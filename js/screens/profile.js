@@ -125,7 +125,7 @@
     });
 
     html += '<div class="hc-about">';
-    html += '<img class="hc-mark" src="assets/icons/mark.svg" alt="Home Church">';
+    html += '<img class="hc-mark" src="assets/icons/mark.png" alt="Home Church">';
     html += '<p class="hc-caption">' + c.esc(HC.data.church.name) + ', ' + c.esc(HC.data.church.pastors) + '</p>';
     html += '<p class="hc-caption">' + c.esc(HC.data.church.tagline) + '</p>';
     html += '<p class="hc-caption hc-about__version">Version 1.0</p>';

@@ -24,9 +24,44 @@
 /* Once the screen scrolls, the bar earns its hairline and shows the title. */
 .hc-topbar[data-scrolled="true"] { border-bottom-color: var(--hc-rule); }
 
-.hc-topbar__title {
+/* The logo and the screen title share one slot. At rest on a tab the logo
+   shows, past the scroll threshold (or on any pushed view, which forces
+   data-scrolled true right away) the title fades in over it. */
+.hc-topbar__center {
+  position: relative;
   flex: 1 1 auto;
   min-width: 0;
+  height: 100%;
+}
+
+.hc-topbar__logo {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  height: 20px;
+  width: auto;
+  opacity: 1;
+  transition: opacity var(--hc-dur-fast) var(--hc-ease);
+}
+
+.hc-topbar[data-scrolled="true"] .hc-topbar__logo {
+  opacity: 0;
+  pointer-events: none;
+}
+
+:root[data-theme="dark"] .hc-topbar__logo--light,
+:root:not([data-theme="dark"]) .hc-topbar__logo--dark {
+  display: none;
+}
+
+.hc-topbar__title {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  min-width: 0;
+  max-width: 100%;
+  transform: translateY(-50%);
   font-family: var(--hc-serif);
   font-weight: 400;
   font-size: 19px;
@@ -36,14 +71,11 @@
   overflow: hidden;
   text-overflow: ellipsis;
   opacity: 0;
-  transform: translateY(4px);
-  transition: opacity var(--hc-dur-fast) var(--hc-ease),
-              transform var(--hc-dur-fast) var(--hc-ease);
+  transition: opacity var(--hc-dur-fast) var(--hc-ease);
 }
 
 .hc-topbar[data-scrolled="true"] .hc-topbar__title {
   opacity: 1;
-  transform: none;
 }
 
 .hc-topbar__back {

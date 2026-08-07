@@ -41,7 +41,11 @@
         '<button type="button" class="hc-topbar__back" data-action="back" aria-label="Back" hidden>' +
           c.icon('chevronLeft') +
         '</button>' +
-        '<span class="hc-topbar__title" id="hc-topbar-title"></span>' +
+        '<span class="hc-topbar__center">' +
+          '<img class="hc-topbar__logo hc-topbar__logo--light" src="assets/img/logo-lockup-ink.png" alt="Home Church">' +
+          '<img class="hc-topbar__logo hc-topbar__logo--dark" src="assets/img/logo-lockup.png" alt="Home Church">' +
+          '<span class="hc-topbar__title" id="hc-topbar-title"></span>' +
+        '</span>' +
         '<button type="button" class="hc-avatar" data-action="go-profile" aria-label="Your account">' +
           '<span class="hc-avatar__disc" id="hc-avatar-disc" aria-hidden="true"></span>' +
         '</button>' +

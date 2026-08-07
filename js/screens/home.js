@@ -108,8 +108,7 @@
   function render() {
     var html = '<div class="hc-screen hc-home">';
 
-    // The mark lives here rather than in the top bar, which stays empty by design.
-    html += '<img class="hc-mark hc-home__mark" src="assets/icons/mark.svg" alt="" aria-hidden="true">';
+    // The mark now lives in the top bar, so Home does not repeat it.
     html += '<h1 class="hc-display-l hc-home__greeting">' + c.esc(greetingLine()) + '</h1>';
 
     html += '<div class="hc-home__stack">';
