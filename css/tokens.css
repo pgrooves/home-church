@@ -1,0 +1,119 @@
+/* ==========================================================================
+   Home Church, design tokens
+   This file holds custom properties only. No selectors beyond :root and the
+   dark theme scope. Everything else in the app reads from here.
+   ========================================================================== */
+
+:root {
+  /* --- Color, core surfaces and ink ------------------------------------ */
+  --hc-paper:       #F7F4EF;  /* app background, warm off-white */
+  --hc-paper-sunk:  #EFEAE2;  /* inputs, wells, disabled */
+  --hc-cream:       #EDE8DF;  /* cards, raised surfaces */
+  --hc-ink:         #111111;  /* primary text */
+  --hc-dark:        #1A1918;  /* dark panels, primary button fill */
+  --hc-mid:         #7A7570;  /* secondary text */
+  --hc-rule:        #C8C0B0;  /* hairlines, dividers */
+  --hc-accent:      #B5A898;  /* taupe, DECORATIVE ONLY, fails contrast */
+  --hc-accent-deep: #8F8271;  /* taupe when text must be legible */
+  --hc-success:     #5F7355;
+  --hc-warning:     #A8763F;
+  --hc-error:       #8B4A3F;
+  --hc-overlay:     rgba(26,25,24,0.55);
+
+  /* Text on a dark fill. Kept as a token so dark mode can retarget it. */
+  --hc-on-dark:     #F7F4EF;
+
+  /* --- Type faces ------------------------------------------------------ */
+  --hc-serif: "Cormorant", "Cormorant Garamond", Georgia, "Times New Roman", serif;
+  --hc-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+
+  /* --- Type scale, size / line ----------------------------------------- */
+  --hc-display-xl:      40px;  --hc-display-xl-line:  44px;
+  --hc-display-l:       32px;  --hc-display-l-line:   36px;
+  --hc-display-m:       26px;  --hc-display-m-line:   30px;
+  --hc-eyebrow:         11px;  --hc-eyebrow-line:     14px;
+  --hc-body-serif:      17px;  --hc-body-serif-line:  26px;
+  --hc-body-sans:       16px;  --hc-body-sans-line:   24px;
+  --hc-question:        18px;  --hc-question-line:    27px;
+  --hc-quote:           20px;  --hc-quote-line:       29px;
+  --hc-caption:         13px;  --hc-caption-line:     18px;
+  --hc-button:          16px;  --hc-button-line:      20px;
+  --hc-tab:             11px;  --hc-tab-line:         14px;
+
+  --hc-track-eyebrow: 0.12em;
+  --hc-track-button:  0.02em;
+
+  /* User text size preference, set from Profile. Multiplies reading type. */
+  --hc-text-scale: 1;
+
+  /* --- Spacing, 4pt base ----------------------------------------------- */
+  --hc-space-xs:   4px;
+  --hc-space-sm:   8px;
+  --hc-space-md:  12px;
+  --hc-space-base:16px;
+  --hc-space-lg:  24px;
+  --hc-space-xl:  32px;
+  --hc-space-xxl: 48px;
+  --hc-space-xxxl:64px;
+
+  --hc-screen-pad: 20px;
+  --hc-card-pad:   20px;
+  --hc-card-gap:   12px;
+  --hc-section-top:40px;
+
+  /* --- Shape ------------------------------------------------------------ */
+  --hc-radius-sm:   8px;   /* inputs */
+  --hc-radius-md:  10px;   /* buttons */
+  --hc-radius-lg:  12px;   /* cards */
+  --hc-radius-pill:999px;  /* pills, avatars */
+
+  --hc-hairline: 0.5px;
+  --hc-edge-rule: 1.5px;   /* the signature left edge */
+
+  /* --- Elevation, used only on sheets and modals ------------------------ */
+  --hc-shadow-sheet: 0 -2px 24px rgba(26,25,24,0.10);
+  --hc-shadow-modal: 0 8px 32px rgba(26,25,24,0.14);
+
+  /* --- Motion ----------------------------------------------------------- */
+  --hc-ease: cubic-bezier(0.4, 0, 0.2, 1);
+  --hc-ease-enter: cubic-bezier(0, 0, 0.2, 1);
+  --hc-dur-fast: 200ms;   /* small state changes */
+  --hc-dur-base: 300ms;   /* view transitions */
+  --hc-dur-sheet: 400ms;  /* bottom sheets */
+
+  /* --- Chrome ----------------------------------------------------------- */
+  --hc-header-h: 52px;
+  --hc-tabbar-h: 56px;
+  --hc-tap-min:  44px;    /* minimum touch target, never go below this */
+
+  color-scheme: light;
+}
+
+/* --------------------------------------------------------------------------
+   Dark mode. Home Church's dark is warm charcoal, never pure black.
+   Applied by an explicit attribute so the Profile toggle is authoritative and
+   the system preference only decides the default.
+   -------------------------------------------------------------------------- */
+
+:root[data-theme="dark"] {
+  --hc-paper:       #1A1918;
+  --hc-paper-sunk:  #201E1D;
+  --hc-cream:       #232120;
+  --hc-ink:         #F2EEE7;
+  --hc-dark:        #F2EEE7;  /* primary button inverts to light on dark */
+  --hc-mid:         #9A938A;
+  --hc-rule:        #3A3633;
+  --hc-accent:      #C4B5A2;
+  --hc-accent-deep: #CFC1AE;
+  --hc-success:     #86A078;
+  --hc-warning:     #C89A63;
+  --hc-error:       #C2796B;
+  --hc-overlay:     rgba(10,10,9,0.65);
+
+  --hc-on-dark:     #1A1918;
+
+  --hc-shadow-sheet: 0 -2px 24px rgba(0,0,0,0.40);
+  --hc-shadow-modal: 0 8px 32px rgba(0,0,0,0.48);
+
+  color-scheme: dark;
+}

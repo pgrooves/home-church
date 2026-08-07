@@ -1,0 +1,880 @@
+/* ==========================================================================
+   Home Church, components
+   Reusable pieces. Screen specific layout lives in screens.css.
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   Top bar. Minimal and mostly empty. The title only appears after scroll.
+   -------------------------------------------------------------------------- */
+
+.hc-topbar {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  gap: var(--hc-space-md);
+  height: calc(var(--hc-header-h) + env(safe-area-inset-top));
+  padding: env(safe-area-inset-top) var(--hc-screen-pad) 0;
+  background: var(--hc-paper);
+  transition: border-color var(--hc-dur-fast) var(--hc-ease);
+  border-bottom: var(--hc-hairline) solid transparent;
+}
+
+/* Once the screen scrolls, the bar earns its hairline and shows the title. */
+.hc-topbar[data-scrolled="true"] { border-bottom-color: var(--hc-rule); }
+
+.hc-topbar__title {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-family: var(--hc-serif);
+  font-weight: 400;
+  font-size: 19px;
+  line-height: 1.2;
+  color: var(--hc-ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  opacity: 0;
+  transform: translateY(4px);
+  transition: opacity var(--hc-dur-fast) var(--hc-ease),
+              transform var(--hc-dur-fast) var(--hc-ease);
+}
+
+.hc-topbar[data-scrolled="true"] .hc-topbar__title {
+  opacity: 1;
+  transform: none;
+}
+
+.hc-topbar__back {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--hc-tap-min);
+  height: var(--hc-tap-min);
+  margin-left: -12px;
+  color: var(--hc-ink);
+  flex: 0 0 auto;
+}
+
+.hc-topbar__spacer { flex: 1 1 auto; }
+
+/* Avatar button, the only way into Profile. No bell, no chat. */
+.hc-avatar {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--hc-tap-min);
+  height: var(--hc-tap-min);
+  margin-right: -10px;
+}
+
+.hc-avatar__disc {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--hc-radius-pill);
+  background: var(--hc-cream);
+  border: var(--hc-hairline) solid var(--hc-rule);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--hc-sans);
+  font-weight: 600;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  color: var(--hc-accent-deep);
+  transition: background var(--hc-dur-fast) var(--hc-ease);
+}
+
+.hc-avatar:active .hc-avatar__disc { background: var(--hc-paper-sunk); }
+
+/* --------------------------------------------------------------------------
+   Tab bar. Flat, hairline on top, no pills, no badges.
+   -------------------------------------------------------------------------- */
+
+.hc-tabbar {
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  z-index: 40;
+  display: flex;
+  background: var(--hc-paper);
+  border-top: var(--hc-hairline) solid var(--hc-rule);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.hc-tab {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  height: var(--hc-tabbar-h);
+  min-height: var(--hc-tap-min);
+  padding: 6px 2px 8px;
+  color: var(--hc-mid);
+  transition: color var(--hc-dur-fast) var(--hc-ease);
+}
+
+.hc-tab__icon {
+  width: 24px;
+  height: 24px;
+  stroke: currentColor;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  fill: none;
+}
+
+.hc-tab__label {
+  font-family: var(--hc-sans);
+  font-weight: 500;
+  font-size: var(--hc-tab);
+  line-height: var(--hc-tab-line);
+  letter-spacing: 0.01em;
+}
+
+.hc-tab[aria-current="page"] { color: var(--hc-ink); }
+.hc-tab[aria-current="page"] .hc-tab__icon { color: var(--hc-accent-deep); }
+
+/* --------------------------------------------------------------------------
+   Section header. The signature pattern: eyebrow, serif title, short rule.
+   -------------------------------------------------------------------------- */
+
+.hc-section-header { margin-top: var(--hc-section-top); }
+.hc-section-header--flush { margin-top: 0; }
+
+.hc-section-header__eyebrow { display: block; }
+
+.hc-section-header__title {
+  margin-top: 6px;
+  font-family: var(--hc-serif);
+  font-weight: 300;
+  font-size: calc(var(--hc-display-m) * var(--hc-text-scale));
+  line-height: 1.155;
+  color: var(--hc-ink);
+}
+
+.hc-section-header__rule {
+  margin-top: 10px;
+  width: 22%;
+  min-width: 56px;
+  height: 0.75px;
+  background: var(--hc-accent);
+  border: 0;
+}
+
+.hc-section-header + * { margin-top: var(--hc-space-base); }
+
+/* Two headers in a row still get the full breath between them. */
+.hc-section-header + .hc-section-header { margin-top: var(--hc-section-top); }
+
+/* --------------------------------------------------------------------------
+   Cards. Color and hairlines separate surfaces, never shadows.
+   -------------------------------------------------------------------------- */
+
+.hc-card {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: var(--hc-cream);
+  border-radius: var(--hc-radius-lg);
+  padding: var(--hc-card-pad);
+  color: var(--hc-ink);
+  transition: background var(--hc-dur-fast) var(--hc-ease);
+}
+
+button.hc-card:active,
+a.hc-card:active { background: var(--hc-paper-sunk); }
+
+.hc-card + .hc-card { margin-top: var(--hc-card-gap); }
+
+/* The left edge rule, carried straight from the print guides. */
+.hc-card--edge {
+  border-left: var(--hc-edge-rule) solid var(--hc-accent);
+  border-top-left-radius: 4px;
+  border-bottom-left-radius: 4px;
+}
+
+.hc-card--quiet {
+  background: transparent;
+  border: var(--hc-hairline) solid var(--hc-rule);
+}
+
+.hc-card__title {
+  font-family: var(--hc-serif);
+  font-weight: 300;
+  font-size: calc(22px * var(--hc-text-scale));
+  line-height: 1.2;
+  color: var(--hc-ink);
+}
+
+.hc-card__meta { margin-top: var(--hc-space-sm); }
+
+/* --------------------------------------------------------------------------
+   Quote card. Used for the one-liners from the pulpit.
+   -------------------------------------------------------------------------- */
+
+.hc-quote-card {
+  background: var(--hc-cream);
+  border-left: var(--hc-edge-rule) solid var(--hc-accent);
+  border-radius: 4px var(--hc-radius-lg) var(--hc-radius-lg) 4px;
+  padding: var(--hc-card-pad);
+}
+
+.hc-quote-card + .hc-quote-card { margin-top: var(--hc-card-gap); }
+
+.hc-quote-card__text { color: var(--hc-ink); }
+
+.hc-quote-card__foot {
+  margin-top: var(--hc-space-md);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--hc-space-md);
+}
+
+.hc-quote-card__attr {
+  font-family: var(--hc-sans);
+  font-weight: 600;
+  font-size: 10px;
+  line-height: 14px;
+  letter-spacing: var(--hc-track-eyebrow);
+  text-transform: uppercase;
+  color: var(--hc-mid);
+}
+
+.hc-share {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: var(--hc-tap-min);
+  min-height: var(--hc-tap-min);
+  margin: -12px -8px -12px 0;
+  padding: 0 8px;
+  color: var(--hc-accent-deep);
+  font-family: var(--hc-sans);
+  font-weight: 600;
+  font-size: var(--hc-caption);
+}
+
+.hc-share__icon {
+  width: 16px; height: 16px;
+  stroke: currentColor;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* --------------------------------------------------------------------------
+   Numbered question row. The most distinctive component carried from print.
+   The numeral is ornament and is hidden from screen readers in the markup.
+   -------------------------------------------------------------------------- */
+
+.hc-numbered {
+  display: grid;
+  grid-template-columns: 34px 1fr;
+  gap: var(--hc-space-base);
+  align-items: start;
+  padding-top: var(--hc-space-base);
+  border-top: var(--hc-hairline) solid var(--hc-rule);
+}
+
+.hc-numbered + .hc-numbered { margin-top: var(--hc-space-base); }
+
+.hc-numeral {
+  font-family: var(--hc-serif);
+  font-weight: 300;
+  font-size: 20px;
+  line-height: 27px;
+  text-align: right;
+  color: var(--hc-accent);
+  font-variant-numeric: tabular-nums;
+}
+
+.hc-numbered__body { min-width: 0; }
+
+/* --------------------------------------------------------------------------
+   Checkable question row, so a leader can track coverage during group.
+   -------------------------------------------------------------------------- */
+
+.hc-check {
+  display: grid;
+  grid-template-columns: 22px 1fr;
+  gap: var(--hc-space-md);
+  align-items: start;
+  width: 100%;
+  text-align: left;
+  padding: var(--hc-space-md) 0;
+  min-height: var(--hc-tap-min);
+  border-top: var(--hc-hairline) solid var(--hc-rule);
+}
+
+.hc-check__box {
+  width: 22px;
+  height: 22px;
+  margin-top: 3px;
+  border-radius: 6px;
+  border: 1px solid var(--hc-rule);
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background var(--hc-dur-fast) var(--hc-ease),
+              border-color var(--hc-dur-fast) var(--hc-ease);
+}
+
+.hc-check__tick {
+  width: 13px; height: 13px;
+  stroke: var(--hc-on-dark);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0;
+  transition: opacity var(--hc-dur-fast) var(--hc-ease);
+}
+
+.hc-check[aria-pressed="true"] .hc-check__box {
+  background: var(--hc-accent-deep);
+  border-color: var(--hc-accent-deep);
+}
+
+.hc-check[aria-pressed="true"] .hc-check__tick { opacity: 1; }
+
+.hc-check[aria-pressed="true"] .hc-check__text { color: var(--hc-mid); }
+
+.hc-check__text { transition: color var(--hc-dur-fast) var(--hc-ease); }
+
+/* --------------------------------------------------------------------------
+   Collapsible section, the six part guide structure.
+   -------------------------------------------------------------------------- */
+
+.hc-section {
+  border-top: var(--hc-hairline) solid var(--hc-rule);
+  padding-top: var(--hc-space-lg);
+  margin-top: var(--hc-space-lg);
+}
+
+.hc-section__toggle {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--hc-space-md);
+  width: 100%;
+  text-align: left;
+  min-height: var(--hc-tap-min);
+  padding: 0;
+}
+
+.hc-section__heading {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: block;
+}
+
+.hc-section__heading .hc-eyebrow { display: block; }
+
+.hc-section__rule {
+  display: block;
+  margin-top: 10px;
+  width: 22%;
+  min-width: 56px;
+  height: 0.75px;
+  background: var(--hc-accent);
+}
+
+.hc-section__title {
+  display: block;
+  margin-top: 6px;
+  font-family: var(--hc-serif);
+  font-weight: 300;
+  font-size: calc(var(--hc-display-m) * var(--hc-text-scale));
+  line-height: 1.155;
+  color: var(--hc-ink);
+}
+
+.hc-section__chevron {
+  flex: 0 0 auto;
+  width: 20px; height: 20px;
+  margin-top: 10px;
+  stroke: var(--hc-accent-deep);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: transform var(--hc-dur-base) var(--hc-ease);
+}
+
+.hc-section__toggle[aria-expanded="true"] .hc-section__chevron { transform: rotate(180deg); }
+
+.hc-section__panel {
+  overflow: hidden;
+  /* Animating grid rows keeps the collapse smooth without a measured height. */
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows var(--hc-dur-base) var(--hc-ease);
+}
+
+.hc-section__panel[data-open="true"] { grid-template-rows: 1fr; }
+
+.hc-section__panel > div { min-height: 0; }
+
+.hc-section__panel[data-open="true"] > div { padding-top: var(--hc-space-base); }
+
+/* --------------------------------------------------------------------------
+   Buttons
+   -------------------------------------------------------------------------- */
+
+.hc-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--hc-space-sm);
+  width: 100%;
+  min-height: 52px;
+  padding: 0 var(--hc-space-lg);
+  border-radius: var(--hc-radius-md);
+  font-family: var(--hc-sans);
+  font-weight: 600;
+  font-size: var(--hc-button);
+  line-height: var(--hc-button-line);
+  letter-spacing: var(--hc-track-button);
+  transition: opacity var(--hc-dur-fast) var(--hc-ease),
+              background var(--hc-dur-fast) var(--hc-ease);
+}
+
+.hc-btn--primary {
+  background: var(--hc-dark);
+  color: var(--hc-on-dark);
+}
+
+.hc-btn--primary:active { opacity: 0.86; }
+
+.hc-btn--secondary {
+  background: transparent;
+  border: 1px solid var(--hc-rule);
+  color: var(--hc-ink);
+}
+
+.hc-btn--secondary:active { background: var(--hc-paper-sunk); }
+
+.hc-btn--tertiary {
+  width: auto;
+  min-height: var(--hc-tap-min);
+  padding: 0;
+  color: var(--hc-accent-deep);
+  background: none;
+}
+
+.hc-btn--tertiary:active { opacity: 0.7; }
+
+.hc-btn__icon {
+  width: 18px; height: 18px;
+  stroke: currentColor;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  flex: 0 0 auto;
+}
+
+/* A quiet inline link, used to cross into a guide from a sermon. */
+.hc-inline-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: var(--hc-tap-min);
+  color: var(--hc-accent-deep);
+  font-family: var(--hc-sans);
+  font-weight: 600;
+  font-size: var(--hc-caption);
+}
+
+/* --------------------------------------------------------------------------
+   Rows and lists
+   -------------------------------------------------------------------------- */
+
+.hc-row {
+  display: flex;
+  align-items: center;
+  gap: var(--hc-space-base);
+  width: 100%;
+  text-align: left;
+  min-height: var(--hc-tap-min);
+  padding: var(--hc-space-base) 0;
+  border-top: var(--hc-hairline) solid var(--hc-rule);
+  color: var(--hc-ink);
+}
+
+.hc-row:last-child { border-bottom: var(--hc-hairline) solid var(--hc-rule); }
+
+.hc-row__body { flex: 1 1 auto; min-width: 0; }
+
+.hc-row__title {
+  font-family: var(--hc-serif);
+  font-weight: 400;
+  font-size: calc(19px * var(--hc-text-scale));
+  line-height: 1.3;
+  color: var(--hc-ink);
+}
+
+.hc-row__label {
+  font-family: var(--hc-sans);
+  font-size: calc(var(--hc-body-sans) * var(--hc-text-scale));
+  line-height: 1.4;
+  color: var(--hc-ink);
+}
+
+.hc-row__value {
+  flex: 0 0 auto;
+  font-family: var(--hc-sans);
+  font-size: var(--hc-body-sans);
+  color: var(--hc-mid);
+}
+
+.hc-row__chevron {
+  flex: 0 0 auto;
+  width: 18px; height: 18px;
+  stroke: var(--hc-rule);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* --------------------------------------------------------------------------
+   Form fields. Inert in v1, styled for when they are not.
+   -------------------------------------------------------------------------- */
+
+.hc-field { display: block; }
+
+.hc-field__label {
+  display: block;
+  font-family: var(--hc-sans);
+  font-weight: 600;
+  font-size: var(--hc-eyebrow);
+  line-height: var(--hc-eyebrow-line);
+  letter-spacing: var(--hc-track-eyebrow);
+  text-transform: uppercase;
+  color: var(--hc-accent-deep);
+  margin-bottom: var(--hc-space-sm);
+}
+
+.hc-input,
+.hc-textarea {
+  width: 100%;
+  background: var(--hc-paper-sunk);
+  border: var(--hc-hairline) solid var(--hc-rule);
+  border-radius: var(--hc-radius-sm);
+  padding: 14px var(--hc-space-base);
+  min-height: var(--hc-tap-min);
+  font-family: var(--hc-sans);
+  font-size: 16px;   /* 16px or larger, or iOS zooms the field on focus */
+  line-height: 1.45;
+  color: var(--hc-ink);
+  transition: border-color var(--hc-dur-fast) var(--hc-ease);
+}
+
+.hc-textarea {
+  font-family: var(--hc-serif);
+  font-size: calc(var(--hc-body-serif) * var(--hc-text-scale));
+  min-height: 88px;
+  resize: vertical;
+}
+
+.hc-input::placeholder,
+.hc-textarea::placeholder { color: var(--hc-mid); opacity: 1; }
+
+.hc-input:focus,
+.hc-textarea:focus { outline: none; border-color: var(--hc-accent-deep); }
+
+/* Journal field under a reflection question. */
+.hc-journal { margin-top: var(--hc-space-md); }
+
+.hc-journal__status {
+  margin-top: 6px;
+  min-height: 18px;
+  font-family: var(--hc-sans);
+  font-size: 12px;
+  line-height: 18px;
+  color: var(--hc-mid);
+  opacity: 0;
+  transition: opacity var(--hc-dur-fast) var(--hc-ease);
+}
+
+.hc-journal__status[data-visible="true"] { opacity: 1; }
+
+/* --------------------------------------------------------------------------
+   Toggle switch
+   -------------------------------------------------------------------------- */
+
+.hc-switch {
+  flex: 0 0 auto;
+  width: 50px;
+  height: 30px;
+  border-radius: var(--hc-radius-pill);
+  background: var(--hc-paper-sunk);
+  border: var(--hc-hairline) solid var(--hc-rule);
+  padding: 2px;
+  display: flex;
+  align-items: center;
+  transition: background var(--hc-dur-fast) var(--hc-ease),
+              border-color var(--hc-dur-fast) var(--hc-ease);
+}
+
+.hc-switch__knob {
+  width: 24px;
+  height: 24px;
+  border-radius: var(--hc-radius-pill);
+  background: var(--hc-paper);
+  border: var(--hc-hairline) solid var(--hc-rule);
+  transform: translateX(0);
+  transition: transform var(--hc-dur-fast) var(--hc-ease);
+}
+
+.hc-switch[aria-checked="true"] {
+  background: var(--hc-accent-deep);
+  border-color: var(--hc-accent-deep);
+}
+
+.hc-switch[aria-checked="true"] .hc-switch__knob { transform: translateX(20px); }
+
+/* The whole row is the target, so the switch itself never needs to be 44pt. */
+.hc-switch-row {
+  display: flex;
+  align-items: center;
+  gap: var(--hc-space-base);
+  width: 100%;
+  text-align: left;
+  min-height: var(--hc-tap-min);
+  padding: var(--hc-space-md) 0;
+  border-top: var(--hc-hairline) solid var(--hc-rule);
+}
+
+.hc-switch-row:last-child { border-bottom: var(--hc-hairline) solid var(--hc-rule); }
+
+/* --------------------------------------------------------------------------
+   Pills, used for filters only. Never as a bright primary action.
+   -------------------------------------------------------------------------- */
+
+.hc-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--hc-space-sm);
+}
+
+.hc-pill {
+  min-height: var(--hc-tap-min);
+  padding: 0 var(--hc-space-base);
+  border-radius: var(--hc-radius-pill);
+  border: var(--hc-hairline) solid var(--hc-rule);
+  background: transparent;
+  color: var(--hc-mid);
+  font-family: var(--hc-sans);
+  font-weight: 500;
+  font-size: var(--hc-caption);
+  transition: color var(--hc-dur-fast) var(--hc-ease),
+              border-color var(--hc-dur-fast) var(--hc-ease),
+              background var(--hc-dur-fast) var(--hc-ease);
+}
+
+.hc-pill[aria-pressed="true"] {
+  color: var(--hc-ink);
+  border-color: var(--hc-accent-deep);
+  background: var(--hc-cream);
+}
+
+/* --------------------------------------------------------------------------
+   Placeholder imagery. Solid cream blocks where photographs will go.
+   Never stock photography.
+   -------------------------------------------------------------------------- */
+
+.hc-media {
+  position: relative;
+  width: 100%;
+  background: var(--hc-cream);
+  border-radius: var(--hc-radius-lg);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.hc-media--16x9 { aspect-ratio: 16 / 9; }
+.hc-media--4x3  { aspect-ratio: 4 / 3; }
+.hc-media--1x1  { aspect-ratio: 1 / 1; }
+
+.hc-media__label {
+  font-family: var(--hc-sans);
+  font-weight: 600;
+  font-size: 10px;
+  letter-spacing: var(--hc-track-eyebrow);
+  text-transform: uppercase;
+  color: var(--hc-accent);
+  padding: 0 var(--hc-space-base);
+  text-align: center;
+}
+
+/* With a play affordance in the middle, the label steps aside to the corner. */
+.hc-media--play .hc-media__label {
+  position: absolute;
+  left: 0; right: 0; bottom: var(--hc-space-md);
+  text-align: left;
+  padding: 0 var(--hc-space-base);
+}
+
+.hc-play {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.hc-play__disc {
+  width: 56px;
+  height: 56px;
+  border-radius: var(--hc-radius-pill);
+  background: var(--hc-paper);
+  border: var(--hc-hairline) solid var(--hc-rule);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform var(--hc-dur-fast) var(--hc-ease);
+}
+
+.hc-play:active .hc-play__disc { transform: scale(0.96); }
+
+.hc-play__icon {
+  width: 20px; height: 20px;
+  margin-left: 3px;
+  fill: var(--hc-ink);
+  stroke: none;
+}
+
+/* --------------------------------------------------------------------------
+   Progress rule. Position, not pressure. No percentage, no streak.
+   -------------------------------------------------------------------------- */
+
+.hc-progress {
+  height: 2px;
+  width: 100%;
+  background: var(--hc-rule);
+  border-radius: var(--hc-radius-pill);
+  overflow: hidden;
+}
+
+.hc-progress__fill {
+  height: 100%;
+  background: var(--hc-accent-deep);
+  border-radius: var(--hc-radius-pill);
+  transition: width var(--hc-dur-base) var(--hc-ease);
+}
+
+/* --------------------------------------------------------------------------
+   Empty state. A hospitality moment, never a shrug.
+   -------------------------------------------------------------------------- */
+
+.hc-empty {
+  padding: var(--hc-space-xl) var(--hc-space-base);
+  text-align: center;
+}
+
+.hc-empty__icon {
+  width: 32px; height: 32px;
+  margin: 0 auto var(--hc-space-base);
+  stroke: var(--hc-rule);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.hc-empty__text {
+  font-family: var(--hc-serif);
+  font-style: italic;
+  font-size: calc(18px * var(--hc-text-scale));
+  line-height: 1.5;
+  color: var(--hc-mid);
+}
+
+/* --------------------------------------------------------------------------
+   Banner. At most one, and always dismissible.
+   -------------------------------------------------------------------------- */
+
+.hc-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--hc-space-md);
+  background: var(--hc-cream);
+  border-left: var(--hc-edge-rule) solid var(--hc-accent);
+  border-radius: 4px var(--hc-radius-lg) var(--hc-radius-lg) 4px;
+  padding: var(--hc-space-base) var(--hc-space-base) var(--hc-space-base) var(--hc-card-pad);
+}
+
+.hc-banner__body { flex: 1 1 auto; min-width: 0; }
+
+.hc-banner__dismiss {
+  flex: 0 0 auto;
+  width: var(--hc-tap-min);
+  height: var(--hc-tap-min);
+  margin: -10px -10px -10px 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--hc-mid);
+}
+
+.hc-banner__dismiss svg {
+  width: 16px; height: 16px;
+  stroke: currentColor;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+}
+
+/* --------------------------------------------------------------------------
+   Toast. Quiet confirmation, bottom of the screen, fades out.
+   -------------------------------------------------------------------------- */
+
+.hc-toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(var(--hc-tabbar-h) + env(safe-area-inset-bottom) + var(--hc-space-base));
+  transform: translate(-50%, 8px);
+  z-index: 60;
+  max-width: calc(100% - 40px);
+  background: var(--hc-dark);
+  color: var(--hc-on-dark);
+  border-radius: var(--hc-radius-md);
+  padding: var(--hc-space-md) var(--hc-space-base);
+  font-family: var(--hc-sans);
+  font-size: 14px;
+  line-height: 20px;
+  text-align: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--hc-dur-base) var(--hc-ease),
+              transform var(--hc-dur-base) var(--hc-ease);
+}
+
+.hc-toast[data-visible="true"] {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+/* Presentation mode has no tab bar, so the toast drops to the real bottom. */
+#app[data-view="present"] .hc-toast {
+  bottom: calc(env(safe-area-inset-bottom) + var(--hc-space-base));
+}
+
+/* --------------------------------------------------------------------------
+   View transition. A soft fade, nothing more.
+   -------------------------------------------------------------------------- */
+
+.hc-view-enter {
+  animation: hc-fade-in var(--hc-dur-base) var(--hc-ease-enter) both;
+}
+
+@keyframes hc-fade-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: none; }
+}

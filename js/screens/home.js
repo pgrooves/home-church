@@ -1,0 +1,135 @@
+/* ==========================================================================
+   Home Church, Home
+   The quiet front door. Three things above the fold, no more.
+   ========================================================================== */
+
+(function (HC) {
+  'use strict';
+
+  var c = HC.components;
+
+  function greetingLine() {
+    var name = HC.store.firstName();
+    if (!name) return 'Welcome home.';
+    return c.greeting() + ', ' + name + '.';
+  }
+
+  function gatheringCard() {
+    var church = HC.data.church;
+    var sunday = c.nextSunday();
+    var today = new Date();
+    today.setHours(0, 0, 0, 0);
+    var isToday = sunday.getTime() === today.getTime();
+
+    var when = isToday
+      ? 'Today'
+      : c.dayName(sunday) + ', ' + c.formatDateShort(sunday.toISOString().slice(0, 10));
+
+    var inner = '' +
+      '<p class="hc-eyebrow">Next gathering</p>' +
+      '<p class="hc-gathering__when hc-display-m">' + c.esc(when) + '</p>' +
+      '<ul class="hc-gathering__times">' +
+        church.serviceTimes.map(function (t) {
+          return '<li class="hc-gathering__time hc-body-sans">' + c.esc(t) + '</li>';
+        }).join('') +
+      '</ul>' +
+      '<p class="hc-caption hc-gathering__address">' +
+        c.esc(church.address.line1) + '<br>' +
+        c.esc(church.address.city + ', ' + church.address.state + ' ' + church.address.zip) +
+      '</p>' +
+      '<div class="hc-gathering__action">' +
+        c.button('Directions', {
+          action: 'open-url',
+          url: church.mapsUrl,
+          variant: 'secondary',
+          icon: 'pin'
+        }) +
+      '</div>';
+
+    return c.card(inner, { edge: true });
+  }
+
+  function guideCard() {
+    var guide = HC.data.latestGuide();
+    if (!guide) {
+      return c.card(c.emptyState('Nothing here yet. Your guide shows up after Sunday.'));
+    }
+    var series = HC.data.getSeries(guide.seriesId);
+    var inner = '' +
+      '<p class="hc-eyebrow">' + c.esc(series ? series.title : 'This week') + '</p>' +
+      '<p class="hc-card__title hc-guide-card__title">' + c.esc(guide.themeTitle) + '</p>' +
+      '<p class="hc-caption hc-card__meta">' +
+        c.esc(guide.preacherShort) + ', ' + c.esc(c.formatDate(guide.preachedOn)) +
+      '</p>' +
+      '<p class="hc-guide-card__cue hc-caption">Open this week’s guide' +
+        c.icon('chevronRight', 'hc-guide-card__chev') + '</p>';
+
+    return c.card(inner, { action: 'open-guide', id: guide.id });
+  }
+
+  function announcement() {
+    var list = (HC.data.announcements || []).filter(function (a) {
+      return !HC.store.isDismissed(a.id);
+    });
+    if (!list.length) return '';
+    var a = list[0];   // one announcement maximum, on purpose
+    return '' +
+      '<div class="hc-banner" data-banner="' + c.esc(a.id) + '">' +
+        '<div class="hc-banner__body">' +
+          '<p class="hc-eyebrow">' + c.esc(a.eyebrow) + '</p>' +
+          '<p class="hc-banner__title hc-body-serif">' + c.esc(a.title) + '</p>' +
+          '<p class="hc-caption">' + c.esc(a.body) + '</p>' +
+        '</div>' +
+        '<button type="button" class="hc-banner__dismiss" data-action="dismiss-banner" ' +
+          'data-id="' + c.esc(a.id) + '" aria-label="Dismiss">' +
+          c.icon('close') +
+        '</button>' +
+      '</div>';
+  }
+
+  function readingPlanRow() {
+    var plan = HC.data.readingPlan;
+    // Position, not pressure. No streak, no percentage, no badge.
+    var pct = Math.round((plan.currentWeek / plan.totalWeeks) * 100);
+    return '' +
+      '<button type="button" class="hc-plan" data-action="open-url" ' +
+        'data-url="' + c.esc(plan.resources[0].url) + '">' +
+        '<div class="hc-plan__head">' +
+          '<span class="hc-plan__title hc-row__title">' + c.esc(plan.title) + '</span>' +
+          '<span class="hc-caption">Week ' + plan.currentWeek + ' of ' + plan.totalWeeks + '</span>' +
+        '</div>' +
+        '<div class="hc-progress" role="presentation">' +
+          '<div class="hc-progress__fill" style="width:' + pct + '%"></div>' +
+        '</div>' +
+        '<p class="hc-caption hc-plan__reading">This week, ' + c.esc(plan.thisWeek) + '</p>' +
+      '</button>';
+  }
+
+  function render() {
+    var html = '<div class="hc-screen hc-home">';
+
+    // The mark lives here rather than in the top bar, which stays empty by design.
+    html += '<img class="hc-mark hc-home__mark" src="assets/icons/mark.svg" alt="" aria-hidden="true">';
+    html += '<h1 class="hc-display-l hc-home__greeting">' + c.esc(greetingLine()) + '</h1>';
+
+    html += '<div class="hc-home__stack">';
+    html += gatheringCard();
+    html += guideCard();
+    html += '</div>';
+
+    var ann = announcement();
+    if (ann) {
+      html += '<div class="hc-home__announcement">' + ann + '</div>';
+    }
+
+    html += c.sectionHeader('Reading together', 'Where we are');
+    html += readingPlanRow();
+
+    html += '</div>';
+    return c.el(html);
+  }
+
+  HC.screens = HC.screens || {};
+  HC.screens.home = render;
+
+})(window.HC = window.HC || {});

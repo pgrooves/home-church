@@ -1,0 +1,231 @@
+/* ==========================================================================
+   Home Church, base layer
+   Reset, typography primitives, safe areas, utilities.
+   ========================================================================== */
+
+/* --- Reset ---------------------------------------------------------------- */
+
+*,
+*::before,
+*::after { box-sizing: border-box; }
+
+/* Several components set an explicit display, which beats the UA rule for
+   [hidden]. Restate it once, loudly, so hiding always wins. */
+[hidden] { display: none !important; }
+
+html, body, h1, h2, h3, h4, p, figure, blockquote, ul, ol, dl, dd, fieldset, legend {
+  margin: 0;
+  padding: 0;
+}
+
+ul[class], ol[class] { list-style: none; }
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  height: 100%;
+}
+
+body {
+  min-height: 100%;
+  background: var(--hc-paper);
+  color: var(--hc-ink);
+  font-family: var(--hc-sans);
+  font-size: var(--hc-body-sans);
+  line-height: var(--hc-body-sans-line);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+
+  /* iOS: kill the rubber band on the document. Inner scrollers keep momentum. */
+  overscroll-behavior: none;
+  overflow: hidden;
+  position: fixed;
+  inset: 0;
+  width: 100%;
+
+  -webkit-tap-highlight-color: transparent;
+}
+
+img, svg, video { display: block; max-width: 100%; }
+svg { fill: none; }
+
+button, input, select, textarea {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: 0;
+  border-radius: 0;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+button { cursor: pointer; -webkit-tap-highlight-color: transparent; }
+
+a { color: inherit; text-decoration: none; }
+
+/* Controls should not select or show the iOS callout. Reading content still can. */
+button, .hc-tab, .hc-eyebrow, .hc-numeral, .hc-section__toggle, .hc-tabbar {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+:focus-visible {
+  outline: 2px solid var(--hc-accent-deep);
+  outline-offset: 2px;
+  border-radius: var(--hc-radius-sm);
+}
+
+/* --- App frame ------------------------------------------------------------ */
+
+#app {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--hc-paper);
+}
+
+/* The one scroll container. Momentum scrolling lives here, not on body. */
+.hc-scroll {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+  /* No smooth default. A new view must land at the top instantly, and the one
+     place that wants easing asks for it per call. */
+  scroll-behavior: auto;
+}
+
+.hc-screen {
+  padding-left: var(--hc-screen-pad);
+  padding-right: var(--hc-screen-pad);
+  /* Clear the fixed header, plus the tab bar and home indicator at the end. */
+  padding-top: calc(var(--hc-header-h) + env(safe-area-inset-top) + var(--hc-space-sm));
+  padding-bottom: calc(var(--hc-tabbar-h) + env(safe-area-inset-bottom) + var(--hc-space-xxl));
+  max-width: 720px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+/* --- Type primitives ------------------------------------------------------ */
+
+.hc-display-xl,
+.hc-display-l,
+.hc-display-m {
+  font-family: var(--hc-serif);
+  font-weight: 300;          /* Cormorant Light, never below 16px */
+  color: var(--hc-ink);
+  letter-spacing: 0.005em;
+}
+
+.hc-display-xl { font-size: calc(var(--hc-display-xl) * var(--hc-text-scale)); line-height: 1.1; }
+.hc-display-l  { font-size: calc(var(--hc-display-l)  * var(--hc-text-scale)); line-height: 1.125; }
+.hc-display-m  { font-size: calc(var(--hc-display-m)  * var(--hc-text-scale)); line-height: 1.155; }
+
+.hc-eyebrow {
+  font-family: var(--hc-sans);
+  font-weight: 600;
+  font-size: var(--hc-eyebrow);
+  line-height: var(--hc-eyebrow-line);
+  letter-spacing: var(--hc-track-eyebrow);
+  text-transform: uppercase;
+  color: var(--hc-accent);   /* decorative by design, reads as ornament */
+}
+
+/* When an eyebrow carries meaning a user must read, not just brand texture. */
+.hc-eyebrow--legible { color: var(--hc-accent-deep); }
+
+.hc-body-serif {
+  font-family: var(--hc-serif);
+  font-weight: 400;
+  font-size: calc(var(--hc-body-serif) * var(--hc-text-scale));
+  line-height: 1.53;
+  color: var(--hc-ink);
+}
+
+.hc-body-sans {
+  font-family: var(--hc-sans);
+  font-weight: 400;
+  font-size: calc(var(--hc-body-sans) * var(--hc-text-scale));
+  line-height: 1.5;
+}
+
+.hc-question {
+  font-family: var(--hc-serif);
+  font-weight: 400;
+  font-size: calc(var(--hc-question) * var(--hc-text-scale));
+  line-height: 1.5;
+  color: var(--hc-ink);
+}
+
+.hc-quote {
+  font-family: var(--hc-serif);
+  font-weight: 400;
+  font-style: italic;
+  font-size: calc(var(--hc-quote) * var(--hc-text-scale));
+  line-height: 1.45;
+  color: var(--hc-ink);
+}
+
+.hc-caption {
+  font-family: var(--hc-sans);
+  font-weight: 400;
+  font-size: var(--hc-caption);
+  line-height: var(--hc-caption-line);
+  color: var(--hc-mid);
+}
+
+.hc-meta {
+  font-family: var(--hc-sans);
+  font-weight: 400;
+  font-size: var(--hc-caption);
+  line-height: var(--hc-caption-line);
+  color: var(--hc-mid);
+}
+
+/* Long-form serif paragraphs, spaced rather than indented. */
+.hc-prose p + p { margin-top: var(--hc-space-base); }
+
+/* --- Utilities ------------------------------------------------------------ */
+
+.hc-hairline {
+  height: var(--hc-hairline);
+  background: var(--hc-rule);
+  border: 0;
+  width: 100%;
+}
+
+.hc-stack > * + * { margin-top: var(--hc-space-md); }
+.hc-stack-sm > * + * { margin-top: var(--hc-space-sm); }
+.hc-stack-lg > * + * { margin-top: var(--hc-space-lg); }
+
+.hc-center { text-align: center; }
+.hc-mt-lg { margin-top: var(--hc-space-lg); }
+.hc-mt-xl { margin-top: var(--hc-space-xl); }
+.hc-mb-md { margin-bottom: var(--hc-space-md); }
+
+.hc-visually-hidden {
+  position: absolute;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* --- Motion --------------------------------------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

@@ -1,0 +1,560 @@
+/* ==========================================================================
+   Home Church, screen layout
+   Only the pieces that are specific to one screen. Anything reused belongs
+   in components.css.
+   ========================================================================== */
+
+/* --------------------------------------------------------------- the mark */
+
+.hc-mark {
+  display: block;
+  width: 34px;
+  height: auto;
+}
+
+.hc-avatar__icon {
+  width: 17px;
+  height: 17px;
+  stroke: var(--hc-accent-deep);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* ==========================================================================
+   Home
+   ========================================================================== */
+
+.hc-home__mark { margin-bottom: var(--hc-space-lg); }
+
+.hc-home__greeting {
+  margin-top: var(--hc-space-sm);
+  margin-bottom: var(--hc-space-lg);
+}
+
+.hc-gathering__when { margin-top: 6px; }
+
+.hc-gathering__times {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--hc-space-sm) var(--hc-space-base);
+  margin-top: var(--hc-space-md);
+  list-style: none;
+}
+
+.hc-gathering__time {
+  color: var(--hc-ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.hc-gathering__time + .hc-gathering__time {
+  padding-left: var(--hc-space-base);
+  border-left: var(--hc-hairline) solid var(--hc-rule);
+}
+
+.hc-gathering__address { margin-top: var(--hc-space-md); }
+.hc-gathering__action { margin-top: var(--hc-space-base); }
+
+.hc-guide-card__title { margin-top: 6px; }
+
+.hc-guide-card__cue {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: var(--hc-space-base);
+  color: var(--hc-accent-deep);
+  font-weight: 600;
+}
+
+.hc-guide-card__chev {
+  width: 14px; height: 14px;
+  stroke: currentColor;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.hc-home__announcement { margin-top: var(--hc-space-xl); }
+
+.hc-banner__title { margin-top: 6px; margin-bottom: 4px; }
+
+.hc-plan {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: var(--hc-space-base) 0;
+  border-top: var(--hc-hairline) solid var(--hc-rule);
+  border-bottom: var(--hc-hairline) solid var(--hc-rule);
+}
+
+.hc-plan__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--hc-space-md);
+  margin-bottom: var(--hc-space-md);
+}
+
+.hc-plan__title { flex: 1 1 auto; min-width: 0; }
+.hc-plan__reading { margin-top: var(--hc-space-md); }
+
+/* ==========================================================================
+   Watch
+   ========================================================================== */
+
+.hc-latest { margin-top: var(--hc-space-lg); }
+
+.hc-latest__media {
+  display: block;
+  width: 100%;
+  padding: 0;
+}
+
+.hc-latest__eyebrow { display: block; margin-top: var(--hc-space-base); }
+.hc-latest__title { margin-top: 6px; }
+.hc-latest__meta { margin-top: var(--hc-space-sm); }
+.hc-latest__desc { margin-top: var(--hc-space-md); }
+
+.hc-series-hero { margin-top: var(--hc-space-base); }
+.hc-series-hero__sub { margin-top: var(--hc-space-md); }
+
+.hc-archive-group { margin-top: var(--hc-space-lg); }
+.hc-archive-group__label { display: block; margin-bottom: var(--hc-space-sm); }
+
+.hc-sermon {
+  padding: var(--hc-space-base) 0;
+  border-top: var(--hc-hairline) solid var(--hc-rule);
+}
+
+.hc-sermon:last-child { border-bottom: var(--hc-hairline) solid var(--hc-rule); }
+
+.hc-sermon__main {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--hc-space-base);
+  width: 100%;
+  text-align: left;
+  min-height: var(--hc-tap-min);
+}
+
+.hc-sermon__thumb {
+  flex: 0 0 104px;
+  width: 104px;
+  display: block;
+}
+
+.hc-sermon__thumb .hc-play__disc {
+  width: 34px;
+  height: 34px;
+}
+
+.hc-sermon__thumb .hc-play__icon {
+  width: 13px; height: 13px;
+  margin-left: 2px;
+}
+
+.hc-sermon__body {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* ==========================================================================
+   Guide, index
+   ========================================================================== */
+
+.hc-guide-intro {
+  margin-top: var(--hc-space-base);
+  color: var(--hc-mid);
+}
+
+.hc-guide-list { margin-top: var(--hc-space-sm); }
+
+.hc-guide-row {
+  display: flex;
+  align-items: center;
+  gap: var(--hc-space-base);
+  width: 100%;
+  text-align: left;
+  min-height: 72px;
+  padding: var(--hc-space-base) 0;
+  border-top: var(--hc-hairline) solid var(--hc-rule);
+  transition: opacity var(--hc-dur-fast) var(--hc-ease);
+}
+
+.hc-guide-row:last-child { border-bottom: var(--hc-hairline) solid var(--hc-rule); }
+.hc-guide-row:active { opacity: 0.6; }
+
+.hc-guide-row__body {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.hc-guide-row__title {
+  font-family: var(--hc-serif);
+  font-weight: 300;
+  font-size: calc(23px * var(--hc-text-scale));
+  line-height: 1.2;
+  color: var(--hc-ink);
+}
+
+/* ==========================================================================
+   Guide, reader
+   ========================================================================== */
+
+.hc-reader__head { padding-top: var(--hc-space-sm); }
+
+.hc-reader__title { margin-top: var(--hc-space-sm); }
+
+.hc-reader__subtitle {
+  margin-top: var(--hc-space-sm);
+  color: var(--hc-mid);
+  font-style: italic;
+}
+
+.hc-reader__rule {
+  width: 22%;
+  min-width: 56px;
+  height: 0.75px;
+  background: var(--hc-accent);
+  margin: var(--hc-space-base) 0 var(--hc-space-md);
+}
+
+.hc-reader__meta { font-variant-numeric: tabular-nums; }
+
+.hc-reader__leader {
+  margin-top: var(--hc-space-lg);
+  padding: var(--hc-space-base);
+  border: var(--hc-hairline) solid var(--hc-rule);
+  border-radius: var(--hc-radius-lg);
+}
+
+.hc-reader__leader-note {
+  margin-top: var(--hc-space-md);
+  text-align: center;
+}
+
+/* Discussion questions */
+
+.hc-coverage {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--hc-space-base);
+  padding-bottom: var(--hc-space-sm);
+}
+
+.hc-coverage .hc-caption { flex: 1 1 auto; }
+
+.hc-qgroup { margin-top: var(--hc-space-lg); }
+
+.hc-qgroup__label { display: block; margin-bottom: var(--hc-space-sm); }
+
+.hc-qgroup .hc-check:last-child { border-bottom: var(--hc-hairline) solid var(--hc-rule); }
+
+/* The three movements, inside the full summary */
+
+.hc-anchors {
+  margin-top: var(--hc-space-xl);
+  padding-top: var(--hc-space-lg);
+  border-top: var(--hc-hairline) solid var(--hc-rule);
+}
+
+.hc-anchors__label { display: block; margin-bottom: var(--hc-space-base); }
+
+.hc-anchors__title {
+  font-family: var(--hc-serif);
+  font-weight: 400;
+  font-size: calc(20px * var(--hc-text-scale));
+  line-height: 1.3;
+  color: var(--hc-ink);
+}
+
+.hc-anchors__body { margin-top: 6px; color: var(--hc-mid); }
+
+/* Self reflection */
+
+.hc-reflection__note {
+  margin-bottom: var(--hc-space-lg);
+  font-style: italic;
+}
+
+/* Scripture */
+
+.hc-scripture-list .hc-row { align-items: flex-start; }
+.hc-scripture-list .hc-row .hc-row__chevron { margin-top: 4px; }
+
+/* Closing */
+
+.hc-closing {
+  margin-top: var(--hc-space-xl);
+  padding: 0 var(--hc-space-base);
+  text-align: center;
+}
+
+.hc-closing__text { color: var(--hc-ink); }
+
+.hc-closing__ref {
+  margin-top: var(--hc-space-md);
+  font-family: var(--hc-sans);
+  font-weight: 600;
+  font-size: var(--hc-eyebrow);
+  line-height: var(--hc-eyebrow-line);
+  letter-spacing: var(--hc-track-eyebrow);
+  text-transform: uppercase;
+  color: var(--hc-accent-deep);
+}
+
+/* ==========================================================================
+   Presentation mode, leader only
+   ========================================================================== */
+
+.hc-present {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+  padding: calc(env(safe-area-inset-top) + var(--hc-space-lg))
+           var(--hc-screen-pad)
+           calc(env(safe-area-inset-bottom) + var(--hc-space-lg));
+  background: var(--hc-paper);
+}
+
+.hc-present__top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--hc-space-base);
+  padding-bottom: var(--hc-space-md);
+  border-bottom: var(--hc-hairline) solid var(--hc-rule);
+}
+
+.hc-present__count { font-variant-numeric: tabular-nums; }
+
+.hc-present__body {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  padding: var(--hc-space-xl) 0;
+}
+
+.hc-present__question {
+  font-family: var(--hc-serif);
+  font-weight: 300;
+  font-size: calc(30px * var(--hc-text-scale));
+  line-height: 1.28;
+  color: var(--hc-ink);
+}
+
+.hc-present__foot { flex: 0 0 auto; }
+
+.hc-present__check {
+  border-top: var(--hc-hairline) solid var(--hc-rule);
+  border-bottom: var(--hc-hairline) solid var(--hc-rule);
+  margin-bottom: var(--hc-space-base);
+}
+
+.hc-present__nav {
+  display: flex;
+  gap: var(--hc-space-md);
+}
+
+.hc-present__arrow {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.hc-present__arrow[disabled] {
+  opacity: 0.35;
+  pointer-events: none;
+}
+
+.hc-present__arrow .hc-btn__icon {
+  width: 22px;
+  height: 22px;
+}
+
+.hc-present__exit {
+  display: flex;
+  width: 100%;
+  margin-top: var(--hc-space-md);
+}
+
+/* ==========================================================================
+   Connect
+   ========================================================================== */
+
+.hc-filters { margin-bottom: var(--hc-space-base); }
+
+.hc-filters__label {
+  display: block;
+  margin: var(--hc-space-base) 0 var(--hc-space-sm);
+}
+
+.hc-filters__label:first-child { margin-top: 0; }
+
+.hc-group-list { margin-top: var(--hc-space-base); }
+
+.hc-group__blurb { margin-top: var(--hc-space-md); color: var(--hc-mid); }
+
+.hc-group__status {
+  margin-top: var(--hc-space-md);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.hc-group__status[data-open="true"] { color: var(--hc-success); }
+.hc-group__status[data-open="false"] { color: var(--hc-mid); }
+
+.hc-mygroup__next { margin-top: var(--hc-space-md); }
+
+.hc-serve-list { margin-top: var(--hc-space-sm); }
+
+.hc-event-list { margin-top: var(--hc-space-sm); }
+
+.hc-event {
+  padding: var(--hc-space-base) 0;
+  border-top: var(--hc-hairline) solid var(--hc-rule);
+}
+
+.hc-event:last-child { border-bottom: var(--hc-hairline) solid var(--hc-rule); }
+
+.hc-event .hc-row__title { margin-top: 4px; }
+.hc-event__blurb { margin-top: var(--hc-space-sm); color: var(--hc-mid); }
+
+.hc-step__blurb { margin-bottom: var(--hc-space-base); color: var(--hc-mid); }
+
+.hc-form .hc-field + .hc-field { margin-top: var(--hc-space-base); }
+.hc-form .hc-btn { margin-top: var(--hc-space-lg); }
+
+/* ==========================================================================
+   Give
+   ========================================================================== */
+
+.hc-give__line {
+  margin-top: var(--hc-space-lg);
+  font-size: calc(19px * var(--hc-text-scale));
+  line-height: 1.55;
+}
+
+.hc-give__action { margin-top: var(--hc-space-xxl); }
+
+.hc-give__note {
+  margin-top: var(--hc-space-md);
+  text-align: center;
+}
+
+/* ==========================================================================
+   Profile
+   ========================================================================== */
+
+.hc-profile__fields { margin-top: var(--hc-space-lg); }
+
+.hc-profile__hint { margin-top: var(--hc-space-sm); }
+
+.hc-profile__leader-copy {
+  margin-top: var(--hc-space-base);
+  margin-bottom: var(--hc-space-base);
+  color: var(--hc-mid);
+}
+
+.hc-switch-row__sub { display: block; margin-top: 2px; }
+
+.hc-about {
+  margin-top: var(--hc-space-xxl);
+  padding-top: var(--hc-space-lg);
+  border-top: var(--hc-hairline) solid var(--hc-rule);
+  text-align: center;
+}
+
+.hc-about .hc-mark { margin: 0 auto var(--hc-space-base); }
+.hc-about .hc-caption + .hc-caption { margin-top: 4px; }
+.hc-about__version { margin-top: var(--hc-space-md) !important; }
+.hc-about__warn { margin-top: var(--hc-space-md) !important; color: var(--hc-warning); }
+
+/* ==========================================================================
+   Leader tools
+   ========================================================================== */
+
+.hc-leader__intro {
+  margin: var(--hc-space-base) 0 var(--hc-space-lg);
+  color: var(--hc-mid);
+}
+
+.hc-leader__actions { margin-top: var(--hc-space-lg); }
+.hc-leader__actions .hc-btn + .hc-btn { margin-top: var(--hc-space-md); }
+
+.hc-leader__count { margin-bottom: var(--hc-space-sm); }
+
+.hc-member {
+  padding-bottom: var(--hc-space-base);
+  border-bottom: var(--hc-hairline) solid var(--hc-rule);
+}
+
+.hc-member__check { border-top: 0; }
+
+.hc-member__note { margin-top: var(--hc-space-sm); }
+
+.hc-member__input {
+  font-size: 15px;
+  padding: 10px var(--hc-space-md);
+  min-height: var(--hc-tap-min);
+}
+
+.hc-member__remove {
+  margin-top: var(--hc-space-sm);
+  font-size: var(--hc-caption);
+}
+
+.hc-addform {
+  margin-top: var(--hc-space-lg);
+  padding: var(--hc-space-base);
+  background: var(--hc-cream);
+  border-radius: var(--hc-radius-lg);
+}
+
+.hc-addform__field + .hc-addform__field { margin-top: var(--hc-space-base); }
+.hc-addform .hc-btn { margin-top: var(--hc-space-base); }
+
+.hc-prayer-list { margin-top: var(--hc-space-lg); }
+
+.hc-prayer {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--hc-space-md);
+  padding: var(--hc-space-base) 0;
+  border-top: var(--hc-hairline) solid var(--hc-rule);
+}
+
+.hc-prayer:last-child { border-bottom: var(--hc-hairline) solid var(--hc-rule); }
+
+.hc-prayer__body { flex: 1 1 auto; min-width: 0; }
+.hc-prayer__body .hc-body-serif { margin: 4px 0; }
+
+/* ==========================================================================
+   Width guards
+   ========================================================================== */
+
+/* 320 wide. Tighten the gutters, never the vertical rhythm. */
+@media (max-width: 359px) {
+  :root {
+    --hc-screen-pad: 16px;
+    --hc-card-pad: 16px;
+  }
+
+  .hc-sermon__thumb { flex-basis: 88px; width: 88px; }
+  .hc-tab__label { font-size: 10px; }
+  .hc-gathering__times { gap: var(--hc-space-sm) var(--hc-space-md); }
+  .hc-gathering__time + .hc-gathering__time { padding-left: var(--hc-space-md); }
+}
+
+/* Tablet. The column stays a column, it just gets air around it. */
+@media (min-width: 768px) {
+  .hc-screen { padding-left: var(--hc-space-xl); padding-right: var(--hc-space-xl); }
+  .hc-present { max-width: 720px; margin: 0 auto; }
+  .hc-present__question { font-size: calc(36px * var(--hc-text-scale)); }
+}
