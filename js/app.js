@@ -109,6 +109,10 @@
     back.hidden = isTab;
     title.textContent = TITLES[route.name] || '';
 
+    // The logo only ever appears on a tab, sliding to center once scrolled.
+    // A pushed view has no room for it, back arrow and title fill that slot.
+    topbar.setAttribute('data-is-tab', isTab ? 'true' : 'false');
+
     // The bar starts bare on a tab, and carries the title straight away on a
     // pushed view where the back arrow needs company.
     topbar.setAttribute('data-scrolled', isTab ? 'false' : 'true');

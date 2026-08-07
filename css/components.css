@@ -38,14 +38,27 @@
   position: absolute;
   left: 0;
   top: 50%;
-  transform: translateY(-50%);
+  transform: translate(0, -50%);
   height: 20px;
   width: auto;
-  opacity: 1;
-  transition: opacity var(--hc-dur-fast) var(--hc-ease);
+  opacity: 0;
+  transition: left var(--hc-dur-fast) var(--hc-ease),
+              transform var(--hc-dur-fast) var(--hc-ease),
+              opacity var(--hc-dur-fast) var(--hc-ease);
 }
 
-.hc-topbar[data-scrolled="true"] .hc-topbar__logo {
+/* At rest on a tab, the logo sits where the title will later appear. */
+.hc-topbar[data-is-tab="true"] .hc-topbar__logo { opacity: 1; }
+
+/* Once the screen scrolls, the title claims the left edge, so the logo
+   slides to the header's center instead of disappearing. */
+.hc-topbar[data-is-tab="true"][data-scrolled="true"] .hc-topbar__logo {
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+/* A pushed view has no logo at all, the back arrow and title fill that role. */
+.hc-topbar[data-is-tab="false"] .hc-topbar__logo {
   opacity: 0;
   pointer-events: none;
 }
