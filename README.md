@@ -208,18 +208,44 @@ login and was left out of this pass on purpose.
 3. **Authentication -> Providers**, confirm Email is on (it is by default).
    For phone sign-in, turn on Phone there too and connect an SMS provider,
    Supabase does not send text messages itself, Twilio is the common
-   choice. Email sign-in needs nothing extra.
-4. **Project Settings -> API**, copy the Project URL and the `anon` `public`
-   key into `js/config.js`. The anon key is safe to ship in client code, the
-   row level security policies above are what actually restrict it.
-5. Reload the app. Sign in appears on Profile automatically.
+   choice. Email sign-in needs nothing extra here.
+4. **Authentication -> Email Templates -> Magic Link**, required, and easy
+   to miss. Supabase generates a one time code for every sign-in email
+   whether you ask for it or not, but the stock template only shows a
+   clickable link, not the code, so nobody sees it unless the template is
+   changed. Replace the template body with something that prints
+   `{{ .Token }}`, for example:
+
+   ```html
+   <h2>Your code</h2>
+   <p>Here's your sign-in code for Home Church:</p>
+   <h1 style="letter-spacing:4px;">{{ .Token }}</h1>
+   <p>It expires shortly. If it's been a while, just ask the app for a new one.</p>
+   ```
+
+   Skip this and people get a link instead of a code, and the app's "enter
+   your code" screen has nothing to type in.
+5. **Authentication -> URL Configuration**, set Site URL to where the app
+   actually lives, `https://pgrooves.github.io/home-church/` once GitHub
+   Pages is on. A fresh project defaults this to `http://localhost:3000`,
+   which is why the very first test of this sent a link that Safari
+   couldn't connect to, nothing on this phone is listening on localhost.
+   Add the same URL under Redirect URLs.
+6. **Project Settings -> API**, copy the Project URL and the Publishable
+   key (Supabase's current name for what used to be called the anon key)
+   into `js/config.js`. It's safe to ship in client code, the row level
+   security policies above are what actually restrict it.
+7. Reload the app. Sign in appears on Profile automatically.
 
 **A note on trust.** The endpoint shapes in `js/auth.js` match Supabase's
-documented Auth and REST APIs as of when this was written, but this has not
-been exercised against a real project, because none existed yet. The first
-sign-in attempt against a live project is the real test. If something does
-not match, the network tab will show which call failed and what came back,
-that is the fastest way to find a renamed field.
+documented Auth and REST APIs, but code written against documentation and
+code proven against a live project are different claims. The first live
+test against this church's own project (see steps 4 and 5) found a real
+gap, the stock email template hides the code behind a link, and a fresh
+project's Site URL points at localhost until someone sets it. Both are one
+time dashboard settings, not app bugs, and are now folded into the steps
+above. If something else does not match, the network tab will show which
+call failed and what came back, that is the fastest way to find it.
 
 -----
 
