@@ -29,9 +29,10 @@ relative, so it runs from a subdirectory without changes.
 To see it the way it is designed, open your browser's device toolbar and set
 the viewport to 390 x 844.
 
-**Fonts.** Cormorant loads from Google Fonts and is the only network request
-the app makes. If it fails, a serif fallback stack takes over and nothing
-breaks.
+**Fonts.** Cormorant loads from Google Fonts. If it fails, a serif fallback
+stack takes over and nothing breaks. It's the only network request the app
+makes until Supabase is connected, see Supabase setup below, at which point
+sign-in and profile sync add calls to your own project.
 
 -----
 
@@ -47,6 +48,8 @@ css/
 js/
   data.js             seed content, shaped like a future API payload
   store.js            localStorage wrapper, app state, tiny pub/sub
+  config.js           Supabase URL and anon key, empty until you fill them in
+  auth.js             sign in, session, profile sync, see Supabase setup below
   router.js           pushState routing, no hash
   components.js       render functions returning HTML strings
   screens/            one file per screen
@@ -72,9 +75,11 @@ every read and write is inside a try/catch, so private browsing degrades to an
 in memory session instead of crashing. Profile also surfaces a quiet note when
 storage is unavailable.
 
-What persists: your name and preferences, dark mode, text size, leader mode,
-per guide question checkmarks, per guide journal entries, dismissed
-announcements, the roster, and prayer requests.
+What persists: your profile and preferences, dark mode, text size, leader
+mode, per guide question checkmarks, per guide journal entries, dismissed
+announcements, the roster, and prayer requests. All of it stays local, except
+the profile fields once Supabase is connected and you're signed in, see
+Supabase setup below.
 
 -----
 
@@ -122,6 +127,99 @@ that matter more than they sound:
 - Discussion questions have to be specific enough that a person cannot deflect
   with a general answer, and must never ask what other people think.
 - No guilt. Nothing in this app shames a missed week.
+
+-----
+
+## Supabase setup
+
+Accounts are prepped but not connected. Nothing changes for anyone using the
+app until a real project exists and its two keys are pasted into
+`js/config.js`. Until then, Profile's identity form still works, it just
+saves to the phone only, exactly like v1 shipped.
+
+**What's already built**, in `js/auth.js`:
+
+- Sign in with either an email address or a phone number, verified by a one
+  time code, no password to set or reset. Supabase calls this OTP.
+- Session storage and refresh, so a signed-in visit does not quietly drop
+  back to guest after an hour.
+- Profile sync. Every field in Your Information autosaves locally first,
+  then, once signed in, pushes the same change to Supabase in the
+  background. Sign in once and the remote copy of the profile wins, so
+  edits made from another phone are the ones a person sees.
+- Talks to Supabase's own HTTP API directly with `fetch`, no SDK. That
+  keeps the no-build-step, no-npm-install promise above intact.
+
+**What is not built**: guide checkmarks and journal entries are still
+localStorage only. Syncing those needs a second table and is a reasonable
+next step once accounts are live, but it is a separate piece of work from
+login and was left out of this pass on purpose.
+
+### To turn it on
+
+1. Create a project at [supabase.com](https://supabase.com).
+2. Open the SQL editor and run this once, it creates the table the profile
+   form reads and writes, locks it down so a person can only ever see or
+   change their own row, and backfills a blank row automatically the moment
+   someone signs up for the first time:
+
+   ```sql
+   create table public.profiles (
+     id uuid primary key references auth.users on delete cascade,
+     first_name text,
+     last_name text,
+     gender text,
+     birthdate date,
+     campus text,
+     marital_status text,
+     street text,
+     unit text,
+     city text,
+     state text,
+     zip text,
+     photo_url text,
+     updated_at timestamptz default now()
+   );
+
+   alter table public.profiles enable row level security;
+
+   create policy "Individuals can view their own profile"
+     on public.profiles for select using (auth.uid() = id);
+
+   create policy "Individuals can update their own profile"
+     on public.profiles for update using (auth.uid() = id);
+
+   create policy "Individuals can insert their own profile"
+     on public.profiles for insert with check (auth.uid() = id);
+
+   create function public.handle_new_user()
+   returns trigger as $$
+   begin
+     insert into public.profiles (id) values (new.id);
+     return new;
+   end;
+   $$ language plpgsql security definer;
+
+   create trigger on_auth_user_created
+     after insert on auth.users
+     for each row execute procedure public.handle_new_user();
+   ```
+
+3. **Authentication -> Providers**, confirm Email is on (it is by default).
+   For phone sign-in, turn on Phone there too and connect an SMS provider,
+   Supabase does not send text messages itself, Twilio is the common
+   choice. Email sign-in needs nothing extra.
+4. **Project Settings -> API**, copy the Project URL and the `anon` `public`
+   key into `js/config.js`. The anon key is safe to ship in client code, the
+   row level security policies above are what actually restrict it.
+5. Reload the app. Sign in appears on Profile automatically.
+
+**A note on trust.** The endpoint shapes in `js/auth.js` match Supabase's
+documented Auth and REST APIs as of when this was written, but this has not
+been exercised against a real project, because none existed yet. The first
+sign-in attempt against a live project is the real test. If something does
+not match, the network tab will show which call failed and what came back,
+that is the fastest way to find a renamed field.
 
 -----
 
@@ -174,17 +272,19 @@ app. No code change is needed, the helper already checks for it.
 
 ## Brand assets
 
-`assets/icons/mark.svg` is a vector redraw of the Home Church mark, the gold
-house outline with a cross inside and a speech bubble tail. `app-icon.svg` and
-the PNG icons are generated from it.
+Everything under `assets/icons` and `assets/img/logo-lockup*.png` is cropped
+directly from the church's own logo file, not redrawn. `assets/icons/mark.png`
+is the house and cross alone, used on Profile and as the app icon.
+`assets/img/logo-lockup.png` is the full "Home Church" lockup exactly as
+supplied, white text, meant for a dark ground. `logo-lockup-ink.png` is the
+same file with only the wordmark pixels lifted to near-black, so it stays
+legible on the paper background, the gold house is untouched in both.
 
-Replace these with the official artwork when it is available, and confirm the
-exact gold against the source file. The redraw currently uses `#D2B27E`. That
-gold is a mark color only, it is not part of the UI palette and no interface
-element should adopt it.
-
-The mark appears on Home, on Profile, and as the app icon. It is deliberately
-absent from the top bar, which stays empty except for the avatar.
+The lockup lives top-left in the header on every tab, sliding to center once
+the screen scrolls and the screen title takes the left edge. Pushed views
+(Guide reader, Profile, Leader) show no logo, back arrow and title fill that
+role instead. That gold, sampled from the source file, is a mark color only,
+it is not part of the UI palette and no interface element should adopt it.
 
 -----
 
@@ -211,12 +311,17 @@ absent from the top bar, which stays empty except for the avatar.
 These are marked in the code where they appear:
 
 1. The Overflow giving URL in `js/data.js`.
-2. The official logo files and the exact brand gold.
-3. Whether a licensed display typeface should replace Cormorant.
-4. Which church management system holds groups, serve teams, and events, which
-   decides whether that content can be pulled live.
-5. Who publishes a guide every week. The app's value depends on that pipeline
+2. Whether a licensed display typeface should replace Cormorant.
+3. Which church management system holds groups, serve teams, and events, which
+   decides whether that content can be pulled live. Planning Center is a
+   strong fit if the church already uses it, it can also hold the profile
+   fields the Supabase setup above tracks, worth weighing before leaning too
+   far into a second source of truth for the same information.
+4. Who publishes a guide every week. The app's value depends on that pipeline
    more than on anything in this repo.
+5. Whether phone sign-in matters enough to pay for an SMS provider. Email
+   sign-in is free and already works once Supabase is connected, phone does
+   not until a provider like Twilio is wired up in the Supabase dashboard.
 
 Seed content in `js/data.js` is written to be plausible, not authoritative.
 Sermons, groups, events, and serve teams are placeholders. The two guides are

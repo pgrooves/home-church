@@ -73,10 +73,11 @@
   }
 
   function initials() {
-    var name = (HC.store.getProfile().name || '').trim();
-    if (!name) return '';
-    var parts = name.split(/\s+/);
-    return (parts[0][0] + (parts[1] ? parts[1][0] : '')).toUpperCase();
+    var p = HC.store.getProfile();
+    var first = (p.firstName || '').trim();
+    var last = (p.lastName || '').trim();
+    if (!first && !last) return '';
+    return ((first ? first[0] : '') + (last ? last[0] : '')).toUpperCase();
   }
 
   function paintAvatar() {
@@ -394,6 +395,56 @@
         el.parentNode.querySelectorAll('[data-action="text-size"]'),
         function (pill) { pill.setAttribute('aria-pressed', pill === el ? 'true' : 'false'); }
       );
+    },
+
+    /* -------------------------------------------------------- sign in */
+
+    'auth-request': function (el) {
+      var form = el.closest('form');
+      var input = form.querySelector('input[name="identifier"]');
+      var value = (input.value || '').trim();
+      if (!HC.auth.classify(value)) {
+        c.toast('That does not look like an email or a phone number.');
+        input.focus();
+        return;
+      }
+      el.setAttribute('disabled', 'true');
+      HC.auth.requestCode(value).then(function (id) {
+        HC.screens.profileHelpers.setAuthIdentifier(id.value);
+        HC.screens.profileHelpers.setAuthStep('sent');
+        HC.router.go({ name: 'profile' }, { force: true });
+        c.toast(id.channel === 'email' ? 'Code sent. Check your email.' : 'Code sent. Check your texts.');
+      }).catch(function (err) {
+        el.removeAttribute('disabled');
+        c.toast(err.message);
+      });
+    },
+
+    'auth-verify': function (el) {
+      var form = el.closest('form');
+      var code = form.querySelector('input[name="code"]').value;
+      var identifier = HC.screens.profileHelpers.getAuthIdentifier();
+      el.setAttribute('disabled', 'true');
+      HC.auth.verifyCode(identifier, code).then(function () {
+        HC.screens.profileHelpers.resetAuth();
+        HC.router.go({ name: 'profile' }, { force: true });
+        c.toast('You are signed in.');
+      }).catch(function (err) {
+        el.removeAttribute('disabled');
+        c.toast(err.message);
+      });
+    },
+
+    'auth-restart': function () {
+      HC.screens.profileHelpers.resetAuth();
+      HC.router.go({ name: 'profile' }, { force: true });
+    },
+
+    'sign-out': function () {
+      HC.auth.signOut().then(function () {
+        HC.router.go({ name: 'profile' }, { force: true });
+        c.toast('Signed out. Everything on this screen still works.');
+      });
     }
   };
 
@@ -443,10 +494,12 @@
 
       var profileField = el.getAttribute && el.getAttribute('data-profile-field');
       if (profileField) {
-        debounce('profile', function () {
+        // Keyed per field, not shared, so editing first name and then last
+        // name inside the same 400ms does not cancel the first save.
+        debounce('profile-' + profileField, function () {
           var patch = {};
           patch[profileField] = el.value;
-          HC.store.updateProfile(patch);
+          HC.auth.saveProfile(patch);
           paintAvatar();
         });
         return;
@@ -499,6 +552,15 @@
         present: HC.screens.present
       }
     });
+
+    // Session restore is async and best effort. If it lands while Profile
+    // is on screen, repaint it so the signed-in state catches up.
+    HC.store.on('auth', function () {
+      paintAvatar();
+      var route = HC.router.current();
+      if (route && route.name === 'profile') HC.router.go({ name: 'profile' }, { force: true });
+    });
+    HC.auth.init();
   }
 
   if (document.readyState === 'loading') {

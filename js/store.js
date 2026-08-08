@@ -79,9 +79,23 @@
 
   /* ----------------------------------------------------------------- state */
 
+  // Shaped to match the profiles table in Supabase once js/config.js points
+  // at a real project. Local-only until then, see js/auth.js.
   var DEFAULT_PROFILE = {
-    name: '',
+    firstName: '',
+    lastName: '',
+    email: '',
+    phone: '',
+    gender: '',
+    birthdate: '',        // 'YYYY-MM-DD'
     campus: 'Metairie',
+    maritalStatus: '',
+    street: '',
+    unit: '',
+    city: '',
+    state: '',
+    zip: '',
+    photoUrl: '',
     notifications: {
       newGuide: true,
       sundayReminder: true,
@@ -107,6 +121,17 @@
     {}, DEFAULT_PROFILE.notifications, state.profile.notifications || {}
   );
 
+  // v1 shipped with a single free-text `name` field. Split it once into
+  // firstName/lastName so anyone with the old app already installed does not
+  // lose what they typed in.
+  if (state.profile.name && !state.profile.firstName) {
+    var parts = state.profile.name.trim().split(/\s+/);
+    state.profile.firstName = parts[0] || '';
+    state.profile.lastName = parts.slice(1).join(' ');
+    delete state.profile.name;
+    storage.set('profile', state.profile);
+  }
+
   /* -------------------------------------------------------------- profile */
 
   function getProfile() {
@@ -121,9 +146,7 @@
   }
 
   function firstName() {
-    var name = (state.profile.name || '').trim();
-    if (!name) return '';
-    return name.split(/\s+/)[0];
+    return (state.profile.firstName || '').trim();
   }
 
   /* ---------------------------------------------------------- guide state */

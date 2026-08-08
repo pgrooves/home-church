@@ -515,6 +515,11 @@ a.hc-card:active { background: var(--hc-paper-sunk); }
 
 .hc-btn--tertiary:active { opacity: 0.7; }
 
+.hc-btn[disabled] {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
 .hc-btn__icon {
   width: 18px; height: 18px;
   stroke: currentColor;

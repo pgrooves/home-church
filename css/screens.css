@@ -454,6 +454,41 @@
 
 .hc-profile__hint { margin-top: var(--hc-space-sm); }
 
+.hc-account__copy {
+  margin-top: var(--hc-space-base);
+  margin-bottom: var(--hc-space-lg);
+  color: var(--hc-mid);
+}
+
+.hc-form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--hc-space-base);
+}
+
+.hc-form-row--address { grid-template-columns: 1.6fr 0.8fr 1fr; }
+
+.hc-form-row .hc-field,
+.hc-profile__fields .hc-field { margin: 0; }
+
+.hc-profile__fields > * + * { margin-top: var(--hc-space-base); }
+
+/* Selects lose their native chrome in the reset, so they get their own
+   chevron, drawn to match the line icons used everywhere else. */
+.hc-select {
+  appearance: none;
+  -webkit-appearance: none;
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  background-size: 14px;
+  padding-right: 40px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%237A7570' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+}
+
+:root[data-theme="dark"] .hc-select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%239A938A' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+}
+
 .hc-profile__leader-copy {
   margin-top: var(--hc-space-base);
   margin-bottom: var(--hc-space-base);

@@ -15,6 +15,128 @@
     { label: 'Largest', value: 1.25 }
   ];
 
+  // Local to this screen, same pattern as the day/neighborhood filters on
+  // Connect. Reset to idle whenever a code actually goes out or verifies.
+  var authIdentifier = '';
+  var authStep = 'idle';   // idle | sent
+
+  function field(name, label, value, autocomplete) {
+    return '' +
+      '<label class="hc-field">' +
+        '<span class="hc-field__label">' + c.esc(label) + '</span>' +
+        '<input class="hc-input" type="text" autocomplete="' + c.esc(autocomplete || 'off') + '" ' +
+          'data-profile-field="' + c.esc(name) + '" value="' + c.esc(value || '') + '">' +
+      '</label>';
+  }
+
+  function dateField(name, label, value) {
+    return '' +
+      '<label class="hc-field">' +
+        '<span class="hc-field__label">' + c.esc(label) + '</span>' +
+        '<input class="hc-input" type="date" data-profile-field="' + c.esc(name) + '" value="' + c.esc(value || '') + '">' +
+      '</label>';
+  }
+
+  function selectField(name, label, value, options) {
+    var opts = options.map(function (pair) {
+      var selected = (value || '') === pair[0] ? ' selected' : '';
+      return '<option value="' + c.esc(pair[0]) + '"' + selected + '>' + c.esc(pair[1]) + '</option>';
+    }).join('');
+    return '' +
+      '<label class="hc-field">' +
+        '<span class="hc-field__label">' + c.esc(label) + '</span>' +
+        '<select class="hc-input hc-select" data-profile-field="' + c.esc(name) + '">' + opts + '</select>' +
+      '</label>';
+  }
+
+  /* ------------------------------------------------------------- account
+     Only exists once js/config.js points at a real Supabase project. Until
+     then the app has no concept of signing in, and this renders nothing.
+     ------------------------------------------------------------------- */
+
+  function accountSection() {
+    if (!HC.auth.isConfigured()) return '';
+
+    if (HC.auth.isSignedIn()) {
+      var user = HC.auth.getUser();
+      return '' +
+        c.sectionHeader('Synced', 'Signed in') +
+        c.row({ title: 'Signed in as ' + (user.email || user.phone || 'you') }) +
+        '<div class="hc-mt-lg">' + c.button('Sign out', { action: 'sign-out', variant: 'secondary' }) + '</div>';
+    }
+
+    if (authStep === 'sent') {
+      return '' +
+        c.sectionHeader('Almost there', 'Enter your code') +
+        '<p class="hc-body-serif hc-account__copy">We sent a code to ' + c.esc(authIdentifier) +
+          '. It can take a minute to land.</p>' +
+        '<form class="hc-form" data-auth-form="verify" novalidate>' +
+          '<label class="hc-field">' +
+            '<span class="hc-field__label">The code</span>' +
+            '<input class="hc-input" type="text" inputmode="numeric" autocomplete="one-time-code" ' +
+              'name="code" placeholder="6 digit code">' +
+          '</label>' +
+          c.button('Verify and sign in', { action: 'auth-verify' }) +
+        '</form>' +
+        '<button type="button" class="hc-btn hc-btn--tertiary hc-mt-lg" data-action="auth-restart">' +
+          'Use a different email or phone</button>';
+    }
+
+    return '' +
+      c.sectionHeader('Keep this with you', 'Sign in') +
+      '<p class="hc-body-serif hc-account__copy">Sign in and your information follows you to any phone. Everything else on this screen already works without it.</p>' +
+      '<form class="hc-form" data-auth-form="request" novalidate>' +
+        '<label class="hc-field">' +
+          '<span class="hc-field__label">Email or phone number</span>' +
+          '<input class="hc-input" type="text" inputmode="email" autocomplete="email" ' +
+            'name="identifier" placeholder="you@example.com" value="' + c.esc(authIdentifier) + '">' +
+        '</label>' +
+        c.button('Send me a code', { action: 'auth-request' }) +
+      '</form>';
+  }
+
+  /* ------------------------------------------------------------- identity
+     Always renders, account or not. Every field autosaves through
+     HC.auth.saveProfile, which writes to this device immediately and, once
+     signed in, pushes the same change to Supabase in the background.
+     ------------------------------------------------------------------- */
+
+  function identitySection(p) {
+    var note = !HC.auth.isConfigured()
+      ? ''
+      : HC.auth.isSignedIn()
+        ? '<p class="hc-caption hc-profile__hint">Synced to your account.</p>'
+        : '<p class="hc-caption hc-profile__hint">Saved on this phone for now. Sign in above to carry it to another device.</p>';
+
+    return '' +
+      c.sectionHeader('The details', 'Your information') +
+      '<div class="hc-profile__fields">' +
+        '<div class="hc-form-row">' +
+          field('firstName', 'First name', p.firstName, 'given-name') +
+          field('lastName', 'Last name', p.lastName, 'family-name') +
+        '</div>' +
+        '<div class="hc-form-row">' +
+          selectField('gender', 'Gender', p.gender, [
+            ['', 'Skip this'], ['female', 'Female'], ['male', 'Male']
+          ]) +
+          dateField('birthdate', 'Birthdate', p.birthdate) +
+        '</div>' +
+        field('campus', 'Campus', p.campus, 'off') +
+        selectField('maritalStatus', 'Marital status', p.maritalStatus, [
+          ['', 'Skip this'], ['single', 'Single'], ['married', 'Married'],
+          ['widowed', 'Widowed'], ['other', 'Other']
+        ]) +
+        field('street', 'Street address', p.street, 'address-line1') +
+        field('unit', 'Apt, suite, etc.', p.unit, 'address-line2') +
+        '<div class="hc-form-row hc-form-row--address">' +
+          field('city', 'City', p.city, 'address-level2') +
+          field('state', 'State', p.state, 'address-level1') +
+          field('zip', 'ZIP', p.zip, 'postal-code') +
+        '</div>' +
+      '</div>' +
+      note;
+  }
+
   function switchRow(opts) {
     return '' +
       '<button type="button" class="hc-switch-row" data-action="' + c.esc(opts.action) + '" ' +
@@ -38,17 +160,9 @@
 
     html += c.sectionHeader('You', 'Your account', { flush: true, tag: 'h1' });
 
-    // Name and campus
-    html += '<div class="hc-profile__fields">';
-    html += '<label class="hc-field">' +
-      '<span class="hc-field__label">What should we call you</span>' +
-      '<input class="hc-input" type="text" name="name" autocomplete="given-name" ' +
-        'data-profile-field="name" value="' + c.esc(p.name) + '" placeholder="Your first name">' +
-    '</label>';
-    html += '<p class="hc-caption hc-profile__hint">This only changes the greeting on your home screen.</p>';
-    html += '</div>';
+    html += accountSection();
+    html += identitySection(p);
 
-    html += c.row({ title: 'Campus', value: p.campus });
     html += c.row({
       title: HC.data.church.address.line1,
       sub: HC.data.church.address.city + ', ' + HC.data.church.address.state,
@@ -140,6 +254,12 @@
 
   HC.screens = HC.screens || {};
   HC.screens.profile = render;
-  HC.screens.profileHelpers = { TEXT_SIZES: TEXT_SIZES };
+  HC.screens.profileHelpers = {
+    TEXT_SIZES: TEXT_SIZES,
+    getAuthIdentifier: function () { return authIdentifier; },
+    setAuthIdentifier: function (value) { authIdentifier = value; },
+    setAuthStep: function (value) { authStep = value; },
+    resetAuth: function () { authIdentifier = ''; authStep = 'idle'; }
+  };
 
 })(window.HC = window.HC || {});
