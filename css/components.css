@@ -196,8 +196,11 @@
 .hc-section-header__title {
   margin-top: 6px;
   font-family: var(--hc-serif);
-  font-weight: 300;
-  font-size: calc(var(--hc-display-m) * var(--hc-text-scale));
+  /* SemiBold, a size up from the rest of Display M, so a section break
+     actually reads while scrolling fast. Every other Cormorant title in the
+     app stays Light, this is the one deliberate exception. */
+  font-weight: 600;
+  font-size: calc(28px * var(--hc-text-scale));
   line-height: 1.155;
   color: var(--hc-ink);
 }
@@ -435,8 +438,9 @@ a.hc-card:active { background: var(--hc-paper-sunk); }
   display: block;
   margin-top: 6px;
   font-family: var(--hc-serif);
-  font-weight: 300;
-  font-size: calc(var(--hc-display-m) * var(--hc-text-scale));
+  /* Matches .hc-section-header__title, same signature pattern. */
+  font-weight: 600;
+  font-size: calc(28px * var(--hc-text-scale));
   line-height: 1.155;
   color: var(--hc-ink);
 }
