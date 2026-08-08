@@ -23,8 +23,8 @@
   'use strict';
 
   HC.config = {
-    SUPABASE_URL: '',        // e.g. 'https://xxxxxxxxxxxx.supabase.co'
-    SUPABASE_ANON_KEY: ''    // the anon / public key from Project Settings -> API
+    SUPABASE_URL: 'https://ibqkumxfltfiuqevviji.supabase.co',
+    SUPABASE_ANON_KEY: 'sb_publishable_x7NBiMU-rIxRwu68xCydGQ_fnwzR8Ey'
   };
 
 })(window.HC = window.HC || {});
