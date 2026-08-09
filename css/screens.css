@@ -13,8 +13,8 @@
 }
 
 .hc-avatar__icon {
-  width: 17px;
-  height: 17px;
+  width: 22px;
+  height: 22px;
   stroke: var(--hc-accent-deep);
   stroke-width: 1.5;
   stroke-linecap: round;

@@ -116,8 +116,9 @@
 }
 
 .hc-avatar__disc {
-  width: 32px;
-  height: 32px;
+  /* 30% up from the original 32px, still clears the 44px tap target. */
+  width: 42px;
+  height: 42px;
   border-radius: var(--hc-radius-pill);
   background: var(--hc-cream);
   border: var(--hc-hairline) solid var(--hc-rule);
@@ -126,7 +127,7 @@
   justify-content: center;
   font-family: var(--hc-sans);
   font-weight: 600;
-  font-size: 12px;
+  font-size: 16px;
   letter-spacing: 0.04em;
   color: var(--hc-accent-deep);
   transition: background var(--hc-dur-fast) var(--hc-ease);
