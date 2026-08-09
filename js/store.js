@@ -101,7 +101,7 @@
       sundayReminder: true,
       groupWeek: false
     },
-    textScale: 1,
+    textScale: 1.1,    // 110%, the app's default reading size
     theme: 'system',   // system | light | dark
     leaderMode: false
   };

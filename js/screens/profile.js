@@ -9,10 +9,11 @@
 
   var c = HC.components;
 
+  // Standard now means 110%, the app's default reading size, not 100%.
   var TEXT_SIZES = [
-    { label: 'Standard', value: 1 },
-    { label: 'Larger', value: 1.12 },
-    { label: 'Largest', value: 1.25 }
+    { label: 'Standard', value: 1.1 },
+    { label: 'Larger', value: 1.25 },
+    { label: 'Largest', value: 1.4 }
   ];
 
   // Local to this screen, same pattern as the day/neighborhood filters on
