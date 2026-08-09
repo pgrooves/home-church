@@ -75,9 +75,12 @@
   min-width: 0;
   max-width: 100%;
   transform: translateY(-50%);
-  font-family: var(--hc-serif);
-  font-weight: 400;
-  font-size: 19px;
+  /* Matches the section header it replaces mid-scroll, same screen name in
+     two different weights would read as a glitch, not a transition. */
+  font-family: var(--hc-sans-display);
+  font-weight: 800;
+  font-size: 17px;
+  letter-spacing: -0.01em;
   line-height: 1.2;
   color: var(--hc-ink);
   white-space: nowrap;
@@ -195,19 +198,19 @@
 .hc-section-header__eyebrow { display: block; }
 
 .hc-section-header__title {
-  margin-top: 6px;
-  font-family: var(--hc-serif);
-  /* SemiBold, a size up from the rest of Display M, so a section break
-     actually reads while scrolling fast. Every other Cormorant title in the
-     app stays Light, this is the one deliberate exception. */
-  font-weight: 600;
-  font-size: calc(28px * var(--hc-text-scale));
-  line-height: 1.155;
+  margin-top: 8px;
+  /* The one deliberate departure from the reading serif: a heavy geometric
+     sans, so a section break reads instantly while scrolling fast. */
+  font-family: var(--hc-sans-display);
+  font-weight: 800;
+  font-size: calc(25px * var(--hc-text-scale));
+  line-height: 1.2;
+  letter-spacing: -0.01em;
   color: var(--hc-ink);
 }
 
 .hc-section-header__rule {
-  margin-top: 10px;
+  margin-top: 12px;
   width: 22%;
   min-width: 56px;
   height: 0.75px;
@@ -428,7 +431,7 @@ a.hc-card:active { background: var(--hc-paper-sunk); }
 
 .hc-section__rule {
   display: block;
-  margin-top: 10px;
+  margin-top: 12px;
   width: 22%;
   min-width: 56px;
   height: 0.75px;
@@ -437,12 +440,13 @@ a.hc-card:active { background: var(--hc-paper-sunk); }
 
 .hc-section__title {
   display: block;
-  margin-top: 6px;
-  font-family: var(--hc-serif);
+  margin-top: 8px;
   /* Matches .hc-section-header__title, same signature pattern. */
-  font-weight: 600;
-  font-size: calc(28px * var(--hc-text-scale));
-  line-height: 1.155;
+  font-family: var(--hc-sans-display);
+  font-weight: 800;
+  font-size: calc(25px * var(--hc-text-scale));
+  line-height: 1.2;
+  letter-spacing: -0.01em;
   color: var(--hc-ink);
 }
 

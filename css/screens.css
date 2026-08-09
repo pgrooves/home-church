@@ -28,10 +28,14 @@
 .hc-home__greeting {
   margin-top: var(--hc-space-sm);
   margin-bottom: var(--hc-space-lg);
-  /* Same weight as the section headers, its own larger Display L size stays
-     put. Scoped here rather than on .hc-display-l itself, which the Guide
-     reader's sermon titles also use and should stay Light. */
-  font-weight: 600;
+  /* Matches the section headers' treatment. Scoped here rather than on
+     .hc-display-l itself, which the Guide reader's sermon titles also use
+     and are meant to stay the light reading serif. */
+  font-family: var(--hc-sans-display);
+  font-weight: 800;
+  font-size: calc(28px * var(--hc-text-scale));
+  line-height: 1.15;
+  letter-spacing: -0.01em;
 }
 
 .hc-gathering__when { margin-top: 6px; }
