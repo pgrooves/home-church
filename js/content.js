@@ -32,7 +32,7 @@
 
   var cfg = HC.config || {};
   var CACHE_KEY = 'content';
-  var CACHE_VERSION = 1;      // bump when a mapping below changes shape
+  var CACHE_VERSION = 2;      // bump when a mapping below changes shape
   var TIMEOUT_MS = 12000;
 
   // The tables we pull, and the HC.data array each one fills. Adding a sixth
@@ -143,7 +143,14 @@
       id: r.id,
       eyebrow: str(r.eyebrow) || 'One thing',
       title: str(r.title),
-      body: str(r.body)
+      body: str(r.body),
+      // The window has to survive the mapping or it may as well not be in the
+      // table. Home applies it at render, not here, because this payload gets
+      // cached: a phone that opens tomorrow on today's cache still has to see
+      // an expired announcement disappear. null on either end means open.
+      startsOn: r.starts_on || null,
+      endsOn: r.ends_on || null,
+      priority: r.priority == null ? 0 : r.priority
     };
   }
 

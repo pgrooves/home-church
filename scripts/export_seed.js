@@ -171,17 +171,18 @@ const events = D.events.map(e => {
   };
 });
 
-/* Announcements carry no dates in data.js, because the only way to retire one
-   was to ship a build. In Supabase they get a window, so leave both ends open
-   here and set them going forward from /new-announcement. */
+/* The bundled announcements normally leave both ends open, because the only
+   way to retire one in data.js was to ship a build. They carry the window
+   fields anyway so the shapes match, so pass through whatever is there rather
+   than hardcoding null and quietly dropping it on the way to Supabase. */
 const announcements = D.announcements.map(a => ({
   id: a.id,
   eyebrow: a.eyebrow || 'One thing',
   title: a.title,
   body: a.body || null,
-  starts_on: null,
-  ends_on: null,
-  priority: 0,
+  starts_on: a.startsOn || null,
+  ends_on: a.endsOn || null,
+  priority: a.priority || 0,
   published: true
 }));
 

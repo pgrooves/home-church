@@ -68,11 +68,43 @@
     return c.card(inner, { action: 'open-guide', id: guide.id });
   }
 
+  /* Today in the phone's own zone, as 'YYYY-MM-DD'. The window columns are
+     plain dates, not timestamps, so comparing them as strings is exact and
+     sidesteps every timezone question. A church in New Orleans should see an
+     announcement retire at midnight local, not at midnight UTC. */
+  function todayLocal() {
+    var d = new Date();
+    return d.getFullYear() + '-' +
+      ('0' + (d.getMonth() + 1)).slice(-2) + '-' +
+      ('0' + d.getDate()).slice(-2);
+  }
+
+  /* startsOn is the first day it shows, endsOn is the first day it does not.
+     A Saturday event announced with endsOn set to the Sunday is gone when
+     people wake up Sunday. Either end null means that end is open. */
+  function isLive(a, today) {
+    if (a.startsOn && today < a.startsOn) return false;
+    if (a.endsOn && today >= a.endsOn) return false;
+    return true;
+  }
+
   function announcement() {
+    var today = todayLocal();
     var list = (HC.data.announcements || []).filter(function (a) {
-      return !HC.store.isDismissed(a.id);
+      return isLive(a, today) && !HC.store.isDismissed(a.id);
     });
     if (!list.length) return '';
+
+    // Home shows one, so when two are live on the same day something has to
+    // break the tie deliberately rather than leaving it to whatever order the
+    // rows arrived in. Higher priority wins, then id, so it is at least stable.
+    list.sort(function (x, y) {
+      var px = x.priority || 0;
+      var py = y.priority || 0;
+      if (px !== py) return py - px;
+      return String(x.id) < String(y.id) ? -1 : 1;
+    });
+
     var a = list[0];   // one announcement maximum, on purpose
     return '' +
       '<div class="hc-banner" data-banner="' + c.esc(a.id) + '">' +

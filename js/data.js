@@ -2178,10 +2178,17 @@
 
   var announcements = [
     {
+      // Same shape the Supabase mapper produces, so a bundled announcement and
+      // a fetched one go through Home's window check identically. Both ends
+      // open here: a bundled announcement cannot be retired without a build
+      // anyway, which is the whole reason the table exists.
       id: 'ann-serve-day',
       eyebrow: 'One thing',
       title: 'City Serve Day, September 12',
-      body: 'Four sites, one Saturday, every hand we can get. Sign up at the Welcome Desk or tell your group leader.'
+      body: 'Four sites, one Saturday, every hand we can get. Sign up at the Welcome Desk or tell your group leader.',
+      startsOn: null,
+      endsOn: null,
+      priority: 0
     }
   ];
 
