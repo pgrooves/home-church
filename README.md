@@ -99,6 +99,28 @@ two can't drift out of sync.
 
 -----
 
+## Adding the week's podcast episode
+
+The guide gets written within a day or two of Sunday. The episode posts to
+Spotify the Monday or Tuesday after, carrying the church's own title for the
+message, which is usually not the title proposed when the guide was written.
+Saying **"new podcast"** runs **`NEW_PODCAST_PROCESS.md`**, which matches the
+episode to its Sunday by date, attaches the episode link and notes, and
+replaces the provisional title with the real one.
+
+That rename is one field. `sermon.title` is the only place a message's name
+is written, and the guide inherits it through `HC.data.guideTitle()`, so
+Home, the guide index, the reader, the PDF, leader mode, and every shared
+one-liner all follow automatically. `guide.themeTitle` exists only to
+override that, is `null` on every guide today, and should stay that way.
+
+Ids never move with a title. A leader's checkmarks and journal entries live
+in `localStorage` keyed by `guide.id`, so renaming a slug to match a new
+title would orphan their notes on their own phone. A slug that no longer
+matches its title is fine and nobody sees it.
+
+-----
+
 ## Supabase setup
 
 Accounts are prepped but not connected. Nothing changes for anyone using the

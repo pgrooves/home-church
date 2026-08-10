@@ -74,7 +74,7 @@
       '<p class="hc-caption hc-card__meta">' + c.esc(group.host) + ' &middot; ' + c.esc(group.neighborhood) + '</p>';
 
     if (guide) {
-      inner += '<p class="hc-body-serif hc-mygroup__next">This week you are on ' + c.esc(guide.themeTitle) + '.</p>';
+      inner += '<p class="hc-body-serif hc-mygroup__next">This week you are on ' + c.esc(HC.data.guideTitle(guide)) + '.</p>';
       inner += '<button type="button" class="hc-inline-link" data-action="open-guide" data-id="' + c.esc(guide.id) + '">' +
         c.icon('guide', 'hc-share__icon') + '<span>Open the guide</span></button>';
     }

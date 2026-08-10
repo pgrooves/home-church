@@ -61,7 +61,7 @@
     if (guide) {
       var inner = '' +
         '<p class="hc-eyebrow">This week</p>' +
-        '<p class="hc-card__title">' + c.esc(guide.themeTitle) + '</p>' +
+        '<p class="hc-card__title">' + c.esc(HC.data.guideTitle(guide)) + '</p>' +
         '<p class="hc-caption hc-card__meta">' + c.esc(guide.preacherShort) + ', ' +
           c.esc(c.formatDate(guide.preachedOn)) + '</p>' +
         '<div class="hc-leader__actions">' +

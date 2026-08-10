@@ -18,7 +18,7 @@
       '<button type="button" class="hc-guide-row" data-action="open-guide" data-id="' + c.esc(guide.id) + '">' +
         '<span class="hc-guide-row__body">' +
           '<span class="hc-eyebrow">' + c.esc(guide.primaryPassage) + '</span>' +
-          '<span class="hc-guide-row__title">' + c.esc(guide.themeTitle) + '</span>' +
+          '<span class="hc-guide-row__title">' + c.esc(HC.data.guideTitle(guide)) + '</span>' +
           '<span class="hc-caption">' + c.esc(guide.preacherShort) + ', ' + c.esc(c.formatDate(guide.preachedOn)) + '</span>' +
         '</span>' +
         c.icon('chevronRight', 'hc-row__chevron') +
@@ -163,10 +163,11 @@
 
   function oneLinerSection(guide) {
     var body = '';
+    var title = HC.data.guideTitle(guide);
     guide.oneLiners.forEach(function (line) {
-      body += c.quoteCard(line, guide.preacherShort + ', ' + guide.themeTitle, {
-        text: '“' + line + '”\n\n' + guide.preacherShort + ', ' + guide.themeTitle + ', Home Church',
-        title: guide.themeTitle
+      body += c.quoteCard(line, guide.preacherShort + ', ' + title, {
+        text: '“' + line + '”\n\n' + guide.preacherShort + ', ' + title + ', Home Church',
+        title: title
       });
     });
     return c.collapsible({
@@ -212,7 +213,7 @@
     // Masthead
     html += '<div class="hc-reader__head">';
     html += '<p class="hc-eyebrow">' + c.esc(series ? series.title : 'Home Church') + '</p>';
-    html += '<h1 class="hc-display-l hc-reader__title">' + c.esc(guide.themeTitle) + '</h1>';
+    html += '<h1 class="hc-display-l hc-reader__title">' + c.esc(HC.data.guideTitle(guide)) + '</h1>';
     html += '<p class="hc-reader__subtitle hc-body-serif">' + c.esc(guide.subtitle) + '</p>';
     html += '<div class="hc-reader__rule" aria-hidden="true"></div>';
     html += '<p class="hc-caption hc-reader__meta">' +

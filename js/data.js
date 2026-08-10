@@ -57,7 +57,6 @@
       id: 'series-david',
       title: 'The Life of David',
       subtitle: 'A shepherd, a king, a mess, a promise.',
-      artLabel: 'The Life of David',
       startedOn: '2026-03-01',
       current: true,
       blurb: 'Twenty weeks through the whole story, the giant and the cave and the throne and the ruin and the road back. We are not skipping the hard parts.'
@@ -66,7 +65,6 @@
       id: 'series-city',
       title: 'Built for This City',
       subtitle: 'What it looks like to love the place you actually live.',
-      artLabel: 'Built for This City',
       startedOn: '2026-06-14',
       current: false,
       blurb: 'Three weeks on New Orleans, our neighbors, and the difference between living in a city and belonging to one.'
@@ -95,7 +93,6 @@
       guideId: 'guide-slow-burn',
       episodeUrl: null,
       summary: null,
-      artLabel: 'The Slow Burn',
       description: 'Nobody wakes up and decides to blow up their life. It happens by degrees, in the ordinary hours, long before anyone notices.'
     },
     {
@@ -110,7 +107,6 @@
       guideId: 'guide-seat-table',
       episodeUrl: null,
       summary: null,
-      artLabel: 'A Seat at the Table',
       description: 'A forgotten grandson of a dead king, hiding in a town called nowhere, gets sent for by the one man he was sure wanted him gone.'
     },
     {
@@ -125,7 +121,6 @@
       guideId: null,
       episodeUrl: null,
       summary: null,
-      artLabel: 'Cave Days',
       description: 'Before the throne there was a cave, and everybody in it was in debt, in distress, or bitter. That is who God builds with.'
     },
     {
@@ -140,7 +135,6 @@
       guideId: null,
       episodeUrl: null,
       summary: null,
-      artLabel: 'Neighbors, Not Projects',
       description: 'The lawyer wanted a category. Jesus gave him a Samaritan, a ditch, and a bill he paid himself.'
     },
     {
@@ -156,7 +150,6 @@
       occasion: 'Father’s Day',
       episodeUrl: null,
       summary: null,
-      artLabel: 'The Family Table',
       description: 'The first church did not have a building. It had a room, a meal, and an open door, and the city noticed.'
     },
     {
@@ -171,7 +164,6 @@
       guideId: null,
       episodeUrl: null,
       summary: null,
-      artLabel: 'A Church of the City',
       description: 'God tells exiles to plant gardens and build houses in the city they never chose. Seek its good, and you will find your own.'
     },
     {
@@ -186,7 +178,6 @@
       guideId: 'guide-unsung-heroes',
       episodeUrl: null,
       summary: null,
-      artLabel: 'Unsung Heroes',
       description: 'Nine names nobody in the room had ever heard turn out to be the reason David makes it back to his throne. This is the sermon about which nine you actually have.'
     }
   ];
@@ -198,7 +189,7 @@
       id: 'guide-seat-table',
       sermonId: 'sermon-seat-table',
       seriesId: 'series-david',
-      themeTitle: 'A Seat at the Table',
+      themeTitle: null,   // inherits sermon.title, set only to override
       subtitle: 'What a forgotten grandson of a dead king teaches us about grace',
       primaryPassage: '2 Samuel 9',
       preacher: 'Alan Boudreaux',
@@ -378,7 +369,7 @@
       id: 'guide-slow-burn',
       sermonId: 'sermon-slow-burn',
       seriesId: 'series-david',
-      themeTitle: 'The Slow Burn',
+      themeTitle: null,   // inherits sermon.title, set only to override
       subtitle: 'How a good man ends up somewhere he never planned to go',
       primaryPassage: '2 Samuel 11 & 12',
       preacher: 'Stephen Daigle',
@@ -574,7 +565,7 @@
       id: 'guide-unsung-heroes',
       sermonId: 'sermon-unsung-heroes',
       seriesId: 'series-david',
-      themeTitle: 'Unsung Heroes',
+      themeTitle: null,   // inherits sermon.title, set only to override
       subtitle: 'What nine forgotten names teach you about the friends you actually need',
       primaryPassage: '2 Samuel 15-19',
       preacher: 'Stephen Daigle',
@@ -960,6 +951,34 @@
 
     guideForSermon: function (sermonId) {
       return guides.filter(function (g) { return g.sermonId === sermonId; })[0] || null;
+    },
+
+    /* A message has one name, and it lives on the sermon, because the podcast
+       is what the church actually called it in public. Every guide inherits
+       that name. themeTitle exists only for the rare guide that needs to be
+       called something else, a two part message or a guide spanning a couple
+       of Sundays, and is null the rest of the time. Never rename an id to
+       follow a title, ids key a leader's checkmarks and journal entries in
+       localStorage and renaming one orphans their notes. */
+    guideTitle: function (guide) {
+      if (!guide) return '';
+      if (guide.themeTitle) return guide.themeTitle;
+      var sermon = this.getSermon(guide.sermonId);
+      return sermon ? sermon.title : '';
+    },
+
+    // The Sunday a message was preached, given the date its episode posted.
+    // Episodes land the Monday or Tuesday after, so the Sunday on or before
+    // the publish date is the one, and anything further back than a week is
+    // not a match at all.
+    sermonForEpisodeDate: function (publishedOn) {
+      var parts = String(publishedOn).split('-');
+      var d = new Date(+parts[0], (+parts[1]) - 1, +parts[2]);
+      d.setDate(d.getDate() - d.getDay());          // back up to that Sunday
+      var iso = d.getFullYear() + '-' +
+        ('0' + (d.getMonth() + 1)).slice(-2) + '-' +
+        ('0' + d.getDate()).slice(-2);
+      return sermons.filter(function (s) { return s.preachedOn === iso; })[0] || null;
     },
 
     currentSeries: function () {

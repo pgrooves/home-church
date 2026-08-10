@@ -61,7 +61,7 @@
     var count = HC.data.sermonsInSeries(series.id).length;
     return '' +
       '<div class="hc-series-hero">' +
-        c.cover(series.artLabel, '4x3', { compact: true }) +
+        c.cover(series.title, '4x3', { compact: true }) +
         '<p class="hc-series-hero__sub hc-body-serif">' + c.esc(series.subtitle) + '</p>' +
         '<p class="hc-caption">' + count + ' episode' + (count === 1 ? '' : 's') + ' so far</p>' +
       '</div>';

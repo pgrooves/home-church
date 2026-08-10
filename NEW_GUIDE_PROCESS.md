@@ -17,7 +17,24 @@ new one").
 This app's guides live in `js/data.js`, in two arrays: `sermons` and
 `guides`. A sermon and its guide are two separate objects linked by ID,
 `sermon.guideId` points at `guide.id`. Adding a new week means appending one
-object to each array. Nothing else in the codebase needs to change, every
+object to each array.
+
+**One name per message.** `sermon.title` is the only place a message's name
+is written. The guide inherits it through `HC.data.guideTitle()`, which is
+what Home, the guide index, the reader, the PDF, leader mode, and every
+shared one-liner all read. So a guide has no title of its own to keep in
+sync, and `guide.themeTitle` stays `null` unless a guide truly needs a
+different name from its message. This matters because the title you propose
+in Step 1 is provisional: the podcast episode posts a day or two later
+carrying the church's own title for the message, and `/new-podcast`
+overwrites `sermon.title` with it. One field changes and the whole app
+follows. See `NEW_PODCAST_PROCESS.md`.
+
+**Never rename an id.** Ids are opaque and permanent. A leader's question
+checkmarks and journal entries are stored on their phone keyed by
+`guide.id`, so renaming `guide-unsung-heroes` because the episode turned out
+to be called something else would silently orphan their notes. Titles move,
+ids don't, and a slug that no longer matches its title is fine. Nothing else in the codebase needs to change, every
 screen (Home, Listen, Guide index, Guide reader, Connect) reads from these
 arrays and picks up a new entry automatically. Newest-first ordering is
 automatic too, everything sorts by `preachedOn`, don't reorder the arrays by
@@ -49,7 +66,7 @@ Then ask the pastor/user two things before writing anything:
 
 1. **Which series is this in?** Check the `series` array. If it's a new
    series, you'll need a new series object too (id, title, subtitle,
-   artLabel, startedOn, current: true, blurb), and you should flip the
+   startedOn, current: true, blurb), and you should flip the
    previously-current series' `current` flag to `false`.
 2. **Roughly how long was the sermon?** For the `duration` field on the
    sermon object, if it's not stated in the PDF.
@@ -153,7 +170,6 @@ are data attached to two of those six, not separate sections of their own.)
   episodeUrl: null,              // this message's Spotify episode link, null falls back to the show
   summary: null,                 // the Spotify episode notes as an array of paragraphs,
                                  // null falls back to `description` below
-  artLabel: 'The Sermon Title',  // shown on the placeholder media block
   description: 'One or two sentences, the hook, shown on the Listen screen.'
 }
 ```
@@ -165,7 +181,11 @@ are data attached to two of those six, not separate sections of their own.)
   id: 'guide-your-slug',
   sermonId: 'sermon-your-slug',  // must match the sermon's id above
   seriesId: 'series-xxx',
-  themeTitle: 'The Sermon Title',        // usually matches sermon.title
+  themeTitle: null,              // leave null, the guide takes its name from
+                                 // sermon.title. Only set a string here if this
+                                 // guide genuinely needs a different name than
+                                 // the message, which is rare. See "One name
+                                 // per message" below.
   subtitle: 'A short, lowercase-led descriptive line',
   primaryPassage: '2 Samuel 13',
   preacher: 'Full Name',

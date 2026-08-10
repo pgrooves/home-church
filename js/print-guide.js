@@ -23,7 +23,7 @@
   function coverPage(guide, series) {
     return page('hc-print-page--cover',
       '<p class="hc-print-eyebrow">Home Church &middot; Small Group Guide</p>' +
-      '<h1 class="hc-print-h1">' + c.esc(guide.themeTitle) + '</h1>' +
+      '<h1 class="hc-print-h1">' + c.esc(HC.data.guideTitle(guide)) + '</h1>' +
       '<p class="hc-print-subtitle">' + c.esc(guide.subtitle) + '</p>' +
       '<div class="hc-print-divider" aria-hidden="true"></div>' +
       '<p class="hc-print-meta">Based on the sermon &middot; ' + c.esc(guide.primaryPassage) + '</p>' +
@@ -39,7 +39,7 @@
       '<p class="hc-print-eyebrow">Short Summary</p>' +
       '<h2 class="hc-print-h2">Overview</h2>';
     guide.shortSummary.forEach(function (p) { body += '<p class="hc-print-body">' + c.esc(p) + '</p>'; });
-    return page('', body + footer(guide.themeTitle, num));
+    return page('', body + footer(HC.data.guideTitle(guide), num));
   }
 
   // Full summary can run long, so it is split across as many pages as it
@@ -58,7 +58,7 @@
           '<h2 class="hc-print-h2">Sermon Summary</h2>';
       }
       chunk.forEach(function (p) { body += '<p class="hc-print-body">' + c.esc(p) + '</p>'; });
-      out.push(page('', body + footer(guide.themeTitle, num)));
+      out.push(page('', body + footer(HC.data.guideTitle(guide), num)));
       num++;
     }
     return out;
@@ -75,7 +75,7 @@
       '</div>';
     });
     body += '</div>';
-    return page('', body + footer(guide.themeTitle, num));
+    return page('', body + footer(HC.data.guideTitle(guide), num));
   }
 
   // Discussion questions are grouped two or three sections per page so a
@@ -100,7 +100,7 @@
         i++;
         placed++;
       }
-      out.push(page('', body + footer(guide.themeTitle, num)));
+      out.push(page('', body + footer(HC.data.guideTitle(guide), num)));
       num++;
     }
     return out;
@@ -113,7 +113,7 @@
       body += '<div class="hc-print-reflect-item"><p class="hc-print-reflect-text">' + c.esc(q) + '</p></div>';
     });
     body += '</div>';
-    return page('', body + footer(guide.themeTitle, num));
+    return page('', body + footer(HC.data.guideTitle(guide), num));
   }
 
   function oneLinerPages(guide, startNum) {
@@ -131,7 +131,7 @@
       body += '<div class="hc-print-liners">';
       chunk.forEach(function (line) { body += '<div class="hc-print-liner">' + c.esc(line) + '</div>'; });
       body += '</div>';
-      out.push(page('', body + footer(guide.themeTitle, num)));
+      out.push(page('', body + footer(HC.data.guideTitle(guide), num)));
       num++;
     }
     return out;
@@ -155,7 +155,7 @@
           '<p class="hc-print-scripture-note">' + c.esc(s.note) + '</p>' +
         '</div>';
       });
-      out.push(page('', body + footer(guide.themeTitle, num)));
+      out.push(page('', body + footer(HC.data.guideTitle(guide), num)));
       num++;
     }
     return out;

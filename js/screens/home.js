@@ -57,7 +57,7 @@
     var series = HC.data.getSeries(guide.seriesId);
     var inner = '' +
       '<p class="hc-eyebrow">' + c.esc(series ? series.title : 'This week') + '</p>' +
-      '<p class="hc-card__title hc-guide-card__title">' + c.esc(guide.themeTitle) + '</p>' +
+      '<p class="hc-card__title hc-guide-card__title">' + c.esc(HC.data.guideTitle(guide)) + '</p>' +
       '<p class="hc-caption hc-card__meta">' +
         c.esc(guide.preacherShort) + ', ' + c.esc(c.formatDate(guide.preachedOn)) +
       '</p>' +
