@@ -221,7 +221,18 @@
     html += '<div class="hc-reader__rule" aria-hidden="true"></div>';
     html += '<p class="hc-caption hc-reader__meta">' +
       c.esc(c.metaLine([meta.preacher, meta.preachedOn ? c.formatDate(meta.preachedOn) : '', meta.passage])) + '</p>';
+    // The message this guide was built from, when it has an episode of its
+    // own. A guide written before the episode posts has nothing specific to
+    // point at, so the button stays away rather than sending someone to the
+    // show to go hunting. It appears by itself once /new-podcast fills in
+    // episodeUrl, which is the same week.
+    var sermon = HC.data.getSermon(guide.sermonId);
     html += '<div class="hc-reader__actions">' +
+      (sermon && sermon.episodeUrl
+        ? c.button('Listen to Sermon', {
+            action: 'open-url', url: sermon.episodeUrl, variant: 'secondary', icon: 'listen'
+          })
+        : '') +
       c.button('Download guide', { action: 'download-guide', id: guide.id, variant: 'secondary', icon: 'download' }) +
     '</div>';
     html += '</div>';

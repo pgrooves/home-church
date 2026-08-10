@@ -259,7 +259,13 @@
 
 .hc-reader__meta { font-variant-numeric: tabular-nums; }
 
-.hc-reader__actions { margin-top: var(--hc-space-base); }
+/* Stacks, because there can be two, and they are full width buttons. */
+.hc-reader__actions {
+  margin-top: var(--hc-space-base);
+  display: flex;
+  flex-direction: column;
+  gap: var(--hc-space-md);
+}
 
 .hc-reader__leader {
   margin-top: var(--hc-space-lg);
