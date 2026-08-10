@@ -34,15 +34,17 @@ follows. See `NEW_PODCAST_PROCESS.md`.
 checkmarks and journal entries are stored on their phone keyed by
 `guide.id`, so renaming `guide-unsung-heroes` because the episode turned out
 to be called something else would silently orphan their notes. Titles move,
-ids don't, and a slug that no longer matches its title is fine. Nothing else in the codebase needs to change, every
-screen (Home, Listen, Guide index, Guide reader, Connect) reads from these
-arrays and picks up a new entry automatically. Newest-first ordering is
-automatic too, everything sorts by `preachedOn`, don't reorder the arrays by
-hand.
+ids don't, and a slug that no longer matches its title is fine.
 
-Read `js/data.js` in full before starting. It has two complete existing
-guides (`guide-seat-table` and `guide-slow-burn`). Those are your ground
-truth for structure, depth, and voice, more than anything written here.
+Nothing else in the codebase needs to change, every screen (Home, Listen,
+Guide index, Guide reader, Connect) reads from these arrays and picks up a
+new entry automatically. Newest-first ordering is automatic too, everything
+sorts by `preachedOn`, don't reorder the arrays by hand.
+
+Read the guides in `js/data.js` before starting. There are three complete
+ones, `guide-seat-table`, `guide-slow-burn`, and `guide-unsung-heroes`.
+Those are your ground truth for structure, depth, and voice, more than
+anything written here.
 This document explains the shape and the rules; the existing guides show
 what "done well" actually looks like. When in doubt, match them, not this
 file's paraphrase of them.
@@ -243,6 +245,16 @@ to go straight through.
 -----
 
 ## Step 6: Commit and push
+
+### Bump the asset version
+
+`index.html` loads every local file with a `?v=N` query string. Bump that
+number, in all of the css and js tags at once, whenever you change anything
+in `css/` or `js/`, which includes every edit to `js/data.js`. Without it a
+phone that has opened the app before keeps serving last week's copy out of
+cache and never sees the new content, and iOS Safari holds on the hardest.
+This is the no-build-step stand-in for a content hash.
+
 
 Commit message should name the sermon and note it's new guide content, not
 a code change. Push straight to `main` by default, the same way every other

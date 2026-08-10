@@ -292,6 +292,16 @@ wrong in a published app is a real error, a missing one is not.
 
 ## Step 6: Commit and push
 
+### Bump the asset version
+
+`index.html` loads every local file with a `?v=N` query string. Bump that
+number, in all of the css and js tags at once, whenever you change anything
+in `css/` or `js/`, which includes every edit to `js/data.js`. Without it a
+phone that has opened the app before keeps serving last week's copy out of
+cache and never sees the new content, and iOS Safari holds on the hardest.
+This is the no-build-step stand-in for a content hash.
+
+
 Commit message should name the episode and note it's content, not a code
 change, and should call out the rename explicitly if there was one. Push
 straight to `main` by default, the same way every other change in this repo's
