@@ -1,7 +1,22 @@
 /* ==========================================================================
-   Home Church, seed content
-   Shaped like a future API payload. When a real backend exists, replace the
-   body of HC.data.load() with a fetch and nothing else in the app changes.
+   Home Church, cold start seed
+
+   NOT the source of truth, and not a place to add content. Supabase is both.
+   js/content.js fetches every content table on app open and swaps the rows
+   into the arrays below in place, so whatever is published there is what
+   people actually read.
+
+   What this file is for: the floor. A brand new install on a phone with no
+   signal has no cache and no network, and it still has to open to a real
+   app rather than a set of empty screens. That is this. It is a frozen
+   snapshot and it is allowed to go stale, because the moment there is any
+   connection at all it gets replaced by live content.
+
+   So do not hand edit content in here. Publishing to both places is what
+   lets the two drift, and a stale copy that looks authoritative is worse
+   than an obviously old one. Use the slash commands, which write to
+   Supabase only. Regenerate the seed from the database if the floor ever
+   needs raising.
 
    Loaded as a classic script, not an ES module, so the app opens straight
    from the file system and inside a Capacitor web view without a build step.

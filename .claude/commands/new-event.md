@@ -148,8 +148,8 @@ Two lines and stop.
 
 ---
 
-**A note on the app during the transition.** The Connect tab still reads the
-`events` array in `js/data.js`. Until `HC.data` fetches from Supabase, an
-event written here is in the database but not yet on anyone's phone. Say so in
-the confirmation, or add it to `js/data.js` too and bump the `?v=N` cache
-number in `index.html`. Delete this note once the app reads Supabase.
+**This reaches phones on its own.** The Connect tab reads `HC.data.events`,
+and `js/content.js` fills that from the `events` table on every app open. So
+an event written here shows up on the next open, with no matching edit in
+`js/data.js` and no `?v=N` bump in `index.html`. Do not add it to
+`js/data.js`, that is how the catalogue ends up in two places again.

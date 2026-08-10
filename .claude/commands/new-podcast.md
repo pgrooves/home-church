@@ -1,10 +1,16 @@
 ---
-description: Attach the week's episode to its sermon, in js/data.js and in Supabase, and put the church's real title on the message.
+description: Attach the week's episode to its sermon in Supabase, and put the church's real title on the message.
 ---
 
 Read `NEW_PODCAST_PROCESS.md` at the repo root in full and follow it exactly
-to attach the latest Spotify episode to its sermon in `js/data.js`, and to
-replace that sermon's provisional title with the episode's real one.
+to attach the latest Spotify episode to its sermon in the `podcasts` table,
+and to replace that sermon's provisional title with the episode's real one.
+
+The episode goes into Supabase, not `js/data.js`. `js/content.js` fetches the
+`podcasts` table on every app open and fills `HC.data.sermons` from it, so
+publishing once is enough. `js/data.js` is the cold start seed now, a frozen
+snapshot, and editing it by hand is how two copies of the catalogue drift
+apart.
 
 Try fetching the show yourself first. If the egress proxy blocks it, which is
 normal in web sessions, ask for the episode's title, publish date, Spotify
@@ -13,8 +19,8 @@ link, and description rather than guessing at any of them.
 If the request mentions backfilling, the back catalogue, or older episodes,
 follow the "Backfilling the whole catalogue" section instead of the
 single-episode steps. Read the placeholder warning in that section before
-writing anything, most of the sermons currently in `js/data.js` are invented
-seed content rather than real messages.
+writing anything, some of the sermons in the back catalogue are invented seed
+content rather than real messages.
 
 $ARGUMENTS
 
@@ -62,7 +68,7 @@ not exist yet rejects the whole write.
 
 ```jsonc
 {
-  "id": "sermon-your-slug",          // the same id as in js/data.js
+  "id": "sermon-your-slug",          // permanent, see supabase/README.md
   "series_id": "series-david",
   "guide_id": "guide-your-slug",     // null when there is no guide
   "title": "Who's In Your Corner?",  // the church's own title, the real one
@@ -92,14 +98,13 @@ transcoding, and the directories for free.
 
 ## The rename, in the database too
 
-`podcasts.title` is the only place a message's name is written, exactly like
-`sermon.title` in `js/data.js`. The guide inherits it, and `guides.theme_title`
-stays null so that inheritance keeps working. So the rename is still one
-field, and writing the new title onto the guide as well is the one thing this
-design exists to prevent.
+`podcasts.title` is the only place a message's name is written. The guide
+inherits it, and `guides.theme_title` stays null so that inheritance keeps
+working. So the rename is one field, and writing the new title onto the guide
+as well is the one thing this design exists to prevent.
 
-Ids never move with a title, in either place. Leader checkmarks and journal
-entries live on people's phones keyed by the guide id.
+Ids never move with a title. Leader checkmarks and journal entries live on
+people's phones keyed by the guide id.
 
 ## Confirm, briefly
 

@@ -184,9 +184,12 @@ Two lines and stop.
 
 ---
 
-**During the transition**, the app still reads `js/data.js`, so an edit made
-here is in the database but not yet on anyone's phone. Either say so in the
-confirmation, or make the matching edit in `js/data.js` and bump the `?v=N`
-cache number in `index.html`. Delete this note once `HC.data` reads Supabase,
-which is the point at which a Saturday night typo fix stops needing a code
-change at all.
+**This reaches phones on its own.** `js/content.js` fetches every content
+table on open and swaps the rows into `HC.data`, so an edit made here is on
+every phone the next time the app opens. No matching edit in `js/data.js`, no
+`?v=N` bump in `index.html`, no build. A Saturday night typo fix is now just
+this command.
+
+The one thing worth saying in the confirmation is that it lands on next open
+rather than instantly, because a phone sitting open on the guide already will
+not change under the reader.

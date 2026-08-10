@@ -184,18 +184,38 @@
     return true;
   }
 
-  /* A payload is only worth applying if it actually has content. An empty
-     guides table on a project somebody is still setting up should not wipe
-     the guides that shipped in the binary, so an empty collection is skipped
-     rather than applied. Announcements are the deliberate exception: zero
-     announcements is a real, intentional state, it means take the banner
-     down, and honoring it is the whole point of dating them. */
+  /* Is this a project nobody has seeded yet? Every table empty is the
+     signature of a fresh project, or of config.js pointed somewhere wrong.
+     One empty table alongside four full ones is a very different thing: it
+     is somebody having deleted the last row on purpose.
+
+     A failed fetch never reaches here, getTable returns null for that and
+     refresh() leaves it out of the payload entirely, so everything we are
+     looking at is a table that answered. */
+  function unseeded(payload) {
+    var answered = 0;
+    for (var i = 0; i < TABLES.length; i++) {
+      var rows = payload[TABLES[i].table];
+      if (!Array.isArray(rows)) continue;
+      answered++;
+      if (rows.length) return false;
+    }
+    return answered > 0;
+  }
+
+  /* Deleting the last row of a table is a real, intentional state and the app
+     has to honor it, or content can be added and changed from Supabase but
+     never actually removed. The one case worth protecting against is the
+     whole project being empty, which would blank the app rather than express
+     an intent, and unseeded() is a better test for that than "is this
+     particular collection empty", which could never tell the two apart. */
   function apply(payload) {
     var applied = [];
+    if (unseeded(payload)) return applied;
+
     TABLES.forEach(function (spec) {
       var rows = payload[spec.table];
       if (!Array.isArray(rows)) return;
-      if (!rows.length && spec.table !== 'announcements') return;
       if (fill(spec.target, rows)) applied.push(spec.target);
     });
     return applied;
