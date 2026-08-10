@@ -220,8 +220,12 @@ to go straight through.
 ## Step 6: Commit and push
 
 Commit message should name the sermon and note it's new guide content, not
-a code change. Push to `main` the same way every other change in this
-repo's history has gone out, unless told otherwise.
+a code change. Push straight to `main` by default, the same way every other
+change in this repo's history has gone out, unless told otherwise. If you're
+working on a separate branch for some reason (a session harness forced one
+on you, for instance), merge it into `main` and push `main` yourself,
+finishing the job rather than leaving the guide stranded on a branch nobody
+asked for.
 
 -----
 
