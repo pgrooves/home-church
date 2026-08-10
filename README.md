@@ -86,47 +86,16 @@ Supabase setup below.
 ## Adding a guide
 
 Guides are the point of this app. Add one by appending an object to the
-`guides` array in `js/data.js`. Nothing else needs to change, the index,
-the reader, the Home card, and leader presentation mode all pick it up.
+`guides` array in `js/data.js`, plus a matching object in `sermons` linked
+by `guideId`. Nothing else needs to change, the index, the reader, the Home
+card, and leader presentation mode all pick it up automatically.
 
-```js
-{
-  id: 'guide-your-slug',          // unique, used in the URL
-  sermonId: 'sermon-your-slug',   // must match an entry in `sermons`
-  seriesId: 'series-david',       // must match an entry in `series`
-  themeTitle: 'The Slow Burn',
-  subtitle: 'How a good man ends up somewhere he never planned to go',
-  primaryPassage: '2 Samuel 11 & 12',
-  preacher: 'Stephen Daigle',
-  preacherShort: 'Stephen',
-  preachedOn: '2026-08-02',       // YYYY-MM-DD, drives newest first ordering
-
-  shortSummary: ['...', '...', '...'],        // three paragraphs
-  fullSummary: ['...', '...'],                // as many as it takes
-  anchors: [{ label: '...', body: '...' }],   // the movements of the sermon
-  groupSections: [                            // renders as checkable rows
-    { heading: 'Getting started', questions: ['...', '...'] }
-  ],
-  reflectionQuestions: ['...'],               // numbered rows plus journals
-  oneLiners: ['...'],                         // cream quote cards
-  scriptures: [{ reference: '2 Samuel 11:1', note: 'why it matters here' }],
-  closingScripture: { text: '...', reference: 'Psalm 32:5' }
-}
-```
-
-Add the matching sermon to the `sermons` array and set its `guideId` to your
-new guide id, which is what puts the quiet guide link on the Watch screen.
-
-**Writing the content.** The six section structure is locked and the reader
-renders it in a fixed order, so write to it rather than around it. Voice notes
-that matter more than they sound:
-
-- Second person, contractions, warm and direct. Speak to one person.
-- **No em-dashes anywhere.** Use commas. This is a brand rule and it applies
-  to every string in the product, including empty states and errors.
-- Discussion questions have to be specific enough that a person cannot deflect
-  with a general answer, and must never ask what other people think.
-- No guilt. Nothing in this app shames a missed week.
+Full instructions, the exact object shape, section-by-section content
+quotas, and the voice rules, live in **`NEW_GUIDE_PROCESS.md`** at the repo
+root, written so it can be handed to a fresh Claude Code session alongside
+a sermon PDF and triggered by saying "new guide." That file is the source
+of truth for this, kept as one document rather than duplicated here so the
+two can't drift out of sync.
 
 -----
 
