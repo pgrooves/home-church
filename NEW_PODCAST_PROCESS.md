@@ -276,10 +276,34 @@ reasons a sermon has no episode, and they need different answers:
    actual sermon.
 
 That third case is the one to stop on. **Never quietly attach a real episode
-to a placeholder sermon**, and never delete a sermon that has a guide hanging
-off it without asking, because deleting a guide orphans any checkmarks and
-journal entries a leader saved under its id. Report which sermons look like
-placeholders, say what you'd do to each, and wait for an answer.
+to a placeholder sermon.**
+
+### Replacing placeholders
+
+The standing decision is that real catalogue replaces invented seed content.
+Carry it out in this order, and not before the episode list is actually in
+front of you:
+
+1. **Match the whole list first, then report.** A sermon being seed content
+   does not mean the message is fictional. Two of the three guides in the
+   repo, `guide-seat-table` and `guide-slow-burn`, are around 1,100 and 1,250
+   words with 25 and 27 questions each, and they read like they were built
+   from real preaching even though their sermon records were invented around
+   them. If those titles turn up in the real catalogue, they are real
+   messages with invented metadata, and the fix is to correct the sermon's
+   date, preacher, and duration, not to delete anything.
+2. **Only then propose deletions**, naming each sermon, whether a guide hangs
+   off it, and how much writing that guide contains. A sermon with no guide
+   and no matching episode is a clean removal. A sermon with a guide is not,
+   ever, without an explicit yes.
+3. **A guide is never collateral.** Deleting a guide throws away real writing
+   and orphans any checkmarks and journal entries a leader saved under its id
+   on their own phone. If a guide's sermon is going away, ask whether the
+   guide should go with it or be repointed at a real message instead.
+
+Deleting seed content is not urgent. It costs nothing to leave a placeholder
+in place for another week while somebody decides, and it costs a guide to get
+it wrong.
 
 -----
 
