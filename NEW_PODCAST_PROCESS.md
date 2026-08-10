@@ -213,6 +213,76 @@ up to add an episode.
 
 -----
 
+## Backfilling the whole catalogue
+
+Everything above handles one episode, which is the weekly case. Say **"new
+podcast, backfill"** to run the back catalogue in one pass instead.
+
+A sermon with no `episodeUrl` still works, it just falls back to the show, so
+backfill is a sharpening pass and never an emergency. Nothing is broken while
+it's undone.
+
+### Getting every episode at once
+
+Scraping the show page one episode at a time is the wrong tool here. Two
+better routes, in order:
+
+**The Spotify Web API**, which is the only place the per-episode links exist:
+
+```
+POST https://accounts.spotify.com/api/token      # client_credentials grant
+GET  https://api.spotify.com/v1/shows/7iJGZvY5MVm7CjPggvvPOa/episodes?market=US&limit=50
+```
+
+A free Spotify developer app gives you a client id and secret, no user login
+and no review process, and the episodes response carries everything this
+process needs per episode: `name`, `description`, `release_date`,
+`duration_ms`, and `external_urls.spotify`. Page through with `offset` if the
+show has more than fifty. Keep the credentials out of the repo, pass them as
+environment variables, and never commit them to `js/config.js` or anywhere
+else.
+
+**The podcast RSS feed**, if the API is more setup than it's worth. It has
+every episode's title, date, description, and duration, but *not* the Spotify
+links, so it gets you everything except the one field backfill exists to
+fill. Useful for correcting titles and notes in bulk, then adding links by
+hand for the episodes that matter most.
+
+Both of these are blocked from web sessions by the egress proxy, the same as
+the show page. Backfill realistically runs from Claude Code on a machine with
+open network access, or from a pasted list.
+
+### The matching pass
+
+Walk episodes oldest to newest and, for each one, do Step 2 and then Step 3a
+or 3b exactly as written. Then report the whole run as one table, every
+message with its Sunday, whether it matched, and what its title changed from
+and to. One table beats a running commentary, and it makes a bad match
+obvious.
+
+### When a sermon matches no episode
+
+Do not delete it and do not invent an episode for it. There are three honest
+reasons a sermon has no episode, and they need different answers:
+
+1. **The episode hasn't posted yet.** Leave it alone, it fixes itself next
+   week.
+2. **The message was never podcast.** Leave it alone. The show-level fallback
+   is correct and the guide is still worth having.
+3. **The sermon is placeholder content that never happened.** Six of the
+   seven sermons in `js/data.js` came from the original `Build the Home
+   Church app, v1` commit and are invented, as `README.md` says plainly.
+   Only `sermon-unsung-heroes` came from a real `/new-guide` run against an
+   actual sermon.
+
+That third case is the one to stop on. **Never quietly attach a real episode
+to a placeholder sermon**, and never delete a sermon that has a guide hanging
+off it without asking, because deleting a guide orphans any checkmarks and
+journal entries a leader saved under its id. Report which sermons look like
+placeholders, say what you'd do to each, and wait for an answer.
+
+-----
+
 ## Step 6: Commit and push
 
 Commit message should name the episode and note it's content, not a code

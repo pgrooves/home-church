@@ -6,4 +6,10 @@ Try fetching the show yourself first. If the egress proxy blocks it, which is
 normal in web sessions, ask for the episode's title, publish date, Spotify
 link, and description rather than guessing at any of them.
 
+If the request mentions backfilling, the back catalogue, or older episodes,
+follow the "Backfilling the whole catalogue" section instead of the
+single-episode steps. Read the placeholder warning in that section before
+writing anything, most of the sermons currently in `js/data.js` are invented
+seed content rather than real messages.
+
 $ARGUMENTS
