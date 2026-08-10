@@ -32,17 +32,23 @@
 
   var cfg = HC.config || {};
   var CACHE_KEY = 'content';
-  var CACHE_VERSION = 2;      // bump when a mapping below changes shape
+  var CACHE_VERSION = 3;      // bump when a mapping below changes shape
   var TIMEOUT_MS = 12000;
 
-  // The tables we pull, and the HC.data array each one fills. Adding a sixth
+  // The tables we pull, and the HC.data key each one fills. Adding another
   // content type means adding one line here and one mapper below.
+  //
+  // `single: true` marks a table the app reads as one object rather than a
+  // list. Home shows one reading plan, so the table keeps every plan the
+  // church has run and the row flagged is_current is the one that lands in
+  // HC.data.readingPlan. Same shape as series, for the same reason.
   var TABLES = [
     { table: 'series',        target: 'series',        map: mapSeries },
     { table: 'guides',        target: 'guides',        map: mapGuide },
     { table: 'podcasts',      target: 'sermons',       map: mapSermon },
     { table: 'events',        target: 'events',        map: mapEvent },
-    { table: 'announcements', target: 'announcements', map: mapAnnouncement }
+    { table: 'announcements', target: 'announcements', map: mapAnnouncement },
+    { table: 'reading_plans', target: 'readingPlan',   map: mapReadingPlan, single: true }
   ];
 
   function configured() {
@@ -154,6 +160,22 @@
     };
   }
 
+  function mapReadingPlan(r) {
+    return {
+      id: r.id,
+      title: str(r.title),
+      subtitle: str(r.subtitle),
+      // The progress bar divides by totalWeeks, so a null here would put NaN
+      // on Home. The column is not null in the table, this is belt and braces
+      // for a row that arrived from somewhere unexpected.
+      totalWeeks: r.total_weeks || 1,
+      currentWeek: r.current_week || 1,
+      thisWeek: str(r.this_week),
+      resources: arr(r.resources),
+      current: !!r.is_current
+    };
+  }
+
   // 'YYYY-MM-DD' in the phone's own zone, which is what formatDate expects.
   function localDate(d) {
     return d.getFullYear() + '-' +
@@ -182,6 +204,32 @@
     list.length = 0;
     for (var i = 0; i < rows.length; i++) list.push(rows[i]);
     return true;
+  }
+
+  /* The same trick for a target the app holds as one object rather than a
+     list. Screens captured HC.data.readingPlan by reference long before this
+     file existed, so the object has to be edited in place, not replaced. */
+  function fillOne(target, row) {
+    var obj = HC.data[target];
+    if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return false;
+    var key;
+    for (key in obj) {
+      if (Object.prototype.hasOwnProperty.call(obj, key)) delete obj[key];
+    }
+    for (key in (row || {})) {
+      if (Object.prototype.hasOwnProperty.call(row, key)) obj[key] = row[key];
+    }
+    return true;
+  }
+
+  /* Which of several rows is the one Home shows. is_current is the flag, and
+     falling back to the first row means a table where nobody set it still
+     renders something rather than nothing. */
+  function pickCurrent(rows) {
+    for (var i = 0; i < rows.length; i++) {
+      if (rows[i] && rows[i].current) return rows[i];
+    }
+    return rows[0];
   }
 
   /* Is this a project nobody has seeded yet? Every table empty is the
@@ -216,7 +264,15 @@
     TABLES.forEach(function (spec) {
       var rows = payload[spec.table];
       if (!Array.isArray(rows)) return;
-      if (fill(spec.target, rows)) applied.push(spec.target);
+
+      // An emptied single-object table clears the object rather than leaving
+      // last week's plan sitting on Home forever. Screens are expected to
+      // handle the empty case, the way Home skips the whole section.
+      var ok = spec.single
+        ? fillOne(spec.target, rows.length ? pickCurrent(rows) : null)
+        : fill(spec.target, rows);
+
+      if (ok) applied.push(spec.target);
     });
     return applied;
   }
@@ -376,6 +432,13 @@
      actually matters here, without stringifying 87 sermons on every boot. */
   function signature() {
     return TABLES.map(function (spec) {
+      // A single object is small enough to fingerprint whole, and it has to
+      // be: the reading plan moving from week 8 to week 9 changes one digit,
+      // which a length-based fingerprint would miss, and missing it means
+      // Home keeps last week's reading until the next cold start.
+      if (spec.single) {
+        return spec.target + '=' + JSON.stringify(HC.data[spec.target] || {});
+      }
       var list = HC.data[spec.target] || [];
       var head = list.length ? JSON.stringify(list[0]).length + ':' + (list[0].id || '') : '';
       return spec.target + '=' + list.length + '/' + head;

@@ -120,22 +120,47 @@
       '</div>';
   }
 
+  /* The plan is one editable row in Supabase now, so this has to hold up
+     against whatever is in it. No plan at all renders nothing and Home drops
+     the section, rather than printing "undefined" or dividing by zero in
+     front of a congregation. */
   function readingPlanRow() {
     var plan = HC.data.readingPlan;
+    if (!plan || !plan.title) return '';
+
+    var total = plan.totalWeeks || 0;
+    var week = plan.currentWeek || 0;
     // Position, not pressure. No streak, no percentage, no badge.
-    var pct = Math.round((plan.currentWeek / plan.totalWeeks) * 100);
+    var pct = total > 0 ? Math.round((week / total) * 100) : 0;
+    if (pct < 0) pct = 0;
+    if (pct > 100) pct = 100;
+
+    var resources = plan.resources || [];
+    var url = resources.length && resources[0] ? resources[0].url : '';
+
+    // Without somewhere to send them, this is a label rather than a button.
+    var open = url
+      ? '<button type="button" class="hc-plan" data-action="open-url" data-url="' + c.esc(url) + '">'
+      : '<div class="hc-plan">';
+    var close = url ? '</button>' : '</div>';
+
+    var progress = total > 0
+      ? '<span class="hc-caption">Week ' + week + ' of ' + total + '</span>'
+      : '';
+
     return '' +
-      '<button type="button" class="hc-plan" data-action="open-url" ' +
-        'data-url="' + c.esc(plan.resources[0].url) + '">' +
+      open +
         '<div class="hc-plan__head">' +
           '<span class="hc-plan__title hc-row__title">' + c.esc(plan.title) + '</span>' +
-          '<span class="hc-caption">Week ' + plan.currentWeek + ' of ' + plan.totalWeeks + '</span>' +
+          progress +
         '</div>' +
         '<div class="hc-progress" role="presentation">' +
           '<div class="hc-progress__fill" style="width:' + pct + '%"></div>' +
         '</div>' +
-        '<p class="hc-caption hc-plan__reading">This week, ' + c.esc(plan.thisWeek) + '</p>' +
-      '</button>';
+        (plan.thisWeek
+          ? '<p class="hc-caption hc-plan__reading">This week, ' + c.esc(plan.thisWeek) + '</p>'
+          : '') +
+      close;
   }
 
   function render() {
@@ -154,8 +179,12 @@
       html += '<div class="hc-home__announcement">' + ann + '</div>';
     }
 
-    html += c.sectionHeader('Reading together', 'Where we are');
-    html += readingPlanRow();
+    // No plan, no section. An empty header over nothing reads as a bug.
+    var plan = readingPlanRow();
+    if (plan) {
+      html += c.sectionHeader('Reading together', 'Where we are');
+      html += plan;
+    }
 
     html += '</div>';
     return c.el(html);

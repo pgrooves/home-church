@@ -2060,6 +2060,8 @@
 
   /* ------------------------------------------------------------- reading plan */
 
+  /* Seed only. The live plan is the is_current row in `reading_plans`, and
+     current_week is bumped there every week, not here. */
   var readingPlan = {
     id: 'plan-david',
     title: 'The Life of David',
@@ -2067,6 +2069,7 @@
     totalWeeks: 20,
     currentWeek: 8,
     thisWeek: '2 Samuel 11 and 12, plus Psalm 51',
+    current: true,
     resources: [
       { label: 'The Bible Project, 2 Samuel', url: 'https://bibleproject.com/explore/video/2-samuel/' },
       { label: 'Robert Alter, The David Story', url: 'https://www.google.com/search?q=Robert+Alter+The+David+Story' }
