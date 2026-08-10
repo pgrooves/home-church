@@ -140,6 +140,19 @@
       guideId: null,
       artLabel: 'A Church of the City',
       description: 'God tells exiles to plant gardens and build houses in the city they never chose. Seek its good, and you will find your own.'
+    },
+    {
+      id: 'sermon-unsung-heroes',
+      seriesId: 'series-david',
+      title: 'Unsung Heroes',
+      preacher: 'Stephen Daigle',
+      preacherShort: 'Stephen',
+      preachedOn: '2026-08-09',
+      duration: '39 min',
+      passage: '2 Samuel 15-19',
+      guideId: 'guide-unsung-heroes',
+      artLabel: 'Unsung Heroes',
+      description: 'Nine names nobody in the room had ever heard turn out to be the reason David makes it back to his throne. This is the sermon about which nine you actually have.'
     }
   ];
 
@@ -519,6 +532,197 @@
       closingScripture: {
         text: 'I acknowledged my sin to you, and I did not cover my iniquity. I said, I will confess my transgressions to the Lord, and you forgave the iniquity of my sin.',
         reference: 'Psalm 32:5'
+      }
+    },
+
+    {
+      id: 'guide-unsung-heroes',
+      sermonId: 'sermon-unsung-heroes',
+      seriesId: 'series-david',
+      themeTitle: 'Unsung Heroes',
+      subtitle: 'What nine forgotten names teach you about the friends you actually need',
+      primaryPassage: '2 Samuel 15-19',
+      preacher: 'Stephen Daigle',
+      preacherShort: 'Stephen',
+      preachedOn: '2026-08-09',
+
+      shortSummary: [
+        'David is at the lowest point of his life. His son Absalom has taken the throne, David has fled Jerusalem into the wilderness, and the people closest to him have turned. Buried inside the chapters that tell that story are nine names, and almost nobody remembers them. Ittai. Zadok and Abiathar. Hushai. Shobi, Machir, and Barzillai. Joab. Nobody in the room had heard of half of them, and they are the reason David makes it back to his throne. Friends are not the extra thing bolted on top of following God. They are how a lot of the actual carrying gets done.',
+        'But there is a wrong expectation worth clearing out of the way first. Church does not hand you deep friendship just because you showed up on a Sunday. Your relational capacity is genuinely capped, that is not a flaw, it is how you are built, and the goal was never to know everybody in the building. It is to have a handful of people who actually know you. Spreading yourself thin across a hundred connections gets you exactly that, connections, and none of the depth you are actually hungry for.',
+        'Proverbs gives three ways to test whether the people around you, and you yourself, are the real thing. A good friend is constant, still there in the trouble and not just the good years. A good friend keeps it real, willing to risk hurting you for your good, but only once you have actually given them permission. And a good friend gives you counsel that is built on Jesus rather than on a season that is going to end. The question underneath all of it is not who is failing you. It is whether you are the kind of friend you are looking for.'
+      ],
+
+      fullSummary: [
+        'Charles Spurgeon once said that if he had to give one piece of advice to a young man about where to live, it would be to sacrifice anything in order to live near friends. That sets the register for the whole sermon. It also sets up a hard correction. The instinct plenty of us carry, the quiet line that goes I do not need many friends, I can do this on my own, is not strength. It is a sign of injury. You were not built to run alone, and pretending otherwise usually means something broke a friendship a while back and you decided not to let it happen again.',
+        'Start with David’s own record before the crisis. His closest friend was Jonathan, the clearest picture of covenant friendship anywhere in scripture. Jonathan died when David was around thirty, after roughly twelve years of knowing each other. Here is the strange gap. Scripture says remarkably little about David having close friends after that, not until he is in his sixties and back in a crisis. It is worth wondering whether a man who got emotionally wrecked that young held people at arm’s length for decades afterward. Plenty of us do the same thing. A best friend in high school, in college, in some season, then something painful happens and the friendship goes away, and we walk into church saying we know we need people while quietly keeping everyone far enough away that it can never happen again.',
+        'The text for this one is 2 Samuel 15 through 19, and the setting is the lowest, most exposed moment of David’s life. His son Absalom has staged a coup and effectively run him off the throne. David is fleeing Jerusalem into the wilderness on foot, weeping, his own son publicly humiliating him in front of the whole kingdom. Right there, in the middle of the collapse, scripture names nine specific people God used to carry him back to his purpose. Most of their names, nobody in the room had ever heard.',
+        'The first is Ittai the Gittite, in 2 Samuel 15:19-21. David actually tries to talk him out of coming. You are a foreigner, an exile from your own country, you only got here yesterday, why would you wander around with us, go back. Ittai answers with a covenant oath, as surely as the Lord lives, wherever my lord the king may be, whether it means life or death, there will your servant be. Here is the detail worth sitting with. Ittai was from Gath, which means he came from the same people as Goliath. He had every historical reason to be David’s enemy, and instead he is the one who will not leave. Sometimes the people who end up closest to you were on the other side of something in a previous season.',
+        'Next come Zadok and Abiathar, the priests who carry the ark out of the city to be with David rather than staying safe behind, 2 Samuel 15:24-29. These are the ones who stand in your corner when everyone else is turning. Alongside them is Hushai the Archite, called David’s friend by name in the text, who turns around and walks straight back into Jerusalem at real personal risk to undermine Absalom’s counsel from the inside, 2 Samuel 15:32-37.',
+        'Then in 2 Samuel 17:27-29 come three more, Shobi, Machir, and Barzillai. They show up in the wilderness with bedding, bowls, wheat, barley, honey, curds, and sheep, because they knew David and his people would be hungry, tired, and thirsty out there. Nobody had to ask them and nobody had to organize them. They saw a need and moved. That is the whole category, the friends who bring the food before you even know you are hungry.',
+        'Joab gets treated differently, on purpose. After Absalom is killed, David falls apart, covering his face and crying out for his son over and over, and the army that just won the battle for him slinks back into the city like they lost. Joab kicks the door down, in 2 Samuel 19:1-7. He tells David flat out that he has just humiliated the men who saved his life and the lives of his family, that he apparently loves the people who hate him and hates the people who love him, and that if he does not get up and go encourage his troops right now, not a man will be left with him by nightfall. Joab is the friend who cares enough to confront. That is a category of friend most people do not have and desperately need.',
+        'So the first claim is straightforward. Friends are not optional, they are essential, and God routinely uses people whose names you would never recognize to carry you through the worst season of your life. But a correction has to come right behind it, because church does not hand you this automatically just by you showing up. The room is full of people working through their own stuff, and if you assume deep friendship will just happen to you, you will end up disappointed. The Dunbar model, developed by anthropologist Robin Dunbar, lays out the actual shape of relational capacity, roughly five intimate friends, fifteen close friends, fifty friends, a hundred fifty meaningful relationships, and up to five hundred acquaintances. Even Jesus had this shape, twelve disciples, and inside that, Peter, James, and John pulled closer than the rest. That is part of why Home Church runs multiple services instead of building one enormous room. The goal was never a crowd. It is a family where people can actually connect.',
+        'Psychotherapist Elizabeth Earnshaw calls the specific problem the friendship depth gap, surrounded by connection, starving for intimacy. You can stand in a room of hundreds and feel completely unseen. You can have a public account and no one who knows anything real about your life. The research says most people are not actually short on friends, they have plenty, what is missing is depth, and what blocks depth is the fear of being known. Communication complexity makes the math concrete, three people is three lines of communication, eight people is twenty eight, fourteen people is ninety one. A great deal of church hurt comes from placing unrealistic expectations on a whole group of people, expectations you could not meet yourself either. You cannot expect everyone to call you back. You can expect a handful of people to actually know you, love you, and grow with you.',
+        'From Proverbs come three tests, and they cut both ways, aimed at the people around you and at you. A good friend is constant, present in the trouble and not only in the good years, Proverbs 18:24, there is a friend who sticks closer than a brother. A good friend keeps it real, willing to risk hurting you for your good, Proverbs 27:6, the wounds of a friend are faithful, but that only happens once you have explicitly given someone permission to say the hard thing. And a good friend gives godly counsel, built on Jesus rather than on a season that is going to end, Proverbs 27:17, iron sharpens iron, and plastic does not sharpen iron. It all lands on Proverbs 18:24 read a second way, a man who has friends must show himself friendly. You reap what you sow, so the first question is not who around you is failing. It is whether you are the kind of friend you are looking for. Underneath every friendship in the chapter is the one it is all modeled on. It takes knowing one to be one, and the best friend you will ever have is Jesus, who gave his life for you before you were in any position to earn it.'
+      ],
+
+      anchors: [
+        {
+          label: 'Constant',
+          body: 'Present in the trouble, not just the good years. Time and crisis are what actually reveal who your real friends are, not how good things feel when nothing is going wrong. If you are not willing to disadvantage yourself for someone else, you are not this kind of friend yet either, and that cuts toward you before it cuts toward anyone around you.'
+        },
+        {
+          label: 'Keeps it real',
+          body: 'Willing to risk hurting you for your good, the way a friend cutting your grass without being asked says more than any text ever could. But correction like that will not happen unless you explicitly give someone permission to say the hard thing and mean it when they do.'
+        },
+        {
+          label: 'Godly counsel',
+          body: 'Built on Jesus rather than on a season that eventually ends. A high school friendship built on high school disappears at graduation. A friendship built on shared conviction outlasts every transition, because iron sharpens iron, and plastic does not sharpen iron.'
+        }
+      ],
+
+      groupSections: [
+        {
+          heading: 'Getting started',
+          questions: [
+            'Name one person outside this room who would notice within a day if something was wrong with you. How would they notice, a missed text, a different tone of voice, something else?',
+            'When you hear the phrase best friend, whose face comes to mind first, and how long has it actually been since you talked to them?'
+          ]
+        },
+        {
+          heading: 'Arm’s length',
+          questions: [
+            'David lost his closest friend Jonathan around age thirty, and scripture goes quiet on him having close friends again until he is in his sixties and in crisis. Has a friendship that ended badly ever changed how close you let people get afterward? What specifically did it change?',
+            'The instinct to say I do not need many friends, I can do this on my own, is a sign of injury, not strength. Where do you catch yourself saying some version of that, and what is actually underneath it when you are honest?'
+          ]
+        },
+        {
+          heading: 'The nine',
+          questions: [
+            'Ittai came from the same people as Goliath and had every reason to be David’s enemy, yet he is the one who would not leave. Has someone who was on the other side of something in a previous season become one of your closest people since? What made that shift possible?',
+            'Shobi, Machir, and Barzillai showed up with food that nobody asked for and nobody organized. Think of a hard season in your own life. Who moved without being asked, and what did that action say to you that words never could have?',
+            'Joab kicked the door down and told David a truth he did not want to hear. Who in your life actually has that kind of access to you, and when did they last use it?'
+          ]
+        },
+        {
+          heading: 'Five, fifteen, fifty',
+          questions: [
+            'Roughly five intimate friends, fifteen close, fifty friends, that is the shape the Dunbar model gives relational capacity. Looking honestly at your own life right now, is your five full, half full, or empty?',
+            'Name one place you have felt quietly disappointed by this church or your group. Could that actually be an expectation problem, something you were expecting from a crowd of people that only a handful of people could ever give you?',
+            'The friendship depth gap is being surrounded by connection while starving for intimacy. Where in your life right now do you have the most connection and the least depth?'
+          ]
+        },
+        {
+          heading: 'Cutting the grass',
+          questions: [
+            'When David’s own family and future were on the line, people showed up with bedding and food before he asked. What would cutting the grass look like for someone in your life this week, something you could do without being asked and without announcing it?',
+            'If you are not willing to disadvantage yourself, your time, your plans, your money, for someone else’s benefit, you are not yet the friend you are hoping to have. When was the last time that actually cost you something real?',
+            'Is there something you have been sitting on about a friend, something true and hard, that you have not said because you were afraid of what it would cost you? What would it take to say it well this week?'
+          ]
+        },
+        {
+          heading: 'Iron and plastic',
+          questions: [
+            'Every friendship is built on something. If a friendship of yours disappeared the moment high school ended, or the job changed, or you moved, what was it actually built on?',
+            'Are the people closest to you going after what you are going after, spiritually, in this season? What does your honest answer suggest about the next six months?',
+            'Who has your explicit permission to say a hard thing to you and know you will not shut them out for it? If the answer is no one, what is actually stopping you from giving that permission to somebody this week?'
+          ]
+        },
+        {
+          heading: 'This week',
+          questions: [
+            'Stay five minutes after service this week and introduce yourself to one person you have never met. Who are you hoping it turns out to be, even though you cannot control that part?',
+            'Pick one name from your five, your fifteen, or your fifty, and do one specific, calendarable thing for them this week without being asked. What is the thing, and what day is it happening?'
+          ]
+        }
+      ],
+
+      reflectionQuestions: [
+        'Write down the actual names in your five, your fifteen, and your fifty. Be honest about which tiers are really full and which you have just been telling yourself are full.',
+        'Is there a friendship wound in your past you have never actually named as a wound, one that has quietly set the distance you keep from people ever since? Name it tonight, even just to yourself.',
+        'Take the three marks one at a time, constant, keeps it real, gives godly counsel, and rate yourself honestly on each. Which one is weakest, and what is one specific thing you could do about it this week?',
+        'When was the last time you disadvantaged yourself, real cost to your time, your money, or your plans, for someone else’s benefit? If nothing recent comes to mind, sit with why.',
+        'Who has permission to tell you hard things about yourself? If the honest answer is no one, write down the name of the person you could give that permission to, and decide when you will actually have that conversation.',
+        'Take your closest three friendships and name what each one is actually built on, a season, a shared activity, proximity, or Jesus. What does that predict about whether they survive your next transition?',
+        'What conviction are you currently keeping to yourself that, if you actually said it out loud to your people, would either deepen those friendships or reveal they were shallower than you thought?',
+        'Is Jesus functionally your friend, or only your Savior and Lord in the abstract? What would it look like this week to actually relate to him as the friendship underneath every other friendship you have?'
+      ],
+
+      oneLiners: [
+        'Friends are not optional. They are essential.',
+        'It is a sign of injury, not strength, to say you do not need friends.',
+        'David’s friends were unsung heroes. You have never heard their names, and they are the ones God used to pull him back.',
+        'Sometimes the people who get closest to you were your enemies in a previous season.',
+        'Nobody had to tell them what to do. They just did it.',
+        'Joab was the friend who cared enough to confront.',
+        'If you think you can just show up and deep friendship will happen to you, you are greatly misled.',
+        'We are surrounded by connection but starving for intimacy.',
+        'You can be in a room of hundreds of people and feel completely unseen.',
+        'Your relational capacity is capped. That is not a flaw, that is how God designed you.',
+        'A lot of church hurt comes from unrealistic expectations placed on a group of people, expectations you could not meet either.',
+        'How do you know a fake friend from a true friend? Time and trouble.',
+        'If you will not disadvantage yourself for someone else’s advantage, you are not a good friend.',
+        'Do not sit here judging the people in your life. Look in the mirror first.',
+        'Iron sharpens iron. Plastic does not sharpen iron.'
+      ],
+
+      scriptures: [
+        {
+          reference: '2 Samuel 15:19-21',
+          note: 'Ittai the Gittite refuses to leave David’s side during the flight from Absalom, even though David tries to send him home. He is from Gath, Goliath’s own people, which makes his loyalty the least likely thing in the chapter.'
+        },
+        {
+          reference: '2 Samuel 15:24-29',
+          note: 'Zadok and Abiathar, the priests, carry the ark out of Jerusalem to be with David. A picture of the people who stand in your corner the moment everyone else turns.'
+        },
+        {
+          reference: '2 Samuel 15:32-37',
+          note: 'Hushai the Archite, called David’s friend by name, walks back into danger to undermine Absalom’s counsel from the inside.'
+        },
+        {
+          reference: '2 Samuel 17:27-29',
+          note: 'Shobi, Machir, and Barzillai bring food and bedding into the wilderness without being asked. Use this for the friends who see a need and just move.'
+        },
+        {
+          reference: '2 Samuel 19:1-7',
+          note: 'Joab confronts David in his grief and tells him the truth he does not want to hear. The friend who cares enough to confront.'
+        },
+        {
+          reference: 'Proverbs 14:20',
+          note: 'The poor are shunned even by their neighbors, but the rich have many friends. Sets up how transactional most relationships actually are before the correction arrives.'
+        },
+        {
+          reference: 'Proverbs 19:4',
+          note: 'Wealth attracts friends, but even the closest friend of the poor deserts them. Pairs with 14:20 to name the default before Proverbs 18:24 corrects it.'
+        },
+        {
+          reference: 'Proverbs 18:24',
+          note: 'There is a friend who sticks closer than a brother. Used twice, once for the mark of constancy, and again at the close in its other reading, that you have to show yourself friendly.'
+        },
+        {
+          reference: 'Proverbs 27:6',
+          note: 'The wounds of a friend are faithful, but an enemy multiplies kisses. The foundation for the keeps it real mark.'
+        },
+        {
+          reference: 'Proverbs 29:5',
+          note: 'Whoever flatters his neighbor spreads a net for his feet. Good for showing the group that flattery is not the same thing as kindness.'
+        },
+        {
+          reference: 'Proverbs 28:23',
+          note: 'Whoever rebukes a person will later find more favor than one who has a flattering tongue. A real friend risks being rejected for your good.'
+        },
+        {
+          reference: 'Proverbs 27:9',
+          note: 'Perfume and incense bring joy to the heart, and the sweetness of a friend comes from their earnest counsel. The foundation for the godly counsel mark.'
+        },
+        {
+          reference: 'Proverbs 27:17',
+          note: 'Iron sharpens iron. Pair it with the line that plastic does not sharpen iron when you talk about who your closest people are actually going after.'
+        }
+      ],
+
+      closingScripture: {
+        text: 'One who has unreliable friends soon comes to ruin, but there is a friend who sticks closer than a brother.',
+        reference: 'Proverbs 18:24'
       }
     }
   ];
