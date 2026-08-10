@@ -16,6 +16,21 @@
 }
 
 @media print {
+  /* The app locks body scrolling for the mobile shell, fixed position,
+     overflow hidden, pinned to the viewport (base.css). Print engines
+     paginate by flowing content down the document, and a fixed, clipped
+     body only ever exposes one viewport-height of it, so without this
+     override every guide printed as a single page, the cover, and nothing
+     after it. Printing needs the document back in normal flow. */
+  html, body {
+    position: static !important;
+    inset: auto !important;
+    overflow: visible !important;
+    height: auto !important;
+    min-height: 0 !important;
+    width: auto !important;
+  }
+
   body > *:not(#hc-print-sheet) { display: none !important; }
 
   #hc-print-sheet {
