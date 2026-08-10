@@ -72,6 +72,16 @@ using.
 | `guides` | Small group guides, the whole `Guide {}` model | Grow, guide reader, leader mode |
 | `podcasts` | Sunday messages as episodes, external media links | Listen |
 | `events` | The events calendar | Connect |
+| `announcements` | The single One thing card, with a date window | Home |
+
+**Why these five and not everything in `js/data.js`.** Collection count is the
+wrong way to look at it. What matters is how often something changes. These
+five are everything that churns: guides and podcasts weekly, announcements
+most weeks, events monthly, series every few months. The rest of `data.js`,
+`church`, the show level `podcast` info, `readingPlan`, `groups`,
+`serveTeams`, and `nextSteps`, is config that changes once or twice a year,
+and shipping it in the binary is fine. Give any of them a table when that
+stops being true, the pattern is in `/new-content-type`.
 
 **Ids are readable text slugs, not uuids.** `guide-slow-burn`, not
 `8f3e...`. This is not a style preference. A leader's question checkmarks and
@@ -157,8 +167,9 @@ Everything goes through slash commands in Claude Code:
 | `/new-guide` | Sermon PDF to a full guide, into `js/data.js` and `guides` |
 | `/new-event` | Asks for what is missing, confirms, writes to `events` |
 | `/new-podcast` | Episode to `podcasts`, links its guide, puts the real title on the message |
+| `/new-announcement` | The One thing card on Home, with a date window so it retires itself |
 | `/edit-content` | Plain language fix to any row, shows current versus proposed, writes after you confirm |
-| `/new-content-type` | Scaffolds a fifth content type, table and command |
+| `/new-content-type` | Scaffolds another content type, table and command |
 
 Under all of them is one script, `scripts/hc_supabase.py`. It is the only
 thing that holds the service role key, and it is standard library Python with
@@ -201,14 +212,47 @@ four, that is worth a second thought before running it.
 
 ---
 
+## How the app reads it
+
+`js/content.js` is the read side. Three layers, and the app is never blank and
+never waiting on the network:
+
+1. **The cache**, last known good content in `localStorage`, applied
+   synchronously before the first paint. A returning phone opens straight to
+   this week's guide.
+2. **`js/data.js`**, baked into the binary, which is what a brand new install
+   with no signal falls back to. This is why that file still ships and should
+   keep shipping.
+3. **Supabase**, fetched in the background after the first paint. If something
+   actually changed, the current screen redraws in place with the scroll
+   position kept.
+
+Two behaviors worth knowing, because they look like bugs and are not:
+
+- **An empty table is ignored, except for announcements.** A guides table that
+  comes back empty, because somebody is still setting the project up, will not
+  wipe the guides that shipped in the binary. Announcements are the deliberate
+  exception, zero announcements is a real instruction, it means take the
+  banner down, and honoring it is what lets a dated announcement retire
+  itself.
+- **A table that fails does not fail the refresh.** Every other table still
+  lands, and the one that failed keeps whatever it already had.
+
+`js/data.js` is never modified by any of this. `HC.data`'s arrays are mutated
+in place rather than reassigned, because the helpers in `data.js` close over
+those same array objects, so assigning a new array would leave every helper
+reading stale content while the screens showed the new.
+
 ## Still to do
 
-**The app does not read these tables yet.** `js/data.js` is still what every
-screen renders, so the publishing commands currently write to both places.
-Pointing `HC.data` at Supabase is the change that makes this whole thing pay
-off, and it is a separate piece of work from setting the tables up. The header
-comment in `js/data.js` has said from the start that this is a swap of one
-function body, and the RLS above is already set up for exactly that read.
+**The publishing commands still write to both places**, Supabase and
+`js/data.js`, which is one step more than should be needed now that the read
+side is live. That belt and braces is deliberate for the first few weeks:
+publish a guide, confirm it appears on a real phone from Supabase alone, and
+then delete the `js/data.js` half from `/new-guide`, `/new-podcast`, and
+`/new-event`. Each of those files marks exactly which step to remove.
+`/new-announcement` never had the second half, so it is the cleanest one to
+watch first.
 
 **Running migrations from the terminal** needs
 `supabase/migrations/0002_optional_migration_runner.sql`, which is optional and

@@ -542,6 +542,15 @@
 
   function boot() {
     HC.store.applyPreferences();
+
+    // Last known good content, straight off the device, before anything is
+    // drawn. Synchronous on purpose: it is a single localStorage read, and
+    // doing it here means a returning phone opens to this week's guide
+    // instead of whatever was frozen into the binary at build time. A first
+    // install has no cache and falls through to js/data.js, which is why
+    // that file still ships.
+    HC.content.primeFromCache();
+
     renderShell();
     wireEvents();
     watchScroll();
@@ -570,6 +579,13 @@
       if (route && route.name === 'profile') HC.router.go({ name: 'profile' }, { force: true });
     });
     HC.auth.init();
+
+    // Then go and get the current content, after the first paint so nothing
+    // waits on the network. If it lands and something actually changed, the
+    // current screen redraws in place with the scroll position kept. If the
+    // phone is offline, or the project is unreachable, this quietly does
+    // nothing and the app carries on with what it already had.
+    HC.content.refresh();
   }
 
   if (document.readyState === 'loading') {

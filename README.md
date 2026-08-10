@@ -129,26 +129,33 @@ without waiting on a review. Full documentation is in
 **`supabase/README.md`**, kept there rather than duplicated here so the two
 cannot drift.
 
-The short version. Four tables, `series`, `guides`, `podcasts`, and `events`,
-publicly readable with the anon key and writable only with the service role
-key. Five slash commands drive them:
+The short version. Five tables, `series`, `guides`, `podcasts`, `events`, and
+`announcements`, publicly readable with the anon key and writable only with
+the service role key. Six slash commands drive them:
 
 | Command | Does |
 |---|---|
 | `/new-guide` | Sermon PDF to a full guide, into `js/data.js` and `guides` |
 | `/new-event` | Asks for what is missing, confirms, writes to `events` |
 | `/new-podcast` | Episode to `podcasts`, links its guide, puts the real title on the message |
+| `/new-announcement` | The One thing card on Home, dated so it retires itself |
 | `/edit-content` | Plain language fix to any row, current versus proposed, writes after you confirm |
-| `/new-content-type` | Scaffolds a fifth content type, table and command |
+| `/new-content-type` | Scaffolds another content type, table and command |
 
-All five shell out to `scripts/hc_supabase.py`, standard library Python, no
+All six shell out to `scripts/hc_supabase.py`, standard library Python, no
 pip install, which keeps the no build step promise above intact. Credentials
 come from `.env` at the repo root, which is git ignored and never committed.
 
-**The app does not read these tables yet.** Every screen still renders
-`js/data.js`, so the commands currently publish to both. Pointing `HC.data` at
-Supabase is the change that makes this pay off, and it is deliberately a
-separate piece of work.
+**The app reads these tables**, through `js/content.js`. It applies the cached
+copy before the first paint, falls back to `js/data.js` on a fresh install
+with no signal, and fetches in the background after the first paint, redrawing
+in place only if something changed. The app is never blank and never waits on
+the network, which matters in a building with concrete walls.
+
+`js/data.js` still ships and still matters, it is the floor under a brand new
+install. The publishing commands write to both for now, and each one marks the
+step to delete once you have watched a guide land on a real phone from
+Supabase alone.
 
 -----
 

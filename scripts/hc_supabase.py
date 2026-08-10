@@ -41,7 +41,21 @@ CONFIG_JS = os.path.join(REPO_ROOT, "js", "config.js")
 
 # The four tables this CMS ships with. Adding a fifth content type means
 # adding its name here, and that is the only line in this file that changes.
-CONTENT_TABLES = ["series", "guides", "podcasts", "events"]
+CONTENT_TABLES = ["series", "guides", "podcasts", "events", "announcements"]
+
+# What `verify` tries to insert as an anonymous user, per table. These have to
+# be valid rows, or PostgREST rejects them for the wrong reason: a payload
+# naming a column that does not exist comes back 400 before the database ever
+# checks permissions, and a 400 would read as "blocked" while proving nothing
+# about row level security. A well formed row can only fail on permissions,
+# which is what makes 401 or 403 here meaningful.
+PROBE_ROWS = {
+    "series": {"title": "probe"},
+    "guides": {},
+    "podcasts": {"title": "probe"},
+    "events": {"title": "probe", "starts_at": "2000-01-01T00:00:00+00:00"},
+    "announcements": {"title": "probe"},
+}
 
 
 # --------------------------------------------------------------------------
@@ -262,13 +276,26 @@ def cmd_verify(args):
         # Anon write, which must be refused. A 401 or 403 here is the pass.
         write_blocked = "skipped"
         if anon_key and cfg_url:
-            wstatus, _ = request("POST", cfg_url, anon_key, "/rest/v1/" + table,
-                                 body={"id": "__hc_rls_probe__", "title": "probe"})
-            write_blocked = "yes" if wstatus in (401, 403) else "NO (%s)" % wstatus
-            if wstatus not in (401, 403):
+            probe = dict(PROBE_ROWS.get(table, {}))
+            probe["id"] = "__hc_rls_probe__"
+            wstatus, wbody = request("POST", cfg_url, anon_key, "/rest/v1/" + table, body=probe)
+            if wstatus in (401, 403):
+                write_blocked = "yes"
+            elif wstatus in (200, 201):
+                write_blocked = "NO (%s)" % wstatus
                 failures.append(
                     "%s accepted an anonymous write (%s). Row level security is "
-                    "not doing its job." % (table, wstatus)
+                    "not doing its job, and a probe row was just created. Delete "
+                    "id __hc_rls_probe__." % (table, wstatus)
+                )
+            else:
+                # Refused, but not on permissions. The write did not land, so
+                # nothing is open, but this did not prove RLS either.
+                write_blocked = "unproven (%s)" % wstatus
+                failures.append(
+                    "%s refused the probe with %s rather than 401 or 403, so the "
+                    "write is blocked but row level security is unproven here. "
+                    "Response: %s" % (table, wstatus, json.dumps(wbody))
                 )
 
         print("  %-11s %-8s %-6s %-13s %s" % (table, "yes", count, public_ok, write_blocked))

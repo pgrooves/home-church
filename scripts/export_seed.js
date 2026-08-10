@@ -171,11 +171,25 @@ const events = D.events.map(e => {
   };
 });
 
+/* Announcements carry no dates in data.js, because the only way to retire one
+   was to ship a build. In Supabase they get a window, so leave both ends open
+   here and set them going forward from /new-announcement. */
+const announcements = D.announcements.map(a => ({
+  id: a.id,
+  eyebrow: a.eyebrow || 'One thing',
+  title: a.title,
+  body: a.body || null,
+  starts_on: null,
+  ends_on: null,
+  priority: 0,
+  published: true
+}));
+
 /* ---------------------------------------------------------------- write --- */
 
 fs.mkdirSync(OUT_DIR, { recursive: true });
 
-for (const [name, rows] of Object.entries({ series, guides, podcasts, events })) {
+for (const [name, rows] of Object.entries({ series, guides, podcasts, events, announcements })) {
   const file = path.join(OUT_DIR, name + '.json');
   fs.writeFileSync(file, JSON.stringify(rows, null, 2) + '\n', 'utf8');
   console.log('wrote  %s  %d rows', path.relative(ROOT, file), rows.length);
@@ -183,4 +197,5 @@ for (const [name, rows] of Object.entries({ series, guides, podcasts, events }))
 
 const linked = podcasts.filter(p => p.guide_id).length;
 console.log('\n%d of %d messages have a guide attached.', linked, podcasts.length);
-console.log('Upsert in this order: series, guides, podcasts, events.');
+console.log('Upsert in this order: series, guides, podcasts, events, announcements.');
+console.log('Series before guides before podcasts, the foreign keys point that way.');
