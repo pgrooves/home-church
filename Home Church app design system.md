@@ -264,7 +264,7 @@ Mirror the site’s verb-based simplicity. Five tabs:
 |Tab        |Purpose                                                                         |
 |-----------|--------------------------------------------------------------------------------|
 |**Home**   |Personalized front door. Next gathering, this week’s guide, one thing to act on.|
-|**Watch**  |Sermon archive, current series, video and audio.                                |
+|**Listen** |The podcast. Sermon archive, current series, episode notes, out to Spotify.    |
 |**Grow**   |Reading plans, small group guides, resources, notes.                            |
 |**Connect**|Groups, serve teams, events, next steps.                                        |
 |**Give**   |Giving, currently handled by Overflow.                                          |
@@ -279,12 +279,15 @@ Mirror the site’s verb-based simplicity. Five tabs:
 - Current reading plan progress, quiet and non-punitive
 - One announcement maximum
 
-**Watch**
+**Listen**
 
+- Latest episode with podcast cover art and a way straight into Spotify
 - Current series hero with series art
-- Episode list with title, preacher, date, duration
-- Player with audio-only toggle, background playback, and a “take notes” affordance
-- Per-sermon: description, scripture references, and a link into the matching small group guide
+- Episode list with title, preacher, date, duration, grouped by series
+- Rows open in place to the episode’s own notes, so you can read what a
+  message is about without leaving the app to find out
+- Per-episode: summary, the Spotify link, and a link into the matching small group guide
+- The show card at the foot, for following the podcast rather than one episode
 
 **Grow**
 

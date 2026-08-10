@@ -11,7 +11,11 @@
 (function (HC) {
   'use strict';
 
-  var TABS = ['home', 'watch', 'guide', 'connect', 'give'];
+  var TABS = ['home', 'listen', 'guide', 'connect', 'give'];
+
+  // Old route names kept alive so a link or a restored history entry from
+  // before a rename still lands somewhere real.
+  var ALIASES = { watch: 'listen' };
 
   var routes = {};        // name -> render(route) returning an element
   var current = null;
@@ -34,6 +38,7 @@
   function fromLocation() {
     var params = new URLSearchParams(window.location.search);
     var name = params.get('v');
+    if (name && ALIASES[name]) name = ALIASES[name];
     if (!name || !routes[name]) return null;
     var route = { name: name };
     var id = params.get('id');
@@ -57,6 +62,10 @@
   }
 
   function render(route) {
+    // A history entry restored from an older build can name a route that has
+    // since been renamed. Translate before we decide it does not exist.
+    if (ALIASES[route.name]) route = Object.assign({}, route, { name: ALIASES[route.name] });
+
     var view = routes[route.name];
     if (!view) {
       route = { name: 'home' };

@@ -18,7 +18,7 @@ This app's guides live in `js/data.js`, in two arrays: `sermons` and
 `guides`. A sermon and its guide are two separate objects linked by ID,
 `sermon.guideId` points at `guide.id`. Adding a new week means appending one
 object to each array. Nothing else in the codebase needs to change, every
-screen (Home, Watch, Guide index, Guide reader, Connect) reads from these
+screen (Home, Listen, Guide index, Guide reader, Connect) reads from these
 arrays and picks up a new entry automatically. Newest-first ordering is
 automatic too, everything sorts by `preachedOn`, don't reorder the arrays by
 hand.
@@ -150,8 +150,11 @@ are data attached to two of those six, not separate sections of their own.)
   duration: '40 min',
   passage: '2 Samuel 13',
   guideId: 'guide-your-slug',    // must match the guide's id below, this is the link
+  episodeUrl: null,              // this message's Spotify episode link, null falls back to the show
+  summary: null,                 // the Spotify episode notes as an array of paragraphs,
+                                 // null falls back to `description` below
   artLabel: 'The Sermon Title',  // shown on the placeholder media block
-  description: 'One or two sentences, the hook, shown on the Watch screen.'
+  description: 'One or two sentences, the hook, shown on the Listen screen.'
 }
 ```
 
@@ -204,7 +207,9 @@ to go straight through.
    (only if needed) a new series object to `series`.
 2. Serve the app locally (`python3 -m http.server` from the repo root, or
    just open `index.html`) and check:
-   - The new sermon appears on Watch, newest first if it's the most recent.
+   - The new sermon appears on Listen, newest first if it's the most recent.
+   - Its archive row opens to the episode notes, and "Listen on Spotify"
+     points at `episodeUrl` when you set one, at the show when you didn't.
    - It shows the "Open the group guide" link.
    - The Guide index lists it under the right series.
    - The guide reader opens, all six sections render, Short Summary is

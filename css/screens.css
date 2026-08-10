@@ -105,7 +105,7 @@
 .hc-plan__reading { margin-top: var(--hc-space-md); }
 
 /* ==========================================================================
-   Watch
+   Listen
    ========================================================================== */
 
 .hc-latest { margin-top: var(--hc-space-lg); }
@@ -120,6 +120,7 @@
 .hc-latest__title { margin-top: 6px; }
 .hc-latest__meta { margin-top: var(--hc-space-sm); }
 .hc-latest__desc { margin-top: var(--hc-space-md); }
+.hc-latest__action { margin-top: var(--hc-space-base); }
 
 .hc-series-hero { margin-top: var(--hc-space-base); }
 .hc-series-hero__sub { margin-top: var(--hc-space-md); }
@@ -143,20 +144,11 @@
   min-height: var(--hc-tap-min);
 }
 
+/* Square, the shape podcast artwork actually comes in. */
 .hc-sermon__thumb {
-  flex: 0 0 104px;
-  width: 104px;
+  flex: 0 0 76px;
+  width: 76px;
   display: block;
-}
-
-.hc-sermon__thumb .hc-play__disc {
-  width: 34px;
-  height: 34px;
-}
-
-.hc-sermon__thumb .hc-play__icon {
-  width: 13px; height: 13px;
-  margin-left: 2px;
 }
 
 .hc-sermon__body {
@@ -166,6 +158,40 @@
   flex-direction: column;
   gap: 2px;
 }
+
+.hc-sermon__chevron {
+  flex: 0 0 auto;
+  width: 20px;
+  height: 20px;
+  margin-top: 2px;
+  color: var(--hc-mid);
+  transition: transform var(--hc-dur-fast) var(--hc-ease);
+}
+
+.hc-sermon__main[aria-expanded="true"] .hc-sermon__chevron { transform: rotate(180deg); }
+
+/* Episode notes, opened in place under the row they belong to. */
+.hc-episode {
+  overflow: hidden;
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows var(--hc-dur-base) var(--hc-ease);
+}
+
+.hc-episode[data-open="true"] { grid-template-rows: 1fr; }
+
+.hc-episode__inner { min-height: 0; }
+
+.hc-episode[data-open="true"] .hc-episode__inner { padding-top: var(--hc-space-md); }
+
+.hc-episode__para + .hc-episode__para,
+.hc-latest__desc .hc-episode__para + .hc-episode__para {
+  margin-top: var(--hc-space-md);
+}
+
+.hc-episode__action { margin-top: var(--hc-space-base); }
+
+.hc-show-card__action { margin-top: var(--hc-space-base); }
 
 /* ==========================================================================
    Guide, index
@@ -589,7 +615,7 @@
     --hc-card-pad: 16px;
   }
 
-  .hc-sermon__thumb { flex-basis: 88px; width: 88px; }
+  .hc-sermon__thumb { flex-basis: 64px; width: 64px; }
   .hc-tab__label { font-size: 10px; }
   .hc-gathering__times { gap: var(--hc-space-sm) var(--hc-space-md); }
   .hc-gathering__time + .hc-gathering__time { padding-left: var(--hc-space-md); }

@@ -36,6 +36,20 @@
     ]
   };
 
+  /* ----------------------------------------------------------------- podcast
+     Every Sunday message is published to Spotify. The show link below is the
+     one the church hands out. Each sermon carries its own episodeUrl, one of
+     the per-episode links off that show page, and falls back to the show
+     itself while an episode link is still missing.
+     -------------------------------------------------------------------- */
+
+  var podcast = {
+    name: 'Home Church NOLA',
+    platform: 'Spotify',
+    showUrl: 'https://open.spotify.com/show/7iJGZvY5MVm7CjPggvvPOa',
+    blurb: 'Every Sunday message, on Spotify by Monday. Follow the show and the next one lands in your feed.'
+  };
+
   /* ------------------------------------------------------------------ series */
 
   var series = [
@@ -59,7 +73,14 @@
     }
   ];
 
-  /* ----------------------------------------------------------------- sermons */
+  /* ----------------------------------------------------------------- sermons
+     episodeUrl is this message's own Spotify episode link, taken off the show
+     page in `podcast`. summary is that episode's notes, an array of
+     paragraphs, and it is what the Listen screen shows when you open a
+     message. Leave either one null and the app falls back, to the show link
+     and to `description` respectively, so a sermon is never broken by a
+     missing episode.
+     -------------------------------------------------------------------- */
 
   var sermons = [
     {
@@ -72,6 +93,8 @@
       duration: '41 min',
       passage: '2 Samuel 11 & 12',
       guideId: 'guide-slow-burn',
+      episodeUrl: null,
+      summary: null,
       artLabel: 'The Slow Burn',
       description: 'Nobody wakes up and decides to blow up their life. It happens by degrees, in the ordinary hours, long before anyone notices.'
     },
@@ -85,6 +108,8 @@
       duration: '38 min',
       passage: '2 Samuel 9',
       guideId: 'guide-seat-table',
+      episodeUrl: null,
+      summary: null,
       artLabel: 'A Seat at the Table',
       description: 'A forgotten grandson of a dead king, hiding in a town called nowhere, gets sent for by the one man he was sure wanted him gone.'
     },
@@ -98,6 +123,8 @@
       duration: '36 min',
       passage: '1 Samuel 22',
       guideId: null,
+      episodeUrl: null,
+      summary: null,
       artLabel: 'Cave Days',
       description: 'Before the throne there was a cave, and everybody in it was in debt, in distress, or bitter. That is who God builds with.'
     },
@@ -111,6 +138,8 @@
       duration: '39 min',
       passage: 'Luke 10:25-37',
       guideId: null,
+      episodeUrl: null,
+      summary: null,
       artLabel: 'Neighbors, Not Projects',
       description: 'The lawyer wanted a category. Jesus gave him a Samaritan, a ditch, and a bill he paid himself.'
     },
@@ -125,6 +154,8 @@
       passage: 'Acts 2:42-47',
       guideId: null,
       occasion: 'Father’s Day',
+      episodeUrl: null,
+      summary: null,
       artLabel: 'The Family Table',
       description: 'The first church did not have a building. It had a room, a meal, and an open door, and the city noticed.'
     },
@@ -138,6 +169,8 @@
       duration: '37 min',
       passage: 'Jeremiah 29:4-7',
       guideId: null,
+      episodeUrl: null,
+      summary: null,
       artLabel: 'A Church of the City',
       description: 'God tells exiles to plant gardens and build houses in the city they never chose. Seek its good, and you will find your own.'
     },
@@ -151,6 +184,8 @@
       duration: '39 min',
       passage: '2 Samuel 15-19',
       guideId: 'guide-unsung-heroes',
+      episodeUrl: null,
+      summary: null,
       artLabel: 'Unsung Heroes',
       description: 'Nine names nobody in the room had ever heard turn out to be the reason David makes it back to his throne. This is the sermon about which nine you actually have.'
     }
@@ -873,6 +908,7 @@
 
   HC.data = {
     church: church,
+    podcast: podcast,
     series: series,
     sermons: sermons,
     guides: guides,
@@ -928,6 +964,20 @@
 
     currentSeries: function () {
       return series.filter(function (s) { return s.current; })[0] || series[0];
+    },
+
+    // Where the Listen tab sends you. The episode when we have its link,
+    // otherwise the show, which is never wrong, only less specific.
+    episodeUrl: function (sermon) {
+      return (sermon && sermon.episodeUrl) || podcast.showUrl;
+    },
+
+    // The episode notes, as an array of paragraphs. Falls back to the one
+    // line description so every message reads as something, never as blank.
+    episodeSummary: function (sermon) {
+      if (!sermon) return [];
+      if (sermon.summary && sermon.summary.length) return sermon.summary;
+      return sermon.description ? [sermon.description] : [];
     }
   };
 

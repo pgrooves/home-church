@@ -11,7 +11,7 @@
 
   var TAB_META = [
     { name: 'home',    label: 'Home',    icon: 'home' },
-    { name: 'watch',   label: 'Watch',   icon: 'watch' },
+    { name: 'listen',  label: 'Listen',  icon: 'listen' },
     { name: 'guide',   label: 'Guide',   icon: 'guide' },
     { name: 'connect', label: 'Connect', icon: 'connect' },
     { name: 'give',    label: 'Give',    icon: 'give' }
@@ -19,7 +19,7 @@
 
   var TITLES = {
     home: 'Home',
-    watch: 'Watch',
+    listen: 'Listen',
     guide: 'Guides',
     connect: 'Connect',
     give: 'Give',
@@ -259,8 +259,13 @@
       if (banner && banner.parentNode) banner.parentNode.removeChild(banner);
     },
 
-    play: function () {
-      c.toast('Video connects when the church feed goes live. The guide is ready now.');
+    // Archive rows open in place, so you can read the episode notes without
+    // leaving for Spotify and losing your spot in the list.
+    'toggle-episode': function (el) {
+      var open = el.getAttribute('aria-expanded') === 'true';
+      el.setAttribute('aria-expanded', open ? 'false' : 'true');
+      var panel = document.getElementById(el.getAttribute('aria-controls'));
+      if (panel) panel.setAttribute('data-open', open ? 'false' : 'true');
     },
 
     filter: function (el) {
@@ -546,7 +551,7 @@
       scroll: scroller,
       routes: {
         home: HC.screens.home,
-        watch: HC.screens.watch,
+        listen: HC.screens.listen,
         guide: HC.screens.guide,
         connect: HC.screens.connect,
         give: HC.screens.give,

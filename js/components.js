@@ -100,7 +100,7 @@
 
   var PATHS = {
     home: '<path d="M3 10.2 12 3l9 7.2V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/>',
-    watch: '<circle cx="12" cy="12" r="9"/><path d="M10 8.5 16 12l-6 3.5z"/>',
+    listen: '<path d="M4 15v-3a8 8 0 0 1 16 0v3"/><path d="M4 14h2a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2H5a1 1 0 0 1-1-1z"/><path d="M20 14h-2a2 2 0 0 0-2 2v2a2 2 0 0 0 2 2h1a1 1 0 0 0 1-1z"/>',
     guide: '<path d="M4 4.5A1.5 1.5 0 0 1 5.5 3H19v15H5.5A1.5 1.5 0 0 0 4 19.5z"/><path d="M4 19.5A1.5 1.5 0 0 1 5.5 18H19v3H5.5A1.5 1.5 0 0 1 4 19.5z"/><path d="M8 8h7M8 11.5h5"/>',
     connect: '<circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.2 2.7-5.2 6-5.2s6 2 6 5.2"/><path d="M16 5.4a3.2 3.2 0 0 1 0 6.2M18 14.6c2 .7 3 2.5 3 5"/>',
     give: '<path d="M12 20s-7.5-4.6-7.5-9.4A4.1 4.1 0 0 1 12 7.6a4.1 4.1 0 0 1 7.5 3C19.5 15.4 12 20 12 20z"/>',
@@ -283,22 +283,47 @@
      A solid cream block where a real photograph will go. Never stock art.
      ---------------------------------------------------------------------- */
 
+  function playBadge() {
+    return '' +
+      '<span class="hc-play">' +
+        '<span class="hc-play__disc">' +
+          '<svg class="hc-play__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">' +
+            '<path d="M8 5.5 19 12 8 18.5z"/>' +
+          '</svg>' +
+        '</span>' +
+      '</span>';
+  }
+
   function media(label, ratio, opts) {
     opts = opts || {};
-    var play = opts.play
-      ? '<span class="hc-play">' +
-          '<span class="hc-play__disc">' +
-            '<svg class="hc-play__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">' +
-              '<path d="M8 5.5 19 12 8 18.5z"/>' +
-            '</svg>' +
-          '</span>' +
-        '</span>'
-      : '';
     return '' +
       '<div class="hc-media hc-media--' + (ratio || '16x9') + (opts.play ? ' hc-media--play' : '') + '">' +
         '<span class="hc-media__label">' + esc(label) + '</span>' +
-        play +
+        (opts.play ? playBadge() : '') +
       '</div>';
+  }
+
+  /* ------------------------------------------------------------- cover art
+     Podcast artwork, drawn rather than fetched. The show has one cover and
+     every episode wears it, so this is the church lockup on a dark panel,
+     which is what the art on Spotify is. Ships with the app, needs no
+     network, and holds up at 64px and at full width alike.
+     ---------------------------------------------------------------------- */
+
+  function cover(label, ratio, opts) {
+    opts = opts || {};
+    // Small enough and the wordmark stops being readable, so the house mark
+    // carries the tile on its own.
+    var art = opts.compact ? 'assets/icons/mark.png' : 'assets/img/logo-lockup.png';
+    var cls = 'hc-cover hc-media--' + (ratio || '1x1') +
+      (opts.compact ? ' hc-cover--compact' : '') +
+      (opts.play ? ' hc-cover--play' : '');
+    return '' +
+      '<span class="' + cls + '">' +
+        '<img class="hc-cover__logo" src="' + art + '" alt="" aria-hidden="true">' +
+        (label ? '<span class="hc-cover__label">' + esc(label) + '</span>' : '') +
+        (opts.play ? playBadge() : '') +
+      '</span>';
   }
 
   /* ---------------------------------------------------------------- toast */
@@ -361,6 +386,7 @@
     collapsible: collapsible,
     emptyState: emptyState,
     media: media,
+    cover: cover,
     toast: toast,
     scriptureRow: scriptureRow,
     closingScripture: closingScripture
