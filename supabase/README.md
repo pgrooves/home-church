@@ -238,6 +238,19 @@ Two behaviors worth knowing, because they look like bugs and are not:
 - **A table that fails does not fail the refresh.** Every other table still
   lands, and the one that failed keeps whatever it already had.
 
+**How to check it on an actual phone.** Open the app, go to Profile, and read
+the last line under the version number. It says one of:
+
+| Line | Means |
+|---|---|
+| Content is up to date, checked today at 6:42 PM | Fetched from Supabase just now |
+| Showing your saved copy | Cache, the network did not answer this time |
+| Showing the copy that came with the app | `js/data.js`, so no cache and no network yet |
+
+That line is the whole device check. It reads as ordinary warm copy to anyone
+else, and it means you never have to guess whether a new guide actually
+landed.
+
 `js/data.js` is never modified by any of this. `HC.data`'s arrays are mutated
 in place rather than reassigned, because the helpers in `data.js` close over
 those same array objects, so assigning a new array would leave every helper

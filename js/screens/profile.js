@@ -153,6 +153,47 @@
       '</button>';
   }
 
+  /* Where the guides, events, and announcements on this phone came from.
+
+     This is here so that "did the app actually pick up the new guide" can be
+     answered by looking at the phone, rather than by refreshing screens and
+     guessing. It reads as a normal, warm line to anyone else, which is the
+     bar for anything in the About block. */
+  function contentLine() {
+    if (!HC.content || !HC.content.isConfigured()) return '';
+    var s = HC.content.state();
+
+    if (s.source === 'network') {
+      return '<p class="hc-caption hc-about__content">Content is up to date' +
+        (s.fetchedAt ? ', checked ' + when(s.fetchedAt) : '') + '.</p>';
+    }
+    if (s.status === 'fetching') {
+      return '<p class="hc-caption hc-about__content">Checking for new content.</p>';
+    }
+    if (s.source === 'cache') {
+      return '<p class="hc-caption hc-about__content">Showing your saved copy. ' +
+        'We will catch up the next time you have signal.</p>';
+    }
+    return '<p class="hc-caption hc-about__content">Showing the copy that came with the app. ' +
+      'We will catch up the next time you have signal.</p>';
+  }
+
+  // 'today at 6:42 PM' when it is today, otherwise the date. Short on purpose.
+  function when(iso) {
+    var d = new Date(iso);
+    if (isNaN(d.getTime())) return 'just now';
+    var h = d.getHours(), m = ('0' + d.getMinutes()).slice(-2);
+    var suffix = h >= 12 ? 'PM' : 'AM';
+    h = h % 12; if (h === 0) h = 12;
+    var clock = h + ':' + m + ' ' + suffix;
+    var today = new Date();
+    var sameDay = d.getFullYear() === today.getFullYear() &&
+      d.getMonth() === today.getMonth() && d.getDate() === today.getDate();
+    return sameDay ? 'today at ' + clock : c.formatDate(
+      d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2)
+    );
+  }
+
   function render() {
     var p = HC.store.getProfile();
     var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
@@ -244,6 +285,7 @@
     html += '<p class="hc-caption">' + c.esc(HC.data.church.name) + ', ' + c.esc(HC.data.church.pastors) + '</p>';
     html += '<p class="hc-caption">' + c.esc(HC.data.church.tagline) + '</p>';
     html += '<p class="hc-caption hc-about__version">Version 1.0</p>';
+    html += contentLine();
     if (!HC.store.storage.available) {
       html += '<p class="hc-caption hc-about__warn">Your browser is not saving anything right now, so notes and checkmarks will not survive a reload. Private browsing usually does this.</p>';
     }

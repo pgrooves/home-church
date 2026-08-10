@@ -578,6 +578,15 @@
       var route = HC.router.current();
       if (route && route.name === 'profile') HC.router.go({ name: 'profile' }, { force: true });
     });
+
+    // A content check finishing changes the line at the bottom of Profile even
+    // when the content itself did not change, so repaint it the same way.
+    HC.store.on('content', function () {
+      var route = HC.router.current();
+      if (route && route.name === 'profile') {
+        HC.router.go({ name: 'profile', restore: true }, { force: true });
+      }
+    });
     HC.auth.init();
 
     // Then go and get the current content, after the first paint so nothing

@@ -204,8 +204,14 @@
     return cached.payload || null;
   }
 
+  /* Returns false when the write did not stick, which on a phone means the
+     localStorage quota is full or this is a private window. That is survivable,
+     the app just falls back to fetching fresh every launch instead of opening
+     from cache, so it is recorded rather than thrown. Worth watching over
+     time: guides are the big rows, roughly 18KB each, so a few years of weekly
+     guides is the thing that would eventually push a 5MB quota. */
   function writeCache(payload) {
-    HC.store.storage.set(CACHE_KEY, {
+    return HC.store.storage.set(CACHE_KEY, {
       version: CACHE_VERSION,
       project: cfg.SUPABASE_URL,
       fetchedAt: new Date().toISOString(),
@@ -269,7 +275,14 @@
 
   /* ------------------------------------------------------------------ api --- */
 
-  var state = { status: 'idle', source: 'bundled', fetchedAt: null };
+  var state = { status: 'idle', source: 'bundled', fetchedAt: null, cached: null };
+
+  /* Anything watching the content layer, which today is the Profile screen's
+     one line about where this phone's content came from. Mirrors how auth
+     announces itself, so app.js handles both the same way. */
+  function announce() {
+    if (HC.store && HC.store.emit) HC.store.emit('content', HC.content.state());
+  }
 
   /* Synchronous, and called before the first render. Reads the cache only, so
      the very first paint already shows last week's real content instead of
@@ -307,6 +320,7 @@
       // Leave the cache and the bundled content exactly as they are.
       if (!got) {
         state.status = 'offline';
+        announce();
         return false;
       }
 
@@ -314,15 +328,17 @@
       apply(payload);
       var changed = signature() !== before;
 
-      writeCache(payload);
+      state.cached = writeCache(payload);
       state.status = 'ok';
       state.source = 'network';
       state.fetchedAt = new Date().toISOString();
 
       if (changed) redraw();
+      announce();
       return changed;
     }).catch(function () {
       state.status = 'error';
+      announce();
       return false;
     });
   }
@@ -344,7 +360,12 @@
     refresh: refresh,
     isConfigured: configured,
     state: function () {
-      return { status: state.status, source: state.source, fetchedAt: state.fetchedAt };
+      return {
+        status: state.status,       // idle | fetching | ok | offline | error
+        source: state.source,       // bundled | cache | network
+        fetchedAt: state.fetchedAt,
+        cached: state.cached        // false means the cache write did not stick
+      };
     }
   };
 
