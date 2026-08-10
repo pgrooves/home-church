@@ -26,8 +26,7 @@
     mapsUrl: 'https://maps.apple.com/?address=216%20Giuffrias%20Ave,%20Metairie,%20LA%2070001',
     serviceDay: 'Sunday',
     serviceTimes: ['8:00 AM', '9:30 AM', '11:00 AM'],
-    // TODO confirm the live Overflow URL with whoever owns giving before launch.
-    givingUrl: 'https://overflow.co/give/homechurchnola',
+    givingUrl: 'https://donate.overflow.co/homechurchnola',
     websiteUrl: 'https://www.homechurchnola.com',
     social: [
       { label: 'Instagram', url: 'https://www.instagram.com/homechurchnola' },
