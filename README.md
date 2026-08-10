@@ -121,6 +121,37 @@ matches its title is fine and nobody sees it.
 
 -----
 
+## Publishing content without an App Store build
+
+Guides, events, podcast episodes, and future content types have a home in
+Supabase, so publishing and editing happen without touching app code and
+without waiting on a review. Full documentation is in
+**`supabase/README.md`**, kept there rather than duplicated here so the two
+cannot drift.
+
+The short version. Four tables, `series`, `guides`, `podcasts`, and `events`,
+publicly readable with the anon key and writable only with the service role
+key. Five slash commands drive them:
+
+| Command | Does |
+|---|---|
+| `/new-guide` | Sermon PDF to a full guide, into `js/data.js` and `guides` |
+| `/new-event` | Asks for what is missing, confirms, writes to `events` |
+| `/new-podcast` | Episode to `podcasts`, links its guide, puts the real title on the message |
+| `/edit-content` | Plain language fix to any row, current versus proposed, writes after you confirm |
+| `/new-content-type` | Scaffolds a fifth content type, table and command |
+
+All five shell out to `scripts/hc_supabase.py`, standard library Python, no
+pip install, which keeps the no build step promise above intact. Credentials
+come from `.env` at the repo root, which is git ignored and never committed.
+
+**The app does not read these tables yet.** Every screen still renders
+`js/data.js`, so the commands currently publish to both. Pointing `HC.data` at
+Supabase is the change that makes this pay off, and it is deliberately a
+separate piece of work.
+
+-----
+
 ## Supabase setup
 
 Accounts are prepped but not connected. Nothing changes for anyone using the

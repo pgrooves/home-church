@@ -1,0 +1,28 @@
+# Secrets. The service role key lives here and must never be committed.
+# `js/config.js` holds the anon publishable key on purpose, that one is safe
+# in client code because row level security is what actually gates access.
+.env
+.env.*
+!.env.example
+
+# Local scratch from the publishing scripts
+*.local.json
+/tmp-guide-*.json
+
+# Seed JSON is generated from js/data.js by scripts/export_seed.js. Committing
+# it would be a second copy of the whole catalogue, free to drift from the
+# first. Regenerate it instead, it takes a second.
+/supabase/seed/
+
+# OS and editor noise
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/
+
+# Python, for the scripts in scripts/
+__pycache__/
+*.pyc
+.venv/
+venv/
