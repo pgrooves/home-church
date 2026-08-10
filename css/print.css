@@ -51,11 +51,18 @@
     color: var(--pp-ink);
   }
 
+  /* No forced height here on purpose. vh units are unreliable across print
+     pipelines, notably iOS Safari's AirPrint path resolves vh against the
+     phone's screen rather than the physical page, so a page sized to
+     exactly 100vh ends up very slightly taller than one physical page on
+     that device and spills a near-blank continuation page after every
+     single page, doubling the page count. page-break-after alone is
+     enough to start each section on its own page regardless of how tall
+     its content is. */
   .hc-print-page {
     background: var(--pp-paper);
     color: var(--pp-ink);
     padding: 20mm 16mm 24mm;
-    min-height: 100vh;
     box-sizing: border-box;
     position: relative;
     page-break-after: always;
@@ -124,6 +131,11 @@
 
   .hc-print-page--cover,
   .hc-print-page--closing {
+    /* A fixed physical height, not vh, so the dark background fills the
+       page like a real cover rather than just wrapping its text. Sized
+       comfortably under the printable area of both Letter and A4 so it
+       can never itself spill a second page. */
+    height: 220mm;
     background: var(--pp-cover);
     color: var(--pp-cover-ink);
     text-align: center;
