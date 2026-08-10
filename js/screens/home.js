@@ -55,11 +55,12 @@
       return c.card(c.emptyState('Nothing here yet. Your guide shows up after Sunday.'));
     }
     var series = HC.data.getSeries(guide.seriesId);
+    var meta = HC.data.guideMeta(guide);
     var inner = '' +
       '<p class="hc-eyebrow">' + c.esc(series ? series.title : 'This week') + '</p>' +
-      '<p class="hc-card__title hc-guide-card__title">' + c.esc(HC.data.guideTitle(guide)) + '</p>' +
+      '<p class="hc-card__title hc-guide-card__title">' + c.esc(meta.title) + '</p>' +
       '<p class="hc-caption hc-card__meta">' +
-        c.esc(guide.preacherShort) + ', ' + c.esc(c.formatDate(guide.preachedOn)) +
+        c.esc(c.byline(meta.preacherShort, meta.preachedOn)) +
       '</p>' +
       '<p class="hc-guide-card__cue hc-caption">Open this week’s guide' +
         c.icon('chevronRight', 'hc-guide-card__chev') + '</p>';

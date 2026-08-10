@@ -262,48 +262,31 @@ obvious.
 
 ### When a sermon matches no episode
 
-Do not delete it and do not invent an episode for it. There are three honest
-reasons a sermon has no episode, and they need different answers:
+Do not delete it and do not invent an episode for it. There are two honest
+reasons a sermon has no episode, and neither one is a problem to fix in a
+hurry:
 
-1. **The episode hasn't posted yet.** Leave it alone, it fixes itself next
+1. **The episode has not posted yet.** Leave it alone, it fixes itself next
    week.
 2. **The message was never podcast.** Leave it alone. The show-level fallback
    is correct and the guide is still worth having.
-3. **The sermon is placeholder content that never happened.** Six of the
-   seven sermons in `js/data.js` came from the original `Build the Home
-   Church app, v1` commit and are invented, as `README.md` says plainly.
-   Only `sermon-unsung-heroes` came from a real `/new-guide` run against an
-   actual sermon.
 
-That third case is the one to stop on. **Never quietly attach a real episode
-to a placeholder sermon.**
+The invented seed sermons that used to live here are gone. `js/data.js` now
+holds the real catalogue, 87 messages transcribed from the podcast feed and
+running back to November 2024, so a sermon in that file is a message that
+actually happened. **Never delete a sermon that has a guide hanging off it
+without asking**, because deleting a guide throws away real writing and
+orphans the checkmarks and journal entries a leader saved under its id on
+their own phone.
 
-### Replacing placeholders
+### Episodes with nothing recorded
 
-The standing decision is that real catalogue replaces invented seed content.
-Carry it out in this order, and not before the episode list is actually in
-front of you:
-
-1. **Match the whole list first, then report.** A sermon being seed content
-   does not mean the message is fictional. Two of the three guides in the
-   repo, `guide-seat-table` and `guide-slow-burn`, are around 1,100 and 1,250
-   words with 25 and 27 questions each, and they read like they were built
-   from real preaching even though their sermon records were invented around
-   them. If those titles turn up in the real catalogue, they are real
-   messages with invented metadata, and the fix is to correct the sermon's
-   date, preacher, and duration, not to delete anything.
-2. **Only then propose deletions**, naming each sermon, whether a guide hangs
-   off it, and how much writing that guide contains. A sermon with no guide
-   and no matching episode is a clean removal. A sermon with a guide is not,
-   ever, without an explicit yes.
-3. **A guide is never collateral.** Deleting a guide throws away real writing
-   and orphans any checkmarks and journal entries a leader saved under its id
-   on their own phone. If a guide's sermon is going away, ask whether the
-   guide should go with it or be repointed at a real message instead.
-
-Deleting seed content is not urgent. It costs nothing to leave a placeholder
-in place for another week while somebody decides, and it costs a guide to get
-it wrong.
+Plenty of episodes do not state a preacher or a passage in their notes.
+Twenty eight and forty three of them respectively, at the time of the
+import. Leave those fields `null` rather than guessing. The byline and the
+meta line both drop empties, so a message with neither renders as a title, a
+date, and a duration, which is honest and looks fine. Getting an attribution
+wrong in a published app is a real error, a missing one is not.
 
 -----
 

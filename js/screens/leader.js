@@ -62,8 +62,8 @@
       var inner = '' +
         '<p class="hc-eyebrow">This week</p>' +
         '<p class="hc-card__title">' + c.esc(HC.data.guideTitle(guide)) + '</p>' +
-        '<p class="hc-caption hc-card__meta">' + c.esc(guide.preacherShort) + ', ' +
-          c.esc(c.formatDate(guide.preachedOn)) + '</p>' +
+        '<p class="hc-caption hc-card__meta">' +
+          c.esc(c.byline(HC.data.guideMeta(guide).preacherShort, HC.data.guideMeta(guide).preachedOn)) + '</p>' +
         '<div class="hc-leader__actions">' +
           c.button('Present the questions', { action: 'present', id: guide.id, icon: 'book' }) +
           c.button('Open the full guide', { action: 'open-guide', id: guide.id, variant: 'secondary' }) +

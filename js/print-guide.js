@@ -21,13 +21,14 @@
   }
 
   function coverPage(guide, series) {
+    var meta = HC.data.guideMeta(guide);
     return page('hc-print-page--cover',
       '<p class="hc-print-eyebrow">Home Church &middot; Small Group Guide</p>' +
       '<h1 class="hc-print-h1">' + c.esc(HC.data.guideTitle(guide)) + '</h1>' +
       '<p class="hc-print-subtitle">' + c.esc(guide.subtitle) + '</p>' +
       '<div class="hc-print-divider" aria-hidden="true"></div>' +
-      '<p class="hc-print-meta">Based on the sermon &middot; ' + c.esc(guide.primaryPassage) + '</p>' +
-      '<p class="hc-print-colophon">' + c.esc(guide.preacher) + ' &middot; ' + c.esc(c.formatDate(guide.preachedOn)) +
+      '<p class="hc-print-meta">Based on the sermon &middot; ' + c.esc(meta.passage) + '</p>' +
+      '<p class="hc-print-colophon">' + c.esc(c.byline(meta.preacher, meta.preachedOn)) +
         (series ? '<br>' + c.esc(series.title) : '') + '</p>'
     );
   }

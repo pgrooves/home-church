@@ -330,23 +330,29 @@ it is not part of the UI palette and no interface element should adopt it.
 These are marked in the code where they appear:
 
 1. The Overflow giving URL in `js/data.js`.
-2. The per-episode Spotify links. `podcast.showUrl` in `js/data.js` is the
-   real show, every sermon carries `episodeUrl: null` and falls back to it, so
-   Listen works today and gets sharper one line at a time. Same for `summary`,
-   which is where each episode's own notes go and which currently falls back
-   to the sermon's one line `description`.
-3. Whether a licensed display typeface should replace Cormorant.
-4. Which church management system holds groups, serve teams, and events, which
+2. The per-episode Spotify links. Every message currently links to its own
+   episode page on the podcast host, which works, and `podcast.showUrl` points
+   at the show on Spotify. Swapping `episodeUrl` to the matching
+   `open.spotify.com/episode/...` link is a per-row change, and the Listen
+   button relabels itself to "Listen on Spotify" automatically when it sees a
+   Spotify URL.
+3. The 28 messages with no preacher recorded and the 43 with no passage, both
+   because the episode notes do not state them. They render cleanly without,
+   the byline just gets shorter. Fill them in as you know them.
+4. Whether a licensed display typeface should replace Cormorant.
+5. Which church management system holds groups, serve teams, and events, which
    decides whether that content can be pulled live. Planning Center is a
    strong fit if the church already uses it, it can also hold the profile
    fields the Supabase setup above tracks, worth weighing before leaning too
    far into a second source of truth for the same information.
-5. Who publishes a guide every week. The app's value depends on that pipeline
+6. Who publishes a guide every week. The app's value depends on that pipeline
    more than on anything in this repo.
-6. Whether phone sign-in matters enough to pay for an SMS provider. Email
+7. Whether phone sign-in matters enough to pay for an SMS provider. Email
    sign-in is free and already works once Supabase is connected, phone does
    not until a provider like Twilio is wired up in the Supabase dashboard.
 
-Seed content in `js/data.js` is written to be plausible, not authoritative.
-Sermons, groups, events, and serve teams are placeholders. The two guides are
-complete and written in the real voice, and they are the thing to look at.
+The `sermons` and `series` arrays in `js/data.js` are now the real Home
+Church NOLA catalogue, 87 messages from November 2024 forward, transcribed
+from the podcast feed. Groups, events, and serve teams are still plausible
+placeholders. The three guides are complete and written in the real voice,
+and they are the thing to look at.

@@ -70,6 +70,18 @@
     return n < 10 ? '0' + n : String(n);
   }
 
+  /* Not every episode names a preacher or a passage, and a missing one must
+     not leave a stray comma or a floating separator behind. Both joiners drop
+     empties rather than rendering them. */
+
+  function byline(name, iso) {
+    return [name, iso ? formatDate(iso) : ''].filter(Boolean).join(', ');
+  }
+
+  function metaLine(parts) {
+    return parts.filter(Boolean).join(' · ');
+  }
+
   /* --------------------------------------------------------- open external
      Every link that leaves the app goes through here. Under Capacitor this
      becomes Browser.open() and nothing else in the codebase changes.
@@ -369,6 +381,8 @@
     icon: icon,
     formatDate: formatDate,
     formatDateShort: formatDateShort,
+    byline: byline,
+    metaLine: metaLine,
     dayName: dayName,
     nextSunday: nextSunday,
     greeting: greeting,

@@ -14,12 +14,13 @@
   // The series name is already on the header above these rows, so the eyebrow
   // carries the passage instead of repeating it.
   function guideRow(guide) {
+    var meta = HC.data.guideMeta(guide);
     return '' +
       '<button type="button" class="hc-guide-row" data-action="open-guide" data-id="' + c.esc(guide.id) + '">' +
         '<span class="hc-guide-row__body">' +
-          '<span class="hc-eyebrow">' + c.esc(guide.primaryPassage) + '</span>' +
-          '<span class="hc-guide-row__title">' + c.esc(HC.data.guideTitle(guide)) + '</span>' +
-          '<span class="hc-caption">' + c.esc(guide.preacherShort) + ', ' + c.esc(c.formatDate(guide.preachedOn)) + '</span>' +
+          '<span class="hc-eyebrow">' + c.esc(meta.passage) + '</span>' +
+          '<span class="hc-guide-row__title">' + c.esc(meta.title) + '</span>' +
+          '<span class="hc-caption">' + c.esc(c.byline(meta.preacherShort, meta.preachedOn)) + '</span>' +
         '</span>' +
         c.icon('chevronRight', 'hc-row__chevron') +
       '</button>';
@@ -163,10 +164,11 @@
 
   function oneLinerSection(guide) {
     var body = '';
-    var title = HC.data.guideTitle(guide);
+    var meta = HC.data.guideMeta(guide);
+    var title = meta.title;
     guide.oneLiners.forEach(function (line) {
-      body += c.quoteCard(line, guide.preacherShort + ', ' + title, {
-        text: '“' + line + '”\n\n' + guide.preacherShort + ', ' + title + ', Home Church',
+      body += c.quoteCard(line, meta.preacherShort + ', ' + title, {
+        text: '“' + line + '”\n\n' + meta.preacherShort + ', ' + title + ', Home Church',
         title: title
       });
     });
@@ -213,12 +215,12 @@
     // Masthead
     html += '<div class="hc-reader__head">';
     html += '<p class="hc-eyebrow">' + c.esc(series ? series.title : 'Home Church') + '</p>';
-    html += '<h1 class="hc-display-l hc-reader__title">' + c.esc(HC.data.guideTitle(guide)) + '</h1>';
+    var meta = HC.data.guideMeta(guide);
+    html += '<h1 class="hc-display-l hc-reader__title">' + c.esc(meta.title) + '</h1>';
     html += '<p class="hc-reader__subtitle hc-body-serif">' + c.esc(guide.subtitle) + '</p>';
     html += '<div class="hc-reader__rule" aria-hidden="true"></div>';
     html += '<p class="hc-caption hc-reader__meta">' +
-      c.esc(guide.preacher) + ' &middot; ' + c.esc(c.formatDate(guide.preachedOn)) +
-      ' &middot; ' + c.esc(guide.primaryPassage) + '</p>';
+      c.esc(c.metaLine([meta.preacher, meta.preachedOn ? c.formatDate(meta.preachedOn) : '', meta.passage])) + '</p>';
     html += '<div class="hc-reader__actions">' +
       c.button('Download guide', { action: 'download-guide', id: guide.id, variant: 'secondary', icon: 'download' }) +
     '</div>';

@@ -20,11 +20,15 @@
   }
 
   // The one action every episode carries. Named for where it lands, because
-  // the tap leaves the app and the label should say so before it does.
+  // the tap leaves the app and the label should say so before it does. The
+  // catalogue currently links each episode on its podcast host, and the show
+  // itself on Spotify, so the label follows the URL rather than assuming.
   function listenButton(sermon, variant) {
-    return c.button('Listen on ' + HC.data.podcast.platform, {
+    var url = HC.data.episodeUrl(sermon);
+    var onSpotify = url.indexOf('spotify.com') !== -1;
+    return c.button(onSpotify ? 'Listen on ' + HC.data.podcast.platform : 'Listen to this message', {
       action: 'open-url',
-      url: HC.data.episodeUrl(sermon),
+      url: url,
       variant: variant || 'secondary',
       icon: 'listen'
     });
@@ -48,8 +52,7 @@
         '<p class="hc-eyebrow hc-latest__eyebrow">' + c.esc(series ? series.title : 'Latest') + '</p>' +
         '<h2 class="hc-display-m hc-latest__title">' + c.esc(sermon.title) + '</h2>' +
         '<p class="hc-caption hc-latest__meta">' +
-          c.esc(sermon.preacher) + ' &middot; ' + c.esc(c.formatDate(sermon.preachedOn)) +
-          ' &middot; ' + c.esc(sermon.duration) +
+          c.esc(c.metaLine([sermon.preacher, c.formatDate(sermon.preachedOn), sermon.duration])) +
         '</p>' +
         '<div class="hc-latest__desc">' + summaryHtml(sermon) + '</div>' +
         '<div class="hc-latest__action">' + listenButton(sermon, 'primary') + '</div>' +
@@ -78,9 +81,8 @@
           '<span class="hc-sermon__thumb">' + c.cover('', '1x1', { compact: true }) + '</span>' +
           '<span class="hc-sermon__body">' +
             '<span class="hc-row__title">' + c.esc(sermon.title) + '</span>' +
-            '<span class="hc-caption">' + c.esc(sermon.preacherShort) + ', ' +
-              c.esc(c.formatDate(sermon.preachedOn)) + '</span>' +
-            '<span class="hc-caption">' + c.esc(sermon.passage) + ' &middot; ' + c.esc(sermon.duration) + '</span>' +
+            '<span class="hc-caption">' + c.esc(c.byline(sermon.preacherShort, sermon.preachedOn)) + '</span>' +
+            '<span class="hc-caption">' + c.esc(c.metaLine([sermon.passage, sermon.duration])) + '</span>' +
           '</span>' +
           c.icon('chevronDown', 'hc-sermon__chevron') +
         '</button>' +
