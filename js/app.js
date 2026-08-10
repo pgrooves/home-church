@@ -209,6 +209,10 @@
       HC.router.go({ name: 'guide-reader', id: el.getAttribute('data-id') });
     },
 
+    'download-guide': function (el) {
+      HC.print.guide(el.getAttribute('data-id'));
+    },
+
     'open-url': function (el) {
       c.openExternal(el.getAttribute('data-url'));
     },

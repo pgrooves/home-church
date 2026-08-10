@@ -1,0 +1,275 @@
+/* ==========================================================================
+   Home Church, guide download
+   Styles the paginated sheet js/print-guide.js builds for the "Download
+   guide" button. Hidden on screen, shown only inside the print context, and
+   only for #hc-print-sheet, everything else in the app is hidden while
+   printing so this is the whole document.
+
+   Paper keeps its own fixed palette here rather than reading the app's
+   --hc-* custom properties. A printed guide should look the same whether
+   the phone it was made on was in light or dark mode, same as real paper.
+   The values below are simply the light-mode numbers from tokens.css.
+   ========================================================================== */
+
+#hc-print-sheet {
+  display: none;
+}
+
+@media print {
+  body > *:not(#hc-print-sheet) { display: none !important; }
+
+  #hc-print-sheet {
+    display: block;
+    --pp-paper:   #F7F4EF;
+    --pp-card:    #EDE8DF;
+    --pp-ink:     #16110B;
+    --pp-mid:     #756F65;
+    --pp-rule:    #CDC4B3;
+    --pp-accent:  #8F7A5C;
+    --pp-cover:   #1A1918;
+    --pp-cover-ink: #F4F0E8;
+    --pp-cover-mid: #C7B9A3;
+    --pp-serif: "Cormorant", "Cormorant Garamond", Georgia, "Times New Roman", serif;
+    --pp-sans:  "Poppins", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+
+    font-family: var(--pp-serif);
+    color: var(--pp-ink);
+  }
+
+  .hc-print-page {
+    background: var(--pp-paper);
+    color: var(--pp-ink);
+    padding: 20mm 16mm 24mm;
+    min-height: 100vh;
+    box-sizing: border-box;
+    position: relative;
+    page-break-after: always;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .hc-print-page:last-child { page-break-after: auto; }
+
+  .hc-print-eyebrow {
+    font-family: var(--pp-sans);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--pp-accent);
+    margin: 0 0 8px;
+  }
+
+  .hc-print-h1 {
+    font-weight: 300;
+    font-size: 40px;
+    line-height: 1.08;
+    margin: 0 0 6px;
+  }
+
+  .hc-print-h2 {
+    font-weight: 300;
+    font-size: 26px;
+    line-height: 1.15;
+    margin: 0 0 16px;
+  }
+
+  .hc-print-body {
+    font-size: 13.5px;
+    line-height: 1.5;
+    margin: 0 0 12px;
+  }
+  .hc-print-body:last-child { margin-bottom: 0; }
+
+  .hc-print-usage {
+    font-style: italic;
+    color: var(--pp-mid);
+    font-size: 12.5px;
+    line-height: 1.5;
+    border-left: 2px solid var(--pp-rule);
+    padding-left: 12px;
+    margin: 0 0 24px;
+  }
+
+  .hc-print-foot {
+    position: absolute;
+    left: 16mm;
+    right: 16mm;
+    bottom: 10mm;
+    display: flex;
+    justify-content: space-between;
+    font-family: var(--pp-sans);
+    font-size: 8px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--pp-mid);
+    opacity: 0.7;
+  }
+
+  /* --- cover and closing pages ------------------------------------------ */
+
+  .hc-print-page--cover,
+  .hc-print-page--closing {
+    background: var(--pp-cover);
+    color: var(--pp-cover-ink);
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+
+  .hc-print-page--cover .hc-print-eyebrow { color: var(--pp-cover-mid); }
+  .hc-print-page--cover .hc-print-h1 { font-size: 46px; margin: 14px 0 10px; }
+
+  .hc-print-subtitle {
+    font-style: italic;
+    font-weight: 400;
+    font-size: 18px;
+    color: var(--pp-cover-mid);
+    margin: 0 0 28px;
+  }
+
+  .hc-print-divider {
+    width: 48px;
+    height: 1px;
+    background: var(--pp-cover-mid);
+    opacity: 0.5;
+    margin: 0 auto 24px;
+  }
+
+  .hc-print-meta {
+    font-family: var(--pp-sans);
+    font-size: 9.5px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--pp-cover-mid);
+    margin: 0;
+  }
+
+  .hc-print-colophon {
+    margin-top: 36px;
+    font-size: 13px;
+    color: var(--pp-cover-mid);
+    line-height: 1.6;
+  }
+
+  .hc-print-quote {
+    font-style: italic;
+    font-weight: 400;
+    font-size: 21px;
+    line-height: 1.5;
+    margin: 0 0 16px;
+  }
+
+  .hc-print-quote-ref {
+    font-family: var(--pp-sans);
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--pp-cover-mid);
+    margin: 0;
+  }
+
+  .hc-print-wordmark {
+    margin-top: 44px;
+    font-family: var(--pp-sans);
+    font-size: 9px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--pp-cover-mid);
+    opacity: 0.7;
+  }
+
+  /* --- anchors ------------------------------------------------------------ */
+
+  .hc-print-anchor {
+    padding: 14px 0;
+    border-top: 1px solid var(--pp-rule);
+  }
+  .hc-print-anchor:last-child { border-bottom: 1px solid var(--pp-rule); }
+
+  .hc-print-anchor-label {
+    font-family: var(--pp-sans);
+    font-size: 9.5px;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--pp-accent);
+    margin: 0 0 4px;
+  }
+
+  .hc-print-anchor-body { font-size: 13px; line-height: 1.5; margin: 0; }
+
+  /* --- discussion questions ------------------------------------------------ */
+
+  .hc-print-qsection { margin-bottom: 20px; }
+  .hc-print-qsection:last-child { margin-bottom: 0; }
+
+  .hc-print-qsection h3 {
+    font-family: var(--pp-sans);
+    font-size: 10.5px;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    margin: 0 0 4px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--pp-rule);
+  }
+
+  .hc-print-qsection ul { list-style: none; margin: 10px 0 0; padding: 0; }
+
+  .hc-print-qsection li {
+    font-size: 13px;
+    line-height: 1.48;
+    margin: 0 0 10px;
+    padding-left: 16px;
+    position: relative;
+  }
+  .hc-print-qsection li:last-child { margin-bottom: 0; }
+  .hc-print-qsection li::before {
+    content: '\2014';
+    position: absolute;
+    left: 0;
+    color: var(--pp-accent);
+  }
+
+  /* --- self reflection ------------------------------------------------------ */
+
+  .hc-print-reflect-item {
+    padding: 12px 0;
+    border-top: 1px solid var(--pp-rule);
+  }
+  .hc-print-reflect-item:last-child { border-bottom: 1px solid var(--pp-rule); }
+  .hc-print-reflect-text { font-size: 13px; line-height: 1.5; margin: 0; }
+
+  /* --- one-liners ------------------------------------------------------------ */
+
+  .hc-print-liners { display: flex; flex-direction: column; gap: 8px; }
+
+  .hc-print-liner {
+    background: var(--pp-card);
+    border-left: 2px solid var(--pp-accent);
+    padding: 10px 14px;
+    font-style: italic;
+    font-size: 13.5px;
+    line-height: 1.4;
+  }
+
+  /* --- scripture index ------------------------------------------------------- */
+
+  .hc-print-scripture { padding: 10px 0; border-top: 1px solid var(--pp-rule); }
+  .hc-print-scripture:last-child { border-bottom: 1px solid var(--pp-rule); }
+
+  .hc-print-scripture-ref {
+    font-weight: 600;
+    font-size: 14.5px;
+    margin: 0 0 2px;
+  }
+
+  .hc-print-scripture-note {
+    font-family: var(--pp-sans);
+    font-size: 11px;
+    line-height: 1.4;
+    color: var(--pp-mid);
+    margin: 0;
+  }
+}

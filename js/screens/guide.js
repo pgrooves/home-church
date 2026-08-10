@@ -218,6 +218,9 @@
     html += '<p class="hc-caption hc-reader__meta">' +
       c.esc(guide.preacher) + ' &middot; ' + c.esc(c.formatDate(guide.preachedOn)) +
       ' &middot; ' + c.esc(guide.primaryPassage) + '</p>';
+    html += '<div class="hc-reader__actions">' +
+      c.button('Download guide', { action: 'download-guide', id: guide.id, variant: 'secondary', icon: 'download' }) +
+    '</div>';
     html += '</div>';
 
     if (leader) {

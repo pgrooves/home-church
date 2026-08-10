@@ -233,6 +233,8 @@
 
 .hc-reader__meta { font-variant-numeric: tabular-nums; }
 
+.hc-reader__actions { margin-top: var(--hc-space-base); }
+
 .hc-reader__leader {
   margin-top: var(--hc-space-lg);
   padding: var(--hc-space-base);
