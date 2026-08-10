@@ -73,15 +73,37 @@ using.
 | `podcasts` | Sunday messages as episodes, external media links | Listen |
 | `events` | The events calendar | Connect |
 | `announcements` | The single One thing card, with a date window | Home |
+| `reading_plans` | The Reading together plan, one row per plan | Home |
 
-**Why these five and not everything in `js/data.js`.** Collection count is the
+**Why these six and not everything in `js/data.js`.** Collection count is the
 wrong way to look at it. What matters is how often something changes. These
-five are everything that churns: guides and podcasts weekly, announcements
-most weeks, events monthly, series every few months. The rest of `data.js`,
-`church`, the show level `podcast` info, `readingPlan`, `groups`,
-`serveTeams`, and `nextSteps`, is config that changes once or twice a year,
-and shipping it in the binary is fine. Give any of them a table when that
-stops being true, the pattern is in `/new-content-type`.
+six are everything that churns: guides and podcasts weekly, the reading plan
+weekly, announcements most weeks, events monthly, series every few months.
+The rest of `data.js`, `church`, the show level `podcast` info, `groups`,
+`serveTeams`, and `nextSteps`, changes once or twice a year, and shipping it
+in the binary is fine for now. Give any of them a table when that stops being
+true, the pattern is in `/new-content-type`.
+
+**`reading_plans` is the one to know about**, because it moves every week.
+`current_week` and `this_week` are the two fields that change, the rest of the
+row sits still for the length of a plan. Starting a new plan is a second row
+with `is_current` true and the old one flipped to false, never a deletion, so
+last year's plan stays on record.
+
+Bumping the week, three ways, all equivalent:
+
+- **Ask Claude Code.** "Move the reading plan to week 9, 2 Samuel 13." This is
+  the one that works from a phone with nothing installed.
+- **Supabase dashboard**, Table Editor, `reading_plans`, edit the two cells.
+  Also works from a phone.
+- **From a machine with `.env`:**
+
+  ```bash
+  python3 scripts/hc_supabase.py update reading_plans plan-david \
+    '{"current_week": 9, "this_week": "2 Samuel 13"}'
+  ```
+
+It reaches phones on the next app open. No build, no merge, no release.
 
 **Ids are readable text slugs, not uuids.** `guide-slow-burn`, not
 `8f3e...`. This is not a style preference. A leader's question checkmarks and
@@ -229,12 +251,13 @@ never waiting on the network:
 
 Two behaviors worth knowing, because they look like bugs and are not:
 
-- **An empty table is ignored, except for announcements.** A guides table that
-  comes back empty, because somebody is still setting the project up, will not
-  wipe the guides that shipped in the binary. Announcements are the deliberate
-  exception, zero announcements is a real instruction, it means take the
-  banner down, and honoring it is what lets a dated announcement retire
-  itself.
+- **An empty table is honored, an empty project is not.** Deleting the last
+  row of a table removes it from the app, which is what makes content genuinely
+  removable and not just addable. The one thing the app refuses is a payload
+  where *every* table came back empty, which is a project nobody has seeded
+  rather than an instruction, and it keeps the bundled content instead of
+  blanking the app. A table that failed to fetch never reaches that decision,
+  it is left out of the payload entirely.
 - **A table that fails does not fail the refresh.** Every other table still
   lands, and the one that failed keeps whatever it already had.
 

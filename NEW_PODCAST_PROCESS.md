@@ -184,7 +184,7 @@ someone opens a message. It comes from the episode's own notes.
   Home Church NOLA, visit us at homechurchnola.com." That is worse than what
   the app already has, so null it and let it fall back to the hand-written
   `description`. Null is a real answer here, not a failure.
-- **Never paste a description with an em-dash into `data.js`.** No em-dashes
+- **Never paste a description with an em-dash into the row.** No em-dashes
   anywhere is a hard brand rule in this repo. Replace them with commas, which
   is the only edit you make to the church's own wording.
 
@@ -271,9 +271,9 @@ hurry:
 2. **The message was never podcast.** Leave it alone. The show-level fallback
    is correct and the guide is still worth having.
 
-The invented seed sermons that used to live here are gone. `js/data.js` now
-holds the real catalogue, 87 messages transcribed from the podcast feed and
-running back to November 2024, so a sermon in that file is a message that
+The invented seed sermons that used to live here are gone. The `podcasts`
+table now holds the real catalogue, 87 messages transcribed from the podcast
+feed and running back to November 2024, so a sermon in it is a message that
 actually happened. **Never delete a sermon that has a guide hanging off it
 without asking**, because deleting a guide throws away real writing and
 orphans the checkmarks and journal entries a leader saved under its id on
@@ -296,10 +296,13 @@ wrong in a published app is a real error, a missing one is not.
 
 `index.html` loads every local file with a `?v=N` query string. Bump that
 number, in all of the css and js tags at once, whenever you change anything
-in `css/` or `js/`, which includes every edit to `js/data.js`. Without it a
-phone that has opened the app before keeps serving last week's copy out of
-cache and never sees the new content, and iOS Safari holds on the hardest.
+in `css/` or `js/`. Without it a phone that has opened the app before keeps
+serving last week's copy out of cache, and iOS Safari holds on the hardest.
 This is the no-build-step stand-in for a content hash.
+
+**Publishing an episode is not a code change and does not need this.** The row
+goes to Supabase and the app fetches it on open. Bump the version when you
+change the code, not when you add content.
 
 
 Commit message should name the episode and note it's content, not a code

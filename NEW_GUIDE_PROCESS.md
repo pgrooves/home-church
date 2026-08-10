@@ -14,10 +14,15 @@ new one").
 
 ## What you're doing
 
-This app's guides live in `js/data.js`, in two arrays: `sermons` and
-`guides`. A sermon and its guide are two separate objects linked by ID,
-`sermon.guideId` points at `guide.id`. Adding a new week means appending one
-object to each array.
+This app's guides live in Supabase, in two tables: `podcasts` and `guides`.
+A sermon and its guide are two separate rows linked by ID, `podcasts.guide_id`
+points at `guides.id`. Adding a new week means one row in each.
+
+The app mirrors that shape in memory as `HC.data.sermons` and `HC.data.guides`,
+which is what every screen reads, and `js/content.js` fills both from Supabase
+on each app open. This document is about the writing. `/new-guide` covers the
+publishing. Do not hand write either row into `js/data.js`, which is now only
+the cold start seed a brand new offline install opens to.
 
 **One name per message.** `sermon.title` is the only place a message's name
 is written. The guide inherits it through `HC.data.guideTitle()`, which is
@@ -214,7 +219,7 @@ from the title, lowercase, hyphenated. `The Slow Burn` became
 ## Step 4: Show the draft before it goes anywhere
 
 Paste the drafted guide content back into the chat, or at minimum the
-`shortSummary` and the three `anchors`, before writing it into `data.js`.
+`shortSummary` and the three `anchors`, before publishing it.
 This is real pastoral content going out under the church's name, a quick
 sanity check from whoever's driving the session catches a wrong name, a
 misjudged tone, or a scripture reference that needs a second look, faster
@@ -250,10 +255,13 @@ to go straight through.
 
 `index.html` loads every local file with a `?v=N` query string. Bump that
 number, in all of the css and js tags at once, whenever you change anything
-in `css/` or `js/`, which includes every edit to `js/data.js`. Without it a
-phone that has opened the app before keeps serving last week's copy out of
-cache and never sees the new content, and iOS Safari holds on the hardest.
+in `css/` or `js/`. Without it a phone that has opened the app before keeps
+serving last week's copy out of cache, and iOS Safari holds on the hardest.
 This is the no-build-step stand-in for a content hash.
+
+**Publishing a guide is not a code change and does not need this.** The guide
+goes to Supabase and the app fetches it on open. Bump the version when you
+change the code, not when you add content.
 
 
 Commit message should name the sermon and note it's new guide content, not

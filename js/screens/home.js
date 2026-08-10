@@ -68,11 +68,43 @@
     return c.card(inner, { action: 'open-guide', id: guide.id });
   }
 
+  /* Today in the phone's own zone, as 'YYYY-MM-DD'. The window columns are
+     plain dates, not timestamps, so comparing them as strings is exact and
+     sidesteps every timezone question. A church in New Orleans should see an
+     announcement retire at midnight local, not at midnight UTC. */
+  function todayLocal() {
+    var d = new Date();
+    return d.getFullYear() + '-' +
+      ('0' + (d.getMonth() + 1)).slice(-2) + '-' +
+      ('0' + d.getDate()).slice(-2);
+  }
+
+  /* startsOn is the first day it shows, endsOn is the first day it does not.
+     A Saturday event announced with endsOn set to the Sunday is gone when
+     people wake up Sunday. Either end null means that end is open. */
+  function isLive(a, today) {
+    if (a.startsOn && today < a.startsOn) return false;
+    if (a.endsOn && today >= a.endsOn) return false;
+    return true;
+  }
+
   function announcement() {
+    var today = todayLocal();
     var list = (HC.data.announcements || []).filter(function (a) {
-      return !HC.store.isDismissed(a.id);
+      return isLive(a, today) && !HC.store.isDismissed(a.id);
     });
     if (!list.length) return '';
+
+    // Home shows one, so when two are live on the same day something has to
+    // break the tie deliberately rather than leaving it to whatever order the
+    // rows arrived in. Higher priority wins, then id, so it is at least stable.
+    list.sort(function (x, y) {
+      var px = x.priority || 0;
+      var py = y.priority || 0;
+      if (px !== py) return py - px;
+      return String(x.id) < String(y.id) ? -1 : 1;
+    });
+
     var a = list[0];   // one announcement maximum, on purpose
     return '' +
       '<div class="hc-banner" data-banner="' + c.esc(a.id) + '">' +
@@ -88,22 +120,47 @@
       '</div>';
   }
 
+  /* The plan is one editable row in Supabase now, so this has to hold up
+     against whatever is in it. No plan at all renders nothing and Home drops
+     the section, rather than printing "undefined" or dividing by zero in
+     front of a congregation. */
   function readingPlanRow() {
     var plan = HC.data.readingPlan;
+    if (!plan || !plan.title) return '';
+
+    var total = plan.totalWeeks || 0;
+    var week = plan.currentWeek || 0;
     // Position, not pressure. No streak, no percentage, no badge.
-    var pct = Math.round((plan.currentWeek / plan.totalWeeks) * 100);
+    var pct = total > 0 ? Math.round((week / total) * 100) : 0;
+    if (pct < 0) pct = 0;
+    if (pct > 100) pct = 100;
+
+    var resources = plan.resources || [];
+    var url = resources.length && resources[0] ? resources[0].url : '';
+
+    // Without somewhere to send them, this is a label rather than a button.
+    var open = url
+      ? '<button type="button" class="hc-plan" data-action="open-url" data-url="' + c.esc(url) + '">'
+      : '<div class="hc-plan">';
+    var close = url ? '</button>' : '</div>';
+
+    var progress = total > 0
+      ? '<span class="hc-caption">Week ' + week + ' of ' + total + '</span>'
+      : '';
+
     return '' +
-      '<button type="button" class="hc-plan" data-action="open-url" ' +
-        'data-url="' + c.esc(plan.resources[0].url) + '">' +
+      open +
         '<div class="hc-plan__head">' +
           '<span class="hc-plan__title hc-row__title">' + c.esc(plan.title) + '</span>' +
-          '<span class="hc-caption">Week ' + plan.currentWeek + ' of ' + plan.totalWeeks + '</span>' +
+          progress +
         '</div>' +
         '<div class="hc-progress" role="presentation">' +
           '<div class="hc-progress__fill" style="width:' + pct + '%"></div>' +
         '</div>' +
-        '<p class="hc-caption hc-plan__reading">This week, ' + c.esc(plan.thisWeek) + '</p>' +
-      '</button>';
+        (plan.thisWeek
+          ? '<p class="hc-caption hc-plan__reading">This week, ' + c.esc(plan.thisWeek) + '</p>'
+          : '') +
+      close;
   }
 
   function render() {
@@ -122,8 +179,12 @@
       html += '<div class="hc-home__announcement">' + ann + '</div>';
     }
 
-    html += c.sectionHeader('Reading together', 'Where we are');
-    html += readingPlanRow();
+    // No plan, no section. An empty header over nothing reads as a bug.
+    var plan = readingPlanRow();
+    if (plan) {
+      html += c.sectionHeader('Reading together', 'Where we are');
+      html += plan;
+    }
 
     html += '</div>';
     return c.el(html);

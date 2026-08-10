@@ -1,10 +1,11 @@
 ---
-description: Turn a sermon PDF into a new guide, in js/data.js and in Supabase, and confirm what was published.
+description: Turn a sermon PDF into a new guide, publish it to Supabase, and confirm what was published.
 ---
 
 Read `NEW_GUIDE_PROCESS.md` at the repo root in full and follow it exactly
-to turn the attached sermon PDF into a new sermon and guide entry in
-`js/data.js`.
+to turn the attached sermon PDF into a new sermon and guide. That document
+governs the writing. This one governs where it goes, which is Supabase, and
+not `js/data.js`. See "Why this no longer touches js/data.js" below.
 
 If no PDF is attached to this message, stop and ask for one before doing
 anything else, the process document depends on it.
@@ -37,9 +38,10 @@ if the project ref in `.env` does not match the one the app reads in
 
 If the connection is refused outright, this is a web session and the egress
 proxy blocks `supabase.co`. That is a policy denial, not a flaky network, so
-do not retry it. Write the guide into `js/data.js` as normal, save the row
-JSON, and say plainly that the publish has to be run from the pastor's own
-machine.
+do not retry it. Write the guide anyway, save the finished row JSON to a file,
+and say plainly that the publish has to be run from the pastor's own machine.
+Do not fall back to writing it into `js/data.js`, that is what created two
+copies of the catalogue in the first place.
 
 ## After the guide is written and approved
 
@@ -57,7 +59,7 @@ design system doc:
 
 ```jsonc
 {
-  "id": "guide-your-slug",          // the same id you used in js/data.js
+  "id": "guide-your-slug",          // permanent, see supabase/README.md
   "sermon_id": "sermon-your-slug",
   "series_id": "series-david",
   "theme_title": null,              // stays null, the name lives on the podcast row
@@ -93,19 +95,26 @@ and this is the last place it can be caught cheaply.
 
 ## The PDF
 
-Nothing new to build here. The pipeline already exists in `js/print-guide.js`,
-and a guide written into `js/data.js` gets its PDF from the Download guide
-button on the reader screen, which paginates the same guide object and hands
-it to the browser's print dialog. Do not add a second PDF path.
+Nothing new to build here. The pipeline already exists in `js/print-guide.js`.
+The Download guide button on the reader screen paginates whatever guide object
+is in `HC.data` and hands it to the browser's print dialog, and a guide fetched
+from Supabase is the same object by then. Do not add a second PDF path.
 
-## Why the guide still goes into `js/data.js` too
+## Why this no longer touches `js/data.js`
 
-The app reads its content from `js/data.js` today. The guide reader, the
-Listen tab, leader mode, and the PDF all read `HC.data`, not Supabase. So for
-now a guide is published in both places, which is what the steps above assume.
+It used to. The app read its content only from `js/data.js`, so a guide had to
+be written in both places, and the two were free to drift.
 
-Once `HC.data` fetches from Supabase, the `js/data.js` half of this goes away
-and so does this section.
+`js/content.js` ended that. It fetches every content table on open and swaps
+the rows into the `HC.data` arrays in place, so the guide reader, the Listen
+tab, leader mode, and the PDF all read Supabase content without knowing it.
+Supabase is the source of truth. Publish there and stop.
+
+`js/data.js` is still in the repo and still matters, but its job is narrow now:
+it is the cold start seed, what a brand new install with no signal opens to
+before the first fetch lands. It is a frozen snapshot, not a second catalogue
+to maintain. Let it go stale. Nobody needs to keep it current, and editing it
+by hand is how the two copies diverge again.
 
 ## Confirm, briefly
 

@@ -171,17 +171,33 @@ const events = D.events.map(e => {
   };
 });
 
-/* Announcements carry no dates in data.js, because the only way to retire one
-   was to ship a build. In Supabase they get a window, so leave both ends open
-   here and set them going forward from /new-announcement. */
+/* The bundled announcements normally leave both ends open, because the only
+   way to retire one in data.js was to ship a build. They carry the window
+   fields anyway so the shapes match, so pass through whatever is there rather
+   than hardcoding null and quietly dropping it on the way to Supabase. */
 const announcements = D.announcements.map(a => ({
   id: a.id,
   eyebrow: a.eyebrow || 'One thing',
   title: a.title,
   body: a.body || null,
-  starts_on: null,
-  ends_on: null,
-  priority: 0,
+  starts_on: a.startsOn || null,
+  ends_on: a.endsOn || null,
+  priority: a.priority || 0,
+  published: true
+}));
+
+/* The app holds one reading plan, data.js holds one object, and the table
+   holds every plan the church has run with is_current marking the live one.
+   So this is a one row list. */
+const reading_plans = [D.readingPlan].filter(Boolean).map(p => ({
+  id: p.id,
+  title: p.title,
+  subtitle: p.subtitle || null,
+  total_weeks: p.totalWeeks,
+  current_week: p.currentWeek,
+  this_week: p.thisWeek || null,
+  resources: p.resources || [],
+  is_current: p.current !== false,
   published: true
 }));
 
@@ -189,7 +205,7 @@ const announcements = D.announcements.map(a => ({
 
 fs.mkdirSync(OUT_DIR, { recursive: true });
 
-for (const [name, rows] of Object.entries({ series, guides, podcasts, events, announcements })) {
+for (const [name, rows] of Object.entries({ series, guides, podcasts, events, announcements, reading_plans })) {
   const file = path.join(OUT_DIR, name + '.json');
   fs.writeFileSync(file, JSON.stringify(rows, null, 2) + '\n', 'utf8');
   console.log('wrote  %s  %d rows', path.relative(ROOT, file), rows.length);
@@ -197,5 +213,5 @@ for (const [name, rows] of Object.entries({ series, guides, podcasts, events, an
 
 const linked = podcasts.filter(p => p.guide_id).length;
 console.log('\n%d of %d messages have a guide attached.', linked, podcasts.length);
-console.log('Upsert in this order: series, guides, podcasts, events, announcements.');
+console.log('Upsert in this order: series, guides, podcasts, events, announcements, reading_plans.');
 console.log('Series before guides before podcasts, the foreign keys point that way.');

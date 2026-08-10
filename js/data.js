@@ -1,7 +1,22 @@
 /* ==========================================================================
-   Home Church, seed content
-   Shaped like a future API payload. When a real backend exists, replace the
-   body of HC.data.load() with a fetch and nothing else in the app changes.
+   Home Church, cold start seed
+
+   NOT the source of truth, and not a place to add content. Supabase is both.
+   js/content.js fetches every content table on app open and swaps the rows
+   into the arrays below in place, so whatever is published there is what
+   people actually read.
+
+   What this file is for: the floor. A brand new install on a phone with no
+   signal has no cache and no network, and it still has to open to a real
+   app rather than a set of empty screens. That is this. It is a frozen
+   snapshot and it is allowed to go stale, because the moment there is any
+   connection at all it gets replaced by live content.
+
+   So do not hand edit content in here. Publishing to both places is what
+   lets the two drift, and a stale copy that looks authoritative is worse
+   than an obviously old one. Use the slash commands, which write to
+   Supabase only. Regenerate the seed from the database if the floor ever
+   needs raising.
 
    Loaded as a classic script, not an ES module, so the app opens straight
    from the file system and inside a Capacitor web view without a build step.
@@ -2045,6 +2060,8 @@
 
   /* ------------------------------------------------------------- reading plan */
 
+  /* Seed only. The live plan is the is_current row in `reading_plans`, and
+     current_week is bumped there every week, not here. */
   var readingPlan = {
     id: 'plan-david',
     title: 'The Life of David',
@@ -2052,6 +2069,7 @@
     totalWeeks: 20,
     currentWeek: 8,
     thisWeek: '2 Samuel 11 and 12, plus Psalm 51',
+    current: true,
     resources: [
       { label: 'The Bible Project, 2 Samuel', url: 'https://bibleproject.com/explore/video/2-samuel/' },
       { label: 'Robert Alter, The David Story', url: 'https://www.google.com/search?q=Robert+Alter+The+David+Story' }
@@ -2178,10 +2196,17 @@
 
   var announcements = [
     {
+      // Same shape the Supabase mapper produces, so a bundled announcement and
+      // a fetched one go through Home's window check identically. Both ends
+      // open here: a bundled announcement cannot be retired without a build
+      // anyway, which is the whole reason the table exists.
       id: 'ann-serve-day',
       eyebrow: 'One thing',
       title: 'City Serve Day, September 12',
-      body: 'Four sites, one Saturday, every hand we can get. Sign up at the Welcome Desk or tell your group leader.'
+      body: 'Four sites, one Saturday, every hand we can get. Sign up at the Welcome Desk or tell your group leader.',
+      startsOn: null,
+      endsOn: null,
+      priority: 0
     }
   ];
 

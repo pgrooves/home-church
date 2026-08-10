@@ -85,10 +85,11 @@ Supabase setup below.
 
 ## Adding a guide
 
-Guides are the point of this app. Add one by appending an object to the
-`guides` array in `js/data.js`, plus a matching object in `sermons` linked
-by `guideId`. Nothing else needs to change, the index, the reader, the Home
-card, and leader presentation mode all pick it up automatically.
+Guides are the point of this app. Add one with `/new-guide`, which writes a
+row to the `guides` table plus a matching row in `podcasts` linked by
+`guide_id`. Nothing else needs to change and nothing needs a build. The index,
+the reader, the Home card, and leader presentation mode all pick it up the
+next time the app opens.
 
 Full instructions, the exact object shape, section-by-section content
 quotas, and the voice rules, live in **`NEW_GUIDE_PROCESS.md`** at the repo
@@ -129,13 +130,13 @@ without waiting on a review. Full documentation is in
 **`supabase/README.md`**, kept there rather than duplicated here so the two
 cannot drift.
 
-The short version. Five tables, `series`, `guides`, `podcasts`, `events`, and
-`announcements`, publicly readable with the anon key and writable only with
-the service role key. Six slash commands drive them:
+The short version. Six tables, `series`, `guides`, `podcasts`, `events`,
+`announcements`, and `reading_plans`, publicly readable with the anon key and
+writable only with the service role key. Six slash commands drive them:
 
 | Command | Does |
 |---|---|
-| `/new-guide` | Sermon PDF to a full guide, into `js/data.js` and `guides` |
+| `/new-guide` | Sermon PDF to a full guide, written to `guides` and `podcasts` |
 | `/new-event` | Asks for what is missing, confirms, writes to `events` |
 | `/new-podcast` | Episode to `podcasts`, links its guide, puts the real title on the message |
 | `/new-announcement` | The One thing card on Home, dated so it retires itself |
@@ -153,9 +154,15 @@ in place only if something changed. The app is never blank and never waits on
 the network, which matters in a building with concrete walls.
 
 `js/data.js` still ships and still matters, it is the floor under a brand new
-install. The publishing commands write to both for now, and each one marks the
-step to delete once you have watched a guide land on a real phone from
-Supabase alone.
+install with no signal. But it is a frozen cold start seed now, not a second
+catalogue: **the publishing commands write to Supabase only.** Do not hand
+edit content into it, that is how two copies drift apart. Let it go stale, and
+regenerate it from Supabase if you ever want the floor raised.
+
+Deleting the last row of a table is honored too, so content can be removed and
+not just added. The one case the app refuses is a project where *every* table
+is empty, which is an unconfigured project rather than an intent, and it keeps
+the bundled content instead of blanking the app.
 
 -----
 
@@ -388,8 +395,7 @@ These are marked in the code where they appear:
    sign-in is free and already works once Supabase is connected, phone does
    not until a provider like Twilio is wired up in the Supabase dashboard.
 
-The `sermons` and `series` arrays in `js/data.js` are now the real Home
-Church NOLA catalogue, 87 messages from November 2024 forward, transcribed
-from the podcast feed. Groups, events, and serve teams are still plausible
+The `podcasts` and `series` tables hold the real Home Church NOLA catalogue,
+87 messages from November 2024 forward, transcribed from the podcast feed. Groups, events, and serve teams are still plausible
 placeholders. The three guides are complete and written in the real voice,
 and they are the thing to look at.

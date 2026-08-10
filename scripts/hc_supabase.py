@@ -39,9 +39,10 @@ REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 ENV_PATH = os.path.join(REPO_ROOT, ".env")
 CONFIG_JS = os.path.join(REPO_ROOT, "js", "config.js")
 
-# The four tables this CMS ships with. Adding a fifth content type means
-# adding its name here, and that is the only line in this file that changes.
-CONTENT_TABLES = ["series", "guides", "podcasts", "events", "announcements"]
+# The tables this CMS ships with. Adding another content type means adding
+# its name here and a probe row below, and that is all that changes.
+CONTENT_TABLES = ["series", "guides", "podcasts", "events", "announcements",
+                  "reading_plans"]
 
 # What `verify` tries to insert as an anonymous user, per table. These have to
 # be valid rows, or PostgREST rejects them for the wrong reason: a payload
@@ -55,6 +56,9 @@ PROBE_ROWS = {
     "podcasts": {"title": "probe"},
     "events": {"title": "probe", "starts_at": "2000-01-01T00:00:00+00:00"},
     "announcements": {"title": "probe"},
+    # total_weeks is not null, and current_week defaults to 1 which the range
+    # constraint needs to fall inside, so 1 is the only safe width here.
+    "reading_plans": {"title": "probe", "total_weeks": 1},
 }
 
 
@@ -230,7 +234,7 @@ def cmd_check(args):
         print("  Content tables still missing: %s" % ", ".join(missing))
         print("  Run supabase/migrations/0001_content_cms.sql in the SQL editor.")
     else:
-        print("  All four content tables are present.")
+        print("  All %d content tables are present." % len(CONTENT_TABLES))
     print("")
     return 0
 
@@ -308,7 +312,8 @@ def cmd_verify(args):
         print("")
         return 1
 
-    print("  All four tables exist, read publicly, and refuse anonymous writes.")
+    print("  All %d tables exist, read publicly, and refuse anonymous writes."
+          % len(CONTENT_TABLES))
     print("")
     return 0
 
