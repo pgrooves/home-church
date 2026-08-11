@@ -183,10 +183,15 @@ competitor names, which is a 2.3.7 rejection.
   app specifically. The homepage alone is thin and reviewers do check.
 - **Marketing URL** (optional): `https://www.homechurchnola.com`
 - **Privacy Policy URL** (required): must be reachable on the open web **in
-  addition to** the in-app screen. Both, not either. `legal/privacy.html` is
-  generated for exactly this, self contained with the fonts embedded and no
-  external requests, so it can be hosted anywhere. Publish it and put that URL
-  here.
+  addition to** the in-app screen. Both, not either.
+
+  Use `https://pgrooves.github.io/home-church/legal/privacy.html`. The repo is
+  public and Pages is already enabled, so this goes live the moment
+  `legal/privacy.html` lands on `main`. No hosting to arrange.
+
+  **Do not use a `raw.githubusercontent.com` link.** Raw serves `text/plain`,
+  so a reviewer clicking it gets HTML source instead of a policy, which reads
+  as a broken link on the field Apple checks most reliably.
 
 ### Copyright
 

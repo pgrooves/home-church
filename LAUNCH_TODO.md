@@ -79,16 +79,36 @@ Three ways past the paste problem, easiest first:
       something addressing app support. The homechurchnola.com homepage is not
       enough. A short page saying what the app is and how to get help is fine.
 
-- [!] **Publish `legal/privacy.html` at a stable public URL**, and put that URL
-      in the **Privacy Policy URL** field in App Store Connect. Apple requires
-      the policy both inside the app, which is done, and as a public link. A
-      404 there, or a link to a homepage that never mentions the app, is a
-      5.1.1 rejection and it is one of the most common ones.
+- [!] **Publish `legal/privacy.html` and put its URL in the Privacy Policy URL
+      field in App Store Connect.** Apple requires the policy both inside the
+      app, which is done, and as a public link. A 404 there, or a link to a
+      homepage that never mentions the app, is a 5.1.1 rejection and it is one
+      of the most common ones.
 
-      The file is generated from the same source as the in-app screen so the
-      two cannot drift, and it is one self contained HTML document with the
-      fonts embedded and no external requests. Drop it anywhere. `terms.html`
-      is beside it and is optional.
+      **GitHub Pages already covers this, no hosting needed.** The repo is
+      public and Pages is enabled, so once this file is on `main` it is live
+      at:
+
+          https://pgrooves.github.io/home-church/legal/privacy.html
+
+      Three things have to be true, and only the first is outstanding:
+
+      1. **The file has to be on `main`.** It is on the feature branch right
+         now, so it is not live yet. Merging is what publishes it.
+      2. **Use the Pages URL, not the raw file link.** A
+         `raw.githubusercontent.com` URL serves as `text/plain`, so a reviewer
+         clicking it sees HTML source rather than a policy. That reads as a
+         broken link.
+      3. **Pages source set to `main`, root folder.** Already how the app
+         itself is served, so almost certainly already right. Worth confirming
+         in Settings, Pages.
+
+      I could not load the URL from here, the sandbox proxy blocks
+      `github.io`, so open it once after merging and check it renders.
+
+      A `github.io` address is perfectly acceptable to Apple, which has no
+      domain requirement. Moving it to homechurchnola.com later is a nicety,
+      not a fix. `terms.html` sits beside it and is optional.
 
 - [x] ~~App icon set with no alpha channel.~~ **Done.** Every icon PNG carried
       an alpha channel with nothing actually transparent in it, so stripping
