@@ -35,13 +35,16 @@ episode also becomes a row in the `podcasts` table.
 
 ## Before you start
 
-```bash
-python3 scripts/hc_supabase.py check
-```
+Read **`supabase/ACCESS.md`**. It says which of the two transports to use, the
+Supabase MCP server or `scripts/hc_supabase.py`, and gives the SQL equivalent
+of every script verb below.
 
-Stop on a missing `.env`, missing tables, or a project ref that does not match
-`js/config.js`. A refused connection means this is a web session and the proxy
-blocks `supabase.co`, so the write happens from the pastor's own machine.
+A missing `.env` or a refused connection is the ordinary shape of a web
+session, not a reason to stop. Use MCP. Confirm the project ref is
+`ibqkumxfltfiuqevviji`, and stop only if neither transport is available.
+
+Episode descriptions are the church's own words and will contain apostrophes.
+Dollar quote them if you are writing SQL by hand.
 
 ## Linking the episode to its guide
 

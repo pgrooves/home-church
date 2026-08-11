@@ -1,31 +1,37 @@
 # Content management, in Supabase
 
-Sermon guides, events, podcast episodes, and whatever comes next live in
-Supabase rather than in app code. Publishing and editing happen through slash
-commands in Claude Code. Nothing here requires a new App Store build, which is
-the whole point: a typo in Saturday's guide gets fixed on Saturday.
+Sermon guides, events, podcast episodes, the weekly reading plan, and whatever
+comes next live in Supabase rather than in app code. Publishing and editing
+happen through slash commands in Claude Code. Nothing here requires a new App
+Store build, which is the whole point: a typo in Saturday's guide gets fixed on
+Saturday.
+
+**How to reach the project is in [`ACCESS.md`](ACCESS.md)**, next to this file.
+Two transports, the Supabase MCP server and `scripts/hc_supabase.py`, and it
+says which to use where. Read that first if a command cannot connect. Most
+editing on this app happens from a phone, where the script cannot run at all.
 
 ---
 
 ## Which project am I pointed at
 
-The account has two similarly named projects, so the display name is not a
-reliable way to tell them apart. The project ref is. It is the random looking
-string in the project URL, `https://<ref>.supabase.co`, and it is unique.
+The project ref is how you tell projects apart. It is the random looking string
+in the project URL, `https://<ref>.supabase.co`, and it is unique where a
+display name is not.
 
-The app already ships pointed at one of them, in `js/config.js`. That is the
-one to use, because it is the project the phones already talk to for sign-in.
+This app's ref is **`ibqkumxfltfiuqevviji`**, "Home Church App". It is what
+`js/config.js` ships pointed at, so it is the project the phones already talk
+to, and it is the only one to publish into.
 
-To see which ref your `.env` is aimed at, and whether it agrees with the app:
+To confirm what `.env` is aimed at, on a machine that has one:
 
 ```bash
 python3 scripts/hc_supabase.py check
 ```
 
-It prints both refs, says whether they match, and lists every table in the
-project. Run it against each of your two projects if you are still unsure
-which is which, the one with a `profiles` table is the one the app has been
-using.
+It prints both refs, says whether they match, and lists every table. From a
+phone, the dashboard shows the ref in the project URL, and `ACCESS.md` has the
+SQL that lists the tables.
 
 ---
 

@@ -1,12 +1,12 @@
 ---
-description: Scaffold a fifth content type, the table and its slash command, following the pattern the existing four use.
+description: Scaffold another content type, its table, app wiring, and slash command, following the pattern the existing ones use.
 ---
 
 # /new-content-type
 
-Adds a whole new kind of content, announcements, staff bios, serve teams,
-whatever comes next, by copying the pattern the four existing types already
-use. Run it with the name of the thing:
+Adds a whole new kind of content, staff bios, serve teams, whatever comes
+next, by copying the pattern the existing types already use. Run it with the
+name of the thing:
 
 ```
 /new-content-type announcements
@@ -62,33 +62,76 @@ oversight. The long version is in `0001`, section 7.
 
 ## Step 3. Run it
 
-Paste the file into the Supabase SQL editor and run it. Then:
+Paste the file into the Supabase SQL editor and run it, or use
+`mcp__Supabase__apply_migration` with the file's contents. Use
+`apply_migration` rather than `execute_sql` for anything that creates or
+alters a table.
 
-```bash
-python3 scripts/hc_supabase.py check
-```
-
-The new table shows up in the list. It will not be flagged as a content table
-until Step 4.
+Then confirm the table is there, whichever way `supabase/ACCESS.md` says to
+reach the project. It will not be flagged as a content table until Step 4.
 
 ## Step 4. Register it in the CLI
 
-One line, in `scripts/hc_supabase.py`:
+Two small edits, in `scripts/hc_supabase.py`:
 
 ```python
-CONTENT_TABLES = ["series", "guides", "podcasts", "events", "announcements"]
+CONTENT_TABLES = ["series", "guides", "podcasts", "events", "announcements",
+                  "reading_plans"]
 ```
 
-That is the only change that file ever needs. `check`, `verify`, `select`,
+and a probe row in `PROBE_ROWS` for the new table, which has to be a valid
+row: `verify` inserts it as an anonymous user and needs the write refused on
+permissions, so a payload that fails validation first would prove nothing.
+Give it whatever the not-null columns and check constraints demand, and
+nothing else.
+
+Those are the only changes that file ever needs. `check`, `verify`, `select`,
 `upsert`, and `update` all pick the new table up from that list.
 
-## Step 5. Write the slash command
+## Step 5. Wire it into the app
 
-Copy `.claude/commands/new-event.md`, it is the simplest of the four and the
-closest to a template. Keep its bones, they are the same every time:
+**Do not skip this one.** Everything up to here gives you a table the CLI can
+write and the app never reads. A content type that is not registered in
+`js/content.js` is invisible on a phone no matter how good the row is, and the
+failure is silent: publishing appears to work and nothing changes on screen.
 
-0. Check the plumbing with `hc_supabase.py check`, and stop on a missing
-   `.env`, a missing table, a project mismatch, or a refused connection
+Two edits, next to the existing ones:
+
+```js
+var TABLES = [
+  ...
+  { table: 'your_table', target: 'yourThing', map: mapYourThing }
+];
+```
+
+and a mapper beside the others. Every mapper is total, it fills every field
+the screens read with a sane empty value rather than undefined, so a half
+filled row degrades to a quiet gap instead of `undefined` rendered on a card
+in front of a congregation. `str()` and `arr()` are there for that.
+
+`target` is the key on `HC.data` the rows land in, and it has to already
+exist there, because `fill()` replaces an array's contents rather than the
+array itself. That is the whole trick that lets `js/data.js` keep working as
+the cold start seed.
+
+**If the app reads one object rather than a list**, the way Home reads one
+reading plan, add `single: true` to the spec. The row flagged `is_current`
+becomes the object, and `fillOne()` edits it in place for the same reason
+`fill()` does not replace arrays. Handle the empty case on screen: no row
+should render nothing, not `undefined`.
+
+Then bump `CACHE_VERSION` at the top of the file. Any change to the shape of
+what a mapper returns needs it, or phones will apply a cached payload that
+predates the new fields.
+
+## Step 6. Write the slash command
+
+Copy `.claude/commands/new-event.md`, it is the simplest one and the closest
+to a template. Keep its bones, they are the same every time:
+
+0. Check the plumbing the way `supabase/ACCESS.md` describes, trying the
+   Supabase MCP server before the script, and stop only when neither
+   transport is available
 1. Collect the fields, asking for everything missing in one message rather
    than one at a time
 2. Write any prose in the church's voice, **zero em-dashes**, first name only
@@ -98,14 +141,14 @@ closest to a template. Keep its bones, they are the same every time:
 5. `upsert`
 6. Confirm in two or three lines and stop, no postamble
 
-## Step 6. Seed it, if there is existing content
+## Step 7. Seed it, if there is existing content
 
 If this content type already lives in `js/data.js`, add a mapping block to
 `scripts/export_seed.js` next to the other four. It reads `js/data.js` through
 Node and writes Supabase shaped JSON into `supabase/seed/`, so the new table
 starts life holding the real content rather than empty.
 
-## Step 7. Update the docs
+## Step 8. Update the docs
 
 Two files, both short:
 
@@ -116,8 +159,12 @@ Two files, both short:
 
 - Do not add a `delete` path. Unpublishing with `{"published": false}` is
   reversible, and deletes are not. There is no delete in the CLI on purpose.
-- Do not add a second way to talk to Supabase. Every command shells out to
-  `scripts/hc_supabase.py`, which is the only thing holding the service role
-  key. Two clients means two places to get the security wrong.
+- Do not write a new client for Supabase. There are two transports and
+  `supabase/ACCESS.md` describes both: the Supabase MCP server, and
+  `scripts/hc_supabase.py`, which is the only thing in this repo holding the
+  service role key. A third means a third place to get the security wrong.
+- Do not add the plumbing instructions to your new command. Point at
+  `supabase/ACCESS.md` the way the others do, so there is one copy to keep
+  right.
 - Do not put media in Supabase storage. External links, the way podcasts
   does. That was a cost decision and it is still right.

@@ -25,23 +25,28 @@ so a typo fix on a Saturday night never needs an App Store build.
 
 ## Before you start writing
 
-Sixty seconds now beats writing a whole guide and then finding the
-credentials are missing:
+Sixty seconds now beats writing a whole guide and then finding you cannot
+publish it.
 
-```bash
-python3 scripts/hc_supabase.py check
-```
+Read **`supabase/ACCESS.md`** and establish a working transport before you
+start. It says which of the two to use, the Supabase MCP server or
+`scripts/hc_supabase.py`, and gives the SQL equivalent of every script verb
+below. Confirm the project ref is `ibqkumxfltfiuqevviji`, the one
+`js/config.js` reads. Never ask for a key to be pasted into the chat.
 
-Stop and say so if `.env` is missing, if the four tables are not there yet, or
-if the project ref in `.env` does not match the one the app reads in
-`js/config.js`. Never ask for a key to be pasted into the chat.
+A missing `.env` or a refused `supabase.co` connection is what a web session
+looks like, and most sessions on this app are web sessions from a phone. Use
+MCP and carry on.
 
-If the connection is refused outright, this is a web session and the egress
-proxy blocks `supabase.co`. That is a policy denial, not a flaky network, so
-do not retry it. Write the guide anyway, save the finished row JSON to a file,
-and say plainly that the publish has to be run from the pastor's own machine.
-Do not fall back to writing it into `js/data.js`, that is what created two
-copies of the catalogue in the first place.
+Only if neither transport works: write the guide anyway, save the finished row
+JSON to a file, and say plainly that the publish has to be run separately. Do
+not fall back to writing it into `js/data.js`, that is what created two copies
+of the catalogue in the first place.
+
+Guides are the worst case for hand written SQL in this repo. Every field is
+prose, the summaries and sections are jsonb, and an apostrophe in the middle of
+a `'...'` string is a real hazard. Dollar quote everything, cast the jsonb
+columns, and read the row back before you report it published.
 
 ## After the guide is written and approved
 

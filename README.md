@@ -143,9 +143,17 @@ writable only with the service role key. Six slash commands drive them:
 | `/edit-content` | Plain language fix to any row, current versus proposed, writes after you confirm |
 | `/new-content-type` | Scaffolds another content type, table and command |
 
-All six shell out to `scripts/hc_supabase.py`, standard library Python, no
-pip install, which keeps the no build step promise above intact. Credentials
-come from `.env` at the repo root, which is git ignored and never committed.
+There are two ways they reach the project, and **`supabase/ACCESS.md`** is the
+one place that says which to use. On a machine with `.env`, they shell out to
+`scripts/hc_supabase.py`, standard library Python, no pip install, which keeps
+the no build step promise above intact. From a phone or a web session, where
+there is no `.env` and the egress proxy blocks `supabase.co`, they use the
+Supabase MCP server instead. Most of this app is edited from a phone, so that
+second path is the normal one rather than the fallback.
+
+Credentials for the script come from `.env` at the repo root, which is git
+ignored and never committed. You do not need `.env` to edit content, and you
+never need the service role key on a phone.
 
 **The app reads these tables**, through `js/content.js`. It applies the cached
 copy before the first paint, falls back to `js/data.js` on a fresh install
