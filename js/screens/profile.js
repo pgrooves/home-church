@@ -19,7 +19,8 @@
   // Local to this screen, same pattern as the day/neighborhood filters on
   // Connect. Reset to idle whenever a code actually goes out or verifies.
   var authIdentifier = '';
-  var authStep = 'idle';   // idle | sent
+  var authChannel = 'email';  // email | phone, decides which copy to show
+  var authStep = 'idle';      // idle | sent
 
   function field(name, label, value, autocomplete) {
     return '' +
@@ -67,10 +68,18 @@
     }
 
     if (authStep === 'sent') {
+      // The email carries a tappable link as well as the code, so say so.
+      // Leaving it out is how somebody ends up staring at a code box
+      // wondering whether the link they already tapped counted.
+      var sent = authChannel === 'phone'
+        ? 'We texted a code to ' + c.esc(authIdentifier) + '. It can take a minute to land.'
+        : 'We sent a code to ' + c.esc(authIdentifier) + '. It can take a minute to land, ' +
+          'and it may be in junk mail. Tapping the link in that email works too, ' +
+          'though the code is the surer route.';
+
       return '' +
         c.sectionHeader('Almost there', 'Enter your code') +
-        '<p class="hc-body-serif hc-account__copy">We sent a code to ' + c.esc(authIdentifier) +
-          '. It can take a minute to land.</p>' +
+        '<p class="hc-body-serif hc-account__copy">' + sent + '</p>' +
         '<form class="hc-form" data-auth-form="verify" novalidate>' +
           '<label class="hc-field">' +
             '<span class="hc-field__label">The code</span>' +
@@ -301,8 +310,9 @@
     TEXT_SIZES: TEXT_SIZES,
     getAuthIdentifier: function () { return authIdentifier; },
     setAuthIdentifier: function (value) { authIdentifier = value; },
+    setAuthChannel: function (value) { authChannel = value; },
     setAuthStep: function (value) { authStep = value; },
-    resetAuth: function () { authIdentifier = ''; authStep = 'idle'; }
+    resetAuth: function () { authIdentifier = ''; authChannel = 'email'; authStep = 'idle'; }
   };
 
 })(window.HC = window.HC || {});

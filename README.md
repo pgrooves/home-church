@@ -258,43 +258,41 @@ login and was left out of this pass on purpose.
    For phone sign-in, turn on Phone there too and connect an SMS provider,
    Supabase does not send text messages itself, Twilio is the common
    choice. Email sign-in needs nothing extra here.
-4. **Authentication -> Email Templates -> Magic Link**, required, and easy
-   to miss. Supabase generates a one time code for every sign-in email
-   whether you ask for it or not, but the stock template only shows a
-   clickable link, not the code, so nobody sees it unless the template is
-   changed. Replace the template body with something that prints
-   `{{ .Token }}`, for example:
+4. **The sign-in emails**, required, and the one step that has actually been
+   skipped in practice. Supabase's stock templates send a bare link and no
+   code, and a fresh project's Site URL points at `http://localhost:3000`,
+   so the app promises a code, sends a link, and the link goes nowhere.
 
-   ```html
-   <h2>Your code</h2>
-   <p>Here's your sign-in code for Home Church:</p>
-   <h1 style="letter-spacing:4px;">{{ .Token }}</h1>
-   <p>It expires shortly. If it's been a while, just ask the app for a new one.</p>
+   It is all in **[`supabase/auth/`](supabase/auth/)**: the two templates as
+   files, the dashboard taps for doing it from a phone, and
+
+   ```bash
+   python3 scripts/hc_auth.py show     # what the project sends today
+   python3 scripts/hc_auth.py apply
    ```
 
-   Skip this and people get a link instead of a code, and the app's "enter
-   your code" screen has nothing to type in.
-5. **Authentication -> URL Configuration**, set Site URL to where the app
-   actually lives, `https://pgrooves.github.io/home-church/` once GitHub
-   Pages is on. A fresh project defaults this to `http://localhost:3000`,
-   which is why the very first test of this sent a link that Safari
-   couldn't connect to, nothing on this phone is listening on localhost.
-   Add the same URL under Redirect URLs.
-6. **Project Settings -> API**, copy the Project URL and the Publishable
+   for doing it from a machine. Note **two** templates, Confirm signup as
+   well as Magic Link. Which one goes out depends on whether the address
+   already has an account, so fixing only Magic Link, which is the easy
+   half to spot, leaves everyone's very first sign-in still broken. That is
+   exactly what happened here.
+5. **Project Settings -> API**, copy the Project URL and the Publishable
    key (Supabase's current name for what used to be called the anon key)
    into `js/config.js`. It's safe to ship in client code, the row level
    security policies above are what actually restrict it.
-7. Reload the app. Sign in appears on Profile automatically.
+6. Reload the app. Sign in appears on Profile automatically.
 
 **A note on trust.** The endpoint shapes in `js/auth.js` match Supabase's
 documented Auth and REST APIs, but code written against documentation and
-code proven against a live project are different claims. The first live
-test against this church's own project (see steps 4 and 5) found a real
-gap, the stock email template hides the code behind a link, and a fresh
-project's Site URL points at localhost until someone sets it. Both are one
-time dashboard settings, not app bugs, and are now folded into the steps
-above. If something else does not match, the network tab will show which
-call failed and what came back, that is the fastest way to find it.
+code proven against a live project are different claims. Two live tests
+against this church's own project have each found something, both of them
+project configuration rather than app bugs, and both now folded into step 4
+above. The second one is the more useful lesson: the fix had already been
+written down here and simply had not been done, and prose in a README does
+not apply itself. That is why step 4 is a script now. If something else does
+not match, the network tab will show which call failed and what came back,
+and the project's own auth logs, dashboard, Logs, Auth, show the same
+exchange from Supabase's side, including which email template it sent.
 
 -----
 

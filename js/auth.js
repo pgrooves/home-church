@@ -14,6 +14,19 @@
    Email works with no extra setup. Phone needs an SMS provider turned on
    in the Supabase dashboard first, see js/config.js.
 
+   THE CODE IS THE PRIMARY PATH, AND THAT IS A DELIBERATE CHOICE. Supabase
+   can send either a six digit code or a tappable link, and which one goes
+   out is decided entirely by the email templates in the dashboard, not by
+   anything here, see supabase/auth/README.md. A link is the wrong shape for
+   this app twice over: an email opens in Safari, so a link signs you in to
+   Safari rather than to the app on your home screen, and several mail
+   providers, Outlook and Hotmail loudly, follow every link in a message
+   before a person ever sees it, which burns a one time link on arrival.
+
+   consumeRedirect() below still handles a link landing on the app, because
+   the templates are project configuration and configuration drifts. If one
+   arrives, it should sign the person in rather than dead end.
+
    NOTE ON THE API CONTRACT: the endpoint shapes below (POST /auth/v1/otp,
    /auth/v1/verify, /auth/v1/token, and the profiles REST table) match
    Supabase's documented Auth and PostgREST APIs at the time this was
@@ -97,6 +110,26 @@
     return cfg.SUPABASE_URL.replace(/\/$/, '') + '/rest/v1' + path;
   }
 
+  // Where a link in one of those emails should come back to. Supabase only
+  // honours this if the address is on the redirect allow list, and falls
+  // back to the project's Site URL when it is not, so both have to be set,
+  // see supabase/auth/README.md.
+  //
+  // Wrapped in Capacitor the page is served from capacitor:// or file://,
+  // neither of which Safari could open from an email even if Supabase would
+  // redirect there, so those fall back to the hosted copy. Query and hash
+  // are dropped because this address is where a person lands, not where
+  // they happen to be standing when they ask for a code.
+  var HOSTED_URL = 'https://pgrooves.github.io/home-church/';
+
+  function appUrl() {
+    var protocol = window.location.protocol;
+    if (protocol === 'http:' || protocol === 'https:') {
+      return window.location.origin + window.location.pathname;
+    }
+    return HOSTED_URL;
+  }
+
   function friendlyError(body, fallback) {
     return (body && (body.error_description || body.msg || body.error || body.message)) || fallback;
   }
@@ -176,7 +209,15 @@
     var body = { create_user: true };
     body[id.channel] = id.value;
 
-    return gotrueFetch('/otp', { body: body }).then(function () { return id; });
+    // redirect_to rides in the query string, not the body, which is what
+    // supabase-js does under its own emailRedirectTo option. It only
+    // matters for a template that still sends a link, and it is what keeps
+    // that link from landing on Supabase's default Site URL of
+    // http://localhost:3000, which is nowhere.
+    var path = '/otp';
+    if (id.channel === 'email') path += '?redirect_to=' + encodeURIComponent(appUrl());
+
+    return gotrueFetch(path, { body: body }).then(function () { return id; });
   }
 
   // Verifies the code the person was sent and completes sign in, creating
@@ -195,6 +236,108 @@
     return gotrueFetch('/verify', { body: body }).then(function (session) {
       storeSessionFromResponse(session);
       return syncAfterSignIn();
+    });
+  }
+
+  /* ------------------------------------------------------ links from email
+
+     Everything below is for the case where the email carried a link rather
+     than, or as well as, a code, and somebody tapped it. Two shapes can
+     land here:
+
+     ?token_hash=..&type=email   The template built its own link pointed at
+                                 the app. Nothing is verified yet, so this
+                                 trades the hash for a session over POST,
+                                 which is the shape that survives a mail
+                                 provider quietly fetching the link first.
+
+     #access_token=..            The link went through Supabase's own
+                                 /verify, which checked it server side and
+                                 bounced back here with the session in the
+                                 fragment. Already signed in by the time we
+                                 see it, it only needs storing.
+
+     Either way the address bar is scrubbed before anything async starts,
+     so a reload, a restored tab, or a URL someone pasted to a friend
+     cannot replay a token that has already been spent.
+     ------------------------------------------------------------------- */
+
+  var REDIRECT_PARAMS = [
+    'token_hash', 'type', 'access_token', 'refresh_token', 'expires_in',
+    'expires_at', 'token_type', 'provider_token', 'provider_refresh_token',
+    'error', 'error_code', 'error_description'
+  ];
+
+  // Takes only our own parameters back out, because the router keeps its
+  // route in the query string too and this runs before it has read it.
+  function scrubRedirect() {
+    try {
+      var params = new URLSearchParams(window.location.search);
+      REDIRECT_PARAMS.forEach(function (name) { params.delete(name); });
+      var query = params.toString();
+      window.history.replaceState(null, '', window.location.pathname + (query ? '?' + query : ''));
+    } catch (err) {
+      // file:// refuses replaceState, exactly as it does for the router.
+      // Nothing below depends on the address bar actually being clean.
+    }
+  }
+
+  // Supabase says "Email link is invalid or has expired", which reads like
+  // an accusation for what is nearly always a link a mail scanner opened
+  // first. Say the thing that gets them in instead.
+  function linkError(text) {
+    if (/expired|invalid|already|not found/i.test(String(text || ''))) {
+      return 'That link had already been used, or it expired. Ask for a new code and type it in instead.';
+    }
+    return text || 'That sign-in link did not work. Ask for a new code and type it in instead.';
+  }
+
+  // Resolves to { status: 'none' | 'signed-in' | 'error' }. Never rejects,
+  // because this runs on every single boot and a failure here must not be
+  // able to stop the app from painting.
+  function consumeRedirect() {
+    if (!configured()) return Promise.resolve({ status: 'none' });
+
+    var query = new URLSearchParams(window.location.search);
+    var fragment = new URLSearchParams(String(window.location.hash || '').replace(/^#/, ''));
+    function param(name) { return query.get(name) || fragment.get(name); }
+
+    var tokenHash = param('token_hash');
+    var accessToken = param('access_token');
+    var failed = param('error_description') || param('error');
+    if (!tokenHash && !accessToken && !failed) return Promise.resolve({ status: 'none' });
+
+    scrubRedirect();
+
+    if (failed) return Promise.resolve({ status: 'error', message: linkError(failed) });
+
+    var signedIn = tokenHash
+      ? gotrueFetch('/verify', {
+          body: { type: param('type') || 'email', token_hash: tokenHash }
+        }).then(function (body) {
+          storeSessionFromResponse(body);
+        })
+      // The fragment carries tokens but no name attached to them, so go and
+      // ask who this is before anything is written down.
+      : gotrueFetch('/user', {
+          method: 'GET',
+          headers: { Authorization: 'Bearer ' + accessToken }
+        }).then(function (user) {
+          setSession({
+            accessToken: accessToken,
+            refreshToken: param('refresh_token') || '',
+            expiresAt: Date.now() + (Number(param('expires_in')) || 3600) * 1000,
+            user: { id: user.id, email: user.email, phone: user.phone }
+          });
+        });
+
+    return signedIn.then(function () {
+      return syncAfterSignIn();
+    }).then(function () {
+      return { status: 'signed-in' };
+    }).catch(function (err) {
+      setSession(null);
+      return { status: 'error', message: linkError(err && err.message) };
     });
   }
 
@@ -339,6 +482,7 @@
     classify: classify,
     requestCode: requestCode,
     verifyCode: verifyCode,
+    consumeRedirect: consumeRedirect,
     signOut: signOut,
     saveProfile: saveProfile,
     sendPasswordReset: sendPasswordReset,

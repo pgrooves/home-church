@@ -420,6 +420,7 @@
       el.setAttribute('disabled', 'true');
       HC.auth.requestCode(value).then(function (id) {
         HC.screens.profileHelpers.setAuthIdentifier(id.value);
+        HC.screens.profileHelpers.setAuthChannel(id.channel);
         HC.screens.profileHelpers.setAuthStep('sent');
         HC.router.go({ name: 'profile' }, { force: true });
         c.toast(id.channel === 'email' ? 'Code sent. Check your email.' : 'Code sent. Check your texts.');
@@ -543,6 +544,13 @@
   function boot() {
     HC.store.applyPreferences();
 
+    // If somebody tapped a sign-in link in an email instead of typing the
+    // code, this is where they land. It has to run before the router reads
+    // the query string, because it takes the auth parameters back out of
+    // the address bar first. The work it starts is async and picked up at
+    // the bottom of this function.
+    var fromEmail = HC.auth.consumeRedirect();
+
     // Last known good content, straight off the device, before anything is
     // drawn. Synchronous on purpose: it is a single localStorage read, and
     // doing it here means a returning phone opens to this week's guide
@@ -587,7 +595,25 @@
         HC.router.go({ name: 'profile', restore: true }, { force: true });
       }
     });
-    HC.auth.init();
+    // A tapped link either signed them in, in which case the auth listener
+    // above has already repainted, or it did not, in which case say so and
+    // put the sign-in form back in front of them. init() only runs when
+    // there was no link to deal with, so the two cannot race over the same
+    // session.
+    fromEmail.then(function (result) {
+      if (result.status === 'signed-in') {
+        HC.screens.profileHelpers.resetAuth();
+        HC.router.go({ name: 'profile' }, { force: true });
+        c.toast('You are signed in.');
+        return;
+      }
+      if (result.status === 'error') {
+        HC.router.go({ name: 'profile' }, { force: true });
+        c.toast(result.message);
+        return;
+      }
+      HC.auth.init();
+    });
 
     // Then go and get the current content, after the first paint so nothing
     // waits on the network. If it lands and something actually changed, the
