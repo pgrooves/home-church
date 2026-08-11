@@ -32,7 +32,7 @@
 
   var cfg = HC.config || {};
   var CACHE_KEY = 'content';
-  var CACHE_VERSION = 4;      // bump when a mapping below changes shape
+  var CACHE_VERSION = 5;      // bump when a mapping below changes shape
   var TIMEOUT_MS = 12000;
 
   // The tables we pull, and the HC.data key each one fills. Adding another
@@ -53,7 +53,21 @@
     // group as "your group", and PostgREST returns rows in no guaranteed
     // order, so without this which group that is could change between fetches.
     { table: 'groups',        target: 'groups',        map: mapGroup,
-      order: 'sort_order.asc,name.asc' }
+      order: 'sort_order.asc,name.asc' },
+    { table: 'serve_teams',   target: 'serveTeams',    map: mapServeTeam,
+      order: 'sort_order.asc,name.asc' },
+    { table: 'next_steps',    target: 'nextSteps',     map: mapNextStep,
+      order: 'sort_order.asc,title.asc' },
+
+    // `neverEmpty` is the one exception to deleting a row propagating, and it
+    // is deliberate. Home, Profile, Give, and the printed guide all read
+    // church.address.city without checking, so a cleared profile is not an
+    // empty state, it is four broken screens. A church with no name is not
+    // something anyone means to say. Edit the row, do not delete it.
+    { table: 'church_profile', target: 'church',  map: mapChurch,
+      single: true, neverEmpty: true },
+    { table: 'podcast_show',   target: 'podcast', map: mapPodcastShow,
+      single: true, neverEmpty: true }
   ];
 
   function configured() {
@@ -183,6 +197,54 @@
     };
   }
 
+  function mapServeTeam(r) {
+    return {
+      id: r.id,
+      name: str(r.name),
+      commitment: str(r.commitment),
+      blurb: str(r.blurb)
+    };
+  }
+
+  function mapNextStep(r) {
+    return {
+      id: r.id,
+      title: str(r.title),
+      blurb: str(r.blurb)
+    };
+  }
+
+  function mapChurch(r) {
+    return {
+      name: str(r.name),
+      tagline: str(r.tagline),
+      pastors: str(r.pastors),
+      // Nested, because Home and Profile read church.address.city directly.
+      // Flattening it here would mean touching four screens for no gain.
+      address: {
+        line1: str(r.address_line1),
+        city: str(r.address_city),
+        state: str(r.address_state),
+        zip: str(r.address_zip)
+      },
+      mapsUrl: str(r.maps_url),
+      serviceDay: str(r.service_day),
+      serviceTimes: arr(r.service_times),
+      givingUrl: str(r.giving_url),
+      websiteUrl: str(r.website_url),
+      social: arr(r.social)
+    };
+  }
+
+  function mapPodcastShow(r) {
+    return {
+      name: str(r.name),
+      platform: str(r.platform),
+      showUrl: str(r.show_url),
+      blurb: str(r.blurb)
+    };
+  }
+
   function mapReadingPlan(r) {
     return {
       id: r.id,
@@ -288,9 +350,13 @@
       var rows = payload[spec.table];
       if (!Array.isArray(rows)) return;
 
-      // An emptied single-object table clears the object rather than leaving
-      // last week's plan sitting on Home forever. Screens are expected to
-      // handle the empty case, the way Home skips the whole section.
+      // Config the whole app dereferences, kept whatever the table says. See
+      // the note on neverEmpty in TABLES.
+      if (!rows.length && spec.neverEmpty) return;
+
+      // An emptied single-object table otherwise clears the object rather than
+      // leaving last week's plan sitting on Home forever. Screens are expected
+      // to handle the empty case, the way Home skips the whole section.
       var ok = spec.single
         ? fillOne(spec.target, rows.length ? pickCurrent(rows) : null)
         : fill(spec.target, rows);

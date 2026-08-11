@@ -159,18 +159,30 @@
       html += '<div class="hc-group-list" data-group-list>' + groupList() + '</div>';
     }
 
-    html += c.sectionHeader('Lend a hand', 'Serve teams');
-    html += '<div class="hc-serve-list">';
-    HC.data.serveTeams.forEach(function (t) { html += serveRow(t); });
-    html += '</div>';
+    // Every list below is an editable table now, so each one can legitimately
+    // come back empty. A section header standing over nothing reads as a bug,
+    // so the whole section drops instead.
+    var serveTeams = HC.data.serveTeams || [];
+    if (serveTeams.length) {
+      html += c.sectionHeader('Lend a hand', 'Serve teams');
+      html += '<div class="hc-serve-list">';
+      serveTeams.forEach(function (t) { html += serveRow(t); });
+      html += '</div>';
+    }
 
-    html += c.sectionHeader('On the calendar', 'Events');
-    html += '<div class="hc-event-list">';
-    HC.data.events.forEach(function (e) { html += eventRow(e); });
-    html += '</div>';
+    var events = HC.data.events || [];
+    if (events.length) {
+      html += c.sectionHeader('On the calendar', 'Events');
+      html += '<div class="hc-event-list">';
+      events.forEach(function (e) { html += eventRow(e); });
+      html += '</div>';
+    }
 
-    html += c.sectionHeader('Start somewhere', 'Next steps');
-    HC.data.nextSteps.forEach(function (s) { html += nextStep(s); });
+    var nextSteps = HC.data.nextSteps || [];
+    if (nextSteps.length) {
+      html += c.sectionHeader('Start somewhere', 'Next steps');
+      nextSteps.forEach(function (s) { html += nextStep(s); });
+    }
 
     html += '</div>';
     return c.el(html);

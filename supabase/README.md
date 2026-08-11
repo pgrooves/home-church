@@ -81,15 +81,22 @@ SQL that lists the tables.
 | `announcements` | The single One thing card, with a date window | Home |
 | `reading_plans` | The Reading together plan, one row per plan | Home |
 | `groups` | Small groups, night, host, neighborhood, and whether there is room | Connect |
+| `serve_teams` | The Lend a hand list | Connect |
+| `next_steps` | The next step cards | Connect |
+| `church_profile` | Name, address, service times, giving and social links. One row | Home, Profile, Give, the PDF |
+| `podcast_show` | The show card, not the episodes. One row | Listen |
 
-**Why these seven and not everything in `js/data.js`.** Collection count is
-the wrong way to look at it. What matters is how often something changes.
-These seven are everything that churns: guides and podcasts weekly, the
-reading plan weekly, announcements most weeks, events monthly, groups by the
-semester, series every few months. The rest of `data.js`, `church`, the show
-level `podcast` info, `serveTeams`, and `nextSteps`, changes once or twice a
-year, and shipping it in the binary is fine for now. Give any of them a table
-when that stops being true, the pattern is in `/new-content-type`.
+**That is all of it.** Every piece of content the app renders now lives in a
+table. Nothing left in `js/data.js` has to be edited to change what a phone
+shows, which is the whole point: no content change needs a build or a merge.
+
+**Two of these behave differently on delete, on purpose.** `church_profile`
+and `podcast_show` are marked `neverEmpty` in `js/content.js`. Emptying them
+leaves the bundled copy in place rather than clearing it, because Home,
+Profile, Give, and the printed guide all read `church.address.city` without
+checking first, and a church with no name is not a state anybody means to
+express. Edit those rows, do not delete them. Every other table takes deletion
+literally.
 
 **`groups.openings` is the field to keep honest.** False renders "Full for
 now" instead of "Room for more", and a group showing room it does not have

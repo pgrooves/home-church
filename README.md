@@ -130,10 +130,12 @@ without waiting on a review. Full documentation is in
 **`supabase/README.md`**, kept there rather than duplicated here so the two
 cannot drift.
 
-The short version. Seven tables, `series`, `guides`, `podcasts`, `events`,
-`announcements`, `reading_plans`, and `groups`, publicly readable with the
-anon key and writable only with the service role key. Six slash commands drive
-them:
+The short version. Eleven tables, publicly readable with the anon key and
+writable only with the service role key: `series`, `guides`, `podcasts`,
+`events`, `announcements`, `reading_plans`, `groups`, `serve_teams`,
+`next_steps`, `church_profile`, and `podcast_show`. Between them they hold
+everything the app renders, so no content change needs a build. Six slash
+commands drive them:
 
 | Command | Does |
 |---|---|
@@ -169,9 +171,11 @@ edit content into it, that is how two copies drift apart. Let it go stale, and
 regenerate it from Supabase if you ever want the floor raised.
 
 Deleting the last row of a table is honored too, so content can be removed and
-not just added. The one case the app refuses is a project where *every* table
-is empty, which is an unconfigured project rather than an intent, and it keeps
-the bundled content instead of blanking the app.
+not just added. Two exceptions, both deliberate. A project where *every* table
+is empty is an unconfigured project rather than an intent, so the bundled
+content stays and the app does not blank. And `church_profile` and
+`podcast_show` are never cleared, because four screens read the church's
+address without checking it exists. Edit those two, do not empty them.
 
 -----
 

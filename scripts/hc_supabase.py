@@ -42,7 +42,8 @@ CONFIG_JS = os.path.join(REPO_ROOT, "js", "config.js")
 # The tables this CMS ships with. Adding another content type means adding
 # its name here and a probe row below, and that is all that changes.
 CONTENT_TABLES = ["series", "guides", "podcasts", "events", "announcements",
-                  "reading_plans", "groups"]
+                  "reading_plans", "groups", "serve_teams", "next_steps",
+                  "church_profile", "podcast_show"]
 
 # What `verify` tries to insert as an anonymous user, per table. These have to
 # be valid rows, or PostgREST rejects them for the wrong reason: a payload
@@ -60,6 +61,10 @@ PROBE_ROWS = {
     # constraint needs to fall inside, so 1 is the only safe width here.
     "reading_plans": {"title": "probe", "total_weeks": 1},
     "groups": {"name": "probe"},
+    "serve_teams": {"name": "probe"},
+    "next_steps": {"title": "probe"},
+    "church_profile": {"name": "probe"},
+    "podcast_show": {"name": "probe"},
 }
 
 
