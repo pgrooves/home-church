@@ -32,7 +32,7 @@
 
   var cfg = HC.config || {};
   var CACHE_KEY = 'content';
-  var CACHE_VERSION = 3;      // bump when a mapping below changes shape
+  var CACHE_VERSION = 4;      // bump when a mapping below changes shape
   var TIMEOUT_MS = 12000;
 
   // The tables we pull, and the HC.data key each one fills. Adding another
@@ -48,7 +48,12 @@
     { table: 'podcasts',      target: 'sermons',       map: mapSermon },
     { table: 'events',        target: 'events',        map: mapEvent },
     { table: 'announcements', target: 'announcements', map: mapAnnouncement },
-    { table: 'reading_plans', target: 'readingPlan',   map: mapReadingPlan, single: true }
+    { table: 'reading_plans', target: 'readingPlan',   map: mapReadingPlan, single: true },
+    // `order` matters here and nowhere else so far: Connect shows the first
+    // group as "your group", and PostgREST returns rows in no guaranteed
+    // order, so without this which group that is could change between fetches.
+    { table: 'groups',        target: 'groups',        map: mapGroup,
+      order: 'sort_order.asc,name.asc' }
   ];
 
   function configured() {
@@ -157,6 +162,24 @@
       startsOn: r.starts_on || null,
       endsOn: r.ends_on || null,
       priority: r.priority == null ? 0 : r.priority
+    };
+  }
+
+  function mapGroup(r) {
+    return {
+      id: r.id,
+      name: str(r.name),
+      day: str(r.day),
+      // Connect renders this straight into "Thursdays, 6:30 PM", so it stays
+      // the display string the church wrote rather than a parsed time.
+      time: str(r.time_label),
+      neighborhood: str(r.neighborhood),
+      host: str(r.host),
+      lifeStage: str(r.life_stage),
+      blurb: str(r.blurb),
+      // Missing reads as full rather than open. Sending somebody to a group
+      // that cannot take them is the worse of the two mistakes.
+      openings: r.openings === true
     };
   }
 
@@ -306,6 +329,7 @@
 
   function getTable(spec) {
     var url = cfg.SUPABASE_URL + '/rest/v1/' + spec.table + '?select=*';
+    if (spec.order) url += '&order=' + encodeURIComponent(spec.order);
 
     // AbortController keeps a stalled connection from leaving the app
     // thinking a refresh is still in flight forever. A phone on one bar of

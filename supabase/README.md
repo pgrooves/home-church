@@ -80,15 +80,25 @@ SQL that lists the tables.
 | `events` | The events calendar | Connect |
 | `announcements` | The single One thing card, with a date window | Home |
 | `reading_plans` | The Reading together plan, one row per plan | Home |
+| `groups` | Small groups, night, host, neighborhood, and whether there is room | Connect |
 
-**Why these six and not everything in `js/data.js`.** Collection count is the
-wrong way to look at it. What matters is how often something changes. These
-six are everything that churns: guides and podcasts weekly, the reading plan
-weekly, announcements most weeks, events monthly, series every few months.
-The rest of `data.js`, `church`, the show level `podcast` info, `groups`,
-`serveTeams`, and `nextSteps`, changes once or twice a year, and shipping it
-in the binary is fine for now. Give any of them a table when that stops being
-true, the pattern is in `/new-content-type`.
+**Why these seven and not everything in `js/data.js`.** Collection count is
+the wrong way to look at it. What matters is how often something changes.
+These seven are everything that churns: guides and podcasts weekly, the
+reading plan weekly, announcements most weeks, events monthly, groups by the
+semester, series every few months. The rest of `data.js`, `church`, the show
+level `podcast` info, `serveTeams`, and `nextSteps`, changes once or twice a
+year, and shipping it in the binary is fine for now. Give any of them a table
+when that stops being true, the pattern is in `/new-content-type`.
+
+**`groups.openings` is the field to keep honest.** False renders "Full for
+now" instead of "Room for more", and a group showing room it does not have
+sends somebody to a door that cannot take them. It is one boolean and it goes
+stale the week a group fills up.
+
+**`groups.sort_order` decides which group Connect calls "your group"**, since
+it shows the first one. Tens, so a group can be slotted between two others
+without renumbering everything.
 
 **`reading_plans` is the one to know about**, because it moves every week.
 `current_week` and `this_week` are the two fields that change, the rest of the

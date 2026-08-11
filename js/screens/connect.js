@@ -58,15 +58,20 @@
   }
 
   function groupList() {
-    var list = HC.data.groups.filter(matches);
+    var list = (HC.data.groups || []).filter(matches);
     if (!list.length) {
       return c.emptyState('No group matches that yet. Widen the filter, or tell us what you need and we will start one.');
     }
     return list.map(groupCard).join('');
   }
 
+  /* Groups are editable rows now, so the list can legitimately be empty and
+     this has to say so rather than throw. Ordering comes from sort_order, set
+     in the fetch, so "the first group" is a stable answer and not whichever
+     row Postgres handed back. */
   function myGroup() {
-    var group = HC.data.groups[0];
+    var group = (HC.data.groups || [])[0];
+    if (!group) return '';
     var guide = HC.data.latestGuide();
     var inner = '' +
       '<p class="hc-eyebrow">' + c.esc(group.day + 's, ' + group.time) + '</p>' +
@@ -130,22 +135,29 @@
   }
 
   function render() {
-    var groups = HC.data.groups;
+    var groups = HC.data.groups || [];
     var html = '<div class="hc-screen hc-connect">';
 
     html += c.sectionHeader('Find your people', 'Connect', { flush: true, tag: 'h1' });
 
-    html += c.sectionHeader('Where you belong', 'Your group');
-    html += myGroup();
+    // No groups at all is a real state now that the table is editable. Both
+    // sections drop rather than rendering a header over an empty filter strip.
+    var mine = myGroup();
+    if (mine) {
+      html += c.sectionHeader('Where you belong', 'Your group');
+      html += mine;
+    }
 
-    html += c.sectionHeader('Open seats', 'Find a group');
-    html += '<div class="hc-filters">';
-    html += '<p class="hc-eyebrow hc-eyebrow--legible hc-filters__label">Day</p>';
-    html += pills('day', uniq(groups, 'day'), filters.day);
-    html += '<p class="hc-eyebrow hc-eyebrow--legible hc-filters__label">Neighborhood</p>';
-    html += pills('neighborhood', uniq(groups, 'neighborhood'), filters.neighborhood);
-    html += '</div>';
-    html += '<div class="hc-group-list" data-group-list>' + groupList() + '</div>';
+    if (groups.length) {
+      html += c.sectionHeader('Open seats', 'Find a group');
+      html += '<div class="hc-filters">';
+      html += '<p class="hc-eyebrow hc-eyebrow--legible hc-filters__label">Day</p>';
+      html += pills('day', uniq(groups, 'day'), filters.day);
+      html += '<p class="hc-eyebrow hc-eyebrow--legible hc-filters__label">Neighborhood</p>';
+      html += pills('neighborhood', uniq(groups, 'neighborhood'), filters.neighborhood);
+      html += '</div>';
+      html += '<div class="hc-group-list" data-group-list>' + groupList() + '</div>';
+    }
 
     html += c.sectionHeader('Lend a hand', 'Serve teams');
     html += '<div class="hc-serve-list">';

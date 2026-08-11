@@ -2076,7 +2076,9 @@
     ]
   };
 
-  /* ------------------------------------------------------------------ groups */
+  /* ------------------------------------------------------------------ groups
+     Seed only. The live list is the `groups` table, ordered by sort_order, and
+     `openings` is edited there rather than here. */
 
   var groups = [
     {

@@ -130,9 +130,10 @@ without waiting on a review. Full documentation is in
 **`supabase/README.md`**, kept there rather than duplicated here so the two
 cannot drift.
 
-The short version. Six tables, `series`, `guides`, `podcasts`, `events`,
-`announcements`, and `reading_plans`, publicly readable with the anon key and
-writable only with the service role key. Six slash commands drive them:
+The short version. Seven tables, `series`, `guides`, `podcasts`, `events`,
+`announcements`, `reading_plans`, and `groups`, publicly readable with the
+anon key and writable only with the service role key. Six slash commands drive
+them:
 
 | Command | Does |
 |---|---|

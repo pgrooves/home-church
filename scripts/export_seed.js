@@ -201,11 +201,29 @@ const reading_plans = [D.readingPlan].filter(Boolean).map(p => ({
   published: true
 }));
 
+/* Groups keep their data.js order, because Connect shows the first one as
+   "your group" and the table has to preserve that rather than leave it to
+   however Postgres returns rows. Tens, so a group can be slotted between two
+   others without renumbering the rest. */
+const groups = D.groups.map((g, i) => ({
+  id: g.id,
+  name: g.name,
+  day: g.day || null,
+  time_label: g.time || null,
+  neighborhood: g.neighborhood || null,
+  host: g.host || null,
+  life_stage: g.lifeStage || null,
+  blurb: g.blurb || null,
+  openings: g.openings === true,
+  sort_order: (i + 1) * 10,
+  published: true
+}));
+
 /* ---------------------------------------------------------------- write --- */
 
 fs.mkdirSync(OUT_DIR, { recursive: true });
 
-for (const [name, rows] of Object.entries({ series, guides, podcasts, events, announcements, reading_plans })) {
+for (const [name, rows] of Object.entries({ series, guides, podcasts, events, announcements, reading_plans, groups })) {
   const file = path.join(OUT_DIR, name + '.json');
   fs.writeFileSync(file, JSON.stringify(rows, null, 2) + '\n', 'utf8');
   console.log('wrote  %s  %d rows', path.relative(ROOT, file), rows.length);
@@ -213,5 +231,5 @@ for (const [name, rows] of Object.entries({ series, guides, podcasts, events, an
 
 const linked = podcasts.filter(p => p.guide_id).length;
 console.log('\n%d of %d messages have a guide attached.', linked, podcasts.length);
-console.log('Upsert in this order: series, guides, podcasts, events, announcements, reading_plans.');
+console.log('Upsert in this order: series, guides, podcasts, events, announcements, reading_plans, groups.');
 console.log('Series before guides before podcasts, the foreign keys point that way.');
