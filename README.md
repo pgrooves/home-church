@@ -3,9 +3,19 @@
 A mobile web app for Home Church, Metairie, Louisiana. Sermons, small group
 guides, and a way in.
 
-It is plain HTML, CSS, and vanilla JavaScript. There is no build step, no npm
-install, and no backend. All content lives in one seed file shaped like a
-future API response.
+It is plain HTML, CSS, and vanilla JavaScript. No framework, no bundler, no
+transpiler. Open `index.html` in a browser and the whole thing runs.
+
+Two qualifications to that, both added when the app was prepared for the App
+Store. There is a `package.json`, but only for Capacitor and its plugins,
+nothing in `js/` or `css/` is compiled or processed. And there are two small
+Node scripts, `npm run stamp` and `npm run sync`, which respectively write the
+cache busting stamps into `index.html` and copy the app's files into `www/`
+for Capacitor. Neither transforms a line of code. You can still read every
+file in this project without learning a tool.
+
+Content lives in Supabase, with `js/data.js` as the cold start floor. See
+"Publishing content" below.
 
 -----
 
@@ -29,10 +39,14 @@ relative, so it runs from a subdirectory without changes.
 To see it the way it is designed, open your browser's device toolbar and set
 the viewport to 390 x 844.
 
-**Fonts.** Cormorant loads from Google Fonts. If it fails, a serif fallback
-stack takes over and nothing breaks. It's the only network request the app
-makes until Supabase is connected, see Supabase setup below, at which point
-sign-in and profile sync add calls to your own project.
+**Fonts.** Cormorant and Poppins ship with the app, in `assets/fonts`, latin
+subset only, six files and 185KB. They used to load from Google Fonts on every
+cold launch, which was a render blocking third party request that also handed
+Google every user's network address for no functional gain. Inside a packaged
+app there was never a reason for it. Both families are SIL Open Font License
+1.1, which permits bundling. See `css/fonts.css`.
+
+That leaves Supabase as the only network request the app makes on its own.
 
 -----
 
@@ -45,18 +59,26 @@ css/
   base.css            reset, typography, safe areas, utilities
   components.css      reusable component classes
   screens.css         screen specific layout
+  fonts.css           @font-face for the two bundled families
 js/
-  data.js             seed content, shaped like a future API payload
-  store.js            localStorage wrapper, app state, tiny pub/sub
-  config.js           Supabase URL and anon key, empty until you fill them in
-  auth.js             sign in, session, profile sync, see Supabase setup below
-  router.js           pushState routing, no hash
+  data.js             cold start seed, the floor under a fresh install
+  store.js            localStorage wrapper, app state, tiny pub/sub, erase
+  config.js           Supabase URL and publishable key
+  auth.js             sign in and profile sync, DORMANT, see "Accounts" below
+  content.js          fills HC.data from Supabase, cache first, never blocks
+  native.js           share sheet, calendar, haptics, notifications
+  print-guide.js      the printable guide, and the standalone file for sharing
+  router.js           pushState routing, query string, no hash
   components.js       render functions returning HTML strings
-  screens/            one file per screen
+  screens/            one file per screen, including legal.js
   app.js              boot, route table, delegated event handling
-assets/icons          the mark, favicon, app icons
+assets/fonts          Cormorant and Poppins, latin subset, plus the OFL
+assets/icons          the mark, favicon, app icons, all without alpha
 assets/img            placeholder note, real photography goes here later
+ios-config/           hand written files for the generated Xcode project
+scripts/              publishing, icons, cache stamps, the www/ copy
 manifest.webmanifest
+capacitor.config.json
 ```
 
 **Scripts are classic, not modules.** ES modules fail over `file://` because
@@ -77,9 +99,11 @@ storage is unavailable.
 
 What persists: your profile and preferences, dark mode, text size, leader
 mode, per guide question checkmarks, per guide journal entries, dismissed
-announcements, the roster, and prayer requests. All of it stays local, except
-the profile fields once Supabase is connected and you're signed in, see
-Supabase setup below.
+announcements, the roster, and prayer requests. **All of it stays on the
+device.** Nothing a person writes in this app is transmitted anywhere, which
+is what keeps Guideline 1.2, the user generated content rule, entirely out of
+scope, and it is a property worth defending. `store.eraseEverything()` wipes
+the lot, and the Your data screen is where somebody does that themselves.
 
 -----
 
@@ -179,159 +203,76 @@ address without checking it exists. Edit those two, do not empty them.
 
 -----
 
-## Supabase setup
+## Accounts
 
-Accounts are prepped but not connected. Nothing changes for anyone using the
-app until a real project exists and its two keys are pasted into
-`js/config.js`. Until then, Profile's identity form still works, it just
-saves to the phone only, exactly like v1 shipped.
+**Sign in is switched off, on purpose, and the app is better for it.**
 
-**What's already built**, in `js/auth.js`:
+`js/auth.js` has always read and written a table called `public.profiles`.
+That table was never created. Three real people signed in and every profile
+save quietly 404'd while the Profile screen told them their information would
+follow them to any phone. The feature had never once worked.
 
-- Sign in with either an email address or a phone number, verified by a one
-  time code, no password to set or reset. Supabase calls this OTP.
-- Session storage and refresh, so a signed-in visit does not quietly drop
-  back to guest after an hour.
-- Profile sync. Every field in Your Information autosaves locally first,
-  then, once signed in, pushes the same change to Supabase in the
-  background. Sign in once and the remote copy of the profile wins, so
-  edits made from another phone are the ones a person sees.
-- Talks to Supabase's own HTTP API directly with `fetch`, no SDK. That
-  keeps the no-build-step, no-npm-install promise above intact.
+Turning it off was cheaper and more honest than turning it on in a hurry, and
+it removed three separate things from the path to the App Store: Apple's
+requirement that account deletion be possible inside the app, the demo account
+a reviewer would otherwise need, and a hard dependency on production email
+before launch, since Supabase's built in sender is rate limited and a reviewer
+who never receives a sign in code rejects the app.
 
-**What is not built**: guide checkmarks and journal entries are still
-localStorage only. Syncing those needs a second table and is a reasonable
-next step once accounts are live, but it is a separate piece of work from
-login and was left out of this pass on purpose.
+There is a fourth reason, and it is the one worth remembering. A row that
+associates a named person with a church is special category data under GDPR
+and lands in Apple's **Sensitive Info** bucket, the most scrutinized part of
+the privacy label. Stacked with birthdate, gender, marital status, and a home
+address, which is what the Profile form collects, that is a lot of sensitive
+data to hold on a free tier project for a feature nobody was using.
 
-### To turn it on
+**What still works.** Everything. The identity form saves to the phone exactly
+as v1 shipped. No screen in the app is behind a login, and none should be.
 
-1. Create a project at [supabase.com](https://supabase.com).
-2. Open the SQL editor and run this once, it creates the table the profile
-   form reads and writes, locks it down so a person can only ever see or
-   change their own row, and backfills a blank row automatically the moment
-   someone signs up for the first time:
+**What is ready and unrun**, so the day accounts are wanted the work is done
+and reviewed rather than written against a deadline:
 
-   ```sql
-   create table public.profiles (
-     id uuid primary key references auth.users on delete cascade,
-     first_name text,
-     last_name text,
-     gender text,
-     birthdate date,
-     campus text,
-     marital_status text,
-     street text,
-     unit text,
-     city text,
-     state text,
-     zip text,
-     photo_url text,
-     updated_at timestamptz default now()
-   );
+- `supabase/migrations/0009_accounts_dormant.sql`, the profiles table with row
+  level security that lets a person read only their own row, the signup
+  trigger, and an export function.
+- `supabase/functions/delete-account/index.ts`, the Edge Function that deletes
+  an account. It has to be a server function because removing a row from
+  `auth.users` needs the service role key, which must never ship in the app.
 
-   alter table public.profiles enable row level security;
-
-   create policy "Individuals can view their own profile"
-     on public.profiles for select using (auth.uid() = id);
-
-   create policy "Individuals can update their own profile"
-     on public.profiles for update using (auth.uid() = id);
-
-   create policy "Individuals can insert their own profile"
-     on public.profiles for insert with check (auth.uid() = id);
-
-   create function public.handle_new_user()
-   returns trigger as $$
-   begin
-     insert into public.profiles (id) values (new.id);
-     return new;
-   end;
-   $$ language plpgsql security definer;
-
-   create trigger on_auth_user_created
-     after insert on auth.users
-     for each row execute procedure public.handle_new_user();
-   ```
-
-3. **Authentication -> Providers**, confirm Email is on (it is by default).
-   For phone sign-in, turn on Phone there too and connect an SMS provider,
-   Supabase does not send text messages itself, Twilio is the common
-   choice. Email sign-in needs nothing extra here.
-4. **Authentication -> Email Templates -> Magic Link**, required, and easy
-   to miss. Supabase generates a one time code for every sign-in email
-   whether you ask for it or not, but the stock template only shows a
-   clickable link, not the code, so nobody sees it unless the template is
-   changed. Replace the template body with something that prints
-   `{{ .Token }}`, for example:
-
-   ```html
-   <h2>Your code</h2>
-   <p>Here's your sign-in code for Home Church:</p>
-   <h1 style="letter-spacing:4px;">{{ .Token }}</h1>
-   <p>It expires shortly. If it's been a while, just ask the app for a new one.</p>
-   ```
-
-   Skip this and people get a link instead of a code, and the app's "enter
-   your code" screen has nothing to type in.
-5. **Authentication -> URL Configuration**, set Site URL to where the app
-   actually lives, `https://pgrooves.github.io/home-church/` once GitHub
-   Pages is on. A fresh project defaults this to `http://localhost:3000`,
-   which is why the very first test of this sent a link that Safari
-   couldn't connect to, nothing on this phone is listening on localhost.
-   Add the same URL under Redirect URLs.
-6. **Project Settings -> API**, copy the Project URL and the Publishable
-   key (Supabase's current name for what used to be called the anon key)
-   into `js/config.js`. It's safe to ship in client code, the row level
-   security policies above are what actually restrict it.
-7. Reload the app. Sign in appears on Profile automatically.
-
-**A note on trust.** The endpoint shapes in `js/auth.js` match Supabase's
-documented Auth and REST APIs, but code written against documentation and
-code proven against a live project are different claims. The first live
-test against this church's own project (see steps 4 and 5) found a real
-gap, the stock email template hides the code behind a link, and a fresh
-project's Site URL points at localhost until someone sets it. Both are one
-time dashboard settings, not app bugs, and are now folded into the steps
-above. If something else does not match, the network tab will show which
-call failed and what came back, that is the fastest way to find it.
+**Before switching it on**, read the note in `0009` about data minimization.
+Of the twelve fields in that table the app itself reads exactly one.
 
 -----
 
+
 ## Wrapping for iOS
 
-The app is built so this is a packaging step, not a rewrite. Paths are all
-relative, safe area insets are already respected, routing uses `pushState`, and
-every outbound link goes through one `openExternal()` helper in
-`js/components.js` that already prefers the Capacitor Browser plugin when it
-is present.
+This is a packaging step, not a rewrite. Paths are all relative, safe area
+insets are respected, routing puts its state in the query string rather than
+the path so a cold launch under Capacitor's local origin resolves, and every
+outbound link goes through one `openExternal()` helper.
+
+`package.json` and `capacitor.config.json` are already written.
 
 ```bash
-npm init -y
-npm i @capacitor/core @capacitor/cli @capacitor/ios
-npx cap init "Home Church" com.homechurchnola.app
-```
-
-Set `webDir` to the repo root in `capacitor.config.json`:
-
-```json
-{
-  "appId": "com.homechurchnola.app",
-  "appName": "Home Church",
-  "webDir": "."
-}
-```
-
-Then:
-
-```bash
+npm install
 npx cap add ios
-npx cap sync
-npx cap open ios
+npm run ios:open      # stamp, sync www/, cap sync, open Xcode
 ```
 
-That opens Xcode. Set the app icon from `assets/icons/`, pick a team, and run
+**`webDir` is `www`, not the repo root.** An earlier version of this file
+suggested the root, which works right up until you run `npm install`, at which
+point every `cap sync` copies `node_modules`, `.git`, the Supabase migrations,
+and the Python scripts into the shipping app. `npm run sync` assembles `www/`
+from the five things the app actually needs. It is a file copy, not a build.
+
+In Xcode: copy `ios-config/PrivacyInfo.xcprivacy` into `ios/App/App/` and add
+it to the App target, run `npm run icons` and drag `ios-icons/` into the
+AppIcon set, set `ITSAppUsesNonExemptEncryption` to `NO`, pick a team, and run
 on a device.
+
+**Everything else about submitting is in `SUBMISSION_KIT.md`**, and everything
+that needs a human rather than a commit is in `LAUNCH_TODO.md`.
 
 **Worth knowing before you start.** An Apple Developer account is $99 a year.
 A personal account can be created in a few minutes. An organization account,
@@ -379,7 +320,19 @@ it is not part of the UI palette and no interface element should adopt it.
   photographs of real people exist. Podcast cover art is the one drawn
   exception, the church lockup on a dark panel, which is what the show wears
   on Spotify anyway. It ships with the app and never fetches.
-- **No in-app payment.** Giving hands off to Overflow.
+- **No in-app payment.** Giving hands off to Overflow, in a system browser.
+- **Nothing a person writes ever leaves their phone.** Notes, roster,
+  attendance, prayer requests. The day one of those becomes visible to another
+  user, the app needs content filtering, reporting, and user blocking under
+  Guideline 1.2, and this becomes a different and much harder submission.
+- **No accounts in v1.** See "Accounts" above.
+- **`--hc-accent` is for ornament, and the eyebrow default is not it.** The
+  default eyebrow color is `--hc-accent-deep`, and `--ornament` is the opt
+  out, so forgetting the modifier gives you readable text rather than 2.12:1
+  uppercase.
+- **No analytics, no crash reporting, no advertising, no third party SDK**
+  beyond Capacitor. That absence is why the privacy label is three lines long.
+  Every addition costs a signed manifest and a new disclosure.
 
 -----
 
@@ -397,16 +350,16 @@ These are marked in the code where they appear:
    because the episode notes do not state them. They render cleanly without,
    the byline just gets shorter. Fill them in as you know them.
 3. Whether a licensed display typeface should replace Cormorant.
-4. Which church management system holds groups, serve teams, and events, which
-   decides whether that content can be pulled live. Planning Center is a
-   strong fit if the church already uses it, it can also hold the profile
-   fields the Supabase setup above tracks, worth weighing before leaning too
-   far into a second source of truth for the same information.
+4. ~~Which church management system holds groups, serve teams, and events.~~
+   **Answered.** The church runs **Planning Center**, through Church Center,
+   and **Group Vitals**. The Connect tab now sends people to both rather than
+   duplicating their forms, so there is no second source of truth to keep in
+   step. Worth remembering the next time somebody proposes building a form.
 5. Who publishes a guide every week. The app's value depends on that pipeline
    more than on anything in this repo.
-6. Whether phone sign-in matters enough to pay for an SMS provider. Email
-   sign-in is free and already works once Supabase is connected, phone does
-   not until a provider like Twilio is wired up in the Supabase dashboard.
+6. ~~Whether phone sign-in matters enough to pay for an SMS provider.~~
+   **Moot for v1.** Sign in is switched off entirely, see "Accounts" above.
+   The question comes back the day accounts do.
 
 The `podcasts` and `series` tables hold the real Home Church NOLA catalogue,
 87 messages from November 2024 forward, transcribed from the podcast feed. Groups, events, and serve teams are still plausible

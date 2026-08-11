@@ -6,13 +6,49 @@ one sitting.
 
 **Status key:** `[ ]` not started, `[x]` done, `[!]` blocking submission.
 
-Last updated at the end of Phase 3.
+Last updated at the end of Phase 7. **All phases are complete.** Everything
+below is what is left, and none of it is code.
 
 -----
 
-## Right now, one thing
+## Right now, three migrations
 
-- [!] **Run `supabase/migrations/0008_real_serve_teams.sql`.**
+They are written, commented, and safe to re-run. My connection to the project
+started requiring an approval this session cannot answer, so `0007` went in
+and these did not. Run them in order.
+
+- [!] **`supabase/migrations/0008_real_serve_teams.sql`**
+      The church's seven real serve teams, and groups switched out of season.
+      **This one changes what people see**, so it matters most. Until it runs,
+      any phone with signal shows the four old invented teams and the
+      placeholder home groups, because Supabase wins over the copy bundled in
+      the app. The bundled copy is already correct, so this only affects live
+      devices. Nothing is broken, the content is just wrong.
+
+- [ ] **`supabase/migrations/0009_accounts_dormant.sql`**
+      The profiles table, its row level security, and the export function.
+      Changes nothing anybody can see, because sign in is off in v1. Run it so
+      the day you want accounts the database side is already correct.
+
+- [ ] **`supabase/migrations/0010_device_tokens.sql`**
+      Where push notification tokens land. **Required before notifications
+      work**, so this one is needed for launch. Read the row level security
+      note in it before changing anything there, it is shaped differently from
+      every other table for a reason.
+
+- [ ] **Deploy the account deletion function**, when you turn accounts on:
+      `supabase functions deploy delete-account`. Not needed for v1.
+
+Three ways past the paste problem, easiest first:
+
+  1. **Approve the Supabase tool call** if Claude Code offers you the prompt.
+     This unblocks every future content change too.
+  2. **Safari, aA in the address bar, Request Desktop Website**, then paste.
+     The SQL editor fights mobile paste. If it still refuses, tap once to
+     place the cursor, then tap the same spot again for the Paste bubble.
+     Long press usually does nothing there.
+  3. **Table Editor, no SQL**, for `0008` only. The other two create
+     functions and policies and genuinely need the SQL editor.
 
   My connection to the Supabase project started requiring an approval this
   session cannot answer, so `0007` went in and `0008` did not.
@@ -63,9 +99,17 @@ Last updated at the end of Phase 3.
       something addressing app support. The homechurchnola.com homepage is not
       enough. A short page saying what the app is and how to get help is fine.
 
-- [!] **App icon set with no alpha channel.** All seven PNGs in the repo are
-      RGBA today. Apple rejects icons containing transparency. Re-export
-      flattened onto a solid background at the full iOS size set.
+- [x] ~~App icon set with no alpha channel.~~ **Done.** Every icon PNG carried
+      an alpha channel with nothing actually transparent in it, so stripping
+      was lossless. `npm run icons` regenerates the full iOS set into
+      `ios-icons/` plus the web icons, and it is a script rather than a one
+      time fix so it keeps being true. The logo lockups and `mark.png` were
+      left alone, they use transparency for real.
+
+      One thing to know: the largest square source in the repo is 512px, so
+      the 1024 App Store icon is upscaled. It passes. If the church's original
+      logo still exists as vector art, export a real 1024 and drop it in as
+      `assets/icons/icon-1024.png`, which the script prefers automatically.
 
 - [!] **Have a Louisiana attorney read the privacy policy and terms.** I wrote
       both in Phase 3 and they are in the app now, at
@@ -112,6 +156,26 @@ Last updated at the end of Phase 3.
 
 - [ ] **Auth URL configuration**, same condition. Site URL and Redirect URLs
       will need the Capacitor origin, not just the GitHub Pages URL.
+
+-----
+
+## Xcode, once you are enrolled
+
+The full ordered version is in `SUBMISSION_KIT.md` section 1. The short list:
+
+- [ ] `npm install && npm run ios:open`
+- [ ] Copy `ios-config/PrivacyInfo.xcprivacy` into `ios/App/App/` and add it to
+      the App target. It lives outside `ios/` because that folder is generated
+      and gitignored, and a hand written file in there gets destroyed the next
+      time somebody runs `npx cap add ios`.
+- [ ] `npm run icons`, then drag `ios-icons/` into the AppIcon set.
+- [ ] `ITSAppUsesNonExemptEncryption` to `NO` in `Info.plist`.
+- [ ] Deployment target **iOS 15**, devices **iPhone only**, version `1.0.0`,
+      build `1`.
+- [ ] Push Notifications capability on, and an APNs key created.
+- [ ] **Test on a real device**, not just the simulator: cold start, airplane
+      mode, back gesture, the giving handoff, the share sheet, add to
+      calendar, and a test notification.
 
 -----
 

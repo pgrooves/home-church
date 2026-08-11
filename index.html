@@ -5,7 +5,12 @@
   <title>Home Church</title>
 
   <!-- iOS: cover the notch, then pad with env(safe-area-inset-*) in CSS. -->
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+  <!-- user-scalable=no came out. Safari has ignored it for years so it looked
+       harmless, but WKWebView honors it, which means it would have taken pinch
+       zoom away for real the moment this was packaged. The app has its own
+       text size control, and that is an addition to system zoom rather than a
+       replacement for it. -->
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="Home Church">
@@ -17,34 +22,37 @@
   <!-- Every path is relative. Capacitor serves from a local origin and a
        leading slash breaks there. -->
   <link rel="manifest" href="manifest.webmanifest">
-  <!-- ?v=2 busts Safari's favicon cache, which is separate from and stickier
-       than its normal page cache, private browsing does not clear it either.
-       Bump this any time the icon file itself changes again. -->
-  <link rel="icon" type="image/png" href="assets/icons/favicon.png?v=2">
-  <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon-180.png?v=2">
+  <!-- The stamp busts Safari's favicon cache, which is separate from and
+       stickier than its normal page cache, and private browsing does not
+       clear it either. -->
+  <link rel="icon" type="image/png" href="assets/icons/favicon.png?v=b333ff03">
+  <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon-180.png?v=b333ff03">
 
-  <!-- Fonts are the only remote asset. The system-sans and serif fallback
-       stacks in tokens.css carry the design on their own if this never
-       arrives. -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet"
-        href="https://fonts.googleapis.com/css2?family=Cormorant:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Poppins:wght@800&display=swap">
+  <!-- Typefaces ship with the app. They used to come from Google on every
+       cold launch, which was a render blocking third party request that also
+       handed Google every user's network address. Inside a packaged app there
+       was never a reason for it. See css/fonts.css. -->
+  <link rel="stylesheet" href="css/fonts.css?v=b333ff03">
 
-  <!-- ?v=N on every local asset. Content lives in js/data.js and changes
-       every week, and without this a returning phone keeps serving last
-       week's copy from cache, Safari most stubbornly. Bump this number in
-       all of the tags below whenever anything in css/ or js/ changes, which
-       both NEW_GUIDE_PROCESS.md and NEW_PODCAST_PROCESS.md call out as a
-       step. It is the no-build-step version of a content hash. -->
-  <link rel="stylesheet" href="css/tokens.css?v=8">
-  <link rel="stylesheet" href="css/base.css?v=8">
-  <link rel="stylesheet" href="css/components.css?v=8">
-  <link rel="stylesheet" href="css/screens.css?v=8">
-  <link rel="stylesheet" href="css/print.css?v=8">
+  <!-- DO NOT EDIT THESE STAMPS BY HAND. `npm run stamp` writes every ?v= in
+       this file from a hash of css/ and js/, so they all move together and
+       none of them can be forgotten. Without a stamp a returning phone keeps
+       serving last week's JavaScript from cache, Safari most stubbornly, and
+       the failure is quiet: the app works, it is just the old one.
+       See scripts/stamp_assets.js. -->
+  <link rel="stylesheet" href="css/tokens.css?v=b333ff03">
+  <link rel="stylesheet" href="css/base.css?v=b333ff03">
+  <link rel="stylesheet" href="css/components.css?v=b333ff03">
+  <link rel="stylesheet" href="css/screens.css?v=b333ff03">
+  <link rel="stylesheet" href="css/print.css?v=b333ff03">
 </head>
 <body>
-  <div id="app" role="application" aria-label="Home Church"></div>
+  <!-- No role="application" here. That role tells a screen reader to stop
+       interpreting the page and hand nearly every keystroke to the app, which
+       is right for a canvas editor and wrong for something people mostly read.
+       It was costing VoiceOver users the ordinary reading controls on a screen
+       full of prose. The landmarks inside the shell do the real work. -->
+  <div id="app"></div>
 
   <noscript>
     <div style="padding:24px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif">
@@ -52,26 +60,30 @@
     </div>
   </noscript>
 
-  <script src="js/data.js?v=8"></script>
-  <script src="js/store.js?v=8"></script>
-  <!-- Empty until js/config.js is filled in, see that file. Once it is, this
-       is the app's only network traffic besides the font. -->
-  <script src="js/config.js?v=8"></script>
-  <script src="js/auth.js?v=8"></script>
+  <script src="js/data.js?v=b333ff03"></script>
+  <script src="js/store.js?v=b333ff03"></script>
+  <!-- Share sheet, calendar, haptics, notifications. Works in a browser
+       too, quietly, so nothing below has to check where it is running. -->
+  <script src="js/native.js?v=b333ff03"></script>
+  <!-- Empty until js/config.js is filled in, see that file. Now that the
+       typefaces ship with the app, Supabase is the only network traffic the
+       app makes on its own. -->
+  <script src="js/config.js?v=b333ff03"></script>
+  <script src="js/auth.js?v=b333ff03"></script>
   <!-- Fills HC.data from Supabase after the first paint. Needs data.js,
        store.js, and config.js above it, and nothing below it. -->
-  <script src="js/content.js?v=8"></script>
-  <script src="js/components.js?v=8"></script>
-  <script src="js/print-guide.js?v=8"></script>
-  <script src="js/router.js?v=8"></script>
-  <script src="js/screens/guide.js?v=8"></script>
-  <script src="js/screens/home.js?v=8"></script>
-  <script src="js/screens/listen.js?v=8"></script>
-  <script src="js/screens/connect.js?v=8"></script>
-  <script src="js/screens/give.js?v=8"></script>
-  <script src="js/screens/profile.js?v=8"></script>
-  <script src="js/screens/leader.js?v=8"></script>
-  <script src="js/screens/legal.js?v=8"></script>
-  <script src="js/app.js?v=8"></script>
+  <script src="js/content.js?v=b333ff03"></script>
+  <script src="js/components.js?v=b333ff03"></script>
+  <script src="js/print-guide.js?v=b333ff03"></script>
+  <script src="js/router.js?v=b333ff03"></script>
+  <script src="js/screens/guide.js?v=b333ff03"></script>
+  <script src="js/screens/home.js?v=b333ff03"></script>
+  <script src="js/screens/listen.js?v=b333ff03"></script>
+  <script src="js/screens/connect.js?v=b333ff03"></script>
+  <script src="js/screens/give.js?v=b333ff03"></script>
+  <script src="js/screens/profile.js?v=b333ff03"></script>
+  <script src="js/screens/leader.js?v=b333ff03"></script>
+  <script src="js/screens/legal.js?v=b333ff03"></script>
+  <script src="js/app.js?v=b333ff03"></script>
 </body>
 </html>

@@ -147,22 +147,12 @@
     }, { passive: true });
   }
 
-  /* ---------------------------------------------------------------- sharing */
+  /* ---------------------------------------------------------------- sharing
+     Moved into js/native.js, which prefers the real system share sheet and
+     falls back through the web Share API and the clipboard. */
 
   function share(text, title) {
-    if (navigator.share) {
-      navigator.share({ text: text, title: title || 'Home Church' }).catch(function () { /* dismissed */ });
-      return;
-    }
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(text).then(function () {
-        c.toast('Copied. Go put it somewhere good.');
-      }, function () {
-        c.toast('Your browser would not let us copy that one.');
-      });
-      return;
-    }
-    c.toast('Sharing needs a newer browser, sorry.');
+    HC.native.shareText(text, title);
   }
 
   /* ------------------------------------------------------------- guide bits */
@@ -212,8 +202,49 @@
       HC.router.go({ name: 'guide-reader', id: el.getAttribute('data-id') });
     },
 
+    /* On a phone this is a real file handed to the share sheet, where iOS
+       offers Print, Save to Files, and Mail. window.print() is a no-op inside
+       WKWebView, so the old behavior was a button that did nothing at all
+       once the app was packaged, and did it silently. In a browser, where
+       print() works properly, it still uses the print dialog. */
     'download-guide': function (el) {
-      HC.print.guide(el.getAttribute('data-id'));
+      var id = el.getAttribute('data-id');
+
+      if (!HC.native.isNative()) {
+        HC.print.guide(id);
+        return;
+      }
+
+      var guide = HC.data.getGuide(id);
+      var name = (HC.data.guideTitle(guide) || 'guide').toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40) + '.html';
+
+      c.toast('Getting the guide ready.');
+      HC.print.standaloneHtml(id).then(function (html) {
+        return HC.native.shareFile(name, html, 'text/html', HC.data.guideTitle(guide));
+      }).then(function (ok) {
+        if (!ok) c.toast('Could not put that together. Try again in a moment.');
+      }).catch(function () {
+        c.toast('Could not put that together. Try again in a moment.');
+      });
+    },
+
+    /* Hands the phone an .ics and lets the person decide. The app never asks
+       for calendar permission, because it never touches the calendar. */
+    'add-to-calendar': function (el) {
+      var id = el.getAttribute('data-id');
+      var evt = (HC.data.events || []).filter(function (e) { return e.id === id; })[0];
+      if (!evt) return;
+
+      HC.native.addToCalendar({
+        title: evt.title,
+        description: evt.blurb,
+        location: evt.location,
+        start: HC.screens.connectHelpers.eventStart(evt)
+      }).then(function (ok) {
+        if (ok) HC.native.tap('Light');
+        else c.toast('Could not open your calendar from here.');
+      });
     },
 
     'open-url': function (el) {
@@ -273,6 +304,9 @@
       var on = HC.store.toggleChecked(guideId, el.getAttribute('data-check-key'));
       el.setAttribute('aria-pressed', on ? 'true' : 'false');
       repaintCoverage(guideId);
+      // A leader running a room is looking at the group, not the screen. The
+      // tick is how they know it registered without checking.
+      if (on) HC.native.tap('Light');
     },
 
     'clear-checks': function (el) {
@@ -387,6 +421,7 @@
         return;
       }
       HC.store.addPrayer((who.value || '').trim(), body);
+      HC.native.tap('Light');
       who.value = '';
       text.value = '';
       HC.router.go({ name: 'leader' }, { force: true });
@@ -400,13 +435,44 @@
 
     /* -------------------------------------------------------------- profile */
 
+    /* These three switches used to write a boolean into localStorage and
+       nothing else, while promising a Monday morning notification the app had
+       no way to send. Now the first one turned on is what asks iOS for
+       permission, at the moment somebody has said they want this, rather than
+       at launch before anyone knows what the app is.
+
+       If permission is refused the switch goes back, because a switch that
+       stays on while nothing arrives is the same lie in a quieter voice. */
     'toggle-notify': function (el) {
       var key = el.getAttribute('data-id');
       var profile = HC.store.getProfile();
       var next = Object.assign({}, profile.notifications);
-      next[key] = !next[key];
+      var turningOn = !next[key];
+      var anyOtherOn = Object.keys(next).some(function (k) {
+        return k !== key && next[k];
+      });
+
+      next[key] = turningOn;
       HC.store.updateProfile({ notifications: next });
-      setSwitch(el, next[key]);
+      setSwitch(el, turningOn);
+
+      if (!HC.native.isNative()) return;
+
+      if (turningOn) {
+        HC.native.enableNotifications().then(function (granted) {
+          if (granted) {
+            HC.native.tap('Light');
+            return;
+          }
+          next[key] = false;
+          HC.store.updateProfile({ notifications: next });
+          setSwitch(el, false);
+          c.toast('Notifications are switched off for this app in Settings. Turn them on there and come back.');
+        });
+      } else if (!anyOtherOn) {
+        // Last one off means stop sending to this phone entirely.
+        HC.native.disableNotifications();
+      }
     },
 
     'toggle-theme': function (el) {
@@ -619,6 +685,12 @@
       }
     });
     HC.auth.init();
+
+    // An APNs token is not permanent. It changes on restore from backup and
+    // sometimes on reinstall, and a church sending to a stale token gets
+    // silence rather than an error, so this re-registers on every launch
+    // where somebody has already asked for notifications.
+    HC.native.resumeNotifications();
 
     // Then go and get the current content, after the first paint so nothing
     // waits on the network. If it lands and something actually changed, the

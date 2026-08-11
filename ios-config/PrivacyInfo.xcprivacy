@@ -1,0 +1,173 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Home Church, privacy manifest.
+
+  Required since spring 2024 for apps and for third party SDKs. Xcode reads
+  this, plus the manifest inside every embedded framework, and produces the
+  privacy report you attach to a submission.
+
+  WHERE THIS GOES. Once `npx cap add ios` has generated ios/, copy this to
+  ios/App/App/PrivacyInfo.xcprivacy and make sure it is a member of the App
+  target in Xcode:
+
+      cp ios-config/PrivacyInfo.xcprivacy ios/App/App/
+
+  It lives in ios-config/ rather than in ios/ because ios/ is generated and
+  gitignored, and a hand written file inside a regenerable directory is a file
+  that gets destroyed the first time somebody runs `npx cap add ios` again.
+
+  VERIFY IT IN XCODE BEFORE SUBMITTING. Apple's own required reason API page
+  would not load when this was written, so the reason code below comes from
+  Apple Developer Forums rather than first hand from the documentation. Xcode
+  reports the codes it actually expects, and an ITMS-91053 warning on upload
+  will name anything missing. Do not take this file on faith.
+
+  WHAT THIS APP DOES NOT DO, which is most of it. No analytics, no crash
+  reporting, no advertising, no attribution, no third party SDK other than
+  Capacitor itself. That is why NSPrivacyTracking is false and the tracking
+  domain list is empty, and it is worth keeping that way: every one of those
+  additions would need its own signed manifest and its own line on the
+  App Store privacy label.
+-->
+<plist version="1.0">
+<dict>
+
+  <!-- Nothing here links user or device data across other companies' apps or
+       websites. No ATT prompt should ever appear in this app. If one does,
+       something was added that should not have been. -->
+  <key>NSPrivacyTracking</key>
+  <false/>
+
+  <key>NSPrivacyTrackingDomains</key>
+  <array/>
+
+  <key>NSPrivacyCollectedDataTypes</key>
+  <array>
+
+    <!-- The APNs device token, so the church can say a new guide is posted.
+         Not tied to a name or an email, because version 1 has no accounts. -->
+    <dict>
+      <key>NSPrivacyCollectedDataType</key>
+      <string>NSPrivacyCollectedDataTypeDeviceID</string>
+      <key>NSPrivacyCollectedDataTypeLinked</key>
+      <false/>
+      <key>NSPrivacyCollectedDataTypeTracking</key>
+      <false/>
+      <key>NSPrivacyCollectedDataTypePurposes</key>
+      <array>
+        <string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+      </array>
+    </dict>
+
+    <!-- Name, email, and phone, only when somebody chooses to fill in a
+         Connect form. Those forms open in the system browser and post to
+         Church Center, Group Vitals, Flodesk, or a Google form, so the app
+         never handles the values itself. Declared anyway. Apple offers an
+         optional disclosure exemption for data a person volunteers in a
+         customer service context, and these plausibly qualify, but
+         over-declaring costs nothing and under-declaring is a metadata
+         rejection. -->
+    <dict>
+      <key>NSPrivacyCollectedDataType</key>
+      <string>NSPrivacyCollectedDataTypeName</string>
+      <key>NSPrivacyCollectedDataTypeLinked</key>
+      <true/>
+      <key>NSPrivacyCollectedDataTypeTracking</key>
+      <false/>
+      <key>NSPrivacyCollectedDataTypePurposes</key>
+      <array>
+        <string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+      </array>
+    </dict>
+
+    <dict>
+      <key>NSPrivacyCollectedDataType</key>
+      <string>NSPrivacyCollectedDataTypeEmailAddress</string>
+      <key>NSPrivacyCollectedDataTypeLinked</key>
+      <true/>
+      <key>NSPrivacyCollectedDataTypeTracking</key>
+      <false/>
+      <key>NSPrivacyCollectedDataTypePurposes</key>
+      <array>
+        <string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+      </array>
+    </dict>
+
+    <dict>
+      <key>NSPrivacyCollectedDataType</key>
+      <string>NSPrivacyCollectedDataTypePhoneNumber</string>
+      <key>NSPrivacyCollectedDataTypeLinked</key>
+      <true/>
+      <key>NSPrivacyCollectedDataTypeTracking</key>
+      <false/>
+      <key>NSPrivacyCollectedDataTypePurposes</key>
+      <array>
+        <string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+      </array>
+    </dict>
+
+    <!-- The free text somebody types into a Connect form. Same handoff, same
+         reasoning as above. -->
+    <dict>
+      <key>NSPrivacyCollectedDataType</key>
+      <string>NSPrivacyCollectedDataTypeOtherUserContent</string>
+      <key>NSPrivacyCollectedDataTypeLinked</key>
+      <true/>
+      <key>NSPrivacyCollectedDataTypeTracking</key>
+      <false/>
+      <key>NSPrivacyCollectedDataTypePurposes</key>
+      <array>
+        <string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+      </array>
+    </dict>
+
+  </array>
+
+  <key>NSPrivacyAccessedAPITypes</key>
+  <array>
+
+    <!-- Capacitor's iOS layer reads and writes UserDefaults for its own
+         configuration. Our JavaScript uses localStorage rather than
+         UserDefaults, but ITMS-91053 keys off what is in the binary, not what
+         language it was written in, so this is declared deliberately rather
+         than left to be discovered on upload.
+
+         CA92.1: access to information stored in user defaults that is
+         accessible only to the app itself. It does not permit reading what
+         other apps or the system wrote, and we do not. -->
+    <dict>
+      <key>NSPrivacyAccessedAPIType</key>
+      <string>NSPrivacyAccessedAPICategoryUserDefaults</string>
+      <key>NSPrivacyAccessedAPITypeReasons</key>
+      <array>
+        <string>CA92.1</string>
+      </array>
+    </dict>
+
+    <!-- @capacitor/filesystem writes two kinds of temporary file into the
+         app's own cache directory: an .ics when somebody adds an event to
+         their calendar, and an .html when a leader saves a guide. Both are
+         handed straight to the share sheet and neither is kept.
+
+         C617.1: access to file timestamps and other metadata for files inside
+         the app container, the app group container, or the app's CloudKit
+         container. It does not cover reading timestamps of files elsewhere on
+         the device, and we do not.
+
+         Declared defensively. Capacitor's plugins ship their own manifests
+         and this may already be covered by the framework's, in which case
+         this entry is harmless duplication. Xcode's privacy report will say
+         which, and that check is on the launch list. -->
+    <dict>
+      <key>NSPrivacyAccessedAPIType</key>
+      <string>NSPrivacyAccessedAPICategoryFileTimestamp</string>
+      <key>NSPrivacyAccessedAPITypeReasons</key>
+      <array>
+        <string>C617.1</string>
+      </array>
+    </dict>
+
+  </array>
+
+</dict>
+</plist>

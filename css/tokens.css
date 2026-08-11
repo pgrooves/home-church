@@ -11,12 +11,28 @@
   --hc-cream:       #EDE8DF;  /* cards, raised surfaces */
   --hc-ink:         #111111;  /* primary text */
   --hc-dark:        #1A1918;  /* dark panels, primary button fill */
-  --hc-mid:         #7A7570;  /* secondary text */
-  --hc-rule:        #C8C0B0;  /* hairlines, dividers */
-  --hc-accent:      #B5A898;  /* taupe, DECORATIVE ONLY, fails contrast */
-  --hc-accent-deep: #8F8271;  /* taupe when text must be legible */
+  /* Three of these moved for contrast. The numbers below are measured against
+     --hc-cream, the card surface, because that is the hardest ground in the
+     app and a token that passes there passes on paper too.
+
+     --hc-mid was #7A7570, which is 3.74:1 on a card. It is the color of
+     .hc-caption, which carries bylines, dates, service times, and every card
+     subtitle, so it is the second most common text style in the app after the
+     body serif and it was failing AA everywhere it appeared.
+
+     --hc-accent-deep was #8F8271, at 3.07:1. That token exists specifically
+     for eyebrows a person has to read, which is to say it had one job. Its
+     class is even called --legible.
+
+     Hue and saturation are unchanged in all three. Only value moved, by the
+     smallest amount that clears 4.5:1 on cream, so the palette still reads as
+     the same warm family. */
+  --hc-mid:         #6D6864;  /* secondary text, 5.02 paper / 4.51 cream */
+  --hc-rule:        #C8C0B0;  /* hairlines, dividers, not text */
+  --hc-accent:      #B5A898;  /* taupe, DECORATIVE ONLY, 2.12, never set text in it */
+  --hc-accent-deep: #71675A;  /* taupe when text must be legible, 5.05 / 4.54 */
   --hc-success:     #5F7355;
-  --hc-warning:     #A8763F;
+  --hc-warning:     #896134;  /* 5.01 paper / 4.50 cream */
   --hc-error:       #8B4A3F;
   --hc-overlay:     rgba(26,25,24,0.55);
 

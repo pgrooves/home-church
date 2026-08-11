@@ -1,0 +1,29 @@
+{
+  "appId": "com.homechurchnola.app",
+  "appName": "Home Church",
+  "webDir": "www",
+  "ios": {
+    "contentInset": "never",
+    "backgroundColor": "#F7F4EF",
+    "limitsNavigationsToAppBoundDomains": false
+  },
+  "server": {
+    "iosScheme": "capacitor"
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchAutoHide": true,
+      "launchShowDuration": 500,
+      "backgroundColor": "#F7F4EFFF",
+      "showSpinner": false,
+      "iosSpinnerStyle": "small"
+    },
+    "StatusBar": {
+      "style": "DEFAULT",
+      "overlaysWebView": true
+    },
+    "PushNotifications": {
+      "presentationOptions": ["alert", "sound"]
+    }
+  }
+}

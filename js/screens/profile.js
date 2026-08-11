@@ -163,9 +163,14 @@
     if (!HC.content || !HC.content.isConfigured()) return '';
     var s = HC.content.state();
 
+    if (s.status === 'partial') {
+      return '<p class="hc-caption hc-about__content">Some of this week’s content did not come through. ' +
+        'You have everything from last time, and we will finish catching up when the signal is better.</p>';
+    }
     if (s.source === 'network') {
       return '<p class="hc-caption hc-about__content">Content is up to date' +
-        (s.fetchedAt ? ', checked ' + when(s.fetchedAt) : '') + '.</p>';
+        (s.fetchedAt ? ', checked ' + when(s.fetchedAt) : '') + '. ' +
+        'It is saved on this phone, so it still opens with no signal.</p>';
     }
     if (s.status === 'fetching') {
       return '<p class="hc-caption hc-about__content">Checking for new content.</p>';

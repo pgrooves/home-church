@@ -529,8 +529,22 @@
       apply(payload);
       var changed = signature() !== before;
 
-      state.cached = writeCache(payload);
-      state.status = 'ok';
+      /* Merge onto the cache rather than replacing it.
+
+         A refresh where three tables answer and eight time out used to write
+         those three over the whole cached payload. The screen was fine,
+         because apply() only touches what came back. The next cold start was
+         not: it primed from a cache missing eight tables and fell through to
+         the copy frozen into the binary for all of them. So one bad minute of
+         signal on a Sunday could quietly roll a phone back to build time
+         content, and nothing anywhere would say so.
+
+         Keeping the previous cache underneath means a partial answer can only
+         ever improve what is stored. */
+      var merged = Object.assign({}, readCache() || {}, payload);
+
+      state.cached = writeCache(merged);
+      state.status = (got === TABLES.length) ? 'ok' : 'partial';
       state.source = 'network';
       state.fetchedAt = new Date().toISOString();
 
@@ -569,7 +583,7 @@
     isConfigured: configured,
     state: function () {
       return {
-        status: state.status,       // idle | fetching | ok | offline | error
+        status: state.status,       // idle | fetching | ok | partial | offline | error
         source: state.source,       // bundled | cache | network
         fetchedAt: state.fetchedAt,
         cached: state.cached        // false means the cache write did not stick

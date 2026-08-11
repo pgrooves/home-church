@@ -20,9 +20,26 @@ html, body, h1, h2, h3, h4, p, figure, blockquote, ul, ol, dl, dd, fieldset, leg
 
 ul[class], ol[class] { list-style: none; }
 
+/* Dynamic Type.
+
+   The app has its own three step text size control on Profile, which is good
+   and which people do find. What it did not do was notice that somebody had
+   already told iOS, once, that they want larger text everywhere. Those are
+   the people most likely to need it and least likely to go hunting through a
+   new app's settings for a second switch.
+
+   -webkit-text-size-adjust was pinned to 100%, which is what actively refused
+   the system setting. Letting it go to auto lets WKWebView scale text with
+   the accessibility setting, and the app's own --hc-text-scale multiplies on
+   top rather than competing.
+
+   The layout survives it because nothing here is sized to fit exactly: the
+   type scale is in rem-free px multiplied by a custom property, every touch
+   target has a min-height rather than a fixed one, and the one scroll
+   container simply gets taller. */
 html {
-  -webkit-text-size-adjust: 100%;
-  text-size-adjust: 100%;
+  -webkit-text-size-adjust: auto;
+  text-size-adjust: auto;
   height: 100%;
 }
 
@@ -125,6 +142,25 @@ button, .hc-tab, .hc-eyebrow, .hc-numeral, .hc-section__toggle, .hc-tabbar {
 .hc-display-l  { font-size: calc(var(--hc-display-l)  * var(--hc-text-scale)); line-height: 1.125; }
 .hc-display-m  { font-size: calc(var(--hc-display-m)  * var(--hc-text-scale)); line-height: 1.155; }
 
+/* The eyebrow is the brand's signature move, and its default color changed.
+
+   It used to be --hc-accent, which the design system is explicit about:
+   decorative only, fails contrast, never set readable text in it. The trouble
+   was that eyebrows had quietly become one of the app's main ways of carrying
+   real information. The scripture passage on every guide row is an eyebrow.
+   So is the day and time on a group card, the series name above a sermon, and
+   the word that tells you a card is about the next gathering. All of that was
+   being set at 2.12:1, in eleven pixel uppercase, in a church app that older
+   people use.
+
+   So the default is now the legible taupe and ornament is the opt out, rather
+   than the other way around. That is the safer direction to fail in: forget
+   the modifier and you get readable text, instead of forgetting it and
+   quietly shipping something nobody over fifty can read.
+
+   Visually this is a small deepening of the same warm taupe, not a new color.
+   .hc-eyebrow--legible is kept as an alias so existing markup is unaffected. */
+
 .hc-eyebrow {
   font-family: var(--hc-sans);
   font-weight: 600;
@@ -132,11 +168,17 @@ button, .hc-tab, .hc-eyebrow, .hc-numeral, .hc-section__toggle, .hc-tabbar {
   line-height: var(--hc-eyebrow-line);
   letter-spacing: var(--hc-track-eyebrow);
   text-transform: uppercase;
-  color: var(--hc-accent);   /* decorative by design, reads as ornament */
+  color: var(--hc-accent-deep);
 }
 
-/* When an eyebrow carries meaning a user must read, not just brand texture. */
+/* Was the way to opt in to legibility. Now the default, kept so no markup
+   has to change. */
 .hc-eyebrow--legible { color: var(--hc-accent-deep); }
+
+/* Genuinely decorative only. Brand texture with no information in it, sitting
+   next to something that already says the same thing in readable type. If you
+   are unsure whether an eyebrow qualifies, it does not. */
+.hc-eyebrow--ornament { color: var(--hc-accent); }
 
 .hc-body-serif {
   font-family: var(--hc-serif);

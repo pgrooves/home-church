@@ -33,6 +33,14 @@
     html += c.sectionHeader('For your group', 'Guides', { flush: true, tag: 'h1' });
     html += '<p class="hc-body-serif hc-guide-intro">Every guide follows the same six parts, so you always know where you are. Open one, take what you need, leave the rest.</p>';
 
+    // Said out loud because the app already does this and nobody could tell.
+    // A group meeting in a living room with one bar, or in a building with
+    // concrete walls, is the normal case rather than the edge case.
+    html += '<p class="hc-caption hc-guide-intro__offline">' +
+      c.icon('download', 'hc-guide-intro__icon') +
+      '<span>Saved on this phone. Guides, notes, and your checkmarks all work with no signal.</span>' +
+    '</p>';
+
     if (!guides.length) {
       html += c.emptyState('Nothing here yet. Your guide shows up after Sunday.');
       html += '</div>';

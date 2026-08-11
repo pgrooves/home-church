@@ -1,0 +1,81 @@
+/* ==========================================================================
+   Home Church, typefaces
+   Cormorant and Poppins, served from the app rather than from Google.
+
+   WHY THESE ARE BUNDLED. The app used to pull both from fonts.googleapis.com
+   on every cold launch. That was one render blocking request to a third party
+   before anything could be drawn, it put every user's network address in front
+   of Google for no functional gain, and it meant a phone opening the app in a
+   building with concrete walls read the whole thing in the fallback serif.
+
+   Inside a packaged app there was never a reason for it. These six files ship
+   in the binary, cost nothing at runtime, and are one fewer third party to
+   name in the privacy policy.
+
+   WHAT IS HERE. Latin subset only, which is what an English language church in
+   Metairie needs. Google serves thirteen more subsets of these families,
+   Cyrillic and Vietnamese among them, and none of them would ever be drawn.
+   Six files, 185KB total.
+
+   Both families are licensed under the SIL Open Font License 1.1, which
+   permits bundling and redistribution. See assets/fonts/OFL.txt.
+
+   font-display: swap matches what Google's stylesheet asked for. With local
+   files it almost never comes into play, but a phone under memory pressure can
+   still delay a font, and text appearing in the fallback beats text not
+   appearing at all.
+   ========================================================================== */
+
+/* --- Cormorant, the reading serif ---------------------------------------- */
+
+@font-face {
+  font-family: 'Cormorant';
+  font-style: normal;
+  font-weight: 300;
+  font-display: swap;
+  src: url('../assets/fonts/cormorant-300.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Cormorant';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('../assets/fonts/cormorant-400.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Cormorant';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('../assets/fonts/cormorant-600.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Cormorant';
+  font-style: italic;
+  font-weight: 300;
+  font-display: swap;
+  src: url('../assets/fonts/cormorant-300-italic.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Cormorant';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: url('../assets/fonts/cormorant-400-italic.woff2') format('woff2');
+}
+
+/* --- Poppins, the display sans --------------------------------------------
+   One weight, 800, used only where something has to announce itself: section
+   headers, the Home greeting, the scroll revealed screen title. */
+
+@font-face {
+  font-family: 'Poppins';
+  font-style: normal;
+  font-weight: 800;
+  font-display: swap;
+  src: url('../assets/fonts/poppins-800.woff2') format('woff2');
+}

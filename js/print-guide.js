@@ -202,6 +202,50 @@
     window.removeEventListener('afterprint', removeSheet);
   }
 
+  /* A complete, self contained HTML document for one guide.
+     ------------------------------------------------------------------------
+     window.print() is a no-op inside WKWebView. It works in Safari and does
+     nothing at all inside a packaged app, silently, which made Download guide
+     a dead button the moment this was wrapped for iOS. It was the kind of
+     dead button that is hard to notice, because it fails without an error.
+
+     So on a phone the guide becomes a real file instead, handed to the system
+     share sheet, where iOS offers Print, Save to Files, and Mail. A leader
+     ends up with the same piece of paper by a different road.
+
+     print.css is fetched and inlined rather than linked, because the file
+     leaves the app and a relative stylesheet link would resolve to nothing
+     wherever it lands. If the fetch fails the document still opens, it just
+     arrives unstyled, which is worse than the alternative and much better
+     than nothing. */
+  function standaloneHtml(guideId) {
+    var g = HC.data.getGuide(guideId);
+    if (!g) return Promise.reject(new Error('No such guide.'));
+    var series = HC.data.getSeries(g.seriesId);
+    var title = HC.data.guideTitle(g);
+
+    return fetch('css/print.css')
+      .then(function (res) { return res.ok ? res.text() : ''; })
+      .catch(function () { return ''; })
+      .then(function (css) {
+        return '<!DOCTYPE html>\n<html lang="en">\n<head>\n' +
+          '<meta charset="utf-8">\n' +
+          '<meta name="viewport" content="width=device-width, initial-scale=1">\n' +
+          '<title>' + c.esc(title) + ', Home Church</title>\n' +
+          '<style>\n' +
+            // The screen rules in print.css only apply inside @media print, so
+            // the sheet needs to be visible on screen too when it stands alone.
+            'body{margin:0;background:#fff;color:#111;' +
+              'font-family:Georgia,"Times New Roman",serif;}\n' +
+            '#' + SHEET_ID + '{display:block !important;}\n' +
+            css + '\n' +
+          '</style>\n' +
+          '</head>\n<body>\n' +
+          '<div id="' + SHEET_ID + '">' + buildPages(g, series) + '</div>\n' +
+          '</body>\n</html>';
+      });
+  }
+
   function guide(guideId) {
     var g = HC.data.getGuide(guideId);
     if (!g) return;
@@ -221,6 +265,6 @@
     window.print();
   }
 
-  HC.print = { guide: guide };
+  HC.print = { guide: guide, standaloneHtml: standaloneHtml };
 
 })(window.HC = window.HC || {});

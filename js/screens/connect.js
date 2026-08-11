@@ -151,6 +151,26 @@
     return html;
   }
 
+  /* When an event actually starts, as a Date.
+
+     evt.date is 'YYYY-MM-DD' and evt.time is whatever the church wrote, which
+     is a clock time on most events and something like 'All three services' on
+     the rest. A real time wins when there is one. When there is not, nine in
+     the morning is the least wrong guess for a church event and it beats
+     refusing to make a calendar entry at all. The person can drag it. */
+  function eventStart(evt) {
+    var parts = String(evt.date || '').split('-');
+    var d = new Date(+parts[0], (+parts[1]) - 1, +parts[2], 9, 0, 0, 0);
+
+    var m = /(\d{1,2}):(\d{2})\s*(AM|PM)/i.exec(evt.time || '');
+    if (m) {
+      var hour = parseInt(m[1], 10) % 12;
+      if (/PM/i.test(m[3])) hour += 12;
+      d.setHours(hour, parseInt(m[2], 10), 0, 0);
+    }
+    return d;
+  }
+
   function eventRow(evt) {
     return '' +
       '<div class="hc-event">' +
@@ -158,6 +178,13 @@
         '<p class="hc-row__title">' + c.esc(evt.title) + '</p>' +
         '<p class="hc-caption">' + c.esc(evt.time) + ' &middot; ' + c.esc(evt.location) + '</p>' +
         '<p class="hc-body-serif hc-event__blurb">' + c.esc(evt.blurb) + '</p>' +
+        '<div class="hc-event__action">' +
+          '<button type="button" class="hc-inline-link" data-action="add-to-calendar" ' +
+            'data-id="' + c.esc(evt.id) + '">' +
+            c.icon('plus', 'hc-share__icon') +
+            '<span>Add to calendar</span>' +
+          '</button>' +
+        '</div>' +
       '</div>';
   }
 
@@ -256,7 +283,8 @@
   HC.screens.connect = render;
   HC.screens.connectHelpers = {
     setFilter: setFilter,
-    repaintGroups: repaintGroups
+    repaintGroups: repaintGroups,
+    eventStart: eventStart
   };
 
 })(window.HC = window.HC || {});

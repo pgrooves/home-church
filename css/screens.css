@@ -499,6 +499,24 @@
 
 .hc-event .hc-row__title { margin-top: 4px; }
 .hc-event__blurb { margin-top: var(--hc-space-sm); color: var(--hc-mid); }
+.hc-event__action { margin-top: var(--hc-space-md); }
+
+/* The offline line under the guide index intro. Icon and text on one
+   baseline, quiet enough not to compete with the guides themselves. */
+.hc-guide-intro__offline {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--hc-space-sm);
+  margin-top: var(--hc-space-md);
+}
+
+.hc-guide-intro__icon {
+  flex: 0 0 auto;
+  width: 16px;
+  height: 16px;
+  margin-top: 1px;
+  stroke: var(--hc-accent-deep);
+}
 
 .hc-step__blurb { color: var(--hc-mid); }
 
