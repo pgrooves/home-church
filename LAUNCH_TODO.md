@@ -30,23 +30,40 @@ Status key: **[ ]** not started, **[~]** in progress, **[x]** done.
 
 -----
 
-## Questions I need answered before I can finish Phase 2
+## Questions
 
-These are in `AUDIT.md` section 7 as well. Answering them changes what I
-recommend, so I would rather ask than guess.
+Answered on August 11:
 
-- [ ] Is Home Church a registered 501(c)(3)? Candid seal, yes or no?
+- [x] ~~Nonprofit status~~ **Holding off.** Giving stays an external handoff to
+      Overflow, which does not depend on the answer. Revisit only if we ever
+      want native Apple Pay giving.
+- [x] ~~Are Connect's groups, teams, events, next steps real?~~ **Placeholders,
+      to be removed before submission.** See the open question this creates,
+      below.
+- [x] ~~Should Leader Mode data leave the phone?~~ **No, staying local.** This
+      keeps Guideline 1.2 out of scope entirely.
+- [x] ~~Who hears about a group or serve team tap?~~ **A designated church email
+      address, not yet chosen.** I am building the capture so the destination is
+      one row of configuration rather than a code change.
+
+Still open:
+
 - [ ] Who is the **data controller** of record for the privacy policy? The
       church itself, or a specific legal entity name?
-- [ ] Are the groups, serve teams, events, and next steps currently in Supabase
-      the church's **real** ones, or the placeholders the README says they are?
-- [ ] When someone taps a group card or a serve team, **who should hear about
-      it**? An email address, a form, a person? Right now nobody does.
-- [ ] Should Leader Mode data (roster, attendance, prayer requests, private
-      notes) ever leave the phone? My recommendation is no. I want to know if
-      that conflicts with what you expect.
 - [ ] Is there an existing privacy policy or terms page on homechurchnola.com
       that I should be consistent with?
+- [ ] **What is the designated email address** for Connect form submissions?
+      Not blocking, I am building around it, but the app cannot notify anyone
+      until it exists.
+- [ ] **What does the Connect tab hold at launch?** Removing the placeholders
+      leaves it as a title over nothing, because every section drops its header
+      when empty. Best answer is real groups and real events. See
+      `APP_STORE_COMPLIANCE.md` section 2.7.
+- [ ] **Accounts in v1, yes or no?** My recommendation is no, with the
+      infrastructure built and dormant. See `APP_STORE_COMPLIANCE.md` section 0.
+- [ ] Three real user accounts exist in the live project with no data. I
+      recommend deleting them before launch. Tell me if one of them is you or
+      the Daigles.
 
 -----
 
@@ -77,6 +94,28 @@ recommend, so I would rather ask than guess.
       once I have drafted them. Particularly the sections on minors and on
       prayer requests and pastoral notes, which are sensitive in a way ordinary
       app data is not. My drafts will be drafts, not legal advice.
+
+-----
+
+## App Store Connect and Xcode
+
+- [ ] **Support URL.** A required App Store Connect field, and it has to
+      resolve to something that actually addresses app support. The
+      homechurchnola.com homepage is not enough on its own. A short page saying
+      what the app is and how to get help is fine.
+
+- [ ] **Validate `PrivacyInfo.xcprivacy` in Xcode before submission.** Apple's
+      canonical required-reason API page would not load from my sandbox, so the
+      reason codes in my draft manifest come from Apple Developer Forums rather
+      than first hand from the docs. Xcode reports the codes it expects. Do not
+      take my draft on faith.
+
+- [ ] **Answer the new age rating questionnaire.** Apple overhauled it in 2025.
+      Tiers are now 4+, 9+, 13+, 16+, 18+, and there are new required sections
+      on in-app controls, capabilities, medical topics, and violent themes. The
+      **social media questions become required for new submissions in September
+      2026**, which is next month, so we will be answering those too. My drafted
+      answers are in `APP_STORE_COMPLIANCE.md` section 2.6. Target rating: 4+.
 
 -----
 
