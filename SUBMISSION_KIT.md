@@ -41,6 +41,9 @@ time, except where noted, where it costs weeks.
 
 ### Xcode, once enrolled
 
+**Full beginner walkthrough with every click is in `XCODE.md`.** The list below
+is the summary.
+
 - [ ] `npm install && npm run ios:open`
 - [ ] Copy `ios-config/PrivacyInfo.xcprivacy` into `ios/App/App/`, add to the
       App target.
@@ -181,8 +184,11 @@ competitor names, which is a 2.3.7 rejection.
 
 ### URLs
 
-- **Support URL** (required): a page on homechurchnola.com that addresses the
-  app specifically. The homepage alone is thin and reviewers do check.
+- **Support URL** (required): use
+  `https://pgrooves.github.io/home-church/legal/support.html`, which is
+  written and ships with the repo. It answers the questions somebody actually
+  has, where their notes live, why a guide has not appeared, and how to reach
+  a person. A homepage alone is thin and reviewers do check.
 - **Marketing URL** (optional): `https://www.homechurchnola.com`
 - **Privacy Policy URL** (required): must be reachable on the open web **in
   addition to** the in-app screen. Both, not either.

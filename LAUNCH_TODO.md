@@ -87,9 +87,11 @@ All three applied to `ibqkumxfltfiuqevviji` on August 11 and verified.
 
 ## Before submission
 
-- [!] **Support URL.** A required App Store Connect field that has to resolve to
-      something addressing app support. The homechurchnola.com homepage is not
-      enough. A short page saying what the app is and how to get help is fine.
+- [x] ~~Support URL.~~ **Written.** `legal/support.html`, live at
+      `https://pgrooves.github.io/home-church/legal/support.html` once it is on
+      `main`. Same self contained page as the privacy policy, no hosting to
+      arrange. It answers the four questions somebody actually has rather than
+      padding to look thorough. Nothing left to do but confirm it loads.
 
 - [!] **Publish `legal/privacy.html` and put its URL in the Privacy Policy URL
       field in App Store Connect.** Apple requires the policy both inside the
@@ -192,7 +194,15 @@ All three applied to `ibqkumxfltfiuqevviji` on August 11 and verified.
 
 ## Xcode, once you are enrolled
 
-The full ordered version is in `SUBMISSION_KIT.md` section 1. The short list:
+**`XCODE.md` is a full step by step walkthrough written for somebody who has
+never shipped an app.** Every step says where to click. Use that on the day,
+not the summary below.
+
+Steps 1 to 6 of it work **without** an Apple Developer account, so you can
+rehearse the whole build now and find any surprises early. Only signing,
+notifications, and uploading need the paid account.
+
+The short list:
 
 - [ ] `npm install && npm run ios:open`
 - [ ] Copy `ios-config/PrivacyInfo.xcprivacy` into `ios/App/App/` and add it to

@@ -1,0 +1,319 @@
+# Xcode, step by step
+
+Written for somebody who has Xcode installed and has never shipped an app.
+Every step says where to click, not just what to do. If a step does not match
+what you see, stop and read the troubleshooting section at the bottom rather
+than guessing, because guessing in Xcode signing is how an afternoon
+disappears.
+
+**Do this on the day you are ready to launch, not before.** Steps 1 to 6 work
+without an Apple Developer account and are worth doing early as a rehearsal.
+Step 7 onward needs the paid account.
+
+-----
+
+## Before you start
+
+- **A Mac running Xcode 26 or newer.** Capacitor 8.5 requires it. Xcode menu,
+  About Xcode, to check.
+- **Node installed.** In Terminal, `node --version`. Anything 18 or newer.
+- **The repo cloned** somewhere you can find it.
+- **An Apple Developer account** ($99/year), for steps 7 onward only.
+
+-----
+
+## 1. Get the code and its dependencies
+
+Open **Terminal**. Move into the project folder and pull the latest:
+
+```bash
+cd ~/path/to/home-church
+git checkout main
+git pull
+npm install
+```
+
+`npm install` takes a minute or two and downloads Capacitor. It will create a
+`node_modules` folder, which is expected and is gitignored.
+
+-----
+
+## 2. Create the iOS project
+
+**Only ever run this once.** It generates the `ios/` folder.
+
+```bash
+npx cap add ios
+```
+
+If it asks to install `@capacitor/cli`, say yes.
+
+You now have an `ios/` folder. It is gitignored on purpose: it is generated,
+and anything hand written that belongs in it lives in `ios-config/` instead.
+
+-----
+
+## 3. Build the web assets and open Xcode
+
+```bash
+npm run ios:open
+```
+
+That one command does four things: stamps the cache busting numbers, copies
+the app's files into `www/`, runs `npx cap sync ios`, and opens Xcode.
+
+**From now on, any time you change the app's code, run `npm run ios` before
+building in Xcode.** Xcode does not see your edits until that copy happens.
+This is the single most common way to spend twenty minutes wondering why a
+fix did not take.
+
+Xcode will open on a project called **App**. Give it a moment to finish
+indexing, the progress bar is in the top middle.
+
+-----
+
+## 4. Find your way around
+
+Three things to know, and then the rest is a settings form.
+
+- **The left panel** is the Project Navigator, a file tree. If you do not see
+  it, press **Cmd+1**.
+- **At the very top of that tree** is a blue icon labelled **App**. Click it.
+  The main area becomes the project settings.
+- **In the settings, there is a second narrow column** listing TARGETS with
+  **App** under it. Click that **App**. Now you see tabs across the top:
+  General, Signing & Capabilities, Resource Tags, Info, Build Settings.
+
+Everything in the next three steps happens in those tabs.
+
+-----
+
+## 5. General tab
+
+Click **General**.
+
+- **Display Name**: `Home Church`
+- **Bundle Identifier**: `com.homechurchnola.app`
+  This must never change once the app is on the store. It is the app's
+  permanent identity to Apple.
+- **Version**: `1.0.0`
+  This is what people see on the store.
+- **Build**: `1`
+  Increment this every time you upload, even for the same version. Apple
+  rejects a duplicate build number, which is a confusing error the first time.
+- **Minimum Deployments**: set to **iOS 15.0**
+- **Supported Destinations**: this is a small list. **Remove iPad** if it is
+  there, using the minus button. Leave iPhone.
+
+  Why: the layout is a centered column capped at 720 points wide, which on a
+  13 inch iPad is a narrow strip in a sea of empty paper. That reads as an
+  unadapted phone app and is its own rejection risk. iPhone only is the honest
+  claim, and it also means you do not have to supply iPad screenshots.
+
+- **Also remove Mac** ("Designed for iPad") if it appears.
+
+-----
+
+## 6. The app icon
+
+First generate the icons, in Terminal:
+
+```bash
+npm run icons
+```
+
+That writes a folder called `ios-icons/`, every file flattened with no alpha
+channel. **Apple rejects app icons that contain an alpha channel**, which is
+why this is a script and not something done by hand.
+
+Now in Xcode:
+
+1. In the left panel, open **App**, then **Assets.xcassets**.
+2. Click **AppIcon**.
+3. You will see one large empty square labelled something like **App Store**
+   or **1024pt**. Modern Xcode wants a single 1024 image and generates the
+   rest.
+4. In Finder, open the `ios-icons` folder in your project.
+5. **Drag `icon-1024.png` onto that empty square.**
+
+If your version of Xcode shows many empty squares instead of one, drag the
+matching file into each by size. The filenames say which is which.
+
+-----
+
+## 7. Signing
+
+**This is where the Apple Developer account is needed.** Everything above
+works without one.
+
+Click the **Signing & Capabilities** tab.
+
+1. Tick **Automatically manage signing**.
+2. **Team**: choose your team from the dropdown. If it is empty, you are not
+   signed in: Xcode menu, **Settings**, **Accounts**, **+**, Apple ID, sign
+   in. Then come back.
+3. Xcode will churn for a few seconds and create a provisioning profile by
+   itself. When it settles, the red errors should be gone.
+
+If you see **"Failed to register bundle identifier"**, it usually means that
+identifier is already taken by another account. See troubleshooting.
+
+-----
+
+## 8. Push notifications capability
+
+Still on **Signing & Capabilities**:
+
+1. Click **+ Capability**, top left of that tab.
+2. Type `push` and double click **Push Notifications**.
+
+That is the Xcode half. The other half is in Apple's developer portal, and you
+only ever do it once:
+
+1. Go to [developer.apple.com/account](https://developer.apple.com/account),
+   then **Certificates, Identifiers & Profiles**, then **Keys**.
+2. Click **+**, name it something like `Home Church APNs`, tick **Apple Push
+   Notifications service (APNs)**, then Continue and Register.
+3. **Download the `.p8` file. You get exactly one chance.** Apple will not let
+   you download it again. Put it somewhere safe and backed up.
+4. Note the **Key ID** shown on that page, and your **Team ID**, which is in
+   the top right of the developer portal.
+
+You need the `.p8`, the Key ID, and the Team ID later to actually send
+notifications. Nothing in the app needs them.
+
+-----
+
+## 9. The privacy manifest
+
+Apple requires a privacy manifest, and Capacitor's own is empty, so the app
+supplies its own.
+
+In Terminal:
+
+```bash
+cp ios-config/PrivacyInfo.xcprivacy ios/App/App/
+```
+
+Then in Xcode, so the file is actually included in the build:
+
+1. In the left panel, find the **App** folder (inside the outer App project).
+2. Right click it, choose **Add Files to "App"...**
+3. Select `PrivacyInfo.xcprivacy` from `ios/App/App/`.
+4. **Before clicking Add**, check the box next to **App** under "Add to
+   targets". This is the step people miss, and if it is unticked the file
+   ships nowhere and Apple emails you a warning after upload.
+
+-----
+
+## 10. Export compliance
+
+This saves you answering the same question on every single upload forever.
+
+1. Click the **Info** tab.
+2. Hover over any row, click the small **+** that appears.
+3. Type `ITSAppUsesNonExemptEncryption` as the key.
+4. Set the **Type** to **Boolean** and the **Value** to **NO**.
+
+The app only makes ordinary HTTPS requests, which are exempt.
+
+-----
+
+## 11. Run it
+
+**On the simulator first.** At the top of the Xcode window, next to the App
+name, is a device dropdown. Pick any iPhone. Press **Cmd+R**.
+
+The app should launch. Tap around. If it comes up blank, you probably skipped
+`npm run ios`.
+
+**Then on your own iPhone**, which matters more than it sounds. Plug it in,
+pick it in that same dropdown, press Cmd+R. The first time, your phone will
+ask you to trust the developer: **Settings, General, VPN & Device Management**,
+tap your certificate, Trust.
+
+**Check these on the real device, because the simulator lies about all of
+them:**
+
+- Cold start with the phone in **airplane mode**. The app should open to full
+  content, not an error. This is the offline behavior and it is a selling
+  point.
+- The **back swipe** from the left edge, in the guide reader.
+- The **Give** button. It should open a browser sheet with a Done button, not
+  a page inside the app.
+- **Share** a quote from any guide, from the one-liners section.
+- **Add to calendar** on an event in Connect.
+- **Download guide**, which should open the iOS share sheet.
+- Turn a **notification switch** on in Your account. iOS should ask
+  permission.
+
+-----
+
+## 12. Upload to App Store Connect
+
+Only when everything above works on a real phone.
+
+1. In the device dropdown, choose **Any iOS Device (arm64)**. You cannot
+   archive while a simulator is selected, and the Archive menu item stays
+   greyed out, which is confusing.
+2. Menu bar: **Product**, then **Archive**. This takes a few minutes.
+3. The **Organizer** window opens when it finishes. Your archive is listed.
+4. Click **Distribute App**, then **App Store Connect**, then **Upload**.
+5. Accept the defaults, click through, and wait.
+
+The build takes ten to sixty minutes to appear in App Store Connect. You will
+get an email when it is processed, and often a second email listing warnings.
+Read those: they are where a missing privacy manifest entry shows up.
+
+Then fill in the store listing from `SUBMISSION_KIT.md`, attach the build, and
+submit.
+
+-----
+
+## Troubleshooting
+
+**The app is blank, or my change did not appear.**
+You skipped `npm run ios`. Xcode builds from `www/`, not from your source
+files. Run it and build again.
+
+**"Command PhaseScriptExecution failed with a nonzero exit code"**
+Usually `www/` does not exist. Run `npm run sync`, then in Xcode: **Product**,
+**Clean Build Folder** (Shift+Cmd+K), then build again.
+
+**"Failed to register bundle identifier."**
+`com.homechurchnola.app` is claimed by a different Apple account. Either use
+the account that owns it, or change the identifier in the General tab and in
+`capacitor.config.json` so they match. Changing it is only safe before the
+first release.
+
+**"Signing for 'App' requires a development team."**
+No team selected. Step 7.
+
+**Archive is greyed out.**
+A simulator is selected. Choose **Any iOS Device (arm64)**.
+
+**Apple emailed "ITMS-91053: Missing API declaration."**
+The privacy manifest is not in the build. Redo step 9 and make sure the
+**App** target box was ticked. The email names the exact API, which tells you
+what to add.
+
+**"Invalid App Store Icon. The icon can't contain an alpha channel."**
+Run `npm run icons` and re-drag `icon-1024.png`. Do not export an icon from
+Preview or Photoshop without flattening it.
+
+**I changed the app and want to upload again.**
+Increment **Build** in the General tab. Apple rejects a repeated build number
+even when the version is the same.
+
+-----
+
+## The short version, once you have done it once
+
+```bash
+git pull
+npm install          # only when dependencies changed
+npm run ios:open
+```
+
+Then in Xcode: bump **Build**, choose **Any iOS Device**, **Product**,
+**Archive**, **Distribute App**.

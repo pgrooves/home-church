@@ -41,6 +41,57 @@ const PAGES = [
   { route: 'terms',   file: 'terms.html',   title: 'Terms of use, Home Church' }
 ];
 
+/* The support page is written here rather than lifted from a screen, because
+   there is no support screen in the app and there should not be. App Store
+   Connect requires a Support URL, it has to resolve, and it has to be about
+   the app rather than a homepage that never mentions it. Reviewers do check.
+
+   Kept short on purpose. A support page that answers the four questions
+   somebody actually has beats one that pads to look thorough. */
+const SUPPORT = `
+<header class="hc-section-header hc-section-header--flush">
+  <span class="hc-eyebrow hc-section-header__eyebrow">Home Church</span>
+  <h1 class="hc-section-header__title">App support</h1>
+  <div class="hc-section-header__rule" aria-hidden="true"></div>
+</header>
+
+<section class="hc-legal__block">
+  <h2 class="hc-legal__heading">Something is wrong, or you have a question</h2>
+  <p class="hc-body-serif hc-legal__p">Email <a href="mailto:hello@homechurchnola.com">hello@homechurchnola.com</a> and a real person will answer. Tell us what phone you are on and what you were doing, and we will get further faster.</p>
+</section>
+
+<section class="hc-legal__block">
+  <h2 class="hc-legal__heading">This week's guide has not appeared</h2>
+  <p class="hc-body-serif hc-legal__p">Guides go up within a day or two of Sunday. The app checks for new content every time you open it, so close it fully and open it again. If it still is not there, we have probably not posted it yet.</p>
+</section>
+
+<section class="hc-legal__block">
+  <h2 class="hc-legal__heading">Nothing loads, or the app looks empty</h2>
+  <p class="hc-body-serif hc-legal__p">The app keeps a copy of everything on your phone and is built to work with no signal, so an empty screen usually means something else. Close it fully and reopen. If that does not fix it, delete the app and install it again. You will lose any notes you have written, which is worth knowing before you do it, because those live on your phone and nowhere else.</p>
+</section>
+
+<section class="hc-legal__block">
+  <h2 class="hc-legal__heading">Where your notes live</h2>
+  <p class="hc-body-serif hc-legal__p">On your phone. Your notes, your group roster, and anything you have written down for prayer stay on the device and are never sent to us. That means we cannot read them, and it also means we cannot recover them for you. Open Your account, then Your data, to see exactly what is stored and to erase all of it.</p>
+</section>
+
+<section class="hc-legal__block">
+  <h2 class="hc-legal__heading">Giving</h2>
+  <p class="hc-body-serif hc-legal__p">Giving opens Overflow in your phone's browser, outside the app. For a question about a gift, a receipt, or a recurring donation, email us and we will sort it out.</p>
+</section>
+
+<section class="hc-legal__block">
+  <h2 class="hc-legal__heading">Home Church</h2>
+  <p class="hc-body-serif hc-legal__p">
+    216 Giuffrias Ave<br>
+    Metairie, LA 70001<br>
+    Sundays at 8:00, 9:30, and 11:00
+  </p>
+  <p class="hc-body-serif hc-legal__p"><a href="https://www.homechurchnola.com">homechurchnola.com</a></p>
+  <p class="hc-body-serif hc-legal__p"><a href="privacy.html">Privacy policy</a> &middot; <a href="terms.html">Terms of use</a></p>
+</section>
+`;
+
 // Only the faces the legal screens actually use. Embedding all six would
 // double the file for italics that never appear in a policy.
 const FONTS = [
@@ -163,6 +214,13 @@ body { background: var(--hc-paper); }
 
     await p.close();
   }
+
+  // Support page. Hand written above rather than lifted from a screen,
+  // because the app has no support screen and does not need one.
+  const supportFile = path.join(OUT, 'support.html');
+  const supportHtml = shell('App support, Home Church', css, SUPPORT);
+  fs.writeFileSync(supportFile, supportHtml);
+  console.log(`legal/support.html  ${(supportHtml.length / 1024).toFixed(0)} KB, self contained`);
 
   await browser.close();
 
