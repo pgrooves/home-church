@@ -54,7 +54,7 @@ time, except where noted, where it costs weeks.
 ### App Store Connect
 
 - [ ] Metadata from section 3.
-- [ ] Screenshots from section 4.
+- [x] Screenshots, already generated in `screenshots/`.
 - [ ] App Privacy answers from section 5.
 - [ ] Age rating answers from section 6.
 - [ ] Review notes from section 7, pasted verbatim.
@@ -182,9 +182,11 @@ competitor names, which is a 2.3.7 rejection.
 - **Support URL** (required): a page on homechurchnola.com that addresses the
   app specifically. The homepage alone is thin and reviewers do check.
 - **Marketing URL** (optional): `https://www.homechurchnola.com`
-- **Privacy Policy URL** (required): must be reachable on the open web, in
-  addition to the in-app screen. Publish the text from `js/screens/legal.js`
-  at a stable URL.
+- **Privacy Policy URL** (required): must be reachable on the open web **in
+  addition to** the in-app screen. Both, not either. `legal/privacy.html` is
+  generated for exactly this, self contained with the fonts embedded and no
+  external requests, so it can be hosted anywhere. Publish it and put that URL
+  here.
 
 ### Copyright
 
@@ -216,8 +218,23 @@ church app.
 | 5 | Connect, serve teams with one open | **Find your people, and a place to serve** | Breadth |
 | 6 | Home, morning greeting, next gathering | **Sunday, and everything before it** | The warm close |
 
-Shoot at 390 x 844 in the simulator on a 6.9 inch device, light mode, with a
-profile name filled in so the greeting is personal rather than "Welcome home".
+**These are already generated**, in `screenshots/`, at exactly 1320 x 2868
+with no alpha channel, in the order above, with captions in
+`screenshots/CAPTIONS.txt`. Rebuild them any time with:
+
+```bash
+npx http-server -p 8770 -s &
+node scripts/make_screenshots.js
+```
+
+Regenerating matters more than it sounds: the content changes weekly, and a
+screenshot showing a guide the app no longer has is a small lie on the store
+page that a reviewer can catch by comparing the two.
+
+They are Chromium renders using the same bundled typefaces and the same CSS,
+which is honest and is accepted. If you want the last few percent of fidelity,
+retake them in the iOS simulator following the same order and captions. Do not
+ship a mix of both, the tonal difference shows.
 
 -----
 

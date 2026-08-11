@@ -50,26 +50,6 @@ Three ways past the paste problem, easiest first:
   3. **Table Editor, no SQL**, for `0008` only. The other two create
      functions and policies and genuinely need the SQL editor.
 
-  My connection to the Supabase project started requiring an approval this
-  session cannot answer, so `0007` went in and `0008` did not.
-
-  Until it runs, any phone **with signal** shows the four old invented serve
-  teams and the placeholder home groups, because Supabase wins over the copy
-  bundled in the app. The bundled copy is already correct, so this only
-  affects live devices. Nothing is broken, the content is just wrong.
-
-  Three ways in, easiest first:
-
-  1. **Approve the Supabase tool call** if Claude Code offers you the prompt.
-     This unblocks every future content change too, not just this one.
-  2. **Safari, aA in the address bar, Request Desktop Website**, then paste
-     into the SQL Editor. The editor fights mobile paste. If it still refuses,
-     tap once to place the cursor, then tap the same spot again for the Paste
-     bubble. Long press usually does nothing there.
-  3. **Table Editor, no SQL.** Open `serve_teams`, delete the four old rows,
-     add the seven new ones from the migration file. Then open
-     `church_profile` and set `groups_in_season` to false. Slow but reliable.
-
 -----
 
 ## Schedule risks, the long poles
@@ -98,6 +78,17 @@ Three ways past the paste problem, easiest first:
 - [!] **Support URL.** A required App Store Connect field that has to resolve to
       something addressing app support. The homechurchnola.com homepage is not
       enough. A short page saying what the app is and how to get help is fine.
+
+- [!] **Publish `legal/privacy.html` at a stable public URL**, and put that URL
+      in the **Privacy Policy URL** field in App Store Connect. Apple requires
+      the policy both inside the app, which is done, and as a public link. A
+      404 there, or a link to a homepage that never mentions the app, is a
+      5.1.1 rejection and it is one of the most common ones.
+
+      The file is generated from the same source as the in-app screen so the
+      two cannot drift, and it is one self contained HTML document with the
+      fonts embedded and no external requests. Drop it anywhere. `terms.html`
+      is beside it and is optional.
 
 - [x] ~~App icon set with no alpha channel.~~ **Done.** Every icon PNG carried
       an alpha channel with nothing actually transparent in it, so stripping
@@ -135,9 +126,17 @@ Three ways past the paste problem, easiest first:
       so you will be answering those. My drafted answers are in
       `APP_STORE_COMPLIANCE.md` section 2.6. Target rating: **4+**.
 
-- [ ] **Screenshots.** 1320 x 2868 for the 6.9 inch iPhone is the only required
-      size, and Apple scales it down for everything smaller. No alpha channel.
-      Shot list comes in Phase 7.
+- [x] ~~Screenshots.~~ **Generated.** Six of them in `screenshots/`, at exactly
+      1320 x 2868, no alpha channel, in the order that leads with the guide and
+      Leader mode rather than with Home. Captions are in
+      `screenshots/CAPTIONS.txt`. `node scripts/make_screenshots.js` rebuilds
+      them, which matters because the content changes weekly and a stale
+      screenshot on the store page is a small lie.
+
+      They are Chromium renders using the same bundled fonts and the same CSS,
+      which is honest and is accepted. If you want the last few percent of
+      fidelity, retake them in the iOS simulator using the same order and
+      captions. Do not ship a mix of both.
 
 - [ ] **Delete the three orphaned accounts** in the Supabase project. They have
       no data, they signed in to a sync that never worked, and starting

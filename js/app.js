@@ -101,6 +101,7 @@
     var app = document.getElementById('app');
     app.setAttribute('data-view', route.name);
 
+
     // Presentation mode takes the whole screen. Nothing else competes with it.
     var chromeless = route.name === 'present';
     topbar.hidden = chromeless;
@@ -252,7 +253,6 @@
     },
 
     'go-legal': function (el) {
-      HC.screens.legalHelpers.setConfirming(false);
       HC.router.go({ name: el.getAttribute('data-id') });
     },
 
@@ -262,19 +262,17 @@
        consequence is on screen in the app's own voice while somebody decides.
        ---------------------------------------------------------------------- */
 
+    // Arming is a real navigation, so the back gesture disarms it for free.
     'erase-ask': function () {
-      HC.screens.legalHelpers.setConfirming(true);
-      HC.router.go({ name: 'data' }, { force: true });
+      HC.router.go({ name: 'data', id: 'confirm' });
     },
 
     'erase-cancel': function () {
-      HC.screens.legalHelpers.setConfirming(false);
-      HC.router.go({ name: 'data' }, { force: true });
+      HC.router.back();
     },
 
     'erase-confirm': function () {
       var ok = HC.store.eraseEverything();
-      HC.screens.legalHelpers.setConfirming(false);
       HC.store.applyPreferences();   // theme and text size went back to default
       paintAvatar();
       HC.router.go({ name: 'home' });

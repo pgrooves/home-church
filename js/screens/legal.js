@@ -191,9 +191,23 @@
      so before the first tap rather than after the second.
      ------------------------------------------------------------------- */
 
-  var confirming = false;
+  /* The armed state lives in the route, not in a variable up here.
 
-  function data() {
+     It was a module variable first, and that was wrong in a way that only
+     showed up under the back gesture. Arming the confirmation pushes a history
+     entry, so going back lands on the previous entry for this same screen, and
+     a module variable knows nothing about that: you would arrive at an
+     unarmed screen still showing "Yes, erase it". A confirmation nobody armed
+     is worse than no confirmation at all, because it trains the tap.
+
+     Put it in the route and history does the work. Back genuinely disarms,
+     forward genuinely re-arms, and a cold launch on a shared link cannot land
+     anybody on a primed delete button.
+
+     It rides in the route's `id` slot, which the router already serializes and
+     which this screen has no other use for. */
+  function data(route) {
+    var confirming = route && route.id === 'confirm';
     var html = '<div class="hc-screen hc-legal hc-data">';
 
     html += c.sectionHeader('The fine print', 'Your data', { flush: true, tag: 'h1' });
@@ -243,9 +257,7 @@
   HC.screens.terms = terms;
   HC.screens.data = data;
   HC.screens.legalHelpers = {
-    EFFECTIVE: EFFECTIVE,
-    setConfirming: function (v) { confirming = v === true; },
-    isConfirming: function () { return confirming; }
+    EFFECTIVE: EFFECTIVE
   };
 
 })(window.HC = window.HC || {});
