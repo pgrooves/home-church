@@ -21,7 +21,7 @@ time, except where noted, where it costs weeks.
 - [x] Migrations 0008, 0009, and 0010 applied and verified.
 - [ ] Run `supabase/migrations/0011_lock_down_signup_trigger.sql`, which closes
       two advisor warnings that 0009 introduced.
-- [ ] Support URL live and resolving.
+- [x] Support URL written, `legal/support.html`. Live once merged to `main`.
 
 ### Code, done
 

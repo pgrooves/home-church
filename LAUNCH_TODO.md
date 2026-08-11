@@ -136,12 +136,25 @@ All three applied to `ibqkumxfltfiuqevviji` on August 11 and verified.
       logo still exists as vector art, export a real 1024 and drop it in as
       `assets/icons/icon-1024.png`, which the script prefers automatically.
 
-- [!] **Have a Louisiana attorney read the privacy policy and terms.** I wrote
-      both in Phase 3 and they are in the app now, at
-      `js/screens/legal.js`. **They are drafts, not legal advice.** They
-      describe accurately what the app does, but I am not a lawyer. Have
-      someone look at the liability section, the Louisiana governing law
-      clause, and the children's data paragraph in particular.
+- [ ] **A Louisiana attorney on the privacy policy and terms. Deferred, and
+      that is a reasonable call.** I had this marked as blocking submission and
+      that was wrong of me.
+
+      **Apple will approve you without it.** Review checks that a privacy
+      policy exists, is reachable in the app and at a public URL, and honestly
+      describes what the app does. All three are true. Nobody at Apple assesses
+      legal quality.
+
+      What an attorney protects is **your** exposure, not your approval, and
+      right now that exposure is genuinely small: there are no accounts, the
+      app collects almost nothing, and everything a person writes stays on
+      their own phone. There is not much to be liable for.
+
+      **The day that changes is the day accounts turn on.** At that point you
+      are holding names, emails, birthdates, and home addresses of a
+      congregation including minors, on your own server, and the liability
+      section and the children's data paragraph stop being theoretical. Get the
+      review before that, not before launch.
 
 - [ ] **Confirm the effective date on both legal screens.** It reads
       **August 11, 2026** right now. Change `EFFECTIVE` at the top of
