@@ -653,6 +653,79 @@
    Width guards
    ========================================================================== */
 
+/* --------------------------------------------------------------------------
+   The fine print. Privacy policy, terms, and the data screen.
+
+   Long form reading, so it follows the guide reader rather than the settings
+   rows: serif body, generous measure, headings that separate with weight and
+   space instead of rules. A privacy policy nobody can stand to read is a
+   privacy policy that has not really been provided.
+   -------------------------------------------------------------------------- */
+
+.hc-legal__date {
+  margin-top: var(--hc-space-md);
+  color: var(--hc-mid);
+}
+
+.hc-legal__block { margin-top: var(--hc-space-xl); }
+
+.hc-legal__heading {
+  font-family: var(--hc-sans);
+  font-weight: 600;
+  font-size: var(--hc-body-sans);
+  line-height: var(--hc-body-sans-line);
+  letter-spacing: 0.01em;
+  color: var(--hc-ink);
+  margin-bottom: var(--hc-space-md);
+}
+
+/* Some blocks are a continuation of the one above and carry no heading. The
+   empty h2 collapses rather than leaving a gap where a title would be. */
+.hc-legal__heading:empty { display: none; }
+
+.hc-legal__p + .hc-legal__p { margin-top: var(--hc-space-base); }
+
+.hc-legal__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+/* Hanging bullet, drawn rather than inherited, so it sits on the serif
+   baseline and takes the rule color instead of the text color. */
+.hc-legal__item {
+  position: relative;
+  padding-left: var(--hc-space-lg);
+}
+
+.hc-legal__item + .hc-legal__item { margin-top: var(--hc-space-md); }
+
+.hc-legal__item::before {
+  content: "";
+  position: absolute;
+  left: 2px;
+  top: 0.7em;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--hc-accent);
+}
+
+.hc-legal .hc-btn { margin-top: var(--hc-space-base); }
+
+/* The erase action. Kept away from the text above it so a scroll does not
+   land a thumb on it, and the confirm state stacks its two choices with the
+   safe one underneath. */
+.hc-data__action { margin-top: var(--hc-space-lg); }
+
+.hc-data__action--confirm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--hc-space-md);
+}
+
+.hc-data__action--confirm .hc-btn { margin-top: 0; }
+
 /* 320 wide. Tighten the gutters, never the vertical rhythm. */
 @media (max-width: 359px) {
   :root {

@@ -1,206 +1,167 @@
-# Launch todo, things only you can do
+# Launch todo, everything only you can do
 
-Everything on this list is outside the codebase. I cannot do any of it for you.
-Kept running through all phases, newest phase at the bottom.
+Nothing on this list is code. It is the running list of things I cannot do from
+here, kept current as I work so you can come back at the end and clear it in
+one sitting.
 
-Status key: **[ ]** not started, **[~]** in progress, **[x]** done.
+**Status key:** `[ ]` not started, `[x]` done, `[!]` blocking submission.
+
+Last updated at the end of Phase 3.
 
 -----
 
-## Schedule risks, start these first
+## Right now, one thing
 
-- [ ] **Apple Developer Program enrollment.** $99 a year. If you enroll as an
+- [!] **Run `supabase/migrations/0008_real_serve_teams.sql`.**
+
+  My connection to the Supabase project started requiring an approval this
+  session cannot answer, so `0007` went in and `0008` did not.
+
+  Until it runs, any phone **with signal** shows the four old invented serve
+  teams and the placeholder home groups, because Supabase wins over the copy
+  bundled in the app. The bundled copy is already correct, so this only
+  affects live devices. Nothing is broken, the content is just wrong.
+
+  Three ways in, easiest first:
+
+  1. **Approve the Supabase tool call** if Claude Code offers you the prompt.
+     This unblocks every future content change too, not just this one.
+  2. **Safari, aA in the address bar, Request Desktop Website**, then paste
+     into the SQL Editor. The editor fights mobile paste. If it still refuses,
+     tap once to place the cursor, then tap the same spot again for the Paste
+     bubble. Long press usually does nothing there.
+  3. **Table Editor, no SQL.** Open `serve_teams`, delete the four old rows,
+     add the seven new ones from the migration file. Then open
+     `church_profile` and set `groups_in_season` to false. Slow but reliable.
+
+-----
+
+## Schedule risks, the long poles
+
+- [!] **Apple Developer Program enrollment.** $99 a year. Enrolling as an
       organization, which is what you want if the app is published as Home
-      Church rather than as a person, you need a **D-U-N-S number** for the
-      church. Getting one usually takes one to two weeks, sometimes longer.
-      This is the longest lead time item in the whole project and it is not a
-      code problem. Start it this week.
-      Registered nonprofits may qualify for a **fee waiver**, which is worth
-      applying for at the same time but should not hold up enrollment.
-
-- [ ] **Confirm the church's nonprofit status and paperwork.** I need to know
-      whether Home Church is a registered 501(c)(3) and whether it holds a
-      **Candid Seal of Transparency**. Apple's approved nonprofit process for
-      US organizations runs through Candid. This decides whether Apple Pay
-      giving is available to us at all, and Apple may ask for documentation
-      during review of the Give tab either way.
+      Church and not as a person, requires a **D-U-N-S number** for the church.
+      That usually takes one to two weeks. **This is the single longest lead
+      time in the project.** Start it before anything else on this page.
+      Registered nonprofits may qualify for a **fee waiver**, worth applying
+      for at the same time but do not let it hold up enrollment.
 
 - [ ] **Xcode 26 and a Mac.** Capacitor 8.5 requires Xcode 26. Confirm you have
-      a Mac that can run it, or decide who will do the build.
+      a machine that can run it, or decide who does the build.
+
+- [ ] **Nonprofit status, when you are ready.** Parked at your request. It does
+      not block launch, because giving hands off to Overflow and that does not
+      depend on the answer. It only decides whether native Apple Pay giving is
+      ever possible. For US churches the route is a **Candid Seal of
+      Transparency**.
 
 -----
 
-## Questions
+## Before submission
 
-Answered on August 11:
+- [!] **Support URL.** A required App Store Connect field that has to resolve to
+      something addressing app support. The homechurchnola.com homepage is not
+      enough. A short page saying what the app is and how to get help is fine.
 
-- [x] ~~Nonprofit status~~ **Holding off.** Giving stays an external handoff to
-      Overflow, which does not depend on the answer. Revisit only if we ever
-      want native Apple Pay giving.
-- [x] ~~Are Connect's groups, teams, events, next steps real?~~ **Placeholders,
-      to be removed before submission.** See the open question this creates,
-      below.
-- [x] ~~Should Leader Mode data leave the phone?~~ **No, staying local.** This
-      keeps Guideline 1.2 out of scope entirely.
-- [x] ~~Who hears about a group or serve team tap?~~ **A designated church email
-      address, not yet chosen.** I am building the capture so the destination is
-      one row of configuration rather than a code change.
+- [!] **App icon set with no alpha channel.** All seven PNGs in the repo are
+      RGBA today. Apple rejects icons containing transparency. Re-export
+      flattened onto a solid background at the full iOS size set.
 
-- [x] ~~Designated email address for form submissions~~ **No longer needed.**
-      The six links you sent mean every next step goes to a system the church
-      already runs. No Supabase capture table, no Edge Function, no second copy
-      of anyone's contact details.
-- [x] ~~What does Connect hold at launch?~~ **Solved.** Groups are season
-      gated, and everything else on the tab now goes somewhere real.
-- [x] ~~Accounts in v1?~~ **No.** Infrastructure built and dormant.
+- [!] **Have a Louisiana attorney read the privacy policy and terms.** I wrote
+      both in Phase 3 and they are in the app now, at
+      `js/screens/legal.js`. **They are drafts, not legal advice.** They
+      describe accurately what the app does, but I am not a lawyer. Have
+      someone look at the liability section, the Louisiana governing law
+      clause, and the children's data paragraph in particular.
 
-Still open:
+- [ ] **Confirm the effective date on both legal screens.** It reads
+      **August 11, 2026** right now. Change `EFFECTIVE` at the top of
+      `js/screens/legal.js` to the real launch date before you submit.
 
-- [ ] Who is the **data controller** of record for the privacy policy? The
-      church itself, or a specific legal entity name?
-- [ ] Is there an existing privacy policy or terms page on homechurchnola.com
-      that I should be consistent with?
-- [ ] Three real user accounts exist in the live project with no data. I
-      recommend deleting them before launch. Tell me if one of them is you or
-      the Daigles.
+- [ ] **Validate `PrivacyInfo.xcprivacy` in Xcode.** Apple's own required
+      reason API page would not load from my sandbox, so the reason codes in my
+      draft manifest come from Apple Developer Forums rather than first hand
+      from the docs. Xcode reports the codes it expects. Do not take my draft
+      on faith.
 
------
-
-## Content I need from you, for the Connect tab
-
-The structure is built and working. These are content swaps, each one row in
-Supabase, none of them code.
-
-- [x] ~~The real serve team names and descriptions.~~ **Done, from your
-      screenshots.** All seven, in the church's own words, in the site's order:
-      Home Kids, Greeters, Set Up, Tear Down, Parking, Prayer Team, Worship
-      Team. The two asterisked conditions, the background check and the
-      training process, got their own field rather than being folded into the
-      description.
-
-- [x] ~~In season or out of season?~~ **Out of season**, per your sign off. The
-      four placeholder groups never render.
-
-- [ ] **RUN THIS ONE YOURSELF:
-      `supabase/migrations/0008_real_serve_teams.sql`.** Supabase dashboard,
-      SQL Editor, New query, paste the whole file, Run. My connection to the
-      project started requiring an approval I cannot answer from this session,
-      so `0007` went in but `0008` did not. Until you run it, the app still
-      shows the old four invented teams **on any phone that has signal**,
-      because Supabase wins over the bundled copy. The version bundled in the
-      app is already correct.
-
-- [ ] **A destination for "I'm new here."** The only next step with no link. It
-      renders as a description with no button right now, which is honest but it
-      is the one a first time visitor is most likely to tap. Is there a Church
-      Center connect card for this?
-
-- [ ] **What happens when someone wants to join a group, not host one?** The
-      Group Vitals link you sent is the leader form. Group cards are now
-      information only, because the old behavior claimed it would pass your
-      name to the host from a card with nowhere to type a name. **This is the
-      last thing on Connect with no destination.**
-
-- [ ] **Decide whether we submit in season or out of season.** Out of season,
-      the four placeholder groups never render and there is nothing for a
-      reviewer to object to. In season, those four rows need to be the real
-      groups with real hosts. Either works. See `APP_STORE_COMPLIANCE.md` 2.7.
-
-- [ ] **`step-baptism` had a hardcoded date** in its blurb, "The next one is
-      August 23." I removed it, because a date in a content blurb goes stale
-      silently. The Events list is where dates belong.
-
------
-
-## Two recommendations on the links you sent
-
-- [ ] **I left the Linktree out, on purpose.** Guideline 4.2.2 names "content
-      aggregators, or a collection of links" as the thing an app must not
-      primarily be. A link to a link aggregator, inside an app that already has
-      a 4.2 risk, is the most on the nose version of that I could put in front
-      of a reviewer. The app should *be* the link tree, and better. Everything
-      on it that matters is now a next step. Tell me if you disagree and I will
-      add it, but I would rather not.
-
-- [ ] **The prayer request Google Form is worth a second thought, later.** It
-      works and it ships. Two things to know. Prayer requests are often the
-      most sensitive thing anyone tells a church, health, marriage, money, and
-      routing them through Google Forms means naming Google as a processor in
-      the privacy policy. And the app already has something called "prayer
-      requests" in Leader Mode that is private, local, and goes to nobody. Two
-      different things with the same name is a trust problem, so I will make
-      the wording distinguish them clearly. Church Center has forms too, if you
-      would rather keep it in one system.
-
-- [ ] **utm parameters stripped from all six links.** They said the traffic came
-      from Instagram, which was true of a link in a bio and is not true of a tap
-      inside the app. The Linktree URL also carried a share session id.
-
------
-
-## Supabase dashboard work
-
-- [ ] **Move off Supabase's default auth email sender before launch.** The
-      built in SMTP is rate limited hard and is explicitly not for production.
-      A reviewer who requests a sign in code and never receives it will reject
-      the app. Set up Resend or SendGrid under Project Settings, Authentication,
-      SMTP Settings. I will give you the exact steps in Phase 4.
-
-- [ ] **Magic Link email template.** Per `README.md` step 4, the stock template
-      shows a clickable link and not the code, so the app's "enter your code"
-      screen has nothing to type in. Confirm this was actually done in the live
-      project, because I cannot see email templates from here.
-
-- [ ] **Auth URL configuration.** Site URL and Redirect URLs need to include the
-      Capacitor origin once the app is wrapped, not just the GitHub Pages URL.
-
-- [ ] Three real user accounts already exist in the live project with no
-      profile rows. Decide whether to keep or clear them before launch.
-
------
-
-## Legal
-
-- [ ] **Louisiana attorney review** of the privacy policy and terms of service
-      once I have drafted them. Particularly the sections on minors and on
-      prayer requests and pastoral notes, which are sensitive in a way ordinary
-      app data is not. My drafts will be drafts, not legal advice.
-
------
-
-## App Store Connect and Xcode
-
-- [ ] **Support URL.** A required App Store Connect field, and it has to
-      resolve to something that actually addresses app support. The
-      homechurchnola.com homepage is not enough on its own. A short page saying
-      what the app is and how to get help is fine.
-
-- [ ] **Validate `PrivacyInfo.xcprivacy` in Xcode before submission.** Apple's
-      canonical required-reason API page would not load from my sandbox, so the
-      reason codes in my draft manifest come from Apple Developer Forums rather
-      than first hand from the docs. Xcode reports the codes it expects. Do not
-      take my draft on faith.
-
-- [ ] **Answer the new age rating questionnaire.** Apple overhauled it in 2025.
-      Tiers are now 4+, 9+, 13+, 16+, 18+, and there are new required sections
-      on in-app controls, capabilities, medical topics, and violent themes. The
-      **social media questions become required for new submissions in September
-      2026**, which is next month, so we will be answering those too. My drafted
-      answers are in `APP_STORE_COMPLIANCE.md` section 2.6. Target rating: 4+.
-
------
-
-## Assets you or a designer need to produce
-
-- [ ] **App icon set with no alpha channel.** All seven PNGs in the repo today
-      are RGBA. Apple rejects app icons containing transparency. These need to
-      be re-exported flattened onto a solid background at the full set of iOS
-      sizes.
+- [ ] **Answer the age rating questionnaire.** Apple overhauled it in 2025.
+      Tiers are now 4+, 9+, 13+, 16+, 18+, with new required sections on in-app
+      controls, capabilities, medical topics, and violent themes. The **social
+      media questions become required for new submissions in September 2026**,
+      so you will be answering those. My drafted answers are in
+      `APP_STORE_COMPLIANCE.md` section 2.6. Target rating: **4+**.
 
 - [ ] **Screenshots.** 1320 x 2868 for the 6.9 inch iPhone is the only required
-      size in 2026, and Apple scales it down for everything smaller. Add
-      2064 x 2752 only if we ship iPad support. I will give you a shot list and
-      an order in Phase 7.
+      size, and Apple scales it down for everything smaller. No alpha channel.
+      Shot list comes in Phase 7.
 
-- [ ] **Real photography**, eventually. Not a launch blocker, the cream
-      placeholder blocks are a deliberate choice and they hold up.
+- [ ] **Delete the three orphaned accounts** in the Supabase project. They have
+      no data, they signed in to a sync that never worked, and starting
+      production at zero is cleaner. Tell me if one is you or the Daigles.
+
+-----
+
+## Supabase dashboard
+
+- [ ] **Move off Supabase's default auth email sender.** Only matters when
+      accounts are switched on, which is not v1, so this is no longer on the
+      critical path. When you do turn accounts on, the built in sender is rate
+      limited and not for production, and a reviewer who never receives a
+      sign in code rejects the app. Resend or SendGrid, under Project Settings,
+      Authentication, SMTP Settings.
+
+- [ ] **Auth URL configuration**, same condition. Site URL and Redirect URLs
+      will need the Capacitor origin, not just the GitHub Pages URL.
+
+-----
+
+## Content I still need from you
+
+Neither of these blocks anything. Both render honestly as they are, they are
+just quieter than they could be.
+
+- [ ] **A destination for "I'm new here."** The only next step with no link.
+      It shows as a description with no button, which is honest, but it is the
+      one a first time visitor is most likely to tap. Is there a Church Center
+      connect card for it?
+
+- [ ] **What happens when someone wants to join a group, not host one?** The
+      Group Vitals link you sent is the leader form. Group cards are
+      information only now, because the old behavior claimed it would pass your
+      name to the host from a card with nowhere to type a name. This is the
+      last thing on Connect with no destination.
+
+-----
+
+## Decisions already made, for the record
+
+- [x] **Accounts are off in v1.** Infrastructure gets built and ships dormant.
+      Removes the account deletion requirement, the demo account, and the SMTP
+      dependency. See `APP_STORE_COMPLIANCE.md` section 0.
+- [x] **Home groups ship out of season**, so the placeholder groups never
+      render. One boolean brings them back.
+- [x] **Leader Mode data stays on the phone.** Keeps Guideline 1.2 entirely out
+      of scope.
+- [x] **The Linktree is not in the app.** A link to a link aggregator, inside an
+      app that already carries a Guideline 4.2 risk, is the most on the nose
+      version of "a collection of links" I could hand a reviewer. Everything on
+      it that matters is a next step now.
+- [x] **Connect points at Church Center, Group Vitals, Google Forms, Flodesk,
+      and your SMS keyword** rather than a form capture pipeline in Supabase.
+- [x] **The real serve teams are in**, all seven, from your screenshots.
+- [x] **utm parameters stripped** from all six links. They claimed the traffic
+      came from Instagram, which was true of a link in a bio and is not true of
+      a tap inside the app.
+
+-----
+
+## Worth a second look later, not now
+
+- [ ] **The prayer request Google Form.** It works and it ships. But prayer
+      requests are often the most sensitive thing anyone tells a church, and
+      routing them through Google Forms means naming Google as a processor in
+      the privacy policy, which I have done. Church Center has forms too, if
+      you would rather keep it in one system.
+
+- [ ] **Real photography.** Not a blocker. The cream placeholder blocks are a
+      deliberate choice and they hold up.

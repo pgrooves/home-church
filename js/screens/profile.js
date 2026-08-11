@@ -280,6 +280,20 @@
       html += c.row({ title: s.label, action: 'open-url', url: s.url, chevron: true });
     });
 
+    // The fine print. Apple requires the privacy policy to be reachable inside
+    // the app and not only linked from App Store Connect, and a person should
+    // be able to find what the app holds on them without hunting for it.
+    html += c.sectionHeader('The fine print', 'Privacy and terms');
+    html += c.row({ title: 'Privacy policy', action: 'go-legal', id: 'privacy', chevron: true });
+    html += c.row({ title: 'Terms of use', action: 'go-legal', id: 'terms', chevron: true });
+    html += c.row({
+      title: 'Your data',
+      sub: 'See what is stored on this phone, and erase it',
+      action: 'go-legal',
+      id: 'data',
+      chevron: true
+    });
+
     html += '<div class="hc-about">';
     html += '<img class="hc-mark" src="assets/icons/mark.png" alt="Home Church">';
     html += '<p class="hc-caption">' + c.esc(HC.data.church.name) + ', ' + c.esc(HC.data.church.pastors) + '</p>';

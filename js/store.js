@@ -287,6 +287,50 @@
     emit('prayers', state.prayers);
   }
 
+  /* ------------------------------------------------------------ erasing
+     Everything this app knows about a person is on their own phone, so
+     deleting it is a local operation and not a request to a server. The
+     privacy policy points at this, and the Data screen runs it.
+
+     Every hc: key goes, including the content cache. That cache holds
+     sermons and guides rather than anything personal, so it could have been
+     spared, but "we deleted everything except one thing" is a worse promise
+     to make than a few seconds of refetching costs. The app refills it on
+     the next launch.
+     ------------------------------------------------------------------- */
+
+  function eraseEverything() {
+    var ok = true;
+
+    // Collect first, then remove. Mutating localStorage while iterating its
+    // own index is how you skip half the keys.
+    var keys = [];
+    try {
+      for (var i = 0; i < window.localStorage.length; i++) {
+        var k = window.localStorage.key(i);
+        if (k && k.indexOf(PREFIX) === 0) keys.push(k);
+      }
+      keys.forEach(function (k) { window.localStorage.removeItem(k); });
+    } catch (err) {
+      ok = false;   // private mode, or storage is gone. Memory reset still runs.
+    }
+
+    // The in memory copy has to go too, or the current session keeps rendering
+    // a profile and a roster that no longer exist on disk.
+    state.profile = Object.assign({}, DEFAULT_PROFILE);
+    state.guideState = {};
+    state.dismissed = {};
+    state.roster = [];      // [] not null, so getRoster does not reseed the sample names
+    state.prayers = [];
+
+    emit('profile', state.profile);
+    emit('roster', state.roster);
+    emit('prayers', state.prayers);
+    emit('erased', { ok: ok });
+
+    return ok;
+  }
+
   /* ---------------------------------------------------------------- theme */
 
   function applyPreferences() {
@@ -337,6 +381,8 @@
     getPrayers: getPrayers,
     addPrayer: addPrayer,
     removePrayer: removePrayer,
+
+    eraseEverything: eraseEverything,
 
     applyPreferences: applyPreferences
   };

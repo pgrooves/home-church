@@ -26,7 +26,10 @@
     profile: 'Your account',
     leader: 'Leader mode',
     'guide-reader': 'Guide',
-    present: 'Presenting'
+    present: 'Presenting',
+    privacy: 'Privacy policy',
+    terms: 'Terms of use',
+    data: 'Your data'
   };
 
   var mount, scroller, topbar, tabbar;
@@ -215,6 +218,38 @@
 
     'open-url': function (el) {
       c.openExternal(el.getAttribute('data-url'));
+    },
+
+    'go-legal': function (el) {
+      HC.screens.legalHelpers.setConfirming(false);
+      HC.router.go({ name: el.getAttribute('data-id') });
+    },
+
+    /* ------------------------------------------------------------- erasing
+       Two taps, and the second one is the one that means it. The screen
+       repaints between them rather than throwing a system dialog, so the
+       consequence is on screen in the app's own voice while somebody decides.
+       ---------------------------------------------------------------------- */
+
+    'erase-ask': function () {
+      HC.screens.legalHelpers.setConfirming(true);
+      HC.router.go({ name: 'data' }, { force: true });
+    },
+
+    'erase-cancel': function () {
+      HC.screens.legalHelpers.setConfirming(false);
+      HC.router.go({ name: 'data' }, { force: true });
+    },
+
+    'erase-confirm': function () {
+      var ok = HC.store.eraseEverything();
+      HC.screens.legalHelpers.setConfirming(false);
+      HC.store.applyPreferences();   // theme and text size went back to default
+      paintAvatar();
+      HC.router.go({ name: 'home' });
+      c.toast(ok
+        ? 'Erased. This phone is back to a fresh start.'
+        : 'Cleared what we could reach. Your browser is not letting the app store anything right now.');
     },
 
     'open-scripture': function (el) {
@@ -560,7 +595,10 @@
         profile: HC.screens.profile,
         leader: HC.screens.leader,
         'guide-reader': HC.screens.guideReader,
-        present: HC.screens.present
+        present: HC.screens.present,
+        privacy: HC.screens.privacy,
+        terms: HC.screens.terms,
+        data: HC.screens.data
       }
     });
 
