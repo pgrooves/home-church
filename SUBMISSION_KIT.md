@@ -18,7 +18,9 @@ time, except where noted, where it costs weeks.
 - [ ] **Apple Developer Program enrollment.** Organization enrollment needs a
       **D-U-N-S number**, which takes one to two weeks. Nothing below can ship
       without this and no amount of code changes that. Start it first.
-- [ ] Run `supabase/migrations/0008_real_serve_teams.sql`.
+- [x] Migrations 0008, 0009, and 0010 applied and verified.
+- [ ] Run `supabase/migrations/0011_lock_down_signup_trigger.sql`, which closes
+      two advisor warnings that 0009 introduced.
 - [ ] Support URL live and resolving.
 
 ### Code, done

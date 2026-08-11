@@ -1,0 +1,60 @@
+-- ===========================================================================
+-- Home Church, close the signup trigger's execute grant
+--
+-- WHAT THIS FIXES. Migration 0009 created public.hc_handle_new_user() and
+-- carefully revoked EXECUTE on the other function it added,
+-- hc_export_my_data, and then did not do the same here. So the signup trigger
+-- function kept Postgres's default grant of EXECUTE to public, which means it
+-- is reachable at /rest/v1/rpc/hc_handle_new_user. The Supabase security
+-- advisor flags it twice, once for anon and once for authenticated:
+--
+--   0028_anon_security_definer_function_executable
+--   0029_authenticated_security_definer_function_executable
+--
+-- IS IT ACTUALLY EXPLOITABLE? No, and it is worth saying why rather than
+-- fixing it nervously. The function returns `trigger`, and Postgres refuses to
+-- call a trigger function directly whatever privileges the caller holds:
+--
+--   0A000  trigger functions can only be called as triggers
+--
+-- That check happens before the body runs, so the SECURITY DEFINER context is
+-- never entered. The advisor matches on the grant without accounting for the
+-- return type. This was probed against the live project rather than assumed.
+--
+-- SO WHY BOTHER. Because an unexplained security warning sitting on the table
+-- that holds member records is exactly the thing you do not want to be
+-- explaining during a privacy review, or six months from now to somebody who
+-- has to work out from scratch whether it mattered. A clean advisor report is
+-- worth more than the argument for leaving it.
+--
+-- WILL THIS BREAK SIGNUP? It should not. Postgres checks EXECUTE on a trigger
+-- function when the trigger is *created*, not each time it fires, and the
+-- trigger itself runs as the table owner. Revoking the grant from public,
+-- anon, and authenticated leaves the existing trigger working.
+--
+-- That is the documented behavior and it is also the fix Supabase's own
+-- advisor recommends, but it is a claim about somebody else's database and it
+-- deserves a test rather than trust. After running this, verify:
+--
+--   1. Create a test user, dashboard, Authentication, Add user.
+--   2. Confirm a matching row appeared:
+--        select id from public.profiles order by created_at desc limit 1;
+--   3. Delete the test user.
+--
+-- If step 2 comes back empty, this migration is wrong and reverting it is one
+-- line: grant execute on function public.hc_handle_new_user() to authenticated.
+-- Say so and I will find another way.
+--
+-- Nothing in v1 depends on this working, because sign in is switched off and
+-- no new auth users are being created. That makes now the cheap time to find
+-- out.
+--
+-- HOW TO RUN IT
+--   Supabase dashboard -> SQL Editor -> New query -> paste -> Run.
+--   Safe to run more than once.
+-- ===========================================================================
+
+revoke all on function public.hc_handle_new_user() from public, anon, authenticated;
+
+comment on function public.hc_handle_new_user() is
+  'Creates the blank profile row alongside every new auth user. EXECUTE is revoked from every client role on purpose, see migration 0011: a trigger function needs no execute grant to fire, and leaving the default grant in place makes it visible at /rest/v1/rpc/ and lights up the security advisor.';

@@ -11,44 +11,56 @@ below is what is left, and none of it is code.
 
 -----
 
-## Right now, three migrations
+## Migrations, done
 
-They are written, commented, and safe to re-run. My connection to the project
-started requiring an approval this session cannot answer, so `0007` went in
-and these did not. Run them in order.
+All three applied to `ibqkumxfltfiuqevviji` on August 11 and verified.
 
-- [!] **`supabase/migrations/0008_real_serve_teams.sql`**
-      The church's seven real serve teams, and groups switched out of season.
-      **This one changes what people see**, so it matters most. Until it runs,
-      any phone with signal shows the four old invented teams and the
-      placeholder home groups, because Supabase wins over the copy bundled in
-      the app. The bundled copy is already correct, so this only affects live
-      devices. Nothing is broken, the content is just wrong.
+- [x] `0008_real_serve_teams.sql`. Seven real serve teams, requirement set on
+      Home Kids and Worship Team only, the four invented ones gone.
+      `groups_in_season` is false, so the finder hides.
+- [x] `0009_accounts_dormant.sql`. `profiles` with RLS scoped to
+      `auth.uid() = id`, no DELETE policy, signup trigger live, export function
+      restricted to `authenticated`. Also cleared the pre-existing
+      `hc_set_updated_at` search_path warning.
+- [x] `0010_device_tokens.sql`. RLS on, and the load bearing part holds:
+      `anon` has INSERT and UPDATE and **no SELECT**, so the token list cannot
+      be read with the publishable key.
 
-- [ ] **`supabase/migrations/0009_accounts_dormant.sql`**
-      The profiles table, its row level security, and the export function.
-      Changes nothing anybody can see, because sign in is off in v1. Run it so
-      the day you want accounts the database side is already correct.
+### One left, and it is mine to own
 
-- [ ] **`supabase/migrations/0010_device_tokens.sql`**
-      Where push notification tokens land. **Required before notifications
-      work**, so this one is needed for launch. Read the row level security
-      note in it before changing anything there, it is shaped differently from
-      every other table for a reason.
+- [ ] **`supabase/migrations/0011_lock_down_signup_trigger.sql`**
+
+      Applying `0009` raised two new advisor warnings, and they are my fault.
+      That migration revoked EXECUTE on one of the two functions it created
+      and not the other, so `hc_handle_new_user` kept Postgres's default grant
+      to public and shows up at `/rest/v1/rpc/`.
+
+      **Not exploitable.** A function returning `trigger` cannot be called
+      directly whatever privileges you hold, Postgres raises `0A000` before
+      the body runs. That was probed against the live project rather than
+      assumed. But an unexplained security warning sitting on the table that
+      holds member records is the last thing you want to be explaining during
+      a privacy review, so it should be closed.
+
+      **Verify after running it**, because it is a claim about how Postgres
+      treats trigger functions and it deserves a test:
+
+      1. Dashboard, Authentication, Add user. Create a test user.
+      2. `select id from public.profiles order by created_at desc limit 1;`
+         A row should be there.
+      3. Delete the test user.
+
+      If step 2 comes back empty, the migration is wrong and reverting is one
+      line. Nothing in v1 depends on it working, since sign in is off and no
+      new auth users are being made, which makes now the cheap time to find
+      out.
 
 - [ ] **Deploy the account deletion function**, when you turn accounts on:
       `supabase functions deploy delete-account`. Not needed for v1.
 
-Three ways past the paste problem, easiest first:
-
-  1. **Approve the Supabase tool call** if Claude Code offers you the prompt.
-     This unblocks every future content change too.
-  2. **Safari, aA in the address bar, Request Desktop Website**, then paste.
-     The SQL editor fights mobile paste. If it still refuses, tap once to
-     place the cursor, then tap the same spot again for the Paste bubble.
-     Long press usually does nothing there.
-  3. **Table Editor, no SQL**, for `0008` only. The other two create
-     functions and policies and genuinely need the SQL editor.
+- [ ] **Leaked Password Protection** is still off in the Auth dashboard.
+      Unchanged and moot while sign in is off. Turn it on the day accounts go
+      live.
 
 -----
 
