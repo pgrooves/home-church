@@ -13,14 +13,15 @@ $ARGUMENTS
 
 ## Step 0. Check the plumbing
 
-```bash
-python3 scripts/hc_supabase.py check
-```
+Read **`supabase/ACCESS.md`**. It says which of the two transports to use, the
+Supabase MCP server or `scripts/hc_supabase.py`, and gives the SQL equivalent
+of every script verb below. It also has the SQL form of `when`, which matters
+here more than in any other command.
 
-No `.env`, missing tables, or a project mismatch means stop and say so. Never
-ask for a key in the chat. If the network is refused outright, this is a web
-session and the egress proxy blocks `supabase.co`, so say the write has to
-happen from the pastor's own machine rather than retrying.
+A missing `.env` or a refused connection is the ordinary shape of a web
+session, not a reason to stop. Use MCP. Confirm the project ref is
+`ibqkumxfltfiuqevviji`, stop only if neither transport is available, and never
+ask for a key in the chat.
 
 ## Step 1. Collect the details
 

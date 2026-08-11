@@ -13,14 +13,18 @@ $ARGUMENTS
 
 ## Step 0. Check the plumbing
 
-```bash
-python3 scripts/hc_supabase.py check
-```
+Read **`supabase/ACCESS.md`**. There are two transports and it says which to
+use: the Supabase MCP server when it is there, `scripts/hc_supabase.py` when
+you have `.env` and a shell. Every command below is written in the script's
+verbs, and that file has the SQL equivalent of each one.
 
-Stop on a missing `.env`, a missing table, or a project ref that does not
-match `js/config.js`. A refused connection means this is a web session and
-the proxy blocks `supabase.co`, so the write happens from the pastor's own
-machine.
+Most sessions on this app are web sessions from a phone, where `.env` does not
+exist and the proxy blocks `supabase.co`. That is the normal case, not a
+failure. Use MCP and carry on.
+
+Confirm the project ref is `ibqkumxfltfiuqevviji`, the one `js/config.js`
+reads. Only stop if neither transport is available, and never ask for a key in
+the chat.
 
 ## Step 1. Collect the details
 

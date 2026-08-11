@@ -201,11 +201,78 @@ const reading_plans = [D.readingPlan].filter(Boolean).map(p => ({
   published: true
 }));
 
+/* Groups keep their data.js order, because Connect shows the first one as
+   "your group" and the table has to preserve that rather than leave it to
+   however Postgres returns rows. Tens, so a group can be slotted between two
+   others without renumbering the rest. */
+const groups = D.groups.map((g, i) => ({
+  id: g.id,
+  name: g.name,
+  day: g.day || null,
+  time_label: g.time || null,
+  neighborhood: g.neighborhood || null,
+  host: g.host || null,
+  life_stage: g.lifeStage || null,
+  blurb: g.blurb || null,
+  openings: g.openings === true,
+  sort_order: (i + 1) * 10,
+  published: true
+}));
+
+/* Serve teams and next steps keep their data.js order for the same reason
+   groups do, the screen renders them in list order. */
+const serve_teams = D.serveTeams.map((t, i) => ({
+  id: t.id,
+  name: t.name,
+  commitment: t.commitment || null,
+  blurb: t.blurb || null,
+  sort_order: (i + 1) * 10,
+  published: true
+}));
+
+const next_steps = D.nextSteps.map((s, i) => ({
+  id: s.id,
+  title: s.title,
+  blurb: s.blurb || null,
+  sort_order: (i + 1) * 10,
+  published: true
+}));
+
+/* Two single row tables. The app reads each as one object, so these are one
+   row lists, the same shape as reading_plans. */
+const church_profile = [{
+  id: 'church-home',
+  name: D.church.name,
+  tagline: D.church.tagline || null,
+  pastors: D.church.pastors || null,
+  address_line1: D.church.address ? D.church.address.line1 : null,
+  address_city: D.church.address ? D.church.address.city : null,
+  address_state: D.church.address ? D.church.address.state : null,
+  address_zip: D.church.address ? D.church.address.zip : null,
+  maps_url: D.church.mapsUrl || null,
+  service_day: D.church.serviceDay || null,
+  service_times: D.church.serviceTimes || [],
+  giving_url: D.church.givingUrl || null,
+  website_url: D.church.websiteUrl || null,
+  social: D.church.social || [],
+  published: true
+}];
+
+const podcast_show = [{
+  id: 'show-home-church-nola',
+  name: D.podcast.name,
+  platform: D.podcast.platform || null,
+  show_url: D.podcast.showUrl || null,
+  blurb: D.podcast.blurb || null,
+  published: true
+}];
+
 /* ---------------------------------------------------------------- write --- */
 
 fs.mkdirSync(OUT_DIR, { recursive: true });
 
-for (const [name, rows] of Object.entries({ series, guides, podcasts, events, announcements, reading_plans })) {
+for (const [name, rows] of Object.entries({ series, guides, podcasts, events, announcements, reading_plans,
+                                  groups, serve_teams, next_steps, church_profile, podcast_show })) {
   const file = path.join(OUT_DIR, name + '.json');
   fs.writeFileSync(file, JSON.stringify(rows, null, 2) + '\n', 'utf8');
   console.log('wrote  %s  %d rows', path.relative(ROOT, file), rows.length);
@@ -213,5 +280,5 @@ for (const [name, rows] of Object.entries({ series, guides, podcasts, events, an
 
 const linked = podcasts.filter(p => p.guide_id).length;
 console.log('\n%d of %d messages have a guide attached.', linked, podcasts.length);
-console.log('Upsert in this order: series, guides, podcasts, events, announcements, reading_plans.');
+console.log('Upsert in this order: series, guides, podcasts, events, then the rest, which have no foreign keys.');
 console.log('Series before guides before podcasts, the foreign keys point that way.');

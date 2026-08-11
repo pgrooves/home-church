@@ -1,31 +1,37 @@
 # Content management, in Supabase
 
-Sermon guides, events, podcast episodes, and whatever comes next live in
-Supabase rather than in app code. Publishing and editing happen through slash
-commands in Claude Code. Nothing here requires a new App Store build, which is
-the whole point: a typo in Saturday's guide gets fixed on Saturday.
+Sermon guides, events, podcast episodes, the weekly reading plan, and whatever
+comes next live in Supabase rather than in app code. Publishing and editing
+happen through slash commands in Claude Code. Nothing here requires a new App
+Store build, which is the whole point: a typo in Saturday's guide gets fixed on
+Saturday.
+
+**How to reach the project is in [`ACCESS.md`](ACCESS.md)**, next to this file.
+Two transports, the Supabase MCP server and `scripts/hc_supabase.py`, and it
+says which to use where. Read that first if a command cannot connect. Most
+editing on this app happens from a phone, where the script cannot run at all.
 
 ---
 
 ## Which project am I pointed at
 
-The account has two similarly named projects, so the display name is not a
-reliable way to tell them apart. The project ref is. It is the random looking
-string in the project URL, `https://<ref>.supabase.co`, and it is unique.
+The project ref is how you tell projects apart. It is the random looking string
+in the project URL, `https://<ref>.supabase.co`, and it is unique where a
+display name is not.
 
-The app already ships pointed at one of them, in `js/config.js`. That is the
-one to use, because it is the project the phones already talk to for sign-in.
+This app's ref is **`ibqkumxfltfiuqevviji`**, "Home Church App". It is what
+`js/config.js` ships pointed at, so it is the project the phones already talk
+to, and it is the only one to publish into.
 
-To see which ref your `.env` is aimed at, and whether it agrees with the app:
+To confirm what `.env` is aimed at, on a machine that has one:
 
 ```bash
 python3 scripts/hc_supabase.py check
 ```
 
-It prints both refs, says whether they match, and lists every table in the
-project. Run it against each of your two projects if you are still unsure
-which is which, the one with a `profiles` table is the one the app has been
-using.
+It prints both refs, says whether they match, and lists every table. From a
+phone, the dashboard shows the ref in the project URL, and `ACCESS.md` has the
+SQL that lists the tables.
 
 ---
 
@@ -74,15 +80,32 @@ using.
 | `events` | The events calendar | Connect |
 | `announcements` | The single One thing card, with a date window | Home |
 | `reading_plans` | The Reading together plan, one row per plan | Home |
+| `groups` | Small groups, night, host, neighborhood, and whether there is room | Connect |
+| `serve_teams` | The Lend a hand list | Connect |
+| `next_steps` | The next step cards | Connect |
+| `church_profile` | Name, address, service times, giving and social links. One row | Home, Profile, Give, the PDF |
+| `podcast_show` | The show card, not the episodes. One row | Listen |
 
-**Why these six and not everything in `js/data.js`.** Collection count is the
-wrong way to look at it. What matters is how often something changes. These
-six are everything that churns: guides and podcasts weekly, the reading plan
-weekly, announcements most weeks, events monthly, series every few months.
-The rest of `data.js`, `church`, the show level `podcast` info, `groups`,
-`serveTeams`, and `nextSteps`, changes once or twice a year, and shipping it
-in the binary is fine for now. Give any of them a table when that stops being
-true, the pattern is in `/new-content-type`.
+**That is all of it.** Every piece of content the app renders now lives in a
+table. Nothing left in `js/data.js` has to be edited to change what a phone
+shows, which is the whole point: no content change needs a build or a merge.
+
+**Two of these behave differently on delete, on purpose.** `church_profile`
+and `podcast_show` are marked `neverEmpty` in `js/content.js`. Emptying them
+leaves the bundled copy in place rather than clearing it, because Home,
+Profile, Give, and the printed guide all read `church.address.city` without
+checking first, and a church with no name is not a state anybody means to
+express. Edit those rows, do not delete them. Every other table takes deletion
+literally.
+
+**`groups.openings` is the field to keep honest.** False renders "Full for
+now" instead of "Room for more", and a group showing room it does not have
+sends somebody to a door that cannot take them. It is one boolean and it goes
+stale the week a group fills up.
+
+**`groups.sort_order` decides which group Connect calls "your group"**, since
+it shows the first one. Tens, so a group can be slotted between two others
+without renumbering everything.
 
 **`reading_plans` is the one to know about**, because it moves every week.
 `current_week` and `this_week` are the two fields that change, the rest of the

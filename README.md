@@ -130,9 +130,12 @@ without waiting on a review. Full documentation is in
 **`supabase/README.md`**, kept there rather than duplicated here so the two
 cannot drift.
 
-The short version. Six tables, `series`, `guides`, `podcasts`, `events`,
-`announcements`, and `reading_plans`, publicly readable with the anon key and
-writable only with the service role key. Six slash commands drive them:
+The short version. Eleven tables, publicly readable with the anon key and
+writable only with the service role key: `series`, `guides`, `podcasts`,
+`events`, `announcements`, `reading_plans`, `groups`, `serve_teams`,
+`next_steps`, `church_profile`, and `podcast_show`. Between them they hold
+everything the app renders, so no content change needs a build. Six slash
+commands drive them:
 
 | Command | Does |
 |---|---|
@@ -143,9 +146,17 @@ writable only with the service role key. Six slash commands drive them:
 | `/edit-content` | Plain language fix to any row, current versus proposed, writes after you confirm |
 | `/new-content-type` | Scaffolds another content type, table and command |
 
-All six shell out to `scripts/hc_supabase.py`, standard library Python, no
-pip install, which keeps the no build step promise above intact. Credentials
-come from `.env` at the repo root, which is git ignored and never committed.
+There are two ways they reach the project, and **`supabase/ACCESS.md`** is the
+one place that says which to use. On a machine with `.env`, they shell out to
+`scripts/hc_supabase.py`, standard library Python, no pip install, which keeps
+the no build step promise above intact. From a phone or a web session, where
+there is no `.env` and the egress proxy blocks `supabase.co`, they use the
+Supabase MCP server instead. Most of this app is edited from a phone, so that
+second path is the normal one rather than the fallback.
+
+Credentials for the script come from `.env` at the repo root, which is git
+ignored and never committed. You do not need `.env` to edit content, and you
+never need the service role key on a phone.
 
 **The app reads these tables**, through `js/content.js`. It applies the cached
 copy before the first paint, falls back to `js/data.js` on a fresh install
@@ -160,9 +171,11 @@ edit content into it, that is how two copies drift apart. Let it go stale, and
 regenerate it from Supabase if you ever want the floor raised.
 
 Deleting the last row of a table is honored too, so content can be removed and
-not just added. The one case the app refuses is a project where *every* table
-is empty, which is an unconfigured project rather than an intent, and it keeps
-the bundled content instead of blanking the app.
+not just added. Two exceptions, both deliberate. A project where *every* table
+is empty is an unconfigured project rather than an intent, so the bundled
+content stays and the app does not blank. And `church_profile` and
+`podcast_show` are never cleared, because four screens read the church's
+address without checking it exists. Edit those two, do not empty them.
 
 -----
 

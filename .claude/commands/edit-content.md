@@ -22,13 +22,23 @@ $ARGUMENTS
 
 ## Step 0. Check the plumbing
 
-```bash
-python3 scripts/hc_supabase.py check
-```
+Read **`supabase/ACCESS.md`**. It says which of the two transports to use, the
+Supabase MCP server or `scripts/hc_supabase.py`, and gives the SQL equivalent
+of every script verb below.
 
-Missing `.env` or missing tables means stop. A refused connection means this
-is a web session and the proxy blocks `supabase.co`, so the edit has to be
-made from the pastor's own machine.
+A missing `.env` or a refused connection is what a web session looks like, and
+this app is mostly edited from a phone, so that is the normal path rather than
+a dead end. Use MCP.
+
+Two things this command depends on that raw SQL will not do for you: dollar
+quote any prose you write, since the whole job here is other people's
+sentences and they are full of apostrophes, and put a `returning` on every
+update. An update against an id that does not exist changes nothing and still
+reports success, which is exactly how you end up telling someone a typo is
+fixed when it is not.
+
+Confirm the project ref is `ibqkumxfltfiuqevviji`. Stop only if neither
+transport is available.
 
 ## Step 1. Work out which table
 
