@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+
+  "permissions": {
+    "allow": [
+      "mcp__supabase__list_projects",
+      "mcp__supabase__list_tables",
+      "mcp__supabase__list_migrations",
+      "mcp__supabase__list_extensions",
+      "mcp__supabase__list_edge_functions",
+      "mcp__supabase__get_project",
+      "mcp__supabase__get_project_url",
+      "mcp__supabase__get_publishable_keys",
+      "mcp__supabase__get_advisors",
+      "mcp__supabase__get_logs",
+      "mcp__supabase__search_docs",
+      "mcp__supabase__execute_sql",
+      "mcp__supabase__apply_migration",
+      "mcp__supabase__deploy_edge_function",
+
+      "Bash(node scripts/stamp_assets.js)",
+      "Bash(node scripts/sync_web.js)",
+      "Bash(node scripts/make_screenshots.js)",
+      "Bash(node scripts/make_legal_pages.js)",
+      "Bash(python3 scripts/make_icons.py)",
+      "Bash(python3 scripts/hc_supabase.py:*)",
+      "Bash(npm run:*)",
+      "Bash(node --check:*)",
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)"
+    ]
+  }
+}
