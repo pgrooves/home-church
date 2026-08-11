@@ -57,7 +57,10 @@
       title: 'Sign up to serve',
       blurb: 'Interested in serving with Home Church? Tap below and a member of our team will be in touch. We cannot wait to serve with you.'
     },
-    groupsInSeason: true,
+    // Between seasons. The four groups below never render while this is false,
+    // which is deliberate: they are still placeholders with invented hosts.
+    // Replace them with the real groups before flipping this back to true.
+    groupsInSeason: false,
     groupsOffSeasonNote: 'Home groups are between seasons right now. When the next one starts this is where you will find it, and we will make sure you hear about it before it fills up.'
   };
 
@@ -2169,30 +2172,62 @@
 
   /* -------------------------------------------------------------- serve teams */
 
+  /* The church's own seven teams, in the church's own words, in the order
+     homechurchnola.com/serve lists them. The four that used to be here were
+     plausible inventions and only one of them was real.
+
+     `requirement` is the condition a person has to clear before serving,
+     printed on the site as an asterisked footnote. It is its own field rather
+     than a sentence inside the blurb, so it reads as a condition. */
   var serveTeams = [
     {
-      id: 'team-kids',
+      id: 'team-home-kids',
       name: 'Home Kids',
-      commitment: 'Two Sundays a month',
-      blurb: 'Birth through fifth grade. Loud, joyful, and the most important room in the building.'
+      commitment: '',
+      requirement: 'Background check required',
+      blurb: 'Our team invests in the lives of children through worship, Biblical teaching, videos, small groups, and games.'
     },
     {
-      id: 'team-welcome',
-      name: 'Welcome Team',
-      commitment: 'One Sunday a month',
-      blurb: 'Doors, coffee, and being the first face somebody sees. If you are good at remembering names, this is you.'
+      id: 'team-greeters',
+      name: 'Greeters',
+      commitment: '',
+      requirement: '',
+      blurb: 'Our team plays a vital role in creating a warm and inviting atmosphere for everyone who walks through our doors.'
+    },
+    {
+      id: 'team-set-up',
+      name: 'Set Up',
+      commitment: 'Saturdays at 4:00 PM, weekly',
+      requirement: '',
+      blurb: 'Our team works behind the scenes to create a welcoming and functional space for worship and fellowship. This includes assembling the stage, curtains, and chairs.'
+    },
+    {
+      id: 'team-tear-down',
+      name: 'Tear Down',
+      commitment: 'Sundays after service, weekly',
+      requirement: '',
+      blurb: 'Our team helps with the transition of our worship space by taking down the stage, curtains, and chairs after the Sunday Service.'
+    },
+    {
+      id: 'team-parking',
+      name: 'Parking',
+      commitment: '',
+      requirement: '',
+      blurb: 'Our team serves as the first impression for those coming to Home Church by welcoming people on and off the property and by providing a safe and efficient parking experience.'
+    },
+    {
+      id: 'team-prayer',
+      name: 'Prayer Team',
+      commitment: '',
+      requirement: '',
+      blurb: 'Our team provides prayer covering for services, teams and ministries at Home Church. We meet to pray in person and online via Zoom.'
     },
     {
       id: 'team-worship',
-      name: 'Worship and Production',
-      commitment: 'Weekly rehearsal, two Sundays a month',
-      blurb: 'Band, vocals, sound, lights, and cameras. Auditions are casual and we will train you on the technical side.'
-    },
-    {
-      id: 'team-care',
-      name: 'Care Team',
-      commitment: 'As needed',
-      blurb: 'Meals after a baby, rides to appointments, showing up when a family is in the hardest week of their year.'
+      name: 'Worship Team',
+      commitment: '',
+      requirement: 'Training process required',
+      blurb: 'Our team facilitates a powerful worship experience through vocals, instruments, and audio engineering.'
     }
   ];
 

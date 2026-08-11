@@ -32,7 +32,7 @@
 
   var cfg = HC.config || {};
   var CACHE_KEY = 'content';
-  var CACHE_VERSION = 6;      // bump when a mapping below changes shape
+  var CACHE_VERSION = 7;      // bump when a mapping below changes shape
   var TIMEOUT_MS = 12000;
 
   // The tables we pull, and the HC.data key each one fills. Adding another
@@ -197,11 +197,17 @@
     };
   }
 
+  /* `requirement` is a condition somebody has to clear before they can serve,
+     a background check for Home Kids or the training process for Worship. It
+     stays out of the blurb and gets its own line, because buried inside the
+     description it reads as part of the pitch rather than as the thing a
+     person needs to know before they decide. */
   function mapServeTeam(r) {
     return {
       id: r.id,
       name: str(r.name),
       commitment: str(r.commitment),
+      requirement: str(r.requirement),
       blurb: str(r.blurb)
     };
   }

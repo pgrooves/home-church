@@ -103,10 +103,21 @@
 
   function serveTeam(team) {
     var body = '';
+
+    // Only two teams publish a schedule. The line drops rather than leaving a
+    // gap on the five that do not.
     if (team.commitment) {
       body += '<p class="hc-eyebrow hc-eyebrow--legible hc-serve__commitment">' + c.esc(team.commitment) + '</p>';
     }
+
     body += '<p class="hc-body-serif hc-serve__blurb">' + c.esc(team.blurb) + '</p>';
+
+    // A background check or a training process. Its own line, after the
+    // description, because it is the thing somebody needs before they decide
+    // and not a detail to find out later.
+    if (team.requirement) {
+      body += '<p class="hc-caption hc-serve__requirement">' + c.esc(team.requirement) + '</p>';
+    }
 
     return c.collapsible({
       id: 'team-' + team.id,

@@ -71,13 +71,24 @@ Still open:
 The structure is built and working. These are content swaps, each one row in
 Supabase, none of them code.
 
-- [ ] **The real serve team names and descriptions from
-      homechurchnola.com/serve.** My sandbox cannot reach the church site, the
-      egress proxy blocks it, so I built the collapsibles against the four
-      teams already in Supabase: Home Kids, Welcome Team, Worship and
-      Production, Care Team. Your screenshot shows at least Prayer Team and
-      Worship Team, so the real list is different. **Paste the team names and
-      their descriptions and I will swap them in.**
+- [x] ~~The real serve team names and descriptions.~~ **Done, from your
+      screenshots.** All seven, in the church's own words, in the site's order:
+      Home Kids, Greeters, Set Up, Tear Down, Parking, Prayer Team, Worship
+      Team. The two asterisked conditions, the background check and the
+      training process, got their own field rather than being folded into the
+      description.
+
+- [x] ~~In season or out of season?~~ **Out of season**, per your sign off. The
+      four placeholder groups never render.
+
+- [ ] **RUN THIS ONE YOURSELF:
+      `supabase/migrations/0008_real_serve_teams.sql`.** Supabase dashboard,
+      SQL Editor, New query, paste the whole file, Run. My connection to the
+      project started requiring an approval I cannot answer from this session,
+      so `0007` went in but `0008` did not. Until you run it, the app still
+      shows the old four invented teams **on any phone that has signal**,
+      because Supabase wins over the bundled copy. The version bundled in the
+      app is already correct.
 
 - [ ] **A destination for "I'm new here."** The only next step with no link. It
       renders as a description with no button right now, which is honest but it

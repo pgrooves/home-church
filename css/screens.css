@@ -465,6 +465,15 @@
 .hc-serve__commitment { margin-bottom: var(--hc-space-xs); }
 .hc-serve__blurb { color: var(--hc-mid); }
 
+/* A background check or a training process. Italic and set apart, the way the
+   church's own site prints it, so it reads as a condition rather than as one
+   more line of the description. */
+.hc-serve__requirement {
+  margin-top: var(--hc-space-md);
+  font-style: italic;
+  color: var(--hc-accent-deep);
+}
+
 /* The one signup every team funnels through, sitting under all of them. */
 .hc-serve__signup-copy {
   margin-top: var(--hc-space-base);
