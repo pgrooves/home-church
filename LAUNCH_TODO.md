@@ -46,24 +46,84 @@ Answered on August 11:
       address, not yet chosen.** I am building the capture so the destination is
       one row of configuration rather than a code change.
 
+- [x] ~~Designated email address for form submissions~~ **No longer needed.**
+      The six links you sent mean every next step goes to a system the church
+      already runs. No Supabase capture table, no Edge Function, no second copy
+      of anyone's contact details.
+- [x] ~~What does Connect hold at launch?~~ **Solved.** Groups are season
+      gated, and everything else on the tab now goes somewhere real.
+- [x] ~~Accounts in v1?~~ **No.** Infrastructure built and dormant.
+
 Still open:
 
 - [ ] Who is the **data controller** of record for the privacy policy? The
       church itself, or a specific legal entity name?
 - [ ] Is there an existing privacy policy or terms page on homechurchnola.com
       that I should be consistent with?
-- [ ] **What is the designated email address** for Connect form submissions?
-      Not blocking, I am building around it, but the app cannot notify anyone
-      until it exists.
-- [ ] **What does the Connect tab hold at launch?** Removing the placeholders
-      leaves it as a title over nothing, because every section drops its header
-      when empty. Best answer is real groups and real events. See
-      `APP_STORE_COMPLIANCE.md` section 2.7.
-- [ ] **Accounts in v1, yes or no?** My recommendation is no, with the
-      infrastructure built and dormant. See `APP_STORE_COMPLIANCE.md` section 0.
 - [ ] Three real user accounts exist in the live project with no data. I
       recommend deleting them before launch. Tell me if one of them is you or
       the Daigles.
+
+-----
+
+## Content I need from you, for the Connect tab
+
+The structure is built and working. These are content swaps, each one row in
+Supabase, none of them code.
+
+- [ ] **The real serve team names and descriptions from
+      homechurchnola.com/serve.** My sandbox cannot reach the church site, the
+      egress proxy blocks it, so I built the collapsibles against the four
+      teams already in Supabase: Home Kids, Welcome Team, Worship and
+      Production, Care Team. Your screenshot shows at least Prayer Team and
+      Worship Team, so the real list is different. **Paste the team names and
+      their descriptions and I will swap them in.**
+
+- [ ] **A destination for "I'm new here."** The only next step with no link. It
+      renders as a description with no button right now, which is honest but it
+      is the one a first time visitor is most likely to tap. Is there a Church
+      Center connect card for this?
+
+- [ ] **What happens when someone wants to join a group, not host one?** The
+      Group Vitals link you sent is the leader form. Group cards are now
+      information only, because the old behavior claimed it would pass your
+      name to the host from a card with nowhere to type a name. **This is the
+      last thing on Connect with no destination.**
+
+- [ ] **Decide whether we submit in season or out of season.** Out of season,
+      the four placeholder groups never render and there is nothing for a
+      reviewer to object to. In season, those four rows need to be the real
+      groups with real hosts. Either works. See `APP_STORE_COMPLIANCE.md` 2.7.
+
+- [ ] **`step-baptism` had a hardcoded date** in its blurb, "The next one is
+      August 23." I removed it, because a date in a content blurb goes stale
+      silently. The Events list is where dates belong.
+
+-----
+
+## Two recommendations on the links you sent
+
+- [ ] **I left the Linktree out, on purpose.** Guideline 4.2.2 names "content
+      aggregators, or a collection of links" as the thing an app must not
+      primarily be. A link to a link aggregator, inside an app that already has
+      a 4.2 risk, is the most on the nose version of that I could put in front
+      of a reviewer. The app should *be* the link tree, and better. Everything
+      on it that matters is now a next step. Tell me if you disagree and I will
+      add it, but I would rather not.
+
+- [ ] **The prayer request Google Form is worth a second thought, later.** It
+      works and it ships. Two things to know. Prayer requests are often the
+      most sensitive thing anyone tells a church, health, marriage, money, and
+      routing them through Google Forms means naming Google as a processor in
+      the privacy policy. And the app already has something called "prayer
+      requests" in Leader Mode that is private, local, and goes to nobody. Two
+      different things with the same name is a trust problem, so I will make
+      the wording distinguish them clearly. Church Center has forms too, if you
+      would rather keep it in one system.
+
+- [ ] **utm parameters stripped from all six links.** They said the traffic came
+      from Instagram, which was true of a link in a bio and is not true of a tap
+      inside the app. The Linktree URL also carried a share session id.
 
 -----
 

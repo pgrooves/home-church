@@ -83,15 +83,50 @@
   }
 
   /* --------------------------------------------------------- open external
-     Every link that leaves the app goes through here. Under Capacitor this
-     becomes Browser.open() and nothing else in the codebase changes.
+     Every link that leaves the app goes through here. Under Capacitor a web
+     link becomes Browser.open(), which is SFSafariViewController: a real
+     system browser with its own chrome and a Done button, visibly not part of
+     this app. That distinction is the whole reason the giving handoff is not
+     mistaken for in app payment, so it is worth keeping deliberate.
+
+     Anything that is not a web link has to take a different road. Handing
+     mailto:, sms:, or tel: to SFSafariViewController does not open Mail or
+     Messages, it fails, and it fails quietly. That is how the "text SERVE"
+     button and the "email the church" row would both have turned into buttons
+     that do nothing the day @capacitor/browser was installed, with no error
+     anywhere to explain it.
      ---------------------------------------------------------------------- */
+
+  var SYSTEM_SCHEMES = /^(mailto|sms|tel):/i;
+
+  function plugins() {
+    return (window.Capacitor && window.Capacitor.Plugins) || null;
+  }
+
+  // Straight to the OS, which hands it to Mail, Messages, or the dialer.
+  function openSystem(url) {
+    try {
+      var p = plugins();
+      if (p && p.App && p.App.openUrl) {
+        p.App.openUrl({ url: url });
+        return;
+      }
+    } catch (err) { /* fall through to the web view, which also handles these */ }
+    window.location.href = url;
+  }
 
   function openExternal(url) {
     if (!url) return;
+
+    if (SYSTEM_SCHEMES.test(url)) {
+      openSystem(url);
+      return;
+    }
+
     try {
-      if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Browser) {
-        window.Capacitor.Plugins.Browser.open({ url: url });
+      var p = plugins();
+      if (p && p.Browser) {
+        p.Browser.open({ url: url });
         return;
       }
       var win = window.open(url, '_blank', 'noopener,noreferrer');
@@ -99,6 +134,19 @@
     } catch (err) {
       window.location.href = url;
     }
+  }
+
+  /* Builds the sms: link behind the serve signup button. iOS separates the
+     body from the number with &, not ?, and a phone that ignores the body
+     still opens Messages addressed correctly, which is the part that has to
+     work. Returns '' rather than a broken link when there is no number, so
+     the caller can drop the button instead of showing a dead one. */
+  function smsUrl(number, keyword) {
+    var digits = String(number || '').replace(/\D/g, '');
+    if (!digits) return '';
+    if (digits.length === 10) digits = '1' + digits;
+    var to = '+' + digits;
+    return keyword ? 'sms:' + to + '&body=' + encodeURIComponent(keyword) : 'sms:' + to;
   }
 
   function bibleUrl(reference) {
@@ -389,6 +437,7 @@
     pad2: pad2,
     openExternal: openExternal,
     bibleUrl: bibleUrl,
+    smsUrl: smsUrl,
 
     sectionHeader: sectionHeader,
     quoteCard: quoteCard,

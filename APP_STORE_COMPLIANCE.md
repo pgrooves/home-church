@@ -603,19 +603,23 @@ as live ones.**
 | `js/screens/profile.js:88` | "Sign in and your information follows you to any phone" | Nothing syncs. The `profiles` table does not exist. |
 | `js/screens/profile.js:109` | "Synced to your account." | Same. Untrue. |
 
-**Given your answer to question 4**, the fix for the first three is now clear
-and I can build it without waiting for the email address:
+**Superseded on August 11, and the replacement is smaller.** I had planned to
+build a Supabase submissions table plus an Edge Function that forwarded to a
+church address. Then you sent the six links, and they made that unnecessary.
 
-Write the submission to a Supabase table with an insert-only policy for `anon`,
-and have an Edge Function forward it to a configured address. The destination
-becomes **one row of configuration**, not a code change, so the day you have the
-address it is a dashboard edit and not a release. Until then the submission is
-captured and durable rather than discarded, which means the copy can finally be
-true: something really does happen when someone taps.
+The church already runs real infrastructure for every one of these: **Church
+Center** for baptism and Alpha, **Group Vitals** for group hosting, a **Google
+Form** for prayer, **Flodesk** for the email list, and an **SMS keyword** for
+serving. Pointing the app at those is a smaller change than building a parallel
+capture pipeline, and a better one, because those systems have somebody watching
+them and a second copy of a member's contact details sitting in a Supabase
+project nobody checks would be a liability rather than a feature.
 
-The group card and serve team rows need an actual input, not just a toast. A
-name and a contact method at minimum, or they cannot honestly claim anyone will
-be passed anything.
+**Status: done.** Migration `0007_connect_real_destinations.sql`, applied. The
+three lying actions are deleted from `js/app.js`. Connect rewritten. Zero forms
+remain on the screen. This also incidentally answers the README's long standing
+open question about which church management system holds this data: **Planning
+Center** and **Group Vitals**.
 
 ### Placeholder content
 
@@ -626,18 +630,18 @@ be passed anything.
   certainly the reviewer, opens Leader Mode to a fake group. This must become an
   empty state, which already exists and is well written at
   `js/screens/leader.js:81`.
-- **Connect's groups, serve teams, events, and next steps are placeholders**, per
-  your answer to question 2. Removing them before submission is the right call.
-  **But note the consequence:** every section on Connect drops its header when
-  its list is empty (`js/screens/connect.js:166`), which is good behavior, and
-  the result is that **the Connect tab renders as a title and nothing else.**
-  An empty tab is its own 2.1 and 4.2 problem.
-
-  So removing the placeholders creates a new gap. Options, and I need your call
-  in Phase 3: ship four real groups and the real events, which is the good
-  answer; or drop Connect from five tabs to four for v1 and restore it when
-  there is content; or keep Connect with only a genuinely written empty state
-  explaining that groups are forming. I would push hard for the first.
+- **The group finder is now season gated, which solves the placeholder problem
+  by accident and it is worth understanding why.** `church_profile.groups_in_season`
+  hides the entire finder and shows one warm card in its place. So **if we
+  submit while out of season, the four groups with invented host names never
+  render at all**, and there is nothing for a reviewer to find. If we submit in
+  season, those four rows must be the church's real groups with real hosts,
+  because a reviewer reading "Trey and Anna, Lakeview, young families" is
+  reading placeholder content. Either is fine. Pick one deliberately rather
+  than discovering it at submission.
+- **Connect no longer risks being empty**, which was my concern when I wrote
+  this section. It now carries four serve teams with real descriptions, the SMS
+  signup, three events, and six next steps of which five go somewhere real.
 - `js/screens/profile.js:287` hardcodes "Version 1.0", disconnected from any
   build number.
 

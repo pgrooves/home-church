@@ -32,7 +32,7 @@
 
   var cfg = HC.config || {};
   var CACHE_KEY = 'content';
-  var CACHE_VERSION = 5;      // bump when a mapping below changes shape
+  var CACHE_VERSION = 6;      // bump when a mapping below changes shape
   var TIMEOUT_MS = 12000;
 
   // The tables we pull, and the HC.data key each one fills. Adding another
@@ -206,11 +206,18 @@
     };
   }
 
+  /* A next step with no url is a description and nothing more, which is a
+     real state and renders as one. null rather than '' because Connect tests
+     it for truthiness to decide whether there is a button at all, and a step
+     that promises an action it cannot perform is the exact thing this pass
+     exists to remove. */
   function mapNextStep(r) {
     return {
       id: r.id,
       title: str(r.title),
-      blurb: str(r.blurb)
+      blurb: str(r.blurb),
+      url: r.url || null,
+      ctaLabel: str(r.cta_label)
     };
   }
 
@@ -232,7 +239,22 @@
       serviceTimes: arr(r.service_times),
       givingUrl: str(r.giving_url),
       websiteUrl: str(r.website_url),
-      social: arr(r.social)
+      social: arr(r.social),
+
+      // Every serve team funnels through one SMS keyword rather than a form
+      // per team, which is how the church already runs it.
+      serve: {
+        number: str(r.serve_signup_number),
+        keyword: str(r.serve_signup_keyword),
+        title: str(r.serve_signup_title),
+        blurb: str(r.serve_signup_blurb)
+      },
+
+      // Groups run in seasons. Missing reads as in season, because a church
+      // that has not set this yet almost certainly has groups running, and
+      // hiding them by default would be the worse of the two mistakes.
+      groupsInSeason: r.groups_in_season !== false,
+      groupsOffSeasonNote: str(r.groups_off_season_note)
     };
   }
 

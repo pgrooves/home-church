@@ -452,7 +452,32 @@
 
 .hc-mygroup__next { margin-top: var(--hc-space-md); }
 
+/* Between group seasons. One card, one paragraph, no filter strip standing
+   over an empty list. */
+.hc-group__off-season { color: var(--hc-ink); }
+
+/* --- Serve teams ---------------------------------------------------------
+   Each team is a collapsible now rather than a one tap interest button, so
+   reading about one costs nothing and commits to nothing. */
+
 .hc-serve-list { margin-top: var(--hc-space-sm); }
+
+.hc-serve__commitment { margin-bottom: var(--hc-space-xs); }
+.hc-serve__blurb { color: var(--hc-mid); }
+
+/* The one signup every team funnels through, sitting under all of them. */
+.hc-serve__signup-copy {
+  margin-top: var(--hc-space-base);
+  color: var(--hc-ink);
+}
+
+.hc-serve__signup-action { margin-top: var(--hc-space-lg); }
+
+.hc-serve__signup-note,
+.hc-step__note {
+  margin-top: var(--hc-space-sm);
+  text-align: center;
+}
 
 .hc-event-list { margin-top: var(--hc-space-sm); }
 
@@ -466,7 +491,12 @@
 .hc-event .hc-row__title { margin-top: 4px; }
 .hc-event__blurb { margin-top: var(--hc-space-sm); color: var(--hc-mid); }
 
-.hc-step__blurb { margin-bottom: var(--hc-space-base); color: var(--hc-mid); }
+.hc-step__blurb { color: var(--hc-mid); }
+
+/* A next step with a destination gets a button. One without renders as the
+   description alone, which is why this is a separate rule and not padding on
+   the blurb. */
+.hc-step__action { margin-top: var(--hc-space-lg); }
 
 .hc-form .hc-field + .hc-field { margin-top: var(--hc-space-base); }
 .hc-form .hc-btn { margin-top: var(--hc-space-lg); }

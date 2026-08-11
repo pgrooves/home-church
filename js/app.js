@@ -281,19 +281,12 @@
       HC.screens.connectHelpers.repaintGroups(mount);
     },
 
-    'join-group': function () {
-      c.toast('We will pass your name to the host. Expect a text this week.');
-    },
-
-    serve: function () {
-      c.toast('Noted. Someone from that team will find you on Sunday.');
-    },
-
-    'submit-step': function (el) {
-      var form = el.closest('form');
-      if (form) form.reset();
-      c.toast('Got it. This one waits on your phone until the church system is connected.');
-    },
+    /* join-group, serve, and submit-step used to live here. All three showed a
+       warm toast and did nothing: no name was captured, nobody was told, and
+       submit-step called form.reset() on what the person had typed. Connect
+       now sends people to the systems the church actually runs, so there is
+       nothing left for them to do. Do not add them back without a destination.
+       ---------------------------------------------------------------------- */
 
     /* ---------------------------------------------------------- leader mode */
 

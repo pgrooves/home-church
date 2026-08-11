@@ -1,7 +1,19 @@
 /* ==========================================================================
    Home Church, Connect
-   Find a group, your group, serve teams, events, next steps.
-   Seed data and inert forms in v1. The shapes are ready for a real backend.
+   Groups in season, serve teams, events, and next steps.
+
+   THE RULE THIS SCREEN NOW KEEPS: nothing here tells a person that something
+   will happen unless something actually happens. Before this pass, three
+   controls on this screen were reassuring lies. Tapping a serve team said
+   "someone from that team will find you on Sunday" and told nobody. Tapping a
+   group said "we will pass your name to the host" from a card that had no
+   field to type a name into. The next step forms collected a name, a contact,
+   and a note, and then threw all three away.
+
+   Every one of them now either goes somewhere real or says nothing. The
+   destinations are the systems the church already runs, Church Center, Group
+   Vitals, Flodesk, and an SMS keyword, because those have somebody watching
+   them and a second copy in this app would not.
    ========================================================================== */
 
 (function (HC) {
@@ -43,6 +55,11 @@
     return true;
   }
 
+  /* An information card, not a button. It was a button, and tapping it claimed
+     a name would be passed to the host from a card with nowhere to type one.
+     Everything a person needs in order to decide is on the card instead, and
+     the one thing the app cannot honestly offer, joining, is not pretended at.
+     See LAUNCH_TODO.md, this is the last open destination on this screen. */
   function groupCard(group) {
     var status = group.openings ? 'Room for more' : 'Full for now';
     var inner = '' +
@@ -54,7 +71,7 @@
       '<p class="hc-body-serif hc-group__blurb">' + c.esc(group.blurb) + '</p>' +
       '<p class="hc-caption hc-group__status" data-open="' + (group.openings ? 'true' : 'false') + '">' +
         c.esc(status) + '</p>';
-    return c.card(inner, { action: 'join-group', id: group.id });
+    return c.card(inner);
   }
 
   function groupList() {
@@ -65,25 +82,62 @@
     return list.map(groupCard).join('');
   }
 
-  /* Groups are editable rows now, so the list can legitimately be empty and
-     this has to say so rather than throw. Ordering comes from sort_order, set
-     in the fetch, so "the first group" is a stable answer and not whichever
-     row Postgres handed back. */
-  function myGroup() {
-    var group = (HC.data.groups || [])[0];
-    if (!group) return '';
-    var guide = HC.data.latestGuide();
-    var inner = '' +
-      '<p class="hc-eyebrow">' + c.esc(group.day + 's, ' + group.time) + '</p>' +
-      '<p class="hc-card__title">' + c.esc(group.name) + '</p>' +
-      '<p class="hc-caption hc-card__meta">' + c.esc(group.host) + ' &middot; ' + c.esc(group.neighborhood) + '</p>';
+  /* Groups run in seasons, and between them there is nothing to join. A filter
+     strip standing over an empty list reads as a broken screen rather than as
+     a season, so the whole finder drops and this takes its place. One boolean
+     in church_profile, flipped twice a year. */
+  function offSeason() {
+    var note = HC.data.church.groupsOffSeasonNote;
+    if (!note) return '';
+    return '' +
+      c.sectionHeader('Between seasons', 'Home groups') +
+      c.card('<p class="hc-body-serif hc-group__off-season">' + c.esc(note) + '</p>', { edge: true });
+  }
 
-    if (guide) {
-      inner += '<p class="hc-body-serif hc-mygroup__next">This week you are on ' + c.esc(HC.data.guideTitle(guide)) + '.</p>';
-      inner += '<button type="button" class="hc-inline-link" data-action="open-guide" data-id="' + c.esc(guide.id) + '">' +
-        c.icon('guide', 'hc-share__icon') + '<span>Open the guide</span></button>';
+  /* --------------------------------------------------------- serve teams
+     Descriptions, opened by tap. Not one tap interest buttons, which is what
+     these were: a single tap fired off a claim that someone would find you on
+     Sunday, with no confirmation and no way to tell what the tap would do
+     before you made it. Reading about a team should cost nothing.
+     ------------------------------------------------------------------- */
+
+  function serveTeam(team) {
+    var body = '';
+    if (team.commitment) {
+      body += '<p class="hc-eyebrow hc-eyebrow--legible hc-serve__commitment">' + c.esc(team.commitment) + '</p>';
     }
-    return c.card(inner, { edge: true });
+    body += '<p class="hc-body-serif hc-serve__blurb">' + c.esc(team.blurb) + '</p>';
+
+    return c.collapsible({
+      id: 'team-' + team.id,
+      eyebrow: 'Serve team',
+      title: team.name,
+      body: body
+    });
+  }
+
+  /* One signup for every team, which is how the church already runs it. The
+     button is dropped rather than shown dead if there is no number on file. */
+  function serveSignup() {
+    var serve = HC.data.church.serve || {};
+    if (!serve.blurb && !serve.number) return '';
+
+    var link = c.smsUrl(serve.number, serve.keyword);
+    var html = '' +
+      c.sectionHeader('Interested?', serve.title || 'Sign up to serve') +
+      '<p class="hc-body-serif hc-serve__signup-copy">' + c.esc(serve.blurb) + '</p>';
+
+    if (link) {
+      var label = serve.keyword
+        ? 'Text ' + serve.keyword + ' to ' + serve.number
+        : 'Text us at ' + serve.number;
+      html += '<div class="hc-serve__signup-action">' +
+        c.button(label, { action: 'open-url', url: link, icon: 'connect' }) +
+        '<p class="hc-caption hc-serve__signup-note">Opens Messages with the number filled in.</p>' +
+      '</div>';
+    }
+
+    return html;
   }
 
   function eventRow(evt) {
@@ -96,35 +150,27 @@
       '</div>';
   }
 
-  function serveRow(team) {
-    return c.row({
-      title: team.name,
-      sub: team.commitment + '. ' + team.blurb,
-      serif: true,
-      action: 'serve',
-      id: team.id,
-      chevron: true
-    });
-  }
+  /* ---------------------------------------------------------- next steps
+     Was a form that collected a name, a contact, and a note and then called
+     form.reset() on them. Now a description and, when there is somewhere real
+     to land, a button that says where it goes before it goes there. A step
+     with no url renders as a description, which is honest, rather than as a
+     button that does nothing.
+     ------------------------------------------------------------------- */
 
   function nextStep(step) {
-    var body = '' +
-      '<p class="hc-body-serif hc-step__blurb">' + c.esc(step.blurb) + '</p>' +
-      '<form class="hc-form" data-step="' + c.esc(step.id) + '" novalidate>' +
-        '<label class="hc-field">' +
-          '<span class="hc-field__label">Your name</span>' +
-          '<input class="hc-input" type="text" name="name" autocomplete="name" placeholder="First and last">' +
-        '</label>' +
-        '<label class="hc-field">' +
-          '<span class="hc-field__label">How do we reach you</span>' +
-          '<input class="hc-input" type="text" name="contact" autocomplete="email" placeholder="Email or phone">' +
-        '</label>' +
-        '<label class="hc-field">' +
-          '<span class="hc-field__label">Anything you want us to know</span>' +
-          '<textarea class="hc-textarea" name="note" rows="3" placeholder="Optional, and there is no wrong answer."></textarea>' +
-        '</label>' +
-        c.button('Send it', { action: 'submit-step', id: step.id }) +
-      '</form>';
+    var body = '<p class="hc-body-serif hc-step__blurb">' + c.esc(step.blurb) + '</p>';
+
+    if (step.url) {
+      body += '<div class="hc-step__action">' +
+        c.button(step.ctaLabel || 'Open', {
+          action: 'open-url',
+          url: step.url,
+          icon: 'arrowOut'
+        }) +
+        '<p class="hc-caption hc-step__note">Opens in your browser.</p>' +
+      '</div>';
+    }
 
     return c.collapsible({
       id: 'step-' + step.id,
@@ -135,20 +181,15 @@
   }
 
   function render() {
+    var church = HC.data.church;
     var groups = HC.data.groups || [];
     var html = '<div class="hc-screen hc-connect">';
 
     html += c.sectionHeader('Find your people', 'Connect', { flush: true, tag: 'h1' });
 
-    // No groups at all is a real state now that the table is editable. Both
-    // sections drop rather than rendering a header over an empty filter strip.
-    var mine = myGroup();
-    if (mine) {
-      html += c.sectionHeader('Where you belong', 'Your group');
-      html += mine;
-    }
-
-    if (groups.length) {
+    if (!church.groupsInSeason) {
+      html += offSeason();
+    } else if (groups.length) {
       html += c.sectionHeader('Open seats', 'Find a group');
       html += '<div class="hc-filters">';
       html += '<p class="hc-eyebrow hc-eyebrow--legible hc-filters__label">Day</p>';
@@ -157,17 +198,20 @@
       html += pills('neighborhood', uniq(groups, 'neighborhood'), filters.neighborhood);
       html += '</div>';
       html += '<div class="hc-group-list" data-group-list>' + groupList() + '</div>';
+    } else {
+      // In season and yet no groups is the same experience for a person as
+      // being between seasons, so say the same thing rather than nothing.
+      html += offSeason();
     }
 
-    // Every list below is an editable table now, so each one can legitimately
-    // come back empty. A section header standing over nothing reads as a bug,
-    // so the whole section drops instead.
+    // Every list below is an editable table, so each one can legitimately come
+    // back empty. A section header standing over nothing reads as a bug, so
+    // the whole section drops instead.
     var serveTeams = HC.data.serveTeams || [];
     if (serveTeams.length) {
       html += c.sectionHeader('Lend a hand', 'Serve teams');
-      html += '<div class="hc-serve-list">';
-      serveTeams.forEach(function (t) { html += serveRow(t); });
-      html += '</div>';
+      serveTeams.forEach(function (t) { html += serveTeam(t); });
+      html += serveSignup();
     }
 
     var events = HC.data.events || [];

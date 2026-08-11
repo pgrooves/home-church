@@ -50,7 +50,15 @@
       { label: 'Instagram', url: 'https://www.instagram.com/homechurchnola' },
       { label: 'Facebook', url: 'https://www.facebook.com/homechurchnola' },
       { label: 'YouTube', url: 'https://www.youtube.com/@homechurchnola' }
-    ]
+    ],
+    serve: {
+      number: '833-801-3857',
+      keyword: 'SERVE',
+      title: 'Sign up to serve',
+      blurb: 'Interested in serving with Home Church? Tap below and a member of our team will be in touch. We cannot wait to serve with you.'
+    },
+    groupsInSeason: true,
+    groupsOffSeasonNote: 'Home groups are between seasons right now. When the next one starts this is where you will find it, and we will make sure you hear about it before it fills up.'
   };
 
   /* ----------------------------------------------------------------- podcast
@@ -2190,11 +2198,33 @@
 
   /* ------------------------------------------------------------- next steps */
 
+  /* url is what turns a step into an action. A step without one renders as a
+     description and stops there, which is the honest shape for 'I'm new here'
+     until the church picks a destination for it. */
   var nextSteps = [
-    { id: 'step-new', title: 'I’m new here', blurb: 'Tell us a little about yourself and we will find you on Sunday.' },
-    { id: 'step-baptism', title: 'I want to be baptized', blurb: 'The next one is August 23. We will walk you through it.' },
-    { id: 'step-prayer', title: 'I need prayer', blurb: 'Send it to us. A real person reads every one of these.' },
-    { id: 'step-group', title: 'I want to lead a group', blurb: 'We will train you and hand you a guide every week.' }
+    { id: 'step-new', title: 'I’m new here',
+      blurb: 'Tell us a little about yourself and we will find you on Sunday.',
+      url: null, ctaLabel: '' },
+    { id: 'step-baptism', title: 'I want to be baptized',
+      blurb: 'We will walk you through it, start to finish.',
+      url: 'https://homechurchnola.churchcenter.com/people/forms/953766',
+      ctaLabel: 'Sign up for baptism' },
+    { id: 'step-prayer', title: 'I need prayer',
+      blurb: 'Send it to us. A real person reads every one of these.',
+      url: 'https://docs.google.com/forms/d/e/1FAIpQLSexkC8J_AhOtQUCH1lNaE5tIP5bXAjmB36iXubtWxQY0ymgGQ/viewform',
+      ctaLabel: 'Tell us how to pray' },
+    { id: 'step-alpha', title: 'I have questions about faith',
+      blurb: 'Alpha is a few weeks of dinner, a short talk, and honest conversation. No question is too basic and nobody is going to put you on the spot.',
+      url: 'https://homechurchnola.churchcenter.com/registrations/events/3798127',
+      ctaLabel: 'Save your spot' },
+    { id: 'step-group', title: 'I want to lead a group',
+      blurb: 'We will train you and hand you a guide every week.',
+      url: 'https://homechurchnola.groupvitals.com/leaderform',
+      ctaLabel: 'Sign up to host' },
+    { id: 'step-email', title: 'Keep me in the loop',
+      blurb: 'The occasional email with what is coming up. Not many, and you can leave whenever you want.',
+      url: 'https://lively-breeze-89532.myflodesk.com/g7ga3zf20y',
+      ctaLabel: 'Join the email list' }
   ];
 
   /* ------------------------------------------------------- announcement */
