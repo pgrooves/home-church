@@ -13,10 +13,18 @@
    4. Paste both below. Sign in, create account, and profile sync switch on
       automatically, nothing else in the app needs to change.
 
+   EMAIL SIGN-IN NEEDS ONE DASHBOARD EDIT. Supabase sends a magic link by
+   default, not a code, and this app asks for a code. Same endpoint, same
+   token, the only difference is what the email says. In Authentication ->
+   Emails, edit both the "Magic Link" template (returning members) and the
+   "Confirm signup" template (first time signing in) to print {{ .Token }},
+   the six digits, and drop {{ .ConfirmationURL }} entirely. The link is not
+   just redundant here, it is broken, nothing in the app handles the redirect
+   it lands on. See README, "Accounts", for the templates to paste.
+
    If phone sign-in matters, also turn on Phone auth under Authentication ->
    Providers in the Supabase dashboard and connect an SMS provider there,
-   Supabase does not send text messages on its own. Email sign-in works with
-   no extra setup.
+   Supabase does not send text messages on its own.
    ========================================================================== */
 
 (function (HC) {

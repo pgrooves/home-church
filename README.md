@@ -249,6 +249,48 @@ and reviewed rather than written against a deadline:
 **Before switching it on**, read the note in `0009` about data minimization.
 Of the twelve fields in that table the app itself reads exactly one.
 
+### The sign in email has to be edited by hand
+
+`js/auth.js` asks Supabase for a one time code and the Profile screen asks the
+person to type six digits. Out of the box Supabase emails a **magic link**
+instead. Nothing is wrong with the request, email OTP and magic link are the
+same endpoint and the same token, the only difference is what the email says,
+and the default templates say it with a link. So the app waits for a code that
+was never printed. Worse, the link is not a usable second path: it redirects to
+the Site URL and no screen in this app handles that, so clicking it consumes
+the token and leaves the person signed out.
+
+Fix it in **Authentication -> Emails**. Two templates, because Supabase picks a
+different one depending on whether the address already exists in `auth.users`:
+**Magic Link** for anyone signing in again, **Confirm signup** for a first
+time. Editing only one leaves half the church stuck. Both get the same body,
+and `{{ .ConfirmationURL }}` comes out entirely.
+
+Subject:
+
+```
+{{ .Token }} is your Home Church sign in code
+```
+
+Body:
+
+```html
+<h2>Your sign in code</h2>
+<p>Enter this code in the Home Church app to finish signing in.</p>
+<p style="font-size:28px;letter-spacing:6px;"><strong>{{ .Token }}</strong></p>
+<p>The code can only be used once. If you did not ask to sign in, ignore this
+email and nothing will happen.</p>
+```
+
+Putting the code in the subject line is the part people notice. It is what
+lets a phone show the six digits on the lock screen, and it is why iOS offers
+to autofill them, which is what the `autocomplete="one-time-code"` on the
+Profile form is waiting for.
+
+While you are on that page, set the OTP expiry under **Authentication ->
+Providers -> Email** to something shorter than the one hour default. An hour
+is a long time for a code sitting in an inbox.
+
 -----
 
 

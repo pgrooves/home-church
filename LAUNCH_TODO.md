@@ -48,6 +48,14 @@ and moot while sign in is off.
 - [ ] **Deploy the account deletion function**, when you turn accounts on:
       `supabase functions deploy delete-account`. Not needed for v1.
 
+- [ ] **Edit the sign in email templates to send a code, not a link.** The app
+      asks for six digits, Supabase's default templates email a magic link,
+      and the link does not work here because no screen handles the redirect.
+      Authentication -> Emails, both **Magic Link** and **Confirm signup**,
+      print `{{ .Token }}` and delete `{{ .ConfirmationURL }}`. Templates to
+      paste are in README, "Accounts". This is a dashboard edit, no code
+      change, and sign in is broken end to end until it is done.
+
 - [ ] **Leaked Password Protection** is still off in the Auth dashboard.
       Unchanged and moot while sign in is off. Turn it on the day accounts go
       live.
