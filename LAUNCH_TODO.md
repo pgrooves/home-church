@@ -190,16 +190,26 @@ and moot while sign in is off.
       needs an Apple Developer account, which needs the D-U-N-S number at the
       top of this page. That is the real dependency, not the code.
 
+      Migration 0012 and the function are already applied and deployed, and
+      both were verified against the live project: the six new `device_tokens`
+      columns, `push_log`, `pg_cron`, `pg_net`, both `hc_` functions, the vault
+      secret, and the `hc-push-tick` job on `0 * * * *` and active. A dry run
+      of `hc_send_push('test', true)` reached the function and came back
+      `Not configured.`, which is the whole chain working and stopping at the
+      first secret you have not set yet. So step 1 below is done; steps 2 and 3
+      are still yours, and still need Apple.
+
       Once you are enrolled, in this order:
 
-      1. **Deploy the function**, from the repo root:
+      1. ~~**Deploy the function**~~ — already done, with `verify_jwt` off.
+         Redeploy only if you change `send-push/index.ts`, and keep the flag:
 
              supabase functions deploy send-push --no-verify-jwt
 
          The `--no-verify-jwt` is deliberate and the function's header explains
          why at length: the database has no user session, and the alternative
          is keeping a service role key in Postgres. It authenticates callers
-         with its own shared secret instead.
+         with its own shared secret instead. Turning it on breaks the cron path.
 
       2. **Read the cron secret** that migration 0012 generated. In the SQL
          editor:
