@@ -194,6 +194,37 @@ neither is a defect:
       most valuable unchecked box on this page even though nothing enforces
       it.
 
+- [ ] **Decide what happens when a thirteen year old signs in.** Nobody has
+      made this decision yet, it has been defaulted into, and it is the one
+      real risk on this page that Apple will not catch for you.
+
+      Sign in is open to anybody with an email address. Once in, Your
+      information asks for a birthday and a home address, and both sync to the
+      server. A church app is used by youth groups. So the current design will,
+      sooner or later, store a minor's date of birth and home address, and for
+      anybody under 13 that is COPPA territory, which wants verifiable parental
+      consent rather than a privacy policy.
+
+      Guideline 5.1.4 is the Apple-facing half and we satisfy it: we have a
+      policy and it names children's data. Nobody in App Review checks who
+      actually signs up, so this will not be caught at submission. That is
+      precisely why it needs deciding rather than discovering.
+
+      Three ways out, cheapest first:
+
+      1. **Stop collecting birthday and address.** Migration `0009` already
+         notes that of the twelve profile fields the app itself reads exactly
+         one, `first_name`. Everything else exists for church records, and a
+         church management system is the better home for it. This removes the
+         problem rather than managing it.
+      2. **Gate account creation at 13+**, stated plainly at sign in.
+      3. **Keep it and get the legal review first**, which folds into the item
+         above.
+
+      I would do the first. It is less code, less data, a shorter privacy
+      policy, and it is the only one of the three that means you are not
+      holding a child's home address at all.
+
 - [ ] **Confirm the effective date on both legal screens.** It reads
       **August 11, 2026** right now. Change `EFFECTIVE` at the top of
       `js/screens/legal.js` to the real launch date before you submit, then
