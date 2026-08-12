@@ -9,6 +9,19 @@ one sitting.
 Last updated at the end of Phase 7. **All phases are complete.** Everything
 below is what is left, and none of it is code.
 
+> **Sign in went live, and that moved several things on this page.** Accounts
+> are no longer dormant: email one time codes are working with Resend as the
+> sender. Three items below were parked with the words "when you turn accounts
+> on" or "moot while sign in is off," and they are now live items rather than
+> future ones. The account deletion function is deployed and wired into the
+> app, because Guideline 5.1.1(v) is a rejection, not a nicety. The privacy
+> policy has been rewritten, because the old one said your name never left the
+> phone and that stopped being true the moment the first person signed in.
+>
+> **The attorney item moved with them.** See the note further down: the
+> document's own advice was to get a review before accounts turn on. They are
+> on.
+
 -----
 
 ## Migrations, all four done
@@ -45,12 +58,31 @@ and moot while sign in is off.
       a real signup, held EXECUTE only through the PUBLIC grant this migration
       removed. The full reasoning is in the migration file's header.
 
-- [ ] **Deploy the account deletion function**, when you turn accounts on:
-      `supabase functions deploy delete-account`. Not needed for v1.
+- [x] **Deploy the account deletion function.** Done, August 12, now that
+      accounts are on. `delete-account` is deployed to
+      `ibqkumxfltfiuqevviji`, version 1, ACTIVE, with `verify_jwt` on. The app
+      calls it from Your account and from Your data.
 
-- [ ] **Leaked Password Protection** is still off in the Auth dashboard.
-      Unchanged and moot while sign in is off. Turn it on the day accounts go
-      live.
+      **One thing I could not test from here and you should test on device.**
+      The sandbox network policy blocks `supabase.co`, so I could not confirm
+      that the CORS preflight survives `verify_jwt`. The function handles
+      `OPTIONS` itself and this is the shape Supabase's own CORS guide uses,
+      so it should be fine, but a browser sends no `Authorization` header on a
+      preflight and that is exactly the kind of thing that works in testing
+      and fails for a reviewer. Sign in on a real device, delete a throwaway
+      account, and watch it succeed before you submit.
+
+- [ ] **Leaked Password Protection** is still off in the Auth dashboard, and
+      the advisor still flags it. **No longer moot, but still low priority:**
+      sign in is email one time codes, so there is no password for anybody to
+      reuse. It is one toggle under Authentication. Flip it and stop thinking
+      about it.
+
+- [ ] **Delete the three test accounts** when you are done testing.
+      `teebacca@hotmail.com`, `treytim@gmail.com`, and `trey@pgrooves.com` are
+      all yours, none are the Daigles, so nothing here needs a conversation
+      first. The cleanest way to check your own work is to delete one of them
+      from inside the app with the new button rather than from the dashboard.
 
 -----
 
@@ -119,20 +151,44 @@ and moot while sign in is off.
       describes what the app does. All three are true. Nobody at Apple assesses
       legal quality.
 
-      What an attorney protects is **your** exposure, not your approval, and
-      right now that exposure is genuinely small: there are no accounts, the
-      app collects almost nothing, and everything a person writes stays on
-      their own phone. There is not much to be liable for.
+      What an attorney protects is **your** exposure, not your approval.
 
-      **The day that changes is the day accounts turn on.** At that point you
-      are holding names, emails, birthdates, and home addresses of a
-      congregation including minors, on your own server, and the liability
-      section and the children's data paragraph stop being theoretical. Get the
-      review before that, not before launch.
+      **That exposure just grew, and this item should move up your list.** The
+      previous version of this note said the risk was small because there were
+      no accounts and everything stayed on the phone, and that the day it
+      changed was the day accounts turned on. Accounts are on. You are now
+      holding names, email addresses, birthdays, and home addresses for a
+      congregation that includes minors, on your own server.
+
+      Apple still does not care and will still approve you without it. This is
+      not a submission blocker and I am not marking it as one. But the
+      liability section and the children's paragraph in your policy stopped
+      being theoretical this week, and the honest read is that this is now the
+      most valuable unchecked box on this page even though nothing enforces
+      it.
 
 - [ ] **Confirm the effective date on both legal screens.** It reads
       **August 11, 2026** right now. Change `EFFECTIVE` at the top of
-      `js/screens/legal.js` to the real launch date before you submit.
+      `js/screens/legal.js` to the real launch date before you submit, then
+      re-run `node scripts/make_legal_pages.js` so the public pages match.
+
+      The policy itself has been rewritten for accounts and the pages under
+      `legal/` are already regenerated, so the date is the only thing left in
+      them. Re-read the new "Signing in" section once before you submit: it
+      describes what actually syncs, and you are the one who has to stand
+      behind it.
+
+- [!] **Decide what happens to the three notification switches.** They are
+      inert. In the home screen web app the handler returns before it reaches
+      any native code, and even in a native build nothing sends, because there
+      is no APNs sender, no scheduled job, and no Edge Function reading
+      `device_tokens`. That table has zero rows.
+
+      Two honest options: build the sending side, or hide the switches until
+      you do. What you cannot do is ship a switch labelled "Monday morning,
+      once a week" that has never delivered anything. This is not me being
+      pedantic about Guideline 2.7, it is that the first person who turns it
+      on and waits will conclude the app is broken.
 
 - [ ] **Validate `PrivacyInfo.xcprivacy` in Xcode.** Apple's own required
       reason API page would not load from my sandbox, so the reason codes in my
@@ -159,23 +215,30 @@ and moot while sign in is off.
       fidelity, retake them in the iOS simulator using the same order and
       captions. Do not ship a mix of both.
 
-- [ ] **Delete the three orphaned accounts** in the Supabase project. They have
-      no data, they signed in to a sync that never worked, and starting
-      production at zero is cleaner. Tell me if one is you or the Daigles.
+*(The orphaned accounts item that used to sit here moved up under Migrations,
+since those three accounts are no longer orphaned. The effective date item is
+above, under Before submission.)*
 
 -----
 
 ## Supabase dashboard
 
-- [ ] **Move off Supabase's default auth email sender.** Only matters when
-      accounts are switched on, which is not v1, so this is no longer on the
-      critical path. When you do turn accounts on, the built in sender is rate
-      limited and not for production, and a reviewer who never receives a
-      sign in code rejects the app. Resend or SendGrid, under Project Settings,
-      Authentication, SMTP Settings.
+- [x] **Move off Supabase's default auth email sender.** Done, Resend is
+      wired in and codes are arriving. This was the right call and it was on
+      the critical path the moment sign in went live.
 
-- [ ] **Auth URL configuration**, same condition. Site URL and Redirect URLs
-      will need the Capacitor origin, not just the GitHub Pages URL.
+- [!] **Auth URL configuration, and this is the one most likely to bite you.**
+      Sign in works today from the GitHub Pages origin. A native build does
+      not run on that origin, it runs on `capacitor://localhost`, and Site URL
+      and Redirect URLs in the Supabase Auth dashboard have to know about it.
+
+      Your six digit code flow is more forgiving here than a magic link would
+      be, because typing a code back into the app needs no redirect at all, so
+      there is a good chance this just works. **Do not take that on faith.**
+      This is the classic failure where everything is fine in your home screen
+      web app and the reviewer cannot get past the first screen. Test sign in
+      on a real device from the Xcode build, not from Safari, before you
+      submit.
 
 -----
 

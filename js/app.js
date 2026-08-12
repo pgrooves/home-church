@@ -281,6 +281,29 @@
         : 'Cleared what we could reach. Your browser is not letting the app store anything right now.');
     },
 
+    /* Deleting the account is armed through the route for exactly the reason
+       erasing is, so that the back gesture genuinely disarms it rather than
+       leaving a primed button behind. The long version is in legal.js. */
+    'account-delete-ask': function () {
+      HC.router.go({ name: 'data', id: 'confirm-account' });
+    },
+
+    'account-delete-cancel': function () {
+      HC.router.back();
+    },
+
+    'account-delete-confirm': function () {
+      HC.auth.deleteAccount().then(function () {
+        HC.router.go({ name: 'home' });
+        c.toast('Your account is deleted. What is saved on this phone is still here.');
+      }).catch(function (err) {
+        // Back to the unarmed screen, so a failure never leaves them staring
+        // at a confirmation for something that did not happen.
+        HC.router.go({ name: 'data' }, { force: true });
+        c.toast(err.message || 'We could not delete your account. Please email the church.');
+      });
+    },
+
     'open-scripture': function (el) {
       c.openExternal(c.bibleUrl(el.getAttribute('data-reference')));
     },

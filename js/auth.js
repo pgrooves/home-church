@@ -205,6 +205,56 @@
     return done.then(function () { setSession(null); });
   }
 
+  /* ---------------------------------------------------- account deletion
+
+     Guideline 5.1.1(v): an app that lets somebody create an account has to
+     let them delete it from inside the app. Signing out is not deletion, and
+     neither is erasing this phone, so this gets its own path and its own
+     confirmation rather than being folded into either.
+
+     The service role key needed to remove a row from auth.users must never
+     ship in the bundle, so the deletion itself happens in the delete-account
+     Edge Function. What goes over the wire is the caller's own access token
+     and nothing else. The function works out whose account that is; no user
+     id is sent, because a function that accepts one is a function that will
+     eventually delete the wrong person.
+     ------------------------------------------------------------------- */
+
+  function functionsUrl(path) {
+    return cfg.SUPABASE_URL.replace(/\/$/, '') + '/functions/v1' + path;
+  }
+
+  function deleteAccount() {
+    if (!isSignedIn()) return Promise.reject(new Error('You are not signed in.'));
+
+    return ensureFreshSession().then(function (fresh) {
+      // A session that would not refresh cannot authorize a deletion. Say so,
+      // rather than signing them out quietly, which looks like it worked.
+      if (!fresh) throw new Error('That sign in has expired. Sign in again and try once more.');
+
+      return networkSafe(fetch(functionsUrl('/delete-account'), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          apikey: cfg.SUPABASE_ANON_KEY,
+          Authorization: 'Bearer ' + fresh.accessToken
+        }
+      })).then(function (res) {
+        return res.json().catch(function () { return {}; }).then(function (body) {
+          if (!res.ok) {
+            throw new Error(friendlyError(body,
+              'We could not finish deleting your account. Please email the church and we will do it by hand.'));
+          }
+          // The user this session belonged to no longer exists, so the tokens
+          // are dead. Drop them here instead of calling /logout, which would
+          // 401 against a deleted user and look like a failure.
+          setSession(null);
+          return true;
+        });
+      });
+    });
+  }
+
   /* --------------------------------------------------------- profile sync */
 
   var FIELD_MAP = {
@@ -340,6 +390,7 @@
     requestCode: requestCode,
     verifyCode: verifyCode,
     signOut: signOut,
+    deleteAccount: deleteAccount,
     saveProfile: saveProfile,
     sendPasswordReset: sendPasswordReset,
     init: init

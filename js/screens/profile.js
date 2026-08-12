@@ -60,10 +60,17 @@
 
     if (HC.auth.isSignedIn()) {
       var user = HC.auth.getUser();
+      // Deleting the account lives on the Your data screen, next to the copy
+      // that says what is actually being deleted. It is linked from here as
+      // well because this is where somebody looks for it, and because 5.1.1(v)
+      // is about being able to find the thing, not only about it existing.
       return '' +
         c.sectionHeader('Synced', 'Signed in') +
         c.row({ title: 'Signed in as ' + (user.email || user.phone || 'you') }) +
-        '<div class="hc-mt-lg">' + c.button('Sign out', { action: 'sign-out', variant: 'secondary' }) + '</div>';
+        '<div class="hc-mt-lg">' +
+          c.button('Sign out', { action: 'sign-out', variant: 'secondary' }) +
+          c.button('Delete my account', { action: 'go-legal', id: 'data', variant: 'tertiary' }) +
+        '</div>';
     }
 
     if (authStep === 'sent') {
@@ -293,7 +300,9 @@
     html += c.row({ title: 'Terms of use', action: 'go-legal', id: 'terms', chevron: true });
     html += c.row({
       title: 'Your data',
-      sub: 'See what is stored on this phone, and erase it',
+      sub: HC.auth.isConfigured() && HC.auth.isSignedIn()
+        ? 'See what is stored, erase this phone, or delete your account'
+        : 'See what is stored on this phone, and erase it',
       action: 'go-legal',
       id: 'data',
       chevron: true
