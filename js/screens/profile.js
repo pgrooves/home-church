@@ -241,13 +241,26 @@
       id: 'sundayReminder',
       on: p.notifications.sundayReminder
     });
-    html += switchRow({
-      title: 'The day your group meets',
-      sub: 'Only on your group’s day',
-      action: 'toggle-notify',
-      id: 'groupWeek',
-      on: p.notifications.groupWeek
-    });
+    /* The third switch is season gated, the same way Connect gates the group
+       finder, and for a harder reason than symmetry. "Only on your group's
+       day" needs to know which group you are in, and nothing in this app
+       models that: there is no membership, only a roster a leader keeps on
+       their own phone. Sending it on every group's day would be noise, and
+       sending it on none would be a lie.
+
+       So while groups are out of season it does not render, and the server
+       column behind it stays false. When groups come back, this needs a group
+       picker in Your information before the switch can be honest. Migration
+       0012 says the same thing next to the column. */
+    if (HC.data.church.groupsInSeason) {
+      html += switchRow({
+        title: 'The day your group meets',
+        sub: 'Only on your group’s day',
+        action: 'toggle-notify',
+        id: 'groupWeek',
+        on: p.notifications.groupWeek
+      });
+    }
 
     // Reading
     html += c.sectionHeader('Easier to read', 'Display');

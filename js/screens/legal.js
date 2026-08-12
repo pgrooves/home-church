@@ -104,7 +104,7 @@
 
     html += block('What actually leaves your phone', [
       'Content. The app downloads sermons, guides, events, and the church’s own details so you always have this week’s material, and keeps a copy so it still works when you have no signal. That is an ordinary web request, and like any web request it includes your device’s network address. We do not use it to work out who you are and we do not build a profile from it.',
-      'Notifications, if you turn them on. Apple hands us an anonymous token for your device so we can tell you when a new guide is posted. The token is not attached to your name or your email, and turning notifications off ends it.'
+      'Notifications, if you turn them on. Apple gives us an anonymous token for your device, and we keep it alongside which of the switches you turned on, so we know what to send and what not to. None of it is attached to your name, your email, or your account: a row here says that some phone wants the Monday guide notice, never whose phone it is. Turning the switches off stops the sending, and we retire the token when your phone tells Apple the app is gone.'
     ]);
 
     html += block('When the app hands you off to somebody else', [

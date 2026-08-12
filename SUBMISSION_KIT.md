@@ -26,15 +26,18 @@ time, except where noted, where it costs weeks.
 
 ### Code, done
 
-- [x] ~~Every inert control removed or given a real destination.~~ **Not true
-      as written, and it needs a decision.** The three notification switches
-      in Your account are inert. Turning one on writes a boolean to
-      localStorage; in a browser or a home screen web app the handler returns
-      at `js/app.js:457` before it reaches any native code, and even in a
-      native build nothing sends, because no APNs sender, scheduled job, or
-      Edge Function exists to read `device_tokens`. The table has zero rows.
-      Either build the sending side or hide the switches before submitting.
-      Everything else on Connect and Profile does have a real destination.
+- [x] Every inert control removed or given a real destination. **True again as
+      of August 12, and it was not for a while.** The notification switches
+      wrote a boolean and nothing else. There is now a real sender:
+      `send-push` signs an APNs token and delivers, migration 0012 schedules
+      it hourly and decides in Louisiana local time, and the app writes your
+      preferences to the server so per-topic filtering can happen where the
+      push is actually addressed. The third switch, which needed group
+      membership the app does not model, is season gated off rather than
+      shipped inert.
+- [x] Push notifications wired end to end in code. **Still needs the APNs
+      credentials, which need the Apple Developer account.** Runbook in
+      `LAUNCH_TODO.md`.
 - [x] Account deletion, in app, Guideline 5.1.1(v). `delete-account` Edge
       Function deployed, reachable from Your account and from Your data.
 - [x] Placeholder serve teams replaced with the church's own seven.
@@ -444,7 +447,13 @@ our email list on Flodesk, and sermon audio on our podcast host and Spotify.
 
 NOTIFICATIONS
 The app asks for notification permission only when a person turns one of the
-three switches on in Your account, never at launch.
+switches on in Your account, never at launch. Declining is respected: the
+switch goes back off rather than sitting on while nothing arrives.
+
+Two notices are sent, both from our own server: the small group guide when a
+new one is published, and a reminder the evening before our Sunday gathering.
+If you would like to see one during review, turn a switch on and let us know
+and we will send one to your device within a few minutes.
 
 IT IS BUILT TO WORK OFFLINE
 Guides, sermons, and notes are stored on the device. If you would like to

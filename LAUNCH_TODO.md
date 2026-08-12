@@ -178,17 +178,93 @@ and moot while sign in is off.
       describes what actually syncs, and you are the one who has to stand
       behind it.
 
-- [!] **Decide what happens to the three notification switches.** They are
-      inert. In the home screen web app the handler returns before it reaches
-      any native code, and even in a native build nothing sends, because there
-      is no APNs sender, no scheduled job, and no Edge Function reading
-      `device_tokens`. That table has zero rows.
+- [!] **Push notifications: the code is built, the credentials are not.**
+      The sending side now exists. Migration 0012 added per-topic preferences,
+      a `push_log`, and an hourly `pg_cron` tick that decides in Louisiana
+      local time when to send, so daylight saving cannot drift the schedule.
+      The `send-push` Edge Function signs an APNs token and delivers. The app
+      writes your switches to the server, because a push is addressed before
+      the phone can filter it.
 
-      Two honest options: build the sending side, or hide the switches until
-      you do. What you cannot do is ship a switch labelled "Monday morning,
-      once a week" that has never delivered anything. This is not me being
-      pedantic about Guideline 2.7, it is that the first person who turns it
-      on and waits will conclude the app is broken.
+      **None of it can send a single notification until Apple exists.** APNs
+      needs an Apple Developer account, which needs the D-U-N-S number at the
+      top of this page. That is the real dependency, not the code.
+
+      Once you are enrolled, in this order:
+
+      1. **Deploy the function**, from the repo root:
+
+             supabase functions deploy send-push --no-verify-jwt
+
+         The `--no-verify-jwt` is deliberate and the function's header explains
+         why at length: the database has no user session, and the alternative
+         is keeping a service role key in Postgres. It authenticates callers
+         with its own shared secret instead.
+
+      2. **Read the cron secret** that migration 0012 generated. In the SQL
+         editor:
+
+             select decrypted_secret from vault.decrypted_secrets
+             where name = 'hc_push_cron_secret';
+
+         It was generated in the database rather than written into the repo,
+         so it has never been in git or in a chat window. Copy it once.
+
+      3. **Set five secrets** on the function, under Edge Functions →
+         send-push → Secrets:
+
+         | Secret | Value |
+         |---|---|
+         | `HC_PUSH_CRON_SECRET` | what you just copied |
+         | `APNS_KEY_ID` | the 10 character Key ID of your `.p8` |
+         | `APNS_TEAM_ID` | your 10 character Team ID |
+         | `APNS_PRIVATE_KEY` | the whole `.p8` file, BEGIN and END lines included |
+         | `APNS_BUNDLE_ID` | `com.homechurchnola.app` |
+
+         **`APNS_HOST` is the sixth one and the one that will waste your
+         afternoon.** It defaults to Apple's production gateway. A build you
+         run from Xcode onto your own phone is a *development* build and its
+         token only works against `api.sandbox.push.apple.com`. TestFlight and
+         the App Store are production. Sending a sandbox token to the
+         production gateway fails with `BadDeviceToken`, which looks exactly
+         like a bug in the code and is not. While you are testing from Xcode,
+         set `APNS_HOST` to `api.sandbox.push.apple.com`, and **delete that
+         secret before you submit.**
+
+      4. **Prove the targeting without sending anything.** In the SQL editor:
+
+             select public.hc_send_push('test', true);
+
+         The `true` is dry run. The function reports how many phones it would
+         reach and what the notification would say, and touches Apple not at
+         all. Then check what came back:
+
+             select * from net._http_response order by id desc limit 1;
+
+      5. **Send yourself a real one**, from a device with the app installed
+         and a switch turned on:
+
+             select public.hc_send_push('test');
+
+         Then read the outcome:
+
+             select * from public.push_log order by ran_at desc limit 5;
+
+      6. **Watch the first real Monday.** The guide notice only fires if a
+         guide was actually published since the last one went out, so a quiet
+         Monday is correct behaviour, not a failure. `push_log.skipped` tells
+         the two apart.
+
+- [x] ~~Decide what happens to the third switch.~~ **Season gated off.** "The
+      day your group meets" needs to know which group you are in, and nothing
+      in the app models that: there is no membership, only a roster a leader
+      keeps on their own phone. It now hides while `groups_in_season` is
+      false, the same gate Connect already uses, so no inert control ships.
+
+      **When groups come back in season, that switch needs a group picker in
+      Your information before it renders again.** It is wired to a server
+      column that stays false, so turning the season on without building the
+      picker would put the old problem back.
 
 - [ ] **Validate `PrivacyInfo.xcprivacy` in Xcode.** Apple's own required
       reason API page would not load from my sandbox, so the reason codes in my
