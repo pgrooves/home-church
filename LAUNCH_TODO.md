@@ -24,11 +24,22 @@ below is what is left, and none of it is code.
 
 -----
 
-## Migrations, all four done
+## Migrations, all five done
 
-Applied to `ibqkumxfltfiuqevviji` and verified. **The Supabase security report
-is clean** apart from Leaked Password Protection, which is a dashboard toggle
-and moot while sign in is off.
+Applied to `ibqkumxfltfiuqevviji` and verified against the live project rather
+than trusting the report that applied them.
+
+**The Supabase security report is clean** apart from two known entries, and
+neither is a defect:
+
+- **Leaked Password Protection** (WARN), a dashboard toggle. Low priority
+  rather than moot now that sign in is on, because sign in is email one time
+  codes and there is no password to reuse.
+- **`rls_enabled_no_policy` on `public.push_log`** (INFO), which is the
+  intended design. That table has RLS on and deliberately no policies, with
+  grants revoked from `anon` and `authenticated`, because only the service
+  role should ever read the church's send history. **Do not "fix" this by
+  adding a policy.**
 
 - [x] `0008_real_serve_teams.sql`. Seven real serve teams, requirement set on
       Home Kids and Worship Team only, the four invented ones gone.
@@ -71,6 +82,17 @@ and moot while sign in is off.
       preflight and that is exactly the kind of thing that works in testing
       and fails for a reviewer. Sign in on a real device, delete a throwaway
       account, and watch it succeed before you submit.
+
+- [x] **`0012_push_delivery.sql`** applied and verified, August 12. Per-topic
+      preference columns on `device_tokens`, `push_log`, `pg_cron` and `pg_net`
+      enabled, `hc_send_push` and `hc_push_tick` both SECURITY DEFINER with a
+      pinned `search_path` and EXECUTE revoked from `public`, `anon`, and
+      `authenticated`, and the `hc-push-tick` job live on `0 * * * *`.
+
+      The lesson from 0011 was applied rather than re-learned: both new
+      SECURITY DEFINER functions were checked in the catalog, not inferred
+      from the advisors staying quiet. Their ACLs grant EXECUTE to `postgres`
+      and `service_role` only.
 
 - [ ] **Leaked Password Protection** is still off in the Auth dashboard, and
       the advisor still flags it. **No longer moot, but still low priority:**
@@ -196,8 +218,8 @@ and moot while sign in is off.
       secret, and the `hc-push-tick` job on `0 * * * *` and active. A dry run
       of `hc_send_push('test', true)` reached the function and came back
       `Not configured.`, which is the whole chain working and stopping at the
-      first secret you have not set yet. So step 1 below is done; steps 2 and 3
-      are still yours, and still need Apple.
+      first secret you have not set yet. So step 1 below is done. Everything
+      from step 2 on is still yours, and still needs Apple.
 
       Once you are enrolled, in this order:
 
