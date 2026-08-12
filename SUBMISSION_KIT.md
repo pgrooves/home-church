@@ -26,7 +26,20 @@ time, except where noted, where it costs weeks.
 
 ### Code, done
 
-- [x] Every inert control removed or given a real destination.
+- [x] Every inert control removed or given a real destination. **True again as
+      of August 12, and it was not for a while.** The notification switches
+      wrote a boolean and nothing else. There is now a real sender:
+      `send-push` signs an APNs token and delivers, migration 0012 schedules
+      it hourly and decides in Louisiana local time, and the app writes your
+      preferences to the server so per-topic filtering can happen where the
+      push is actually addressed. The third switch, which needed group
+      membership the app does not model, is season gated off rather than
+      shipped inert.
+- [x] Push notifications wired end to end in code. **Still needs the APNs
+      credentials, which need the Apple Developer account.** Runbook in
+      `LAUNCH_TODO.md`.
+- [x] Account deletion, in app, Guideline 5.1.1(v). `delete-account` Edge
+      Function deployed, reachable from Your account and from Your data.
 - [x] Placeholder serve teams replaced with the church's own seven.
 - [x] Home groups season gated, so placeholder groups do not render.
 - [x] Privacy policy, terms, and the data screen, reachable in the app.
@@ -254,34 +267,63 @@ ship a mix of both, the tonal difference shows.
 
 ## 5. App Privacy questionnaire, filled in
 
-Answer as of v1: accounts off, fonts bundled, push shipped.
+**Answer as of v1: accounts ON**, email one time codes with Resend as the
+sender, fonts bundled, push registration present but no sender behind it.
 
-**Does this app collect data? Yes.** Three types, and none of them for
-tracking.
+**This section was rewritten when sign in went live.** The previous version
+answered for an app with no accounts and it is preserved nowhere, on purpose,
+because a stale privacy answer is worse than no draft at all. If sign in is
+ever switched back off, this table shrinks rather than being restored from
+memory.
+
+**Does this app collect data? Yes.**
 
 | Data type | Collected | Linked to user | Used for tracking | Purpose |
 |---|---|---|---|---|
-| **Device ID** | Yes | **No** | No | App Functionality |
 | **Name** | Yes | Yes | No | App Functionality |
 | **Email Address** | Yes | Yes | No | App Functionality |
 | **Phone Number** | Yes | Yes | No | App Functionality |
+| **Physical Address** | Yes | Yes | No | App Functionality |
+| **Other Data** | Yes | Yes | No | App Functionality |
+| **User ID** | Yes | Yes | No | App Functionality |
+| **Device ID** | Yes | **No** | No | App Functionality |
 | **Other User Content** | Yes | Yes | No | App Functionality |
 
 Everything else: **Not Collected.** Specifically no Health, no Financial Info,
 no Location, no Sensitive Info, no Contacts, no Browsing History, no Search
 History, no Usage Data, no Diagnostics, no Purchases.
 
-**Notes on the two that need explaining:**
+**Notes on each one that needs explaining:**
 
-- **Device ID** is the APNs push token and nothing else. Not linked, because
-  v1 has no accounts and there is no name to link it to.
-- **Name, email, phone, and user content** are collected only when somebody
-  chooses to fill in a Connect form, and those forms open in the system
+- **Name, Physical Address, and Other Data** are the fields under Your
+  information. They sync to `public.profiles` the moment somebody signs in,
+  through `FIELD_MAP` in `js/auth.js`. Physical Address is the street, unit,
+  city, state, and zip. Other Data is birthday, campus, and marital status.
+  **None of these were declared before sign in went live and all of them have
+  to be now.** Filling any of them in is optional and the app works without.
+- **Email Address** is what sign in is built on, so it is unavoidable.
+- **Phone Number** is declared because `classify()` in `js/auth.js` still
+  accepts a phone number and would create a phone account. No SMS provider is
+  connected, so in practice this path fails today. Declared anyway, because
+  over-declaring costs nothing and the code path exists.
+- **User ID** is the Supabase auth uuid. It is the primary key of the profile
+  row, so it is unambiguously collected and linked.
+- **Device ID** is the APNs push token, not linked to the account. Note that
+  the token is only ever registered in a native build, and nothing sends to it
+  yet. See the notification note in section 7 before answering this one.
+- **Other User Content** covers Connect forms, which open in the system
   browser and post to Church Center, Group Vitals, Flodesk, or a Google form.
-  The app never handles the values. Apple offers an optional disclosure
-  exemption for data volunteered in a customer service context and these
-  plausibly qualify, but **declare them anyway.** Over-declaring costs
-  nothing. Under-declaring is a metadata rejection.
+  The app never handles those values. Apple offers an optional exemption for
+  data volunteered in a customer service context and these plausibly qualify,
+  but declare them anyway.
+
+**Sensitive Info: No.** Worth stating because it gets asked. Apple's Sensitive
+Info category means racial or ethnic data, sexual orientation, pregnancy,
+disability, religious or philosophical beliefs, union membership, political
+opinion, genetic, or biometric data. Marital status and birthday are not on
+that list and belong under Other Data. Religious belief is not collected from
+anybody: this is a church's app, which says something about the publisher, not
+about a data field in it.
 
 **Tracking: No.** No ATT prompt should ever appear. No analytics SDK, no ad
 network, no attribution. If a prompt appears, something was added that should
@@ -346,10 +388,31 @@ which is exactly the shape that fails Guideline 4.2.
 Thanks for reviewing. Home Church is the app for a single church in Metairie,
 Louisiana. A few notes to save you time.
 
-NO ACCOUNT IS NEEDED, AND THERE IS NO LOGIN
-Nothing in this app is behind a sign in. Every screen, including all leader
-features, is fully available on first launch. There is no demo account
-because there is nothing to sign in to.
+NO ACCOUNT IS NEEDED, AND NOTHING IS BEHIND ONE
+Every screen, including all leader features, is fully available on first
+launch without signing in. We have not supplied a demo account because there
+is no gated content for one to unlock.
+
+Signing in is offered, and it does exactly one thing: it syncs the optional
+fields under Your information so they follow a person to a new phone.
+
+If you would like to test it, please sign in with any email address you
+control. Your account is created on first use, so no credentials from us are
+needed. We send a six digit code, there is no password.
+
+DELETING AN ACCOUNT, GUIDELINE 5.1.1(v)
+Once signed in, account deletion is available in two places, both inside the
+app and neither requiring an email to us or a visit to a website:
+
+  1. Tap the circle in the top right corner to open Your account. "Delete my
+     account" sits directly under Sign out.
+  2. Or open Your account, then Your data, where the button sits beside the
+     copy explaining exactly what is removed.
+
+It takes two taps, the second confirming, and it deletes the account and
+everything synced to it from our server rather than deactivating it. The
+separate "Erase everything on this phone" button on that same screen clears
+local device data and is deliberately not the same control.
 
 HOW TO SEE LEADER MODE, WHICH IS THE HEART OF THE APP
 This is not obvious and we would rather point you straight at it:
@@ -384,9 +447,13 @@ our email list on Flodesk, and sermon audio on our podcast host and Spotify.
 
 NOTIFICATIONS
 The app asks for notification permission only when a person turns one of the
-three switches on in Your account, never at launch. If you would like to see
-one delivered during review, please let us know and we will send a test to
-your device.
+switches on in Your account, never at launch. Declining is respected: the
+switch goes back off rather than sitting on while nothing arrives.
+
+Two notices are sent, both from our own server: the small group guide when a
+new one is published, and a reminder the evening before our Sunday gathering.
+If you would like to see one during review, turn a switch on and let us know
+and we will send one to your device within a few minutes.
 
 IT IS BUILT TO WORK OFFLINE
 Guides, sermons, and notes are stored on the device. If you would like to

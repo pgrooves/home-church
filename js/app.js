@@ -281,6 +281,29 @@
         : 'Cleared what we could reach. Your browser is not letting the app store anything right now.');
     },
 
+    /* Deleting the account is armed through the route for exactly the reason
+       erasing is, so that the back gesture genuinely disarms it rather than
+       leaving a primed button behind. The long version is in legal.js. */
+    'account-delete-ask': function () {
+      HC.router.go({ name: 'data', id: 'confirm-account' });
+    },
+
+    'account-delete-cancel': function () {
+      HC.router.back();
+    },
+
+    'account-delete-confirm': function () {
+      HC.auth.deleteAccount().then(function () {
+        HC.router.go({ name: 'home' });
+        c.toast('Your account is deleted. What is saved on this phone is still here.');
+      }).catch(function (err) {
+        // Back to the unarmed screen, so a failure never leaves them staring
+        // at a confirmation for something that did not happen.
+        HC.router.go({ name: 'data' }, { force: true });
+        c.toast(err.message || 'We could not delete your account. Please email the church.');
+      });
+    },
+
     'open-scripture': function (el) {
       c.openExternal(c.bibleUrl(el.getAttribute('data-reference')));
     },
@@ -446,9 +469,6 @@
       var profile = HC.store.getProfile();
       var next = Object.assign({}, profile.notifications);
       var turningOn = !next[key];
-      var anyOtherOn = Object.keys(next).some(function (k) {
-        return k !== key && next[k];
-      });
 
       next[key] = turningOn;
       HC.store.updateProfile({ notifications: next });
@@ -456,10 +476,14 @@
 
       if (!HC.native.isNative()) return;
 
+      var anyStillOn = Object.keys(next).some(function (k) { return next[k]; });
+
       if (turningOn) {
         HC.native.enableNotifications().then(function (granted) {
           if (granted) {
             HC.native.tap('Light');
+            // Registration re-sends every preference, so the second switch
+            // somebody turns on needs no request of its own.
             return;
           }
           next[key] = false;
@@ -467,7 +491,11 @@
           setSwitch(el, false);
           c.toast('Notifications are switched off for this app in Settings. Turn them on there and come back.');
         });
-      } else if (!anyOtherOn) {
+      } else if (anyStillOn) {
+        // They still want something, just not this one. Update the row rather
+        // than deregistering the phone, which would silence the others too.
+        HC.native.syncPreferences();
+      } else {
         // Last one off means stop sending to this phone entirely.
         HC.native.disableNotifications();
       }

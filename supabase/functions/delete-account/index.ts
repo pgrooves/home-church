@@ -15,10 +15,12 @@
  * not enough. Finishing on a website is permitted, but starting on one is
  * not. This function is what makes the in-app path real.
  *
- * DORMANT IN V1. Version 1 of the app ships with sign in switched off, so
- * there are no accounts to delete and Apple's requirement does not apply.
- * This is deployed anyway, and tested, so that turning accounts on is a
- * client change rather than a scramble.
+ * LIVE AS OF V1. This shipped dormant while sign in was switched off, on the
+ * theory that turning accounts on later should be a client change rather than
+ * a scramble. Sign in is on now, over email one time codes with Resend as the
+ * sender, so this function is load bearing: without it the app takes accounts
+ * and offers no way out of them, which is a rejection under 5.1.1(v) and,
+ * more to the point, is not a decent way to treat somebody.
  *
  * WHAT GETS DELETED. The auth user, which cascades to public.profiles through
  * the foreign key in migration 0009. Notes, guide checkmarks, group rosters,

@@ -60,10 +60,17 @@
 
     if (HC.auth.isSignedIn()) {
       var user = HC.auth.getUser();
+      // Deleting the account lives on the Your data screen, next to the copy
+      // that says what is actually being deleted. It is linked from here as
+      // well because this is where somebody looks for it, and because 5.1.1(v)
+      // is about being able to find the thing, not only about it existing.
       return '' +
         c.sectionHeader('Synced', 'Signed in') +
         c.row({ title: 'Signed in as ' + (user.email || user.phone || 'you') }) +
-        '<div class="hc-mt-lg">' + c.button('Sign out', { action: 'sign-out', variant: 'secondary' }) + '</div>';
+        '<div class="hc-mt-lg">' +
+          c.button('Sign out', { action: 'sign-out', variant: 'secondary' }) +
+          c.button('Delete my account', { action: 'go-legal', id: 'data', variant: 'tertiary' }) +
+        '</div>';
     }
 
     if (authStep === 'sent') {
@@ -234,13 +241,26 @@
       id: 'sundayReminder',
       on: p.notifications.sundayReminder
     });
-    html += switchRow({
-      title: 'The day your group meets',
-      sub: 'Only on your group’s day',
-      action: 'toggle-notify',
-      id: 'groupWeek',
-      on: p.notifications.groupWeek
-    });
+    /* The third switch is season gated, the same way Connect gates the group
+       finder, and for a harder reason than symmetry. "Only on your group's
+       day" needs to know which group you are in, and nothing in this app
+       models that: there is no membership, only a roster a leader keeps on
+       their own phone. Sending it on every group's day would be noise, and
+       sending it on none would be a lie.
+
+       So while groups are out of season it does not render, and the server
+       column behind it stays false. When groups come back, this needs a group
+       picker in Your information before the switch can be honest. Migration
+       0012 says the same thing next to the column. */
+    if (HC.data.church.groupsInSeason) {
+      html += switchRow({
+        title: 'The day your group meets',
+        sub: 'Only on your group’s day',
+        action: 'toggle-notify',
+        id: 'groupWeek',
+        on: p.notifications.groupWeek
+      });
+    }
 
     // Reading
     html += c.sectionHeader('Easier to read', 'Display');
@@ -293,7 +313,9 @@
     html += c.row({ title: 'Terms of use', action: 'go-legal', id: 'terms', chevron: true });
     html += c.row({
       title: 'Your data',
-      sub: 'See what is stored on this phone, and erase it',
+      sub: HC.auth.isConfigured() && HC.auth.isSignedIn()
+        ? 'See what is stored, erase this phone, or delete your account'
+        : 'See what is stored on this phone, and erase it',
       action: 'go-legal',
       id: 'data',
       chevron: true

@@ -211,30 +211,82 @@
 
   var TOKEN_KEY = 'pushToken';
 
+  function restHeaders(extra) {
+    var cfg = HC.config || {};
+    return Object.assign({
+      'Content-Type': 'application/json',
+      apikey: cfg.SUPABASE_ANON_KEY,
+      Authorization: 'Bearer ' + cfg.SUPABASE_ANON_KEY
+    }, extra || {});
+  }
+
+  /* WHY THE SWITCHES LIVE ON THE SERVER NOW, reversing what migration 0010
+     said. That comment argued the three preferences belonged on the phone
+     because the church only needs to know which phones want anything at all,
+     and that per-topic filtering could happen "on the sending side".
+
+     The sending side is the server. A push is composed and addressed before
+     the phone is involved, so a phone that wants the guide notice but not the
+     Sunday reminder cannot drop one on arrival: iOS has already drawn it on
+     the lock screen before any of our code runs. Either the server knows, or
+     two of the three switches are decorative. Migration 0012 adds the columns
+     and explains the privacy trade in full. */
+  function prefsBody() {
+    var prefs = (HC.store.getProfile().notifications) || {};
+    return {
+      active: true,
+      wants_new_guide: !!prefs.newGuide,
+      wants_sunday_reminder: !!prefs.sundayReminder,
+      wants_group_day: !!prefs.groupWeek
+    };
+  }
+
   function saveToken(token) {
     if (!token) return Promise.resolve(false);
-
-    // Same token as last time means the church already has it.
-    if (HC.store.storage.get(TOKEN_KEY, null) === token) return Promise.resolve(true);
 
     var cfg = HC.config || {};
     if (!cfg.SUPABASE_URL || !cfg.SUPABASE_ANON_KEY) return Promise.resolve(false);
 
+    /* This used to return early when the token matched the stored one, which
+       looked like a sensible optimisation and quietly broke two things. A
+       preference changed after the first registration never reached the
+       server, and `active` was left false forever after somebody switched
+       everything off and later changed their mind, because the upsert only
+       updates the columns it actually sends. Re-registering on every launch
+       costs one request and repairs both. */
+    var row = Object.assign({ token: token, platform: 'ios' }, prefsBody());
+
     return fetch(cfg.SUPABASE_URL + '/rest/v1/device_tokens', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        apikey: cfg.SUPABASE_ANON_KEY,
-        Authorization: 'Bearer ' + cfg.SUPABASE_ANON_KEY,
-        Prefer: 'resolution=merge-duplicates,return=minimal'
-      },
-      body: JSON.stringify({ token: token, platform: 'ios' })
+      headers: restHeaders({ Prefer: 'resolution=merge-duplicates,return=minimal' }),
+      body: JSON.stringify(row)
     }).then(function (res) {
       if (!res.ok) return false;
       HC.store.storage.set(TOKEN_KEY, token);
       return true;
     }).catch(function () {
       return false;   // offline. The switch stays on and this retries next launch.
+    });
+  }
+
+  /* A switch moved and the phone is already registered, so this is an update
+     rather than another registration. Silent by design: somebody flipping a
+     switch does not need a receipt, and a failure here is repaired by the
+     re-register on next launch. */
+  function syncPreferences() {
+    var token = HC.store.storage.get(TOKEN_KEY, null);
+    var cfg = HC.config || {};
+    if (!token || !cfg.SUPABASE_URL || !cfg.SUPABASE_ANON_KEY) return Promise.resolve(false);
+
+    return fetch(cfg.SUPABASE_URL + '/rest/v1/device_tokens?token=eq.' +
+                 encodeURIComponent(token), {
+      method: 'PATCH',
+      headers: restHeaders({ Prefer: 'return=minimal' }),
+      body: JSON.stringify(prefsBody())
+    }).then(function (res) {
+      return res.ok;
+    }).catch(function () {
+      return false;
     });
   }
 
@@ -281,13 +333,13 @@
     return fetch(cfg.SUPABASE_URL + '/rest/v1/device_tokens?token=eq.' +
                  encodeURIComponent(token), {
       method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json',
-        apikey: cfg.SUPABASE_ANON_KEY,
-        Authorization: 'Bearer ' + cfg.SUPABASE_ANON_KEY,
-        Prefer: 'return=minimal'
-      },
-      body: JSON.stringify({ active: false })
+      headers: restHeaders({ Prefer: 'return=minimal' }),
+      body: JSON.stringify({
+        active: false,
+        wants_new_guide: false,
+        wants_sunday_reminder: false,
+        wants_group_day: false
+      })
     }).then(function () { return true; }).catch(function () { return true; });
   }
 
@@ -312,6 +364,7 @@
     addToCalendar: addToCalendar,
     enableNotifications: enableNotifications,
     disableNotifications: disableNotifications,
+    syncPreferences: syncPreferences,
     resumeNotifications: resumeNotifications
   };
 

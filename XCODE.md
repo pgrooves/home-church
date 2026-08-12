@@ -180,7 +180,19 @@ only ever do it once:
    the top right of the developer portal.
 
 You need the `.p8`, the Key ID, and the Team ID later to actually send
-notifications. Nothing in the app needs them.
+notifications. Nothing in the app needs them: they go into Supabase, on the
+`send-push` Edge Function, and the full runbook is in `LAUNCH_TODO.md` under
+"Push notifications".
+
+**One thing to know before you test on your own phone.** The build Xcode puts
+on a device plugged into your Mac is a *development* build, and the push token
+it registers is only valid against Apple's **sandbox** gateway. TestFlight and
+the App Store are **production**. The sender defaults to production, so while
+you are testing from Xcode you have to set the `APNS_HOST` secret to
+`api.sandbox.push.apple.com` and then remove it before you submit.
+
+If you skip this, the send fails with `BadDeviceToken` and looks precisely
+like a bug in the app. It is not. It is the gateway.
 
 -----
 

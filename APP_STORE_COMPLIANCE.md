@@ -21,7 +21,19 @@ the one where I am least able to promise you an outcome.
 
 ## 0. The scope decision that changes everything else
 
-**Recommendation: ship v1 with sign in switched off. Build the account
+> **August 12: this recommendation was considered and not taken, deliberately.**
+> Sign in is live, over email one time codes with Resend as the sender. The
+> analysis below is left standing because the tradeoff it describes is real and
+> was weighed rather than missed, and because the table showing what accounts
+> add to the critical path is now a list of work that was actually done:
+> account deletion is built and deployed, and the privacy policy and the App
+> Privacy answers in `SUBMISSION_KIT.md` section 5 have been rewritten for a
+> world with accounts in it.
+>
+> Read the rest of this section as the argument for the other branch, not as a
+> description of what shipped. `LAUNCH_TODO.md` is the current state.
+
+**Original recommendation: ship v1 with sign in switched off. Build the account
 infrastructure now, leave it dormant.**
 
 This is not a shortcut. It is the smaller and safer launch, and it follows a
