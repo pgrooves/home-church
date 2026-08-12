@@ -260,7 +260,15 @@ was never printed. Worse, the link is not a usable second path: it redirects to
 the Site URL and no screen in this app handles that, so clicking it consumes
 the token and leaves the person signed out.
 
-Fix it in **Authentication -> Emails**. Two templates, because Supabase picks a
+**Custom SMTP has to be set up first, there is no way around it.** On the
+built in sender the dashboard shows both fields read only, "Set up custom SMTP
+to edit templates". And the deeper reason to do it anyway: that sender
+delivers only to members of the Supabase org and answers every other address
+with `Email address not authorized`. It is a try-it-out service, not a small
+email budget. Sign in cannot work for the congregation until a real SMTP
+provider is connected, whatever the emails say.
+
+Then fix it in **Authentication -> Emails**. Two templates, because Supabase picks a
 different one depending on whether the address already exists in `auth.users`:
 **Magic Link** for anyone signing in again, **Confirm signup** for a first
 time. Editing only one leaves half the church stuck. Both get the same body,

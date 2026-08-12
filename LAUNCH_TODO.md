@@ -175,12 +175,24 @@ and moot while sign in is off.
 
 ## Supabase dashboard
 
-- [ ] **Move off Supabase's default auth email sender.** Only matters when
-      accounts are switched on, which is not v1, so this is no longer on the
-      critical path. When you do turn accounts on, the built in sender is rate
-      limited and not for production, and a reviewer who never receives a
-      sign in code rejects the app. Resend or SendGrid, under Project Settings,
-      Authentication, SMTP Settings.
+- [ ] **Move off Supabase's default auth email sender.** Still not v1, but the
+      day accounts turn on this is the **first** thing to do, before the
+      templates and before any testing. It was filed here as rate limiting.
+      That undersold it twice over, and both were found by trying it:
+
+      1. **The default sender will not email your church.** It delivers only
+         to members of the Supabase org. Every other address fails with
+         `Email address not authorized`. Not a limit you can raise, it is
+         what the built in service is.
+      2. **Templates are read only until custom SMTP is configured.** The
+         dashboard greys out subject and body and says so. Which means the
+         code-not-link fix below cannot even be attempted first.
+
+      So the order is SMTP, then templates, then test. Resend or SendGrid,
+      and the sending domain has to be DNS verified before it can mail
+      anyone. Afterwards Supabase imposes 30 messages an hour on the new
+      server, raise it on the Auth -> Rate Limits page if a launch Sunday
+      would exceed that.
 
 - [ ] **Auth URL configuration**, same condition. Site URL and Redirect URLs
       will need the Capacitor origin, not just the GitHub Pages URL.
