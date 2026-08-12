@@ -11,9 +11,11 @@ below is what is left, and none of it is code.
 
 -----
 
-## Migrations, done
+## Migrations, all four done
 
-All three applied to `ibqkumxfltfiuqevviji` on August 11 and verified.
+Applied to `ibqkumxfltfiuqevviji` and verified. **The Supabase security report
+is clean** apart from Leaked Password Protection, which is a dashboard toggle
+and moot while sign in is off.
 
 - [x] `0008_real_serve_teams.sql`. Seven real serve teams, requirement set on
       Home Kids and Worship Team only, the four invented ones gone.
@@ -25,8 +27,6 @@ All three applied to `ibqkumxfltfiuqevviji` on August 11 and verified.
 - [x] `0010_device_tokens.sql`. RLS on, and the load bearing part holds:
       `anon` has INSERT and UPDATE and **no SELECT**, so the token list cannot
       be read with the publishable key.
-
-### All four applied
 
 - [x] **`0011_lock_down_signup_trigger.sql`** applied and proven, August 12.
       Both SECURITY DEFINER advisor warnings on `hc_handle_new_user` are gone.
@@ -77,42 +77,26 @@ All three applied to `ibqkumxfltfiuqevviji` on August 11 and verified.
 
 ## Before submission
 
-- [x] ~~Support URL.~~ **Written.** `legal/support.html`, live at
-      `https://pgrooves.github.io/home-church/legal/support.html` once it is on
-      `main`. Same self contained page as the privacy policy, no hosting to
-      arrange. It answers the four questions somebody actually has rather than
-      padding to look thorough. Nothing left to do but confirm it loads.
+- [x] ~~Support URL.~~ **Written and merged to `main`.** Should be live at
+      `https://pgrooves.github.io/home-church/legal/support.html`. Nothing left
+      but to open it once and confirm it renders.
 
-- [!] **Publish `legal/privacy.html` and put its URL in the Privacy Policy URL
-      field in App Store Connect.** Apple requires the policy both inside the
-      app, which is done, and as a public link. A 404 there, or a link to a
-      homepage that never mentions the app, is a 5.1.1 rejection and it is one
-      of the most common ones.
-
-      **GitHub Pages already covers this, no hosting needed.** The repo is
-      public and Pages is enabled, so once this file is on `main` it is live
-      at:
+- [ ] **Open both pages once and confirm they render.** They are on `main`
+      now, so GitHub Pages should be serving them:
 
           https://pgrooves.github.io/home-church/legal/privacy.html
+          https://pgrooves.github.io/home-church/legal/support.html
 
-      Three things have to be true, and only the first is outstanding:
+      Right looks like a formatted page: small caps eyebrow, serif body, warm
+      off white background, same as the in app screen. Wrong looks like a 404,
+      which means Pages has not built yet or its source is not set to `main`
+      and root folder, or raw HTML source on screen, which means the wrong URL.
 
-      1. **The file has to be on `main`.** It is on the feature branch right
-         now, so it is not live yet. Merging is what publishes it.
-      2. **Use the Pages URL, not the raw file link.** A
-         `raw.githubusercontent.com` URL serves as `text/plain`, so a reviewer
-         clicking it sees HTML source rather than a policy. That reads as a
-         broken link.
-      3. **Pages source set to `main`, root folder.** Already how the app
-         itself is served, so almost certainly already right. Worth confirming
-         in Settings, Pages.
+      I cannot load them from here, the sandbox proxy blocks `github.io`.
 
-      I could not load the URL from here, the sandbox proxy blocks
-      `github.io`, so open it once after merging and check it renders.
-
-      A `github.io` address is perfectly acceptable to Apple, which has no
-      domain requirement. Moving it to homechurchnola.com later is a nicety,
-      not a fix. `terms.html` sits beside it and is optional.
+      These two go in the **Privacy Policy URL** and **Support URL** fields in
+      App Store Connect. A `github.io` address is fine, Apple has no domain
+      requirement. Moving them to homechurchnola.com later is a nicety.
 
 - [x] ~~App icon set with no alpha channel.~~ **Done.** Every icon PNG carried
       an alpha channel with nothing actually transparent in it, so stripping
