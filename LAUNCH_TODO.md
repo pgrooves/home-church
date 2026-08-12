@@ -26,34 +26,24 @@ All three applied to `ibqkumxfltfiuqevviji` on August 11 and verified.
       `anon` has INSERT and UPDATE and **no SELECT**, so the token list cannot
       be read with the publishable key.
 
-### One left, and it is mine to own
+### All four applied
 
-- [ ] **`supabase/migrations/0011_lock_down_signup_trigger.sql`**
+- [x] **`0011_lock_down_signup_trigger.sql`** applied and proven, August 12.
+      Both SECURITY DEFINER advisor warnings on `hc_handle_new_user` are gone.
+      The security report is now clean except for Leaked Password Protection,
+      which is a dashboard toggle and moot while sign in is off.
 
-      Applying `0009` raised two new advisor warnings, and they are my fault.
-      That migration revoked EXECUTE on one of the two functions it created
-      and not the other, so `hc_handle_new_user` kept Postgres's default grant
-      to public and shows up at `/rest/v1/rpc/`.
+      Worth knowing, because it is the kind of thing that gets re-litigated
+      later: **the obvious test of this migration proves nothing.** Creating a
+      user from the dashboard or over MCP inserts as `postgres`, which owns the
+      function, so a privilege check could never have blocked it. My original
+      verification steps had that flaw and the session that ran it caught it.
 
-      **Not exploitable.** A function returning `trigger` cannot be called
-      directly whatever privileges you hold, Postgres raises `0A000` before
-      the body runs. That was probed against the live project rather than
-      assumed. But an unexplained security warning sitting on the table that
-      holds member records is the last thing you want to be explaining during
-      a privacy review, so it should be closed.
-
-      **Verify after running it**, because it is a claim about how Postgres
-      treats trigger functions and it deserves a test:
-
-      1. Dashboard, Authentication, Add user. Create a test user.
-      2. `select id from public.profiles order by created_at desc limit 1;`
-         A row should be there.
-      3. Delete the test user.
-
-      If step 2 comes back empty, the migration is wrong and reverting is one
-      line. Nothing in v1 depends on it working, since sign in is off and no
-      new auth users are being made, which makes now the cheap time to find
-      out.
+      What settled it was a throwaway replica in a separate schema, inserting
+      as a role confirmed to have `EXECUTE = false`. The trigger fired. That
+      matters because `supabase_auth_admin`, the role GoTrue inserts as during
+      a real signup, held EXECUTE only through the PUBLIC grant this migration
+      removed. The full reasoning is in the migration file's header.
 
 - [ ] **Deploy the account deletion function**, when you turn accounts on:
       `supabase functions deploy delete-account`. Not needed for v1.

@@ -27,29 +27,45 @@
 -- has to work out from scratch whether it mattered. A clean advisor report is
 -- worth more than the argument for leaving it.
 --
--- WILL THIS BREAK SIGNUP? It should not. Postgres checks EXECUTE on a trigger
--- function when the trigger is *created*, not each time it fires, and the
--- trigger itself runs as the table owner. Revoking the grant from public,
--- anon, and authenticated leaves the existing trigger working.
+-- DOES THIS BREAK SIGNUP? No. Postgres checks EXECUTE on a trigger function
+-- when the trigger is *created*, not each time it fires.
 --
--- That is the documented behavior and it is also the fix Supabase's own
--- advisor recommends, but it is a claim about somebody else's database and it
--- deserves a test rather than trust. After running this, verify:
+-- APPLIED AND PROVEN, August 12 2026. Both advisor warnings cleared. The ACL
+-- went from {=X/postgres, postgres=X, anon=X, authenticated=X, service_role=X}
+-- to {postgres=X/postgres, service_role=X/postgres}, and the trigger
+-- on_auth_user_created is still enabled.
 --
---   1. Create a test user, dashboard, Authentication, Add user.
---   2. Confirm a matching row appeared:
---        select id from public.profiles order by created_at desc limit 1;
---   3. Delete the test user.
+-- HOW IT WAS PROVEN, which is worth writing down because the obvious test does
+-- not actually test anything.
 --
--- If step 2 comes back empty, this migration is wrong and reverting it is one
--- line: grant execute on function public.hc_handle_new_user() to authenticated.
--- Say so and I will find another way.
+-- The obvious test is: create a user, check a profiles row appeared. That test
+-- is worthless here. Anything with dashboard or MCP access inserts into
+-- auth.users as `postgres`, which OWNS this function, so a privilege check
+-- could never have blocked it. The test passes whether or not the revoke is
+-- safe. It confirms the trigger exists and nothing more.
 --
--- Nothing in v1 depends on this working, because sign in is switched off and
--- no new auth users are being created. That makes now the cheap time to find
--- out.
+-- The question is also live rather than academic: `supabase_auth_admin`, the
+-- role GoTrue actually inserts as during a real signup, held EXECUTE only
+-- through the PUBLIC grant this migration removes. After the revoke,
+-- has_function_privilege('supabase_auth_admin', ...) returns false. So real
+-- signups run through a role that genuinely lacks the grant.
 --
--- HOW TO RUN IT
+-- What settled it: a throwaway replica of this setup was built in its own
+-- schema, outside public so PostgREST never saw it, with the same
+-- SECURITY DEFINER trigger function and the same revoke. Inserting as
+-- `authenticated`, a role confirmed at EXECUTE = false, fired the trigger and
+-- wrote the row. That is the claim demonstrated against a role that really
+-- does lack the privilege. The probe schema was dropped afterward.
+--
+-- If this ever needs undoing:
+--   grant execute on function public.hc_handle_new_user() to authenticated;
+--
+-- ON REPLAYING MIGRATIONS. This is recorded in the remote project's migration
+-- history as `lock_down_signup_trigger` rather than under this filename. If
+-- supabase/migrations/ is ever replayed against this project it will run
+-- again, which is harmless: a revoke of an already revoked grant is a no-op.
+--
+-- HOW TO RUN IT ELSEWHERE
 --   Supabase dashboard -> SQL Editor -> New query -> paste -> Run.
 --   Safe to run more than once.
 -- ===========================================================================

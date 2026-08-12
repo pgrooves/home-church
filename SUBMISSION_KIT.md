@@ -19,8 +19,9 @@ time, except where noted, where it costs weeks.
       **D-U-N-S number**, which takes one to two weeks. Nothing below can ship
       without this and no amount of code changes that. Start it first.
 - [x] Migrations 0008, 0009, and 0010 applied and verified.
-- [ ] Run `supabase/migrations/0011_lock_down_signup_trigger.sql`, which closes
-      two advisor warnings that 0009 introduced.
+- [x] `0011_lock_down_signup_trigger.sql` applied and proven. The Supabase
+      security report is clean apart from Leaked Password Protection, which is
+      a dashboard toggle and moot while sign in is off.
 - [x] Support URL written, `legal/support.html`. Live once merged to `main`.
 
 ### Code, done
