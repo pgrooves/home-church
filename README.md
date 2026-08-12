@@ -284,11 +284,39 @@ Body:
 
 ```html
 <h2>Your sign in code</h2>
-<p>Enter this code in the Home Church app to finish signing in.</p>
+<p>Enter this code in the Home Church app to finish signing in:</p>
 <p style="font-size:28px;letter-spacing:6px;"><strong>{{ .Token }}</strong></p>
 <p>The code can only be used once. If you did not ask to sign in, ignore this
-email and nothing will happen.</p>
+email and nothing will happen, nobody can use the code but you.</p>
+<p style="color:#767676;font-size:13px;">You are receiving this because this
+address was entered on the sign in screen of the Home Church app. This is not
+a mailing list and there is nothing to unsubscribe from.</p>
 ```
+
+The closing footer is not decoration. A very short, link free, code only email
+from a domain nobody has seen before is close to the shape spam filters are
+built to catch, and saying plainly why the message arrived is one of the few
+content signals that helps. The rest of staying out of junk is not something
+the template can fix, see below.
+
+### Junk folder, what actually moves it
+
+In rough order of effect, learned the first day this sent real mail:
+
+1. **Age and volume of the sending domain.** A subdomain that sent its first
+   message this morning has no reputation, and filters treat that as a risk
+   until real people receive mail and do not complain. This mostly fixes
+   itself over days of ordinary use.
+2. **SPF, DKIM and DMARC passing at the far end**, which is not the same claim
+   as "verified" in the sending provider. `mail-tester.com` gives a free score
+   and a per check breakdown, and takes about two minutes: request a code to
+   the address it shows you, then read the report.
+3. **People marking it Not Junk.** Worth asking the first few members to do it
+   rather than hoping.
+4. **The content**, which is the block above, and the smallest of the four.
+
+Do not chase this by rewriting the email repeatedly. It reads as churn to the
+filters and the first item is doing most of the work.
 
 Putting the code in the subject line is the part people notice. It is what
 lets a phone show the six digits on the lock screen, and it is why iOS offers
