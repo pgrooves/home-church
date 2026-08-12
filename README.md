@@ -10,9 +10,16 @@ Two qualifications to that, both added when the app was prepared for the App
 Store. There is a `package.json`, but only for Capacitor and its plugins,
 nothing in `js/` or `css/` is compiled or processed. And there are two small
 Node scripts, `npm run stamp` and `npm run sync`, which respectively write the
-cache busting stamps into `index.html` and copy the app's files into `www/`
-for Capacitor. Neither transforms a line of code. You can still read every
-file in this project without learning a tool.
+cache busting stamps into `index.html` and `manifest.webmanifest` and copy the
+app's files into `www/` for Capacitor. Neither transforms a line of code. You
+can still read every file in this project without learning a tool.
+
+There are two stamps and they are hashed from different places. `?v=` comes
+from `css/` and `js/` and rides the code. `?i=` comes from `assets/icons/` and
+rides the artwork. They are separate because the app icon was once redrawn
+without either its filename or its stamp changing, and Safari, which caches
+icons apart from pages and holds them past a reinstall, kept showing the old
+one. See the comment at the top of `scripts/stamp_assets.js`.
 
 Content lives in Supabase, with `js/data.js` as the cold start floor. See
 "Publishing content" below.
@@ -295,6 +302,14 @@ is the house and cross alone, used on Profile and as the app icon.
 supplied, white text, meant for a dark ground. `logo-lockup-ink.png` is the
 same file with only the wordmark pixels lifted to near-black, so it stays
 legible on the paper background, the gold house is untouched in both.
+
+The square icons, `favicon` through `icon-512`, are that same mark on the
+app's own dark, `#1A1918`, and they are meant to stay dark on a light Home
+Screen as well as a dark one. Gold on paper is the weakest pairing the brand
+has at icon size, gold on dark is the strongest, and the icon does not need to
+agree with the wallpaper. `index.html` names the same file for both
+appearances so nothing has to be inferred from the artwork. Regenerate with
+`npm run icons`, then `npm run stamp` so the URL moves with the picture.
 
 The lockup lives top-left in the header on every tab, sliding to center once
 the screen scrolls and the screen title takes the left edge. Pushed views

@@ -24,9 +24,25 @@
   <link rel="manifest" href="manifest.webmanifest">
   <!-- The stamp busts Safari's favicon cache, which is separate from and
        stickier than its normal page cache, and private browsing does not
-       clear it either. -->
-  <link rel="icon" type="image/png" href="assets/icons/favicon.png?v=84e078b3">
-  <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon-180.png?v=84e078b3">
+       clear it either.
+
+       These carry ?i= and not ?v=, and the difference matters. ?v= is a hash
+       of css/ and js/, so it moves when the code moves and sits still when the
+       icons change, which is backwards for a cache keyed on this URL. That is
+       not hypothetical: the icons were redrawn from paper-colored to dark and
+       kept both their filenames and their stamp, so every phone that had ever
+       loaded the old ones went on showing the old ones. ?i= is a hash of
+       assets/icons/, written by the same script. Redraw an icon, the URL moves.
+
+       Both appearances point at the same file on purpose. The mark is drawn on
+       its own dark ground, and it should stay that way on a light Home Screen
+       rather than being lightened to match one. iOS is inconsistent about
+       honoring media here; when it ignores these it falls back to the first
+       link, which is the same image, so the answer is the same either way. -->
+  <link rel="icon" type="image/png" href="assets/icons/favicon.png?i=663e3858">
+  <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon-180.png?i=663e3858">
+  <link rel="apple-touch-icon" media="(prefers-color-scheme: light)" href="assets/icons/apple-touch-icon-180.png?i=663e3858">
+  <link rel="apple-touch-icon" media="(prefers-color-scheme: dark)" href="assets/icons/apple-touch-icon-180.png?i=663e3858">
 
   <!-- Typefaces ship with the app. They used to come from Google on every
        cold launch, which was a render blocking third party request that also

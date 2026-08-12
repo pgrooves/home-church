@@ -19,6 +19,14 @@
  * It replaces a number with a hash. ?v=9 becomes ?v=a3f1c802. Nothing cares
  * what is in there as long as it changes.
  *
+ * THE SECOND STAMP. Icons carry ?i= instead, hashed from assets/icons/ and
+ * written into index.html and manifest.webmanifest. They need their own stamp
+ * because they change on their own schedule: the app icon was redrawn from
+ * paper-colored to dark, kept its filename, and kept the css/js stamp with it,
+ * so the URL never moved and Safari kept serving the old picture from a cache
+ * that outlives the page cache and survives private browsing. Art moves, ?i=
+ * moves. Code moves, ?v= moves. Neither one speaks for the other.
+ *
  * USAGE
  *   node scripts/stamp_assets.js          stamp, and say what changed
  *   node scripts/stamp_assets.js --check  exit 1 if stamping is needed
@@ -36,7 +44,9 @@ const crypto = require('crypto');
 
 const ROOT = path.dirname(__dirname);
 const INDEX = path.join(ROOT, 'index.html');
+const MANIFEST = path.join(ROOT, 'manifest.webmanifest');
 const WATCH = ['css', 'js'];
+const ICON_WATCH = ['assets/icons'];
 
 function walk(dir, out) {
   for (const name of fs.readdirSync(dir).sort()) {
@@ -48,10 +58,10 @@ function walk(dir, out) {
   return out;
 }
 
-function stamp() {
+function stamp(dirs) {
   const hash = crypto.createHash('sha256');
 
-  for (const name of WATCH) {
+  for (const name of dirs) {
     const dir = path.join(ROOT, name);
     if (!fs.existsSync(dir)) continue;
     for (const file of walk(dir, [])) {
@@ -65,29 +75,66 @@ function stamp() {
   return hash.digest('hex').slice(0, 8);
 }
 
+// One token in one string. Text in, text out, so index.html can take the ?v=
+// pass and the ?i= pass one after the other without either one writing over
+// the other's work. Reporting is separate from writing because --check has to
+// look at everything before it decides to fail.
+function restamp(text, token, want) {
+  const pattern = new RegExp(`(\\?${token}=)[A-Za-z0-9]+`, 'g');
+  const found = text.match(pattern) || [];
+  const value = (m) => m.slice(token.length + 2);
+
+  return {
+    count: found.length,
+    current: found.length ? value(found[0]) : '(none)',
+    want: want,
+    text: text.replace(pattern, `$1${want}`),
+    stale: found.some((m) => value(m) !== want),
+  };
+}
+
 function main() {
   const check = process.argv.includes('--check');
-  const want = stamp();
+  const code = stamp(WATCH);
+  const art = stamp(ICON_WATCH);
 
-  const before = fs.readFileSync(INDEX, 'utf8');
-  const after = before.replace(/(\?v=)[A-Za-z0-9]+/g, `$1${want}`);
+  // file, token, wanted stamp. index.html appears twice on purpose.
+  const jobs = [
+    [INDEX, 'v', code],
+    [INDEX, 'i', art],
+    [MANIFEST, 'i', art],
+  ];
 
-  const found = before.match(/\?v=([A-Za-z0-9]+)/g) || [];
-  const current = found.length ? found[0].slice(3) : '(none)';
+  const texts = new Map();
+  const done = [];
 
-  if (before === after) {
-    console.log(`Already stamped ${want}, ${found.length} assets. Nothing to do.`);
+  for (const [file, token, want] of jobs) {
+    if (!texts.has(file)) texts.set(file, fs.readFileSync(file, 'utf8'));
+    const pass = restamp(texts.get(file), token, want);
+    texts.set(file, pass.text);
+    done.push(Object.assign({ file: file, token: token }, pass));
+  }
+
+  const stale = done.filter((p) => p.stale);
+
+  if (!stale.length) {
+    const n = done.reduce((sum, p) => sum + p.count, 0);
+    console.log(`Already stamped, code ${code} and icons ${art}, ${n} assets. Nothing to do.`);
     return;
   }
 
   if (check) {
-    console.error(`Stamp is stale. index.html says ${current}, css/ and js/ hash to ${want}.`);
+    for (const p of stale) {
+      console.error(`Stamp is stale. ${path.basename(p.file)} ?${p.token}= says ${p.current}, wants ${p.want}.`);
+    }
     console.error('Run: npm run stamp');
     process.exit(1);
   }
 
-  fs.writeFileSync(INDEX, after);
-  console.log(`Stamped ${found.length} assets: ${current} to ${want}`);
+  for (const [file, text] of texts) fs.writeFileSync(file, text);
+  for (const p of stale) {
+    console.log(`${path.basename(p.file)} ?${p.token}=: ${p.count} assets, ${p.current} to ${p.want}`);
+  }
 }
 
 main();
