@@ -47,7 +47,10 @@
     givingUrl: 'https://donate.overflow.co/homechurchnola',
     websiteUrl: 'https://www.homechurchnola.com',
     social: [
-      { label: 'Instagram', url: 'https://www.instagram.com/homechurchnola' },
+      // The dot is load bearing. Every other handle the church owns is
+      // homechurchnola, Instagram alone is homechurch.nola, and this link
+      // shipped without the dot pointing at an account that is not theirs.
+      { label: 'Instagram', url: 'https://www.instagram.com/homechurch.nola' },
       { label: 'Facebook', url: 'https://www.facebook.com/homechurchnola' },
       { label: 'YouTube', url: 'https://www.youtube.com/@homechurchnola' }
     ],
