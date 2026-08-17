@@ -450,6 +450,10 @@
     emptyState: emptyState,
     media: media,
     cover: cover,
+    // Exported for the Instagram rail, which draws its own tile rather than
+    // going through media() or cover(): it has a real photograph to show and
+    // both of those exist for the case where there is not one.
+    playBadge: playBadge,
     toast: toast,
     scriptureRow: scriptureRow,
     closingScripture: closingScripture

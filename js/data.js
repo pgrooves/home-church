@@ -47,9 +47,14 @@
     givingUrl: 'https://donate.overflow.co/homechurchnola',
     websiteUrl: 'https://www.homechurchnola.com',
     social: [
-      { label: 'Instagram', url: 'https://www.instagram.com/homechurchnola' },
+      // The dot is load bearing. Every other handle the church owns is
+      // homechurchnola, Instagram alone is homechurch.nola, and this link
+      // shipped without the dot pointing at an account that is not theirs.
+      { label: 'Instagram', url: 'https://www.instagram.com/homechurch.nola' },
       { label: 'Facebook', url: 'https://www.facebook.com/homechurchnola' },
-      { label: 'YouTube', url: 'https://www.youtube.com/@homechurchnola' }
+      { label: 'YouTube', url: 'https://www.youtube.com/@homechurchnola' },
+      { label: 'X', url: 'https://x.com/homechurchnola' },
+      { label: 'TikTok', url: 'https://www.tiktok.com/@homechurchnola' }
     ],
     serve: {
       number: '833-801-3857',
@@ -2280,6 +2285,21 @@
     }
   ];
 
+  /* Instagram posts, for the rail at the top of Connect.
+
+     Empty on purpose, and it is the one collection in this file that should
+     stay empty. Everything else here is a floor: a real guide, a real event,
+     something true enough to show a phone with no signal on its first launch.
+     A frozen snapshot of "the latest posts" is a contradiction. By the time a
+     build reaches the App Store it would be months old, and presenting a
+     stale post as the newest thing the church has said is worse than showing
+     no rail at all.
+
+     Connect drops the whole section when this is empty, the same way it drops
+     serve teams and events, so nothing renders until Supabase has real rows.
+     See supabase/migrations/0015_instagram_posts.sql. */
+  var instagramPosts = [];
+
   /* ------------------------------------------------------------------ export */
 
   HC.data = {
@@ -2294,6 +2314,7 @@
     serveTeams: serveTeams,
     nextSteps: nextSteps,
     announcements: announcements,
+    instagramPosts: instagramPosts,
 
     /* ------------------------------------------------------------- helpers */
 

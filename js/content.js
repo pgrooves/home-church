@@ -32,7 +32,7 @@
 
   var cfg = HC.config || {};
   var CACHE_KEY = 'content';
-  var CACHE_VERSION = 7;      // bump when a mapping below changes shape
+  var CACHE_VERSION = 8;      // bump when a mapping below changes shape
   var TIMEOUT_MS = 12000;
 
   // The tables we pull, and the HC.data key each one fills. Adding another
@@ -58,6 +58,14 @@
       order: 'sort_order.asc,name.asc' },
     { table: 'next_steps',    target: 'nextSteps',     map: mapNextStep,
       order: 'sort_order.asc,title.asc' },
+
+    // The rail at the top of Connect. Newest first, and capped, because a rail
+    // is a glance and not an archive. The sync job keeps nine rows, so the
+    // limit is belt and braces for a table that grew for some reason nobody
+    // remembers. Until the account is connected this table is empty, which
+    // Connect renders as nothing at all rather than as an empty strip.
+    { table: 'instagram_posts', target: 'instagramPosts', map: mapInstagramPost,
+      order: 'posted_at.desc', limit: 9 },
 
     // `neverEmpty` is the one exception to deleting a row propagating, and it
     // is deliberate. Home, Profile, Give, and the printed guide all read
@@ -224,6 +232,45 @@
       blurb: str(r.blurb),
       url: r.url || null,
       ctaLabel: str(r.cta_label)
+    };
+  }
+
+  /* An object path inside a public Storage bucket, as a URL a phone can load.
+
+     Built here rather than on the screen because it is the one field whose
+     value depends on which Supabase project the app is pointed at, and that
+     is this file's business. Each path segment is encoded separately so a
+     slash in the path stays a slash and a space in a filename does not
+     become a broken image. */
+  function storageUrl(bucket, path) {
+    return cfg.SUPABASE_URL + '/storage/v1/object/public/' + bucket + '/' +
+      String(path).split('/').map(encodeURIComponent).join('/');
+  }
+
+  /* A post in the Connect rail.
+
+     `image_path` is an object path in the `instagram` bucket, never a URL on
+     instagram.com, and the difference is the whole design. Their CDN links
+     are signed and expire within days, so a stored one goes blank on its own.
+     Worse, loading them on the phone would hand Meta every congregant's IP
+     address on every visit to Connect, which is the exact trade this project
+     already refused when it pulled Google Fonts out of index.html. The sync
+     job mirrors the bytes into Storage and the phone only ever talks to
+     Supabase.
+
+     A row with no image_path is a post whose picture never made it into the
+     bucket. It maps to '' and Connect drops it, because a tile with no
+     picture is not a smaller tile, it is a hole in a row of photographs. */
+  function mapInstagramPost(r) {
+    return {
+      id: r.id,
+      permalink: str(r.permalink),
+      imageUrl: r.image_path ? storageUrl('instagram', r.image_path) : '',
+      // VIDEO and CAROUSEL_ALBUM both draw as one still. Only VIDEO gets a
+      // play badge, because that badge is a promise about what a tap does.
+      mediaType: str(r.media_type) || 'IMAGE',
+      caption: str(r.caption),
+      postedAt: r.posted_at || null
     };
   }
 
@@ -424,6 +471,10 @@
   function getTable(spec) {
     var url = cfg.SUPABASE_URL + '/rest/v1/' + spec.table + '?select=*';
     if (spec.order) url += '&order=' + encodeURIComponent(spec.order);
+    // Only the Instagram rail sets this so far. Ordering has to be set with
+    // it or a limit would take an arbitrary nine rows rather than the newest
+    // nine, which PostgREST will happily do.
+    if (spec.limit) url += '&limit=' + encodeURIComponent(spec.limit);
 
     // AbortController keeps a stalled connection from leaving the app
     // thinking a refresh is still in flight forever. A phone on one bar of

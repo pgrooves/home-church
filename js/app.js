@@ -596,6 +596,21 @@
       fn(el, evt);
     });
 
+    /* An image that fails to load. Capture phase, because error events from
+       an <img> do not bubble and an ordinary listener here would never fire.
+
+       The tile marks itself and CSS lets the cream block underneath show
+       through, which is how missing art looks everywhere else in this app.
+       Without this, a photograph that did not arrive draws the web view's
+       broken image glyph in the middle of a row of real photographs, which
+       looks like a bug in the app rather than one slow request. */
+    document.addEventListener('error', function (evt) {
+      var el = evt.target;
+      if (!el || el.tagName !== 'IMG' || !el.closest) return;
+      var tile = el.closest('[data-media-fallback]');
+      if (tile) tile.setAttribute('data-failed', 'true');
+    }, true);
+
     // Anything typed is saved quietly, a moment after the typing stops.
     var timers = {};
     function debounce(id, fn) {

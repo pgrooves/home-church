@@ -997,3 +997,118 @@ a.hc-card:active { background: var(--hc-paper-sunk); }
   from { opacity: 0; transform: translateY(6px); }
   to   { opacity: 1; transform: none; }
 }
+
+/* --------------------------------------------------------------------------
+   The rail. A horizontal strip of square photographs, used by the Instagram
+   section at the top of Connect.
+
+   FULL BLEED ON PURPOSE. .hc-screen carries 20px of side padding, and a rail
+   that stopped at that padding would look like a list that had been cut off
+   at both ends. The negative margins pull it out to the screen edges and the
+   scroll padding puts the inset back on the content, so the first tile lines
+   up with the text above it and the last one runs off the edge. That overrun
+   is the affordance: it is what tells a thumb there is more to the right
+   without needing an arrow or a row of dots.
+
+   .hc-screen is capped at 720px and centered, so on a wide window the rail
+   bleeds to the edges of the column rather than the edges of the display,
+   which is the right answer for both.
+   -------------------------------------------------------------------------- */
+
+.hc-rail {
+  margin-left: calc(var(--hc-screen-pad) * -1);
+  margin-right: calc(var(--hc-screen-pad) * -1);
+  overflow-x: auto;
+  overflow-y: hidden;
+  /* Momentum scrolling inside the Capacitor web view. */
+  -webkit-overflow-scrolling: touch;
+  scroll-snap-type: x mandatory;
+  scroll-padding-left: var(--hc-screen-pad);
+  /* The scrollbar is chrome this design does not use, and on a phone it is
+     not drawn at all. Hidden rather than styled. */
+  scrollbar-width: none;
+}
+
+.hc-rail::-webkit-scrollbar { display: none; }
+
+.hc-rail__track {
+  display: flex;
+  gap: var(--hc-card-gap);
+  list-style: none;
+  margin: 0;
+  /* The trailing pad has to be padding and not a margin on the last child, or
+     iOS drops it at the end of an overflow scroll and the last tile sits hard
+     against the edge. */
+  padding: 0 var(--hc-screen-pad);
+}
+
+.hc-rail__item {
+  flex: 0 0 auto;
+  scroll-snap-align: start;
+}
+
+/* --- A single post -------------------------------------------------------- */
+
+.hc-post {
+  position: relative;
+  display: block;
+  width: 148px;
+  aspect-ratio: 1 / 1;
+  padding: 0;
+  border: none;
+  /* Showing through while the photograph loads, and the whole tile if it
+     never does. Same cream as every other piece of missing art in the app. */
+  background: var(--hc-cream);
+  border-radius: var(--hc-radius-lg);
+  overflow: hidden;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.hc-post__img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  /* A photograph that fades in reads as arriving. One that snaps in reads as
+     a flash, which is what nine of them landing at once looks like. */
+  animation: hc-fade-in var(--hc-dur-base) var(--hc-ease-enter) both;
+}
+
+/* Set by the image error listener in app.js. The tile keeps its cream block
+   rather than drawing a broken image glyph. */
+.hc-post[data-failed="true"] .hc-post__img { display: none; }
+
+.hc-post:active { opacity: 0.85; }
+
+/* --- The way out, last tile in the rail ----------------------------------- */
+
+.hc-post--more {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--hc-space-sm);
+  background: var(--hc-paper-sunk);
+  color: var(--hc-accent-deep);
+}
+
+.hc-post__more-icon {
+  width: 22px;
+  height: 22px;
+}
+
+.hc-post__more-label {
+  font-family: var(--hc-sans);
+  font-weight: 600;
+  font-size: var(--hc-caption);
+  line-height: var(--hc-caption-line);
+}
+
+/* A rail is a horizontal scroll, which is a gesture, and a person who has
+   asked for less motion still has to be able to reach the ninth tile. So the
+   snapping goes and the scrolling stays. */
+@media (prefers-reduced-motion: reduce) {
+  .hc-rail { scroll-snap-type: none; }
+  .hc-post__img { animation: none; }
+}
