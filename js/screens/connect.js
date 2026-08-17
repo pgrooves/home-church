@@ -151,6 +151,111 @@
     return html;
   }
 
+  /* ------------------------------------------------------ the Instagram rail
+     A strip of the church's latest posts, across the top of this screen.
+
+     WHY IT CAN BE INVISIBLE AND THAT IS FINE. Instagram serves no API to a
+     Personal account, and the church's account is still one, so there is
+     nothing feeding this yet. Rather than a feature flag somebody has to
+     remember to flip, the rail obeys the rule this screen already keeps
+     everywhere else: a section whose list is empty does not render at all.
+     Zero rows means zero markup, not an empty strip. The day the sync writes
+     its first rows the rail appears on every phone, with no App Store build,
+     because the rows arrive through the same content pipeline as events.
+
+     WHAT IT DELIBERATELY IS NOT. Not a copy of Instagram. No like counts, no
+     comments, no inline video. It is a window with nine photographs in it and
+     a door to the real thing, because every one of those extra things is
+     something the app would then have to keep true.
+     ------------------------------------------------------------------- */
+
+  function instagramProfileUrl() {
+    var social = (HC.data.church.social || []).filter(function (s) {
+      return s.label === 'Instagram';
+    })[0];
+    return social ? social.url : '';
+  }
+
+  /* What VoiceOver reads for a tile.
+
+     A rail of nine buttons all announcing "Instagram post" is a rail nobody
+     can navigate, so the caption does the work when there is one. Instagram
+     captions run to paragraphs and end in a drift of hashtags, so this takes
+     the first line and caps it. "Opens Instagram" is on the end because the
+     tile leaves the app, and a link that leaves should say so before it is
+     followed rather than after. */
+  function tileLabel(post) {
+    var first = String(post.caption || '').split('\n')[0].trim();
+    if (first.length > 120) {
+      first = first.slice(0, 119).replace(/\s+\S*$/, '') + '…';
+    }
+    var fallback = post.mediaType === 'VIDEO' ? 'Instagram video' : 'Instagram post';
+    var when = post.postedAt ? c.formatDate(String(post.postedAt).slice(0, 10)) : '';
+
+    // Joining these with '. ' would double the stop on every caption that
+    // already ends in one, and VoiceOver reads "Sunday dot dot". Each part
+    // gets punctuated only if it needs it, then they join on a space.
+    function sentence(s) {
+      return /[.!?…]$/.test(s) ? s : s + '.';
+    }
+
+    return [first || fallback, when, 'Opens Instagram']
+      .filter(Boolean).map(sentence).join(' ');
+  }
+
+  /* alt="" on the image is correct, not an oversight. The button already
+     carries the description, and a nested image with its own alt text makes a
+     screen reader announce the same post twice.
+
+     data-media-fallback marks the tile for the image error listener in
+     app.js. An image that never arrives leaves the cream block underneath it
+     showing, which is the same treatment missing art gets everywhere else in
+     the app, rather than a broken image glyph in a row of photographs. */
+  function instagramTile(post) {
+    return '' +
+      '<li class="hc-rail__item">' +
+        '<button type="button" class="hc-post" data-action="open-url" ' +
+          'data-media-fallback data-url="' + c.esc(post.permalink) + '" ' +
+          'aria-label="' + c.esc(tileLabel(post)) + '">' +
+          '<img class="hc-post__img" src="' + c.esc(post.imageUrl) + '" alt="" ' +
+            'loading="lazy" decoding="async">' +
+          (post.mediaType === 'VIDEO' ? c.playBadge() : '') +
+        '</button>' +
+      '</li>';
+  }
+
+  function instagramRail() {
+    var posts = (HC.data.instagramPosts || []).filter(function (p) {
+      return p.imageUrl && p.permalink;
+    });
+    if (!posts.length) return '';
+
+    // role="list" restores the semantics Safari drops the moment a list has
+    // list-style: none, which is every styled list in this app.
+    var html = c.sectionHeader('Lately', 'On Instagram') +
+      '<div class="hc-rail">' +
+        '<ul class="hc-rail__track" role="list">';
+
+    posts.forEach(function (p) { html += instagramTile(p); });
+
+    // The way out of the rail and into the actual feed. Reads the URL from
+    // church.social rather than hardcoding it, so the handle lives in exactly
+    // one place, which is the row Profile already links from.
+    var profile = instagramProfileUrl();
+    if (profile) {
+      html += '<li class="hc-rail__item">' +
+        '<button type="button" class="hc-post hc-post--more" data-action="open-url" ' +
+          'data-url="' + c.esc(profile) + '" ' +
+          'aria-label="See more on Instagram. Opens Instagram">' +
+          c.icon('arrowOut', 'hc-post__more-icon') +
+          '<span class="hc-post__more-label">See more</span>' +
+        '</button>' +
+      '</li>';
+    }
+
+    return html + '</ul></div>';
+  }
+
   /* When an event actually starts, as a Date.
 
      evt.date is 'YYYY-MM-DD' and evt.time is whatever the church wrote, which
@@ -224,6 +329,12 @@
     var html = '<div class="hc-screen hc-connect">';
 
     html += c.sectionHeader('Find your people', 'Connect', { flush: true, tag: 'h1' });
+
+    // Under the h1, never above it. A screen whose first element is a strip of
+    // unlabeled photographs reads as an ad banner to a person and as an
+    // unheaded region to a screen reader. Renders nothing at all until the
+    // Instagram sync exists, so today this line is a no-op.
+    html += instagramRail();
 
     if (!church.groupsInSeason) {
       html += offSeason();

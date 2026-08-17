@@ -2285,6 +2285,21 @@
     }
   ];
 
+  /* Instagram posts, for the rail at the top of Connect.
+
+     Empty on purpose, and it is the one collection in this file that should
+     stay empty. Everything else here is a floor: a real guide, a real event,
+     something true enough to show a phone with no signal on its first launch.
+     A frozen snapshot of "the latest posts" is a contradiction. By the time a
+     build reaches the App Store it would be months old, and presenting a
+     stale post as the newest thing the church has said is worse than showing
+     no rail at all.
+
+     Connect drops the whole section when this is empty, the same way it drops
+     serve teams and events, so nothing renders until Supabase has real rows.
+     See supabase/migrations/0015_instagram_posts.sql. */
+  var instagramPosts = [];
+
   /* ------------------------------------------------------------------ export */
 
   HC.data = {
@@ -2299,6 +2314,7 @@
     serveTeams: serveTeams,
     nextSteps: nextSteps,
     announcements: announcements,
+    instagramPosts: instagramPosts,
 
     /* ------------------------------------------------------------- helpers */
 
