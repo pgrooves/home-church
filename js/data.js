@@ -52,7 +52,9 @@
       // shipped without the dot pointing at an account that is not theirs.
       { label: 'Instagram', url: 'https://www.instagram.com/homechurch.nola' },
       { label: 'Facebook', url: 'https://www.facebook.com/homechurchnola' },
-      { label: 'YouTube', url: 'https://www.youtube.com/@homechurchnola' }
+      { label: 'YouTube', url: 'https://www.youtube.com/@homechurchnola' },
+      { label: 'X', url: 'https://x.com/homechurchnola' },
+      { label: 'TikTok', url: 'https://www.tiktok.com/@homechurchnola' }
     ],
     serve: {
       number: '833-801-3857',
