@@ -143,6 +143,35 @@
                            inset 0 -1px 0 rgba(26,25,24,0.06),
                            0 3px 9px rgba(26,25,24,0.12);
 
+  /* The brand gold, sampled from assets/icons/mark.png rather than guessed.
+     It is a mark colour everywhere else in this app, see README; the back to
+     top disc is the one interface element that borrows it, deliberately,
+     because being the only gold thing on the screen is what makes it findable
+     without a label.
+
+     Two skins, same reasoning as the tab bar: --hc-gold-skin-lens is the real
+     glass and needs to be thin enough that what scrolls underneath shows
+     through, --hc-gold-skin stands in where the browser cannot blur and has to
+     be dense enough to read on its own. The arrow flips with the theme rather
+     than staying dark in both, because at this thinness the disc composites
+     towards whatever it is over, and a fixed arrow colour fails contrast on
+     one side or the other. The halo is what keeps it legible on the one
+     surface that can be any colour at all, a photograph. */
+  --hc-gold:        #D7BA85;
+  --hc-gold-ink:    #1A1918;
+  --hc-gold-halo:   rgba(255,252,246,0.55);
+  --hc-gold-skin:      linear-gradient(178deg, rgba(233,208,158,0.86), rgba(206,177,122,0.82));
+  --hc-gold-skin-lens: linear-gradient(178deg, rgba(233,208,158,0.34), rgba(206,177,122,0.28));
+  --hc-gold-edge:      rgba(122,96,48,0.34);
+  --hc-gold-shadow:    0 10px 24px rgba(26,25,24,0.16),
+                       0 2px 6px rgba(26,25,24,0.08),
+                       inset 0 1px 0 rgba(255,255,255,0.40),
+                       inset 0 -1px 0 rgba(26,25,24,0.07);
+  --hc-gold-sheen:     linear-gradient(112deg,
+                         rgba(255,255,255,0.30) 0%,
+                         rgba(255,255,255,0.09) 26%,
+                         rgba(255,255,255,0) 54%);
+
   color-scheme: light;
 }
 
@@ -191,6 +220,23 @@
   --hc-tabbar-tile-shadow: inset 0 1px 0 rgba(255,252,247,0.24),
                            inset 0 -1px 0 rgba(0,0,0,0.16),
                            0 4px 12px rgba(0,0,0,0.30);
+
+  /* The disc in the dark. The gold deepens so it glows against charcoal
+     instead of glaring, and the arrow inverts to paper for the same reason
+     the light theme's is ink. */
+  --hc-gold:        #CBAC74;
+  --hc-gold-ink:    #F4EFE6;
+  --hc-gold-halo:   rgba(12,11,10,0.55);
+  --hc-gold-skin:      linear-gradient(178deg, rgba(226,197,141,0.86), rgba(190,158,100,0.80));
+  --hc-gold-skin-lens: linear-gradient(178deg, rgba(226,197,141,0.42), rgba(190,158,100,0.34));
+  --hc-gold-edge:      rgba(247,231,196,0.30);
+  --hc-gold-shadow:    0 14px 28px rgba(0,0,0,0.46),
+                       inset 0 1px 0 rgba(255,246,224,0.24),
+                       inset 0 -1px 0 rgba(0,0,0,0.20);
+  --hc-gold-sheen:     linear-gradient(112deg,
+                         rgba(255,250,236,0.24) 0%,
+                         rgba(255,250,236,0.07) 26%,
+                         rgba(255,250,236,0) 54%);
 
   color-scheme: dark;
 }

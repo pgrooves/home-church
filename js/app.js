@@ -32,7 +32,7 @@
     data: 'Your data'
   };
 
-  var mount, scroller, topbar, tabbar;
+  var mount, scroller, topbar, tabbar, totop;
 
   /* ------------------------------------------------------------- the shell */
 
@@ -65,6 +65,15 @@
         '<div id="hc-view"></div>' +
       '</main>' +
 
+      // Shell chrome rather than something each screen adds, so no screen has
+      // to remember it and none of them can disagree about where it sits.
+      '<button type="button" class="hc-totop" id="hc-totop" data-action="to-top" ' +
+          'data-show="false" aria-label="Back to top" aria-hidden="true" tabindex="-1">' +
+        '<svg class="hc-totop__icon" viewBox="0 0 24 24" aria-hidden="true">' +
+          '<path d="M12 19V5"/><path d="m5.5 11.5 6.5-6.5 6.5 6.5"/>' +
+        '</svg>' +
+      '</button>' +
+
       '<nav class="hc-tabbar" id="hc-tabbar" aria-label="Sections">' +
         TAB_META.map(function (t) {
           return '<button type="button" class="hc-tab" data-action="tab" data-tab="' + t.name + '">' +
@@ -80,6 +89,7 @@
     scroller = document.getElementById('hc-scroll');
     topbar = document.getElementById('hc-topbar');
     tabbar = document.getElementById('hc-tabbar');
+    totop = document.getElementById('hc-totop');
 
     // The sliding tile behind the active tab is a pseudo element sized by
     // this count, so the CSS never has to know how many tabs there are.
@@ -154,8 +164,42 @@
     // place. Coming back, it is already where it should be.
     tabbar.style.setProperty('--hc-tab-tile', isTab ? '1' : '0');
 
+    // The new view starts at the top, or is about to be scrolled to wherever
+    // it was left. Either way the disc's state belongs to this view and not
+    // the last one, and the scroll handler picks it up from here.
+    paintTotop();
+
     paintAvatar();
   };
+
+  function prefersReducedMotion() {
+    return window.matchMedia &&
+           window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  }
+
+  /* About a card and a half of travel.
+
+     This started at a screenful, 600, which was wrong for a reason worth
+     leaving here: Home at phone size is roughly 1.3 screens tall, so its whole
+     scroll range is around 300px and a 600px trigger meant the button never
+     appeared on the tab the app opens to. The number has to be smaller than
+     the shortest scrolling screen's range, not a fraction of the viewport.
+
+     240 is still far enough that a nudge of the thumb does not summon it. */
+  var TOTOP_AT = 240;
+
+  function paintTotop() {
+    if (!totop) return;
+    var route = HC.router.current();
+    // Presentation mode takes the whole screen and the rest of the chrome is
+    // already gone, so this goes with it rather than floating over a guide.
+    var up = !!route && route.name !== 'present' && scroller.scrollTop > TOTOP_AT;
+    totop.setAttribute('data-show', up ? 'true' : 'false');
+    // Out of the reading order and out of the tab order while it is down. A
+    // button nobody can see should not be a button anybody can reach.
+    totop.setAttribute('aria-hidden', up ? 'false' : 'true');
+    totop.tabIndex = up ? 0 : -1;
+  }
 
   function watchScroll() {
     var ticking = false;
@@ -165,8 +209,9 @@
       window.requestAnimationFrame(function () {
         ticking = false;
         // The rail rides the same frame as the header rather than adding a
-        // second listener to the same scroller.
+        // second listener to the same scroller. So does the disc.
         HC.dateRail.update();
+        paintTotop();
         var route = HC.router.current();
         if (!route || !HC.router.isTab(route.name)) return;
         topbar.setAttribute('data-scrolled', scroller.scrollTop > 24 ? 'true' : 'false');
@@ -211,6 +256,11 @@
 
     back: function () {
       HC.router.back();
+    },
+
+    'to-top': function () {
+      HC.native.tap('Light');
+      scroller.scrollTo({ top: 0, behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
     },
 
     'go-profile': function () {
