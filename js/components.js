@@ -178,6 +178,72 @@
     download: '<path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/>'
   };
 
+  /* ------------------------------------------------------------ brand marks
+     The five platforms the church posts on. Separate from PATHS above because
+     these are somebody else's marks and follow their rules, not this app's:
+     they are solid glyphs on a 24 grid rather than 1.5 stroke line icons, and
+     they are drawn the way each brand draws itself. Instagram is the one
+     outline in the set because Instagram's own mark is an outline.
+
+     YouTube's play triangle is a hole, not a shape. fill-rule="evenodd" turns
+     the inner subpath into a knockout, so the triangle takes the colour of
+     whatever the glyph sits on rather than being painted a colour that has to
+     be kept in sync with the circle behind it.
+     ---------------------------------------------------------------------- */
+
+  var BRANDS = {
+    Instagram: '<rect x="3" y="3" width="18" height="18" rx="5.2" fill="none" ' +
+      'stroke="currentColor" stroke-width="1.8"/>' +
+      '<circle cx="12" cy="12" r="3.8" fill="none" stroke="currentColor" stroke-width="1.8"/>' +
+      '<circle cx="17.1" cy="6.9" r="1.15"/>',
+    Facebook: '<path d="M13.4 21v-8h2.7l.4-3.1h-3.1V7.9c0-.9.25-1.5 1.55-1.5h1.65V3.6a22 22 0 0 0-2.4-.12c-2.4 0-4.05 1.47-4.05 4.16V9.9H7.4V13h2.75v8z"/>',
+    YouTube: '<path fill-rule="evenodd" d="M21.6 7.3a2.55 2.55 0 0 0-1.8-1.8C18.2 5.05 12 5.05 12 5.05s-6.2 0-7.8.45a2.55 2.55 0 0 0-1.8 1.8A26.6 26.6 0 0 0 2 12a26.6 26.6 0 0 0 .4 4.7 2.55 2.55 0 0 0 1.8 1.8c1.6.45 7.8.45 7.8.45s6.2 0 7.8-.45a2.55 2.55 0 0 0 1.8-1.8A26.6 26.6 0 0 0 22 12a26.6 26.6 0 0 0-.4-4.7zM10.15 15.05V8.95L15.4 12z"/>',
+    X: '<path d="M13.6 10.6 20.9 2h-1.73l-6.35 7.38L7.75 2H2l7.66 11.12L2 22h1.73l6.7-7.79L15.78 22H21.5zm-2.37 2.76-.78-1.11L4.35 3.3h2.66l4.99 7.14.77 1.11 6.48 9.27h-2.66z"/>',
+    TikTok: '<path d="M16.5 5.8a4.35 4.35 0 0 1-1.02-2.8h-3.13v11.55a2.47 2.47 0 1 1-2.47-2.47c.26 0 .5.04.74.12V9.02a5.7 5.7 0 0 0-.74-.05 5.68 5.68 0 1 0 5.68 5.68V8.86a7.3 7.3 0 0 0 4.28 1.37V7.14a4.32 4.32 0 0 1-3.34-1.34z"/>'
+  };
+
+  /* A platform this app has no mark for still gets a link rather than being
+     dropped. church_profile is an editable table, so a sixth platform can
+     appear in it any Tuesday, and a silently missing row is worse than a
+     generic glyph that still opens the right page. */
+  function brandIcon(label, className) {
+    var body = BRANDS[label];
+    if (!body) {
+      return icon('arrowOut', className);
+    }
+    /* hc-brand is not decoration, it is the opt out of `svg { fill: none }`
+       in base.css. That reset exists for the app's own stroke drawn icons and
+       it wins over a fill attribute, because a stylesheet beats a presentation
+       attribute. These marks are solid, so the fill has to come back as CSS.
+       Set on the svg rather than on its children, so Instagram's rect and
+       circle keep the fill="none" they carry themselves and stay an outline. */
+    return '<svg class="hc-brand ' + esc(className || '') + '" viewBox="0 0 24 24" ' +
+      'aria-hidden="true" focusable="false">' + body + '</svg>';
+  }
+
+  /* Every social link the church has, as a centered row.
+
+     No disc behind them, and the glyph is --hc-ink, which is near black on
+     paper and near white in dark mode. One token does the whole inversion,
+     so these follow the theme the way body text does rather than needing a
+     second set of rules to keep in step with it.
+
+     Renders nothing when there are no links, like everything else here. */
+  function socialRow(links) {
+    links = links || [];
+    if (!links.length) return '';
+
+    var html = '<div class="hc-social-row">';
+    links.forEach(function (s) {
+      if (!s || !s.url) return;
+      html += '<button type="button" class="hc-social" data-action="open-url" ' +
+        'data-url="' + esc(s.url) + '" aria-label="' + esc(s.label) + '">' +
+        brandIcon(s.label, 'hc-social__icon') +
+      '</button>';
+    });
+    return html + '</div>';
+  }
+
   function icon(name, className) {
     var body = PATHS[name] || '';
     return '<svg class="' + esc(className || '') + '" viewBox="0 0 24 24" ' +
@@ -448,6 +514,8 @@
     row: row,
     collapsible: collapsible,
     emptyState: emptyState,
+    brandIcon: brandIcon,
+    socialRow: socialRow,
     media: media,
     cover: cover,
     // Exported for the Instagram rail, which draws its own tile rather than

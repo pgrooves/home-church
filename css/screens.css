@@ -787,6 +787,11 @@
   -webkit-tap-highlight-color: transparent;
 }
 
+.hc-latest__label {
+  display: block;
+  margin-bottom: var(--hc-space-sm);
+}
+
 .hc-latest__frame {
   display: block;
   width: 100%;
@@ -826,7 +831,6 @@
   line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
-  margin-top: var(--hc-space-xs);
   color: var(--hc-ink);
 }
 
