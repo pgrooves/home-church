@@ -47,6 +47,15 @@
     return MONTHS[d.getMonth()].slice(0, 3) + ' ' + d.getDate();
   }
 
+  /* 08/16/2026. The one place the app writes a date as digits, for the
+     announcement label on Home, where it sits in a tracked caps eyebrow that a
+     spelled out month would overrun. Everything a congregation reads in a
+     sentence still goes through formatDate. */
+  function formatDateNumeric(iso) {
+    var d = parseDate(iso);
+    return pad2(d.getMonth() + 1) + '/' + pad2(d.getDate()) + '/' + d.getFullYear();
+  }
+
   function dayName(date) {
     return DAYS[date.getDay()];
   }
@@ -495,6 +504,7 @@
     icon: icon,
     formatDate: formatDate,
     formatDateShort: formatDateShort,
+    formatDateNumeric: formatDateNumeric,
     byline: byline,
     metaLine: metaLine,
     dayName: dayName,

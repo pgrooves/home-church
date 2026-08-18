@@ -173,7 +173,7 @@ commands drive them:
 | `/new-guide` | Sermon PDF to a full guide, written to `guides` and `podcasts` |
 | `/new-event` | Asks for what is missing, confirms, writes to `events` |
 | `/new-podcast` | Episode to `podcasts`, links its guide, puts the real title on the message |
-| `/new-announcement` | The One thing card on Home, dated so it retires itself |
+| `/new-announcement` | The announcement card on Home, dated so it retires itself |
 | `/edit-content` | Plain language fix to any row, current versus proposed, writes after you confirm |
 | `/new-content-type` | Scaffolds another content type, table and command |
 

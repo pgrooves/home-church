@@ -177,7 +177,10 @@ const events = D.events.map(e => {
    than hardcoding null and quietly dropping it on the way to Supabase. */
 const announcements = D.announcements.map(a => ({
   id: a.id,
-  eyebrow: a.eyebrow || 'One thing',
+  // The eyebrow column is no longer read by the app. Home generates that label
+  // from the publish date now, so nothing typed here would reach a phone, and
+  // seeding a literal into it would only mislead whoever reads the table next.
+  eyebrow: null,
   title: a.title,
   body: a.body || null,
   starts_on: a.startsOn || null,

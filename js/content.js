@@ -32,7 +32,7 @@
 
   var cfg = HC.config || {};
   var CACHE_KEY = 'content';
-  var CACHE_VERSION = 8;      // bump when a mapping below changes shape
+  var CACHE_VERSION = 9;      // bump when a mapping below changes shape
   var TIMEOUT_MS = 12000;
 
   // The tables we pull, and the HC.data key each one fills. Adding another
@@ -174,7 +174,15 @@
   function mapAnnouncement(r) {
     return {
       id: r.id,
-      eyebrow: str(r.eyebrow) || 'One thing',
+      // The date Home prints on the label. starts_on is already a date and is
+      // the day the church chose to publish, so it wins. When it is null the
+      // announcement went up the moment the row was written, and created_at is
+      // a timestamptz in UTC, so it goes through localDate rather than having
+      // its first ten characters taken: an announcement written at eight in
+      // the evening in Metairie is stored on the following UTC day, and
+      // slicing the string would date the card tomorrow.
+      publishedOn: r.starts_on ||
+        (r.created_at ? localDate(new Date(r.created_at)) : null),
       title: str(r.title),
       body: str(r.body),
       // The window has to survive the mapping or it may as well not be in the
