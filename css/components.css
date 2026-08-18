@@ -139,20 +139,84 @@
 .hc-avatar:active .hc-avatar__disc { background: var(--hc-paper-sunk); }
 
 /* --------------------------------------------------------------------------
-   Tab bar. Flat, hairline on top, no pills, no badges.
+   Tab bar. A glass plinth floating clear of the screen edges, with the
+   active tab raised out of it as a tile.
+
+   Two pseudo elements carry the whole treatment, so the markup stays five
+   buttons and nothing else:
+     ::before  the tile, one element that slides between tabs. JS sets
+               --hc-tab-index; the tile does the travelling.
+     ::after   the sheen, one soft diagonal pass across the top-left.
+   The tile sits under the buttons and the sheen sits over everything,
+   which is the order light actually arrives in.
    -------------------------------------------------------------------------- */
 
 .hc-tabbar {
   position: fixed;
-  bottom: 0; left: 0; right: 0;
+  left: var(--hc-tabbar-inset);
+  right: var(--hc-tabbar-inset);
+  bottom: calc(var(--hc-tabbar-inset) + env(safe-area-inset-bottom));
   z-index: 40;
   display: flex;
-  background: var(--hc-paper);
-  border-top: var(--hc-hairline) solid var(--hc-rule);
-  padding-bottom: env(safe-area-inset-bottom);
+  padding: var(--hc-tabbar-pad);
+  /* Concentric with the tile: 26 outside, 6 of frame, 20 inside. Corners
+     stay parallel, which is the difference between this looking made and
+     looking assembled. */
+  border-radius: 26px;
+  background: var(--hc-tabbar-skin);
+  border: var(--hc-hairline) solid var(--hc-tabbar-edge);
+  box-shadow: var(--hc-tabbar-shadow);
+  isolation: isolate;
+}
+
+/* Glass only where the browser can actually blur. Everywhere else the
+   opaque skin above stands in, and the bar simply reads as a solid plinth. */
+@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+  .hc-tabbar {
+    background: var(--hc-tabbar-skin-lens);
+    -webkit-backdrop-filter: blur(22px) saturate(150%);
+    backdrop-filter: blur(22px) saturate(150%);
+  }
+}
+
+/* The raised tile. Width is a fifth of the frame, driven by --hc-tab-count
+   so adding a sixth tab needs no CSS. It hides on pushed views, where no
+   tab is current, and keeps its place for the return. */
+.hc-tabbar::before {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  top: var(--hc-tabbar-pad);
+  bottom: var(--hc-tabbar-pad);
+  left: var(--hc-tabbar-pad);
+  width: calc((100% - (var(--hc-tabbar-pad) * 2)) / var(--hc-tab-count, 5));
+  border-radius: 20px;
+  background: var(--hc-tabbar-tile);
+  border: var(--hc-hairline) solid var(--hc-tabbar-tile-edge);
+  box-shadow: var(--hc-tabbar-tile-shadow);
+  opacity: var(--hc-tab-tile, 1);
+  transform: translateX(calc(var(--hc-tab-index, 0) * 100%));
+  transition: transform var(--hc-dur-base) var(--hc-ease),
+              opacity var(--hc-dur-fast) var(--hc-ease);
+}
+
+.hc-tabbar::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  border-radius: inherit;
+  background: var(--hc-tabbar-sheen);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hc-tabbar::before { transition: opacity var(--hc-dur-fast) var(--hc-ease); }
 }
 
 .hc-tab {
+  position: relative;
+  z-index: 1;
   flex: 1 1 0;
   min-width: 0;
   display: flex;
@@ -185,8 +249,17 @@
   letter-spacing: 0.01em;
 }
 
+/* The tile lightens the ground under the active tab, so its label lifts a
+   step past ink to hold the same separation it had on paper. */
 .hc-tab[aria-current="page"] { color: var(--hc-ink); }
 .hc-tab[aria-current="page"] .hc-tab__icon { color: var(--hc-accent-deep); }
+
+/* The focus ring has to stay inside the plinth, or it draws a rectangle
+   across the rounded corner. */
+.hc-tab:focus-visible {
+  outline-offset: -4px;
+  border-radius: 20px;
+}
 
 /* --------------------------------------------------------------------------
    Section header. The signature pattern: eyebrow, serif title, short rule.
@@ -957,7 +1030,7 @@ a.hc-card:active { background: var(--hc-paper-sunk); }
 .hc-toast {
   position: fixed;
   left: 50%;
-  bottom: calc(var(--hc-tabbar-h) + env(safe-area-inset-bottom) + var(--hc-space-base));
+  bottom: calc(var(--hc-tabbar-space) + env(safe-area-inset-bottom) + var(--hc-space-base));
   transform: translate(-50%, 8px);
   z-index: 60;
   max-width: calc(100% - 40px);

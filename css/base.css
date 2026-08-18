@@ -121,7 +121,7 @@ button, .hc-tab, .hc-eyebrow, .hc-numeral, .hc-section__toggle, .hc-tabbar {
   padding-right: var(--hc-screen-pad);
   /* Clear the fixed header, plus the tab bar and home indicator at the end. */
   padding-top: calc(var(--hc-header-h) + env(safe-area-inset-top) + var(--hc-space-sm));
-  padding-bottom: calc(var(--hc-tabbar-h) + env(safe-area-inset-bottom) + var(--hc-space-xxl));
+  padding-bottom: calc(var(--hc-tabbar-space) + env(safe-area-inset-bottom) + var(--hc-space-xxl));
   max-width: 720px;
   margin: 0 auto;
   width: 100%;

@@ -73,6 +73,10 @@
     scroller = document.getElementById('hc-scroll');
     topbar = document.getElementById('hc-topbar');
     tabbar = document.getElementById('hc-tabbar');
+
+    // The sliding tile behind the active tab is a pseudo element sized by
+    // this count, so the CSS never has to know how many tabs there are.
+    tabbar.style.setProperty('--hc-tab-count', TAB_META.length);
   }
 
   function initials() {
@@ -122,14 +126,21 @@
     // pushed view where the back arrow needs company.
     topbar.setAttribute('data-scrolled', isTab ? 'false' : 'true');
 
+    var buttons = tabbar.querySelectorAll('.hc-tab');
     TAB_META.forEach(function (t, i) {
-      var btn = tabbar.children[i];
+      var btn = buttons[i];
       if (t.name === route.name) {
         btn.setAttribute('aria-current', 'page');
+        // The tile travels to the tab rather than appearing under it.
+        tabbar.style.setProperty('--hc-tab-index', i);
       } else {
         btn.removeAttribute('aria-current');
       }
     });
+
+    // A pushed view has no current tab, so the tile fades out and holds its
+    // place. Coming back, it is already where it should be.
+    tabbar.style.setProperty('--hc-tab-tile', isTab ? '1' : '0');
 
     paintAvatar();
   };
