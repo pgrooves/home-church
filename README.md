@@ -76,6 +76,8 @@ js/
   native.js           share sheet, calendar, haptics, notifications
   print-guide.js      the printable guide, and the standalone file for sharing
   router.js           pushState routing, query string, no hash
+  date-rail.js        the month strip under the header on Listen
+  swipe.js            drag sideways to move between the five tabs
   components.js       render functions returning HTML strings
   screens/            one file per screen, including legal.js
   app.js              boot, route table, delegated event handling

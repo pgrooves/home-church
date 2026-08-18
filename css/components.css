@@ -301,8 +301,17 @@
   box-shadow: var(--hc-tabbar-tile-shadow);
   opacity: var(--hc-tab-tile, 1);
   transform: translateX(calc(var(--hc-tab-index, 0) * 100%));
-  transition: transform var(--hc-dur-base) var(--hc-ease),
+  /* --hc-tab-tween is the swipe settling: the tile is given the same duration
+     as the screens so it arrives with them rather than on its own schedule.
+     Unset the rest of the time, which is the ordinary tap. */
+  transition: transform var(--hc-tab-tween, var(--hc-dur-base)) var(--hc-ease),
               opacity var(--hc-dur-fast) var(--hc-ease);
+}
+
+/* Mid drag the tile is not travelling toward anything, it is being placed
+   every frame at a fraction of a tab, so it must not also be easing. */
+.hc-tabbar[data-swiping="true"]::before {
+  transition: opacity var(--hc-dur-fast) var(--hc-ease);
 }
 
 .hc-tabbar::after {
@@ -1276,6 +1285,51 @@ a.hc-card:active { background: var(--hc-paper-sunk); }
 @keyframes hc-fade-in {
   from { opacity: 0; transform: translateY(6px); }
   to   { opacity: 1; transform: none; }
+}
+
+/* --------------------------------------------------------------------------
+   Swiping between tabs. The layer the incoming screen rides in on, see
+   js/swipe.js.
+
+   It is fixed and full screen rather than sitting inside .hc-scroll, because
+   the screen coming in has to be a whole screen: its own top padding under the
+   header, its own bottom padding above the tab bar, clipped at the edges and
+   scrolled nowhere. z-index puts it over the content it is arriving beside and
+   under every piece of chrome, so the header, the date rail, the disc, and the
+   tab bar hold still while the pages move underneath them.
+
+   The screen on its way out is not in here. It stays in the mount and is moved
+   by a transform, which .hc-scroll clips, so its scroll position is untouched
+   and a cancelled gesture costs nothing at all.
+   -------------------------------------------------------------------------- */
+
+.hc-swipe {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  overflow: hidden;
+  /* Passing through: the finger that is dragging this belongs to the screen
+     underneath, and nothing in here is tappable until it has landed. */
+  pointer-events: none;
+}
+
+.hc-swipe__pane {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  /* Opaque, or the outgoing screen reads through the incoming one. */
+  background: var(--hc-paper);
+  /* The leading edge of a sheet of paper sliding over another one. Soft and
+     narrow, so it is the seam that shows rather than a drop shadow. */
+  box-shadow: 0 0 22px rgba(28, 24, 20, 0.10);
+  will-change: transform;
+}
+
+/* The mount only carries this while a finger is on it. A permanent
+   will-change on the one element every screen mounts into would keep a layer
+   alive for the whole life of the app to serve a gesture lasting a second. */
+.hc-view-dragging {
+  will-change: transform;
 }
 
 /* --------------------------------------------------------------------------

@@ -61,7 +61,9 @@
     }
   }
 
-  function render(route) {
+  function render(route, opts) {
+    opts = opts || {};
+
     // A history entry restored from an older build can name a route that has
     // since been renamed. Translate before we decide it does not exist.
     if (ALIASES[route.name]) route = Object.assign({}, route, { name: ALIASES[route.name] });
@@ -70,6 +72,7 @@
     if (!view) {
       route = { name: 'home' };
       view = routes.home;
+      opts = Object.assign({}, opts, { adopt: null });
     }
 
     // Remember where the outgoing view was sitting before we replace it.
@@ -79,10 +82,15 @@
 
     current = route;
 
-    var el = view(route);
+    // opts.adopt is a screen somebody else already built, handed over rather
+    // than rendered again. The swipe gesture drags the next tab in as a real
+    // screen, and mounting that same element is what makes the last frame of
+    // the drag and the first frame of the new view the same pixels.
+    var el = opts.adopt || view(route);
     mountEl.innerHTML = '';
     mountEl.appendChild(el);
-    el.classList.add('hc-view-enter');
+    // A view that arrived by being dragged in has already made its entrance.
+    if (opts.animate !== false) el.classList.add('hc-view-enter');
 
     HC.emitViewChange(route);
 
@@ -104,7 +112,17 @@
     }
 
     pushHistory(route, opts.replace === true);
-    render(route);
+    render(route, opts);
+  }
+
+  /* A screen built outside the mount, for whoever needs one before it is the
+     current view. Nothing here becomes current and no history is written, so
+     the caller owns what it gets back. See js/swipe.js. */
+  function renderRoute(route) {
+    if (typeof route === 'string') route = { name: route };
+    if (ALIASES[route.name]) route = Object.assign({}, route, { name: ALIASES[route.name] });
+    var view = routes[route.name];
+    return view ? view(route) : null;
   }
 
   function back() {
@@ -139,6 +157,7 @@
     TABS: TABS,
     start: start,
     go: go,
+    renderRoute: renderRoute,
     back: back,
     current: function () { return current; },
     isTab: function (name) { return TABS.indexOf(name) !== -1; }

@@ -776,6 +776,15 @@
       topbar: topbar
     });
 
+    // Drag left or right on a tab and the next one comes with your thumb.
+    // Wired before the router starts so the first screen is already swipeable.
+    HC.swipe.init({
+      scroller: scroller,
+      mount: mount,
+      tabbar: tabbar,
+      totop: totop
+    });
+
     HC.router.start({
       mount: mount,
       scroll: scroller,
