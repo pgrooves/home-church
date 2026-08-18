@@ -49,6 +49,10 @@
     return '' +
       '<button type="button" class="hc-latest" data-action="open-url" ' +
         'data-media-fallback data-url="' + c.esc(post.permalink) + '">' +
+        // Above the photograph, so the block says what it is before it shows
+        // it. Underneath, it read as a caption for the picture rather than a
+        // label for the section.
+        '<span class="hc-eyebrow hc-latest__label">Latest on Instagram</span>' +
         '<span class="hc-latest__frame">' +
           // No loading="lazy" here, unlike the rail. This one is above the
           // fold on the screen the app opens to, so deferring it would mean
@@ -57,7 +61,6 @@
             'decoding="async">' +
         '</span>' +
         '<span class="hc-latest__meta">' +
-          '<span class="hc-eyebrow">Latest on Instagram</span>' +
           (caption
             ? '<span class="hc-latest__caption hc-body-serif">' + c.esc(caption) + '</span>'
             : '') +
@@ -225,6 +228,17 @@
     // there are posts, so today's Home is unchanged on a project with an
     // empty instagram_posts table.
     html += latestPost();
+
+    /* The social links sit under the photograph, but they do not depend on
+       it. A week when nothing has been posted, or a sync that has broken, is
+       exactly when somebody might go looking for the church elsewhere, and
+       that is the week these would have disappeared if they were nested
+       inside the block above.
+
+       Outside that block for a second reason too: it is a button, and a
+       button inside a button is invalid HTML that browsers resolve however
+       they like. */
+    html += c.socialRow(HC.data.church.social);
 
     html += '<div class="hc-home__stack">';
     html += gatheringCard();

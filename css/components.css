@@ -1112,3 +1112,65 @@ a.hc-card:active { background: var(--hc-paper-sunk); }
   .hc-rail { scroll-snap-type: none; }
   .hc-post__img { animation: none; }
 }
+
+/* --------------------------------------------------------------------------
+   Social links, a centered row. Used on Home under the latest post.
+
+   The glyphs are --hc-ink, which is near black on paper and near white in
+   dark mode, so one token carries the whole inversion and these follow the
+   theme exactly the way body text does. No disc behind them: a filled circle
+   would have needed its own light and dark pair kept in step with this one,
+   and five solid discs under a photograph read as a toolbar rather than as a
+   quiet row of links.
+
+   The button is 44 square while the glyph is 24. That gap is deliberate.
+   --hc-tap-min is 44 and nothing here goes under it, but a 44pt logo is a
+   billboard, so the target stays 44 and only the paint shrinks.
+   -------------------------------------------------------------------------- */
+
+/* Solid brand marks opt back out of the `svg { fill: none }` reset in
+   base.css, which exists for this app's own stroke drawn icons and wins over
+   a fill attribute. Set on the svg only: fill inherits, so children without
+   one of their own pick it up, while Instagram's rect and circle keep the
+   fill="none" they carry and stay an outline the way its real mark is. */
+.hc-brand { fill: currentColor; }
+
+.hc-social-row {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: var(--hc-space-sm);
+  margin-bottom: var(--hc-space-lg);
+}
+
+.hc-social {
+  width: var(--hc-tap-min);
+  height: var(--hc-tap-min);
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--hc-ink);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.hc-social__icon {
+  width: 24px;
+  height: 24px;
+  display: block;
+  transition: transform var(--hc-dur-fast) var(--hc-ease),
+              opacity var(--hc-dur-fast) var(--hc-ease);
+}
+
+.hc-social:active .hc-social__icon {
+  opacity: 0.6;
+  transform: scale(0.92);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hc-social__icon { transition: none; }
+  .hc-social:active .hc-social__icon { transform: none; }
+}
