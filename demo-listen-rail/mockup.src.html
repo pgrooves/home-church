@@ -1,0 +1,1196 @@
+<title>Listen Date Rail</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant:ital,wght@0,400;0,600;1,400&family=Poppins:wght@400;600;800&display=swap">
+
+<style>
+/* ==========================================================================
+   Home Church tokens, lifted from css/tokens.css so the phone in this page is
+   the real thing rather than an impression of it. The surround around the
+   device adds only what a token file has no reason to carry: a table to set
+   the phone on, and the ink for the notes beside it.
+   ========================================================================== */
+
+:root {
+  --hc-paper:       #F7F4EF;
+  --hc-paper-sunk:  #EFEAE2;
+  --hc-cream:       #EDE8DF;
+  --hc-ink:         #111111;
+  --hc-dark:        #1A1918;
+  --hc-mid:         #6D6864;
+  --hc-rule:        #C8C0B0;
+  --hc-accent:      #B5A898;
+  --hc-accent-deep: #71675A;
+  --hc-on-dark:     #F7F4EF;
+
+  --hc-serif: "Cormorant", "Cormorant Garamond", Georgia, "Times New Roman", serif;
+  --hc-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --hc-sans-display: "Poppins", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+
+  --hc-radius-sm: 8px;
+  --hc-radius-md: 10px;
+  --hc-radius-lg: 12px;
+  --hc-radius-pill: 999px;
+  --hc-hairline: 0.5px;
+
+  --hc-ease: cubic-bezier(0.4, 0, 0.2, 1);
+  --hc-dur-fast: 200ms;
+  --hc-dur-base: 300ms;
+
+  --hc-tabbar-skin:      linear-gradient(178deg, rgba(255,253,250,0.94), rgba(238,233,225,0.92));
+  --hc-tabbar-edge:      rgba(122,110,95,0.28);
+  --hc-tabbar-shadow:    0 14px 34px rgba(26,25,24,0.18), 0 2px 8px rgba(26,25,24,0.08),
+                         inset 0 1px 0 rgba(255,255,255,0.70), inset 0 -1px 0 rgba(26,25,24,0.05);
+  --hc-tabbar-tile:      linear-gradient(180deg, rgba(255,255,255,0.96), rgba(247,244,239,0.86));
+  --hc-tabbar-tile-edge: rgba(122,110,95,0.18);
+  --hc-tabbar-tile-shadow: inset 0 1px 0 rgba(255,255,255,0.90), inset 0 -1px 0 rgba(26,25,24,0.06),
+                         0 3px 9px rgba(26,25,24,0.12);
+
+  /* --- the surround ---------------------------------------------------- */
+  --pg-ground:   #E4DCCE;   /* the table the phone sits on */
+  --pg-raised:   #EFE9DF;   /* note panels */
+  --pg-ink:      #22201C;
+  --pg-mid:      #5E574E;
+  --pg-line:     rgba(113,103,90,0.26);
+  --pg-shadow:   0 40px 80px -28px rgba(50,42,32,0.45), 0 8px 24px -8px rgba(50,42,32,0.24);
+  --pg-flag:     #7A5A3A;   /* the one warning hue, used once */
+  --pg-flag-bg:  rgba(122,90,58,0.10);
+
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --hc-paper:       #1A1918;
+    --hc-paper-sunk:  #201E1D;
+    --hc-cream:       #232120;
+    --hc-ink:         #F2EEE7;
+    --hc-dark:        #F2EEE7;
+    --hc-mid:         #9A938A;
+    --hc-rule:        #3A3633;
+    --hc-accent:      #C4B5A2;
+    --hc-accent-deep: #CFC1AE;
+    --hc-on-dark:     #1A1918;
+
+    --hc-tabbar-skin:      linear-gradient(178deg, rgba(58,54,51,0.88), rgba(26,25,24,0.86));
+    --hc-tabbar-edge:      rgba(196,181,162,0.20);
+    --hc-tabbar-shadow:    0 16px 36px rgba(0,0,0,0.52), inset 0 1px 0 rgba(242,238,231,0.10),
+                           inset 0 -1px 0 rgba(0,0,0,0.30);
+    --hc-tabbar-tile:      linear-gradient(180deg, rgba(247,244,239,0.15), rgba(247,244,239,0.055));
+    --hc-tabbar-tile-edge: rgba(207,193,174,0.30);
+    --hc-tabbar-tile-shadow: inset 0 1px 0 rgba(255,252,247,0.24), inset 0 -1px 0 rgba(0,0,0,0.16),
+                           0 4px 12px rgba(0,0,0,0.30);
+
+    --pg-ground:  #131211;
+    --pg-raised:  #1E1C1A;
+    --pg-ink:     #EFE9E0;
+    --pg-mid:     #A29A8F;
+    --pg-line:    rgba(196,181,162,0.20);
+    --pg-shadow:  0 40px 90px -30px rgba(0,0,0,0.85), 0 8px 24px -8px rgba(0,0,0,0.6);
+    --pg-flag:    #D2A472;
+    --pg-flag-bg: rgba(210,164,114,0.12);
+
+    color-scheme: dark;
+  }
+}
+
+:root[data-theme="dark"] {
+  --hc-paper:       #1A1918;
+  --hc-paper-sunk:  #201E1D;
+  --hc-cream:       #232120;
+  --hc-ink:         #F2EEE7;
+  --hc-dark:        #F2EEE7;
+  --hc-mid:         #9A938A;
+  --hc-rule:        #3A3633;
+  --hc-accent:      #C4B5A2;
+  --hc-accent-deep: #CFC1AE;
+  --hc-on-dark:     #1A1918;
+
+  --hc-tabbar-skin:      linear-gradient(178deg, rgba(58,54,51,0.88), rgba(26,25,24,0.86));
+  --hc-tabbar-edge:      rgba(196,181,162,0.20);
+  --hc-tabbar-shadow:    0 16px 36px rgba(0,0,0,0.52), inset 0 1px 0 rgba(242,238,231,0.10),
+                         inset 0 -1px 0 rgba(0,0,0,0.30);
+  --hc-tabbar-tile:      linear-gradient(180deg, rgba(247,244,239,0.15), rgba(247,244,239,0.055));
+  --hc-tabbar-tile-edge: rgba(207,193,174,0.30);
+  --hc-tabbar-tile-shadow: inset 0 1px 0 rgba(255,252,247,0.24), inset 0 -1px 0 rgba(0,0,0,0.16),
+                         0 4px 12px rgba(0,0,0,0.30);
+
+  --pg-ground:  #131211;
+  --pg-raised:  #1E1C1A;
+  --pg-ink:     #EFE9E0;
+  --pg-mid:     #A29A8F;
+  --pg-line:    rgba(196,181,162,0.20);
+  --pg-shadow:  0 40px 90px -30px rgba(0,0,0,0.85), 0 8px 24px -8px rgba(0,0,0,0.6);
+  --pg-flag:    #D2A472;
+  --pg-flag-bg: rgba(210,164,114,0.12);
+
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--pg-ground);
+  color: var(--pg-ink);
+  font-family: var(--hc-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+svg { fill: none; }
+
+/* ------------------------------------------------------------- page shell */
+
+.page {
+  max-width: 1160px;
+  margin: 0 auto;
+  padding: clamp(32px, 6vw, 72px) clamp(20px, 4vw, 40px) 96px;
+}
+
+.masthead { max-width: 62ch; display: flex; flex-direction: column; gap: 14px; }
+
+.eyebrow {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--hc-accent-deep);
+  margin: 0;
+}
+
+h1 {
+  margin: 0;
+  font-family: var(--hc-sans-display);
+  font-weight: 800;
+  font-size: clamp(30px, 4.4vw, 46px);
+  line-height: 1.08;
+  letter-spacing: -0.025em;
+  text-wrap: balance;
+}
+
+.lede {
+  margin: 0;
+  font-family: var(--hc-serif);
+  font-size: clamp(19px, 2vw, 22px);
+  line-height: 1.5;
+  color: var(--pg-ink);
+}
+
+.lede em { color: var(--pg-mid); }
+
+/* ------------------------------------------------------------ the stage */
+
+.stage {
+  margin-top: clamp(32px, 5vw, 56px);
+  display: grid;
+  gap: clamp(28px, 4vw, 56px);
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+}
+
+@media (min-width: 1000px) {
+  .stage { grid-template-columns: 390px minmax(0, 1fr); }
+  .stage__device { position: sticky; top: 32px; }
+}
+
+.stage__device { display: flex; flex-direction: column; gap: 16px; align-items: center; }
+
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+}
+
+.seg {
+  display: inline-flex;
+  padding: 3px;
+  gap: 3px;
+  background: var(--pg-raised);
+  border: 1px solid var(--pg-line);
+  border-radius: var(--hc-radius-pill);
+}
+
+.seg button {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: var(--pg-mid);
+  padding: 7px 14px;
+  border-radius: var(--hc-radius-pill);
+  cursor: pointer;
+  transition: background var(--hc-dur-fast) var(--hc-ease), color var(--hc-dur-fast) var(--hc-ease);
+}
+
+.seg button[aria-pressed="true"] {
+  background: var(--hc-accent-deep);
+  color: var(--hc-on-dark);
+}
+
+.seg button:focus-visible,
+.ghost:focus-visible { outline: 2px solid var(--hc-accent-deep); outline-offset: 2px; }
+
+.ghost {
+  appearance: none;
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--pg-mid);
+  background: transparent;
+  border: 1px solid var(--pg-line);
+  border-radius: var(--hc-radius-pill);
+  padding: 8px 15px;
+  cursor: pointer;
+  transition: color var(--hc-dur-fast) var(--hc-ease), border-color var(--hc-dur-fast) var(--hc-ease);
+}
+
+.ghost:hover { color: var(--pg-ink); border-color: var(--hc-accent-deep); }
+
+.hint {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--pg-mid);
+  text-align: center;
+  max-width: 34ch;
+}
+
+/* ----------------------------------------------------------- the device */
+
+.device {
+  width: 390px;
+  max-width: 100%;
+  height: 780px;
+  max-height: 82vh;
+  border-radius: 46px;
+  padding: 11px;
+  background: linear-gradient(160deg, #45403A, #23201C 55%, #38332D);
+  box-shadow: var(--pg-shadow);
+  flex: 0 0 auto;
+}
+
+.screen {
+  position: relative;
+  height: 100%;
+  border-radius: 36px;
+  overflow: hidden;
+  background: var(--hc-paper);
+  color: var(--hc-ink);
+  isolation: isolate;
+}
+
+/* --- top bar, as built today ------------------------------------------- */
+
+.tb {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 52px;
+  padding: 0 20px;
+  background: var(--hc-paper);
+  border-bottom: var(--hc-hairline) solid transparent;
+  transition: border-color var(--hc-dur-fast) var(--hc-ease);
+}
+
+.tb[data-scrolled="true"] { border-bottom-color: var(--hc-rule); }
+.tb[data-rail="true"] { border-bottom-color: transparent; }
+
+.tb__center { position: relative; flex: 1 1 auto; min-width: 0; height: 100%; }
+
+.tb__logo {
+  position: absolute;
+  left: 0; top: 50%;
+  transform: translate(0, -50%);
+  height: 20px; width: auto;
+  transition: left var(--hc-dur-fast) var(--hc-ease), transform var(--hc-dur-fast) var(--hc-ease);
+}
+
+.tb[data-scrolled="true"] .tb__logo { left: 50%; transform: translate(-50%, -50%); }
+
+.tb__title {
+  position: absolute;
+  left: 0; top: 50%;
+  transform: translateY(-50%);
+  font-family: var(--hc-sans-display);
+  font-weight: 800;
+  font-size: 17px;
+  letter-spacing: -0.01em;
+  opacity: 0;
+  transition: opacity var(--hc-dur-fast) var(--hc-ease);
+}
+
+.tb[data-scrolled="true"] .tb__title { opacity: 1; }
+
+.tb__avatar {
+  flex: 0 0 auto;
+  width: 30px; height: 30px;
+  border-radius: var(--hc-radius-pill);
+  background: var(--hc-cream);
+  border: var(--hc-hairline) solid var(--hc-rule);
+  display: grid;
+  place-items: center;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  color: var(--hc-accent-deep);
+}
+
+/* --- the proposal: the date rail --------------------------------------- */
+
+.rail {
+  position: absolute;
+  z-index: 39;
+  top: 52px; left: 0; right: 0;
+  height: 42px;
+  background: color-mix(in srgb, var(--hc-paper) 94%, transparent);
+  backdrop-filter: blur(14px) saturate(1.4);
+  -webkit-backdrop-filter: blur(14px) saturate(1.4);
+  border-bottom: var(--hc-hairline) solid var(--hc-rule);
+  transform: translateY(-100%);
+  opacity: 0;
+  pointer-events: none;
+  transition: transform var(--hc-dur-base) var(--hc-ease),
+              opacity var(--hc-dur-fast) var(--hc-ease);
+}
+
+.rail[data-show="true"] { transform: translateY(0); opacity: 1; pointer-events: auto; }
+
+@media (prefers-reduced-motion: reduce) {
+  .rail { transition: opacity var(--hc-dur-fast) linear; transform: none; }
+}
+
+.rail__track {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 100%;
+  padding: 0 16px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.rail__track::-webkit-scrollbar { display: none; }
+
+.chip {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  flex: 0 0 auto;
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  font-variant-numeric: tabular-nums;
+  color: var(--hc-mid);
+  padding: 6px 11px;
+  border-radius: var(--hc-radius-pill);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background var(--hc-dur-fast) var(--hc-ease),
+              color var(--hc-dur-fast) var(--hc-ease);
+}
+
+.chip[aria-current="true"] {
+  background: var(--hc-accent-deep);
+  color: var(--hc-on-dark);
+  font-weight: 700;
+}
+
+.chip:focus-visible { outline: 2px solid var(--hc-accent-deep); outline-offset: 1px; }
+
+/* The series marker, only in the second variant. Not a month, so it does not
+   look like one: no pill, tracked caps, and a hairline standing in for the
+   seam between two archive groups. */
+.seam {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  padding: 6px 10px 6px 0;
+  margin-left: 4px;
+  font: inherit;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--hc-accent-deep);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.seam::before {
+  content: "";
+  width: 1px;
+  height: 14px;
+  background: var(--hc-rule);
+}
+
+.seam:focus-visible { outline: 2px solid var(--hc-accent-deep); outline-offset: 1px; }
+
+.rail[data-variant="months"] .seam { display: none; }
+
+.rail__fade {
+  position: absolute;
+  top: 0; bottom: var(--hc-hairline);
+  width: 22px;
+  pointer-events: none;
+}
+
+.rail__fade--l { left: 0;  background: linear-gradient(90deg, var(--hc-paper), transparent); }
+.rail__fade--r { right: 0; background: linear-gradient(270deg, var(--hc-paper), transparent); }
+
+/* --- the scroller ------------------------------------------------------- */
+
+.scroll {
+  position: absolute;
+  inset: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: none;
+  padding: 52px 20px 108px;
+}
+
+.scroll::-webkit-scrollbar { display: none; }
+
+/* --- Listen screen, as built today ------------------------------------- */
+
+.sec { margin-top: 40px; }
+.sec--flush { margin-top: 0; }
+.sec__eyebrow {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--hc-accent-deep);
+}
+.sec__title {
+  margin: 8px 0 0;
+  font-family: var(--hc-sans-display);
+  font-weight: 800;
+  font-size: 25px;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+  color: var(--hc-ink);
+}
+.sec__rule { margin-top: 12px; width: 22%; min-width: 56px; height: 0.75px; background: var(--hc-accent); }
+.sec + * { margin-top: 16px; }
+
+.cover {
+  position: relative;
+  display: block;
+  width: 100%;
+  background: #1A1918;
+  box-shadow: inset 0 0 0 var(--hc-hairline) var(--hc-rule);
+  border-radius: var(--hc-radius-lg);
+  overflow: hidden;
+}
+.cover--16x9 { aspect-ratio: 16 / 9; }
+.cover--4x3 { aspect-ratio: 4 / 3; }
+.cover--1x1 { aspect-ratio: 1 / 1; }
+.cover img { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 62%; }
+.cover--compact img { width: 46%; }
+.cover__play {
+  position: absolute; inset: 0;
+  display: grid; place-items: center;
+}
+.cover__play span {
+  width: 54px; height: 54px;
+  border-radius: var(--hc-radius-pill);
+  background: #F7F4EF;
+  border: var(--hc-hairline) solid rgba(247,244,239,0.24);
+  display: grid; place-items: center;
+}
+.cover__play svg { width: 20px; height: 20px; margin-left: 3px; fill: #111111; }
+
+.latest { display: flex; flex-direction: column; gap: 10px; }
+.latest__eyebrow { margin: 6px 0 0; }
+.latest__title {
+  margin: 0;
+  font-family: var(--hc-sans-display);
+  font-weight: 800;
+  font-size: 26px;
+  line-height: 30px;
+  letter-spacing: -0.015em;
+}
+.caption { font-size: 13px; line-height: 18px; color: var(--hc-mid); margin: 0; }
+.serif { font-family: var(--hc-serif); font-size: 17px; line-height: 26px; margin: 0; }
+
+.btn {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 44px;
+  padding: 12px 18px;
+  border-radius: var(--hc-radius-md);
+  font: inherit;
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition: opacity var(--hc-dur-fast) var(--hc-ease);
+}
+.btn svg { width: 18px; height: 18px; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+.btn--primary { background: var(--hc-dark); color: var(--hc-on-dark); border: 0; }
+.btn--secondary { background: transparent; color: var(--hc-ink); border: 1px solid var(--hc-rule); }
+.btn:active { opacity: 0.85; }
+
+.inline-link {
+  appearance: none; border: 0; background: transparent;
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 8px 0;
+  font: inherit; font-size: 14px; font-weight: 600;
+  color: var(--hc-accent-deep);
+  cursor: pointer;
+}
+.inline-link svg { width: 16px; height: 16px; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+
+.hero { display: flex; flex-direction: column; gap: 10px; }
+
+.group { margin-top: 24px; }
+.group__label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--hc-accent-deep);
+}
+
+.row { padding: 16px 0; border-top: var(--hc-hairline) solid var(--hc-rule); }
+.group .row:last-of-type { border-bottom: var(--hc-hairline) solid var(--hc-rule); }
+
+.row__main {
+  appearance: none; border: 0; background: transparent;
+  display: flex; align-items: flex-start; gap: 16px;
+  width: 100%; text-align: left; padding: 0; cursor: pointer;
+  color: inherit; font: inherit;
+}
+.row__thumb { flex: 0 0 76px; width: 76px; }
+.row__body { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.row__title {
+  font-family: var(--hc-sans);
+  font-size: 16px; line-height: 22px; font-weight: 600;
+  color: var(--hc-ink);
+}
+.row__chev { flex: 0 0 auto; width: 20px; height: 20px; margin-top: 2px; color: var(--hc-mid);
+  stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round;
+  transition: transform var(--hc-dur-fast) var(--hc-ease); }
+.row__main[aria-expanded="true"] .row__chev { transform: rotate(180deg); }
+
+.panel { display: grid; grid-template-rows: 0fr; overflow: hidden;
+  transition: grid-template-rows var(--hc-dur-base) var(--hc-ease); }
+.panel[data-open="true"] { grid-template-rows: 1fr; }
+.panel__inner { min-height: 0; display: flex; flex-direction: column; gap: 12px; }
+.panel[data-open="true"] .panel__inner { padding-top: 14px; }
+
+.card {
+  background: var(--hc-cream);
+  border-radius: var(--hc-radius-lg);
+  padding: 20px;
+  display: flex; flex-direction: column; gap: 8px;
+  border-left: 1.5px solid var(--hc-accent);
+}
+.card__title { margin: 0; font-family: var(--hc-sans-display); font-weight: 800; font-size: 19px; letter-spacing: -0.01em; }
+
+/* --- the floating tab bar ---------------------------------------------- */
+
+.tabbar {
+  position: absolute;
+  z-index: 41;
+  left: 12px; right: 12px; bottom: 12px;
+  height: 68px;
+  padding: 6px;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  border-radius: 22px;
+  background: var(--hc-tabbar-skin);
+  border: var(--hc-hairline) solid var(--hc-tabbar-edge);
+  box-shadow: var(--hc-tabbar-shadow);
+}
+
+.tab {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
+  border-radius: 16px;
+  color: var(--hc-mid);
+  font-size: 11px; font-weight: 600;
+}
+.tab svg { width: 22px; height: 22px; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+.tab[aria-current="page"] {
+  color: var(--hc-ink);
+  background: var(--hc-tabbar-tile);
+  border: var(--hc-hairline) solid var(--hc-tabbar-tile-edge);
+  box-shadow: var(--hc-tabbar-tile-shadow);
+}
+
+/* ------------------------------------------------------------- the notes */
+
+.notes { display: flex; flex-direction: column; gap: 28px; max-width: 62ch; }
+
+.note h2 {
+  margin: 0 0 14px;
+  font-family: var(--hc-sans-display);
+  font-weight: 800;
+  font-size: 21px;
+  letter-spacing: -0.015em;
+}
+
+.steps { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 0; }
+
+.steps li {
+  display: grid;
+  grid-template-columns: 76px minmax(0, 1fr);
+  gap: 18px;
+  padding: 14px 0;
+  border-top: 1px solid var(--pg-line);
+  align-items: baseline;
+}
+.steps li:last-child { border-bottom: 1px solid var(--pg-line); }
+
+.steps b {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--hc-accent-deep);
+}
+
+.steps p { margin: 0; font-size: 14.5px; line-height: 1.6; color: var(--pg-ink); }
+.steps p span { color: var(--pg-mid); }
+
+.flag {
+  border-left: 2px solid var(--pg-flag);
+  background: var(--pg-flag-bg);
+  border-radius: 0 var(--hc-radius-lg) var(--hc-radius-lg) 0;
+  padding: 18px 20px;
+  display: flex; flex-direction: column; gap: 10px;
+}
+.flag h3 {
+  margin: 0;
+  font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--pg-flag);
+}
+.flag p { margin: 0; font-size: 14.5px; line-height: 1.6; }
+.flag code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12.5px;
+  background: color-mix(in srgb, var(--pg-ink) 8%, transparent);
+  padding: 1px 5px; border-radius: 4px;
+}
+
+.order {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.order li {
+  padding: 5px 9px;
+  border-radius: var(--hc-radius-pill);
+  border: 1px solid var(--pg-line);
+  color: var(--pg-mid);
+}
+.order li[data-dupe="true"] { border-color: var(--pg-flag); color: var(--pg-flag); font-weight: 600; }
+.order li[data-seam="true"] {
+  border: 0; background: transparent; color: var(--hc-accent-deep);
+  font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
+  padding-left: 2px; padding-right: 2px;
+}
+
+.decide { display: flex; flex-direction: column; gap: 12px; }
+.decide__item {
+  border: 1px solid var(--pg-line);
+  border-radius: var(--hc-radius-lg);
+  padding: 16px 18px;
+  background: var(--pg-raised);
+  display: flex; flex-direction: column; gap: 6px;
+}
+.decide__item h3 { margin: 0; font-size: 14.5px; font-weight: 700; }
+.decide__item p { margin: 0; font-size: 14px; line-height: 1.6; color: var(--pg-mid); }
+.decide__item[data-pick="true"] { border-color: var(--hc-accent-deep); }
+.decide__item[data-pick="true"] h3::after {
+  content: "recommended";
+  margin-left: 8px;
+  font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--hc-accent-deep);
+}
+
+footer.tail {
+  margin-top: 56px;
+  padding-top: 20px;
+  border-top: 1px solid var(--pg-line);
+  font-size: 13px;
+  color: var(--pg-mid);
+  max-width: 62ch;
+  line-height: 1.6;
+}
+</style>
+
+<div class="page">
+
+  <header class="masthead">
+    <p class="eyebrow">Home Church · Listen tab</p>
+    <h1>A sticky month rail for the archive</h1>
+    <p class="lede">
+      Once <em>Archive</em> clears the header, a second sticky strip slides in underneath it,
+      carrying the month each episode was preached. Scroll it sideways, tap a month, and the
+      page goes there. <em>The phone below is live — scroll it.</em>
+    </p>
+  </header>
+
+  <div class="stage">
+
+    <div class="stage__device">
+      <div class="controls">
+        <div class="seg" role="group" aria-label="Rail variant">
+          <button type="button" data-variant="months" aria-pressed="false">Months only</button>
+          <button type="button" data-variant="seams" aria-pressed="true">Months + series</button>
+        </div>
+        <button type="button" class="ghost" id="jump">Jump to Archive</button>
+      </div>
+
+      <div class="device">
+        <div class="screen">
+
+          <header class="tb" id="tb" data-scrolled="false" data-rail="false">
+            <span class="tb__center">
+              <img class="tb__logo" id="logo" src="__LOCKUP_INK__" alt="Home Church">
+              <span class="tb__title">Listen</span>
+            </span>
+            <span class="tb__avatar">TG</span>
+          </header>
+
+          <div class="rail" id="rail" data-show="false" data-variant="seams"
+               role="tablist" aria-label="Jump to a month">
+            <div class="rail__track" id="track"></div>
+            <div class="rail__fade rail__fade--l"></div>
+            <div class="rail__fade rail__fade--r"></div>
+          </div>
+
+          <main class="scroll" id="scroll"></main>
+
+          <nav class="tabbar" aria-hidden="true">
+            <span class="tab"><svg viewBox="0 0 24 24"><path d="M3 10.2 12 3l9 7.2V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>Home</span>
+            <span class="tab" aria-current="page"><svg viewBox="0 0 24 24"><path d="M4 15v-3a8 8 0 0 1 16 0v3"/><path d="M4 14h2a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2H5a1 1 0 0 1-1-1z"/><path d="M20 14h-2a2 2 0 0 0-2 2v2a2 2 0 0 0 2 2h1a1 1 0 0 0 1-1z"/></svg>Listen</span>
+            <span class="tab"><svg viewBox="0 0 24 24"><path d="M4 4.5A1.5 1.5 0 0 1 5.5 3H19v15H5.5A1.5 1.5 0 0 0 4 19.5z"/><path d="M4 19.5A1.5 1.5 0 0 1 5.5 18H19v3H5.5A1.5 1.5 0 0 1 4 19.5z"/><path d="M8 8h7M8 11.5h5"/></svg>Guide</span>
+            <span class="tab"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.2 2.7-5.2 6-5.2s6 2 6 5.2"/><path d="M16 5.4a3.2 3.2 0 0 1 0 6.2M18 14.6c2 .7 3 2.5 3 5"/></svg>Connect</span>
+            <span class="tab"><svg viewBox="0 0 24 24"><path d="M12 20s-7.5-4.6-7.5-9.4A4.1 4.1 0 0 1 12 7.6a4.1 4.1 0 0 1 7.5 3C19.5 15.4 12 20 12 20z"/></svg>Give</span>
+          </nav>
+
+        </div>
+      </div>
+
+      <p class="hint">Rows still open in place. The rail re-measures when they do.</p>
+    </div>
+
+    <div class="notes">
+
+      <section class="note">
+        <h2>How it behaves</h2>
+        <ul class="steps">
+          <li>
+            <b>Appears</b>
+            <p>The rail is hidden through Most recent and Current series. It slides down the moment the <span>Archive</span> header passes under the top bar, and slides back up when you scroll above it again.</p>
+          </li>
+          <li>
+            <b>Tracks</b>
+            <p>As you scroll, the active month is whichever one is currently sitting under the header. The rail auto-scrolls to keep that month centered, so the label is never off-screen.</p>
+          </li>
+          <li>
+            <b>Jumps</b>
+            <p>Tap a month and the page smooth-scrolls so that month's first episode lands just below the rail. Tapping never leaves the row hidden behind the chrome.</p>
+          </li>
+          <li>
+            <b>Measures</b>
+            <p>Opening an episode changes every offset below it. Positions are recomputed on expand, on resize, and on text-size changes, so the rail cannot drift out of sync.</p>
+          </li>
+          <li>
+            <b>Reach</b>
+            <p>42px tall, so the rail plus the header still leave the episode list the majority of the screen. Chips clear the 44px tap minimum by their padding and the rail's full height.</p>
+          </li>
+        </ul>
+      </section>
+
+      <section class="note">
+        <h2>One thing to decide</h2>
+        <div class="flag">
+          <h3>The archive is not in date order</h3>
+          <p>
+            It is grouped by series first, newest series first, and dates only run downward
+            <em>inside</em> a group. So the page really goes Aug 2026 → May 2026 (David), then
+            back up to Jun 2026 (Messages), then down again, then back to Oct 2025 (Ephesians).
+            A rail of bare months would appear to jump backwards three times.
+          </p>
+          <ul class="order" aria-label="Month order down the page">
+            <li data-seam="true">David</li>
+            <li>Aug 26</li><li>Jul 26</li><li>Jun 26</li><li>May 26</li>
+            <li data-seam="true">Messages</li>
+            <li data-dupe="true">Jun 26</li><li>Apr 26</li><li>Mar 26</li><li>Feb 26</li><li>Jan 26</li>
+            <li data-seam="true">Ephesians</li>
+            <li data-dupe="true">Oct 25</li><li>Sep 25</li>
+          </ul>
+        </div>
+      </section>
+
+      <section class="note">
+        <h2>Two ways to handle it</h2>
+        <div class="decide">
+          <div class="decide__item">
+            <h3>Months only</h3>
+            <p>Exactly what you asked for: month + year, in page order, nothing else. Honest about where you are, but the repeated months read as a bug unless you already know the archive is grouped by series.</p>
+          </div>
+          <div class="decide__item" data-pick="true">
+            <h3>Months + series markers</h3>
+            <p>Same chips, with a hairline and the series name at each group seam. The second “Jun 2026” now reads as June 2026 <em>in Messages</em>, and the rail doubles as a series index. Toggle both above the phone.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="note">
+        <h2>What it touches</h2>
+        <ul class="steps">
+          <li><b>Markup</b><p>A rail element in the shell alongside the top bar, plus a date attribute on each archive row. <span>js/app.js, js/screens/listen.js</span></p></li>
+          <li><b>Style</b><p>Rail, chips, seam marker, and the top bar giving up its bottom hairline while the rail is showing. <span>css/components.css</span></p></li>
+          <li><b>Behavior</b><p>One scroll listener, shared with the existing rAF-throttled one that already drives the logo. No new scroll handler. <span>js/app.js</span></p></li>
+          <li><b>Scope</b><p>Listen only. The rail hides itself on every other tab and on pushed views.</p></li>
+        </ul>
+      </section>
+
+    </div>
+  </div>
+
+  <footer class="tail">
+    Mockup only — nothing here is wired into the app yet. Episode titles, dates, and series
+    are the real catalogue. Say which variant you want and I'll build it.
+  </footer>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  var DATA = __DATA__;
+  var MARK = "__MARK__";
+  var LOCKUP = "__LOCKUP__";
+  var LOCKUP_INK = "__LOCKUP_INK__";
+
+  var MONTHS = ['January','February','March','April','May','June',
+                'July','August','September','October','November','December'];
+  var SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+  function parse(iso) {
+    var p = iso.split('-');
+    return new Date(+p[0], +p[1] - 1, +p[2]);
+  }
+  function longDate(iso) { var d = parse(iso); return MONTHS[d.getMonth()] + ' ' + d.getDate() + ', ' + d.getFullYear(); }
+  function monthLabel(iso) { var d = parse(iso); return SHORT[d.getMonth()] + ' ' + d.getFullYear(); }
+  function monthKey(iso) { return iso.slice(0, 7); }
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"]/g, function (ch) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch];
+    });
+  }
+  function meta(parts) { return parts.filter(Boolean).join(' · '); }
+
+  /* ------------------------------------------------------- screen markup */
+
+  function cover(ratio, opts) {
+    opts = opts || {};
+    var art = opts.compact ? MARK : LOCKUP;
+    return '<span class="cover cover--' + ratio + (opts.compact ? ' cover--compact' : '') + '">' +
+      '<img src="' + art + '" alt="">' +
+      (opts.play ? '<span class="cover__play"><span>' +
+        '<svg viewBox="0 0 24 24"><path d="M8 5.5 19 12 8 18.5z"/></svg></span></span>' : '') +
+      '</span>';
+  }
+
+  function section(eyebrow, title, opts) {
+    opts = opts || {};
+    return '<header class="sec' + (opts.flush ? ' sec--flush' : '') + '"' +
+      (opts.id ? ' id="' + opts.id + '"' : '') + '>' +
+      '<span class="sec__eyebrow">' + esc(eyebrow) + '</span>' +
+      '<h2 class="sec__title">' + esc(title) + '</h2>' +
+      '<div class="sec__rule"></div>' +
+      '</header>';
+  }
+
+  var ICON_LISTEN = '<svg viewBox="0 0 24 24"><path d="M4 15v-3a8 8 0 0 1 16 0v3"/>' +
+    '<path d="M4 14h2a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2H5a1 1 0 0 1-1-1z"/>' +
+    '<path d="M20 14h-2a2 2 0 0 0-2 2v2a2 2 0 0 0 2 2h1a1 1 0 0 0 1-1z"/></svg>';
+  var ICON_GUIDE = '<svg viewBox="0 0 24 24"><path d="M4 4.5A1.5 1.5 0 0 1 5.5 3H19v15H5.5A1.5 1.5 0 0 0 4 19.5z"/>' +
+    '<path d="M4 19.5A1.5 1.5 0 0 1 5.5 18H19v3H5.5A1.5 1.5 0 0 1 4 19.5z"/><path d="M8 8h7M8 11.5h5"/></svg>';
+  var ICON_OUT = '<svg viewBox="0 0 24 24"><path d="M14 4h6v6"/><path d="M20 4 10 14"/>' +
+    '<path d="M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg>';
+  var ICON_CHEV = '<svg class="row__chev" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg>';
+
+  function row(s) {
+    return '<div class="row" data-date="' + s.d + '">' +
+      '<button type="button" class="row__main" aria-expanded="false">' +
+        '<span class="row__thumb">' + cover('1x1', { compact: true }) + '</span>' +
+        '<span class="row__body">' +
+          '<span class="row__title">' + esc(s.t) + '</span>' +
+          '<span class="caption">' + esc([s.p, longDate(s.d)].filter(Boolean).join(', ')) + '</span>' +
+          '<span class="caption">' + esc(meta([s.pa, s.du])) + '</span>' +
+        '</span>' + ICON_CHEV +
+      '</button>' +
+      '<div class="panel" data-open="false"><div class="panel__inner">' +
+        (s.desc ? '<p class="serif">' + esc(s.desc) + '</p>' : '') +
+        '<button type="button" class="btn btn--secondary">' + ICON_LISTEN + 'Listen on Spotify</button>' +
+        (s.g ? '<button type="button" class="inline-link">' + ICON_GUIDE + '<span>Open the group guide</span></button>' : '') +
+      '</div></div>' +
+    '</div>';
+  }
+
+  function build() {
+    var L = DATA.latest, H = DATA.seriesHero, P = DATA.podcast;
+    var html = '';
+
+    html += section('Most recent', 'Listen', { flush: true });
+    html += '<div class="latest">' +
+      cover('16x9', { play: true }) +
+      '<p class="sec__eyebrow latest__eyebrow">' + esc(L.series) + '</p>' +
+      '<h3 class="latest__title">' + esc(L.t) + '</h3>' +
+      '<p class="caption">' + esc(meta([L.p, longDate(L.d), L.du])) + '</p>' +
+      L.paras.map(function (p) { return '<p class="serif">' + esc(p) + '</p>'; }).join('') +
+      '<button type="button" class="btn btn--primary">' + ICON_LISTEN + 'Listen on Spotify</button>' +
+      (L.guide ? '<button type="button" class="inline-link">' + ICON_GUIDE + '<span>Open the group guide</span></button>' : '') +
+    '</div>';
+
+    html += section('Current series', H.title);
+    html += '<div class="hero">' + cover('4x3', { compact: true }) +
+      '<p class="serif">' + esc(H.sub) + '</p>' +
+      '<p class="caption">' + H.count + ' episodes so far</p></div>';
+
+    html += section('Everything else', 'Archive', { id: 'archive' });
+
+    DATA.groups.forEach(function (g, gi) {
+      html += '<div class="group" data-series="' + esc(g.name) + '" data-gi="' + gi + '">' +
+        '<span class="group__label">' + esc(g.name) + '</span>' +
+        g.items.map(row).join('') +
+      '</div>';
+    });
+
+    html += section('Wherever you listen', 'The show');
+    html += '<div class="card">' +
+      '<span class="sec__eyebrow">On ' + esc(P.platform) + '</span>' +
+      '<p class="card__title">' + esc(P.name) + '</p>' +
+      '<p class="caption">' + esc(P.blurb) + '</p>' +
+      '<button type="button" class="btn btn--secondary">' + ICON_OUT + 'Follow the show</button>' +
+    '</div>';
+
+    return html;
+  }
+
+  var scroll = document.getElementById('scroll');
+  var tb = document.getElementById('tb');
+  var rail = document.getElementById('rail');
+  var track = document.getElementById('track');
+  var logo = document.getElementById('logo');
+
+  scroll.innerHTML = build();
+
+  /* ------------------------------------------------------------- the rail
+     Markers are the first row of every month, in the order they appear down
+     the page. A month can appear twice, once per archive group, which is why
+     each marker carries the group it belongs to. */
+
+  var markers = [];
+  var archiveEl = document.getElementById('archive');
+
+  function collect() {
+    markers = [];
+    var groups = scroll.querySelectorAll('.group');
+    Array.prototype.forEach.call(groups, function (group) {
+      var series = group.getAttribute('data-series');
+      var seen = null;
+      var first = true;
+      Array.prototype.forEach.call(group.querySelectorAll('.row'), function (r) {
+        var key = monthKey(r.getAttribute('data-date'));
+        if (key === seen) return;
+        seen = key;
+        markers.push({
+          // The first month of a group anchors on the group itself, so
+          // crossing a series seam flips the rail at the series label rather
+          // than one row later.
+          el: first ? group : r,
+          label: monthLabel(r.getAttribute('data-date')),
+          series: series,
+          seam: first,
+          top: 0
+        });
+        first = false;
+      });
+    });
+  }
+
+  // LAND is the gap a jumped-to row keeps below the rail. PROBE has to sit
+  // below that gap, or the row you just jumped to lands under the reading line
+  // and the month above it takes the highlight straight back.
+  var HEADER = 52, RAIL = 42, LAND = 12, PROBE = HEADER + RAIL + LAND + 8;
+
+  function measure() {
+    var base = scroll.getBoundingClientRect().top - scroll.scrollTop;
+    markers.forEach(function (m) {
+      m.top = m.el.getBoundingClientRect().top - base;
+    });
+    archiveTop = archiveEl.getBoundingClientRect().top - base;
+  }
+
+  var archiveTop = 0;
+
+  function paintRail() {
+    track.innerHTML = markers.map(function (m, i) {
+      var seam = (m.seam && i > 0)
+        ? '<button type="button" class="seam" data-i="' + i + '">' + esc(m.series) + '</button>'
+        : '';
+      return seam + '<button type="button" class="chip" role="tab" data-i="' + i + '" ' +
+        'aria-current="false">' + esc(m.label) + '</button>';
+    }).join('');
+    chips = track.querySelectorAll('.chip');
+  }
+
+  var chips = [];
+  var active = -1;
+  var lockUntil = 0;
+
+  function centerChip(chip, smooth) {
+    var want = chip.offsetLeft - (track.clientWidth / 2) + (chip.offsetWidth / 2);
+    var max = track.scrollWidth - track.clientWidth;
+    want = Math.max(0, Math.min(max, want));
+    if (Math.abs(want - track.scrollLeft) < 2) return;
+    if (track.scrollTo) track.scrollTo({ left: want, behavior: smooth ? 'smooth' : 'auto' });
+    else track.scrollLeft = want;
+  }
+
+  function setActive(i, smooth) {
+    if (i === active || i < 0) return;
+    if (chips[active]) chips[active].setAttribute('aria-current', 'false');
+    active = i;
+    if (chips[active]) {
+      chips[active].setAttribute('aria-current', 'true');
+      centerChip(chips[active], smooth !== false);
+    }
+  }
+
+  function update() {
+    var y = scroll.scrollTop;
+
+    tb.setAttribute('data-scrolled', y > 24 ? 'true' : 'false');
+
+    // The rail arrives when the Archive header has gone under the top bar,
+    // and leaves the moment it comes back into view.
+    var show = y > archiveTop - HEADER + 8;
+    rail.setAttribute('data-show', show ? 'true' : 'false');
+    tb.setAttribute('data-rail', show ? 'true' : 'false');
+    if (!show) return;
+
+    if (Date.now() < lockUntil) return;
+
+    var line = y + PROBE;
+    var found = 0;
+    for (var i = 0; i < markers.length; i++) {
+      if (markers[i].top <= line) found = i; else break;
+    }
+    setActive(found);
+  }
+
+  function goTo(i) {
+    var m = markers[i];
+    if (!m) return;
+    setActive(i);
+    lockUntil = Date.now() + 700;
+    var want = m.top - HEADER - RAIL - LAND;
+    scroll.scrollTo({ top: Math.max(0, want), behavior: 'smooth' });
+  }
+
+  track.addEventListener('click', function (e) {
+    var el = e.target.closest('.chip, .seam');
+    if (!el) return;
+    goTo(+el.getAttribute('data-i'));
+  });
+
+  var ticking = false;
+  scroll.addEventListener('scroll', function () {
+    if (ticking) return;
+    ticking = true;
+    requestAnimationFrame(function () { ticking = false; update(); });
+  }, { passive: true });
+
+  // Rows open in place, which moves everything under them. Re-measure, then
+  // re-derive the active month from the new geometry.
+  scroll.addEventListener('click', function (e) {
+    var btn = e.target.closest('.row__main');
+    if (!btn) return;
+    var open = btn.getAttribute('aria-expanded') === 'true';
+    btn.setAttribute('aria-expanded', open ? 'false' : 'true');
+    btn.parentNode.querySelector('.panel').setAttribute('data-open', open ? 'false' : 'true');
+    setTimeout(function () { measure(); update(); }, 320);
+  });
+
+  window.addEventListener('resize', function () { measure(); update(); });
+
+  /* --------------------------------------------------------- page controls */
+
+  Array.prototype.forEach.call(document.querySelectorAll('.seg button'), function (b) {
+    b.addEventListener('click', function () {
+      var v = b.getAttribute('data-variant');
+      rail.setAttribute('data-variant', v);
+      Array.prototype.forEach.call(document.querySelectorAll('.seg button'), function (o) {
+        o.setAttribute('aria-pressed', o === b ? 'true' : 'false');
+      });
+      if (chips[active]) centerChip(chips[active], false);
+    });
+  });
+
+  document.getElementById('jump').addEventListener('click', function () {
+    scroll.scrollTo({ top: Math.max(0, archiveTop - HEADER + 40), behavior: 'smooth' });
+  });
+
+  // The wordmark has a light and a dark cut. Follow whichever theme is live.
+  var darkQuery = window.matchMedia('(prefers-color-scheme: dark)');
+  function paintLogo() {
+    var stamp = document.documentElement.getAttribute('data-theme');
+    var dark = stamp === 'dark' || (!stamp && darkQuery.matches);
+    logo.src = dark ? LOCKUP : LOCKUP_INK;
+  }
+  if (darkQuery.addEventListener) darkQuery.addEventListener('change', paintLogo);
+  new MutationObserver(paintLogo).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+
+  function boot() {
+    collect();
+    paintRail();
+    measure();
+    paintLogo();
+    update();
+  }
+
+  boot();
+  window.addEventListener('load', function () { measure(); update(); });
+  if (document.fonts && document.fonts.ready) {
+    document.fonts.ready.then(function () { measure(); update(); });
+  }
+})();
+</script>
