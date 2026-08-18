@@ -14,7 +14,10 @@ The phone in the page is real: it runs the tokens from `css/tokens.css`, the
 Listen screen's own markup, and the actual catalogue, pulled out of
 `js/data.js` into `listen.json`.
 
-## The thing to decide
+**Built.** The rail shipped as month + year, the first variant below. It lives
+in `js/date-rail.js`; this folder stays as the drawing it was decided from.
+
+## The thing that was decided
 
 The archive is grouped by series first, so dates only run downward *inside* a
 group. Down the page the months go Aug 2026 → May 2026 (David), back up to
@@ -23,9 +26,10 @@ bare months appears to jump backwards three times.
 
 The mockup carries both answers behind a toggle:
 
-- **Months only** — literal month + year, in page order.
+- **Months only** — literal month + year, in page order. This is what shipped.
 - **Months + series** — the same chips with a hairline and the series name at
-  each group seam, so the second "Jun 2026" reads as June in *Messages*.
+  each group seam, so the second "Jun 2026" reads as June in *Messages*. Still
+  here if the repeated months ever start reading as a bug.
 
 ## Building it
 

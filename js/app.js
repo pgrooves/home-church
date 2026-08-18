@@ -54,6 +54,13 @@
         '</button>' +
       '</header>' +
 
+      // Sits directly under the header and stays out of the way until the
+      // Listen archive starts. See js/date-rail.js.
+      '<nav class="hc-date-rail" id="hc-date-rail" data-show="false" ' +
+          'aria-label="Jump to a month" hidden>' +
+        '<div class="hc-date-rail__track"></div>' +
+      '</nav>' +
+
       '<main class="hc-scroll" id="hc-scroll">' +
         '<div id="hc-view"></div>' +
       '</main>' +
@@ -111,6 +118,11 @@
     topbar.hidden = chromeless;
     tabbar.hidden = chromeless;
 
+    // The rail belongs to one screen, so every other view puts it away. This
+    // runs against the view that was just mounted, before the scroll position
+    // is restored, and the scroll handler picks it up from there.
+    HC.dateRail.build(chromeless ? null : route);
+
     var title = document.getElementById('hc-topbar-title');
     var back = topbar.querySelector('.hc-topbar__back');
     var isTab = HC.router.isTab(route.name);
@@ -152,6 +164,9 @@
       ticking = true;
       window.requestAnimationFrame(function () {
         ticking = false;
+        // The rail rides the same frame as the header rather than adding a
+        // second listener to the same scroller.
+        HC.dateRail.update();
         var route = HC.router.current();
         if (!route || !HC.router.isTab(route.name)) return;
         topbar.setAttribute('data-scrolled', scroller.scrollTop > 24 ? 'true' : 'false');
@@ -261,6 +276,10 @@
 
     'open-url': function (el) {
       c.openExternal(el.getAttribute('data-url'));
+    },
+
+    'date-rail-jump': function (el) {
+      HC.dateRail.jump(parseInt(el.getAttribute('data-index'), 10));
     },
 
     'go-legal': function (el) {
@@ -700,6 +719,12 @@
     renderShell();
     wireEvents();
     watchScroll();
+
+    HC.dateRail.init({
+      scroller: scroller,
+      rail: document.getElementById('hc-date-rail'),
+      topbar: topbar
+    });
 
     HC.router.start({
       mount: mount,

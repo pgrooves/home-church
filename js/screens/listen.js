@@ -74,8 +74,10 @@
      you can read what a message is about before deciding to leave for it. */
   function sermonRow(sermon) {
     var panelId = 'episode-' + sermon.id;
+    // The date rail reads its months off these stamps rather than the
+    // catalogue, so it stays right whatever order this screen draws in.
     return '' +
-      '<div class="hc-sermon">' +
+      '<div class="hc-sermon" data-date="' + c.esc(sermon.preachedOn) + '">' +
         '<button type="button" class="hc-sermon__main" data-action="toggle-episode" ' +
           'aria-expanded="false" aria-controls="' + c.esc(panelId) + '">' +
           '<span class="hc-sermon__thumb">' + c.cover('', '1x1', { compact: true }) + '</span>' +
@@ -144,7 +146,9 @@
       bySeries[s.seriesId].push(s);
     });
 
-    html += c.sectionHeader('Everything else', 'Archive');
+    // The rail waits for this header to go under the top bar before it comes
+    // out, so it is the one section here that has to be findable by name.
+    html += c.sectionHeader('Everything else', 'Archive', { id: 'hc-archive-start' });
 
     order.forEach(function (seriesId) {
       var series = HC.data.getSeries(seriesId);

@@ -24,6 +24,10 @@
 /* Once the screen scrolls, the bar earns its hairline and shows the title. */
 .hc-topbar[data-scrolled="true"] { border-bottom-color: var(--hc-rule); }
 
+/* With the date rail out, the rail is the bottom of the chrome and carries
+   the hairline. Two of them stacked read as a seam. */
+.hc-topbar[data-rail="true"] { border-bottom-color: transparent; }
+
 /* The logo and the screen title share one slot. At rest on a tab the logo
    shows, past the scroll threshold (or on any pushed view, which forces
    data-scrolled true right away) the title fades in over it. */
@@ -137,6 +141,107 @@
 }
 
 .hc-avatar:active .hc-avatar__disc { background: var(--hc-paper-sunk); }
+
+/* --------------------------------------------------------------------------
+   Date rail. A second strip of chrome, directly under the top bar and only on
+   the Listen archive: the month each message was preached, running in the
+   order the page draws them, with the one you are reading filled in.
+
+   Hidden it is not just moved but made invisible, which takes the chips out of
+   the tab order and out of the accessibility tree without needing the
+   attribute plumbing that would fight the slide.
+   -------------------------------------------------------------------------- */
+
+.hc-date-rail {
+  position: fixed;
+  z-index: 39;   /* under the top bar it slides out from */
+  top: calc(var(--hc-header-h) + env(safe-area-inset-top));
+  left: 0; right: 0;
+  height: 42px;
+  background: var(--hc-paper);
+  border-bottom: var(--hc-hairline) solid var(--hc-rule);
+  transform: translateY(-100%);
+  opacity: 0;
+  visibility: hidden;
+  transition: transform var(--hc-dur-base) var(--hc-ease),
+              opacity var(--hc-dur-fast) var(--hc-ease),
+              visibility 0s linear var(--hc-dur-base);
+}
+
+.hc-date-rail[data-show="true"] {
+  transform: translateY(0);
+  opacity: 1;
+  visibility: visible;
+  transition: transform var(--hc-dur-base) var(--hc-ease),
+              opacity var(--hc-dur-fast) var(--hc-ease),
+              visibility 0s;
+}
+
+/* The paper behind it is solid, so the blur is doing tone rather than
+   legibility: the list reads as passing under the rail instead of ending at
+   it. Where it is unsupported the opaque paper above stands in. */
+@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+  .hc-date-rail {
+    background: color-mix(in srgb, var(--hc-paper) 88%, transparent);
+    -webkit-backdrop-filter: blur(18px) saturate(150%);
+    backdrop-filter: blur(18px) saturate(150%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hc-date-rail,
+  .hc-date-rail[data-show="true"] { transform: none; }
+}
+
+/* Centered on the same column the screen uses, so on a tablet the first month
+   starts where the episode titles start. */
+.hc-date-rail__track {
+  display: flex;
+  align-items: center;
+  gap: var(--hc-space-xs);
+  height: 100%;
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 0 var(--hc-screen-pad);
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+}
+
+.hc-date-rail__track::-webkit-scrollbar { display: none; }
+
+/* Tablet gives the column more air, and the months move with it. */
+@media (min-width: 768px) {
+  .hc-date-rail__track { padding: 0 var(--hc-space-xl); }
+}
+
+.hc-date-rail__chip {
+  flex: 0 0 auto;
+  /* The chip is 30px of ink in a 42px strip. The rail is the target, not the
+     pill, which is why the padding is vertical as well as horizontal. */
+  padding: 6px var(--hc-space-md);
+  border-radius: var(--hc-radius-pill);
+  font-family: var(--hc-sans);
+  font-weight: 600;
+  font-size: var(--hc-caption);
+  line-height: var(--hc-caption-line);
+  letter-spacing: 0.01em;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  color: var(--hc-mid);
+  transition: background var(--hc-dur-fast) var(--hc-ease),
+              color var(--hc-dur-fast) var(--hc-ease);
+}
+
+.hc-date-rail__chip[aria-current="true"] {
+  background: var(--hc-accent-deep);
+  color: var(--hc-on-dark);
+  font-weight: 700;
+}
+
+.hc-date-rail__chip:focus-visible { outline-offset: 1px; }
 
 /* --------------------------------------------------------------------------
    Tab bar. A glass plinth floating clear of the screen edges, with the

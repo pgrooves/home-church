@@ -270,7 +270,7 @@
     var cls = 'hc-section-header' + (opts.flush ? ' hc-section-header--flush' : '');
     var tag = opts.tag || 'h2';
     return '' +
-      '<header class="' + cls + '">' +
+      '<header class="' + cls + '"' + (opts.id ? ' id="' + esc(opts.id) + '"' : '') + '>' +
         '<span class="hc-eyebrow hc-section-header__eyebrow">' + esc(eyebrow) + '</span>' +
         '<' + tag + ' class="hc-section-header__title">' + esc(title) + '</' + tag + '>' +
         '<div class="hc-section-header__rule" aria-hidden="true"></div>' +
