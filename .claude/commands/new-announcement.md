@@ -1,11 +1,11 @@
 ---
-description: Publish the One thing card on Home. Asks for what is missing, confirms, then writes.
+description: Publish the announcement card on Home. Asks for what is missing, confirms, then writes.
 ---
 
 # /new-announcement
 
-Adds one row to the `announcements` table, which is the single "One thing"
-card at the top of Home.
+Adds one row to the `announcements` table, which is the single announcement
+card at the top of Home, labelled with the date it went up.
 
 $ARGUMENTS
 
@@ -32,9 +32,14 @@ the chat.
 |---|---|---|
 | Title | yes | `City Serve Day, September 12`. The thing itself, with its date in it |
 | Body | yes | One or two sentences, what to do about it |
-| Eyebrow | no | Defaults to `One thing`. Rarely worth changing |
 | Runs from | no | Null shows it immediately |
 | Runs until | no | Null runs until you take it down |
+
+**There is no eyebrow to write.** Home labels the card `Announcement 08/16/2026`
+and generates that date itself, from `starts_on` when it is set and from
+`created_at` when it is not. The `eyebrow` column is still on the table and the
+app no longer reads it, so leave it null. If someone asks for different label
+text, that is a change in `js/screens/home.js`, not a value in a row.
 
 **Ask about the end date specifically.** It is the field that makes this
 hands off, and it is the one nobody thinks to give you. An announcement for a
@@ -89,7 +94,7 @@ python3 scripts/hc_supabase.py select announcements --eq published=true \
 Show it as it will read on Home, and wait for a yes:
 
 ```
-One thing
+Announcement 08/16/2026
 City Serve Day, September 12
 Four sites, one Saturday, every hand we can get. Sign up at the Welcome Desk
 or tell your group leader.
@@ -107,7 +112,7 @@ python3 scripts/hc_supabase.py upsert announcements /tmp/announcement-your-slug.
 ```jsonc
 {
   "id": "announcement-serve-day",
-  "eyebrow": "One thing",
+  "eyebrow": null,            // unread, Home dates the label itself
   "title": "City Serve Day, September 12",
   "body": "Four sites, one Saturday, every hand we can get. Sign up at the Welcome Desk or tell your group leader.",
   "starts_on": null,          // null shows it immediately

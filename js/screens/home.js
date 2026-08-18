@@ -143,6 +143,19 @@
     return true;
   }
 
+  /* The label above the announcement. It used to be the literal "One thing"
+     carried on the row, and it is now the date the announcement went up, so a
+     card that has been sitting on Home for three weeks says so rather than
+     reading as news. The date is generated, not typed: nobody has to remember
+     to change it, and it cannot disagree with the window the row is running
+     on. A row carrying no date at all degrades to the bare word rather than to
+     "Announcement //", which is the only thing worse than no date. */
+  function announcementLabel(a) {
+    return a.publishedOn
+      ? 'Announcement ' + c.formatDateNumeric(a.publishedOn)
+      : 'Announcement';
+  }
+
   function announcement() {
     var today = todayLocal();
     var list = (HC.data.announcements || []).filter(function (a) {
@@ -164,7 +177,7 @@
     return '' +
       '<div class="hc-banner" data-banner="' + c.esc(a.id) + '">' +
         '<div class="hc-banner__body">' +
-          '<p class="hc-eyebrow">' + c.esc(a.eyebrow) + '</p>' +
+          '<p class="hc-eyebrow">' + c.esc(announcementLabel(a)) + '</p>' +
           '<p class="hc-banner__title hc-body-serif">' + c.esc(a.title) + '</p>' +
           '<p class="hc-caption">' + c.esc(a.body) + '</p>' +
         '</div>' +

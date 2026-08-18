@@ -2276,7 +2276,11 @@
       // open here: a bundled announcement cannot be retired without a build
       // anyway, which is the whole reason the table exists.
       id: 'ann-serve-day',
-      eyebrow: 'One thing',
+      // Home labels the card "Announcement 08/16/2026" from this. A fetched
+      // row gets it from starts_on or created_at; a bundled one has to say it
+      // outright, and a phone with no signal deserves the same card as
+      // everyone else rather than a label with the date missing.
+      publishedOn: '2026-08-16',
       title: 'City Serve Day, September 12',
       body: 'Four sites, one Saturday, every hand we can get. Sign up at the Welcome Desk or tell your group leader.',
       startsOn: null,

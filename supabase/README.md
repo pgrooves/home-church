@@ -78,7 +78,7 @@ SQL that lists the tables.
 | `guides` | Small group guides, the whole `Guide {}` model | Grow, guide reader, leader mode |
 | `podcasts` | Sunday messages as episodes, external media links | Listen |
 | `events` | The events calendar | Connect |
-| `announcements` | The single One thing card, with a date window | Home |
+| `announcements` | The single announcement card, with a date window | Home |
 | `reading_plans` | The Reading together plan, one row per plan | Home |
 | `groups` | Small groups, night, host, neighborhood, and whether there is room | Connect |
 | `serve_teams` | The Lend a hand list | Connect |
@@ -212,7 +212,7 @@ Everything goes through slash commands in Claude Code:
 | `/new-guide` | Sermon PDF to a full guide, into `js/data.js` and `guides` |
 | `/new-event` | Asks for what is missing, confirms, writes to `events` |
 | `/new-podcast` | Episode to `podcasts`, links its guide, puts the real title on the message |
-| `/new-announcement` | The One thing card on Home, with a date window so it retires itself |
+| `/new-announcement` | The announcement card on Home, with a date window so it retires itself |
 | `/edit-content` | Plain language fix to any row, shows current versus proposed, writes after you confirm |
 | `/new-content-type` | Scaffolds another content type, table and command |
 
