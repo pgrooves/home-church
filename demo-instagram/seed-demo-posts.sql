@@ -30,8 +30,23 @@
 
 
 -- 1. Confirm the images actually landed, and under these exact names --------
--- Five rows, no folder prefix. If this returns anything else, fix it before
--- running the insert or the tiles will render as empty cream blocks.
+--
+--   01gathering.jpg  02welcome.jpg  03worship.jpg  04teaching.jpg
+--   05ridgewood.jpg
+--
+-- plus .emptyFolderPlaceholder, which Supabase creates on its own and which is
+-- not a photograph. No folder prefix on any of them.
+--
+-- The names lost their hyphens somewhere between being cropped and being
+-- uploaded, and the paths below match what is actually in the bucket rather
+-- than what the files were called when they were made. Do not "correct" them.
+--
+-- WHY A MISMATCH HERE IS WORSE THAN A MISSING FILE. content.js concatenates
+-- image_path straight into the Storage URL, and the rail only drops a post
+-- whose imageUrl is empty. A path that is merely wrong still passes that
+-- filter, so the section renders under "On Instagram" as a row of blank cream
+-- blocks: visibly broken, rather than invisible the way an empty table is.
+-- Run this select and read it before running the insert.
 
 select name from storage.objects
 where bucket_id = 'instagram'
@@ -43,23 +58,23 @@ order by name;
 insert into public.instagram_posts
   (id, permalink, image_path, media_type, caption, posted_at, published)
 values
-  ('DcHwSuzCUYq', 'https://www.instagram.com/p/DcHwSuzCUYq/', '01-gathering.jpg',
+  ('DcHwSuzCUYq', 'https://www.instagram.com/p/DcHwSuzCUYq/', '01gathering.jpg',
    'CAROUSEL_ALBUM', 'Gathering outside before the service.',
    '2026-08-16T15:00:00Z', true),
 
-  ('DcEDXxvjLJW', 'https://www.instagram.com/p/DcEDXxvjLJW/', '02-welcome.jpg',
+  ('DcEDXxvjLJW', 'https://www.instagram.com/p/DcEDXxvjLJW/', '02welcome.jpg',
    'CAROUSEL_ALBUM', 'A wave hello at the door on Sunday morning.',
    '2026-08-09T15:00:00Z', true),
 
-  ('Db1vWdDCXWb', 'https://www.instagram.com/p/Db1vWdDCXWb/', '03-worship.jpg',
+  ('Db1vWdDCXWb', 'https://www.instagram.com/p/Db1vWdDCXWb/', '03worship.jpg',
    'IMAGE', 'Hands raised in worship.',
    '2026-08-02T15:00:00Z', true),
 
-  ('DbRvCcwCTzI', 'https://www.instagram.com/p/DbRvCcwCTzI/', '04-teaching.jpg',
+  ('DbRvCcwCTzI', 'https://www.instagram.com/p/DbRvCcwCTzI/', '04teaching.jpg',
    'IMAGE', 'Sunday teaching.',
    '2026-07-26T15:00:00Z', true),
 
-  ('Da_oiYwiYeA', 'https://www.instagram.com/p/Da_oiYwiYeA/', '05-ridgewood.jpg',
+  ('Da_oiYwiYeA', 'https://www.instagram.com/p/Da_oiYwiYeA/', '05ridgewood.jpg',
    'IMAGE', 'Families walking in under the Ridgewood arch.',
    '2026-07-19T15:00:00Z', true)
 
