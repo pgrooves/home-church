@@ -763,3 +763,73 @@
   .hc-present { max-width: 720px; margin: 0 auto; }
   .hc-present__question { font-size: calc(36px * var(--hc-text-scale)); }
 }
+
+/* --- The latest Instagram post, between the greeting and the gathering card.
+   4:3 rather than the square Instagram itself uses. A full width 1:1 is around
+   350pt tall on a phone, which pushes the gathering card and its service times
+   clean off the first screen, and this file's own rule for Home is three
+   things above the fold. 4:3 keeps the photograph a hero and keeps Sunday
+   visible under it. The stored images are square, so this crops 12.5% off the
+   top and bottom, which their compositions survive; 16:9 would not, it cuts
+   faces on at least two of them.
+   -------------------------------------------------------------------------- */
+
+.hc-latest {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: none;
+  background: none;
+  text-align: left;
+  color: var(--hc-ink);
+  margin-bottom: var(--hc-space-lg);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.hc-latest__frame {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  /* Showing while the photograph loads, and the whole frame if it never
+     arrives. Same cream as every other piece of missing art in the app. */
+  background: var(--hc-cream);
+  border-radius: var(--hc-radius-lg);
+  overflow: hidden;
+}
+
+.hc-latest__img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  animation: hc-fade-in var(--hc-dur-base) var(--hc-ease-enter) both;
+}
+
+/* Set by the image error listener in app.js, same as the rail's tiles. */
+.hc-latest[data-failed="true"] .hc-latest__img { display: none; }
+
+.hc-latest:active { opacity: 0.9; }
+
+.hc-latest__meta {
+  display: block;
+  margin-top: var(--hc-space-md);
+}
+
+/* Three lines, then it stops. An Instagram caption runs to paragraphs and
+   trails off into hashtags, and none of that belongs on the front door. The
+   whole caption is one tap away on Instagram, which is where it reads
+   properly anyway. */
+.hc-latest__caption {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  margin-top: var(--hc-space-xs);
+  color: var(--hc-ink);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hc-latest__img { animation: none; }
+}

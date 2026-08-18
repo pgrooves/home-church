@@ -14,6 +14,58 @@
     return c.greeting() + ', ' + name + '.';
   }
 
+  /* ------------------------------------------------- the latest Instagram post
+     One photograph and its caption, between the greeting and the gathering
+     card. The same rows the Connect rail reads, but only the newest one.
+
+     WHY IT SORTS RATHER THAN TAKING [0]. content.js asks PostgREST for these
+     newest first, so the first element is almost always right. Almost is not
+     good enough for a screen that calls this post "latest" in front of a
+     congregation: change that order parameter for any reason and Home starts
+     presenting an old photograph as this week's news, silently. Sorting here
+     costs nothing on nine rows and makes the claim true on its own terms.
+
+     Renders nothing at all when there are no posts, like everything else that
+     reads this table. See connect.js for the whole reasoning.
+     ------------------------------------------------------------------------ */
+
+  function latestPost() {
+    var usable = (HC.data.instagramPosts || []).filter(function (p) {
+      return p.imageUrl && p.permalink;
+    });
+    if (!usable.length) return '';
+
+    var post = usable.slice().sort(function (a, b) {
+      return String(b.postedAt || '') < String(a.postedAt || '') ? -1 : 1;
+    })[0];
+
+    var caption = String(post.caption || '').trim();
+
+    /* No aria-label on the button, deliberately. An aria-label would replace
+       the visible caption as the accessible name, which leaves a screen
+       reader user hearing something different from what everyone else is
+       reading. The text inside names it, and the hidden span adds the one
+       thing the visible text cannot say: that this leaves the app. */
+    return '' +
+      '<button type="button" class="hc-latest" data-action="open-url" ' +
+        'data-media-fallback data-url="' + c.esc(post.permalink) + '">' +
+        '<span class="hc-latest__frame">' +
+          // No loading="lazy" here, unlike the rail. This one is above the
+          // fold on the screen the app opens to, so deferring it would mean
+          // watching it arrive on every launch.
+          '<img class="hc-latest__img" src="' + c.esc(post.imageUrl) + '" alt="" ' +
+            'decoding="async">' +
+        '</span>' +
+        '<span class="hc-latest__meta">' +
+          '<span class="hc-eyebrow">Latest on Instagram</span>' +
+          (caption
+            ? '<span class="hc-latest__caption hc-body-serif">' + c.esc(caption) + '</span>'
+            : '') +
+          '<span class="hc-visually-hidden">Opens Instagram.</span>' +
+        '</span>' +
+      '</button>';
+  }
+
   function gatheringCard() {
     var church = HC.data.church;
     var sunday = c.nextSunday();
@@ -168,6 +220,11 @@
 
     // The mark now lives in the top bar, so Home does not repeat it.
     html += '<h1 class="hc-display-l hc-home__greeting">' + c.esc(greetingLine()) + '</h1>';
+
+    // Between the greeting and the gathering card. Renders nothing until
+    // there are posts, so today's Home is unchanged on a project with an
+    // empty instagram_posts table.
+    html += latestPost();
 
     html += '<div class="hc-home__stack">';
     html += gatheringCard();
