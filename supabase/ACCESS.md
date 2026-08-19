@@ -120,6 +120,26 @@ back as `2026-12-24 23:00+00`, an hour different from the same clock time in
 August, which is exactly the mistake that puts a Christmas Eve service on the
 wrong day.
 
+### Let somebody host a group room
+
+```bash
+python3 scripts/hc_supabase.py host someone@example.com on
+python3 scripts/hc_supabase.py host someone@example.com off
+```
+
+This is the one thing in the app that is deliberately not self service, see
+migration 0016: hosting a room is real authority over other people's writing,
+so the church grants it rather than a switch in Profile. The command looks
+the person up by the email they signed in with and flips
+`public.profiles.can_host`. They need to have signed in at least once already,
+because that is what creates the profile row.
+
+No script or MCP access? Ask them their `id` and use `mcp__Supabase__execute_sql`:
+
+```sql
+update public.profiles set can_host = true where id = '<uuid>';
+```
+
 ### Run a migration
 
 ```bash

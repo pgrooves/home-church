@@ -17,6 +17,7 @@ in the app talks to Supabase with the service role key.
     python3 scripts/hc_supabase.py select events --ilike title=baptism
     python3 scripts/hc_supabase.py upsert guides guide.json
     python3 scripts/hc_supabase.py update events event-baptism patch.json
+    python3 scripts/hc_supabase.py host someone@example.com on
 
 Credentials come from `.env` at the repo root, which is git ignored. They are
 never printed, never logged, and never written to another file. If you find
@@ -443,6 +444,74 @@ def cmd_update(args):
 CHURCH_TZ = "America/Chicago"
 
 
+def cmd_host(args):
+    """Grant or take away can_host, by email rather than by uuid.
+
+    can_host is deliberately not self service, see migration 0016: it lets
+    somebody open and close a group room, take down anything anybody wrote in
+    it, and edit the questions the whole group sees. The church sets it. This
+    is the one step that does, so the person running the account does not
+    have to find a uuid or write SQL to do it.
+
+    auth.users is not a public schema table, so it is not reachable through
+    the ordinary /rest/v1 select this script otherwise uses. The email lookup
+    goes through GoTrue's admin endpoint instead, which is what the service
+    role key is for."""
+    url, key = load_env()
+    email = args.email.strip().lower()
+    turn_on = args.state == "on"
+
+    # GoTrue's admin listing takes `filter`, a fuzzy substring search, not an
+    # equality filter, so a request for "trey@x.com" can come back with other
+    # addresses that merely contain that text. Matched exactly, case
+    # insensitively, against what came back, rather than trusted as is.
+    status, body = request(
+        "GET", url, key, "/auth/v1/admin/users",
+        query={"filter": email},
+    )
+    if status != 200:
+        die("Could not look that email up (%s):\n%s" % (status, json.dumps(body, indent=2)))
+
+    candidates = (body or {}).get("users", []) if isinstance(body, dict) else []
+    users = [u for u in candidates if (u.get("email") or "").strip().lower() == email]
+    if not users:
+        die("No account signed in yet with %s.\n\n"
+            "can_host is set on the profile row a sign-in creates, so the "
+            "person has to open the app and sign in once, with this exact "
+            "email, before you can grant it." % email)
+    if len(users) > 1:
+        die("More than one account matches %s exactly. Not touching anything." % email)
+
+    uid = users[0]["id"]
+
+    status, profile = request(
+        "GET", url, key, "/rest/v1/profiles",
+        query={"id": "eq." + uid, "select": "first_name,can_host"},
+    )
+    if status != 200 or not profile:
+        die("Signed in, but no profile row yet for %s. It is created on first "
+            "sign-in; ask them to open the app once and try again." % email)
+
+    name = (profile[0].get("first_name") or "").strip() or "(no name set)"
+    was = profile[0].get("can_host")
+
+    status, updated = request(
+        "PATCH", url, key, "/rest/v1/profiles",
+        body={"can_host": turn_on},
+        headers={"Prefer": "return=representation"},
+        query={"id": "eq." + uid},
+    )
+    if status not in (200, 204) or not updated:
+        die("Update failed (%s):\n%s" % (status, json.dumps(updated, indent=2)))
+
+    verb = "can now host group rooms" if turn_on else "can no longer host group rooms"
+    print("%s (%s) %s.%s" % (
+        name, email, verb,
+        "" if was == turn_on else "  (was %s)" % ("on" if was else "off"),
+    ))
+    return 0
+
+
 def cmd_when(args):
     """`events.starts_at` is timestamptz, so it is stored in UTC. The church is
     in New Orleans, which is UTC-5 in summer and UTC-6 in winter, and that is
@@ -498,6 +567,10 @@ def main():
     p_update.add_argument("id")
     p_update.add_argument("patch", help="path to a .json file, a JSON string, or -")
 
+    p_host = sub.add_parser("host", help="let somebody host a group room, or take that away")
+    p_host.add_argument("email")
+    p_host.add_argument("state", choices=["on", "off"])
+
     p_when = sub.add_parser("when", help="church local time -> the UTC value events wants")
     p_when.add_argument("date", help="YYYY-MM-DD")
     p_when.add_argument("time", help="HH:MM on a 24 hour clock")
@@ -507,7 +580,7 @@ def main():
     handlers = {
         "check": cmd_check, "verify": cmd_verify, "apply": cmd_apply,
         "select": cmd_select, "upsert": cmd_upsert, "update": cmd_update,
-        "when": cmd_when,
+        "host": cmd_host, "when": cmd_when,
     }
     return handlers[args.command](args)
 

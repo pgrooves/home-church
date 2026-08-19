@@ -57,6 +57,11 @@
 -- it is, because what it turns on is a private roster and a presentation
 -- mode. Hosting a room is a different thing and the church sets it:
 --
+--   python3 scripts/hc_supabase.py host someone@example.com on
+--
+-- which looks the account up by email and does this, so nobody has to find a
+-- uuid or write SQL by hand:
+--
 --   update public.profiles set can_host = true where id = '<uuid>';
 --
 -- `terms_accepted_at` is guideline 1.2's requirement that people agree to
