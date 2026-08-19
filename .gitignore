@@ -40,3 +40,7 @@ __pycache__/
 *.pyc
 .venv/
 venv/
+
+# Personal, per-machine Claude Code overrides. The session-scoped MCP server
+# names in here are local to one session and mean nothing to anybody else.
+.claude/settings.local.json
