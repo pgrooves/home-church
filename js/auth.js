@@ -382,8 +382,42 @@
     });
   }
 
+  /* ------------------------------------------------------- the transport
+     Exported so the Group tab can talk to the same project without writing a
+     second copy of the session refresh. Nothing above this line knows about
+     rooms and nothing in js/rooms.js knows about tokens, which is the split
+     worth keeping.
+
+     `rpc` is the one that matters. Every write in the Group tab goes through a
+     Postgres function rather than a table, see migration 0016 section 10, so
+     the client's whole write surface is this one call with a different name.
+
+     `publicGet` is the signed out path, and there is exactly one thing it is
+     for: typing a six digit code and finding out whether a room is behind it.
+     It carries the publishable key and no session, so the database answers it
+     as `anon` and the policies from 0016 decide what comes back, which is a
+     live room and its questions and nothing anybody wrote. */
+
+  function rpc(name, args) {
+    return restFetch('/rpc/' + name, { method: 'POST', body: args || {} });
+  }
+
+  function publicGet(path) {
+    return networkSafe(fetch(restUrl(path), {
+      headers: { apikey: cfg.SUPABASE_ANON_KEY, Accept: 'application/json' }
+    })).then(function (res) {
+      return res.json().catch(function () { return null; }).then(function (body) {
+        if (!res.ok) throw new Error(friendlyError(body, 'Could not reach the room.'));
+        return body;
+      });
+    });
+  }
+
   HC.auth = {
     isConfigured: configured,
+    restFetch: restFetch,
+    rpc: rpc,
+    publicGet: publicGet,
     isSignedIn: isSignedIn,
     getUser: getUser,
     classify: classify,

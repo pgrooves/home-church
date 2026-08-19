@@ -5,6 +5,9 @@
   "description": "Home Church, Metairie. Sermons, small group guides, and a way in.",
   "license": "UNLICENSED",
   "scripts": {
+    "test": "node tests/rooms.test.js && sh supabase/tests/run.sh",
+    "test:js": "node tests/rooms.test.js",
+    "test:db": "sh supabase/tests/run.sh",
     "stamp": "node scripts/stamp_assets.js",
     "sync": "node scripts/sync_web.js",
     "ios": "npm run stamp && npm run sync && npx cap sync ios",
