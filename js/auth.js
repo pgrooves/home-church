@@ -340,6 +340,16 @@
       var patch = toLocal(remote || {});
       patch.email = user.email || '';
       patch.phone = user.phone || '';
+      // Deliberately not in FIELD_MAP, the same reason termsAcceptedAt is
+      // not: FIELD_MAP is also what toRemote() reads to decide what a local
+      // edit is allowed to push back up, and can_host must never be one of
+      // those. It only ever flows this one direction, server to phone, which
+      // is what makes "the church sets it, the app never writes it" true
+      // rather than just a comment. remote.can_host is always present and
+      // always a boolean (not null default false in migration 0016), so this
+      // also correctly turns Leader mode back off on the phone if the church
+      // ever revokes it.
+      if (remote && typeof remote.can_host === 'boolean') patch.canHost = remote.can_host;
       HC.store.updateProfile(patch);
     }).catch(function () {
       // Offline, or the table is not there yet. Sign-in still succeeded,
