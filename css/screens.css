@@ -918,6 +918,85 @@
   line-height: 1.2;
 }
 
+/* --- the host's report queue --------------------------------------------- */
+/* Warning coloured, not danger coloured. A report is something to look at,
+   and most of them will turn out to be nothing; drawing it in red would make
+   a host feel they have to delete to make it go away. It sits above the
+   questions because a flag you have to scroll for is a flag nobody reads. */
+.hc-queue {
+  margin-bottom: var(--hc-space-base);
+  padding: var(--hc-card-pad);
+  border-radius: var(--hc-radius-lg);
+  background: var(--hc-paper-sunk);
+  border: var(--hc-hairline) solid var(--hc-warning);
+}
+.hc-queue__eyebrow { display: flex; align-items: center; gap: 6px; color: var(--hc-warning); }
+.hc-queue__icon { width: 13px; height: 13px; flex: 0 0 auto; }
+.hc-queue__title {
+  margin: var(--hc-space-xs) 0 var(--hc-space-xs);
+  font-family: var(--hc-serif);
+  font-size: calc(21px * var(--hc-text-scale));
+  line-height: 1.2;
+}
+.hc-queue__item {
+  margin-top: var(--hc-space-md);
+  padding-top: var(--hc-space-md);
+  border-top: var(--hc-hairline) solid var(--hc-rule);
+}
+.hc-queue__who {
+  margin: 0;
+  font-size: var(--hc-caption);
+  font-weight: 600;
+  line-height: 18px;
+}
+.hc-queue__reason {
+  margin: var(--hc-space-xs) 0 0;
+  font-family: var(--hc-serif);
+  font-style: italic;
+  font-size: var(--hc-caption);
+  line-height: 19px;
+  color: var(--hc-mid);
+}
+.hc-queue__text {
+  margin: var(--hc-space-sm) 0 0;
+  padding-left: var(--hc-space-md);
+  border-left: 2px solid var(--hc-rule);
+  font-size: var(--hc-body-sans);
+  line-height: 1.5;
+}
+.hc-queue__text--gone { font-style: italic; color: var(--hc-mid); font-size: var(--hc-caption); }
+.hc-queue__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--hc-space-sm);
+  margin: var(--hc-space-md) calc(var(--hc-space-sm) * -1) 0;
+}
+/* The tertiary here is a real choice, not a leftover. Pull it back onto the
+   grid the way .hc-note__tools does, so the pair reads as two buttons. */
+.hc-queue__row .hc-btn--secondary { margin-left: var(--hc-space-sm); }
+
+/* --- the way back from a block ------------------------------------------- */
+/* Quiet on purpose. Nobody needs this until they need it, and then it has to
+   be somewhere findable, because a blocked person's writing does not arrive
+   and so the feed cannot be where you undo it. */
+.hc-blocked {
+  margin-top: var(--hc-space-lg);
+  padding: var(--hc-space-md);
+  border-radius: var(--hc-radius-sm);
+  background: var(--hc-paper-sunk);
+  border: var(--hc-hairline) solid var(--hc-rule);
+}
+.hc-blocked__label { margin: 0; }
+.hc-blocked__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--hc-space-sm);
+  margin-top: var(--hc-space-xs);
+}
+.hc-blocked__name { font-size: var(--hc-body-sans); }
+
 .hc-reveal-all {
   display: flex;
   align-items: center;

@@ -82,13 +82,20 @@ select t_check('anon can execute exactly the two policy helpers, and nothing els
       and has_function_privilege('anon', p.oid, 'EXECUTE')),
   'hc_room_is_live, hc_room_is_member');
 
-select t_check('signing in gets you the fifteen writes and the three helpers',
-  (select count(*)::int from pg_proc p
+-- Stated as an invariant rather than a count. The first version asserted
+-- "18", which was true until 0019 added a nineteenth and then failed for a
+-- reason that had nothing to do with anything being wrong. A number here has
+-- to be edited every time the feature grows; this does not, and it still
+-- catches the thing worth catching, which is an hc_room_ function that
+-- somebody forgot to grant.
+select t_check('every hc_room_ function is callable by somebody signed in',
+  (select coalesce(string_agg(p.proname, ', ' order by p.proname), 'none')
+     from pg_proc p
      join pg_type ty on ty.oid = p.prorettype
     where p.pronamespace = 'public'::regnamespace
       and p.proname like 'hc\_room%'
       and ty.typname <> 'trigger'
-      and has_function_privilege('authenticated', p.oid, 'EXECUTE')), 18);
+      and not has_function_privilege('authenticated', p.oid, 'EXECUTE')), 'none');
 
 select t_check('and the sweep belongs to service_role alone',
   (select coalesce(string_agg(r.role, ', ' order by r.role), 'none')

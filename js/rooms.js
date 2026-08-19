@@ -46,6 +46,8 @@
     members: [],
     questions: [],
     notes: [],         // answers and prayer requests, only what you may read
+    reports: [],       // open ones, host only, empty for everybody else
+    blocks: [],        // people you have blocked, so there is a way back
     loading: false,
     error: null,
     lastSyncedAt: null,
@@ -75,6 +77,8 @@
       members: state.members.slice(),
       questions: state.questions.slice(),
       notes: state.notes.slice(),
+      reports: state.reports.slice(),
+      blocks: state.blocks.slice(),
       loading: state.loading,
       error: state.error,
       stale: state.stale,
@@ -132,8 +136,26 @@
     };
   }
 
+  function mapReport(r) {
+    return {
+      id: r.id,
+      noteId: r.note_id,
+      reporterId: r.reporter_id,
+      reason: r.reason,
+      createdAt: r.created_at
+    };
+  }
+
+  function mapBlock(b) {
+    return { personId: b.blocked_id, createdAt: b.created_at };
+  }
+
   /* ----------------------------------------------------------------- cache */
 
+  // Reports and blocks are deliberately not cached. Both exist to be acted on
+  // and every action needs the network, so a stale copy would only offer
+  // buttons that cannot work. What the group wrote is worth keeping offline;
+  // a moderation queue from an hour ago is not.
   function writeCache() {
     if (!state.room) return;
     HC.store.storage.set(CACHE_KEY, {
@@ -169,6 +191,8 @@
     state.members = [];
     state.questions = [];
     state.notes = [];
+    state.reports = [];
+    state.blocks = [];
     state.error = null;
     state.stale = false;
     state.lastSyncedAt = null;
@@ -189,12 +213,28 @@
     state.loading = true;
     emit();
 
+    /* The report queue is the host's screen and nobody else's, so a member's
+       poll does not ask for it. The policy would return their own reports and
+       there is nothing in the app that draws them: a report you filed is
+       finished business from your side, and the reply is the host acting.
+
+       Blocks are read every time by everybody, which is one extra round trip
+       for a table that almost always has nothing in it. It buys the only way
+       back: a blocked person's writing is gone from the feed, so the feed
+       cannot be where you unblock them. */
+    var mine = signedIn() && HC.auth.getUser();
+    var host = !!(mine && state.room.hostId === mine.id);
+
     inFlight = Promise.all([
       HC.auth.restFetch('/group_rooms?id=eq.' + id + '&select=*'),
       HC.auth.restFetch('/group_room_members?room_id=eq.' + id + '&select=*&order=joined_at.asc'),
       HC.auth.restFetch('/group_room_questions?room_id=eq.' + id +
                         '&select=*&order=sort_order.asc,created_at.asc'),
-      HC.auth.restFetch('/group_room_notes?room_id=eq.' + id + '&select=*&order=created_at.asc')
+      HC.auth.restFetch('/group_room_notes?room_id=eq.' + id + '&select=*&order=created_at.asc'),
+      host ? HC.auth.restFetch('/group_note_reports?room_id=eq.' + id +
+                               '&resolved_at=is.null&select=*&order=created_at.asc')
+           : Promise.resolve([]),
+      HC.auth.restFetch('/group_blocks?select=*')
     ]).then(function (res) {
       var room = (res[0] || [])[0];
 
@@ -207,6 +247,8 @@
       state.members = (res[1] || []).map(mapMember);
       state.questions = (res[2] || []).map(mapQuestion);
       state.notes = (res[3] || []).map(mapNote);
+      state.reports = (res[4] || []).map(mapReport);
+      state.blocks = (res[5] || []).map(mapBlock);
       state.error = null;
       state.stale = false;
       state.lastSyncedAt = Date.now();
@@ -402,15 +444,29 @@
   /* ------------------------------------------------------ guideline 1.2 */
 
   function report(noteId, reason) {
-    return HC.auth.rpc('hc_room_report', { p_note: noteId, p_reason: reason || null });
+    // Followed by a pull rather than left alone, because when the host is the
+    // one reporting, the queue they are looking at should gain the row they
+    // just filed instead of waiting out the poll.
+    return HC.auth.rpc('hc_room_report', { p_note: noteId, p_reason: reason || null }).then(pull);
   }
 
   function takeDown(noteId) {
     return HC.auth.rpc('hc_room_take_down', { p_note: noteId }).then(pull);
   }
 
+  // The other ending. A host who reads a reported note and decides it is fine
+  // needs a way to say so that is not deleting somebody's writing, or the
+  // queue only ever empties one way. See migration 0019.
+  function resolveReport(reportId) {
+    return HC.auth.rpc('hc_room_resolve_report', { p_report: reportId }).then(pull);
+  }
+
   function block(personId, isBlocked) {
     return HC.auth.rpc('hc_room_block', { p_person: personId, p_blocked: !!isBlocked }).then(pull);
+  }
+
+  function unblock(personId) {
+    return block(personId, false);
   }
 
   /* ------------------------------------------------------------- questions
@@ -443,6 +499,41 @@
   function isOpen(noteId) {
     var note = state.notes.filter(function (n) { return n.id === noteId; })[0];
     return !!(note && note.openedAt);
+  }
+
+  function memberName(personId) {
+    var m = state.members.filter(function (x) { return x.id === personId; })[0];
+    return m ? m.name : 'Someone in the group';
+  }
+
+  /* The host's queue, with enough attached to act on it without another
+     round trip: who raised it, what they said, and the note itself.
+
+     The note can be missing, and that is not a bug to paper over. Reporting
+     needs the note to be readable, but by the time the host looks the room
+     may have closed that answer again, or the host may have blocked its
+     author, and either way the read policy stops the row reaching this phone.
+     `note: null` is the screen's cue to say the writing is not visible and
+     still offer both buttons, since taking down and closing out are the
+     host's calls and neither depends on reading it here. */
+  function reports() {
+    return state.reports.map(function (r) {
+      var note = state.notes.filter(function (n) { return n.id === r.noteId; })[0] || null;
+      return {
+        id: r.id,
+        noteId: r.noteId,
+        reason: r.reason,
+        createdAt: r.createdAt,
+        reporter: memberName(r.reporterId),
+        note: note
+      };
+    });
+  }
+
+  function blocked() {
+    return state.blocks.map(function (b) {
+      return { id: b.personId, name: memberName(b.personId), createdAt: b.createdAt };
+    });
   }
 
   /* ------------------------------------------------------------------ boot */
@@ -495,13 +586,17 @@
 
     report: report,
     takeDown: takeDown,
+    resolveReport: resolveReport,
     block: block,
+    unblock: unblock,
 
     isHost: isHost,
     notesFor: notesFor,
     prayers: prayers,
     answeredBy: answeredBy,
-    isOpen: isOpen
+    isOpen: isOpen,
+    reports: reports,
+    blocked: blocked
   };
 
 })(window.HC = window.HC || {});

@@ -218,6 +218,78 @@
     return host ? host.name : 'your leader';
   }
 
+  /* --------------------------------------------------------- the host's queue
+
+     Report said "whoever hosts this room will see it", and for a while there
+     was nowhere for the host to see it. This is that place: the top of the
+     room, above the questions, because a flag that waits until you scroll is
+     a flag nobody reads.
+
+     Two buttons under each, not one. Taking it down is the right answer when
+     the report is right; a queue that empties only by deleting somebody's
+     writing teaches a host to delete, or to stop looking. "Leave it up" is
+     hc_room_resolve_report from migration 0019. */
+
+  function reportQueue(snap) {
+    var open = HC.rooms.reports();
+    if (!open.length) return '';
+
+    var html = '<div class="hc-queue" role="region" aria-label="Reported notes">' +
+      '<p class="hc-eyebrow hc-queue__eyebrow">' + c.icon('flag', 'hc-queue__icon') + 'Reported</p>' +
+      '<p class="hc-queue__title">' +
+        (open.length === 1 ? 'One thing to look at' : open.length + ' things to look at') + '</p>' +
+      '<p class="hc-caption">Somebody in the room flagged ' +
+        (open.length === 1 ? 'this' : 'these') + '. Only you see it.</p>';
+
+    open.forEach(function (r) {
+      html += '<div class="hc-queue__item">' +
+        '<p class="hc-queue__who">' + c.esc(r.reporter) + ' reported ' +
+          (r.note ? c.esc(r.note.author) + '&rsquo;s ' + (r.note.kind === 'prayer' ? 'prayer request' : 'answer')
+                  : 'a note') + '</p>';
+
+      if (r.reason) {
+        html += '<p class="hc-queue__reason">&ldquo;' + c.esc(r.reason) + '&rdquo;</p>';
+      }
+
+      // A reported note can be unreadable by the time you look: the room may
+      // have closed that answer again, or you blocked whoever wrote it. Say
+      // so plainly and keep both buttons, since neither one needs the text.
+      html += r.note
+        ? '<p class="hc-queue__text">' + c.esc(r.note.body) + '</p>'
+        : '<p class="hc-queue__text hc-queue__text--gone">Not on your screen right now. It may be shut ' +
+          'again, or written by somebody you have blocked.</p>';
+
+      html += '<div class="hc-queue__row">' +
+        '<button type="button" class="hc-btn hc-btn--secondary hc-btn--small" ' +
+          'data-action="room-take-down" data-id="' + c.esc(r.noteId) + '">Take it down</button>' +
+        '<button type="button" class="hc-btn hc-btn--tertiary hc-btn--small" ' +
+          'data-action="room-resolve-report" data-id="' + c.esc(r.id) + '">Leave it up</button>' +
+      '</div></div>';
+    });
+
+    return html + '</div>';
+  }
+
+  /* Blocking works by making somebody's writing not arrive, which means the
+     room cannot be where you undo it: there is nothing left to tap. So the
+     way back lives here, at the bottom, and only shows when there is one. */
+  function blockedRow() {
+    var list = HC.rooms.blocked();
+    if (!list.length) return '';
+
+    var html = '<div class="hc-blocked">' +
+      '<p class="hc-caption hc-blocked__label">Blocked, so nothing they write reaches you:</p>';
+    list.forEach(function (p) {
+      html += '<div class="hc-blocked__row">' +
+        '<span class="hc-blocked__name">' + c.esc(p.name) + '</span>' +
+        '<button type="button" class="hc-btn hc-btn--tertiary hc-btn--small" ' +
+          'data-action="room-unblock" data-id="' + c.esc(p.id) + '" ' +
+          'data-name="' + c.esc(p.name) + '">Unblock</button>' +
+      '</div>';
+    });
+    return html + '</div>';
+  }
+
   /* The reveal desk. Only the host sees it, and it deliberately shows names
      and not text: opening an answer shows it to the host and the room in the
      same moment, so nobody reads ahead, the leader included. */
@@ -418,6 +490,7 @@
         c.button('Sign in', { action: 'go-profile', variant: 'secondary' }) + '</div>';
     }
 
+    if (host) html += reportQueue(snap);
     if (host) html += revealAll(snap);
 
     if (!snap.questions.length) {
@@ -434,12 +507,15 @@
       '<span>Saved on this phone. With no signal you keep the questions and everything already opened, ' +
       'and yours goes out when the phone catches up.</span></p>';
 
+    html += blockedRow();
+
     if (host) {
       html += '<div class="hc-wrap">' +
         '<p class="hc-eyebrow">When the night is over</p>' +
         '<p class="hc-wrap__title">Tonight, on one sheet</p>' +
-        '<p class="hc-caption">The guide, all ' + snap.questions.length + ' questions, what each person wrote, ' +
-          'and the prayer requests above.</p>' +
+        '<p class="hc-caption">The guide, ' +
+          (snap.questions.length === 1 ? 'the question' : 'all ' + snap.questions.length + ' questions') +
+          ', what each person wrote, and the prayer requests above.</p>' +
         '<div class="hc-wrap__row">' +
           c.button('Print everything to PDF', { action: 'room-sheet', icon: 'doc' }) +
           c.button('Send as text', { action: 'room-send-sheet', icon: 'message', variant: 'secondary' }) +
@@ -498,6 +574,8 @@
       snap.members.map(function (m) { return m.id + m.name; }),
       snap.questions.map(function (q) { return q.id + q.body; }),
       snap.notes.map(function (n) { return n.id + n.body + (n.openedAt || ''); }),
+      snap.reports.map(function (r) { return r.id; }),
+      snap.blocks.map(function (b) { return b.personId; }),
       HC.auth.isSignedIn(), agreedToTerms(), canHost(),
       // Local state that changes what is drawn.
       Object.keys(drafts).map(function (k) { return k + (drafts[k].trim() ? '1' : '0'); }).join(),

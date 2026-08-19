@@ -41,14 +41,20 @@ let NOTES = [
   { id: 'n1', room_id: 'r-1', question_id: 'q1', kind: 'answer', author_id: 'priya',
     author_name: 'Priya', body: 'A courtroom.', opened_at: null, created_at: '1' }
 ];
+let REPORTS = [];
+let BLOCKS = [];
 const calls = [];
+const paths = [];
 
 const auth = {
   isConfigured: () => true,
   isSignedIn: () => true,
   getUser: () => ({ id: 'trey' }),
   restFetch: (path) => {
+    paths.push(path);
     if (path.startsWith('/group_rooms')) return Promise.resolve([ROOM]);
+    if (path.startsWith('/group_note_reports')) return Promise.resolve(REPORTS);
+    if (path.startsWith('/group_blocks')) return Promise.resolve(BLOCKS);
     if (path.startsWith('/group_room_members')) return Promise.resolve([
       { person_id: 'trey', display_name: 'Trey', is_host: true, joined_at: '1' },
       { person_id: 'priya', display_name: 'Priya', is_host: false, joined_at: '2' }
@@ -126,6 +132,62 @@ const rooms = sandbox.window.HC.rooms;
   await rooms.refresh();
   ok('prayers come out of the same table by kind', rooms.prayers().map(p => p.author), ['Dee']);
   ok('and are not mistaken for answers', rooms.notesFor('q1').length, 1);
+
+  // ---- guideline 1.2: the queue a host acts on, and the way back from a block
+  //
+  // Report told people "whoever hosts this room will see it". These are the
+  // reads behind that promise, plus the one a reviewer will go looking for:
+  // once you block somebody their writing stops arriving, so the feed cannot
+  // be where you undo it and something else has to be.
+  REPORTS = [{ id: 'rep-1', note_id: 'n1', room_id: 'r-1', reporter_id: 'trey',
+               reason: 'Felt aimed at somebody.', created_at: '3', resolved_at: null }];
+  BLOCKS = [{ blocker_id: 'trey', blocked_id: 'priya', created_at: '4' }];
+  await rooms.refresh();
+
+  ok('the host is handed the open reports', rooms.reports().length, 1);
+  ok('named from the member list rather than shown as a uuid',
+     rooms.reports()[0].reporter, 'Trey');
+  ok('with the note attached, so acting on it needs no second trip',
+     rooms.reports()[0].note.body, 'A courtroom.');
+  ok('and a block carries a name for the unblock button',
+     rooms.blocked(), [{ id: 'priya', name: 'Priya', createdAt: '4' }]);
+
+  // The case that is easy to forget: by the time a host looks, the room may
+  // have shut that answer again, and then the read policy stops it reaching
+  // this phone. The report must still be actionable.
+  REPORTS = [{ id: 'rep-2', note_id: 'not-on-this-phone', room_id: 'r-1',
+               reporter_id: 'somebody-who-left', reason: null, created_at: '5', resolved_at: null }];
+  await rooms.refresh();
+  ok('a report about a note this phone cannot read still arrives',
+     rooms.reports().length, 1);
+  ok('with no note rather than a broken one', rooms.reports()[0].note, null);
+  ok('and a reporter who is not in the list does not render as blank',
+     rooms.reports()[0].reporter, 'Someone in the group');
+
+  calls.length = 0;
+  await rooms.resolveReport('rep-2');
+  ok('leaving it up is its own call, and does not touch the note',
+     calls[0], ['hc_room_resolve_report', { p_report: 'rep-2' }]);
+  await rooms.unblock('priya');
+  ok('unblock is the block call with the flag turned round',
+     calls[1], ['hc_room_block', { p_person: 'priya', p_blocked: false }]);
+
+  // A member is not a moderator. Their poll does not ask for the queue at
+  // all, rather than asking and drawing nothing.
+  const asHost = auth.getUser;
+  auth.getUser = () => ({ id: 'priya' });
+  paths.length = 0;
+  await rooms.refresh();
+  ok('a member\'s poll never asks for the report queue',
+     paths.some(p => p.startsWith('/group_note_reports')), false);
+  ok('but does ask for their own blocks, which are theirs to undo',
+     paths.some(p => p.startsWith('/group_blocks')), true);
+  ok('and the queue is empty on their phone', rooms.reports().length, 0);
+  auth.getUser = asHost;
+
+  REPORTS = [];
+  BLOCKS = [];
+  await rooms.refresh();
 
   // ---- terms
   calls.length = 0;

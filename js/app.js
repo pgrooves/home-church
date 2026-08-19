@@ -870,6 +870,10 @@
       var why = window.prompt('What is wrong with this one? The person hosting will see it.');
       if (why === null) return;
       HC.rooms.report(el.getAttribute('data-id'), why).then(function () {
+        // The repaint matters when the host is the one reporting: the queue
+        // at the top of their own room should gain the row now, rather than
+        // at the next poll, or the button looks like it did nothing.
+        HC.screens.groupHelpers.repaint(true);
         c.toast('Reported. Whoever hosts this room will see it, and you can also write to ' +
                 'hello@homechurchnola.com.');
       }).catch(roomFailed);
@@ -934,11 +938,29 @@
       });
     },
 
+    'room-unblock': function (el) {
+      var name = el.getAttribute('data-name') || 'this person';
+      HC.rooms.unblock(el.getAttribute('data-id')).then(function () {
+        HC.screens.groupHelpers.repaint(true);
+        c.toast('Unblocked. You will see what ' + name + ' writes again.');
+      }).catch(roomFailed);
+    },
+
     'room-take-down': function (el) {
       if (!window.confirm('Take this down for everybody in the room?')) return;
       HC.rooms.takeDown(el.getAttribute('data-id')).then(function () {
         HC.screens.groupHelpers.repaint(true);
         c.toast('Taken down. It is gone for everybody, including whoever wrote it.');
+      }).catch(roomFailed);
+    },
+
+    /* The other way a report ends. Without this the only button that empties
+       the queue is the one that deletes somebody's writing, which is a bad
+       thing to make the easy path. */
+    'room-resolve-report': function (el) {
+      HC.rooms.resolveReport(el.getAttribute('data-id')).then(function () {
+        HC.screens.groupHelpers.repaint(true);
+        c.toast('Left up, and the report is closed.');
       }).catch(roomFailed);
     }
   };

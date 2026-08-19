@@ -28,7 +28,7 @@
 # ===========================================================================
 set -e
 
-MIGS=${*:-"0016_group_rooms 0017_group_rooms_grants 0018_group_rooms_anon"}
+MIGS=${*:-"0016_group_rooms 0017_group_rooms_grants 0018_group_rooms_anon 0019_group_reports_resolve"}
 HERE=$(cd "$(dirname "$0")" && pwd)
 ROOT=$(cd "$HERE/../.." && pwd)
 WORK=${HC_TEST_DIR:-/var/tmp/hc-migration-tests}
