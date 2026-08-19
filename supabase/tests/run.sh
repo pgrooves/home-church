@@ -13,8 +13,14 @@
 # honest way to check it is to be that role and ask. Reading the policy and
 # nodding is not the same thing.
 #
-#   sh supabase/tests/run.sh                     # every test
-#   sh supabase/tests/run.sh 0016_group_rooms    # just one
+#   sh supabase/tests/run.sh                                    # the lot
+#   sh supabase/tests/run.sh 0016_group_rooms                   # just one
+#   sh supabase/tests/run.sh 0016_group_rooms 0017_group_rooms_grants
+#
+# Migrations are applied in the order given and the tests run afterwards, so
+# every test sees the schema as production will have it rather than as it was
+# halfway through. That matters here: 0017 takes away privileges 0016 handed
+# out, and testing 0016 alone is how the hole in it went unnoticed.
 #
 # Needs a postgres server binary on the machine, which the Supabase project
 # itself does not: this never talks to the real project and cannot, by
@@ -22,7 +28,7 @@
 # ===========================================================================
 set -e
 
-MIG=${1:-0016_group_rooms}
+MIGS=${*:-"0016_group_rooms 0017_group_rooms_grants"}
 HERE=$(cd "$(dirname "$0")" && pwd)
 ROOT=$(cd "$HERE/../.." && pwd)
 WORK=${HC_TEST_DIR:-/var/tmp/hc-migration-tests}
@@ -69,15 +75,22 @@ PSQL="psql -h $WORK -p 55432 -U postgres"
 
 $PSQL -q -c "drop database if exists hc_test;" -c "create database hc_test;"
 $PSQL -d hc_test -q -v ON_ERROR_STOP=1 -c 'set client_min_messages=warning' -f "$HERE/harness.sql"
-$PSQL -d hc_test -q -v ON_ERROR_STOP=1 -c 'set client_min_messages=warning' \
-      -f "$ROOT/supabase/migrations/$MIG.sql"
 
-# Run it a second time. Every migration here promises to be safe to re-run.
-$PSQL -d hc_test -q -v ON_ERROR_STOP=1 -c 'set client_min_messages=warning' \
-      -f "$ROOT/supabase/migrations/$MIG.sql"
+for MIG in $MIGS; do
+  FILE="$ROOT/supabase/migrations/$MIG.sql"
+  [ -f "$FILE" ] || { echo "No such migration: $FILE"; exit 1; }
+  # Twice. Every migration here promises to be safe to re-run.
+  $PSQL -d hc_test -q -v ON_ERROR_STOP=1 -c 'set client_min_messages=warning' -f "$FILE"
+  $PSQL -d hc_test -q -v ON_ERROR_STOP=1 -c 'set client_min_messages=warning' -f "$FILE"
+done
 
-OUT=$($PSQL -d hc_test -q -f "$HERE/${MIG}_test.sql" 2>&1 \
-      | sed 's/^psql:[^ ]* //; s/^NOTICE:  //; s/^WARNING:  //')
+OUT=""
+for MIG in $MIGS; do
+  TEST="$HERE/${MIG}_test.sql"
+  [ -f "$TEST" ] || continue
+  OUT="$OUT
+$($PSQL -d hc_test -q -f "$TEST" 2>&1 | sed 's/^psql:[^ ]* //; s/^NOTICE:  //; s/^WARNING:  //')"
+done
 
 echo "$OUT" | grep -E '^(PASS|FAIL|ERROR)' || true
 

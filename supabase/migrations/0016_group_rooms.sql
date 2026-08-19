@@ -1002,5 +1002,12 @@ grant execute on function public.hc_room_block(uuid, boolean)                to 
 grant execute on function public.hc_room_close(uuid)                         to authenticated;
 
 -- The purge runs as a scheduled job, not as anybody's session.
+--
+-- WRONG, AND FIXED IN 0017. This revoke does nothing. Postgres grants EXECUTE
+-- on every new function to PUBLIC, PUBLIC cannot be named in a revoke list of
+-- roles, and every role kept inheriting execute through it. For a while this
+-- meant anybody holding the app's publishable key could delete every group
+-- room over PostgREST. 0017_group_rooms_grants.sql revokes from public by name
+-- on all nineteen functions and grants back precisely. Do not copy this line.
 revoke execute on function public.hc_purge_group_rooms(integer) from anon, authenticated;
 grant  execute on function public.hc_purge_group_rooms(integer) to service_role;
