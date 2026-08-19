@@ -690,6 +690,189 @@ body {
 .s-textarea::placeholder, .s-input::placeholder { color: var(--hc-mid); }
 .s-status { margin: 7px 0 0; font-size: 12px; line-height: 17px; color: var(--hc-mid); min-height: 17px; }
 
+/* --- holding answers back, and letting them out --------------------------
+   The room writes at its own pace and the leader decides when anybody reads
+   what. Two surfaces: a locked strip on the member's phone, and a desk of
+   name switches on the leader's. */
+
+.s-locked {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 11px 12px;
+  border-radius: var(--hc-radius-sm);
+  background: var(--hc-paper-sunk);
+  border: 1px dashed var(--hc-rule);
+  font-size: var(--hc-caption);
+  line-height: 18px;
+  color: var(--hc-mid);
+}
+.s-locked svg {
+  flex: 0 0 auto;
+  width: 14px; height: 14px;
+  margin-top: 1px;
+  fill: none; stroke: currentColor; stroke-width: 1.6;
+  stroke-linecap: round; stroke-linejoin: round;
+}
+
+/* Your own answer, in but not out. The warning hue is the app's, and this is
+   the one place it earns its keep: something is pending, nothing is wrong. */
+.s-note--waiting { border-left-color: var(--hc-warning); }
+.s-note__flag {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 7px;
+  font-size: 11.5px;
+  color: var(--hc-mid);
+}
+.s-note__lock { width: 12px; height: 12px; fill: none; stroke: currentColor; stroke-width: 1.7; }
+
+.s-revealall {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 16px 0 4px;
+  padding: 10px 12px;
+  border-radius: var(--hc-radius-sm);
+  background: var(--hc-paper-sunk);
+  border: var(--hc-hairline) solid var(--hc-rule);
+}
+
+.s-desk {
+  margin-top: 12px;
+  padding: 11px 12px;
+  border-radius: var(--hc-radius-sm);
+  background: var(--hc-paper-sunk);
+  border: var(--hc-hairline) solid var(--hc-rule);
+}
+.s-desk__label { margin: 0 0 8px; font-size: 11.5px; color: var(--hc-mid); }
+.s-desk__names { display: flex; flex-wrap: wrap; gap: 6px; }
+
+.s-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 32px;
+  padding: 6px 11px;
+  border-radius: 999px;
+  background: var(--hc-paper);
+  border: 1px solid var(--hc-rule);
+  color: var(--hc-mid);
+  font-family: var(--hc-sans);
+  font-size: var(--hc-caption);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 160ms var(--hc-ease), color 160ms var(--hc-ease), border-color 160ms var(--hc-ease);
+}
+.s-chip__ico { width: 13px; height: 13px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.s-chip[aria-pressed="true"] {
+  background: var(--hc-dark);
+  border-color: transparent;
+  color: var(--hc-on-dark);
+}
+.s-chip--act { border-style: dashed; color: var(--hc-accent-deep); }
+
+/* --- the last box ------------------------------------------------------- */
+
+.s-prayers {
+  margin-top: 22px;
+  padding: 16px;
+  border-radius: var(--hc-radius-lg);
+  background: var(--hc-cream);
+  border: var(--hc-hairline) solid var(--hc-rule);
+  border-left: 1.5px solid var(--hc-accent-deep);
+}
+.s-prayers__title {
+  margin: 5px 0 6px;
+  font-family: var(--hc-serif);
+  font-size: 23px;
+  line-height: 1.2;
+}
+.s-note--prayer { background: var(--hc-paper); border-left-color: var(--hc-accent-deep); }
+
+/* --- the end of the page, and of the night ------------------------------ */
+
+.s-wrap {
+  margin-top: 22px;
+  padding: 16px;
+  border-radius: var(--hc-radius-lg);
+  background: var(--hc-paper-sunk);
+  border: var(--hc-hairline) solid var(--hc-rule);
+}
+.s-wrap__title {
+  margin: 5px 0 6px;
+  font-family: var(--hc-serif);
+  font-size: 23px;
+  line-height: 1.2;
+}
+/* Stacked rather than side by side. At 375 across, two buttons in a row put
+   "Print everything to PDF" on three lines, and a three line button reads as
+   a mistake. Full width also gives the pair a primary and a second. */
+.s-wrap__row { display: flex; flex-direction: column; gap: 8px; margin-top: 14px; }
+.s-wrap__row .s-btn svg { width: 16px; height: 16px; flex: 0 0 auto; }
+
+/* the sheet's first page, small enough to be a thumbnail and real enough to
+   show what actually goes out */
+.s-pdfpage {
+  margin: 10px 0 14px;
+  padding: 16px;
+  border-radius: 6px;
+  background: #FCFAF6;
+  border: 1px solid var(--hc-rule);
+  box-shadow: 0 6px 18px rgba(26,25,24,0.12);
+  color: #1A1918;
+}
+.s-pdfpage__eyebrow {
+  margin: 0;
+  font-family: var(--hc-sans-display);
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #7A6E5F;
+}
+.s-pdfpage__title { margin: 6px 0 0; font-family: var(--hc-serif); font-size: 24px; line-height: 1.15; }
+.s-pdfpage__meta { margin: 3px 0 0; font-size: 11.5px; color: #6D6864; }
+.s-pdfpage__rule { margin: 10px 0; height: 1px; background: var(--hc-rule); }
+.s-pdfpage__toc { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 6px; }
+.s-pdfpage__toc li {
+  display: grid;
+  grid-template-columns: 15px minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: baseline;
+  font-size: 12px;
+  line-height: 1.4;
+  color: #4A443D;
+}
+.s-pdfpage__toc b { font-weight: 600; color: #1A1918; white-space: nowrap; }
+.s-pdfpage__n {
+  font-family: var(--hc-sans-display);
+  font-size: 11px;
+  font-weight: 700;
+  color: #8F8271;
+  font-variant-numeric: tabular-nums;
+}
+.s-pdfpage__t { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.s-pdfpage__ico { width: 12px; height: 12px; fill: none; stroke: currentColor; stroke-width: 1.7; }
+
+.s-attach {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 14px;
+  padding: 11px 12px;
+  border-radius: 10px;
+  background: var(--hc-paper-sunk);
+  border: var(--hc-hairline) solid var(--hc-rule);
+  font-size: 12.5px;
+  line-height: 1.4;
+  color: var(--hc-mid);
+}
+.s-attach b { color: var(--hc-ink); font-weight: 600; }
+.s-attach__ico { width: 22px; height: 22px; flex: 0 0 auto; fill: none; stroke: var(--hc-accent-deep); stroke-width: 1.5; stroke-linejoin: round; }
+
 .s-flash { animation: flash 1100ms var(--hc-ease); }
 @keyframes flash {
   0%   { background: rgba(215,186,133,0.55); }
@@ -835,7 +1018,7 @@ body {
 
 .decide {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 12px;
 }
 @media (max-width: 1100px) { .decide { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
@@ -887,9 +1070,10 @@ footer.tail {
     <h1>A room your group joins with six digits</h1>
     <p class="lede">
       The leader opens a room and texts the code out. Everybody lands on the same page,
-      which is this week's guide questions, already carried over. Notes typed under a question
-      are readable by the whole group and editable by nobody but the person who wrote them.
-      <em>Both phones below are live and wired to the same room. Post a note on the left and watch the right.</em>
+      which is this week's guide questions, already carried over. Answers stay shut until
+      the leader opens them, one name or the whole room at a time, so nobody reads ahead of the question being
+      asked, and the night ends on one sheet that goes out as a text.
+      <em>Both phones below are live and wired to the same room. Open an answer on the right and watch the left.</em>
     </p>
   </header>
 
@@ -916,6 +1100,10 @@ footer.tail {
       <div class="thread__chip" data-thread="questions">the questions</div>
       <div class="thread__line"></div>
       <div class="thread__chip" data-thread="notes">the notes</div>
+      <div class="thread__line"></div>
+      <div class="thread__chip" data-thread="reveal">the reveal</div>
+      <div class="thread__line"></div>
+      <div class="thread__chip" data-thread="night">the night</div>
       <div class="thread__line"></div>
     </div>
 
@@ -954,7 +1142,23 @@ footer.tail {
         </li>
         <li>
           <b>Answered</b>
-          <p>Under each question, everyone gets a box. Post and it appears for the whole room under your first name, taken straight from your profile. You can edit and delete your own. Nobody can edit anyone else's, and the host can take anything down.</p>
+          <p>Under each question, everyone gets a box. What you write goes in under your first name, taken straight from your profile. You can edit and delete your own, nobody can edit anyone else's, and the host can take anything down.</p>
+        </li>
+        <li>
+          <b>Held back</b>
+          <p>Nothing anybody writes is readable by anybody else until Trey opens it. He works down the page a question at a time, and each answer is a switch he can throw on its own, all at once for that question, or all at once for the room. Thrown the other way it closes again.</p>
+        </li>
+        <li>
+          <b>Not read ahead</b>
+          <p>Trey does not get an early look either. He sees who has answered, not what they said, and opening an answer shows it to him and to the room in the same moment. Your own writing is the exception: you always see what you wrote, marked as not out yet.</p>
+        </li>
+        <li>
+          <b>Prayed for</b>
+          <p>The last box on the page is the prayer list, and it is the one thing never held back. Anyone adds to it, everyone reads it, and it goes out with the sheet.</p>
+        </li>
+        <li>
+          <b>Sent</b>
+          <p>At the end of the page, <b>Print everything to PDF</b> and <b>Send as text</b>. One sheet carries the guide, every question asked, every answer whether it was opened or not, and the prayer list. The text goes to the group with the sheet on it.</p>
         </li>
       </ul>
     </section>
@@ -968,14 +1172,15 @@ footer.tail {
         <li><span>js/store.js</span><span>Caches the room, its questions, and the notes last seen, so the tab opens to something real with no signal.</span></li>
         <li><span>js/content.js</span><span>Untouched. That file is the read only publishing pipeline and rooms are neither published nor church authored.</span></li>
         <li><span>js/auth.js</span><span>Its <code>restFetch</code> is the model to copy for authenticated writes. This is the first user writing to the database in this app.</span></li>
-        <li><span>js/native.js</span><span>Nothing new. <code>shareText</code> already falls back from the native sheet to the web share API to the clipboard.</span></li>
-        <li><span>supabase/migrations</span><span>A new <code>0016_group_rooms.sql</code>: rooms, members, questions, notes, and the project's first insert and update policies.</span></li>
+        <li><span>js/native.js</span><span>Nothing new. <code>shareText</code> already falls back from the native sheet to the web share API to the clipboard, and <code>shareFile</code> is the road the night sheet takes.</span></li>
+        <li><span>js/print-guide.js</span><span>Most of the export is already written. <code>standaloneHtml</code> builds a paginated document with <code>print.css</code> inlined and hands it to the system share sheet, where iOS offers Print, Save to Files and Mail. The night sheet is a second document built the same way. Worth knowing before promising a button: <code>window.print()</code> is a silent no-op inside WKWebView, which is exactly why that road exists.</span></li>
+        <li><span>supabase/migrations</span><span>A new <code>0016_group_rooms.sql</code>: rooms, members, questions, notes, prayer requests, and the project's first insert and update policies. Whether an answer is open is a column on the note, and the read policy has to honour it.</span></li>
         <li><span>supabase/functions/delete-account</span><span>Has to learn about notes, or deleting an account leaves a name attached to text in somebody else's room.</span></li>
       </ul>
     </section>
 
     <section class="note note--wide">
-      <h2>Four things to decide</h2>
+      <h2>Six things to decide</h2>
       <div class="decide">
         <div class="decide__item" data-pick="true">
           <h3>Writing needs an account, reading does not</h3>
@@ -993,6 +1198,14 @@ footer.tail {
           <h3>Codes expire at midnight</h3>
           <p>Six digits is a million rooms, which is plenty when only tonight's are live. Enforce uniqueness among open rooms only, and let last week's code be somebody else's this week.</p>
         </div>
+        <div class="decide__item" data-pick="true">
+          <h3>Hiding has to be real</h3>
+          <p>If the phone holds every answer and simply declines to draw them, one look at the network tab undoes the feature. A closed answer must not leave the database, which means the read policy enforces this and not the screen.</p>
+        </div>
+        <div class="decide__item" data-pick="true">
+          <h3>The leader waits with everyone else</h3>
+          <p>Drawn here so Trey sees who has answered and not what they wrote. It is the kinder default and it keeps the room honest. Letting him read first makes moderation easier before the fact, and it is the version section 2.5 calls a leader dashboard. Your call.</p>
+        </div>
       </div>
     </section>
 
@@ -1003,8 +1216,9 @@ footer.tail {
         this exact feature as the thing that would break the current answer:
         <b>&ldquo;if anyone later proposes showing prayer requests to a group, or a leader dashboard that reads
         members' journal entries, that single change pulls the entire weight of Guideline 1.2 into scope.&rdquo;</b>
-        Notes visible to the whole room are user generated content shown to other users, so 1.2 applies and the
-        submission gets meaningfully harder.
+        Read that sentence next to the last box on the phone above. It is not a near miss, it is the same feature,
+        named. Answers and prayer requests visible to the whole room are user generated content shown to other
+        users, so 1.2 applies and the submission gets meaningfully harder.
       </p>
       <p><b>What 1.2 then requires, none of which exists today:</b></p>
       <ul class="req">
@@ -1018,6 +1232,14 @@ footer.tail {
         people and needs a retention and deletion answer, and the compliance matrix row that reads
         <b>User generated content: No</b> flips to yes, which the review notes currently lean on.
         The host takedown control drawn on the right hand phone is the start of the answer, not the whole of it.
+      </p>
+      <p>
+        <b>And the sheet is the part nothing can reach.</b> Every other control here works because the content is
+        still inside the app: a note comes down, an answer closes, an account is deleted. Once the night is a PDF
+        in a group text it is a file on five phones, and Dee's sister and Marcus's job are in it. Taking a note
+        down afterwards does not touch it. Two things worth deciding before this ships: say plainly on that button
+        what is about to leave, and settle whether prayer requests go in the sheet by default or only when the
+        room says so. It is a one line answer either way, and it is much harder to give after the first text goes out.
       </p>
     </section>
 
@@ -1098,17 +1320,28 @@ footer.tail {
       { id: 'n1', q: 'q1', who: 'Marcus', text: 'A courtroom. My dad practiced law and that is just where my head goes, somebody paying my fine.' },
       { id: 'n2', q: 'q1', who: 'Dee', text: 'My grandmother\u2019s kitchen. She fed whoever knocked and never once asked what they had done first.' },
       { id: 'n3', q: 'q2', who: 'Anna', text: 'The school pickup line. I get there twenty minutes early so I do not have to stand in the lobby and talk.' }
+    ],
+    // The last box. Never hidden, because a room does not hold back what it
+    // is being asked to pray about.
+    prayers: [
+      { id: 'r1', who: 'Dee', text: 'My sister starts treatment Tuesday. Pray she is not scared of it.' },
+      { id: 'r2', who: 'Marcus', text: 'Work decides on layoffs this month and my name is on the list they are looking at.' }
     ]
   };
 
-  var room, drafts, adding, editing, scene, sheet, flash, seq;
+  var room, drafts, prayerDraft, adding, editing, scene, sheet, shown, flash, seq;
 
   function reset() {
     room = JSON.parse(JSON.stringify(SEED));
     drafts = {};        // Priya's in progress text, keyed by question id
+    prayerDraft = '';   // her in progress prayer request
     adding = '';        // Trey's in progress new question
     editing = null;     // { id, text } while Trey has a question open
-    sheet = false;      // the share sheet over the leader's phone
+    sheet = '';         // '', 'code', 'pdf' or 'text', a sheet over the leader
+    // Which answers the room can see. Keyed by note id rather than by
+    // question, because the leader opens them one name at a time as often as
+    // a whole question at once.
+    shown = {};
     flash = {};         // ids that just changed, for the gold wash
     seq = 100;
   }
@@ -1133,6 +1366,16 @@ footer.tail {
     return room.notes.filter(function (n) { return n.q === qid; });
   }
 
+  function hiddenCount(qid) {
+    return notesFor(qid).filter(function (n) { return !shown[n.id]; }).length;
+  }
+
+  function allShown() {
+    return room.notes.length > 0 && room.notes.every(function (n) { return shown[n.id]; });
+  }
+
+  function plural(n, one, many) { return n + ' ' + (n === 1 ? one : many); }
+
   function lit(which) {
     var chip = document.querySelector('[data-thread="' + which + '"]');
     if (!chip) return;
@@ -1154,6 +1397,10 @@ footer.tail {
     pencil: '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>',
     plus: '<path d="M12 5v14M5 12h14"/>',
     close: '<path d="M18 6 6 18M6 6l12 12"/>',
+    eye: '<path d="M2 12s3.8-6.4 10-6.4S22 12 22 12s-3.8 6.4-10 6.4S2 12 2 12z"/><circle cx="12" cy="12" r="2.6"/>',
+    eyeOff: '<path d="M4 4.5 19.5 20"/><path d="M9.9 6A9.9 9.9 0 0 1 12 5.6c6.2 0 10 6.4 10 6.4a17 17 0 0 1-3.3 4"/><path d="M6.4 8.1A17 17 0 0 0 2 12s3.8 6.4 10 6.4a10 10 0 0 0 3.6-.7"/>',
+    lock: '<rect x="4.5" y="10.5" width="15" height="9.5" rx="2.2"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5"/>',
+    doc: '<path d="M13.5 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8.5z"/><path d="M13.5 3v5.5H19"/>',
     group: '<rect x="3" y="5" width="18" height="14" rx="4"/><circle cx="8.5" cy="12" r="1.2"/><circle cx="12" cy="12" r="1.2"/><circle cx="15.5" cy="12" r="1.2"/>',
     home: '<path d="M3 10.2 12 3l9 7.2V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/>',
     listen: '<path d="M4 15v-3a8 8 0 0 1 16 0v3"/><path d="M4 14h2a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2H5a1 1 0 0 1-1-1z"/><path d="M20 14h-2a2 2 0 0 0-2 2v2a2 2 0 0 0 2 2h1a1 1 0 0 0 1-1z"/>',
@@ -1218,6 +1465,114 @@ footer.tail {
     '</div>';
   }
 
+  /* ---------------------------------------------------- shared room pieces */
+
+  // The last box on the page. Never held back: a room does not sit on what it
+  // is being asked to pray about.
+  function prayerBlock(who) {
+    var out = '<div class="s-prayers">' +
+      '<p class="s-eyebrow">Before you go</p>' +
+      '<p class="s-prayers__title">Prayer requests</p>' +
+      '<p class="s-cap">Everyone sees these, and they go out on the sheet at the end of the night.</p>' +
+      '<div class="s-notes">';
+
+    room.prayers.forEach(function (r) {
+      out += '<div class="s-note s-note--prayer' + (r.who === who ? ' s-note--mine' : '') + flashClass(r.id) + '">' +
+        '<span class="s-note__who">' + esc(r.who) + '</span>' +
+        '<p class="s-note__text">' + esc(r.text) + '</p>' +
+        (who === 'Trey'
+          ? '<button type="button" class="s-note__pull" data-pull-prayer="' + r.id + '" ' +
+            'aria-label="Take down the request from ' + esc(r.who) + '">' + svg('close') + '</button>'
+          : '') +
+      '</div>';
+    });
+
+    out += '</div>';
+
+    if (who === 'Priya') {
+      out += '<div class="s-field">' +
+        '<textarea class="s-textarea" rows="2" data-prayer="1" aria-label="Add a prayer request" ' +
+          'placeholder="What do you want the group carrying this week?">' + esc(prayerDraft) + '</textarea>' +
+        (prayerDraft.trim()
+          ? '<div style="margin-top:8px"><button type="button" class="s-btn s-btn--small" data-post-prayer="1">' +
+            'Add to the list</button></div>'
+          : '') +
+      '</div>';
+    }
+
+    return out + '</div>';
+  }
+
+  // The end of the page, and the end of the night. One sheet carries the whole
+  // room: the guide, every question, every answer whether it was opened or
+  // not, and the prayer list.
+  function wrapUp() {
+    return '<div class="s-wrap">' +
+      '<p class="s-eyebrow">When the night is over</p>' +
+      '<p class="s-wrap__title">Tonight, on one sheet</p>' +
+      '<p class="s-cap">The guide, all ' + room.questions.length + ' questions, what each person wrote, and the ' +
+        plural(room.prayers.length, 'request', 'requests') + ' above.</p>' +
+      '<div class="s-wrap__row">' +
+        '<button type="button" class="s-btn" data-pdf="1">' + svg('doc') + 'Print everything to PDF</button>' +
+        '<button type="button" class="s-btn s-btn--secondary" data-text="1">' + svg('message') + 'Send as text</button>' +
+      '</div>' +
+    '</div>';
+  }
+
+  /* The sheets that come up over the leader's phone. */
+  function sheetLayer() {
+    if (!sheet) return '';
+
+    var scrim = '<button type="button" class="s-scrim" data-sheet="" aria-label="Close"></button>';
+
+    if (sheet === 'code') {
+      return scrim +
+        '<div class="s-sheet">' +
+          '<p class="s-eyebrow">Messages</p>' +
+          '<div class="s-bubble">Trey opened tonight\u2019s room in the Home Church app. Code ' +
+            esc(spaced(room.code)) + '. Open the Group tab and tap Join.</div>' +
+          '<button type="button" class="s-btn" data-sheet="">Send to Lakeview Thursday</button>' +
+          '<p class="s-cap" style="margin:10px 0 0;text-align:center">Handed to the phone\u2019s own share sheet.</p>' +
+        '</div>';
+    }
+
+    if (sheet === 'pdf') {
+      var lines = room.questions.map(function (q, i) {
+        return '<li><span class="s-pdfpage__n">' + (i + 1) + '</span>' +
+          '<span class="s-pdfpage__t">' + esc(q.text.slice(0, 42)) + '\u2026</span>' +
+          '<b>' + plural(notesFor(q.id).length, 'answer', 'answers') + '</b></li>';
+      }).join('');
+      return scrim +
+        '<div class="s-sheet">' +
+          '<p class="s-eyebrow">Tonight\u2019s sheet</p>' +
+          '<div class="s-pdfpage">' +
+            '<p class="s-pdfpage__eyebrow">Home Church \u00b7 Lakeview Thursday</p>' +
+            '<p class="s-pdfpage__title">The Table of Grace</p>' +
+            '<p class="s-pdfpage__meta">Thursday, November 13 \u00b7 5 there</p>' +
+            '<div class="s-pdfpage__rule"></div>' +
+            '<ul class="s-pdfpage__toc">' + lines +
+              '<li><span class="s-pdfpage__n">' + svg('give', 's-pdfpage__ico') + '</span>' +
+                '<span class="s-pdfpage__t">Prayer requests</span>' +
+                '<b>' + room.prayers.length + '</b></li>' +
+            '</ul>' +
+          '</div>' +
+          '<button type="button" class="s-btn" data-sheet="">Save to Files</button>' +
+          '<p class="s-cap" style="margin:10px 0 0;text-align:center">Print, Save to Files and Mail all come from ' +
+            'the same sheet, the way Download guide already works.</p>' +
+        '</div>';
+    }
+
+    return scrim +
+      '<div class="s-sheet">' +
+        '<p class="s-eyebrow">Messages</p>' +
+        '<div class="s-bubble">Here is Thursday night, everything we wrote down. Dee and Marcus, we are praying.</div>' +
+        '<div class="s-attach">' + svg('doc', 's-attach__ico') +
+          '<span><b>Lakeview Thursday, Nov 13</b><br>PDF \u00b7 4 pages</span></div>' +
+        '<button type="button" class="s-btn" data-sheet="">Send to Lakeview Thursday</button>' +
+        '<p class="s-cap" style="margin:10px 0 0;text-align:center">Once this goes, it is out of the app for good.</p>' +
+      '</div>';
+  }
+
   /* ---------------------------------------------------------- the member */
 
   function memberScreen() {
@@ -1241,18 +1596,42 @@ footer.tail {
     var body = roomBar() + head('In the room', 'Lakeview Thursday') + guideCard();
 
     room.questions.forEach(function (q, i) {
+      var all = notesFor(q.id);
+      var open = all.filter(function (n) { return shown[n.id]; });
+      var waiting = all.filter(function (n) { return !shown[n.id]; });
+      var mineHidden = waiting.filter(function (n) { return n.who === 'Priya'; });
+      var othersHidden = waiting.length - mineHidden.length;
+
       body += '<div class="s-q' + flashClass(q.id) + '">' +
         '<span class="s-q__num">' + (i + 1) + ' \u00b7 ' + esc(q.heading).toUpperCase() + '</span>' +
         '<p class="s-q__text">' + esc(q.text) + '</p>' +
         (q.added ? '<span class="s-q__tag">Added by Trey</span>' : '') +
         '<div class="s-notes">';
 
-      notesFor(q.id).forEach(function (n) {
+      // Yours is always yours to see. Everyone else's waits for Trey.
+      mineHidden.forEach(function (n) {
+        body += '<div class="s-note s-note--mine s-note--waiting' + flashClass(n.id) + '">' +
+          '<span class="s-note__who">' + esc(n.who) + '</span>' +
+          '<p class="s-note__text">' + esc(n.text) + '</p>' +
+          '<span class="s-note__flag">' + svg('lock', 's-note__lock') +
+            'In, and only you can see it until Trey opens this one.</span>' +
+        '</div>';
+      });
+
+      open.forEach(function (n) {
         body += '<div class="s-note' + (n.who === 'Priya' ? ' s-note--mine' : '') + flashClass(n.id) + '">' +
           '<span class="s-note__who">' + esc(n.who) + '</span>' +
           '<p class="s-note__text">' + esc(n.text) + '</p>' +
         '</div>';
       });
+
+      if (othersHidden) {
+        body += '<div class="s-locked">' + svg('lock') +
+          '<span>' + plural(othersHidden, 'answer is', 'answers are') + ' in. Trey opens ' +
+          (othersHidden === 1 ? 'it' : 'them') + ' when the group gets here.</span></div>';
+      } else if (!all.length) {
+        body += '<p class="s-empty" style="margin:0">Nobody has written anything here yet.</p>';
+      }
 
       var draft = drafts[q.id] || '';
       body += '</div>' +
@@ -1264,13 +1643,17 @@ footer.tail {
             ? '<div style="margin-top:8px"><button type="button" class="s-btn s-btn--small" data-post="' + q.id + '">Post to the group</button></div>'
             : '') +
           '<p class="s-status">' + (draft.trim()
-            ? 'Everyone in the room will see this under your name.'
-            : 'Visible to the room once you post. Yours to edit, nobody else\u2019s.') + '</p>' +
+            ? 'It goes in now and shows to the room when Trey opens this question.'
+            : 'Write it whenever. Nobody reads it until Trey opens this one.') + '</p>' +
         '</div>' +
       '</div>';
     });
 
-    body += '<div class="s-offline">Saved on this phone. With no signal you keep the questions and everything already posted, and yours goes out when the phone catches up.</div>';
+    body += prayerBlock('Priya');
+
+    body += '<div class="s-offline">Saved on this phone. With no signal you keep the questions and everything already ' +
+      'opened, and yours goes out when the phone catches up.</div>';
+    body += '<p class="s-cap" style="margin:14px 0 0;text-align:center">Trey sends the whole night out when you are done.</p>';
 
     return chrome('PN', body);
   }
@@ -1285,7 +1668,7 @@ footer.tail {
           '<p class="s-code">' + esc(spaced(room.code)) + '</p>' +
           '<p class="s-cap">Good until midnight. Anyone with these six digits can come in.</p>' +
           '<div class="s-stack">' +
-            '<button type="button" class="s-btn" data-share="1">' + svg('message') + 'Text the code to your group</button>' +
+            '<button type="button" class="s-btn" data-sheet="code">' + svg('message') + 'Text the code to your group</button>' +
             '<button type="button" class="s-btn s-btn--secondary">Copy the code</button>' +
           '</div>' +
         '</div>' +
@@ -1302,32 +1685,36 @@ footer.tail {
           '<button type="button" class="s-btn s-btn--tertiary">Close the room</button>' +
         '</div>';
 
-      var extra = sheet
-        ? '<button type="button" class="s-scrim" data-share="0" aria-label="Close"></button>' +
-          '<div class="s-sheet">' +
-            '<p class="s-eyebrow">Messages</p>' +
-            '<div class="s-bubble">Trey opened tonight\u2019s room in the Home Church app. Code ' +
-              esc(spaced(room.code)) + '. Open the Group tab and tap Join.</div>' +
-            '<button type="button" class="s-btn" data-share="0">Send to Lakeview Thursday</button>' +
-            '<p class="s-cap" style="margin:10px 0 0;text-align:center">Handed to the phone\u2019s own share sheet.</p>' +
-          '</div>'
-        : '';
-
-      return chrome('TG', body, extra);
+      return chrome('TG', body, sheetLayer());
     }
 
+    var everything = allShown();
     var out = roomBar() + head('Leader mode', 'Lakeview Thursday') + guideCard();
 
+    // The one control for the whole room, above the questions where a leader
+    // running behind will look for it.
+    out += '<div class="s-revealall">' +
+      '<button type="button" class="s-btn s-btn--secondary s-btn--small" data-all="' + (everything ? '0' : '1') + '">' +
+        svg(everything ? 'eyeOff' : 'eye') +
+        (everything ? 'Hide every answer' : 'Open every answer') +
+      '</button>' +
+      '<span class="s-cap">' + room.notes.filter(function (n) { return shown[n.id]; }).length +
+        ' of ' + room.notes.length + ' open</span>' +
+    '</div>';
+
     room.questions.forEach(function (q, i) {
-      var open = editing && editing.id === q.id;
+      var editingThis = editing && editing.id === q.id;
+      var all = notesFor(q.id);
+      var hidden = hiddenCount(q.id);
+
       out += '<div class="s-q' + flashClass(q.id) + '">' +
         '<div class="s-q__row">' +
           '<span class="s-q__num">' + (i + 1) + ' \u00b7 ' + esc(q.heading).toUpperCase() + '</span>' +
-          (open ? '' : '<button type="button" class="s-btn s-btn--tertiary s-btn--small" data-edit="' + q.id + '">' +
+          (editingThis ? '' : '<button type="button" class="s-btn s-btn--tertiary s-btn--small" data-edit="' + q.id + '">' +
             svg('pencil') + 'Edit</button>') +
         '</div>';
 
-      if (open) {
+      if (editingThis) {
         out += '<div class="s-field" style="margin-top:8px">' +
           '<textarea class="s-textarea" rows="4" data-editing="1" aria-label="Edit this question">' + esc(editing.text) + '</textarea>' +
           '<div style="display:flex;gap:8px;margin-top:8px">' +
@@ -1341,12 +1728,30 @@ footer.tail {
           (q.added ? '<span class="s-q__tag">Added by you</span>' : '');
       }
 
-      var ns = notesFor(q.id);
-      out += '<div class="s-notes">';
-      if (!ns.length) {
-        out += '<p class="s-cap" style="font-style:italic;font-family:var(--hc-serif);font-size:calc(var(--hc-body-serif) * var(--hc-text-scale))">Nothing written here yet.</p>';
+      // The reveal desk. Each name is a switch, so answers open one at a time
+      // or all together, and close again the same way. Trey does not read
+      // ahead either: opening one shows it to him and the room at once.
+      if (all.length) {
+        out += '<div class="s-desk">' +
+          '<p class="s-desk__label">' + plural(all.length, 'answer', 'answers') + ' in. Tap a name to open it.</p>' +
+          '<div class="s-desk__names">' +
+            all.map(function (n) {
+              return '<button type="button" class="s-chip" data-toggle="' + n.id + '" ' +
+                'aria-pressed="' + (shown[n.id] ? 'true' : 'false') + '">' +
+                svg(shown[n.id] ? 'eye' : 'lock', 's-chip__ico') + esc(n.who) + '</button>';
+            }).join('') +
+            (all.length > 1
+              ? '<button type="button" class="s-chip s-chip--act" data-q-all="' + q.id + '" data-on="' +
+                (hidden ? '1' : '0') + '">' + (hidden ? 'Open all ' + all.length : 'Close all') + '</button>'
+              : '') +
+          '</div>' +
+        '</div>';
+      } else {
+        out += '<p class="s-empty" style="margin:12px 0 0">Nothing written here yet.</p>';
       }
-      ns.forEach(function (n) {
+
+      out += '<div class="s-notes">';
+      all.filter(function (n) { return shown[n.id]; }).forEach(function (n) {
         out += '<div class="s-note' + flashClass(n.id) + '">' +
           '<span class="s-note__who">' + esc(n.who) + '</span>' +
           '<p class="s-note__text">' + esc(n.text) + '</p>' +
@@ -1370,9 +1775,14 @@ footer.tail {
       '</div>' +
     '</div>';
 
-    out += '<div class="s-offline">Taking a note down removes it for everyone and tells the person who wrote it. This is the control an App Store reviewer will look for.</div>';
+    out += prayerBlock('Trey');
 
-    return chrome('TG', out);
+    out += '<div class="s-offline">Taking a note down removes it for everyone and tells the person who wrote it. ' +
+      'This is the control an App Store reviewer will look for.</div>';
+
+    out += wrapUp();
+
+    return chrome('TG', out, sheetLayer());
   }
 
   /* -------------------------------------------------------------- render
@@ -1386,6 +1796,7 @@ footer.tail {
     if (active && (active.tagName === 'TEXTAREA')) {
       keep = {
         sel: active.getAttribute('data-draft') ? '[data-draft="' + active.getAttribute('data-draft') + '"]'
+           : active.getAttribute('data-prayer') ? '[data-prayer="1"]'
            : active.getAttribute('data-adding') ? '[data-adding="1"]'
            : active.getAttribute('data-editing') ? '[data-editing="1"]' : null,
         start: active.selectionStart,
@@ -1417,6 +1828,12 @@ footer.tail {
       if (!was !== !t.value.trim()) render();   // the Post button appearing or leaving
       return;
     }
+    if (t.hasAttribute && t.hasAttribute('data-prayer')) {
+      var before = prayerDraft.trim();
+      prayerDraft = t.value;
+      if (!before !== !prayerDraft.trim()) render();
+      return;
+    }
     if (t.hasAttribute && t.hasAttribute('data-adding')) {
       var had = adding.trim();
       adding = t.value;
@@ -1429,7 +1846,10 @@ footer.tail {
   });
 
   document.addEventListener('click', function (e) {
-    var el = e.target.closest ? e.target.closest('[data-post],[data-add],[data-edit],[data-save],[data-cancel],[data-pull],[data-share],[data-scene]') : null;
+    var el = e.target.closest ? e.target.closest(
+      '[data-post],[data-add],[data-edit],[data-save],[data-cancel],[data-pull],[data-scene],' +
+      '[data-sheet],[data-toggle],[data-q-all],[data-all],[data-post-prayer],[data-pull-prayer],' +
+      '[data-pdf],[data-text]') : null;
     if (!el) {
       if (e.target.id === 'reset') { reset(); render(); }
       return;
@@ -1437,7 +1857,7 @@ footer.tail {
 
     if (el.hasAttribute('data-scene')) {
       scene = el.getAttribute('data-scene');
-      sheet = false;
+      sheet = '';
       Array.prototype.forEach.call(document.querySelectorAll('[data-scene]'), function (b) {
         b.setAttribute('aria-pressed', b === el ? 'true' : 'false');
       });
@@ -1446,9 +1866,66 @@ footer.tail {
       return;
     }
 
-    if (el.hasAttribute('data-share')) {
-      sheet = el.getAttribute('data-share') === '1';
-      lit('code');
+    if (el.hasAttribute('data-sheet')) {
+      sheet = el.getAttribute('data-sheet');
+      if (sheet === 'code') lit('code');
+      if (sheet === 'pdf' || sheet === 'text') lit('night');
+      render();
+      return;
+    }
+
+    if (el.hasAttribute('data-pdf')) { sheet = 'pdf'; lit('night'); render(); return; }
+    if (el.hasAttribute('data-text')) { sheet = 'text'; lit('night'); render(); return; }
+
+    // One name at a time.
+    if (el.hasAttribute('data-toggle')) {
+      var nid2 = el.getAttribute('data-toggle');
+      if (shown[nid2]) delete shown[nid2]; else { shown[nid2] = true; mark(nid2); }
+      lit('reveal');
+      render();
+      return;
+    }
+
+    // Or a whole question at once.
+    if (el.hasAttribute('data-q-all')) {
+      var on = el.getAttribute('data-on') === '1';
+      notesFor(el.getAttribute('data-q-all')).forEach(function (n) {
+        if (on) { if (!shown[n.id]) { shown[n.id] = true; mark(n.id); } }
+        else delete shown[n.id];
+      });
+      lit('reveal');
+      render();
+      return;
+    }
+
+    // Or the entire room.
+    if (el.hasAttribute('data-all')) {
+      var turnOn = el.getAttribute('data-all') === '1';
+      room.notes.forEach(function (n) {
+        if (turnOn) { if (!shown[n.id]) { shown[n.id] = true; mark(n.id); } }
+        else delete shown[n.id];
+      });
+      lit('reveal');
+      render();
+      return;
+    }
+
+    if (el.hasAttribute('data-post-prayer')) {
+      var ptext = prayerDraft.trim();
+      if (!ptext) return;
+      var pid = 'r' + (++seq);
+      room.prayers.push({ id: pid, who: 'Priya', text: ptext });
+      prayerDraft = '';
+      mark(pid);
+      lit('notes');
+      render();
+      return;
+    }
+
+    if (el.hasAttribute('data-pull-prayer')) {
+      var rid = el.getAttribute('data-pull-prayer');
+      room.prayers = room.prayers.filter(function (r) { return r.id !== rid; });
+      lit('notes');
       render();
       return;
     }
