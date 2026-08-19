@@ -152,6 +152,17 @@ revoke execute on function public.hc_purge_group_rooms(integer)          from pu
 -- Neither one reads or writes anything: each answers "is the caller in this
 -- room" or "is this room live" about the caller themselves, and for anon
 -- auth.uid() is null, so both are always false.
+--
+-- WHAT THE DASHBOARD ACTUALLY SHOWS, added after applying this. Twenty, not
+-- two, because there are two linter rules and this note only anticipated the
+-- first. anon_security_definer_function_executable is these two, as described
+-- above. authenticated_security_definer_function_executable is a separate
+-- rule that fires on any SECURITY DEFINER function a signed in user can
+-- reach, which is every hc_room_ function there is, so it raises eighteen
+-- more. That second rule is flagging the architecture: there is no insert,
+-- update or delete policy anywhere in this feature and every write goes
+-- through a definer function on purpose. All twenty must stay. See
+-- supabase/APPLY_GROUP_ROOMS.md, which has the applied verification.
 grant execute on function public.hc_room_is_member(uuid) to anon, authenticated;
 grant execute on function public.hc_room_is_live(uuid)   to anon, authenticated;
 grant execute on function public.hc_room_is_host(uuid)   to authenticated;
