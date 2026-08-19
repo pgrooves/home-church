@@ -10,6 +10,36 @@ do $$ begin
 end $$;
 grant anon, authenticated, service_role to postgres;
 
+-- ---------------------------------------------------------------------------
+-- Supabase's default privileges, which are the whole reason this block exists.
+--
+-- A bare Postgres gives a new function one grant: EXECUTE to PUBLIC. Supabase
+-- adds explicit default grants on top, so a function created in the public
+-- schema on a real project comes out carrying FOUR grants:
+--
+--   {=X/postgres, postgres=X/postgres, anon=X/postgres,
+--    authenticated=X/postgres, service_role=X/postgres}
+--
+-- Without these lines this harness is a bare Postgres, migration 0017 passes
+-- its own tests locally, and eighteen functions stay callable by anon in
+-- production with every check green. That happened. The explicit anon grant
+-- survives a revoke aimed at PUBLIC, because it did not come from PUBLIC.
+--
+-- Tables and sequences get the same treatment on a real project, which is why
+-- 0016 revokes insert, update and delete rather than assuming a new table
+-- starts closed.
+--
+-- Kept verbatim from what a Supabase project actually reports. If this block
+-- and the real project ever drift, the tests go back to being theatre.
+-- ---------------------------------------------------------------------------
+
+alter default privileges in schema public
+  grant all on tables to postgres, anon, authenticated, service_role;
+alter default privileges in schema public
+  grant all on functions to postgres, anon, authenticated, service_role;
+alter default privileges in schema public
+  grant all on sequences to postgres, anon, authenticated, service_role;
+
 create schema if not exists auth;
 grant usage on schema auth to anon, authenticated, service_role;
 grant usage on schema public to anon, authenticated, service_role;

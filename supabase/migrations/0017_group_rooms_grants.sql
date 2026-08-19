@@ -1,6 +1,17 @@
 -- ===========================================================================
 -- Home Church, group rooms, closing the PUBLIC grant
 --
+-- INCOMPLETE, AND FINISHED IN 0018. Read this file's header for the mechanism,
+-- then read 0018 for the half it missed. Everything below is true and none of
+-- it is the whole story: this file assumes PUBLIC is the only thing granting
+-- anon, which is right for a bare Postgres and wrong for a Supabase project.
+-- Supabase ships default privileges that hand anon, authenticated and
+-- service_role an explicit grant on every new function and table, so revoking
+-- PUBLIC left eighteen of the nineteen functions still callable by a signed
+-- out client, and left anon holding SELECT on all six tables. The local test
+-- suite agreed with this file because the harness was a bare Postgres. It now
+-- carries Supabase's default privileges, and 0018 is what the tests demand.
+--
 -- WHAT WENT WRONG IN 0016. Section 12 of that file ends with this line:
 --
 --   revoke execute on function public.hc_purge_group_rooms(integer)
@@ -33,6 +44,10 @@
 -- from PUBLIC first, then grant to exactly the roles that need it. Never rely
 -- on a revoke naming roles to take a privilege away, because the privilege
 -- usually did not come from a role.
+--
+-- Which was still not enough. 0018 states the finished rule: revoke from
+-- public AND anon AND authenticated by name, then grant back. On this project
+-- a privilege can arrive by either road and taking away one leaves the other.
 --
 -- No table, column, policy or function body changes here. This file only
 -- moves privileges, and it is safe to run more than once.
