@@ -711,6 +711,22 @@ a.hc-card:active { background: var(--hc-paper-sunk); }
 
 .hc-btn--tertiary:active { opacity: 0.7; }
 
+/* A button that sits in a row of other buttons rather than alone under a
+   card. Narrower and shorter, but never below --hc-tap-min, which is the one
+   number in this file that is not a matter of taste. */
+.hc-btn--small {
+  width: auto;
+  min-height: var(--hc-tap-min);
+  padding: var(--hc-space-sm) var(--hc-space-md);
+  font-size: 14px;
+}
+
+/* Tertiary and small together is the Group tab's Report and Block, sitting
+   under somebody's answer. Tertiary alone has no padding at all, which is
+   right for a lone link and wrong here: two of them side by side ran together
+   and read as one control called "Report Block". */
+.hc-btn--tertiary.hc-btn--small { padding: var(--hc-space-xs) var(--hc-space-sm); }
+
 .hc-btn[disabled] {
   opacity: 0.5;
   pointer-events: none;

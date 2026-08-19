@@ -183,6 +183,26 @@
     arrowOut: '<path d="M14 4h6v6"/><path d="M20 4 10 14"/><path d="M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/>',
     book: '<path d="M4 5.5A1.5 1.5 0 0 1 5.5 4H11v16H5.5A1.5 1.5 0 0 1 4 18.5z"/><path d="M20 5.5A1.5 1.5 0 0 0 18.5 4H13v16h5.5a1.5 1.5 0 0 0 1.5-1.5z"/>',
     plus: '<path d="M12 5v14M5 12h14"/>',
+
+    /* The Group tab and the reveal. `group` is the tab's own mark: a room
+       with people in it, drawn as a rounded frame rather than the two figures
+       Connect already uses, because at 11px two person glyphs one tab apart
+       read as the same icon twice. */
+    group: '<rect x="3" y="5" width="18" height="14" rx="4"/>' +
+           '<circle cx="8.5" cy="12" r="1.2"/><circle cx="12" cy="12" r="1.2"/>' +
+           '<circle cx="15.5" cy="12" r="1.2"/>',
+    eye: '<path d="M2 12s3.8-6.4 10-6.4S22 12 22 12s-3.8 6.4-10 6.4S2 12 2 12z"/>' +
+         '<circle cx="12" cy="12" r="2.6"/>',
+    eyeOff: '<path d="M4 4.5 19.5 20"/>' +
+            '<path d="M9.9 6A9.9 9.9 0 0 1 12 5.6c6.2 0 10 6.4 10 6.4a17 17 0 0 1-3.3 4"/>' +
+            '<path d="M6.4 8.1A17 17 0 0 0 2 12s3.8 6.4 10 6.4a10 10 0 0 0 3.6-.7"/>',
+    lock: '<rect x="4.5" y="10.5" width="15" height="9.5" rx="2.2"/>' +
+          '<path d="M8 10.5V8a4 4 0 0 1 8 0v2.5"/>',
+    doc: '<path d="M13.5 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8.5z"/>' +
+         '<path d="M13.5 3v5.5H19"/>',
+    message: '<path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9.5 9.5 0 0 1-2.9-.4L4 21l1.4-4.1A8.2 8.2 0 0 1 3.6 11.5 8.4 8.4 0 0 1 12 3.1a8.4 8.4 0 0 1 9 8.4z"/>',
+    flag: '<path d="M5 21V4"/><path d="M5 5h11l-1.6 3.2L16 11.5H5z"/>',
+    pencil: '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>',
     leaf: '<path d="M20 4C10 4 4 9 4 16v4"/><path d="M20 4c0 9-5 13-11 13H4"/>',
     download: '<path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/>'
   };
@@ -329,11 +349,22 @@
   function button(label, opts) {
     opts = opts || {};
     var variant = opts.variant || 'primary';
-    var attrs = ['type="button"', 'class="hc-btn hc-btn--' + variant + (opts.className ? ' ' + opts.className : '') + '"'];
+    var cls = 'hc-btn hc-btn--' + variant +
+      (opts.small ? ' hc-btn--small' : '') +
+      (opts.className ? ' ' + opts.className : '');
+    var attrs = ['type="button"', 'class="' + cls + '"'];
     if (opts.action) attrs.push('data-action="' + esc(opts.action) + '"');
     if (opts.url) attrs.push('data-url="' + esc(opts.url) + '"');
     if (opts.id) attrs.push('data-id="' + esc(opts.id) + '"');
     if (opts.ariaLabel) attrs.push('aria-label="' + esc(opts.ariaLabel) + '"');
+
+    /* `busy` is a button waiting on the network, and it is disabled as well as
+       marked. Both matter: aria-busy tells a screen reader something is
+       happening, and the disabled attribute is what stops a second tap posting
+       the same answer twice on a slow connection. */
+    if (opts.disabled || opts.busy) attrs.push('disabled');
+    if (opts.busy) attrs.push('aria-busy="true"');
+
     var iconHtml = opts.icon ? icon(opts.icon, 'hc-btn__icon') : '';
     return '<button ' + attrs.join(' ') + '>' + iconHtml + '<span>' + esc(label) + '</span></button>';
   }

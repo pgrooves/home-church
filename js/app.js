@@ -9,10 +9,17 @@
 
   var c = HC.components;
 
+  /* Six now. The design system asks for four to five and this is the one
+     place that pushed past it, deliberately: on a 375pt phone each tile goes
+     from 67.8pt to 56.2pt, which keeps every tap target legal and leaves
+     Connect, the widest label at 48.5pt, with under 4pt of air on each side.
+     Measured rather than guessed, in demo-group-room. If it ever reads badly
+     the answer is not a smaller font, it is moving the room inside Guide. */
   var TAB_META = [
     { name: 'home',    label: 'Home',    icon: 'home' },
     { name: 'listen',  label: 'Listen',  icon: 'listen' },
     { name: 'guide',   label: 'Guide',   icon: 'guide' },
+    { name: 'group',   label: 'Group',   icon: 'group' },
     { name: 'connect', label: 'Connect', icon: 'connect' },
     { name: 'give',    label: 'Give',    icon: 'give' }
   ];
@@ -21,6 +28,7 @@
     home: 'Home',
     listen: 'Listen',
     guide: 'Guides',
+    group: 'Group',
     connect: 'Connect',
     give: 'Give',
     profile: 'Your account',
@@ -132,6 +140,19 @@
     // runs against the view that was just mounted, before the scroll position
     // is restored, and the scroll handler picks it up from there.
     HC.dateRail.build(chromeless ? null : route);
+
+    /* A room is only live while you are looking at it. Leaving the tab stops
+       the poll, so sitting on Home is not quietly re-reading a room every
+       eight seconds, and arriving pulls once straight away rather than
+       showing a stale room until the next tick. */
+    if (HC.rooms) {
+      if (route.name === 'group') {
+        HC.rooms.startPolling();
+        HC.rooms.refresh();
+      } else {
+        HC.rooms.stopPolling();
+      }
+    }
 
     var title = document.getElementById('hc-topbar-title');
     var back = topbar.querySelector('.hc-topbar__back');
@@ -654,8 +675,241 @@
         HC.router.go({ name: 'profile' }, { force: true });
         c.toast('Signed out. Everything on this screen still works.');
       });
+    },
+
+    /* --------------------------------------------------------- the Group tab
+
+       Every one of these is the same three steps: ask js/rooms.js to do the
+       thing, repaint, and say something human if it failed. None of them
+       touches the network directly and none of them decides what anybody is
+       allowed to do, because the database already did both.
+
+       `g` is js/screens/group.js's own state, kept there rather than in the
+       DOM so that the eight second poll cannot sweep a half typed answer out
+       from under somebody's thumb. */
+
+    'room-join': function () {
+      var g = HC.screens.groupHelpers;
+      g.setJoinError(null);
+      g.setBusy('join');
+      g.repaint(true);
+      HC.rooms.join(g.getCodeDraft()).then(function () {
+        g.setCodeDraft('');
+        g.setBusy(null);
+        g.repaint(true);
+        HC.native.tap('Light');
+      }).catch(function (err) {
+        g.setBusy(null);
+        g.setJoinError(err.message);
+        g.repaint(true);
+      });
+    },
+
+    'room-open': function (el) {
+      var g = HC.screens.groupHelpers;
+      var guide = HC.data.getGuide(el.getAttribute('data-id'));
+      g.setBusy('open');
+      g.repaint(true);
+      HC.rooms.open(guide).then(function () {
+        g.setBusy(null);
+        g.repaint(true);
+        c.toast('Your room is open. Text the code to your group.');
+      }).catch(roomFailed);
+    },
+
+    'room-share-code': function () {
+      var snap = HC.rooms.snapshot();
+      if (!snap.room) return;
+      var who = HC.store.firstName() || 'Somebody';
+      HC.native.shareText(
+        who + ' opened tonight\u2019s room in the Home Church app. Code ' +
+        snap.room.code.slice(0, 3) + ' ' + snap.room.code.slice(3) +
+        '. Open the Group tab and tap Join.', 'Tonight\u2019s room');
+    },
+
+    'room-leave': function () {
+      HC.rooms.leave().then(function () { HC.screens.groupHelpers.repaint(true); });
+    },
+
+    'room-close': function () {
+      HC.rooms.close().then(function () {
+        HC.screens.groupHelpers.repaint(true);
+        c.toast('Room closed. The code stops working now.');
+      }).catch(roomFailed);
+    },
+
+    /* Writing. Each one checks the terms gate first, because guideline 1.2
+       wants agreement before a first post. The database checks it too and
+       would refuse, so this is the polite half of a rule that is enforced
+       somewhere a client cannot reach. */
+
+    'room-accept-terms': function () {
+      var g = HC.screens.groupHelpers;
+      HC.rooms.acceptTerms().then(function () {
+        g.requireTerms(false);
+        g.repaint(true);
+      }).catch(roomFailed);
+    },
+
+    'room-post': function (el) {
+      var g = HC.screens.groupHelpers;
+      var qid = el.getAttribute('data-id');
+      if (askForTerms()) return;
+      g.setBusy(qid);
+      g.repaint(true);
+      HC.rooms.post(qid, g.drafts[qid] || '').then(function () {
+        g.clearDraft(qid);
+        g.setBusy(null);
+        g.repaint(true);
+        HC.native.tap('Light');
+      }).catch(roomFailed);
+    },
+
+    'room-pray': function () {
+      var g = HC.screens.groupHelpers;
+      if (askForTerms()) return;
+      var box = document.querySelector('[data-prayer="1"]');
+      g.setBusy('prayer');
+      g.repaint(true);
+      HC.rooms.pray(box ? box.value : '').then(function () {
+        g.clearPrayerDraft();
+        g.setBusy(null);
+        g.repaint(true);
+      }).catch(roomFailed);
+    },
+
+    'room-edit-note': function (el) {
+      var id = el.getAttribute('data-id');
+      var note = HC.rooms.snapshot().notes.filter(function (n) { return n.id === id; })[0];
+      if (!note) return;
+      var next = window.prompt('Edit what you wrote', note.body);
+      if (next === null || !next.trim()) return;
+      HC.rooms.editNote(id, next).then(function () {
+        HC.screens.groupHelpers.repaint(true);
+      }).catch(roomFailed);
+    },
+
+    'room-delete-note': function (el) {
+      if (!window.confirm('Delete what you wrote? This cannot be undone.')) return;
+      HC.rooms.deleteNote(el.getAttribute('data-id')).then(function () {
+        HC.screens.groupHelpers.repaint(true);
+      }).catch(roomFailed);
+    },
+
+    /* The reveal, at its three grains. */
+
+    'room-open-answer': function (el) {
+      HC.rooms.openAnswer(el.getAttribute('data-id'), el.getAttribute('data-on') === '1')
+        .then(function () { HC.screens.groupHelpers.repaint(true); HC.native.tap('Light'); })
+        .catch(roomFailed);
+    },
+
+    'room-open-question': function (el) {
+      HC.rooms.openQuestion(el.getAttribute('data-id'), el.getAttribute('data-on') === '1')
+        .then(function () { HC.screens.groupHelpers.repaint(true); })
+        .catch(roomFailed);
+    },
+
+    'room-open-all': function (el) {
+      HC.rooms.openEverything(el.getAttribute('data-on') === '1')
+        .then(function () { HC.screens.groupHelpers.repaint(true); })
+        .catch(roomFailed);
+    },
+
+    /* The host's questions. */
+
+    'room-edit-question': function (el) {
+      var id = el.getAttribute('data-id');
+      var q = HC.rooms.snapshot().questions.filter(function (x) { return x.id === id; })[0];
+      if (!q) return;
+      HC.screens.groupHelpers.setEditing({ id: id, body: q.body });
+      HC.screens.groupHelpers.repaint(true);
+    },
+
+    'room-cancel-edit': function () {
+      HC.screens.groupHelpers.setEditing(null);
+      HC.screens.groupHelpers.repaint(true);
+    },
+
+    'room-save-question': function (el) {
+      var g = HC.screens.groupHelpers;
+      var box = document.querySelector('[data-editing="1"]');
+      var body = box ? box.value : '';
+      HC.rooms.editQuestion(el.getAttribute('data-id'), body).then(function () {
+        g.setEditing(null);
+        g.repaint(true);
+      }).catch(roomFailed);
+    },
+
+    'room-remove-question': function (el) {
+      if (!window.confirm('Remove this question for everybody in the room?')) return;
+      var g = HC.screens.groupHelpers;
+      HC.rooms.removeQuestion(el.getAttribute('data-id')).then(function () {
+        g.setEditing(null);
+        g.repaint(true);
+      }).catch(roomFailed);
+    },
+
+    'room-add-question': function () {
+      var g = HC.screens.groupHelpers;
+      var box = document.querySelector('[data-newq="1"]');
+      g.setBusy('newq');
+      g.repaint(true);
+      HC.rooms.addQuestion(box ? box.value : '').then(function () {
+        g.clearNewQuestion();
+        g.setBusy(null);
+        g.repaint(true);
+      }).catch(roomFailed);
+    },
+
+    /* Guideline 1.2. A reviewer will try all three of these, so they are
+       plain buttons on every note rather than anything hidden behind a
+       gesture. */
+
+    'room-report': function (el) {
+      var why = window.prompt('What is wrong with this one? The person hosting will see it.');
+      if (why === null) return;
+      HC.rooms.report(el.getAttribute('data-id'), why).then(function () {
+        c.toast('Reported. Whoever hosts this room will see it, and you can also write to ' +
+                'hello@homechurchnola.com.');
+      }).catch(roomFailed);
+    },
+
+    'room-block': function (el) {
+      var name = el.getAttribute('data-name') || 'this person';
+      if (!window.confirm('Block ' + name + '? You will stop seeing anything they write.')) return;
+      HC.rooms.block(el.getAttribute('data-id'), true).then(function () {
+        HC.screens.groupHelpers.repaint(true);
+        c.toast('Blocked. You will not see their writing again.');
+      }).catch(roomFailed);
+    },
+
+    'room-take-down': function (el) {
+      if (!window.confirm('Take this down for everybody in the room?')) return;
+      HC.rooms.takeDown(el.getAttribute('data-id')).then(function () {
+        HC.screens.groupHelpers.repaint(true);
+        c.toast('Taken down. It is gone for everybody, including whoever wrote it.');
+      }).catch(roomFailed);
     }
   };
+
+  /* One place for a failed room action. These are ordinary network and
+     permission errors and the message from js/rooms.js is already written for
+     a person, so this shows it rather than inventing a second wording. */
+  function roomFailed(err) {
+    var g = HC.screens.groupHelpers;
+    if (g) { g.setBusy(null); g.repaint(true); }
+    c.toast(err && err.message ? err.message : 'That did not go through. Try again in a moment.');
+  }
+
+  // Returns true when the write has been held back for the terms screen.
+  function askForTerms() {
+    var g = HC.screens.groupHelpers;
+    if (!g.needsTerms()) return false;
+    g.requireTerms(true);
+    g.repaint(true);
+    return true;
+  }
 
   function setSwitch(el, on) {
     el.setAttribute('aria-checked', on ? 'true' : 'false');
@@ -700,6 +954,54 @@
 
     document.addEventListener('input', function (evt) {
       var el = evt.target;
+
+      /* The Group tab. Kept in the screen's own module rather than debounced
+         to storage, because none of it is worth persisting and all of it has
+         to survive the eight second poll rebuilding the DOM.
+
+         The repaint is conditional on purpose: it only runs when the button
+         under the box appears or disappears, which is the only thing about
+         typing that changes what is drawn. Repainting on every keystroke
+         would be correct and would also mean rebuilding the room between two
+         letters of a word. */
+      if (el.getAttribute) {
+        var g = HC.screens.groupHelpers;
+        var draftKey = el.getAttribute('data-draft');
+        if (draftKey) {
+          var had = (g.drafts[draftKey] || '').trim();
+          g.setDraft(draftKey, el.value);
+          if (!had !== !el.value.trim()) g.repaint(true);
+          return;
+        }
+        if (el.getAttribute('data-prayer')) {
+          var hadPrayer = document.querySelector('[data-action="room-pray"]');
+          g.setPrayerDraft(el.value);
+          if (!hadPrayer !== !el.value.trim()) g.repaint(true);
+          return;
+        }
+        if (el.getAttribute('data-newq')) {
+          var hadQ = document.querySelector('[data-action="room-add-question"]');
+          g.setNewQuestion(el.value);
+          if (!hadQ !== !el.value.trim()) g.repaint(true);
+          return;
+        }
+        if (el.getAttribute('data-editing')) {
+          var open = g.getEditing();
+          if (open) g.setEditing({ id: open.id, body: el.value });
+          return;
+        }
+        if (el.name === 'code' && el.closest('[data-join-form]')) {
+          // Digits only, and the spacing is redrawn rather than typed. Six
+          // digits with a space in the middle is easier to read back off a
+          // text message than 486217.
+          var digits = el.value.replace(/\D/g, '').slice(0, 6);
+          var wasReady = g.getCodeDraft().length === 6;
+          g.setCodeDraft(digits);
+          el.value = digits.length > 3 ? digits.slice(0, 3) + ' ' + digits.slice(3) : digits;
+          if (wasReady !== (digits.length === 6)) g.repaint(true);
+          return;
+        }
+      }
 
       var journalKey = el.getAttribute && el.getAttribute('data-journal-key');
       if (journalKey !== null && journalKey !== undefined) {
@@ -792,6 +1094,7 @@
         home: HC.screens.home,
         listen: HC.screens.listen,
         guide: HC.screens.guide,
+        group: HC.screens.group,
         connect: HC.screens.connect,
         give: HC.screens.give,
         profile: HC.screens.profile,
@@ -821,6 +1124,21 @@
       }
     });
     HC.auth.init();
+
+    /* The Group tab. Reads its cached room off the phone and shows it before
+       any network happens, same rule as content: never blank, never blocked.
+
+       The subscriber is what makes a room live. js/rooms.js polls while the
+       tab is visible and emits on every change, and repaint() decides whether
+       anything a person would notice actually moved before touching the DOM.
+       Polling only runs while the Group tab is the current view, so sitting on
+       Home is not quietly re-reading a room every eight seconds. */
+    HC.rooms.init();
+
+    HC.store.on('room', function () {
+      var route = HC.router.current();
+      if (route && route.name === 'group') HC.screens.groupHelpers.repaint();
+    });
 
     // An APNs token is not permanent. It changes on restore from backup and
     // sometimes on reinstall, and a church sending to a stale token gets

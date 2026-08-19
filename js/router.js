@@ -11,7 +11,7 @@
 (function (HC) {
   'use strict';
 
-  var TABS = ['home', 'listen', 'guide', 'connect', 'give'];
+  var TABS = ['home', 'listen', 'guide', 'group', 'connect', 'give'];
 
   // Old route names kept alive so a link or a restored history entry from
   // before a rename still lands somewhere real.

@@ -837,3 +837,285 @@
 @media (prefers-reduced-motion: reduce) {
   .hc-latest__img { animation: none; }
 }
+
+/* ==========================================================================
+   Group
+   The sixth tab. Drawn from demo-group-room, with every value coming from
+   tokens.css rather than the mockup's copies of them.
+   ========================================================================== */
+
+.hc-group__join { display: flex; flex-direction: column; gap: var(--hc-space-md); }
+.hc-group__intro { margin: 0 0 var(--hc-space-base); }
+.hc-group__hint  { margin: var(--hc-space-md) 0 0; }
+.hc-group__carry { margin: var(--hc-space-sm) 0 0; }
+.hc-group__error { margin: var(--hc-space-sm) 0 0; font-size: var(--hc-caption); color: var(--hc-error); }
+
+.hc-group__actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--hc-space-sm);
+  margin-top: var(--hc-space-md);
+}
+
+.hc-group__offline {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--hc-space-sm);
+  margin-top: var(--hc-space-lg);
+  padding: var(--hc-space-md);
+  border-radius: var(--hc-radius-sm);
+  background: var(--hc-paper-sunk);
+  border: var(--hc-hairline) solid var(--hc-rule);
+}
+.hc-group__offline-icon { width: 16px; height: 16px; flex: 0 0 auto; margin-top: 1px; }
+
+/* The code, typed. One field with the digits spread out, not six boxes. */
+.hc-code-input {
+  font-family: var(--hc-sans-display);
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  padding: var(--hc-space-md);
+}
+
+/* --- in the room -------------------------------------------------------- */
+
+.hc-room-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--hc-space-sm);
+  padding-bottom: var(--hc-space-md);
+  margin-bottom: var(--hc-space-base);
+  border-bottom: var(--hc-hairline) solid var(--hc-rule);
+}
+.hc-room-bar__code { letter-spacing: 0.14em; }
+.hc-room-bar__live {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--hc-space-xs);
+  font-size: var(--hc-caption);
+  color: var(--hc-mid);
+}
+.hc-room-bar__live::before {
+  content: "";
+  width: 7px; height: 7px;
+  border-radius: var(--hc-radius-pill);
+  background: var(--hc-success);
+}
+/* Behind, and saying so. The warning hue earns its keep exactly here: nothing
+   is wrong, something is pending. */
+.hc-room-bar__live--stale { color: var(--hc-warning); }
+.hc-room-bar__live--stale::before { background: var(--hc-warning); }
+
+.hc-room-guide { margin-bottom: var(--hc-space-lg); }
+.hc-room-guide__title {
+  margin: var(--hc-space-xs) 0 var(--hc-space-xs);
+  font-family: var(--hc-serif);
+  font-size: calc(23px * var(--hc-text-scale));
+  line-height: 1.2;
+}
+
+.hc-reveal-all {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--hc-space-sm);
+  margin-bottom: var(--hc-space-base);
+  padding: var(--hc-space-md);
+  border-radius: var(--hc-radius-sm);
+  background: var(--hc-paper-sunk);
+  border: var(--hc-hairline) solid var(--hc-rule);
+}
+
+.hc-room-q { padding: var(--hc-space-base) 0; border-top: var(--hc-hairline) solid var(--hc-rule); }
+.hc-room-q:first-of-type { border-top: 0; }
+.hc-room-q__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--hc-space-sm);
+}
+.hc-room-q__num {
+  font-family: var(--hc-sans-display);
+  font-size: var(--hc-eyebrow);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--hc-accent-deep);
+}
+.hc-room-q__text { margin: var(--hc-space-sm) 0 0; }
+.hc-room-q__tag {
+  display: inline-block;
+  margin-top: var(--hc-space-sm);
+  padding: 3px 8px;
+  border-radius: var(--hc-radius-pill);
+  background: var(--hc-paper-sunk);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--hc-accent-deep);
+}
+.hc-room-q__empty { margin: var(--hc-space-md) 0 0; }
+.hc-room-q__mine { margin-top: var(--hc-space-md); }
+.hc-room-q__post { margin-top: var(--hc-space-sm); }
+.hc-room-q__editrow { display: flex; flex-wrap: wrap; gap: var(--hc-space-sm); margin-top: var(--hc-space-sm); }
+.hc-room-q--add { border-top: var(--hc-hairline) solid var(--hc-rule); }
+
+/* --- what people wrote --------------------------------------------------- */
+
+.hc-notes { display: flex; flex-direction: column; gap: var(--hc-space-sm); margin-top: var(--hc-space-md); }
+
+.hc-note {
+  padding: var(--hc-space-md);
+  border-radius: var(--hc-radius-sm);
+  background: var(--hc-cream);
+  border-left: var(--hc-edge-rule) solid var(--hc-accent);
+}
+.hc-note--mine { background: var(--hc-paper-sunk); border-left-color: var(--hc-accent-deep); }
+/* In, but not out. */
+.hc-note--waiting { border-left-color: var(--hc-warning); }
+
+.hc-note__who {
+  margin: 0;
+  font-family: var(--hc-sans-display);
+  font-size: var(--hc-eyebrow);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--hc-accent-deep);
+}
+.hc-note__you {
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--hc-mid);
+}
+.hc-note__text {
+  margin: var(--hc-space-xs) 0 0;
+  font-family: var(--hc-serif);
+  font-size: calc(var(--hc-body-serif) * var(--hc-text-scale));
+  line-height: 1.5;
+}
+.hc-note__flag {
+  display: flex;
+  align-items: center;
+  gap: var(--hc-space-xs);
+  margin: var(--hc-space-sm) 0 0;
+  font-size: 11.5px;
+  color: var(--hc-mid);
+}
+.hc-note__lock { width: 12px; height: 12px; flex: 0 0 auto; }
+/* Negative inline margin so the first button's own padding does not indent
+   the row away from the text above it. */
+.hc-note__tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--hc-space-sm);
+  margin: var(--hc-space-xs) calc(var(--hc-space-sm) * -1) 0;
+}
+
+/* Waiting on the leader. Dashed, because the answers exist and are simply
+   not out yet, which is a different thing from an empty state. */
+.hc-locked {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--hc-space-sm);
+  padding: var(--hc-space-md);
+  border-radius: var(--hc-radius-sm);
+  background: var(--hc-paper-sunk);
+  border: 1px dashed var(--hc-rule);
+  font-size: var(--hc-caption);
+  line-height: 18px;
+  color: var(--hc-mid);
+}
+.hc-locked svg { width: 14px; height: 14px; flex: 0 0 auto; margin-top: 1px; }
+
+/* --- the reveal desk, host only ------------------------------------------ */
+
+.hc-desk {
+  margin-top: var(--hc-space-md);
+  padding: var(--hc-space-md);
+  border-radius: var(--hc-radius-sm);
+  background: var(--hc-paper-sunk);
+  border: var(--hc-hairline) solid var(--hc-rule);
+}
+.hc-desk__label { margin: 0 0 var(--hc-space-sm); font-size: 11.5px; color: var(--hc-mid); }
+.hc-desk__names { display: flex; flex-wrap: wrap; gap: var(--hc-space-xs); }
+
+.hc-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 32px;
+  padding: 6px 11px;
+  border-radius: var(--hc-radius-pill);
+  background: var(--hc-paper);
+  border: 1px solid var(--hc-rule);
+  color: var(--hc-mid);
+  font-family: var(--hc-sans);
+  font-size: var(--hc-caption);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--hc-dur-fast) var(--hc-ease),
+              color var(--hc-dur-fast) var(--hc-ease),
+              border-color var(--hc-dur-fast) var(--hc-ease);
+}
+.hc-chip__icon { width: 13px; height: 13px; flex: 0 0 auto; }
+.hc-chip[aria-pressed="true"] {
+  background: var(--hc-dark);
+  border-color: transparent;
+  color: var(--hc-on-dark);
+}
+.hc-chip--act { border-style: dashed; color: var(--hc-accent-deep); }
+
+/* --- the last box, and the end of the night ------------------------------ */
+
+.hc-prayers {
+  margin-top: var(--hc-space-lg);
+  padding: var(--hc-card-pad);
+  border-radius: var(--hc-radius-lg);
+  background: var(--hc-cream);
+  border: var(--hc-hairline) solid var(--hc-rule);
+  border-left: var(--hc-edge-rule) solid var(--hc-accent-deep);
+}
+.hc-prayers__title {
+  margin: var(--hc-space-xs) 0 var(--hc-space-xs);
+  font-family: var(--hc-serif);
+  font-size: calc(23px * var(--hc-text-scale));
+  line-height: 1.2;
+}
+.hc-prayers .hc-note { background: var(--hc-paper); border-left-color: var(--hc-accent-deep); }
+
+.hc-room-code { margin-top: var(--hc-space-lg); text-align: center; }
+.hc-room-code__digits {
+  margin: var(--hc-space-sm) 0 0;
+  font-family: var(--hc-sans-display);
+  font-size: 40px;
+  font-weight: 800;
+  letter-spacing: 0.10em;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.hc-wrap {
+  margin-top: var(--hc-space-lg);
+  padding: var(--hc-card-pad);
+  border-radius: var(--hc-radius-lg);
+  background: var(--hc-paper-sunk);
+  border: var(--hc-hairline) solid var(--hc-rule);
+}
+.hc-wrap__title {
+  margin: var(--hc-space-xs) 0 var(--hc-space-xs);
+  font-family: var(--hc-serif);
+  font-size: calc(23px * var(--hc-text-scale));
+  line-height: 1.2;
+}
+/* Stacked rather than side by side. At 375 across, two buttons in a row put
+   "Print everything to PDF" on three lines, and a three line button reads as
+   a mistake. Full width also gives the pair a primary and a second. */
+.hc-wrap__row { display: flex; flex-direction: column; gap: var(--hc-space-sm); margin-top: var(--hc-space-md); }
+
+.hc-terms-list { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: var(--hc-space-sm); }
+.hc-terms-list li { font-size: var(--hc-body-sans); line-height: 1.55; color: var(--hc-mid); }
