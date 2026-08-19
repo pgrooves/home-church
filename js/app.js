@@ -896,20 +896,19 @@
        Files and Mail, and a browser gets the print dialog. */
 
     'room-sheet': function () {
-      var snap = HC.rooms.snapshot();
-      if (!snap.room) return;
-
-      if (!HC.native.isNative()) {
-        HC.print.night(snap);
-        return;
-      }
-      c.toast('Getting tonight ready.');
-      HC.print.nightHtml(snap).then(function (html) {
-        return HC.native.shareFile(sheetName(snap), html, 'text/html', 'Tonight');
-      }).then(function (ok) {
-        if (!ok) c.toast('Could not put that together. Try again in a moment.');
-      }).catch(function () {
-        c.toast('Could not put that together. Try again in a moment.');
+      readyForSheet(function (snap) {
+        if (!HC.native.isNative()) {
+          HC.print.night(snap);
+          return;
+        }
+        c.toast('Getting tonight ready.');
+        HC.print.nightHtml(snap).then(function (html) {
+          return HC.native.shareFile(sheetName(snap), html, 'text/html', 'Tonight');
+        }).then(function (ok) {
+          if (!ok) c.toast('Could not put that together. Try again in a moment.');
+        }).catch(function () {
+          c.toast('Could not put that together. Try again in a moment.');
+        });
       });
     },
 
@@ -919,22 +918,21 @@
        falls back to the print dialog and says so. */
 
     'room-send-sheet': function () {
-      var snap = HC.rooms.snapshot();
-      if (!snap.room) return;
-
-      if (!HC.native.isNative()) {
-        c.toast('Save it first, then attach it to a message.');
-        HC.print.night(snap);
-        return;
-      }
-      c.toast('Getting tonight ready.');
-      HC.print.nightHtml(snap).then(function (html) {
-        return HC.native.shareFile(sheetName(snap), html, 'text/html',
-          'Here is Thursday night, everything we wrote down.');
-      }).then(function (ok) {
-        if (!ok) c.toast('Could not put that together. Try again in a moment.');
-      }).catch(function () {
-        c.toast('Could not put that together. Try again in a moment.');
+      readyForSheet(function (snap) {
+        if (!HC.native.isNative()) {
+          c.toast('Save it first, then attach it to a message.');
+          HC.print.night(snap);
+          return;
+        }
+        c.toast('Getting tonight ready.');
+        HC.print.nightHtml(snap).then(function (html) {
+          return HC.native.shareFile(sheetName(snap), html, 'text/html',
+            'Here is Thursday night, everything we wrote down.');
+        }).then(function (ok) {
+          if (!ok) c.toast('Could not put that together. Try again in a moment.');
+        }).catch(function () {
+          c.toast('Could not put that together. Try again in a moment.');
+        });
       });
     },
 
@@ -964,6 +962,36 @@
       }).catch(roomFailed);
     }
   };
+
+  /* The sheet promises the whole night, "including the answers the group
+     never got round to opening". That promise used to be built on the host's
+     phone holding every answer, and it does not: a shut answer never reaches
+     anybody, the host included, which is the rule the feature rests on.
+
+     Rather than opening a back door for the host to read what the room never
+     saw, the sheet opens them. It is the end of the night, the button says
+     everything, and this keeps one plain rule: nothing lands on the sheet
+     that the group did not see first. The confirm says so, because opening
+     every answer is a real thing to do to a room and should not happen
+     because somebody tapped Print. */
+  function readyForSheet(then) {
+    var snap = HC.rooms.snapshot();
+    if (!snap.room) return;
+
+    var n = HC.rooms.answerCounts();
+    var shut = n.total - n.open;
+    if (!shut) { then(snap); return; }
+
+    if (!window.confirm(shut === 1
+      ? 'One answer is still shut. Printing opens it to the room first, so nothing on the sheet is a surprise to whoever wrote it. Go ahead?'
+      : shut + ' answers are still shut. Printing opens them to the room first, so nothing on the sheet is a surprise to whoever wrote it. Go ahead?')) return;
+
+    c.toast('Opening the last answers.');
+    HC.rooms.openEverything(true).then(function () {
+      HC.screens.groupHelpers.repaint(true);
+      then(HC.rooms.snapshot());
+    }).catch(roomFailed);
+  }
 
   // A filename somebody will recognise a week later in Files.
   function sheetName(snap) {

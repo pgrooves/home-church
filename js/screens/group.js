@@ -155,11 +155,12 @@
 
   // The host's one control for the whole room, above the questions where a
   // leader running behind will look for it.
-  function revealAll(snap) {
-    var answers = snap.notes.filter(function (n) { return n.kind === 'answer'; });
-    if (!answers.length) return '';
-    var open = answers.filter(function (n) { return n.openedAt; }).length;
-    var everything = open === answers.length;
+  // Counted from the answer index rather than from the notes on this phone.
+  // A closed answer is not here to be counted; see migration 0021.
+  function revealAll() {
+    var n = HC.rooms.answerCounts();
+    if (!n.total) return '';
+    var everything = n.open === n.total;
 
     return '<div class="hc-reveal-all">' +
       '<button type="button" class="hc-btn hc-btn--secondary hc-btn--small" ' +
@@ -167,7 +168,7 @@
         c.icon(everything ? 'eyeOff' : 'eye', 'hc-btn__icon') +
         (everything ? 'Hide every answer' : 'Open every answer') +
       '</button>' +
-      '<span class="hc-caption">' + open + ' of ' + answers.length + ' open</span>' +
+      '<span class="hc-caption">' + n.open + ' of ' + n.total + ' open</span>' +
     '</div>';
   }
 
@@ -294,29 +295,33 @@
      and not text: opening an answer shows it to the host and the room in the
      same moment, so nobody reads ahead, the leader included. */
   function desk(question, snap) {
-    var notes = HC.rooms.notesFor(question.id);
-    if (!notes.length) {
+    // The index, not the notes. The host cannot read a shut answer either, so
+    // building this out of what the phone holds drew an empty desk in a full
+    // room. Migration 0021 is the fix and this line is the reason for it.
+    var rows = HC.rooms.indexFor(question.id);
+    if (!rows.length) {
       return '<p class="hc-empty-state hc-room-q__empty">Nothing written here yet.</p>';
     }
-    var shut = notes.filter(function (n) { return !n.openedAt; }).length;
+    var shut = rows.filter(function (n) { return !n.openedAt; }).length;
 
     var html = '<div class="hc-desk">' +
-      '<p class="hc-desk__label">' + notes.length + (notes.length === 1 ? ' answer in.' : ' answers in.') +
+      '<p class="hc-desk__label">' + rows.length + (rows.length === 1 ? ' answer in.' : ' answers in.') +
         ' Tap a name to open it.</p>' +
       '<div class="hc-desk__names">';
 
-    notes.forEach(function (n) {
+    rows.forEach(function (n) {
       html += '<button type="button" class="hc-chip" data-action="room-open-answer" ' +
         'data-id="' + c.esc(n.id) + '" data-on="' + (n.openedAt ? '0' : '1') + '" ' +
         'aria-pressed="' + (n.openedAt ? 'true' : 'false') + '">' +
-        c.icon(n.openedAt ? 'eye' : 'lock', 'hc-chip__icon') + c.esc(n.author) +
+        c.icon(n.openedAt ? 'eye' : 'lock', 'hc-chip__icon') +
+        c.esc(n.author || 'Someone') +
       '</button>';
     });
 
-    if (notes.length > 1) {
+    if (rows.length > 1) {
       html += '<button type="button" class="hc-chip hc-chip--act" data-action="room-open-question" ' +
         'data-id="' + c.esc(question.id) + '" data-on="' + (shut ? '1' : '0') + '">' +
-        (shut ? 'Open all ' + notes.length : 'Close all') + '</button>';
+        (shut ? 'Open all ' + rows.length : 'Close all') + '</button>';
     }
 
     return html + '</div></div>';
@@ -373,9 +378,9 @@
       });
       openNotes.forEach(function (n) { html += noteCard(n, snap); });
 
-      var othersShut = notes.filter(function (n) {
-        return !n.openedAt && n.authorId !== me();
-      }).length;
+      // Same correction as the desk: other people's shut answers are not on
+      // this phone either, so the count comes from the index.
+      var othersShut = HC.rooms.shutFor(question.id, me());
 
       if (othersShut) {
         html += '<div class="hc-locked">' + c.icon('lock') +
@@ -491,7 +496,7 @@
     }
 
     if (host) html += reportQueue(snap);
-    if (host) html += revealAll(snap);
+    if (host) html += revealAll();
 
     if (!snap.questions.length) {
       html += c.emptyState('This room has no questions yet.');
@@ -515,7 +520,9 @@
         '<p class="hc-wrap__title">Tonight, on one sheet</p>' +
         '<p class="hc-caption">The guide, ' +
           (snap.questions.length === 1 ? 'the question' : 'all ' + snap.questions.length + ' questions') +
-          ', what each person wrote, and the prayer requests above.</p>' +
+          ', what each person wrote, and the prayer requests above. Anything ' +
+          'still shut is opened to the room first, so nothing on the sheet is ' +
+          'a surprise to whoever wrote it.</p>' +
         '<div class="hc-wrap__row">' +
           c.button('Print everything to PDF', { action: 'room-sheet', icon: 'doc' }) +
           c.button('Send as text', { action: 'room-send-sheet', icon: 'message', variant: 'secondary' }) +
@@ -574,6 +581,11 @@
       snap.members.map(function (m) { return m.id + m.name; }),
       snap.questions.map(function (q) { return q.id + q.body; }),
       snap.notes.map(function (n) { return n.id + n.body + (n.openedAt || ''); }),
+      // The index is its own line and not folded into the one above. It is
+      // what changes first when somebody answers: their note does not reach
+      // this phone, only the fact of it, and if that does not move the
+      // signature the host's desk never redraws.
+      snap.index.map(function (n) { return n.id + (n.author || '') + (n.openedAt || ''); }),
       snap.reports.map(function (r) { return r.id; }),
       snap.blocks.map(function (b) { return b.personId; }),
       HC.auth.isSignedIn(), agreedToTerms(), canHost(),

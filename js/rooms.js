@@ -46,6 +46,12 @@
     members: [],
     questions: [],
     notes: [],         // answers and prayer requests, only what you may read
+    /* Every answer in the room, with no bodies: who wrote it and whether it
+       is open. This is how the host knows there is anything to open at all,
+       since a closed answer does not reach their phone either. See migration
+       0021, which exists because the desk was built out of `notes` and so was
+       empty for the one person who needed it. */
+    index: [],
     reports: [],       // open ones, host only, empty for everybody else
     blocks: [],        // people you have blocked, so there is a way back
     loading: false,
@@ -77,6 +83,7 @@
       members: state.members.slice(),
       questions: state.questions.slice(),
       notes: state.notes.slice(),
+      index: state.index.slice(),
       reports: state.reports.slice(),
       blocks: state.blocks.slice(),
       loading: state.loading,
@@ -136,6 +143,20 @@
     };
   }
 
+  // No body, by construction rather than by omission: the function on the
+  // other end does not return one.
+  function mapIndex(n) {
+    return {
+      id: n.id,
+      questionId: n.question_id,
+      kind: n.kind,
+      authorId: n.author_id,          // null for somebody else's shut answer
+      author: n.author_name,          // and so is this
+      openedAt: n.opened_at,
+      createdAt: n.created_at
+    };
+  }
+
   function mapReport(r) {
     return {
       id: r.id,
@@ -164,7 +185,11 @@
       room: state.room,
       members: state.members,
       questions: state.questions,
-      notes: state.notes
+      notes: state.notes,
+      // Cached with the notes rather than with the reports, because this is
+      // not something to act on, it is what the room looks like. Without it a
+      // host who loses signal loses the desk and cannot open anything.
+      index: state.index
     });
   }
 
@@ -180,6 +205,7 @@
     state.members = cached.members || [];
     state.questions = cached.questions || [];
     state.notes = cached.notes || [];
+    state.index = cached.index || [];
     state.lastSyncedAt = cached.at || null;
     state.stale = true;   // until a real pull says otherwise
     return true;
@@ -191,6 +217,7 @@
     state.members = [];
     state.questions = [];
     state.notes = [];
+    state.index = [];
     state.reports = [];
     state.blocks = [];
     state.error = null;
@@ -234,7 +261,8 @@
       host ? HC.auth.restFetch('/group_note_reports?room_id=eq.' + id +
                                '&resolved_at=is.null&select=*&order=created_at.asc')
            : Promise.resolve([]),
-      HC.auth.restFetch('/group_blocks?select=*')
+      HC.auth.restFetch('/group_blocks?select=*'),
+      HC.auth.rpc('hc_room_answer_index', { p_room: state.room.id })
     ]).then(function (res) {
       var room = (res[0] || [])[0];
 
@@ -249,6 +277,7 @@
       state.notes = (res[3] || []).map(mapNote);
       state.reports = (res[4] || []).map(mapReport);
       state.blocks = (res[5] || []).map(mapBlock);
+      state.index = (res[6] || []).map(mapIndex);
       state.error = null;
       state.stale = false;
       state.lastSyncedAt = Date.now();
@@ -487,18 +516,46 @@
     return state.notes.filter(function (n) { return n.kind === 'prayer'; });
   }
 
-  // What the host needs to run the reveal: who has answered this question,
-  // and whether the room can see each one yet. Deliberately not the text.
-  // The host waits with everybody else, see migration 0016.
-  function answeredBy(questionId) {
-    return state.members.filter(function (m) {
-      return notesFor(questionId).some(function (n) { return n.authorId === m.id; });
+  /* What the host runs the reveal from. These read the index, not the notes,
+     and the difference is the whole of migration 0021: a closed answer is not
+     on this phone, so anything derived from `notes` says a room is empty when
+     it is full. Nothing here has a body to hand out. */
+
+  function indexFor(questionId) {
+    return state.index.filter(function (n) {
+      return n.kind === 'answer' && n.questionId === questionId;
     });
   }
 
+  // Who has answered this question, and whether the room can see each one
+  // yet. Deliberately not the text: the host waits with everybody else, see
+  // migration 0016.
+  function answeredBy(questionId) {
+    return indexFor(questionId).filter(function (n) { return n.author; });
+  }
+
+  // Everything still shut, in the whole room. The host's one control at the
+  // top counts with this.
+  function answerCounts() {
+    var answers = state.index.filter(function (n) { return n.kind === 'answer'; });
+    return {
+      total: answers.length,
+      open: answers.filter(function (n) { return n.openedAt; }).length
+    };
+  }
+
+  // Answers on this question that are in but not yours and not open yet.
+  // This is the line a member reads while they wait.
+  function shutFor(questionId, meId) {
+    return indexFor(questionId).filter(function (n) {
+      return !n.openedAt && n.authorId !== meId;
+    }).length;
+  }
+
   function isOpen(noteId) {
-    var note = state.notes.filter(function (n) { return n.id === noteId; })[0];
-    return !!(note && note.openedAt);
+    var row = state.index.filter(function (n) { return n.id === noteId; })[0]
+           || state.notes.filter(function (n) { return n.id === noteId; })[0];
+    return !!(row && row.openedAt);
   }
 
   function memberName(personId) {
@@ -593,7 +650,10 @@
     isHost: isHost,
     notesFor: notesFor,
     prayers: prayers,
+    indexFor: indexFor,
     answeredBy: answeredBy,
+    answerCounts: answerCounts,
+    shutFor: shutFor,
     isOpen: isOpen,
     reports: reports,
     blocked: blocked

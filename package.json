@@ -8,6 +8,8 @@
     "test": "node tests/rooms.test.js && sh supabase/tests/run.sh",
     "test:js": "node tests/rooms.test.js",
     "test:db": "sh supabase/tests/run.sh",
+    "test:e2e": "sh tests/e2e/run.sh",
+    "test:all": "npm run test && npm run test:e2e",
     "stamp": "node scripts/stamp_assets.js",
     "sync": "node scripts/sync_web.js",
     "ios": "npm run stamp && npm run sync && npx cap sync ios",
@@ -27,6 +29,7 @@
     "@capacitor/status-bar": "^8.0.0"
   },
   "devDependencies": {
-    "@capacitor/cli": "^8.0.0"
+    "@capacitor/cli": "^8.0.0",
+    "playwright-core": "^1.62.1"
   }
 }

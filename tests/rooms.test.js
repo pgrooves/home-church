@@ -43,13 +43,15 @@ let NOTES = [
 ];
 let REPORTS = [];
 let BLOCKS = [];
+let AS_MEMBER = false;          // flips the answer index to a member's view
+let signedInAs = 'trey';
 const calls = [];
 const paths = [];
 
 const auth = {
   isConfigured: () => true,
   isSignedIn: () => true,
-  getUser: () => ({ id: 'trey' }),
+  getUser: () => ({ id: signedInAs }),
   restFetch: (path) => {
     paths.push(path);
     if (path.startsWith('/group_rooms')) return Promise.resolve([ROOM]);
@@ -66,7 +68,28 @@ const auth = {
     if (path.startsWith('/group_room_notes')) return Promise.resolve(NOTES);
     throw new Error('unexpected path ' + path);
   },
-  rpc: (name, args) => { calls.push([name, args]); return Promise.resolve(name === 'hc_room_join' ? ROOM : null); },
+  rpc: (name, args) => {
+    /* The answer index is a read that happens to be an rpc, because it
+       returns rows a policy cannot express: who answered, without what they
+       said. Kept out of `calls` for that reason, so the write assertions
+       below stay about writes. */
+    if (name === 'hc_room_answer_index') {
+      return Promise.resolve(NOTES.map(n => {
+        // A host is told every name. A member is told a name only for an
+        // answer that is open or their own, and gets nulls otherwise, which
+        // is enough to count and not enough to see who is holding out.
+        var named = !AS_MEMBER || n.opened_at || n.author_id === signedInAs;
+        return {
+          id: n.id, question_id: n.question_id, kind: n.kind,
+          author_id: named ? n.author_id : null,
+          author_name: named ? n.author_name : null,
+          opened_at: n.opened_at, created_at: n.created_at
+        };
+      }));
+    }
+    calls.push([name, args]);
+    return Promise.resolve(name === 'hc_room_join' ? ROOM : null);
+  },
   publicGet: (path) => Promise.resolve(path.includes('486217') ? [ROOM] : [])
 };
 
@@ -105,9 +128,20 @@ const rooms = sandbox.window.HC.rooms;
      rooms.notesFor('q1').length, 1);
   ok('isOpen reads the column', rooms.isOpen('n1'), false);
 
-  // ---- host questions
+  // ---- the answer index, which is how the host knows there is anything
+  //
+  // The bug migration 0021 fixes: the desk was built from `notes`, and the
+  // host's `notes` cannot contain a shut answer, so a full room drew an empty
+  // desk. Everything the desk needs now comes from a separate list that has
+  // no bodies in it at all.
   ok('isHost compares against the signed in user', rooms.isHost(), true);
-  ok('answeredBy names who wrote, not what', rooms.answeredBy('q1').map(m => m.name), ['Priya']);
+  ok('the index carries the shut answer the notes cannot',
+     rooms.indexFor('q1').map(n => n.id), ['n1']);
+  ok('answeredBy names who wrote, not what', rooms.answeredBy('q1').map(m => m.author), ['Priya']);
+  ok('and nothing in the index has a body to leak',
+     rooms.indexFor('q1').every(n => !('body' in n)), true);
+  ok('counts come from the index, not from what reached this phone',
+     rooms.answerCounts(), { total: 1, open: 0 });
 
   // ---- writes go through rpc and re-pull
   calls.length = 0;
@@ -187,6 +221,36 @@ const rooms = sandbox.window.HC.rooms;
 
   REPORTS = [];
   BLOCKS = [];
+  await rooms.refresh();
+
+  // ---- the same list, read by somebody who is not running the room
+  //
+  // A member may know how many answers are in. They may not know whose. The
+  // nulling happens on the server; this checks the client does something
+  // sensible with a row that arrives without a name rather than rendering
+  // "undefined" at somebody.
+  AS_MEMBER = true;
+  signedInAs = 'dee';
+  await rooms.refresh();
+  ok('a member is not the host', rooms.isHost(), false);
+  ok('and still counts the shut answers', rooms.answerCounts().total, 1);
+  ok('but is told no name for one that is not theirs',
+     rooms.indexFor('q1').map(n => n.author), [null]);
+  ok('which is exactly the line their screen draws: one is in, not yet open',
+     rooms.shutFor('q1', 'dee'), 1);
+
+  // And for the person who wrote it, that line must not appear. Their own
+  // shut answer is already on their screen, above the box, marked as waiting.
+  // Counting it again as "1 answer is in" would be the app telling somebody
+  // to wait for themselves.
+  signedInAs = 'priya';
+  await rooms.refresh();
+  ok('the author does not wait on their own answer',
+     rooms.shutFor('q1', 'priya'), 0);
+  ok('and is told it is theirs', rooms.indexFor('q1').map(n => n.author), ['Priya']);
+
+  AS_MEMBER = false;
+  signedInAs = 'trey';
   await rooms.refresh();
 
   // ---- terms
