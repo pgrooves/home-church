@@ -1,0 +1,1513 @@
+<meta charset="utf-8">
+<title>The Group Room</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant:ital,wght@0,400;0,600;1,400&family=Poppins:wght@400;600;800&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Serif:wght@600&display=swap">
+
+<style>
+/* ==========================================================================
+   Home Church, Group tab mockup
+
+   Two phones, one room. The left one belongs to somebody in the group, the
+   right one belongs to the leader hosting it, and they are wired to the same
+   state object, so posting a note or adding a question really does land on
+   the other screen. That is the whole claim of the feature, and it is easier
+   to look at than to read.
+
+   Inside the phones: the tokens from css/tokens.css, unedited, so what you
+   are looking at is the app rather than an impression of it. Outside them:
+   a separate palette and a separate typeface family, because the annotation
+   layer is the spec and should never be mistaken for the product.
+   ========================================================================== */
+
+:root {
+  /* --- the app, lifted verbatim from css/tokens.css --------------------- */
+  --hc-paper:       #F7F4EF;
+  --hc-paper-sunk:  #EFEAE2;
+  --hc-cream:       #EDE8DF;
+  --hc-ink:         #111111;
+  --hc-dark:        #1A1918;
+  --hc-mid:         #6D6864;
+  --hc-rule:        #C8C0B0;
+  --hc-accent:      #B5A898;
+  --hc-accent-deep: #71675A;
+  --hc-success:     #5F7355;
+  --hc-warning:     #896134;
+  --hc-error:       #8B4A3F;
+  --hc-on-dark:     #F7F4EF;
+  --hc-gold:        #D7BA85;
+
+  --hc-serif: "Cormorant", "Cormorant Garamond", Georgia, "Times New Roman", serif;
+  --hc-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --hc-sans-display: "Poppins", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+
+  /* The type scale, and the multiplier css/base.css applies to reading type.
+     1.1 is the shipped default, so this is the size these screens are really
+     read at rather than the raw token. Captions, eyebrows, buttons and tab
+     labels are deliberately outside the multiplier, same as in the app. */
+  --hc-display-m:  26px;
+  --hc-body-serif: 17px;
+  --hc-body-sans:  16px;
+  --hc-question:   18px;
+  --hc-caption:    13px;
+  --hc-eyebrow:    11px;
+  --hc-button:     16px;
+  --hc-tab:        11px;
+  --hc-text-scale: 1.1;
+
+  --hc-radius-sm: 8px;
+  --hc-radius-md: 10px;
+  --hc-radius-lg: 12px;
+  --hc-radius-pill: 999px;
+  --hc-hairline: 0.5px;
+  --hc-ease: cubic-bezier(0.4, 0, 0.2, 1);
+
+  --hc-tabbar-skin:        linear-gradient(178deg, rgba(255,253,250,0.94), rgba(238,233,225,0.92));
+  --hc-tabbar-edge:        rgba(122,110,95,0.28);
+  --hc-tabbar-shadow:      0 14px 34px rgba(26,25,24,0.18), 0 2px 8px rgba(26,25,24,0.08),
+                           inset 0 1px 0 rgba(255,255,255,0.70), inset 0 -1px 0 rgba(26,25,24,0.05);
+  --hc-tabbar-tile:        linear-gradient(180deg, rgba(255,255,255,0.96), rgba(247,244,239,0.86));
+  --hc-tabbar-tile-edge:   rgba(122,110,95,0.18);
+  --hc-tabbar-tile-shadow: inset 0 1px 0 rgba(255,255,255,0.90), inset 0 -1px 0 rgba(26,25,24,0.06),
+                           0 3px 9px rgba(26,25,24,0.12);
+
+  /* --- the surround, this page only ------------------------------------ */
+  --pg-ground:  #DCD3C4;   /* the table the phones are set down on */
+  --pg-raised:  #F2EDE4;   /* annotation panels */
+  --pg-well:    #D2C8B7;   /* sunk chips and controls */
+  --pg-ink:     #1F1D19;
+  --pg-mid:     #5A5349;
+  --pg-line:    rgba(90,83,73,0.24);
+  --pg-thread:  #A8823F;   /* what crosses between the two phones */
+  --pg-thread-soft: rgba(168,130,63,0.14);
+  --pg-flag:    #8B4A3F;   /* the one warning hue, spent carefully */
+  --pg-flag-bg: rgba(139,74,63,0.10);
+  --pg-shadow:  0 42px 84px -30px rgba(48,40,28,0.46), 0 10px 26px -10px rgba(48,40,28,0.26);
+  /* The phone chassis. It lightens in the dark so the device still reads as an
+     object on the table instead of dissolving into it. */
+  --pg-bezel:   linear-gradient(168deg, #4B443A, #26221D 46%, #3A342C);
+
+  --pg-serif: "IBM Plex Serif", Georgia, serif;
+  --pg-sans:  "IBM Plex Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --pg-mono:  "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  /* The lockup comes in two inks and the app swaps them with the theme. Which
+     one shows is carried as a token like everything else, so the swap happens
+     in the same three places the palette does and cannot fall out of step. */
+  --hc-logo-ink:   block;
+  --hc-logo-paper: none;
+
+  color-scheme: light dark;
+}
+
+/* The system default stamps nothing on the root, so the media query is what
+   most people actually get. The :not() guard keeps an explicit light choice
+   winning over a dark OS. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --hc-paper:       #1A1918;
+    --hc-paper-sunk:  #201E1D;
+    --hc-cream:       #232120;
+    --hc-ink:         #F2EEE7;
+    --hc-dark:        #F2EEE7;
+    --hc-mid:         #9A938A;
+    --hc-rule:        #3A3633;
+    --hc-accent:      #C4B5A2;
+    --hc-accent-deep: #CFC1AE;
+    --hc-success:     #86A078;
+    --hc-warning:     #C89A63;
+    --hc-error:       #C2796B;
+    --hc-on-dark:     #1A1918;
+    --hc-gold:        #CBAC74;
+
+    --hc-tabbar-skin:        linear-gradient(178deg, rgba(58,54,51,0.88), rgba(26,25,24,0.86));
+    --hc-tabbar-edge:        rgba(196,181,162,0.20);
+    --hc-tabbar-shadow:      0 16px 36px rgba(0,0,0,0.52), inset 0 1px 0 rgba(242,238,231,0.10),
+                             inset 0 -1px 0 rgba(0,0,0,0.30);
+    --hc-tabbar-tile:        linear-gradient(180deg, rgba(247,244,239,0.15), rgba(247,244,239,0.055));
+    --hc-tabbar-tile-edge:   rgba(207,193,174,0.30);
+    --hc-tabbar-tile-shadow: inset 0 1px 0 rgba(255,252,247,0.24), inset 0 -1px 0 rgba(0,0,0,0.16),
+                             0 4px 12px rgba(0,0,0,0.30);
+
+    --pg-ground:  #171614;
+    --pg-raised:  #201E1C;
+    --pg-well:    #2A2724;
+    --pg-ink:     #EDE7DD;
+    --pg-mid:     #9A9288;
+    --pg-line:    rgba(200,190,175,0.18);
+    --pg-thread:  #CBAC74;
+    --pg-thread-soft: rgba(203,172,116,0.16);
+    --pg-flag:    #C2796B;
+    --pg-flag-bg: rgba(194,121,107,0.12);
+    --pg-shadow:  0 42px 84px -30px rgba(0,0,0,0.70), 0 10px 26px -10px rgba(0,0,0,0.50);
+    --pg-bezel:   linear-gradient(168deg, #6B6153, #3B352D 46%, #554C40);
+
+    --hc-logo-ink:   none;
+    --hc-logo-paper: block;
+  }
+}
+
+/* And again for the explicit toggle, so it wins in the other direction. */
+:root[data-theme="dark"] {
+  --hc-paper:       #1A1918;
+  --hc-paper-sunk:  #201E1D;
+  --hc-cream:       #232120;
+  --hc-ink:         #F2EEE7;
+  --hc-dark:        #F2EEE7;
+  --hc-mid:         #9A938A;
+  --hc-rule:        #3A3633;
+  --hc-accent:      #C4B5A2;
+  --hc-accent-deep: #CFC1AE;
+  --hc-success:     #86A078;
+  --hc-warning:     #C89A63;
+  --hc-error:       #C2796B;
+  --hc-on-dark:     #1A1918;
+  --hc-gold:        #CBAC74;
+
+  --hc-tabbar-skin:        linear-gradient(178deg, rgba(58,54,51,0.88), rgba(26,25,24,0.86));
+  --hc-tabbar-edge:        rgba(196,181,162,0.20);
+  --hc-tabbar-shadow:      0 16px 36px rgba(0,0,0,0.52), inset 0 1px 0 rgba(242,238,231,0.10),
+                           inset 0 -1px 0 rgba(0,0,0,0.30);
+  --hc-tabbar-tile:        linear-gradient(180deg, rgba(247,244,239,0.15), rgba(247,244,239,0.055));
+  --hc-tabbar-tile-edge:   rgba(207,193,174,0.30);
+  --hc-tabbar-tile-shadow: inset 0 1px 0 rgba(255,252,247,0.24), inset 0 -1px 0 rgba(0,0,0,0.16),
+                           0 4px 12px rgba(0,0,0,0.30);
+
+  --pg-ground:  #171614;
+  --pg-raised:  #201E1C;
+  --pg-well:    #2A2724;
+  --pg-ink:     #EDE7DD;
+  --pg-mid:     #9A9288;
+  --pg-line:    rgba(200,190,175,0.18);
+  --pg-thread:  #CBAC74;
+  --pg-thread-soft: rgba(203,172,116,0.16);
+  --pg-flag:    #C2796B;
+  --pg-flag-bg: rgba(194,121,107,0.12);
+  --pg-shadow:  0 42px 84px -30px rgba(0,0,0,0.70), 0 10px 26px -10px rgba(0,0,0,0.50);
+  --pg-bezel:   linear-gradient(168deg, #6B6153, #3B352D 46%, #554C40);
+
+  --hc-logo-ink:   none;
+  --hc-logo-paper: block;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--pg-ground);
+  color: var(--pg-ink);
+  font-family: var(--pg-sans);
+  font-size: 15px;
+  line-height: 1.62;
+  -webkit-font-smoothing: antialiased;
+}
+
+.page {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 56px 24px 96px;
+}
+
+/* ----------------------------------------------------------- masthead */
+
+.masthead {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+  gap: 12px 56px;
+  align-items: end;
+}
+.masthead .eyebrow { grid-column: 1 / -1; }
+@media (max-width: 860px) {
+  .masthead { grid-template-columns: 1fr; gap: 14px; }
+}
+
+.eyebrow {
+  margin: 0;
+  font-family: var(--pg-mono);
+  font-size: 11.5px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--pg-thread);
+}
+
+.masthead h1 {
+  margin: 0;
+  font-family: var(--pg-serif);
+  font-size: clamp(30px, 4.6vw, 46px);
+  font-weight: 600;
+  line-height: 1.1;
+  letter-spacing: -0.015em;
+  text-wrap: balance;
+}
+
+.lede { margin: 0; font-size: 17px; line-height: 1.65; color: var(--pg-mid); max-width: 62ch; }
+.lede em { color: var(--pg-ink); font-style: normal; font-weight: 600; }
+
+/* ------------------------------------------------------------- controls */
+
+.controls {
+  margin: 40px 0 22px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+.seg {
+  display: inline-flex;
+  padding: 3px;
+  gap: 3px;
+  background: var(--pg-well);
+  border: 1px solid var(--pg-line);
+  border-radius: 999px;
+}
+
+.seg button, .ghost {
+  font-family: var(--pg-mono);
+  font-size: 11.5px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 180ms var(--hc-ease), color 180ms var(--hc-ease);
+}
+
+.seg button {
+  padding: 8px 16px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--pg-mid);
+}
+.seg button[aria-pressed="true"] { background: var(--pg-raised); color: var(--pg-ink); }
+
+.ghost {
+  padding: 9px 16px;
+  border: 1px solid var(--pg-line);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--pg-mid);
+}
+.ghost:hover { color: var(--pg-ink); border-color: var(--pg-thread); }
+
+.seg button:focus-visible, .ghost:focus-visible, .device button:focus-visible,
+.device textarea:focus-visible, .device input:focus-visible {
+  outline: 2px solid var(--pg-thread);
+  outline-offset: 2px;
+}
+
+/* ---------------------------------------------------------------- stage */
+
+.stage {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 28px;
+  align-items: start;
+  justify-items: center;
+}
+
+@media (max-width: 1000px) {
+  .stage { grid-template-columns: 1fr; }
+  .thread { display: none; }
+}
+
+.seat { display: flex; flex-direction: column; align-items: center; gap: 14px; width: 100%; }
+
+.seat__who {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  font-family: var(--pg-mono);
+  font-size: 11.5px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--pg-mid);
+}
+.seat__who b { color: var(--pg-ink); font-weight: 600; }
+.seat__who span[data-role="leader"] {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--pg-thread-soft);
+  color: var(--pg-thread);
+  letter-spacing: 0.08em;
+}
+
+.hint {
+  margin: 0;
+  max-width: 34ch;
+  text-align: center;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--pg-mid);
+}
+
+/* the thread: what actually crosses between the two screens */
+
+.thread {
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding-top: 92px;
+}
+.thread__line { flex: 1; width: 1px; background: repeating-linear-gradient(to bottom, var(--pg-line) 0 6px, transparent 6px 12px); }
+.thread__chip {
+  padding: 7px 12px;
+  border: 1px solid var(--pg-line);
+  border-radius: 999px;
+  background: var(--pg-raised);
+  font-family: var(--pg-mono);
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--pg-mid);
+  white-space: nowrap;
+  transition: background 200ms var(--hc-ease), color 200ms var(--hc-ease), border-color 200ms var(--hc-ease);
+}
+.thread__chip[data-lit="true"] {
+  background: var(--pg-thread);
+  border-color: var(--pg-thread);
+  color: #FFFCF6;
+}
+
+/* --------------------------------------------------------------- device */
+
+/* 375 across, which is a real iPhone in points, so the type inside is at the
+   size it will actually be read at and the six tab labels have exactly the
+   room they will really have. */
+.device {
+  width: 397px;
+  max-width: 100%;
+  border-radius: 46px;
+  padding: 11px;
+  background: var(--pg-bezel);
+  box-shadow: var(--pg-shadow);
+}
+
+.screen {
+  position: relative;
+  height: 748px;
+  border-radius: 32px;
+  overflow: hidden;
+  background: var(--hc-paper);
+  display: flex;
+  flex-direction: column;
+  font-family: var(--hc-sans);
+  color: var(--hc-ink);
+}
+
+/* top bar, matching .hc-topbar */
+.tb {
+  flex: 0 0 auto;
+  height: 52px;
+  padding: 0 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  background: var(--hc-paper);
+  border-bottom: var(--hc-hairline) solid var(--hc-rule);
+  z-index: 3;
+}
+.tb__logo { height: 17px; width: auto; }
+.tb__logo--ink   { display: var(--hc-logo-ink); }
+.tb__logo--paper { display: var(--hc-logo-paper); }
+.tb__avatar {
+  flex: 0 0 auto;
+  width: 30px; height: 30px;
+  border-radius: 999px;
+  background: var(--hc-accent);
+  color: var(--hc-on-dark);
+  display: grid; place-items: center;
+  font-size: 11px; font-weight: 700; letter-spacing: 0.02em;
+}
+.tb__back { width: 30px; }
+
+.scroll {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 20px 20px 108px;
+  scrollbar-width: thin;
+}
+
+/* tab bar, six tiles now instead of five */
+.tabbar {
+  position: absolute;
+  left: 12px; right: 12px; bottom: 12px;
+  height: 68px;
+  padding: 6px;
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  align-items: stretch;
+  border-radius: 22px;
+  background: var(--hc-tabbar-skin);
+  border: 1px solid var(--hc-tabbar-edge);
+  box-shadow: var(--hc-tabbar-shadow);
+  z-index: 4;
+}
+.tab {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  border-radius: 16px;
+  font-family: var(--hc-sans-display);
+  font-size: var(--hc-tab);
+  line-height: 14px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: var(--hc-mid);
+  white-space: nowrap;
+}
+.tab svg { width: 21px; height: 21px; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+.tab[aria-current="page"] {
+  color: var(--hc-ink);
+  background: var(--hc-tabbar-tile);
+  border: 1px solid var(--hc-tabbar-tile-edge);
+  box-shadow: var(--hc-tabbar-tile-shadow);
+}
+
+/* ------------------------------------------------- app pieces, in-screen */
+
+.s-eyebrow {
+  margin: 0;
+  font-family: var(--hc-sans-display);
+  font-size: var(--hc-eyebrow);
+  line-height: 14px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--hc-accent-deep);
+}
+
+.s-roombar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding-bottom: 12px;
+  margin-bottom: 18px;
+  border-bottom: var(--hc-hairline) solid var(--hc-rule);
+}
+.s-roombar__live {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--hc-caption);
+  color: var(--hc-mid);
+}
+.s-roombar__live::before {
+  content: "";
+  width: 7px; height: 7px;
+  border-radius: 999px;
+  background: var(--hc-success);
+}
+
+.s-head { margin: 0 0 18px; }
+.s-head h2 {
+  margin: 4px 0 0;
+  font-family: var(--hc-sans-display);
+  font-size: calc(var(--hc-display-m) * var(--hc-text-scale));
+  font-weight: 700;
+  line-height: 1.155;
+  letter-spacing: -0.015em;
+}
+.s-head .s-rule { margin-top: 10px; width: 34px; height: 1.5px; background: var(--hc-accent); }
+
+.s-serif {
+  font-family: var(--hc-serif);
+  font-size: calc(var(--hc-body-serif) * var(--hc-text-scale));
+  line-height: 1.53;
+  color: var(--hc-ink);
+}
+.s-cap { font-size: var(--hc-caption); line-height: 18px; color: var(--hc-mid); }
+
+.s-card {
+  padding: 16px;
+  border-radius: var(--hc-radius-lg);
+  background: var(--hc-cream);
+  border: var(--hc-hairline) solid var(--hc-rule);
+}
+.s-card--edge { border-left: 1.5px solid var(--hc-accent); }
+
+/* the code itself, the one thing on the screen you read out loud */
+.s-code {
+  margin: 12px 0 4px;
+  font-family: var(--hc-sans-display);
+  font-size: 44px;
+  font-weight: 800;
+  letter-spacing: 0.10em;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: var(--hc-ink);
+}
+
+.s-btn {
+  width: 100%;
+  min-height: 44px;
+  padding: 11px 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 0;
+  border-radius: var(--hc-radius-md);
+  background: var(--hc-dark);
+  color: var(--hc-on-dark);
+  font-family: var(--hc-sans);
+  font-size: var(--hc-button);
+  line-height: 20px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+}
+.s-btn svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.s-btn--secondary { background: transparent; color: var(--hc-ink); border: 1px solid var(--hc-rule); }
+.s-btn--tertiary { background: transparent; color: var(--hc-accent-deep); border: 0; font-size: 14px; min-height: 36px; }
+.s-btn--small { width: auto; min-height: 36px; padding: 8px 13px; font-size: 14px; }
+
+.s-stack { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+
+/* six code boxes, the join screen */
+.s-boxes { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; margin: 4px 0 12px; }
+.s-box {
+  aspect-ratio: 3 / 4;
+  border-radius: var(--hc-radius-sm);
+  background: var(--hc-paper-sunk);
+  border: 1px solid var(--hc-rule);
+  display: grid;
+  place-items: center;
+  font-family: var(--hc-sans-display);
+  font-size: 24px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.s-box[data-caret="true"] { border-color: var(--hc-accent-deep); box-shadow: inset 0 0 0 1px var(--hc-accent-deep); }
+.s-box[data-caret="true"]::after {
+  content: "";
+  width: 2px; height: 22px;
+  background: var(--hc-accent-deep);
+  animation: blink 1.1s steps(1, end) infinite;
+}
+@keyframes blink { 50% { opacity: 0; } }
+
+/* who is in the room */
+.s-people { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.s-person {
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: var(--hc-paper-sunk);
+  border: var(--hc-hairline) solid var(--hc-rule);
+  font-size: var(--hc-caption);
+  color: var(--hc-ink);
+}
+.s-person[data-host="true"] { background: var(--hc-accent); color: var(--hc-on-dark); border-color: transparent; }
+
+/* a question and the notes under it */
+.s-q { padding: 16px 0; border-top: var(--hc-hairline) solid var(--hc-rule); }
+.s-q:first-of-type { border-top: 0; }
+.s-q__num {
+  font-family: var(--hc-sans-display);
+  font-size: var(--hc-eyebrow);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--hc-accent-deep);
+}
+.s-q__row { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.s-q__text {
+  margin: 7px 0 0;
+  font-family: var(--hc-serif);
+  font-size: calc(var(--hc-question) * var(--hc-text-scale));
+  line-height: 1.5;
+}
+.s-q__tag {
+  display: inline-block;
+  margin-top: 8px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: rgba(181,168,152,0.24);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--hc-accent-deep);
+}
+
+.s-notes { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+.s-note {
+  position: relative;
+  padding: 10px 12px;
+  border-radius: var(--hc-radius-sm);
+  background: var(--hc-cream);
+  border-left: 1.5px solid var(--hc-accent);
+}
+.s-note__who {
+  font-family: var(--hc-sans-display);
+  font-size: var(--hc-eyebrow);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--hc-accent-deep);
+}
+.s-note__text {
+  margin: 4px 0 0;
+  font-family: var(--hc-serif);
+  font-size: calc(var(--hc-body-serif) * var(--hc-text-scale));
+  line-height: 1.5;
+}
+.s-note--mine { background: var(--hc-paper-sunk); border-left-color: var(--hc-accent-deep); }
+.s-note__pull {
+  position: absolute;
+  top: 6px; right: 6px;
+  width: 26px; height: 26px;
+  border: 0; border-radius: 999px;
+  background: transparent;
+  color: var(--hc-mid);
+  cursor: pointer;
+  display: grid; place-items: center;
+}
+.s-note__pull svg { width: 13px; height: 13px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; }
+
+.s-field { margin-top: 10px; }
+.s-input, .s-textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: var(--hc-radius-sm);
+  background: var(--hc-paper-sunk);
+  border: 1px solid var(--hc-rule);
+  color: var(--hc-ink);
+  font-family: var(--hc-sans);
+  font-size: calc(var(--hc-body-sans) * var(--hc-text-scale));
+  line-height: 1.5;
+  resize: none;
+}
+.s-textarea::placeholder, .s-input::placeholder { color: var(--hc-mid); }
+.s-status { margin: 7px 0 0; font-size: 12px; line-height: 17px; color: var(--hc-mid); min-height: 17px; }
+
+.s-flash { animation: flash 1100ms var(--hc-ease); }
+@keyframes flash {
+  0%   { background: rgba(215,186,133,0.55); }
+  100% { background: transparent; }
+}
+
+/* the share sheet the text button raises */
+.s-sheet {
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  z-index: 6;
+  padding: 18px 18px 26px;
+  border-radius: 20px 20px 32px 32px;
+  background: var(--hc-paper);
+  border-top: var(--hc-hairline) solid var(--hc-rule);
+  box-shadow: 0 -2px 24px rgba(26,25,24,0.16);
+  animation: rise 320ms var(--hc-ease);
+}
+@keyframes rise { from { transform: translateY(100%); } }
+.s-scrim {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  background: rgba(26,25,24,0.42);
+  border: 0;
+  cursor: pointer;
+}
+.s-bubble {
+  margin: 10px 0 14px;
+  padding: 12px 14px;
+  border-radius: 16px 16px 16px 4px;
+  background: var(--hc-cream);
+  font-family: var(--hc-serif);
+  font-size: calc(var(--hc-body-serif) * var(--hc-text-scale));
+  line-height: 1.5;
+}
+
+.s-empty {
+  margin: 14px 0 0;
+  font-family: var(--hc-serif);
+  font-style: italic;
+  font-size: calc(var(--hc-body-serif) * var(--hc-text-scale));
+  line-height: 1.5;
+  color: var(--hc-mid);
+}
+
+.s-offline {
+  margin-top: 14px;
+  padding: 10px 12px;
+  border-radius: var(--hc-radius-sm);
+  background: var(--hc-paper-sunk);
+  border: var(--hc-hairline) solid var(--hc-rule);
+  font-size: var(--hc-caption);
+  line-height: 18px;
+  color: var(--hc-mid);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .s-flash, .s-sheet, .s-box[data-caret="true"]::after { animation: none; }
+}
+
+/* ---------------------------------------------------------------- notes */
+
+/* Six columns so a panel can take a half or the whole width. A table of files
+   and a compliance argument both need the run; a short aside does not. */
+.notes {
+  margin-top: 72px;
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 20px;
+  align-items: start;
+}
+
+.note { grid-column: span 3; }
+.note--wide { grid-column: 1 / -1; }
+
+@media (max-width: 900px) {
+  .note, .note--wide { grid-column: 1 / -1; }
+}
+
+.note {
+  padding: 24px;
+  border-radius: 16px;
+  background: var(--pg-raised);
+  border: 1px solid var(--pg-line);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.note h2 {
+  margin: 0;
+  font-family: var(--pg-serif);
+  font-size: 19px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.note h3 { margin: 0; font-size: 14.5px; font-weight: 600; letter-spacing: -0.005em; }
+.note p { margin: 0; font-size: 14px; line-height: 1.62; color: var(--pg-mid); }
+.note p b, .note li b { color: var(--pg-ink); font-weight: 600; }
+.note code {
+  font-family: var(--pg-mono);
+  font-size: 12.5px;
+  padding: 1px 5px;
+  border-radius: 5px;
+  background: var(--pg-well);
+  color: var(--pg-ink);
+}
+
+.steps { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 14px; }
+.steps li { display: grid; grid-template-columns: 112px 1fr; gap: 14px; align-items: start; }
+/* The label only, never a <b> used for emphasis inside the paragraph beside
+   it. Without the child combinator the two fight and inline emphasis comes
+   out as an uppercase mono chip. */
+.steps li > b {
+  font-family: var(--pg-mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--pg-thread);
+  padding-top: 3px;
+}
+@media (max-width: 560px) {
+  .steps li { grid-template-columns: 1fr; gap: 4px; }
+}
+
+.touch { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; }
+.touch li {
+  display: grid;
+  grid-template-columns: minmax(0, 230px) 1fr;
+  gap: 16px;
+  padding: 11px 0;
+  border-top: 1px solid var(--pg-line);
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: var(--pg-mid);
+}
+.touch li:first-child { border-top: 0; }
+.touch li > span:first-child { font-family: var(--pg-mono); font-size: 12.5px; color: var(--pg-ink); word-break: break-word; }
+@media (max-width: 560px) {
+  .touch li { grid-template-columns: 1fr; gap: 3px; }
+}
+
+.decide {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+@media (max-width: 1100px) { .decide { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 620px)  { .decide { grid-template-columns: 1fr; } }
+.decide__item {
+  padding: 14px 16px;
+  border: 1px solid var(--pg-line);
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.decide__item[data-pick="true"] { border-color: var(--pg-thread); background: var(--pg-thread-soft); }
+.decide__item[data-pick="true"] h3::after {
+  content: "recommended";
+  display: block;
+  margin-top: 5px;
+  font-family: var(--pg-mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--pg-thread);
+}
+
+.flag {
+  border-color: var(--pg-flag);
+  background: var(--pg-flag-bg);
+}
+.flag h2 { color: var(--pg-flag); }
+.flag .req { margin: 0; padding: 0 0 0 20px; display: flex; flex-direction: column; gap: 7px; }
+.flag .req li { font-size: 14px; line-height: 1.55; color: var(--pg-mid); }
+
+footer.tail {
+  margin-top: 64px;
+  padding-top: 22px;
+  border-top: 1px solid var(--pg-line);
+  max-width: 66ch;
+  font-size: 13px;
+  line-height: 1.65;
+  color: var(--pg-mid);
+}
+</style>
+
+<div class="page">
+
+  <header class="masthead">
+    <p class="eyebrow">Home Church &middot; a sixth tab</p>
+    <h1>A room your group joins with six digits</h1>
+    <p class="lede">
+      The leader opens a room and texts the code out. Everybody lands on the same page,
+      which is this week's guide questions, already carried over. Notes typed under a question
+      are readable by the whole group and editable by nobody but the person who wrote them.
+      <em>Both phones below are live and wired to the same room. Post a note on the left and watch the right.</em>
+    </p>
+  </header>
+
+  <div class="controls">
+    <div class="seg" role="group" aria-label="Which moment to show">
+      <button type="button" data-scene="join" aria-pressed="false">Getting in</button>
+      <button type="button" data-scene="room" aria-pressed="true">In the room</button>
+    </div>
+    <button type="button" class="ghost" id="reset">Reset the room</button>
+  </div>
+
+  <div class="stage">
+
+    <div class="seat">
+      <p class="seat__who"><b>Priya</b> <span>in the group</span></p>
+      <div class="device"><div class="screen" id="screen-member"></div></div>
+      <p class="hint">Her note carries her first name from her profile. She can edit her own and nobody else's.</p>
+    </div>
+
+    <div class="thread" aria-hidden="true">
+      <div class="thread__line"></div>
+      <div class="thread__chip" data-thread="code">the code</div>
+      <div class="thread__line"></div>
+      <div class="thread__chip" data-thread="questions">the questions</div>
+      <div class="thread__line"></div>
+      <div class="thread__chip" data-thread="notes">the notes</div>
+      <div class="thread__line"></div>
+    </div>
+
+    <div class="seat">
+      <p class="seat__who"><b>Trey</b> <span data-role="leader">hosting</span></p>
+      <div class="device"><div class="screen" id="screen-leader"></div></div>
+      <p class="hint">Leader mode adds editing in place. What he changes here is what everyone else opens.</p>
+    </div>
+
+  </div>
+
+  <div class="notes">
+
+    <section class="note note--wide">
+      <h2>How a Thursday night goes</h2>
+      <ul class="steps">
+        <li>
+          <b>Open</b>
+          <p>Trey has leader mode on, so the Group tab offers <b>Host tonight</b>. Tapping it mints a six digit code and opens a room against this week's guide. Nobody else has to do anything yet.</p>
+        </li>
+        <li>
+          <b>Text</b>
+          <p><b>Text the code to your group</b> hands a prefilled message to the phone's share sheet. That plumbing already exists as <code>HC.native.shareText</code>, used today by the quote cards, so this is one call and no new dependency.</p>
+        </li>
+        <li>
+          <b>Join</b>
+          <p>Everyone else opens the Group tab, types the six digits, and is in. The tab remembers the room, so nobody types it twice, and it clears itself when the room closes.</p>
+        </li>
+        <li>
+          <b>Carried over</b>
+          <p>The room opens holding this week's discussion questions, copied out of the guide at the moment the room is created. Same questions, same order, same headings, no retyping.</p>
+        </li>
+        <li>
+          <b>Edited</b>
+          <p>Trey can reword a question, drop one, or add his own. Every change lands on every phone in the room. The published guide is untouched, because one leader's night should not rewrite the guide for the other three groups.</p>
+        </li>
+        <li>
+          <b>Answered</b>
+          <p>Under each question, everyone gets a box. Post and it appears for the whole room under your first name, taken straight from your profile. You can edit and delete your own. Nobody can edit anyone else's, and the host can take anything down.</p>
+        </li>
+      </ul>
+    </section>
+
+    <section class="note note--wide">
+      <h2>What it touches</h2>
+      <ul class="touch">
+        <li><span>js/app.js</span><span>A sixth entry in <code>TAB_META</code> and <code>TITLES</code>. The tile width is already computed from <code>--hc-tab-count</code>, so the bar resizes itself.</span></li>
+        <li><span>js/router.js</span><span>One name added to <code>TABS</code>. <code>js/swipe.js</code> reads that array rather than a copy, so sideways swiping picks the tab up for free.</span></li>
+        <li><span>js/screens/group.js</span><span>New screen, plus a script tag in <code>index.html</code> and a run of <code>npm run stamp</code>.</span></li>
+        <li><span>js/store.js</span><span>Caches the room, its questions, and the notes last seen, so the tab opens to something real with no signal.</span></li>
+        <li><span>js/content.js</span><span>Untouched. That file is the read only publishing pipeline and rooms are neither published nor church authored.</span></li>
+        <li><span>js/auth.js</span><span>Its <code>restFetch</code> is the model to copy for authenticated writes. This is the first user writing to the database in this app.</span></li>
+        <li><span>js/native.js</span><span>Nothing new. <code>shareText</code> already falls back from the native sheet to the web share API to the clipboard.</span></li>
+        <li><span>supabase/migrations</span><span>A new <code>0016_group_rooms.sql</code>: rooms, members, questions, notes, and the project's first insert and update policies.</span></li>
+        <li><span>supabase/functions/delete-account</span><span>Has to learn about notes, or deleting an account leaves a name attached to text in somebody else's room.</span></li>
+      </ul>
+    </section>
+
+    <section class="note note--wide">
+      <h2>Four things to decide</h2>
+      <div class="decide">
+        <div class="decide__item" data-pick="true">
+          <h3>Writing needs an account, reading does not</h3>
+          <p>A note has to carry a first name and an owner, and the app cannot tell who you are unless you are signed in. The room stays readable to anyone with the code, and the first attempt to post is what asks you to sign in.</p>
+        </div>
+        <div class="decide__item">
+          <h3>It catches up, it is not instant</h3>
+          <p>The app talks to Supabase with plain <code>fetch</code> and carries no SDK. Polling every few seconds while the tab is open, plus a pull on focus, keeps that true. Realtime over a websocket is the other answer and it is a bigger change than it sounds.</p>
+        </div>
+        <div class="decide__item">
+          <h3>Host is a row, not a switch</h3>
+          <p>Leader mode today is a checkbox in Profile that anybody can flip. The room's host has to be a <code>host_id</code> the database enforces, or every guest can rewrite the questions.</p>
+        </div>
+        <div class="decide__item">
+          <h3>Codes expire at midnight</h3>
+          <p>Six digits is a million rooms, which is plenty when only tonight's are live. Enforce uniqueness among open rooms only, and let last week's code be somebody else's this week.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="note note--wide flag">
+      <h2>The one that changes the App Store submission</h2>
+      <p>
+        This is worth reading before anything gets built. <code>APP_STORE_COMPLIANCE.md</code> section 2.5 names
+        this exact feature as the thing that would break the current answer:
+        <b>&ldquo;if anyone later proposes showing prayer requests to a group, or a leader dashboard that reads
+        members' journal entries, that single change pulls the entire weight of Guideline 1.2 into scope.&rdquo;</b>
+        Notes visible to the whole room are user generated content shown to other users, so 1.2 applies and the
+        submission gets meaningfully harder.
+      </p>
+      <p><b>What 1.2 then requires, none of which exists today:</b></p>
+      <ul class="req">
+        <li>Terms of service with a no objectionable content clause, agreed to before a first post. The compliance doc currently has ToS as optional and first to cut.</li>
+        <li>A report control on every note, and a way to block a user.</li>
+        <li>A filtering mechanism, and published contact information for abuse reports.</li>
+        <li>A commitment to remove reported content and eject the poster inside 24 hours.</li>
+      </ul>
+      <p>
+        Two smaller consequences ride along. The privacy policy gains a class of data that is shared with other
+        people and needs a retention and deletion answer, and the compliance matrix row that reads
+        <b>User generated content: No</b> flips to yes, which the review notes currently lean on.
+        The host takedown control drawn on the right hand phone is the start of the answer, not the whole of it.
+      </p>
+    </section>
+
+    <section class="note">
+      <h2>Where the tab bar starts to hurt</h2>
+      <p>
+        The design system asks for four to five tabs and this makes six. The phones above are 375 across, a real
+        iPhone in points, so these are measurements rather than estimates: a sixth tab takes each tile from
+        <b>67.8pt down to 56.2pt</b>. Tap targets stay legal. The label is what runs out of room, and
+        <b>Connect</b> is the one that does it, setting 48.5pt wide at 11px and leaving under 4pt of air on
+        each side. The mockup renders that honestly rather than quietly shrinking the type.
+      </p>
+      <p>
+        If that reads badly on a real phone, the fallback is not a smaller font. It is putting the room inside the
+        Guide tab, where the questions already live, and surfacing it as a banner across the top of the guide
+        whenever a room is open. Same feature, no sixth tab, and the guide is where people are already looking on
+        a Thursday night.
+      </p>
+    </section>
+
+    <section class="note">
+      <h2>Keeping the offline promise</h2>
+      <p>
+        <code>js/content.js</code> opens with a rule the whole app is built on: never blank, never blocked on the
+        network. A shared room is the first screen that genuinely needs a connection, and living rooms with one bar
+        are the normal case rather than the edge case.
+      </p>
+      <p>
+        The honest version is to cache the room exactly like guides are cached. With no signal the tab still opens,
+        shows the questions and every note it had already seen, marks itself as behind, and holds your own note until
+        the phone can post it. What it must never do is show an empty screen and call it a room.
+      </p>
+    </section>
+
+  </div>
+
+  <footer class="tail">
+    Nothing here is wired into the app. The phones run the tokens from <code>css/tokens.css</code> and the
+    discussion questions from <code>js/data.js</code>, so what you are looking at is the real type at the real
+    size, on the guide for <i>The Table of Grace</i>.
+  </footer>
+
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  /* ------------------------------------------------------------ the room
+     One state object drives both phones, which is the entire point: the
+     leader's screen and the member's screen are two views of the same thing.
+     Questions are the real ones from js/data.js, guide-seat-table. */
+
+  var SEED = {
+    code: '486217',
+    guide: {
+      series: 'David',
+      title: 'The Table of Grace',
+      by: 'Allen Barrera',
+      on: 'November 9'
+    },
+    people: ['Trey', 'Priya', 'Marcus', 'Dee', 'Anna'],
+    questions: [
+      {
+        id: 'q1',
+        heading: 'Getting started',
+        text: 'When you hear the word grace, what is the first picture that comes to mind, and where did that picture come from?',
+        added: false
+      },
+      {
+        id: 'q2',
+        heading: 'Lo-debar',
+        text: 'Lo-debar means no pasture. Mephibosheth chose a nowhere town because nowhere felt safer than being seen. What is your Lo-debar, the place you go small and stay quiet so nobody looks too closely?',
+        added: false
+      }
+    ],
+    notes: [
+      { id: 'n1', q: 'q1', who: 'Marcus', text: 'A courtroom. My dad practiced law and that is just where my head goes, somebody paying my fine.' },
+      { id: 'n2', q: 'q1', who: 'Dee', text: 'My grandmother\u2019s kitchen. She fed whoever knocked and never once asked what they had done first.' },
+      { id: 'n3', q: 'q2', who: 'Anna', text: 'The school pickup line. I get there twenty minutes early so I do not have to stand in the lobby and talk.' }
+    ]
+  };
+
+  var room, drafts, adding, editing, scene, sheet, flash, seq;
+
+  function reset() {
+    room = JSON.parse(JSON.stringify(SEED));
+    drafts = {};        // Priya's in progress text, keyed by question id
+    adding = '';        // Trey's in progress new question
+    editing = null;     // { id, text } while Trey has a question open
+    sheet = false;      // the share sheet over the leader's phone
+    flash = {};         // ids that just changed, for the gold wash
+    seq = 100;
+  }
+
+  scene = 'room';
+  reset();
+
+  var memberEl = document.getElementById('screen-member');
+  var leaderEl = document.getElementById('screen-leader');
+
+  /* ------------------------------------------------------------- helpers */
+
+  function esc(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+
+  function spaced(code) { return code.slice(0, 3) + ' ' + code.slice(3); }
+
+  function notesFor(qid) {
+    return room.notes.filter(function (n) { return n.q === qid; });
+  }
+
+  function lit(which) {
+    var chip = document.querySelector('[data-thread="' + which + '"]');
+    if (!chip) return;
+    chip.setAttribute('data-lit', 'true');
+    setTimeout(function () { chip.setAttribute('data-lit', 'false'); }, 1200);
+  }
+
+  function mark(id) {
+    flash[id] = true;
+    setTimeout(function () { delete flash[id]; }, 1200);
+  }
+
+  function flashClass(id) { return flash[id] ? ' s-flash' : ''; }
+
+  /* --------------------------------------------------------------- icons */
+
+  var ICON = {
+    message: '<path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9.5 9.5 0 0 1-2.9-.4L4 21l1.4-4.1A8.2 8.2 0 0 1 3.6 11.5 8.4 8.4 0 0 1 12 3.1a8.4 8.4 0 0 1 9 8.4z"/>',
+    pencil: '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>',
+    plus: '<path d="M12 5v14M5 12h14"/>',
+    close: '<path d="M18 6 6 18M6 6l12 12"/>',
+    group: '<rect x="3" y="5" width="18" height="14" rx="4"/><circle cx="8.5" cy="12" r="1.2"/><circle cx="12" cy="12" r="1.2"/><circle cx="15.5" cy="12" r="1.2"/>',
+    home: '<path d="M3 10.2 12 3l9 7.2V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/>',
+    listen: '<path d="M4 15v-3a8 8 0 0 1 16 0v3"/><path d="M4 14h2a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2H5a1 1 0 0 1-1-1z"/><path d="M20 14h-2a2 2 0 0 0-2 2v2a2 2 0 0 0 2 2h1a1 1 0 0 0 1-1z"/>',
+    guide: '<path d="M4 4.5A1.5 1.5 0 0 1 5.5 3H19v15H5.5A1.5 1.5 0 0 0 4 19.5z"/><path d="M4 19.5A1.5 1.5 0 0 1 5.5 18H19v3H5.5A1.5 1.5 0 0 1 4 19.5z"/><path d="M8 8h7M8 11.5h5"/>',
+    connect: '<circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.2 2.7-5.2 6-5.2s6 2 6 5.2"/><path d="M16 5.4a3.2 3.2 0 0 1 0 6.2M18 14.6c2 .7 3 2.5 3 5"/>',
+    give: '<path d="M12 20s-7.5-4.6-7.5-9.4A4.1 4.1 0 0 1 12 7.6a4.1 4.1 0 0 1 7.5 3C19.5 15.4 12 20 12 20z"/>'
+  };
+
+  function svg(name, cls) {
+    return '<svg class="' + (cls || '') + '" viewBox="0 0 24 24" aria-hidden="true">' + ICON[name] + '</svg>';
+  }
+
+  var TABS = [
+    ['home', 'Home'], ['listen', 'Listen'], ['guide', 'Guide'],
+    ['group', 'Group'], ['connect', 'Connect'], ['give', 'Give']
+  ];
+
+  function chrome(initials, body, extra) {
+    return '' +
+      '<header class="tb">' +
+        '<span class="tb__back"></span>' +
+        // At the top of a tab the app shows the lockup and keeps the screen
+        // title hidden, swapping them only once you scroll. See components.css.
+        '<span style="display:flex;align-items:center;gap:8px">' +
+          '<img class="tb__logo tb__logo--ink" src="__LOCKUP_INK__" alt="Home Church">' +
+          '<img class="tb__logo tb__logo--paper" src="__LOCKUP__" alt="">' +
+        '</span>' +
+        '<span class="tb__avatar">' + esc(initials) + '</span>' +
+      '</header>' +
+      '<main class="scroll">' + body + '</main>' +
+      (extra || '') +
+      '<nav class="tabbar" aria-label="Sections">' +
+        TABS.map(function (t) {
+          return '<span class="tab"' + (t[0] === 'group' ? ' aria-current="page"' : '') + '>' +
+            svg(t[0]) + t[1] + '</span>';
+        }).join('') +
+      '</nav>';
+  }
+
+  function head(eyebrow, title) {
+    return '<div class="s-head">' +
+      '<p class="s-eyebrow">' + esc(eyebrow) + '</p>' +
+      '<h2>' + esc(title) + '</h2>' +
+      '<div class="s-rule"></div>' +
+    '</div>';
+  }
+
+  function guideCard() {
+    var g = room.guide;
+    return '<div class="s-card s-card--edge">' +
+      '<p class="s-eyebrow">' + esc(g.series) + ' \u00b7 this week</p>' +
+      '<p style="margin:5px 0 0;font-family:var(--hc-serif);font-size:23px;line-height:1.2">' + esc(g.title) + '</p>' +
+      '<p class="s-cap" style="margin:6px 0 0">' + esc(g.by) + ', ' + esc(g.on) + '</p>' +
+      '<p class="s-cap" style="margin:8px 0 0">Questions carried over from the guide.</p>' +
+    '</div>';
+  }
+
+  function roomBar() {
+    return '<div class="s-roombar">' +
+      '<span class="s-eyebrow" style="letter-spacing:0.14em">Room ' + esc(spaced(room.code)) + '</span>' +
+      '<span class="s-roombar__live">' + room.people.length + ' here</span>' +
+    '</div>';
+  }
+
+  /* ---------------------------------------------------------- the member */
+
+  function memberScreen() {
+    if (scene === 'join') {
+      var typed = '48621';
+      var boxes = '';
+      for (var i = 0; i < 6; i++) {
+        boxes += '<div class="s-box"' + (i === typed.length ? ' data-caret="true"' : '') + '>' +
+          (typed[i] || '') + '</div>';
+      }
+      return chrome('PN',
+        head('Thursday night', 'Join your group') +
+        '<p class="s-serif" style="margin:0 0 16px">Your leader opens the room and sends out the code. Type it here and you are in.</p>' +
+        '<div class="s-boxes">' + boxes + '</div>' +
+        '<button type="button" class="s-btn" disabled style="opacity:.45">Join the room</button>' +
+        '<p class="s-cap" style="margin:10px 0 0">A code is good for one night. Lakeview Thursday meets at 6:30.</p>' +
+        '<p class="s-empty">Nothing here until somebody opens a room. Ask whoever hosts your group for tonight\u2019s code.</p>'
+      );
+    }
+
+    var body = roomBar() + head('In the room', 'Lakeview Thursday') + guideCard();
+
+    room.questions.forEach(function (q, i) {
+      body += '<div class="s-q' + flashClass(q.id) + '">' +
+        '<span class="s-q__num">' + (i + 1) + ' \u00b7 ' + esc(q.heading).toUpperCase() + '</span>' +
+        '<p class="s-q__text">' + esc(q.text) + '</p>' +
+        (q.added ? '<span class="s-q__tag">Added by Trey</span>' : '') +
+        '<div class="s-notes">';
+
+      notesFor(q.id).forEach(function (n) {
+        body += '<div class="s-note' + (n.who === 'Priya' ? ' s-note--mine' : '') + flashClass(n.id) + '">' +
+          '<span class="s-note__who">' + esc(n.who) + '</span>' +
+          '<p class="s-note__text">' + esc(n.text) + '</p>' +
+        '</div>';
+      });
+
+      var draft = drafts[q.id] || '';
+      body += '</div>' +
+        '<div class="s-field">' +
+          '<textarea class="s-textarea" rows="2" data-draft="' + q.id + '" ' +
+            'placeholder="Type it the way you would say it, Priya."' +
+            ' aria-label="Your answer to question ' + (i + 1) + '">' + esc(draft) + '</textarea>' +
+          (draft.trim()
+            ? '<div style="margin-top:8px"><button type="button" class="s-btn s-btn--small" data-post="' + q.id + '">Post to the group</button></div>'
+            : '') +
+          '<p class="s-status">' + (draft.trim()
+            ? 'Everyone in the room will see this under your name.'
+            : 'Visible to the room once you post. Yours to edit, nobody else\u2019s.') + '</p>' +
+        '</div>' +
+      '</div>';
+    });
+
+    body += '<div class="s-offline">Saved on this phone. With no signal you keep the questions and everything already posted, and yours goes out when the phone catches up.</div>';
+
+    return chrome('PN', body);
+  }
+
+  /* ---------------------------------------------------------- the leader */
+
+  function leaderScreen() {
+    if (scene === 'join') {
+      var body = head('Leader mode', 'Host tonight') +
+        '<div class="s-card s-card--edge">' +
+          '<p class="s-eyebrow">Your room is open</p>' +
+          '<p class="s-code">' + esc(spaced(room.code)) + '</p>' +
+          '<p class="s-cap">Good until midnight. Anyone with these six digits can come in.</p>' +
+          '<div class="s-stack">' +
+            '<button type="button" class="s-btn" data-share="1">' + svg('message') + 'Text the code to your group</button>' +
+            '<button type="button" class="s-btn s-btn--secondary">Copy the code</button>' +
+          '</div>' +
+        '</div>' +
+        '<p class="s-eyebrow" style="margin:22px 0 0">Here so far</p>' +
+        '<div class="s-people">' +
+          room.people.map(function (p) {
+            return '<span class="s-person" data-host="' + (p === 'Trey') + '">' + esc(p) +
+              (p === 'Trey' ? ' \u00b7 you' : '') + '</span>';
+          }).join('') +
+        '</div>' +
+        '<p class="s-cap" style="margin:12px 0 0">Names come from each person\u2019s profile. Nobody is added by hand.</p>' +
+        '<div class="s-stack" style="margin-top:22px">' +
+          '<button type="button" class="s-btn s-btn--secondary">Open the full guide</button>' +
+          '<button type="button" class="s-btn s-btn--tertiary">Close the room</button>' +
+        '</div>';
+
+      var extra = sheet
+        ? '<button type="button" class="s-scrim" data-share="0" aria-label="Close"></button>' +
+          '<div class="s-sheet">' +
+            '<p class="s-eyebrow">Messages</p>' +
+            '<div class="s-bubble">Trey opened tonight\u2019s room in the Home Church app. Code ' +
+              esc(spaced(room.code)) + '. Open the Group tab and tap Join.</div>' +
+            '<button type="button" class="s-btn" data-share="0">Send to Lakeview Thursday</button>' +
+            '<p class="s-cap" style="margin:10px 0 0;text-align:center">Handed to the phone\u2019s own share sheet.</p>' +
+          '</div>'
+        : '';
+
+      return chrome('TG', body, extra);
+    }
+
+    var out = roomBar() + head('Leader mode', 'Lakeview Thursday') + guideCard();
+
+    room.questions.forEach(function (q, i) {
+      var open = editing && editing.id === q.id;
+      out += '<div class="s-q' + flashClass(q.id) + '">' +
+        '<div class="s-q__row">' +
+          '<span class="s-q__num">' + (i + 1) + ' \u00b7 ' + esc(q.heading).toUpperCase() + '</span>' +
+          (open ? '' : '<button type="button" class="s-btn s-btn--tertiary s-btn--small" data-edit="' + q.id + '">' +
+            svg('pencil') + 'Edit</button>') +
+        '</div>';
+
+      if (open) {
+        out += '<div class="s-field" style="margin-top:8px">' +
+          '<textarea class="s-textarea" rows="4" data-editing="1" aria-label="Edit this question">' + esc(editing.text) + '</textarea>' +
+          '<div style="display:flex;gap:8px;margin-top:8px">' +
+            '<button type="button" class="s-btn s-btn--small" data-save="' + q.id + '">Save for everyone</button>' +
+            '<button type="button" class="s-btn s-btn--secondary s-btn--small" data-cancel="1">Cancel</button>' +
+          '</div>' +
+          '<p class="s-status">Saving changes it on every phone in the room. The published guide stays as it is.</p>' +
+        '</div>';
+      } else {
+        out += '<p class="s-q__text">' + esc(q.text) + '</p>' +
+          (q.added ? '<span class="s-q__tag">Added by you</span>' : '');
+      }
+
+      var ns = notesFor(q.id);
+      out += '<div class="s-notes">';
+      if (!ns.length) {
+        out += '<p class="s-cap" style="font-style:italic;font-family:var(--hc-serif);font-size:calc(var(--hc-body-serif) * var(--hc-text-scale))">Nothing written here yet.</p>';
+      }
+      ns.forEach(function (n) {
+        out += '<div class="s-note' + flashClass(n.id) + '">' +
+          '<span class="s-note__who">' + esc(n.who) + '</span>' +
+          '<p class="s-note__text">' + esc(n.text) + '</p>' +
+          '<button type="button" class="s-note__pull" data-pull="' + n.id + '" ' +
+            'aria-label="Take down the note from ' + esc(n.who) + '">' + svg('close') + '</button>' +
+        '</div>';
+      });
+      out += '</div></div>';
+    });
+
+    out += '<div class="s-q" style="border-top:0.5px solid var(--hc-rule)">' +
+      '<p class="s-eyebrow">Your own question</p>' +
+      '<div class="s-field">' +
+        '<textarea class="s-textarea" rows="2" data-adding="1" ' +
+          'placeholder="Ask the room something the guide did not." aria-label="Add a question"></textarea>' +
+        (adding.trim()
+          ? '<div style="margin-top:8px"><button type="button" class="s-btn s-btn--small" data-add="1">' +
+            svg('plus') + 'Add for everyone</button></div>'
+          : '') +
+        '<p class="s-status">It lands at the bottom of the list on every phone in the room.</p>' +
+      '</div>' +
+    '</div>';
+
+    out += '<div class="s-offline">Taking a note down removes it for everyone and tells the person who wrote it. This is the control an App Store reviewer will look for.</div>';
+
+    return chrome('TG', out);
+  }
+
+  /* -------------------------------------------------------------- render
+     Both phones are rebuilt on every change, then focus and caret are put
+     back where they were. At this size that is cheaper than diffing and it
+     cannot drift out of step with the state. */
+
+  function render() {
+    var active = document.activeElement;
+    var keep = null;
+    if (active && (active.tagName === 'TEXTAREA')) {
+      keep = {
+        sel: active.getAttribute('data-draft') ? '[data-draft="' + active.getAttribute('data-draft') + '"]'
+           : active.getAttribute('data-adding') ? '[data-adding="1"]'
+           : active.getAttribute('data-editing') ? '[data-editing="1"]' : null,
+        start: active.selectionStart,
+        end: active.selectionEnd,
+        inLeader: leaderEl.contains(active)
+      };
+    }
+
+    memberEl.innerHTML = memberScreen();
+    leaderEl.innerHTML = leaderScreen();
+
+    if (keep && keep.sel) {
+      var root = keep.inLeader ? leaderEl : memberEl;
+      var el = root.querySelector(keep.sel);
+      if (el) {
+        el.focus();
+        try { el.setSelectionRange(keep.start, keep.end); } catch (e) {}
+      }
+    }
+  }
+
+  /* ------------------------------------------------------------- wiring */
+
+  document.addEventListener('input', function (e) {
+    var t = e.target;
+    if (t.hasAttribute && t.hasAttribute('data-draft')) {
+      var was = (drafts[t.getAttribute('data-draft')] || '').trim();
+      drafts[t.getAttribute('data-draft')] = t.value;
+      if (!was !== !t.value.trim()) render();   // the Post button appearing or leaving
+      return;
+    }
+    if (t.hasAttribute && t.hasAttribute('data-adding')) {
+      var had = adding.trim();
+      adding = t.value;
+      if (!had !== !adding.trim()) render();
+      return;
+    }
+    if (t.hasAttribute && t.hasAttribute('data-editing') && editing) {
+      editing.text = t.value;
+    }
+  });
+
+  document.addEventListener('click', function (e) {
+    var el = e.target.closest ? e.target.closest('[data-post],[data-add],[data-edit],[data-save],[data-cancel],[data-pull],[data-share],[data-scene]') : null;
+    if (!el) {
+      if (e.target.id === 'reset') { reset(); render(); }
+      return;
+    }
+
+    if (el.hasAttribute('data-scene')) {
+      scene = el.getAttribute('data-scene');
+      sheet = false;
+      Array.prototype.forEach.call(document.querySelectorAll('[data-scene]'), function (b) {
+        b.setAttribute('aria-pressed', b === el ? 'true' : 'false');
+      });
+      lit(scene === 'join' ? 'code' : 'questions');
+      render();
+      return;
+    }
+
+    if (el.hasAttribute('data-share')) {
+      sheet = el.getAttribute('data-share') === '1';
+      lit('code');
+      render();
+      return;
+    }
+
+    if (el.hasAttribute('data-post')) {
+      var qid = el.getAttribute('data-post');
+      var text = (drafts[qid] || '').trim();
+      if (!text) return;
+      var id = 'n' + (++seq);
+      room.notes.push({ id: id, q: qid, who: 'Priya', text: text });
+      drafts[qid] = '';
+      mark(id);
+      lit('notes');
+      render();
+      return;
+    }
+
+    if (el.hasAttribute('data-add')) {
+      var qtext = adding.trim();
+      if (!qtext) return;
+      var qq = 'q' + (++seq);
+      room.questions.push({ id: qq, heading: 'From Trey', text: qtext, added: true });
+      adding = '';
+      mark(qq);
+      lit('questions');
+      render();
+      return;
+    }
+
+    if (el.hasAttribute('data-edit')) {
+      var target = room.questions.filter(function (q) { return q.id === el.getAttribute('data-edit'); })[0];
+      editing = { id: target.id, text: target.text };
+      render();
+      return;
+    }
+
+    if (el.hasAttribute('data-save')) {
+      var sid = el.getAttribute('data-save');
+      room.questions.forEach(function (q) {
+        if (q.id === sid) q.text = (editing && editing.text.trim()) || q.text;
+      });
+      editing = null;
+      mark(sid);
+      lit('questions');
+      render();
+      return;
+    }
+
+    if (el.hasAttribute('data-cancel')) { editing = null; render(); return; }
+
+    if (el.hasAttribute('data-pull')) {
+      var nid = el.getAttribute('data-pull');
+      room.notes = room.notes.filter(function (n) { return n.id !== nid; });
+      lit('notes');
+      render();
+      return;
+    }
+  });
+
+  render();
+})();
+</script>
