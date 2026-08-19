@@ -142,6 +142,16 @@ revoke execute on function public.hc_purge_group_rooms(integer)          from pu
 -- authenticated, so it stays off anon.
 -- ---------------------------------------------------------------------------
 
+-- THESE TWO WILL SHOW UP IN THE SECURITY ADVISOR AND MUST STAY. Supabase's
+-- linter raises anon_security_definer_function_executable for any SECURITY
+-- DEFINER function anon can reach over /rest/v1/rpc, whether or not the
+-- exposure is deliberate, so after this migration the count goes from eighteen
+-- to two rather than to zero. The two are these. Revoking them to get a clean
+-- report would take a signed out phone joining by code from working screen to
+-- permission error, which is a real regression traded for a green dashboard.
+-- Neither one reads or writes anything: each answers "is the caller in this
+-- room" or "is this room live" about the caller themselves, and for anon
+-- auth.uid() is null, so both are always false.
 grant execute on function public.hc_room_is_member(uuid) to anon, authenticated;
 grant execute on function public.hc_room_is_live(uuid)   to anon, authenticated;
 grant execute on function public.hc_room_is_host(uuid)   to authenticated;
