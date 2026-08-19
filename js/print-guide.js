@@ -218,12 +218,11 @@
      wherever it lands. If the fetch fails the document still opens, it just
      arrives unstyled, which is worse than the alternative and much better
      than nothing. */
-  function standaloneHtml(guideId) {
-    var g = HC.data.getGuide(guideId);
-    if (!g) return Promise.reject(new Error('No such guide.'));
-    var series = HC.data.getSeries(g.seriesId);
-    var title = HC.data.guideTitle(g);
-
+  /* One document wrapper, used by the guide and by the night sheet. Pulled
+     out of standaloneHtml when the Group tab needed the same thing around a
+     different set of pages: there is no reason for two copies of the
+     stylesheet inlining, and a second copy is how they drift. */
+  function wrap(title, pagesHtml) {
     return fetch('css/print.css')
       .then(function (res) { return res.ok ? res.text() : ''; })
       .catch(function () { return ''; })
@@ -241,9 +240,170 @@
             css + '\n' +
           '</style>\n' +
           '</head>\n<body>\n' +
-          '<div id="' + SHEET_ID + '">' + buildPages(g, series) + '</div>\n' +
+          '<div id="' + SHEET_ID + '">' + pagesHtml + '</div>\n' +
           '</body>\n</html>';
       });
+  }
+
+  function standaloneHtml(guideId) {
+    var g = HC.data.getGuide(guideId);
+    if (!g) return Promise.reject(new Error('No such guide.'));
+    var series = HC.data.getSeries(g.seriesId);
+    return wrap(HC.data.guideTitle(g), buildPages(g, series));
+  }
+
+  /* ------------------------------------------------------------ the night
+     What a group actually did on a Thursday, as one sheet. Everything goes
+     in: the guide it was built on, every question including the ones the host
+     added, what each person wrote whether or not it was opened during the
+     evening, and the prayer list.
+
+     ON PRINTING EVERYTHING. The reveal is a thing that happens during the
+     meeting, not a permission that outlives it. By the time this sheet is
+     made the group has been through the questions together, and a sheet that
+     silently dropped the answers nobody got to would be a worse record than
+     no sheet. Said plainly on the button and again on the cover, because the
+     one thing this must not do is surprise somebody.
+
+     Pagination is by an estimated line count rather than a fixed number of
+     questions per page. One question can have six answers and the next can
+     have none, and chunking by count puts a page break in the middle of the
+     only interesting thing on the page. */
+
+  function nightCover(snap, when) {
+    var names = snap.members.map(function (m) { return m.name; });
+    return page('hc-print-page--cover',
+      '<p class="hc-print-eyebrow">Home Church &middot; Small Group</p>' +
+      '<h1 class="hc-print-h1">' + c.esc(snap.room.groupName || snap.room.guideTitle || 'Your group') + '</h1>' +
+      '<p class="hc-print-subtitle">' + c.esc(when) + '</p>' +
+      '<div class="hc-print-divider" aria-hidden="true"></div>' +
+      (snap.room.guideTitle
+        ? '<p class="hc-print-meta">On the guide &middot; ' + c.esc(snap.room.guideTitle) + '</p>'
+        : '') +
+      '<p class="hc-print-colophon">' + c.esc(names.join(', ')) + '</p>'
+    );
+  }
+
+  // Roughly how many lines a block will take, for deciding where a page ends.
+  function linesFor(text, perLine) {
+    return Math.max(1, Math.ceil((text || '').length / (perLine || 60)));
+  }
+
+  function nightQuestionPages(snap, startNum, title) {
+    var out = [];
+    var num = startNum;
+    var budget = 26;         // lines that fit under the heading on one page
+    var used = 0;
+    var body = '';
+    var first = true;
+
+    function flush() {
+      if (!body) return;
+      out.push(page('', body + footer(title, num)));
+      num++;
+      body = '';
+      used = 0;
+    }
+
+    snap.questions.forEach(function (q, i) {
+      var answers = snap.notes.filter(function (n) {
+        return n.kind === 'answer' && n.questionId === q.id;
+      });
+
+      var cost = 3 + linesFor(q.body, 52);
+      answers.forEach(function (a) { cost += 1 + linesFor(a.body, 58); });
+
+      // A block that will not fit starts a new page, unless the page is empty,
+      // in which case it is simply a long block and gets one to itself.
+      if (used && used + cost > budget) flush();
+
+      if (first || !body) {
+        body += '<p class="hc-print-eyebrow">What the group talked about</p>' +
+                '<h2 class="hc-print-h2">Discussion</h2>';
+        first = false;
+      }
+
+      body += '<div class="hc-print-night-q">' +
+        '<p class="hc-print-question">' + (i + 1) + '. ' + c.esc(q.body) + '</p>';
+
+      if (!answers.length) {
+        body += '<p class="hc-print-night-none">Nobody wrote on this one.</p>';
+      }
+      answers.forEach(function (a) {
+        body += '<div class="hc-print-night-a">' +
+          '<p class="hc-print-night-who">' + c.esc(a.author) + '</p>' +
+          '<p class="hc-print-body">' + c.esc(a.body) + '</p>' +
+        '</div>';
+      });
+      body += '</div>';
+      used += cost;
+    });
+
+    flush();
+    return out;
+  }
+
+  function nightPrayerPages(snap, startNum, title) {
+    var prayers = snap.notes.filter(function (n) { return n.kind === 'prayer'; });
+    if (!prayers.length) return [];
+
+    var out = [];
+    var num = startNum;
+    var perPage = 8;
+    for (var i = 0; i < prayers.length; i += perPage) {
+      var body = '';
+      if (i === 0) {
+        body += '<p class="hc-print-eyebrow">Before you go</p>' +
+                '<h2 class="hc-print-h2">Prayer Requests</h2>';
+      }
+      prayers.slice(i, i + perPage).forEach(function (r) {
+        body += '<div class="hc-print-night-a">' +
+          '<p class="hc-print-night-who">' + c.esc(r.author) + '</p>' +
+          '<p class="hc-print-body">' + c.esc(r.body) + '</p>' +
+        '</div>';
+      });
+      out.push(page('', body + footer(title, num)));
+      num++;
+    }
+    return out;
+  }
+
+  function buildNightPages(snap) {
+    if (!snap || !snap.room) return '';
+
+    var when = c.formatDate(new Date(snap.room.openedAt || Date.now())
+      .toISOString().slice(0, 10));
+    var title = (snap.room.groupName || snap.room.guideTitle || 'Your group') + ', ' + when;
+
+    var pages = [nightCover(snap, when)];
+    var num = 2;
+
+    nightQuestionPages(snap, num, title).forEach(function (p) { pages.push(p); num++; });
+    nightPrayerPages(snap, num, title).forEach(function (p) { pages.push(p); num++; });
+
+    return pages.join('');
+  }
+
+  function nightHtml(snap) {
+    if (!snap || !snap.room) return Promise.reject(new Error('There is no room to write down.'));
+    var when = c.formatDate(new Date(snap.room.openedAt || Date.now())
+      .toISOString().slice(0, 10));
+    return wrap((snap.room.groupName || snap.room.guideTitle || 'Your group') + ', ' + when,
+                buildNightPages(snap));
+  }
+
+  // The print dialog road, for a browser. On a phone window.print() is a
+  // no-op, which is why the app hands a file to the share sheet instead.
+  function night(snap) {
+    if (!snap || !snap.room) return;
+    removeSheet();
+    var sheet = document.createElement('div');
+    sheet.id = SHEET_ID;
+    sheet.innerHTML = buildNightPages(snap);
+    document.body.appendChild(sheet);
+    window.addEventListener('afterprint', removeSheet);
+    window.setTimeout(removeSheet, 60000);
+    window.print();
   }
 
   function guide(guideId) {
@@ -265,6 +425,12 @@
     window.print();
   }
 
-  HC.print = { guide: guide, standaloneHtml: standaloneHtml };
+  HC.print = {
+    guide: guide,
+    standaloneHtml: standaloneHtml,
+    night: night,
+    nightHtml: nightHtml,
+    buildNightPages: buildNightPages
+  };
 
 })(window.HC = window.HC || {});

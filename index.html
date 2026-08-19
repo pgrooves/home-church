@@ -48,7 +48,7 @@
        cold launch, which was a render blocking third party request that also
        handed Google every user's network address. Inside a packaged app there
        was never a reason for it. See css/fonts.css. -->
-  <link rel="stylesheet" href="css/fonts.css?v=b2dab69e">
+  <link rel="stylesheet" href="css/fonts.css?v=4b48242d">
 
   <!-- DO NOT EDIT THESE STAMPS BY HAND. `npm run stamp` writes every ?v= in
        this file from a hash of css/ and js/, so they all move together and
@@ -56,11 +56,11 @@
        serving last week's JavaScript from cache, Safari most stubbornly, and
        the failure is quiet: the app works, it is just the old one.
        See scripts/stamp_assets.js. -->
-  <link rel="stylesheet" href="css/tokens.css?v=b2dab69e">
-  <link rel="stylesheet" href="css/base.css?v=b2dab69e">
-  <link rel="stylesheet" href="css/components.css?v=b2dab69e">
-  <link rel="stylesheet" href="css/screens.css?v=b2dab69e">
-  <link rel="stylesheet" href="css/print.css?v=b2dab69e">
+  <link rel="stylesheet" href="css/tokens.css?v=4b48242d">
+  <link rel="stylesheet" href="css/base.css?v=4b48242d">
+  <link rel="stylesheet" href="css/components.css?v=4b48242d">
+  <link rel="stylesheet" href="css/screens.css?v=4b48242d">
+  <link rel="stylesheet" href="css/print.css?v=4b48242d">
 </head>
 <body>
   <!-- No role="application" here. That role tells a screen reader to stop
@@ -76,40 +76,40 @@
     </div>
   </noscript>
 
-  <script src="js/data.js?v=b2dab69e"></script>
-  <script src="js/store.js?v=b2dab69e"></script>
+  <script src="js/data.js?v=4b48242d"></script>
+  <script src="js/store.js?v=4b48242d"></script>
   <!-- Share sheet, calendar, haptics, notifications. Works in a browser
        too, quietly, so nothing below has to check where it is running. -->
-  <script src="js/native.js?v=b2dab69e"></script>
+  <script src="js/native.js?v=4b48242d"></script>
   <!-- Empty until js/config.js is filled in, see that file. Now that the
        typefaces ship with the app, Supabase is the only network traffic the
        app makes on its own. -->
-  <script src="js/config.js?v=b2dab69e"></script>
-  <script src="js/auth.js?v=b2dab69e"></script>
+  <script src="js/config.js?v=4b48242d"></script>
+  <script src="js/auth.js?v=4b48242d"></script>
   <!-- Fills HC.data from Supabase after the first paint. Needs data.js,
        store.js, and config.js above it, and nothing below it. -->
-  <script src="js/content.js?v=b2dab69e"></script>
-  <script src="js/components.js?v=b2dab69e"></script>
-  <script src="js/print-guide.js?v=b2dab69e"></script>
-  <script src="js/router.js?v=b2dab69e"></script>
+  <script src="js/content.js?v=4b48242d"></script>
+  <script src="js/components.js?v=4b48242d"></script>
+  <script src="js/print-guide.js?v=4b48242d"></script>
+  <script src="js/router.js?v=4b48242d"></script>
   <!-- The month strip under the header on Listen. Shell chrome, so it loads
        with the router rather than with the screen it serves. -->
-  <script src="js/date-rail.js?v=b2dab69e"></script>
+  <script src="js/date-rail.js?v=4b48242d"></script>
   <!-- Swiping sideways between the five tabs. Shell chrome like the rail
        above, and it needs the router, which is why it sits here. -->
-  <script src="js/swipe.js?v=b2dab69e"></script>
+  <script src="js/swipe.js?v=4b48242d"></script>
   <!-- The Group tab's data layer. Needs auth.js above it for the transport
        and store.js for the cache, and js/screens/group.js below it. -->
-  <script src="js/rooms.js?v=b2dab69e"></script>
-  <script src="js/screens/guide.js?v=b2dab69e"></script>
-  <script src="js/screens/home.js?v=b2dab69e"></script>
-  <script src="js/screens/listen.js?v=b2dab69e"></script>
-  <script src="js/screens/connect.js?v=b2dab69e"></script>
-  <script src="js/screens/give.js?v=b2dab69e"></script>
-  <script src="js/screens/profile.js?v=b2dab69e"></script>
-  <script src="js/screens/group.js?v=b2dab69e"></script>
-  <script src="js/screens/leader.js?v=b2dab69e"></script>
-  <script src="js/screens/legal.js?v=b2dab69e"></script>
-  <script src="js/app.js?v=b2dab69e"></script>
+  <script src="js/rooms.js?v=4b48242d"></script>
+  <script src="js/screens/guide.js?v=4b48242d"></script>
+  <script src="js/screens/home.js?v=4b48242d"></script>
+  <script src="js/screens/listen.js?v=4b48242d"></script>
+  <script src="js/screens/connect.js?v=4b48242d"></script>
+  <script src="js/screens/give.js?v=4b48242d"></script>
+  <script src="js/screens/profile.js?v=4b48242d"></script>
+  <script src="js/screens/group.js?v=4b48242d"></script>
+  <script src="js/screens/leader.js?v=4b48242d"></script>
+  <script src="js/screens/legal.js?v=4b48242d"></script>
+  <script src="js/app.js?v=4b48242d"></script>
 </body>
 </html>

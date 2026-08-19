@@ -153,6 +153,47 @@ const rooms = sandbox.window.HC.rooms;
   sandbox.window.HC.rooms.init();
   ok('last night\'s room is not shown as tonight\'s', sandbox.window.HC.rooms.snapshot().room, null);
 
+  // ---- the night sheet
+  //
+  // Its whole contract is that everything goes on it, including the answers
+  // the group never opened. A sheet that quietly dropped those would be a
+  // worse record than no sheet, and it is the kind of thing nobody notices
+  // until somebody goes looking for what they wrote.
+  const printSrc = fs.readFileSync(path.join(__dirname, '..', 'js', 'print-guide.js'), 'utf8');
+  sandbox.window.HC.components = {
+    esc: (x) => String(x == null ? '' : x).replace(/&/g, '&amp;').replace(/</g, '&lt;'),
+    formatDate: () => 'August 13, 2026'
+  };
+  sandbox.window.HC.data = Object.assign(sandbox.window.HC.data || {}, {
+    church: { websiteUrl: 'https://homechurchnola.com' }
+  });
+  sandbox.fetch = () => Promise.reject(new Error('no stylesheet in node'));
+  vm.runInContext(printSrc, sandbox);
+
+  const sheet = sandbox.window.HC.print.buildNightPages({
+    room: { id: 'r1', code: '486217', groupName: 'Lakeview Thursday',
+            guideTitle: 'The Table of Grace', openedAt: '2026-08-13T23:00:00Z' },
+    members: [ { id: 'trey', name: 'Trey' }, { id: 'dee', name: 'Dee' } ],
+    questions: [ { id: 'q1', body: 'First question?' }, { id: 'q2', body: 'Second question?' } ],
+    notes: [
+      { id: 'a1', questionId: 'q1', kind: 'answer', author: 'Dee', body: 'An opened answer.', openedAt: '1' },
+      { id: 'a2', questionId: 'q1', kind: 'answer', author: 'Trey', body: 'A shut one.', openedAt: null },
+      { id: 'p1', questionId: null, kind: 'prayer', author: 'Dee', body: 'For my sister.', openedAt: '1' }
+    ]
+  });
+
+  ok('the sheet names the group and the night',
+     /Lakeview Thursday/.test(sheet) && /August 13, 2026/.test(sheet), true);
+  ok('and who was there', /Trey, Dee/.test(sheet), true);
+  ok('every question is on it',
+     /First question/.test(sheet) && /Second question/.test(sheet), true);
+  ok('an opened answer is on it', /An opened answer/.test(sheet), true);
+  ok('AND one that was never opened', /A shut one/.test(sheet), true);
+  ok('a question nobody answered says so', /Nobody wrote on this one/.test(sheet), true);
+  ok('the prayer list is on it', /For my sister/.test(sheet), true);
+  ok('and a prayer is not filed as an answer too',
+     (sheet.match(/For my sister/g) || []).length, 1);
+
   console.log('\n' + (fail ? fail + ' failed, ' + pass + ' passed.' : pass + ' passed.'));
   process.exit(fail ? 1 : 0);
 })();

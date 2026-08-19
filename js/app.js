@@ -884,6 +884,56 @@
       }).catch(roomFailed);
     },
 
+    /* The end of the night, on one sheet. Everything goes in, including the
+       answers the group never got round to opening, which the button says and
+       the cover repeats. The road is the same one Download guide takes:
+       window.print() is a silent no-op inside WKWebView, so a phone gets a
+       real file handed to the share sheet where iOS offers Print, Save to
+       Files and Mail, and a browser gets the print dialog. */
+
+    'room-sheet': function () {
+      var snap = HC.rooms.snapshot();
+      if (!snap.room) return;
+
+      if (!HC.native.isNative()) {
+        HC.print.night(snap);
+        return;
+      }
+      c.toast('Getting tonight ready.');
+      HC.print.nightHtml(snap).then(function (html) {
+        return HC.native.shareFile(sheetName(snap), html, 'text/html', 'Tonight');
+      }).then(function (ok) {
+        if (!ok) c.toast('Could not put that together. Try again in a moment.');
+      }).catch(function () {
+        c.toast('Could not put that together. Try again in a moment.');
+      });
+    },
+
+    /* Same sheet, handed to the share sheet with a message already written,
+       so the common case is two taps rather than a save and a hunt through
+       Files. On a browser there is no share sheet to hand it to, so this
+       falls back to the print dialog and says so. */
+
+    'room-send-sheet': function () {
+      var snap = HC.rooms.snapshot();
+      if (!snap.room) return;
+
+      if (!HC.native.isNative()) {
+        c.toast('Save it first, then attach it to a message.');
+        HC.print.night(snap);
+        return;
+      }
+      c.toast('Getting tonight ready.');
+      HC.print.nightHtml(snap).then(function (html) {
+        return HC.native.shareFile(sheetName(snap), html, 'text/html',
+          'Here is Thursday night, everything we wrote down.');
+      }).then(function (ok) {
+        if (!ok) c.toast('Could not put that together. Try again in a moment.');
+      }).catch(function () {
+        c.toast('Could not put that together. Try again in a moment.');
+      });
+    },
+
     'room-take-down': function (el) {
       if (!window.confirm('Take this down for everybody in the room?')) return;
       HC.rooms.takeDown(el.getAttribute('data-id')).then(function () {
@@ -892,6 +942,14 @@
       }).catch(roomFailed);
     }
   };
+
+  // A filename somebody will recognise a week later in Files.
+  function sheetName(snap) {
+    var when = new Date(snap.room.openedAt || Date.now()).toISOString().slice(0, 10);
+    var who = (snap.room.groupName || snap.room.guideTitle || 'group')
+      .toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40);
+    return who + '-' + when + '.html';
+  }
 
   /* One place for a failed room action. These are ordinary network and
      permission errors and the message from js/rooms.js is already written for
