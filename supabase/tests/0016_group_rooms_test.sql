@@ -325,6 +325,97 @@ select t_check('the purge deletes a room past ninety days',
 select t_check('and everything in it went with it',
              (select count(*)::int from public.group_room_notes), 0);
 
--- Deleting the account takes the person's writing with it, by cascade.
 select t_check('no orphan members left behind',
              (select count(*)::int from public.group_room_members), 0);
+
+-- ===========================================================================
+-- Deleting an account, which is Guideline 5.1.1(v) and also a promise.
+--
+-- supabase/functions/delete-account removes the row from auth.users and
+-- nothing else, on the strength of the foreign keys below doing the rest.
+-- Before group rooms that claim was easy: profiles was the only user owned
+-- table. Now a person's writing sits in somebody else's room, and "it
+-- cascades" is a thing to check rather than a thing to assume, because the
+-- failure mode is an answer with somebody's first name on it outliving the
+-- account by ninety days.
+--
+-- A fresh room, since the retention sweep above emptied the last one.
+-- ===========================================================================
+
+insert into auth.users (id, email) values
+  ('88888888-8888-8888-8888-888888888888', 'leaver@example.com')
+  on conflict do nothing;
+insert into public.profiles (id, first_name, can_host, terms_accepted_at) values
+  ('88888888-8888-8888-8888-888888888888', 'Sam', false, now())
+  on conflict (id) do update set terms_accepted_at = excluded.terms_accepted_at;
+
+create table if not exists t_del (k text primary key, v text);
+delete from t_del;
+
+-- Trey hosts. Sam joins, answers, asks for prayer, and reports something.
+begin;
+  set local role authenticated;
+  set local request.jwt.claims = '{"sub":"11111111-1111-1111-1111-111111111111"}';
+  insert into t_del select 'room', (public.hc_room_open(
+    'g-del', 'A guide', 'Leaving', '[{"heading":"h","body":"A question"}]'::jsonb)).id::text;
+commit;
+
+insert into t_del select 'code', code from public.group_rooms
+ where id = (select v from t_del where k = 'room')::uuid;
+insert into t_del select 'q', id::text from public.group_room_questions
+ where room_id = (select v from t_del where k = 'room')::uuid;
+
+begin;
+  set local role authenticated;
+  set local request.jwt.claims = '{"sub":"11111111-1111-1111-1111-111111111111"}';
+  insert into t_del select 'hostnote', (public.hc_room_post(
+    (select v from t_del where k='room')::uuid, (select v from t_del where k='q')::uuid,
+    'answer', 'The host wrote this.')).id::text;
+commit;
+
+begin;
+  set local role authenticated;
+  set local request.jwt.claims = '{"sub":"88888888-8888-8888-8888-888888888888"}';
+  select public.hc_room_join((select v from t_del where k = 'code'));
+  select public.hc_room_post((select v from t_del where k='room')::uuid,
+    (select v from t_del where k='q')::uuid, 'answer', 'Sam wrote this in Trey''s room.');
+  select public.hc_room_post((select v from t_del where k='room')::uuid,
+    null, 'prayer', 'Sam asked for this.');
+  select public.hc_room_report((select v from t_del where k='hostnote')::uuid, 'Sam reported it');
+  select public.hc_room_block('22222222-2222-2222-2222-222222222222', true);
+commit;
+
+select t_check('before deleting: two answers, one prayer',
+  (select count(*)::int from public.group_room_notes
+    where room_id = (select v from t_del where k='room')::uuid), 3);
+
+-- What the Edge Function does, and the only thing it does.
+delete from auth.users where id = '88888888-8888-8888-8888-888888888888';
+
+select t_check('their answer in somebody else''s room is gone',
+  (select count(*)::int from public.group_room_notes
+    where body = 'Sam wrote this in Trey''s room.'), 0);
+select t_check('their prayer request is gone',
+  (select count(*)::int from public.group_room_notes where kind = 'prayer'
+    and room_id = (select v from t_del where k='room')::uuid), 0);
+select t_check('they are off the roster',
+  (select count(*)::int from public.group_room_members
+    where person_id = '88888888-8888-8888-8888-888888888888'), 0);
+select t_check('the report they filed is gone',
+  (select count(*)::int from public.group_note_reports
+    where reporter_id = '88888888-8888-8888-8888-888888888888'), 0);
+select t_check('and so is the block they set',
+  (select count(*)::int from public.group_blocks
+    where blocker_id = '88888888-8888-8888-8888-888888888888'), 0);
+select t_check('their profile went with the account',
+  (select count(*)::int from public.profiles
+    where id = '88888888-8888-8888-8888-888888888888'), 0);
+
+-- And the part that has to survive: leaving does not take the room down with
+-- you, or delete what everybody else wrote.
+select t_check('the room is still there for the people still in it',
+  (select count(*)::int from public.group_rooms
+    where id = (select v from t_del where k='room')::uuid), 1);
+select t_check('and the host''s own answer is untouched',
+  (select body from public.group_room_notes
+    where id = (select v from t_del where k='hostnote')::uuid), 'The host wrote this.');

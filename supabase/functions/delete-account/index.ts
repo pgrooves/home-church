@@ -22,10 +22,34 @@
  * and offers no way out of them, which is a rejection under 5.1.1(v) and,
  * more to the point, is not a decent way to treat somebody.
  *
- * WHAT GETS DELETED. The auth user, which cascades to public.profiles through
- * the foreign key in migration 0009. Notes, guide checkmarks, group rosters,
- * and prayer requests are not touched because they were never here. They live
- * on the person's phone and the app erases them separately, from Your data.
+ * WHAT GETS DELETED. The auth user, and everything hanging off it by a
+ * cascading foreign key:
+ *
+ *   public.profiles                 migration 0009
+ *   public.group_room_notes         every answer and prayer request they
+ *                                   wrote, including the ones in rooms
+ *                                   somebody else was hosting
+ *   public.group_room_members       their place on every roster
+ *   public.group_note_reports       reports they filed
+ *   public.group_blocks             people they blocked, both directions
+ *   public.group_rooms              rooms they hosted, and by cascade
+ *                                   everything anybody wrote in them
+ *
+ * That last line is the one worth reading twice. A host who deletes their
+ * account takes the evening down with them. It is the right answer for a
+ * room, which is one night and expires anyway, but it is not obvious, so the
+ * privacy policy says it in words.
+ *
+ * Guide checkmarks and saved notes are still not here. They live on the
+ * person's phone and the app erases them separately, from Your data.
+ *
+ * The cascade is checked rather than assumed: supabase/tests, the last
+ * section of 0016_group_rooms_test.sql, deletes a real auth.users row and
+ * asserts that the person's writing in somebody else's room goes with it and
+ * that the room and everybody else's writing survive. "It cascades" was a
+ * safe thing to say when profiles was the only user owned table. It is not
+ * any more, and the failure mode is an answer with somebody's first name on
+ * it outliving their account.
  *
  * DEPLOY
  *   supabase functions deploy delete-account
@@ -89,9 +113,9 @@ Deno.serve(async (req: Request) => {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 
-  // profiles cascades from auth.users, so this one call takes both. If more
-  // user owned tables are ever added, either give them the same cascading
-  // foreign key or delete them here, before this line, and say so in the
+  // Every user owned table cascades from auth.users, so this one call takes
+  // all of them. If another is ever added, either give it the same cascading
+  // foreign key or delete from it here, before this line, and say so in the
   // privacy policy. A table that survives account deletion is a promise
   // broken quietly.
   const { error: deleteError } = await admin.auth.admin.deleteUser(userId);

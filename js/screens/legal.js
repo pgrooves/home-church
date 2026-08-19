@@ -100,7 +100,7 @@
       'A group room is a room your small group joins with a six digit code. What you write in one is stored on our server, because everybody else in the room has to be able to read it. Nothing else in this app works that way.',
       'What is stored is what you wrote, your first name from Your information, which room, and when. Answers are held back until whoever hosts the room opens them, and until that moment the only person who can read one is you, which is enforced by the database rather than by the screen.',
       'Everybody in that room can read what has been opened. Nobody else can, and neither can somebody who is signed out and merely knows the code. We do not read rooms, and there is no dashboard anywhere that shows them to the church.',
-      'You can edit or delete anything you wrote, whenever you like. Whoever hosts the room can take anything down for everybody. Deleting your account takes everything you wrote in every room with it.'
+      'You can edit or delete anything you wrote, whenever you like. Whoever hosts the room can take anything down for everybody. Deleting your account takes everything you wrote in every room with it, and if you hosted a room, it takes that room down too, including what everybody else wrote in it.'
     ]);
 
     html += block('Signing in, which is the one part that does leave', [

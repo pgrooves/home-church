@@ -321,15 +321,22 @@ The policy must explicitly cover three things Apple names:
 
 ### Terms of service
 
-**Status: absent. Severity: High, not Blocker.** Correction to the brief:
-**Apple does not require a Terms of Service.** It requires a privacy policy. A
-ToS becomes mandatory only when you have user generated content, where 1.2
-requires users to agree to terms forbidding objectionable content, or when you
-supply a custom EULA instead of Apple's standard one.
+**Status: written and shipping. Severity: was High, now closed. `js/screens/legal.js`.**
 
-We have neither. So the ToS is a good idea and I will write it, but it is not
-what will get us rejected, and if the schedule gets tight it is the first thing
-to move.
+This section said something different when it was written, and the reason it
+changed is worth keeping rather than editing away. It said: *Apple does not
+require a Terms of Service. A ToS becomes mandatory only when you have user
+generated content, where 1.2 requires users to agree to terms forbidding
+objectionable content. We have neither, so it is the first thing to move if
+the schedule gets tight.*
+
+Group rooms are user generated content. So the ToS moved from "good idea" to
+**required**, and it is required in a specific form: a person must agree to
+terms forbidding objectionable content **before their first post**, not on a
+page they could have read. That is why the agreement is a gate in front of
+writing (`js/screens/group.js`, `termsGate`) and why the database checks
+`profiles.terms_accepted_at` inside `hc_room_post` rather than trusting the
+screen. See section 2.5.
 
 ### Third parties, and the one I want to remove
 
@@ -491,44 +498,95 @@ answer that in one sentence if it is asked.
 
 ## 2.5 User generated content, Guideline 1.2
 
-**Status: 1.2 does not apply, and your answer to question 3 is what keeps it
-that way.**
+**Status: 1.2 applies, in full, and every requirement is built. Severity:
+Blocker if any row below regresses.**
 
-This is worth documenting carefully, because it is the difference between a
-short review and a long one.
+### What changed, and why the old text is quoted rather than deleted
 
-Every piece of user entered content in this app is **private to its author and
-never leaves their device**:
+The first version of this section said 1.2 did not apply, and ended with this
+warning:
 
-| Content | Where | Visible to |
+> **The one thing that could break this:** … if anyone later proposes showing
+> prayer requests to a group, or a leader dashboard that reads members'
+> journal entries, **that single change pulls the entire weight of Guideline
+> 1.2 into scope** and turns this into a different and much harder submission.
+> Worth writing down somewhere the next person will find it.
+
+That is exactly what the Group tab does. A group room is a room several people
+join with a six digit code, where what one person writes is read by everyone
+else in it, and prayer requests are shown to the group by design. The warning
+was right, the change was made deliberately, and this section is now the
+harder one it predicted.
+
+Nothing else in the app changed. Guide journal entries, question checkmarks,
+the leader's roster and per member notes, and profile fields are all still
+private to their author and still never leave the phone. The UGC surface is
+the Group tab and nothing but the Group tab, which is worth saying in the
+review notes because it is a much smaller thing to review than "a church app
+with user content".
+
+### The four requirements, and where each one is
+
+Apple names four. Plus the terms agreement, which is where most rejections
+under 1.2 actually happen.
+
+| 1.2 requires | Built | Where |
 |---|---|---|
-| Guide journal entries | `hc:guideState`, `js/store.js:198` | Author only, on that device |
-| Question checkmarks | `hc:guideState`, `js/store.js:172` | Author only |
-| Group roster and attendance | `hc:roster`, `js/store.js:247` | Author only |
-| Private per member notes | `hc:roster`, `js/screens/leader.js:25` | Author only |
-| Prayer requests | `hc:prayers`, `js/store.js:279` | Author only |
-| Profile fields | `hc:profile`, `js/store.js:143` | Author only |
+| **Terms forbidding objectionable content, agreed before the first post** | Yes | `js/screens/group.js` `termsGate()`, shown in front of the first write. Full terms at `js/screens/legal.js`. **Enforced in the database**: `hc_room_post` refuses when `profiles.terms_accepted_at` is null, so skipping the screen does not skip the rule. |
+| **A method for filtering objectionable material from being posted** | Yes | Migration `0020_group_word_filter.sql`. A slur list in `group_filter_terms`, matched on word boundaries by `hc_text_offends`, called inside both `hc_room_post` and `hc_room_edit_note` so the filter is not one edit deep. The list is closed to `anon` and `authenticated`: a client that could read it is a client that could work around it. |
+| **A mechanism to report offensive content, with timely responses** | Yes | A Report button on **every** note, not behind a gesture (`js/screens/group.js` `noteCard()`). It writes a row through `hc_room_report`. The host sees open reports as a queue at the top of their own room (`reportQueue()`) with two buttons: **Take it down** (`hc_room_take_down`, removes it for everybody) and **Leave it up** (`hc_room_resolve_report`, migration 0019). The terms commit to acting within 24 hours. |
+| **The ability to block abusive users** | Yes | A Block button next to Report on every note that is not your own. `hc_room_block` writes to `group_blocks`, and **the read policy on `group_room_notes` does the hiding**, so a blocked person's writing never reaches your phone at all rather than being filtered on screen. Unblocking is at the bottom of the room (`blockedRow()`), because once you have blocked somebody there is nothing left in the feed to tap. |
+| **Published contact information for abuse reports** | Yes | `hello@homechurchnola.com`, named in the terms, in the report confirmation toast, and on the support page. |
 
-There is no feed, no comments, no messaging, no profiles visible to others, no
-sharing between users. **Nothing any user types is ever shown to any other
-user.**
+### What a reviewer will actually try, and what happens
 
-Therefore none of 1.2's four requirements are triggered: no content filtering
-mechanism, no report mechanism, no user blocking, no published contact info for
-abuse reports. We still publish contact information, but as ordinary support
-information, not as a 1.2 obligation.
+Worth rehearsing, because all five are one tap deep and all five are testable
+with the demo account.
 
-**This must be stated affirmatively in the review notes.** A reviewer who sees
-"prayer requests" and "group roster" in a church app will reasonably assume
-shared data unless told otherwise. Getting ahead of it is worth a sentence.
+1. **Post something.** They get the terms gate first. There is no path past it;
+   the database refuses too.
+2. **Report a note.** A prompt asks why, then a toast says the host will see it
+   and names the email address. Report and Block only appear on writing that is
+   not your own, so seeing this end to end needs two accounts. `SUBMISSION_KIT.md`
+   section 7 has a seven step script that does it on one device, and the two
+   demo accounts it depends on are a checklist item in section 1 of that kit.
+   **If those two accounts are not set up, a reviewer cannot test any of this
+   row or the one below it.**
+3. **Block somebody.** A confirm, then that person's writing is gone from the
+   screen on the next read. The unblock row appears at the bottom.
+4. **Type a slur.** The post is refused with a message that says why.
+5. **Look for moderation.** The host's queue is at the top of the room, above
+   the questions, not in a settings screen.
 
-**The one thing that could break this:** the Connect forms, once they email a
-church address. That is still not UGC, because the content is not displayed to
-other users in the app, it is a contact form. 1.2 remains inapplicable. But if
-anyone later proposes showing prayer requests to a group, or a leader dashboard
-that reads members' journal entries, **that single change pulls the entire
-weight of Guideline 1.2 into scope** and turns this into a different and much
-harder submission. Worth writing down somewhere the next person will find it.
+### The part that is not a checkbox
+
+Two design decisions carry more weight here than any of the buttons.
+
+**Closed answers never leave the database.** An answer is invisible until the
+host opens it, and that is enforced by a row level security policy
+(`0016_group_rooms.sql`, "open answers, and your own"), not by the screen. The
+app literally cannot receive somebody else's unopened answer. This matters for
+1.2 because the exposure window for anything objectionable is small and under
+a named person's control.
+
+**A room is one evening, joined by a code from a leader.** There is no
+discovery, no directory, no way to find a room you were not given the code
+for, and no stranger to stranger contact anywhere in the app. Rooms are swept
+after 90 days by `hc_purge_group_rooms`. This is not a social network with
+church branding, and the review notes should say so plainly.
+
+### What would break this again
+
+Any of these turns the Group tab into something harder to defend, and each one
+should be weighed against this section before it is built:
+
+- Rooms discoverable without a code, or a public list of them.
+- Direct messages between two people.
+- Images, audio, or files in a room. **The filter is text only.** The moment
+  somebody can post a photo, 1.2 needs an answer for image moderation and this
+  table gains a row that is currently blank.
+- A room that outlives the night, or a persistent profile visible to people
+  outside your own group.
 
 -----
 
@@ -537,6 +595,18 @@ harder submission. Worth writing down somewhere the next person will find it.
 **Status: needs answering, no structural problem. Severity: Medium.**
 
 **Recommendation: 4+. Do not use the Kids Category.**
+
+**Group rooms change the answer to one question here, and may change the
+rating.** Apple's 2025 questionnaire asks about user generated content, and
+that answer is now Yes (section 2.5). Unmoderated UGC pushes an app up the
+tiers on its own. Ours is moderated, closed, and text only, and the honest
+case for holding 4+ is: rooms are not discoverable, there is no user to user
+contact outside a room somebody's group leader gave them the code for, every
+note carries report and block, posting runs through a filter, and the host of
+each room has a queue. **Answer the question truthfully and take the rating
+the questionnaire gives.** If it comes back 9+ or 13+, take it. A church app
+rated 13+ costs nothing. Arguing the rating down by answering No to a UGC
+question would be the kind of thing that unravels an entire submission.
 
 The Kids Category carries substantially heavier restrictions: no third party
 analytics or advertising, parental gates on external links, and much closer
@@ -573,8 +643,8 @@ Draft answers, for the submission kit:
 | Mature or suggestive themes | None |
 | Medical or wellness topics | None |
 | Unrestricted web access | **See the judgment call below** |
-| User generated content | **No.** See section 2.5. |
-| Social media capabilities | **No.** No feed, no messaging, no user to user interaction. |
+| User generated content | **Yes**, in the Group tab only, with moderation. See section 2.5. Answering No here because the rest of the app is private would be a false answer to a question about the app. |
+| Social media capabilities | **No.** No feed, no messaging, no direct contact between users, no discovery, no profiles visible outside a room you were given a code for. A group room is a closed room for one evening. |
 | In-app purchases | No |
 | Age assurance / parental controls | Not applicable |
 

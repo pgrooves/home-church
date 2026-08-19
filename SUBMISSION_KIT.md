@@ -79,6 +79,28 @@ is the summary.
 - [ ] Review notes from section 7, pasted verbatim.
 - [ ] Export compliance from section 8.
 
+### The two demo accounts, which the review notes depend on
+
+Group rooms are the one part of the app a reviewer cannot fully test without
+signing in, and the host's moderation queue needs an account the church has
+marked as a group leader. Set this up before you submit, or section 7 has two
+blanks in it and a reviewer with no way to check the Guideline 1.2 controls.
+
+- [ ] In Supabase, **Authentication → Sign In / Providers → Email**, add two
+      **test OTPs**: one address for the host, one for the member, each with
+      a fixed six digit code. A test OTP means the code always works and no
+      email is sent, so a reviewer is never waiting on an inbox we control.
+      Use addresses that read as what they are, `applereview.host@` and
+      `applereview.member@` on the church domain.
+- [ ] Sign in once as each so the `profiles` row exists.
+- [ ] Mark the host: `update public.profiles set can_host = true where id =
+      (select id from auth.users where email = '…');`
+- [ ] Fill both addresses and both codes into the review notes in section 7.
+- [ ] Walk the seven steps in section 7 yourself, on a device, exactly as
+      written. If any step does not do what it says, fix the step or fix the
+      app before a reviewer finds the difference.
+- [ ] Leave both accounts in place after approval. Apple re-reviews updates.
+
 -----
 
 ## 2. Apple Developer Program
@@ -160,8 +182,21 @@ a time, large type, readable across a living room without anybody hunching
 over a screen. Keep a roster, mark who came, and write down what people asked
 you to pray for.
 
-None of that leaves your phone. Not to us, not to anyone. A group leader
-holds things people said out loud in a room, and those belong to the room.
+Your roster, your attendance marks, and the notes you keep beside a name stay
+on your phone. Not to us, not to anyone. A group leader holds things people
+said out loud in a room, and those belong to the room.
+
+THE GROUP TAB
+
+Open a room and the app gives you a six digit code to send your group. This
+week's questions are already in it. Everybody answers on their own phone, the
+answers stay hidden until you open them, and you open them one at a time as
+the conversation gets there, so nobody reads ahead and nobody is put on the
+spot. The last section is prayer requests. When the night is over, one button
+puts the whole evening on a single sheet you can send to everyone.
+
+A room needs an account, because your first name goes on what you write and
+your group should know who said it. It lasts the evening.
 
 IT WORKS WITH NO SIGNAL
 
@@ -311,11 +346,23 @@ History, no Usage Data, no Diagnostics, no Purchases.
 - **Device ID** is the APNs push token, not linked to the account. Note that
   the token is only ever registered in a native build, and nothing sends to it
   yet. See the notification note in section 7 before answering this one.
-- **Other User Content** covers Connect forms, which open in the system
-  browser and post to Church Center, Group Vitals, Flodesk, or a Google form.
-  The app never handles those values. Apple offers an optional exemption for
-  data volunteered in a customer service context and these plausibly qualify,
-  but declare them anyway.
+- **Other User Content** is the one line in this table that grew. It now
+  covers two different things and the second is the substantial one.
+    - The Connect forms, which open in the system browser and post to Church
+      Center, Group Vitals, Flodesk, or a Google form. The app never handles
+      those values. Apple offers an optional exemption for data volunteered in
+      a customer service context and these plausibly qualify, but declare them
+      anyway.
+    - **What people write in a group room.** Answers to discussion questions
+      and prayer requests are stored on our server, under the author's first
+      name, and shown to the other people in that room. This is real collected
+      content, linked to the account, and the only place in the app where
+      something a person typed is shown to another person. It is deleted with
+      the account and swept after ninety days. See section 2.5 of
+      APP_STORE_COMPLIANCE.md.
+  Guide notes, question checkmarks, the leader's roster, attendance marks, and
+  locally saved prayer requests are **not** part of this answer. They never
+  leave the device and Apple does not ask you to declare what does not leave.
 
 **Sensitive Info: No.** Worth stating because it gets asked. Apple's Sensitive
 Info category means racial or ethnic data, sexual orientation, pregnancy,
@@ -325,6 +372,12 @@ that list and belong under Other Data. Religious belief is not collected from
 anybody: this is a church's app, which says something about the publisher, not
 about a data field in it.
 
+Group rooms do not change that answer, and it is worth being able to say why
+in one breath. The question is about data types an app collects, not about
+what a person might choose to type into a free text box. We do not ask for
+anything on that list, do not have a field for anything on that list, and do
+not read, categorize, or derive anything from what is written in a room.
+
 **Tracking: No.** No ATT prompt should ever appear. No analytics SDK, no ad
 network, no attribution. If a prompt appears, something was added that should
 not have been.
@@ -333,7 +386,7 @@ not have been.
 
 ## 6. Age rating questionnaire, filled in
 
-**Target: 4+.**
+**Target: 4+, but answer honestly and take what the questionnaire gives.**
 
 Apple overhauled this in 2025. Tiers are now 4+, 9+, 13+, 16+, 18+, and there
 are new required sections. The **social media questions became required for
@@ -352,19 +405,34 @@ new submissions in September 2026**, so you will be answering those too.
 | Medical or wellness topics | None |
 | Violent themes | None |
 | In-app purchases | No |
-| User generated content | **No** |
+| User generated content | **Yes**, Group tab only, moderated |
 | Social media capabilities | **No** |
 | Unrestricted web access | **No**, see below |
 | Age assurance / parental controls | Not applicable |
 
-**Two answers worth understanding before you click them.**
+**Three answers worth understanding before you click them.**
 
-**User generated content: No.** People write notes, keep a roster, and record
-prayer requests, and every one of those stays on the author's own phone and is
-never shown to any other user. There is no feed, no comments, no messaging.
-That is what keeps Guideline 1.2 out of scope entirely. If a future version
-ever shows one person's writing to another person, this answer changes and so
-does the whole submission.
+**User generated content: Yes.** This answer used to be No, and the old text
+here said that if a future version ever showed one person's writing to another
+person, the answer would change and so would the whole submission. The Group
+tab does exactly that, on purpose, and so this is now Yes.
+
+Be precise about the scope when the questionnaire lets you: it is the Group
+tab and nothing else. Guide notes, the roster, attendance, and locally saved
+prayer requests still never leave the phone. Room content is moderated, and
+section 2.5 of APP_STORE_COMPLIANCE.md lists every Guideline 1.2 control and
+where it lives.
+
+**This may push the rating above 4+.** Take whatever the questionnaire
+returns. A church app rated 9+ or 13+ costs nothing; answering No to a UGC
+question to protect a 4+ is the kind of thing that unravels a whole
+submission, and it would be a lie.
+
+**Social media capabilities: still No.** A group room is not a social network.
+There is no feed, no messaging, no direct contact between two people, no
+discovery, no profile visible to anybody outside a room, and no way to find a
+room without a six digit code handed to you by your group's leader. It exists
+for one evening and is gone.
 
 **Unrestricted web access: No.** The app opens specific known URLs in
 `SFSafariViewController`. A person can navigate onward from there, so this is
@@ -388,17 +456,18 @@ which is exactly the shape that fails Guideline 4.2.
 Thanks for reviewing. Home Church is the app for a single church in Metairie,
 Louisiana. A few notes to save you time.
 
-NO ACCOUNT IS NEEDED, AND NOTHING IS BEHIND ONE
-Every screen, including all leader features, is fully available on first
-launch without signing in. We have not supplied a demo account because there
-is no gated content for one to unlock.
+ALMOST NOTHING NEEDS AN ACCOUNT
+Every screen is available on first launch without signing in, including all
+of Leader mode, the whole guide catalogue, and every sermon. The one
+exception is writing in a group room, described below, because what a person
+writes there is shown to their group under their first name and that should
+not be anonymous.
 
-Signing in is offered, and it does exactly one thing: it syncs the optional
-fields under Your information so they follow a person to a new phone.
-
-If you would like to test it, please sign in with any email address you
-control. Your account is created on first use, so no credentials from us are
-needed. We send a six digit code, there is no password.
+Signing in has no password. We send a six digit code to an email address and
+the account is created on first use, so you can sign in with any address you
+control. We have also supplied a demo account below, because one part of the
+group room feature, the host's moderation queue, can only be seen from an
+account the church has marked as a group leader.
 
 DELETING AN ACCOUNT, GUIDELINE 5.1.1(v)
 Once signed in, account deletion is available in two places, both inside the
@@ -425,12 +494,73 @@ This is not obvious and we would rather point you straight at it:
      mode" at the top. That is the one question at a time view group
      leaders use while running a meeting.
 
-WHY THERE IS NO CONTENT MODERATION OR REPORTING
-Everything a person writes in this app, notes, roster, attendance, and prayer
-requests, is stored only on their own device and is never transmitted or
-shown to any other user. There is no feed, no comments, and no messaging.
-There is no user generated content in the Guideline 1.2 sense and therefore
-nothing to moderate or report.
+THE GROUP TAB, AND GUIDELINE 1.2
+One part of this app shows what a person writes to other people, and we want
+to be direct about it and about how it is moderated.
+
+A group room is a room a small group joins with a six digit code, given out
+by whoever is hosting that evening. The room carries that week's discussion
+questions. Each person types their own answer, the answers stay hidden until
+the host opens them one at a time, and the last section is prayer requests.
+The room expires the same night and is deleted after ninety days.
+
+There is nothing else like it in the app. Guide notes, the leader's roster,
+attendance, and locally saved prayer requests are still stored only on the
+device and shown to nobody. There is no feed, no messaging, no way to contact
+another user, no directory, and no way to find a room without being given its
+code by a person.
+
+The Guideline 1.2 controls are all one tap deep and all testable:
+
+  * TERMS BEFORE THE FIRST POST. The first time anyone tries to write in a
+    room, a screen states the rules against objectionable content and asks
+    them to agree. There is no way past it. Our server refuses the post as
+    well, so it cannot be skipped by anything.
+  * FILTERING. Posts are checked against a slur list on our server before
+    they are stored, on posting and on editing.
+  * REPORTING. Every note written by somebody else has a Report button on it,
+    in plain sight rather than behind a long press. Reporting asks why and
+    confirms, and names hello@homechurchnola.com as a second route.
+  * A HOST QUEUE. Reports appear immediately at the top of the room for
+    whoever is hosting it, with two buttons on each: "Take it down", which
+    removes it for everybody, and "Leave it up", which closes the report. We
+    commit in our terms to acting on anything sent to that address within 24
+    hours.
+  * BLOCKING. Next to Report on every note. Blocking somebody stops their
+    writing reaching you at all, enforced on our server rather than hidden on
+    screen. An Unblock list sits at the bottom of the room.
+
+TO TEST ALL OF THAT ON ONE DEVICE
+Reporting and blocking only appear on writing that is not your own, so this
+needs two accounts. Both are below, and both are configured as test accounts:
+the codes never change and no email is actually sent. One device is enough,
+because a room lives on our server and is still there when you sign back in.
+
+  Host account (marked as a group leader)
+    Email: __________________     Code: __________
+  Member account
+    Email: __________________     Code: __________
+
+  1. Tap the circle in the top right and sign in as the HOST.
+  2. Tap the Group tab, then "Open a room" under Leader mode. The app mints
+     a six digit room code. Write it down.
+  3. Scroll to Prayer requests at the bottom and add one. The terms screen
+     appears first, which is the agreement gate. Prayer requests are visible
+     to the room immediately, which is what makes the next step possible.
+  4. While you are here: type a slur into an answer box and post it. It is
+     refused with a message, and nothing is stored.
+  5. Tap the circle, sign out, and sign in as the MEMBER.
+  6. Group tab, type the room code, join. You will see the host's prayer
+     request with Report and Block underneath it. Try both.
+  7. Sign out, sign back in as the HOST, open the Group tab and type the same
+     room code. The report is at the top of the room, with "Take it down" and
+     "Leave it up".
+
+  (Signing out clears the room from the phone, which is why step 7 asks for
+  the code again. The room itself is on our server and unchanged.)
+
+If you would rather we walk through it live, or you want a second device set
+up, we are at hello@homechurchnola.com and will answer within the hour.
 
 ABOUT THE GIVE TAB
 Home Church is a church and the Give tab is how people donate. It takes no
