@@ -23,7 +23,7 @@
 
   // Update this whenever the text below changes in a way that matters, and
   // confirm it before submitting to the App Store.
-  var EFFECTIVE = 'August 11, 2026';
+  var EFFECTIVE = 'August 19, 2026';
 
   /* ---------------------------------------------------------- small parts */
 
@@ -78,7 +78,7 @@
 
     html += block('The short version', [
       'Almost everything you do in this app stays on your phone. We do not track you, there is no analytics, there is no advertising, and we do not sell your information to anyone. That is not a promise we are making for now. It is how the app is built.',
-      'The one exception is signing in, which is optional. If you do, your email address and whatever you have put under Your information are stored on our server so they can follow you to another phone. You can delete all of it from inside the app whenever you like.'
+      'Two things leave, and both are things you choose. Signing in, which puts your email address and whatever you have filled in under Your information on our server so they follow you to another phone. And writing in a group room, which is the point of a room: what you write there is read by the people in it. You can delete either from inside the app whenever you like.'
     ]);
 
     html += list('What stays on your phone, and only on your phone', [
@@ -90,6 +90,17 @@
 
     html += block('', [
       'None of that is sent anywhere. The app keeps it on your device. Delete the app and it goes with it, and you can clear it yourself at any time from Your data. We do not have a copy, which means we cannot read it, hand it over, or lose it.'
+    ]);
+
+    /* The Group tab is the one place this app holds something a person wrote
+       and shows it to somebody else. It gets its own section rather than a
+       clause tucked into another one, because a reader skimming for "what
+       does it know about me" should hit it. */
+    html += block('Group rooms, where writing is the point', [
+      'A group room is a room your small group joins with a six digit code. What you write in one is stored on our server, because everybody else in the room has to be able to read it. Nothing else in this app works that way.',
+      'What is stored is what you wrote, your first name from Your information, which room, and when. Answers are held back until whoever hosts the room opens them, and until that moment the only person who can read one is you, which is enforced by the database rather than by the screen.',
+      'Everybody in that room can read what has been opened. Nobody else can, and neither can somebody who is signed out and merely knows the code. We do not read rooms, and there is no dashboard anywhere that shows them to the church.',
+      'You can edit or delete anything you wrote, whenever you like. Whoever hosts the room can take anything down for everybody. Deleting your account takes everything you wrote in every room with it.'
     ]);
 
     html += block('Signing in, which is the one part that does leave', [
@@ -123,7 +134,9 @@
     ]);
 
     html += block('How long we keep it', [
-      'Whatever is on your phone stays there until you remove it. If you have an account, what is in it stays until you delete the account, and then it is gone from our server rather than hidden or marked inactive.'
+      'Whatever is on your phone stays there until you remove it. If you have an account, what is in it stays until you delete the account, and then it is gone from our server rather than hidden or marked inactive.',
+      'Group rooms are the exception, and they delete themselves. Ninety days after a room is opened, the room and everything written in it is removed. Long enough that a group can look back at a night, short enough that a hard season somebody wrote about in March is not still sitting on a server in December.',
+      'One thing that ninety days does not reach. If whoever hosted a room sent the night out as a document, that file is on the phones it went to, and we cannot delete it for you. It is worth asking them.'
     ]);
 
     html += block('Getting rid of it', [
@@ -167,7 +180,25 @@
     ]);
 
     html += block('What you write is yours', [
-      'Your notes, your journal entries, your group’s roster and prayer requests. They are yours, they stay on your phone, and we do not have them. We claim nothing over anything you write here.'
+      'Your notes on a guide, your journal entries, your group’s roster and the prayer requests you keep in Leader mode. They are yours, they stay on your phone, and we do not have them. We claim nothing over anything you write here.',
+      'A group room is the one place that works differently, because the whole point of it is that other people read what you wrote. It still belongs to you. You can edit it or delete it whenever you like. But once you post it, the people in that room have seen it, and the next section is about what that asks of everybody.'
+    ]);
+
+    /* Guideline 1.2. Apple requires terms forbidding objectionable content
+       and agreement to them before a first post, which is why this section
+       exists and why js/screens/group.js will not let anybody write until
+       they have read it. The database checks the same thing, so this is the
+       polite half of a rule enforced somewhere a client cannot reach. */
+    html += block('In a group room', [
+      'A room is your small group, on a Thursday night, writing down what they would say out loud. Write like that. Nothing hateful, nothing obscene, nothing aimed at somebody, nothing that is not yours to post. If you would not say it with the room looking at you, it does not go in the box.',
+      'What other people write in a room stays in the room. It is not yours to forward, screenshot, or repeat somewhere they did not choose.',
+      'Every note has a Report button and you can block anybody, which stops their writing reaching you. Whoever hosts the room can take anything down for everybody. We look at reports and act on them within one day, and acting on one can mean removing what was written, removing somebody from a room, or closing their account.',
+      'If the problem is the person hosting your room, or you would rather not go through them, write to us at hello@homechurchnola.com and it comes straight to the church.'
+    ]);
+
+    html += block('The sheet at the end of the night', [
+      'Whoever hosts a room can turn the evening into one document and send it to the group. Everything the room wrote goes on it, including answers the group never got round to opening, and the prayer requests. That is what the button says before you tap it.',
+      'Once that document leaves the app it is a file on somebody’s phone and we cannot reach it. Deleting what you wrote afterwards does not take it off a sheet that has already gone out. Worth knowing before you write, and worth a leader thinking about before they send.'
     ]);
 
     html += block('What we can do', [
