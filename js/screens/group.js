@@ -32,7 +32,6 @@
   var codeDraft = '';
   var editing = null;     // { id, body } while the host has a question open
   var showingJournal = null;   // question id whose journal suggestions are open
-  var openGroups = {};    // question group key -> open; every group starts shut
   var busy = null;        // an id, while its button is waiting on the network
   var joinError = null;
   var lastSignature = null;
@@ -339,7 +338,8 @@
     var html = '<div class="hc-room-q" data-question="' + c.esc(question.id) + '">';
 
     html += '<div class="hc-room-q__head">' +
-      '<span class="hc-room-q__num">' + (index + 1) + '</span>' +
+      '<span class="hc-room-q__num">' + (index + 1) +
+        (question.heading ? ' · ' + c.esc(question.heading.toUpperCase()) : '') + '</span>' +
       (host && !isEditing
         ? '<button type="button" class="hc-btn hc-btn--tertiary hc-btn--small" ' +
           'data-action="room-edit-question" data-id="' + c.esc(question.id) + '">' +
@@ -543,20 +543,16 @@
       '</div>' +
     '</div>';
 
-    return html;
-  }
-
-  // The code, so the host can send it again to whoever is late. It sits at the
-  // top of the room: the one thing a host is asked for out loud, and nobody
-  // should have to scroll past the whole night to read it out.
-  function codeCard(snap) {
-    return '<div class="hc-card hc-room-code" data-no-index>' +
+    // The code, so the host can send it again to whoever is late.
+    html += '<div class="hc-card hc-room-code">' +
       '<p class="hc-eyebrow">The code</p>' +
       '<p class="hc-room-code__digits">' + c.esc(spaced(snap.room.code)) + '</p>' +
       '<div class="hc-group__actions">' +
         c.button('Text it to your group', { action: 'room-share-code', icon: 'message', variant: 'secondary' }) +
       '</div>' +
     '</div>';
+
+    return html;
   }
 
   /* Your own half of the evening, kept. A room is swept ninety days after it
@@ -581,73 +577,15 @@
     '</div>';
   }
 
-  /* --------------------------------------------------------- the questions
-
-     A guide's questions come over carrying the heading they sat under, and a
-     heading covers several of them. So the room draws one shut chunk per
-     heading rather than a column of twenty open questions: everything is
-     folded away when you arrive, and the group opens the part it is on. Two
-     questions with the same heading are the same chunk, wherever they fall in
-     the list, and each chunk stamps [data-index-stop] so the rail down the
-     right edge gets a notch per heading. */
-
-  function groupKey(question, index) {
-    var head = (question.heading || '').trim();
-    return head ? 'h:' + head.toLowerCase() : 'q:' + question.id;
-  }
-
-  function grouped(questions) {
-    var out = [];
-    var byKey = {};
-    questions.forEach(function (q, i) {
-      var key = groupKey(q, i);
-      if (!byKey[key]) {
-        byKey[key] = { key: key, title: (q.heading || '').trim() || 'Question ' + (i + 1), items: [] };
-        out.push(byKey[key]);
-      }
-      byKey[key].items.push({ question: q, index: i });
-    });
-    return out;
-  }
-
-  function questionGroups(snap) {
-    var html = '';
-    grouped(snap.questions).forEach(function (group) {
-      var open = !!openGroups[group.key];
-      var n = group.items.length;
-
-      html += '<div class="hc-qgroup' + (open ? ' hc-qgroup--open' : '') + '" ' +
-        'data-index-stop="' + c.esc(group.title) + '">' +
-        '<button type="button" class="hc-qgroup__head" data-action="room-group-toggle" ' +
-          'data-group="' + c.esc(group.key) + '" aria-expanded="' + (open ? 'true' : 'false') + '">' +
-          '<span class="hc-qgroup__title">' + c.esc(group.title) + '</span>' +
-          '<span class="hc-qgroup__count">' + n + (n === 1 ? ' question' : ' questions') + '</span>' +
-          c.icon('chevronDown', 'hc-qgroup__chevron') +
-        '</button>';
-
-      if (open) {
-        html += '<div class="hc-qgroup__body">';
-        group.items.forEach(function (it) {
-          html += questionBlock(it.question, it.index, snap);
-        });
-        html += '</div>';
-      }
-      html += '</div>';
-    });
-    return html;
-  }
-
   function roomScreen(snap) {
     var host = HC.rooms.isHost();
     var html = '<div class="hc-screen hc-group" data-room="' + c.esc(snap.room.id) + '">';
 
     html += roomBar(snap);
-    if (host) html += codeCard(snap);
     html += c.sectionHeader(host ? 'Leader mode' : 'In the room',
                             snap.room.groupName || snap.room.guideTitle || 'Your group',
                             { flush: true, tag: 'h1' });
     html += guideCard(snap);
-    html += prayerBlock(snap);
 
     if (!HC.auth.isSignedIn()) {
       html += '<div class="hc-locked hc-mt-lg">' + c.icon('lock') +
@@ -662,13 +600,12 @@
 
     if (!snap.questions.length) {
       html += c.emptyState('This room has no questions yet.');
-    } else {
-      html += '<div class="hc-questions-head" data-no-index>' +
-        '<p class="hc-questions-head__title">Questions</p></div>';
-      html += questionGroups(snap);
     }
+    snap.questions.forEach(function (q, i) { html += questionBlock(q, i, snap); });
 
     if (host) html += hostExtras(snap);
+
+    html += prayerBlock(snap);
 
     // The offline promise, said out loud, same as the Guide index does.
     html += '<p class="hc-caption hc-group__offline">' + c.icon('download', 'hc-group__offline-icon') +
@@ -758,7 +695,6 @@
       Object.keys(drafts).map(function (k) { return k + (drafts[k].trim() ? '1' : '0'); }).join(),
       prayerDraft.trim() ? '1' : '0', newQuestion.trim() ? '1' : '0',
       codeDraft, joinError, editing && editing.id, busy, showingJournal,
-      Object.keys(openGroups).filter(function (k) { return openGroups[k]; }).sort().join(),
       // Whether tonight has been kept changes the button at the bottom, and
       // the lock changes whether any of it is offered at all.
       snap.room && HC.journal ? !!HC.journal.get('night-' + snap.room.id) : false,
@@ -843,7 +779,6 @@
     setJoinError: function (v) { joinError = v; },
     setEditing: function (v) { editing = v; },
     setShowingJournal: function (v) { showingJournal = v; },
-    toggleGroup: function (key) { openGroups[key] = !openGroups[key]; },
     getShowingJournal: function () { return showingJournal; },
     getEditing: function () { return editing; },
     setBusy: function (v) { busy = v; },

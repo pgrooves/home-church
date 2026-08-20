@@ -1437,12 +1437,6 @@
        Both of these only ever touch the draft. See fromJournal() in
        js/screens/group.js for why that line is drawn where it is. */
 
-    'room-group-toggle': function (el) {
-      var g = HC.screens.groupHelpers;
-      g.toggleGroup(el.getAttribute('data-group'));
-      g.repaint(true);
-    },
-
     'room-journal-toggle': function (el) {
       var g = HC.screens.groupHelpers;
       var id = el.getAttribute('data-id');

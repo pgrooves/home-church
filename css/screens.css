@@ -1168,54 +1168,6 @@
   border: var(--hc-hairline) solid var(--hc-rule);
 }
 
-/* --- the questions, in shut chunks ---------------------------------------- */
-/* One chunk per guide heading, all of them shut when you walk in. The head is
-   the whole tappable row, so a thumb aiming at the chevron on the right cannot
-   miss it. */
-.hc-questions-head { margin: var(--hc-space-lg) 0 var(--hc-space-sm); }
-.hc-questions-head__title {
-  margin: 0;
-  font-family: var(--hc-serif);
-  font-size: calc(23px * var(--hc-text-scale));
-  line-height: 1.2;
-}
-
-.hc-qgroup { border-top: var(--hc-hairline) solid var(--hc-rule); }
-.hc-qgroup__head {
-  display: flex;
-  align-items: center;
-  gap: var(--hc-space-sm);
-  width: 100%;
-  padding: var(--hc-space-base) 0;
-  background: none;
-  border: 0;
-  text-align: left;
-  color: inherit;
-  cursor: pointer;
-  min-height: 44px;
-}
-.hc-qgroup__title {
-  flex: 1 1 auto;
-  font-family: var(--hc-sans-display);
-  font-size: calc(16px * var(--hc-text-scale));
-  font-weight: 700;
-}
-.hc-qgroup__count {
-  flex: 0 0 auto;
-  font-size: var(--hc-eyebrow);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--hc-mid);
-}
-.hc-qgroup__chevron {
-  flex: 0 0 auto;
-  color: var(--hc-accent-deep);
-  transition: transform 160ms var(--hc-ease);
-}
-.hc-qgroup--open .hc-qgroup__chevron { transform: rotate(180deg); }
-.hc-qgroup__body { padding-bottom: var(--hc-space-base); }
-.hc-qgroup__body .hc-room-q:first-of-type { border-top: 0; }
-
 .hc-room-q { padding: var(--hc-space-base) 0; border-top: var(--hc-hairline) solid var(--hc-rule); }
 .hc-room-q:first-of-type { border-top: 0; }
 .hc-room-q__head {
