@@ -48,5 +48,5 @@ venv/
 # Mockup output. Every demo-*/ folder builds its own page from a source file
 # and the brand PNGs, and the built page is large, generated, and one command
 # away. Keep the source, not the output.
-demo-*/mockup.html
-demo-*/artifact.html
+demo-*/*.html
+!demo-*/*.src.html

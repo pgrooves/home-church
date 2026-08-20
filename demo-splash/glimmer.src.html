@@ -1,0 +1,934 @@
+<title>Front Door Glimmer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant:ital,wght@0,300;0,400;0,600;1,400&family=Poppins:wght@500;800&display=swap">
+
+<style>
+/* ==========================================================================
+   Front door, with the light moving
+
+   Study A from the four, three ways: the fade on its own, and two strengths
+   of a glimmer that crosses the house left to right just as the splash hands
+   off to Home.
+
+   Same two token sets as the first sheet, and the same rule about not
+   confusing them. --pg-* is the page around the phones and follows the
+   reader's appearance. --hc-* is the app inside the phones, lifted from
+   css/tokens.css, and follows the Light / Dark control.
+
+   Everything inside a .stage is drawn at real iPhone points, 393 x 852, then
+   scaled to fit the frame, so the numbers below are shipping numbers. The
+   Home tab underneath the splash is a sketch, there to show the handoff and
+   nothing else. Do not read it as a Home redesign.
+   ========================================================================== */
+
+:root {
+  --mark:        url("__MARK__");
+  --lockup-ink:  url("__LOCKUP_INK__");
+  --lockup-lite: url("__LOCKUP__");
+
+  --pg-paper:   #F7F4EF;
+  --pg-cream:   #EDE8DF;
+  --pg-ink:     #111111;
+  --pg-mid:     #6D6864;
+  --pg-rule:    #C8C0B0;
+  --pg-gold:    #B08D4B;
+  --pg-sunk:    #EFEAE2;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --pg-paper: #1A1918;
+    --pg-cream: #232120;
+    --pg-ink:   #F2EEE7;
+    --pg-mid:   #9A938A;
+    --pg-rule:  #3A3633;
+    --pg-gold:  #CBAC74;
+    --pg-sunk:  #201E1D;
+    color-scheme: dark;
+  }
+}
+
+:root[data-theme="dark"] {
+  --pg-paper: #1A1918;
+  --pg-cream: #232120;
+  --pg-ink:   #F2EEE7;
+  --pg-mid:   #9A938A;
+  --pg-rule:  #3A3633;
+  --pg-gold:  #CBAC74;
+  --pg-sunk:  #201E1D;
+  color-scheme: dark;
+}
+
+body {
+  margin: 0;
+  background: var(--pg-paper);
+  color: var(--pg-ink);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+.sheet {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 56px 24px 88px;
+  display: flex;
+  flex-direction: column;
+  gap: 40px;
+}
+
+/* --- masthead -------------------------------------------------------- */
+
+.masthead { display: flex; flex-direction: column; gap: 14px; max-width: 62ch; }
+
+.eyebrow {
+  font-size: 11px;
+  line-height: 14px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--pg-gold);
+  margin: 0;
+}
+
+.masthead h1 {
+  font-family: "Poppins", -apple-system, BlinkMacSystemFont, sans-serif;
+  font-weight: 800;
+  font-size: clamp(30px, 4.6vw, 42px);
+  line-height: 1.08;
+  letter-spacing: -0.01em;
+  margin: 0;
+  text-wrap: balance;
+}
+
+.masthead p { margin: 0; font-size: 16px; line-height: 25px; color: var(--pg-mid); }
+
+/* --- controls -------------------------------------------------------- */
+
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 20px;
+  padding: 16px 18px;
+  background: var(--pg-cream);
+  border: 1px solid var(--pg-rule);
+  border-radius: 14px;
+  position: sticky;
+  top: 0;
+  z-index: 5;
+}
+
+.control { display: flex; align-items: center; gap: 8px; }
+
+.control > span {
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--pg-mid);
+}
+
+.seg {
+  display: inline-flex;
+  background: var(--pg-sunk);
+  border: 1px solid var(--pg-rule);
+  border-radius: 999px;
+  padding: 2px;
+}
+
+.seg button {
+  appearance: none;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 13px;
+  color: var(--pg-mid);
+  padding: 6px 14px;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.seg button[aria-pressed="true"] {
+  background: var(--pg-paper);
+  color: var(--pg-ink);
+  box-shadow: 0 1px 3px rgba(26, 25, 24, 0.14);
+}
+
+.seg button:focus-visible,
+.replay:focus-visible { outline: 2px solid var(--pg-gold); outline-offset: 2px; }
+
+.replay {
+  appearance: none;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  color: var(--pg-ink);
+  background: var(--pg-paper);
+  border: 1px solid var(--pg-rule);
+  border-radius: 999px;
+  padding: 7px 16px;
+  margin-left: auto;
+}
+
+/* --- the three phones -------------------------------------------------- */
+
+.studies {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(288px, 1fr));
+  gap: 40px 32px;
+}
+
+.study { display: flex; flex-direction: column; gap: 16px; }
+
+.frame {
+  width: 300px;
+  height: 651px;
+  margin: 0 auto;
+  border-radius: 46px;
+  padding: 5px;
+  background: linear-gradient(160deg, #3B3733, #161513);
+  box-shadow: 0 18px 40px rgba(26, 25, 24, 0.22), 0 2px 6px rgba(26, 25, 24, 0.16);
+  flex: none;
+}
+
+.screen { width: 100%; height: 100%; border-radius: 41px; overflow: hidden; position: relative; }
+
+.stage {
+  width: 393px;
+  height: 852px;
+  transform: scale(0.76336);
+  transform-origin: 0 0;
+  position: relative;
+
+  /* Light, straight out of css/tokens.css */
+  --hc-paper:  #F7F4EF;
+  --hc-cream:  #EDE8DF;
+  --hc-ink:    #111111;
+  --hc-mid:    #6D6864;
+  --hc-rule:   #C8C0B0;
+  --hc-gold:   #D7BA85;
+  --hc-lockup: var(--lockup-ink);
+  --hc-serif: "Cormorant", Georgia, "Times New Roman", serif;
+  --hc-sans-display: "Poppins", -apple-system, BlinkMacSystemFont, sans-serif;
+  --hc-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+
+  background: var(--hc-paper);
+  color: var(--hc-ink);
+}
+
+.stage[data-app-theme="dark"] {
+  --hc-paper:  #1A1918;
+  --hc-cream:  #232120;
+  --hc-ink:    #F2EEE7;
+  --hc-mid:    #9A938A;
+  --hc-rule:   #3A3633;
+  --hc-gold:   #CBAC74;
+  --hc-lockup: var(--lockup-lite);
+}
+
+.pill {
+  position: absolute;
+  top: 11px; left: 50%;
+  transform: translateX(-50%);
+  width: 124px; height: 36px;
+  border-radius: 22px;
+  background: #161513;
+  z-index: 4;
+}
+
+.indicator {
+  position: absolute;
+  bottom: 9px; left: 50%;
+  transform: translateX(-50%);
+  width: 140px; height: 5px;
+  border-radius: 3px;
+  background: var(--hc-ink);
+  opacity: 0.28;
+  z-index: 4;
+}
+
+.caption { display: flex; flex-direction: column; gap: 6px; }
+
+.caption h2 {
+  font-family: "Poppins", -apple-system, BlinkMacSystemFont, sans-serif;
+  font-weight: 800;
+  font-size: 17px;
+  line-height: 22px;
+  margin: 0;
+}
+
+.caption p { margin: 0; font-size: 14px; line-height: 21px; color: var(--pg-mid); }
+
+.caption .tag {
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--pg-gold);
+}
+
+/* ==========================================================================
+   Home, sketched. Only enough of it to see what the splash lands on.
+   ========================================================================== */
+
+.home {
+  position: absolute;
+  inset: 0;
+  padding: 62px 20px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.home__bar { height: 30px; display: flex; align-items: center; }
+
+.home__lockup {
+  width: 118px;
+  aspect-ratio: 1461 / 230;
+  background: var(--hc-lockup) left center / contain no-repeat;
+}
+
+.home__greeting {
+  font-family: var(--hc-sans-display);
+  font-weight: 800;
+  font-size: 32px;
+  line-height: 36px;
+  letter-spacing: -0.005em;
+  margin: 6px 0 0;
+}
+
+.home__label {
+  font-size: 11px;
+  line-height: 14px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--hc-mid);
+  margin: 0;
+}
+
+.home__card {
+  background: var(--hc-cream);
+  border-radius: 14px;
+  padding: 18px 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.home__card h3 {
+  font-family: var(--hc-serif);
+  font-weight: 600;
+  font-size: 26px;
+  line-height: 30px;
+  margin: 0;
+}
+
+.home__times { display: flex; flex-direction: column; gap: 8px; }
+
+.home__time {
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--hc-sans);
+  font-size: 13px;
+  line-height: 18px;
+  color: var(--hc-mid);
+  border-top: 1px solid var(--hc-rule);
+  padding-top: 8px;
+}
+
+.home__block { height: 96px; border-radius: 14px; background: var(--hc-cream); }
+
+.home__tabs {
+  position: absolute;
+  left: 16px; right: 16px; bottom: 26px;
+  height: 58px;
+  border-radius: 20px;
+  background: var(--hc-cream);
+  border: 1px solid var(--hc-rule);
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  padding: 0 6px;
+}
+
+.home__tab {
+  font-size: 10px;
+  letter-spacing: 0.02em;
+  color: var(--hc-mid);
+  padding: 6px 7px;
+  border-radius: 12px;
+}
+
+.home__tab--on {
+  color: var(--hc-ink);
+  background: var(--hc-paper);
+  box-shadow: 0 2px 6px rgba(26, 25, 24, 0.12);
+}
+
+/* ==========================================================================
+   The splash. Study A exactly: paper, the mark alone, the Home tab's own
+   display face for the welcome, Loading small and muted at the bottom.
+   ========================================================================== */
+
+.splash {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  background: var(--hc-paper);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.markwrap { position: relative; width: 92px; margin-bottom: 26px; }
+
+.mark {
+  width: 92px;
+  aspect-ratio: 246 / 226;
+  background: var(--mark) center / contain no-repeat;
+}
+
+/* The glimmer is the mark's own silhouette used as a mask, so the light only
+   ever touches the gold. No second asset, and nothing to keep in sync if the
+   logo is ever redrawn. */
+.gleam {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  -webkit-mask: var(--mark) center / contain no-repeat;
+          mask: var(--mark) center / contain no-repeat;
+  /* Warm white in the middle, a little deeper gold on either side of it. The
+     dark edges are what make the sheen read on paper at all: white on gold on
+     an off white ground is almost nothing on its own, and the shoulders give
+     the highlight something to be brighter than. */
+  background-image: linear-gradient(105deg,
+    rgba(138, 104, 44, 0) calc(50% - var(--gleam-wide)),
+    rgba(138, 104, 44, var(--gleam-e)) calc(50% - var(--gleam-band)),
+    rgba(255, 251, 242, var(--gleam-a)) 50%,
+    rgba(138, 104, 44, var(--gleam-e)) calc(50% + var(--gleam-band)),
+    rgba(138, 104, 44, 0) calc(50% + var(--gleam-wide)));
+  background-repeat: no-repeat;
+  background-size: 300% 100%;
+  background-position: 100% 0;
+  opacity: 0;
+}
+
+.greeting {
+  margin: 0;
+  padding: 0 32px;
+  text-align: center;
+  text-wrap: balance;
+  font-family: var(--hc-sans-display);
+  font-weight: 800;
+  font-size: 32px;
+  line-height: 36px;
+  letter-spacing: -0.005em;
+}
+
+.loading {
+  position: absolute;
+  left: 0; right: 0;
+  bottom: 54px;
+  margin: 0;
+  text-align: center;
+  color: var(--hc-mid);
+  font-family: var(--hc-sans);
+  font-size: 13px;
+  line-height: 18px;
+}
+
+/* --- the timing ------------------------------------------------------- */
+
+.stage {
+  /* Slower and softer than the first sheet. The house takes 900ms instead of
+     560, the travel drops from 10pt to 8 so the rise reads as settling rather
+     than sliding, and the welcome now follows a beat later instead of
+     stepping on it. */
+  --dur-mark: 900ms;
+  --del-mark: 140ms;
+  --dur-line: 900ms;
+  --del-line: 460ms;
+  --del-load: 1000ms;
+  --del-gleam: 1900ms;
+  --del-hand: 2750ms;
+  --ease: cubic-bezier(0.16, 0.84, 0.44, 1);
+}
+
+/* The first sheet's timing, kept behind the control so the difference can be
+   watched rather than described. */
+.speed-prev .stage {
+  --dur-mark: 560ms;
+  --del-mark: 60ms;
+  --dur-line: 560ms;
+  --del-line: 260ms;
+  --del-load: 620ms;
+  --del-gleam: 1500ms;
+  --del-hand: 2300ms;
+  --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+.splash .mark,
+.splash .greeting,
+.splash .loading { opacity: 0; }
+
+.playing .mark {
+  animation: rise var(--dur-mark) var(--ease) var(--del-mark) forwards;
+}
+
+.playing .greeting {
+  animation: rise var(--dur-line) var(--ease) var(--del-line) forwards;
+}
+
+.playing .loading {
+  animation: fade 700ms ease var(--del-load) forwards,
+             breathe 2800ms ease-in-out calc(var(--del-load) + 800ms) infinite;
+}
+
+.playing .gleam {
+  animation: sweep var(--dur-gleam) var(--gleam-ease) var(--del-gleam) forwards;
+}
+
+/* The handoff. The splash lifts off Home rather than Home arriving, which is
+   why only this layer moves. */
+.playing .splash {
+  animation: handoff 420ms ease-in var(--del-hand) forwards;
+}
+
+.playing .home {
+  animation: settle 520ms var(--ease) calc(var(--del-hand) + 60ms) backwards;
+}
+
+@keyframes rise {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fade { to { opacity: 1; } }
+
+@keyframes breathe {
+  0%, 100% { opacity: 0.45; }
+  50%      { opacity: 0.9; }
+}
+
+@keyframes sweep {
+  0%   { opacity: 0; background-position: 100% 0; }
+  12%  { opacity: 1; }
+  88%  { opacity: 1; }
+  100% { opacity: 0; background-position: 0% 0; }
+}
+
+@keyframes handoff {
+  to { opacity: 0; visibility: hidden; }
+}
+
+@keyframes settle {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* --- how strong the light is ------------------------------------------ */
+
+/* None. The fade on its own, so there is something to judge the other two
+   against. */
+.s-none .gleam { display: none; }
+
+/* Soft. A wide, low highlight that reads as the room's light moving over the
+   gold rather than as an effect. */
+.s-soft .stage {
+  --gleam-a: 0.72;
+  --gleam-e: 0.16;
+  --gleam-band: 13%;
+  --gleam-wide: 30%;
+  --dur-gleam: 1100ms;
+  --gleam-ease: cubic-bezier(0.4, 0, 0.3, 1);
+}
+
+/* Bright. A narrower, faster glint with a small bloom under it, closer to a
+   catch of light on metal. */
+.s-glint .stage {
+  --gleam-a: 0.96;
+  --gleam-e: 0.30;
+  --gleam-band: 7%;
+  --gleam-wide: 22%;
+  --dur-gleam: 780ms;
+  --gleam-ease: cubic-bezier(0.5, 0, 0.4, 1);
+}
+
+.s-glint .playing .mark {
+  animation: rise var(--dur-mark) var(--ease) var(--del-mark) forwards,
+             bloom var(--dur-gleam) ease-in-out var(--del-gleam);
+}
+
+@keyframes bloom {
+  0%, 100% { filter: none; }
+  50%      { filter: drop-shadow(0 0 10px rgba(215, 186, 133, 0.55)); }
+}
+
+/* Reduce Motion takes the travel and the light out and leaves the cross fade,
+   which is a change of what is on screen rather than movement across it. */
+@media (prefers-reduced-motion: reduce) {
+  .playing .mark,
+  .playing .greeting {
+    animation: fade 400ms ease var(--del-mark) forwards;
+  }
+  .playing .loading { animation: fade 400ms ease var(--del-load) forwards; }
+  .playing .gleam { animation: none; opacity: 0; }
+  .playing .home { animation: none; }
+}
+
+/* --- notes ------------------------------------------------------------ */
+
+.notes {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 28px;
+  border-top: 1px solid var(--pg-rule);
+  padding-top: 32px;
+}
+
+.note h3 {
+  font-family: "Poppins", -apple-system, BlinkMacSystemFont, sans-serif;
+  font-weight: 800;
+  font-size: 13px;
+  line-height: 18px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin: 0 0 10px;
+}
+
+.note p, .note li { font-size: 15px; line-height: 24px; color: var(--pg-mid); margin: 0 0 10px; }
+.note ul { margin: 0; padding-left: 18px; }
+.note b { color: var(--pg-ink); font-weight: 600; }
+
+.beats {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+
+.beats th {
+  text-align: left;
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--pg-mid);
+  font-weight: 400;
+  padding: 0 0 8px;
+}
+
+.beats td {
+  border-top: 1px solid var(--pg-rule);
+  padding: 8px 12px 8px 0;
+  color: var(--pg-mid);
+}
+
+.beats td:first-child { color: var(--pg-ink); white-space: nowrap; }
+</style>
+
+<div class="sheet">
+
+  <header class="masthead">
+    <p class="eyebrow">Home Church, study A carried forward</p>
+    <h1>The light crossing the house</h1>
+    <p>
+      Front door, the same as before, with the fade slowed and softened. Then
+      the same screen twice more with a glimmer that crosses the gold left to
+      right just as the splash lifts off and Home comes up underneath. Each
+      phone plays the whole thing through, splash to Home, so the sweep is
+      judged where it actually happens. Home is sketched in, only enough of it
+      to land on. Still nothing wired into the app.
+    </p>
+  </header>
+
+  <div class="controls">
+    <div class="control">
+      <span>Fade</span>
+      <div class="seg" id="speed">
+        <button type="button" data-speed="slow" aria-pressed="true">Slower</button>
+        <button type="button" data-speed="prev" aria-pressed="false">As drawn before</button>
+      </div>
+    </div>
+
+    <div class="control">
+      <span>App appearance</span>
+      <div class="seg" id="theme">
+        <button type="button" data-theme="light" aria-pressed="true">Light</button>
+        <button type="button" data-theme="dark" aria-pressed="false">Dark</button>
+      </div>
+    </div>
+
+    <div class="control">
+      <span>Repeat</span>
+      <div class="seg" id="loop">
+        <button type="button" data-loop="off" aria-pressed="true">Once</button>
+        <button type="button" data-loop="on" aria-pressed="false">Keep going</button>
+      </div>
+    </div>
+
+    <button type="button" class="replay" id="replay">Play them again</button>
+  </div>
+
+  <div class="studies" id="studies">
+
+    <section class="study s-none">
+      <div class="frame">
+        <div class="screen">
+          <div class="stage" data-app-theme="light">
+            <div class="home">
+              <div class="home__bar"><div class="home__lockup"></div></div>
+              <h1 class="home__greeting">Good morning, Trey.</h1>
+              <p class="home__label">This Sunday</p>
+              <div class="home__card">
+                <h3>Gathering at Home</h3>
+                <div class="home__times">
+                  <div class="home__time"><span>216 Giuffrias Ave</span><span>8:00</span></div>
+                  <div class="home__time"><span>Metairie</span><span>9:30</span></div>
+                  <div class="home__time"><span>Kids at every hour</span><span>11:00</span></div>
+                </div>
+              </div>
+              <div class="home__block"></div>
+              <div class="home__tabs">
+                <span class="home__tab home__tab--on">Home</span>
+                <span class="home__tab">Listen</span>
+                <span class="home__tab">Guide</span>
+                <span class="home__tab">Group</span>
+                <span class="home__tab">Connect</span>
+                <span class="home__tab">•••</span>
+              </div>
+            </div>
+            <div class="splash">
+              <div class="markwrap">
+                <div class="mark" role="img" aria-label="Home Church"></div>
+                <div class="gleam"></div>
+              </div>
+              <h1 class="greeting">Welcome home, Trey.</h1>
+              <p class="loading">Loading...</p>
+            </div>
+            <div class="pill"></div>
+            <div class="indicator"></div>
+          </div>
+        </div>
+      </div>
+      <div class="caption">
+        <span class="tag">No glimmer</span>
+        <h2>Just the slower fade</h2>
+        <p>
+          Study A with the timing eased out: the house takes 900ms instead of
+          560, rises 8pt instead of 10, and the welcome waits a beat rather than
+          stepping on it. Here to judge the other two against. If the sweep ever
+          starts to feel like a trick, this is what it goes back to.
+        </p>
+      </div>
+    </section>
+
+    <section class="study s-soft">
+      <div class="frame">
+        <div class="screen">
+          <div class="stage" data-app-theme="light">
+            <div class="home">
+              <div class="home__bar"><div class="home__lockup"></div></div>
+              <h1 class="home__greeting">Good morning, Trey.</h1>
+              <p class="home__label">This Sunday</p>
+              <div class="home__card">
+                <h3>Gathering at Home</h3>
+                <div class="home__times">
+                  <div class="home__time"><span>216 Giuffrias Ave</span><span>8:00</span></div>
+                  <div class="home__time"><span>Metairie</span><span>9:30</span></div>
+                  <div class="home__time"><span>Kids at every hour</span><span>11:00</span></div>
+                </div>
+              </div>
+              <div class="home__block"></div>
+              <div class="home__tabs">
+                <span class="home__tab home__tab--on">Home</span>
+                <span class="home__tab">Listen</span>
+                <span class="home__tab">Guide</span>
+                <span class="home__tab">Group</span>
+                <span class="home__tab">Connect</span>
+                <span class="home__tab">•••</span>
+              </div>
+            </div>
+            <div class="splash">
+              <div class="markwrap">
+                <div class="mark" role="img" aria-label="Home Church"></div>
+                <div class="gleam"></div>
+              </div>
+              <h1 class="greeting">Welcome home, Trey.</h1>
+              <p class="loading">Loading...</p>
+            </div>
+            <div class="pill"></div>
+            <div class="indicator"></div>
+          </div>
+        </div>
+      </div>
+      <div class="caption">
+        <span class="tag">Soft pass</span>
+        <h2>The room's light moving</h2>
+        <p>
+          A wide, low highlight over 1.1 seconds, tilted a few degrees off
+          vertical so it falls the way light would. It brightens the gold rather
+          than flashing across it, and it is gone before you have finished
+          reading the welcome. The quieter of the two, and the one that still
+          looks right on the tenth launch.
+        </p>
+      </div>
+    </section>
+
+    <section class="study s-glint">
+      <div class="frame">
+        <div class="screen">
+          <div class="stage" data-app-theme="light">
+            <div class="home">
+              <div class="home__bar"><div class="home__lockup"></div></div>
+              <h1 class="home__greeting">Good morning, Trey.</h1>
+              <p class="home__label">This Sunday</p>
+              <div class="home__card">
+                <h3>Gathering at Home</h3>
+                <div class="home__times">
+                  <div class="home__time"><span>216 Giuffrias Ave</span><span>8:00</span></div>
+                  <div class="home__time"><span>Metairie</span><span>9:30</span></div>
+                  <div class="home__time"><span>Kids at every hour</span><span>11:00</span></div>
+                </div>
+              </div>
+              <div class="home__block"></div>
+              <div class="home__tabs">
+                <span class="home__tab home__tab--on">Home</span>
+                <span class="home__tab">Listen</span>
+                <span class="home__tab">Guide</span>
+                <span class="home__tab">Group</span>
+                <span class="home__tab">Connect</span>
+                <span class="home__tab">•••</span>
+              </div>
+            </div>
+            <div class="splash">
+              <div class="markwrap">
+                <div class="mark" role="img" aria-label="Home Church"></div>
+                <div class="gleam"></div>
+              </div>
+              <h1 class="greeting">Welcome home, Trey.</h1>
+              <p class="loading">Loading...</p>
+            </div>
+            <div class="pill"></div>
+            <div class="indicator"></div>
+          </div>
+        </div>
+      </div>
+      <div class="caption">
+        <span class="tag">Bright pass</span>
+        <h2>A catch of light on metal</h2>
+        <p>
+          The same sweep narrowed, brightened, and cut to 780ms, with a small
+          gold bloom under the house at the peak. It announces itself, which is
+          either the point or the problem. Worth watching in dark, where it has
+          the most room to shine, and then in light, where it has the least.
+        </p>
+      </div>
+    </section>
+
+  </div>
+
+  <div class="notes">
+    <div class="note">
+      <h3>The beats, as they run now</h3>
+      <table class="beats">
+        <thead>
+          <tr><th>Time</th><th>What happens</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>0.14s</td><td>House fades up over 900ms, rising 8pt</td></tr>
+          <tr><td>0.46s</td><td>Welcome follows, same 900ms</td></tr>
+          <tr><td>1.00s</td><td>Loading arrives, then breathes on a slow cycle</td></tr>
+          <tr><td>1.90s</td><td>The light crosses the house, left to right</td></tr>
+          <tr><td>2.75s</td><td>Splash lifts off over 420ms, Home settles in</td></tr>
+        </tbody>
+      </table>
+      <p>
+        The sweep sits where it does on purpose: late enough that the house has
+        finished arriving, early enough that it is still going as the splash
+        starts to leave. It is the last thing that happens before Home.
+      </p>
+    </div>
+    <div class="note">
+      <h3>How the light is made</h3>
+      <p>
+        The gold house is used as its own mask, so a soft band of warm white
+        slides across and is clipped to the mark's silhouette. The light only
+        ever touches the gold, never the paper around it.
+      </p>
+      <p>
+        No new asset, nothing to redraw, and nothing to keep in sync if the logo
+        ever changes. It is one element, one gradient, and one keyframe.
+      </p>
+    </div>
+    <div class="note">
+      <h3>What is still open</h3>
+      <ul>
+        <li>Soft or bright, or none at all.</li>
+        <li>Whether the sweep runs on every launch or only the first of the day. Once a day keeps it feeling like a greeting instead of a screensaver.</li>
+        <li>The real timings still need a floor of about <b>900ms</b> and a ceiling of about four seconds, the same as before. The sweep would have to fit inside the floor, or be skipped on a launch that is already over.</li>
+      </ul>
+    </div>
+  </div>
+
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  var studies = document.getElementById('studies');
+  var stages = Array.prototype.slice.call(document.querySelectorAll('.stage'));
+  var timer = null;
+
+  /* The cycle is the last beat plus a beat of Home, so a repeat reads as a
+     fresh launch rather than a stutter. */
+  var CYCLE = 6200;
+
+  function play() {
+    stages.forEach(function (s) {
+      s.classList.remove('playing');
+      /* Reading offsetWidth restarts the animations without a timer. */
+      void s.offsetWidth;
+      s.classList.add('playing');
+    });
+  }
+
+  function press(group, value, attr) {
+    Array.prototype.forEach.call(group.querySelectorAll('button'), function (b) {
+      b.setAttribute('aria-pressed', String(b.dataset[attr] === value));
+    });
+  }
+
+  document.getElementById('speed').addEventListener('click', function (e) {
+    var b = e.target.closest('button');
+    if (!b) return;
+    press(this, b.dataset.speed, 'speed');
+    studies.classList.toggle('speed-prev', b.dataset.speed === 'prev');
+    play();
+  });
+
+  document.getElementById('theme').addEventListener('click', function (e) {
+    var b = e.target.closest('button');
+    if (!b) return;
+    press(this, b.dataset.theme, 'theme');
+    stages.forEach(function (s) { s.dataset.appTheme = b.dataset.theme; });
+    play();
+  });
+
+  document.getElementById('loop').addEventListener('click', function (e) {
+    var b = e.target.closest('button');
+    if (!b) return;
+    press(this, b.dataset.loop, 'loop');
+    clearInterval(timer);
+    timer = null;
+    if (b.dataset.loop === 'on') {
+      play();
+      timer = setInterval(play, CYCLE);
+    }
+  });
+
+  document.getElementById('replay').addEventListener('click', play);
+
+  play();
+}());
+</script>

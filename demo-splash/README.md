@@ -27,18 +27,36 @@ are the real tokens from `css/tokens.css`, both themes.
 The controls at the top switch between signed in and signed out, let you type a
 different first name, flip the app's appearance, and replay the entrance.
 
+## The second sheet, `glimmer.src.html`
+
+**Front door was picked.** The second page carries it forward with the fade
+eased out, 900ms and 8pt of travel instead of 560ms and 10, and the welcome
+following a beat behind rather than stepping on it. The first sheet's timing is
+still there behind a control, so the two can be watched against each other.
+
+It also puts a glimmer across the gold, left to right, timed to land just as
+the splash lifts off and Home comes up underneath. Three phones: no glimmer, a
+soft wide pass over 1.1 seconds, and a brighter 780ms glint with a small bloom.
+Each one plays the whole launch through to a sketch of the Home tab, because a
+sweep timed to the handoff cannot be judged without the handoff.
+
+The light is the mark's own silhouette used as a mask, so a band of warm white
+with slightly deeper gold shoulders slides across and is clipped to the house.
+No second asset, and nothing to keep in sync if the logo is ever redrawn.
+
 ## Building it
 
-`mockup.src.html` carries a placeholder for the gold mark. `build.js` inlines it
-and writes two files, neither committed:
+Each `*.src.html` carries placeholders for the brand PNGs. `build.js` inlines
+them and writes two files per source, none of them committed:
 
     cd demo-splash && node build.js
 
-- `mockup.html` — a whole document, for opening off disk.
-- `artifact.html` — the same thing as a fragment, for publishing.
+- `NAME.html` — a whole document, for opening off disk.
+- `NAME.artifact.html` — the same thing as a fragment, for publishing.
 
 ## Not decided yet
 
-Which of the four, and the two timings in the notes on the page: the floor that
-keeps a fast launch from turning the splash into a flicker, and the ceiling that
-gets a phone with no signal to Home anyway.
+Soft, bright, or no glimmer at all, and whether it runs on every launch or only
+the first of the day. Then the two timings in the notes on both pages: the floor
+that keeps a fast launch from turning the splash into a flicker, and the ceiling
+that gets a phone with no signal to Home anyway.
