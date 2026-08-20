@@ -224,8 +224,6 @@
       '</div>';
     }
 
-    var body = entry ? entry.bodyText : (draft ? draft.bodyText : '');
-
     var html = '<div class="hc-screen hc-entry" data-entry="' + c.esc(entry ? entry.id : 'new') + '">';
 
     // What you highlighted, above what you wrote about it. Not editable: it
@@ -242,12 +240,12 @@
         { flush: true, tag: 'h1' });
     }
 
-    html += '<div class="hc-field">' +
-      '<label class="hc-visually-hidden" for="hc-entry-body">What you want to say</label>' +
-      '<textarea class="hc-textarea hc-entry__body" id="hc-entry-body" rows="10" data-journal-body ' +
-        'placeholder="Whatever it was. Nobody is reading this but you.">' + c.esc(body) + '</textarea>' +
-      '<p class="hc-journal__status" data-journal-status aria-live="polite"></p>' +
-    '</div>';
+    html += HC.editor.field({
+      id: 'hc-entry-body',
+      html: entry ? entry.bodyHtml : (draft ? draft.bodyHtml : ''),
+      label: 'What you want to say',
+      placeholder: 'Whatever it was. Nobody is reading this but you.'
+    });
 
     /* A reflection answer already knows which guide and which question it
        belongs to, and moving it to another guide would orphan it from the
@@ -297,8 +295,8 @@
 
     // The unsaved new entry. See the note at the top of this file.
     getDraft: function () { return draft; },
-    startDraft: function () { draft = { bodyText: '', guideId: null }; },
-    setDraft: function (patch) { draft = Object.assign(draft || { bodyText: '', guideId: null }, patch); },
+    startDraft: function () { draft = { bodyHtml: '', guideId: null }; },
+    setDraft: function (patch) { draft = Object.assign(draft || { bodyHtml: '', guideId: null }, patch); },
     clearDraft: function () { draft = null; }
   };
 

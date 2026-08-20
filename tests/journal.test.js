@@ -164,6 +164,15 @@ console.log('\n— the allowlist —');
   ok('a lookalike host does not pass',
      s('<a href="https://www.biblegateway.com.evil.test/x">John 3:16</a>'), 'John 3:16');
 
+  // What a browser actually hands back after return-then-bullet.
+  ok('a list inside a div is not wrapped in a paragraph',
+     s('first line<div><ul><li>one</li><li>two</li></ul></div>'),
+     'first line<ul><li>one</li><li>two</li></ul>');
+  ok('but a div of plain text still becomes one',
+     s('<div>a line</div>'), '<p>a line</p>');
+  ok('and a paragraph of plain text is left alone',
+     s('<p>a line</p>'), '<p>a line</p>');
+
   ok('an unknown tag is unwrapped, the words stay',
      s('<marquee>still here</marquee>'), 'still here');
   ok('angle brackets in text are escaped, not executed',

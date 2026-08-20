@@ -146,6 +146,9 @@
   var VOID = { br: true };
   var BIBLE = 'https://www.biblegateway.com/';
 
+  // Blocks that must never end up inside a <p>. See the note in cleanNodes().
+  var BLOCK_INSIDE = /<(ul|ol|p)[\s>]/i;
+
   function esc(value) {
     return String(value == null ? '' : value)
       .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
@@ -180,6 +183,20 @@
           : inner;
         return;
       }
+
+      /* A paragraph cannot contain a list. This is not pedantry: press
+         return and then the bullet button and a browser hands back
+         `first line<div><ul>…</ul></div>`, div maps to p above, and what
+         would be stored is `<p><ul>…</ul></p>`. Every parser that then reads
+         it back closes the p before the ul and leaves a stray empty one
+         after, so the markup changes shape every time it is saved and
+         reloaded. Unwrap instead: the block inside already carries the
+         break. */
+      if (tag === 'p' && BLOCK_INSIDE.test(inner)) {
+        out += inner;
+        return;
+      }
+
       out += '<' + tag + '>' + inner + '</' + tag + '>';
     });
     return out;

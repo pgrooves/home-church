@@ -357,6 +357,29 @@
       HC.router.go({ name: 'journal-entry', id: el.getAttribute('data-id') });
     },
 
+    /* The editor. Formatting acts on the selection, which is why every one
+       of these buttons carries data-keep-focus: see the mousedown guard in
+       wireEvents(). */
+
+    'editor-format': function (el) {
+      HC.editor.format(el.getAttribute('data-cmd'));
+      var box = document.querySelector('.hc-rt');
+      if (box) box.dispatchEvent(new Event('input', { bubbles: true }));
+    },
+
+    'scripture-open': function () {
+      HC.editor.openScripture();
+    },
+
+    'scripture-close': function () {
+      HC.editor.closeScripture();
+    },
+
+    'scripture-insert': function () {
+      HC.editor.insertScripture();
+      HC.native.tap('Light');
+    },
+
     'journal-filter': function (el) {
       HC.screens.journalHelpers.setFilter(el.getAttribute('data-value'));
       HC.screens.journalHelpers.repaint();
@@ -1116,7 +1139,7 @@
      yet, so this makes it and then replaces the route so the screen that is
      already on screen is now looking at something real. `replace` rather than
      push, because 'new' is not a place anybody should be able to go back to. */
-  function saveEntryBody(text) {
+  function saveEntryBody(html) {
     var j = HC.screens.journalHelpers;
     var wrap = document.querySelector('[data-entry]');
     if (!wrap) return;
@@ -1124,23 +1147,29 @@
     var id = wrap.getAttribute('data-entry');
     var status = document.querySelector('[data-journal-status]');
 
+    // Whether there is anything in there is a question about words, not about
+    // markup: an empty contenteditable is rarely an empty string. It is
+    // <br>, or <p><br></p>, depending on the browser and on what was just
+    // deleted.
+    var words = HC.journal.plainText(html).trim();
+
     function said() {
       if (!status) return;
-      status.textContent = text.trim() ? savedWhere() : '';
-      status.setAttribute('data-visible', text.trim() ? 'true' : 'false');
+      status.textContent = words ? savedWhere() : '';
+      status.setAttribute('data-visible', words ? 'true' : 'false');
     }
 
     if (id !== 'new') {
-      HC.journal.update(id, { bodyText: text });
+      HC.journal.update(id, { bodyHtml: html });
       said();
       return;
     }
 
     // Nothing but whitespace is not an entry yet. Keep waiting.
-    if (!text.trim()) return;
+    if (!words) return;
 
     var draft = j.getDraft() || {};
-    var entry = HC.journal.create({ bodyText: text, guideId: draft.guideId || null });
+    var entry = HC.journal.create({ bodyHtml: html, guideId: draft.guideId || null });
     j.clearDraft();
     wrap.setAttribute('data-entry', entry.id);
     HC.router.replaceCurrent({ name: 'journal-entry', id: entry.id });
@@ -1268,7 +1297,9 @@
          once there are, so the back gesture and a reload both land on the
          real entry rather than on a blank draft. */
       if (el.getAttribute && el.getAttribute('data-journal-body') !== null) {
-        debounce('journal-body', function () { saveEntryBody(el.value); });
+        // A contenteditable, not a textarea: what was typed is markup, and it
+        // is sanitized on the way into the store rather than here.
+        debounce('journal-body', function () { saveEntryBody(el.innerHTML); });
         return;
       }
 
@@ -1314,6 +1345,21 @@
           HC.store.updateMember(memberId, { note: el.value });
         });
       }
+    });
+
+    /* A toolbar button must not steal the caret. mousedown is where focus
+       moves, so refusing it there is what keeps the selection alive long
+       enough for execCommand to act on it. The click still lands. */
+    document.addEventListener('mousedown', function (evt) {
+      var el = evt.target.closest && evt.target.closest('[data-keep-focus]');
+      if (el) evt.preventDefault();
+    });
+
+    // The scripture sheet's dropdowns. A <select> reports 'change', and on
+    // iOS the wheel reports it once, when the picker is dismissed.
+    document.addEventListener('change', function (evt) {
+      var what = evt.target.getAttribute && evt.target.getAttribute('data-scripture');
+      if (what) HC.editor.setPick(what, evt.target.value);
     });
 
     // Forms are inert in v1. Stop the browser from navigating away.

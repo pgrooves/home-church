@@ -1529,3 +1529,184 @@ a.hc-card:active { background: var(--hc-paper-sunk); }
   .hc-social__icon { transition: none; }
   .hc-social:active .hc-social__icon { transform: none; }
 }
+
+/* --------------------------------------------------------------------------
+   The editor
+   A contenteditable with five buttons over it. See js/editor.js.
+   -------------------------------------------------------------------------- */
+
+.hc-editor { margin-top: var(--hc-space-base); }
+
+.hc-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--hc-space-xs);
+  padding: var(--hc-space-xs);
+  border: var(--hc-hairline) solid var(--hc-rule);
+  border-bottom: 0;
+  border-radius: var(--hc-radius-sm) var(--hc-radius-sm) 0 0;
+  background: var(--hc-paper-sunk);
+}
+
+.hc-tool {
+  min-width: var(--hc-tap-min);
+  min-height: var(--hc-tap-min);
+  padding: 0 var(--hc-space-sm);
+  border-radius: var(--hc-radius-sm);
+  background: transparent;
+  color: var(--hc-mid);
+  font-family: var(--hc-sans);
+  font-size: calc(15px * var(--hc-text-scale));
+  line-height: 1;
+}
+
+/* The three letters are the thing they do. Nobody needs a legend for a bold
+   B, and an icon set for this would be five more glyphs to draw and keep. */
+.hc-tool--b { font-weight: 700; }
+.hc-tool--i { font-style: italic; font-family: var(--hc-serif); }
+.hc-tool--u { text-decoration: underline; }
+
+.hc-tool:active { background: var(--hc-cream); color: var(--hc-ink); }
+
+/* No margin-left:auto pushing this to the right. At 375 across it does not
+   fit on the same line as the five format buttons, and at a larger text scale
+   it fits even less, so it wraps to a second line either way. Flowing left
+   under the B reads as a deliberate second row; pinned right it reads as a
+   button that fell off the end. */
+.hc-tool--wide {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--hc-space-xs);
+  padding: 0 var(--hc-space-md);
+  font-size: var(--hc-caption);
+  font-weight: 500;
+  color: var(--hc-accent-deep);
+}
+
+.hc-tool__icon { width: 14px; height: 14px; }
+
+.hc-rt {
+  min-height: 34vh;
+  padding: var(--hc-space-base);
+  border: var(--hc-hairline) solid var(--hc-rule);
+  border-radius: 0 0 var(--hc-radius-sm) var(--hc-radius-sm);
+  background: var(--hc-paper-sunk);
+  color: var(--hc-ink);
+  font-family: var(--hc-sans);
+  font-size: calc(var(--hc-body-sans) * var(--hc-text-scale));
+  line-height: 1.6;
+  /* Long words and pasted URLs must not push the screen sideways. */
+  overflow-wrap: break-word;
+}
+
+.hc-rt:focus { outline: none; border-color: var(--hc-accent-deep); }
+
+/* A contenteditable has no placeholder attribute. :empty is not enough on its
+   own, because a browser that has ever had a caret in the box leaves a <br>
+   behind, so this also matches a box whose only child is that break. */
+.hc-rt:empty::before,
+.hc-rt:has(> br:only-child)::before {
+  content: attr(data-placeholder);
+  color: var(--hc-mid);
+  pointer-events: none;
+}
+
+.hc-rt p { margin: 0 0 var(--hc-space-md); }
+.hc-rt p:last-child { margin-bottom: 0; }
+.hc-rt ul, .hc-rt ol { margin: 0 0 var(--hc-space-md); padding-left: 1.4em; }
+.hc-rt ul { list-style: disc; }
+.hc-rt ol { list-style: decimal; }
+.hc-rt li { margin-bottom: var(--hc-space-xs); }
+
+/* A scripture reference inside somebody's writing. Not blue, not underlined:
+   it is set in the serif the guides use for scripture, in the accent, so it
+   reads as a citation rather than as a web link dropped into a paragraph. */
+.hc-rt a,
+.hc-jbody a {
+  font-family: var(--hc-serif);
+  color: var(--hc-accent-deep);
+  text-decoration: none;
+  border-bottom: var(--hc-hairline) solid var(--hc-accent);
+}
+
+/* --------------------------------------------------------------------------
+   The sheet
+   One overlay, from the bottom, used by the scripture picker. The app's only
+   modal, and it stays that way unless something else genuinely cannot be a
+   pushed view.
+   -------------------------------------------------------------------------- */
+
+.hc-sheet {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: flex-end;
+}
+
+.hc-sheet__scrim {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  background: rgba(26, 25, 24, 0.4);
+  border: 0;
+  animation: hc-fade-in var(--hc-dur-fast) var(--hc-ease);
+}
+
+.hc-sheet__panel {
+  position: relative;
+  width: 100%;
+  max-height: 86vh;
+  overflow-y: auto;
+  padding: var(--hc-space-lg) var(--hc-space-base)
+           calc(var(--hc-space-lg) + env(safe-area-inset-bottom));
+  border-radius: var(--hc-radius-lg) var(--hc-radius-lg) 0 0;
+  background: var(--hc-paper);
+  border-top: var(--hc-hairline) solid var(--hc-rule);
+  box-shadow: 0 -8px 32px rgba(26, 25, 24, 0.18);
+  animation: hc-sheet-up var(--hc-dur-base) var(--hc-ease);
+}
+
+@keyframes hc-fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes hc-sheet-up { from { transform: translateY(12%); } to { transform: none; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .hc-sheet__panel, .hc-sheet__scrim { animation: none; }
+}
+
+.hc-sheet__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--hc-space-base);
+}
+
+.hc-sheet__close {
+  width: var(--hc-tap-min);
+  height: var(--hc-tap-min);
+  margin: calc(var(--hc-space-sm) * -1) calc(var(--hc-space-sm) * -1) 0 0;
+  color: var(--hc-mid);
+}
+
+.hc-sheet__close svg { width: 18px; height: 18px; margin: 0 auto; }
+
+/* Verse and Through side by side. They are two halves of one answer. */
+.hc-sheet__verses {
+  display: flex;
+  gap: var(--hc-space-md);
+  margin-top: var(--hc-space-md);
+}
+
+.hc-sheet__verses .hc-field { flex: 1 1 0; min-width: 0; }
+
+.hc-sheet__foot { margin-top: var(--hc-space-lg); }
+
+.hc-sheet__preview {
+  margin-bottom: var(--hc-space-md);
+  font-family: var(--hc-serif);
+  font-size: calc(21px * var(--hc-text-scale));
+  color: var(--hc-ink);
+}
+
+.hc-sheet__note { margin-top: var(--hc-space-md); }
