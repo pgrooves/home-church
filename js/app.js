@@ -65,7 +65,7 @@
     return MODULE_ROUTES.indexOf(name) !== -1;
   }
 
-  var mount, scroller, topbar, tabbar, totop;
+  var mount, scroller, topbar, tabbar, totop, backdisc;
 
   /* ------------------------------------------------------------- the shell */
 
@@ -99,10 +99,18 @@
       '</main>' +
 
       // Shell chrome rather than something each screen adds, so no screen has
-      // to remember it and none of them can disagree about where it sits.
-      '<button type="button" class="hc-totop" id="hc-totop" data-action="to-top" ' +
+      // to remember it and none of them can disagree about where they sit.
+      // The way back on the left, the way up on the right.
+      '<button type="button" class="hc-disc hc-disc--back" id="hc-back" data-action="back" ' +
+          'data-show="false" aria-label="Back" aria-hidden="true" tabindex="-1">' +
+        '<svg class="hc-disc__icon" viewBox="0 0 24 24" aria-hidden="true">' +
+          '<path d="M19 12H5"/><path d="m11.5 5.5-6.5 6.5 6.5 6.5"/>' +
+        '</svg>' +
+      '</button>' +
+
+      '<button type="button" class="hc-disc hc-disc--top" id="hc-totop" data-action="to-top" ' +
           'data-show="false" aria-label="Back to top" aria-hidden="true" tabindex="-1">' +
-        '<svg class="hc-totop__icon" viewBox="0 0 24 24" aria-hidden="true">' +
+        '<svg class="hc-disc__icon" viewBox="0 0 24 24" aria-hidden="true">' +
           '<path d="M12 19V5"/><path d="m5.5 11.5 6.5-6.5 6.5 6.5"/>' +
         '</svg>' +
       '</button>' +
@@ -125,6 +133,7 @@
     topbar = document.getElementById('hc-topbar');
     tabbar = document.getElementById('hc-tabbar');
     totop = document.getElementById('hc-totop');
+    backdisc = document.getElementById('hc-back');
 
     // The sliding tile behind the active tab is a pseudo element sized by
     // this count, so the CSS never has to know how many tabs there are.
@@ -223,9 +232,9 @@
     tabbar.style.setProperty('--hc-tab-tile', (isTab || module) ? '1' : '0');
 
     // The new view starts at the top, or is about to be scrolled to wherever
-    // it was left. Either way the disc's state belongs to this view and not
-    // the last one, and the scroll handler picks it up from here.
-    paintTotop();
+    // it was left. Either way the discs belong to this view and not the last
+    // one, and the scroll handler picks them up from here.
+    paintDiscs();
 
     paintAvatar();
   };
@@ -246,17 +255,32 @@
      240 is still far enough that a nudge of the thumb does not summon it. */
   var TOTOP_AT = 240;
 
-  function paintTotop() {
-    if (!totop) return;
+  /* Up and down for both discs in one place, so they can never disagree about
+     which of them is on screen or how a hidden one behaves. Out of the reading
+     order and out of the tab order while a disc is down: a button nobody can
+     see should not be a button anybody can reach. */
+  function setDisc(el, up) {
+    if (!el) return;
+    el.setAttribute('data-show', up ? 'true' : 'false');
+    el.setAttribute('aria-hidden', up ? 'false' : 'true');
+    el.tabIndex = up ? 0 : -1;
+  }
+
+  function paintDiscs() {
     var route = HC.router.current();
+
     // Presentation mode takes the whole screen and the rest of the chrome is
-    // already gone, so this goes with it rather than floating over a guide.
-    var up = !!route && route.name !== 'present' && scroller.scrollTop > TOTOP_AT;
-    totop.setAttribute('data-show', up ? 'true' : 'false');
-    // Out of the reading order and out of the tab order while it is down. A
-    // button nobody can see should not be a button anybody can reach.
-    totop.setAttribute('aria-hidden', up ? 'false' : 'true');
-    totop.tabIndex = up ? 0 : -1;
+    // already gone, so these go with it rather than floating over a guide.
+    var chromeless = !route || route.name === 'present';
+
+    setDisc(totop, !chromeless && scroller.scrollTop > TOTOP_AT);
+
+    /* The way back is not a scroll state. A pushed view is somewhere you were
+       sent, and the way out of it has to be there the moment you arrive and
+       stay there the whole time, at the top of a sermon guide as much as
+       eleven questions down a group room. A tab is not pushed and has nowhere
+       to go back to, so it does not get one. */
+    setDisc(backdisc, !chromeless && !HC.router.isTab(route.name));
   }
 
   function watchScroll() {
@@ -267,9 +291,9 @@
       window.requestAnimationFrame(function () {
         ticking = false;
         // The rail rides the same frame as the header rather than adding a
-        // second listener to the same scroller. So does the disc.
+        // second listener to the same scroller. So do the discs.
         HC.dateRail.update();
-        paintTotop();
+        paintDiscs();
         var route = HC.router.current();
         if (!route || !HC.router.isTab(route.name)) return;
         topbar.setAttribute('data-scrolled', scroller.scrollTop > 24 ? 'true' : 'false');
@@ -312,7 +336,9 @@
       HC.router.go({ name: el.getAttribute('data-tab') });
     },
 
+    // Both ways back, the arrow in the header and the disc by the thumb.
     back: function () {
+      HC.native.tap('Light');
       HC.router.back();
     },
 

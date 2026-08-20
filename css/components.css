@@ -1155,26 +1155,31 @@ a.hc-card:active { background: var(--hc-paper-sunk); }
 
 
 /* --------------------------------------------------------------------------
-   Back to top. A gold glass disc that turns up once the screen has been
-   scrolled past a screenful and takes you home in one tap.
+   The discs. Two of them, one material, one set of rules.
 
-   It is the same material as the plinth below it, drawn the same way: a thin
-   skin over a blur, a hairline edge, one diagonal sheen. Concentric with the
-   bar too, sharing its 12px inset on the right so the two line up on the same
-   edge rather than nearly lining up.
+   --top   sits on the right and turns up once the screen has been scrolled
+           past a screenful. One tap and you are back at the start of it.
+   --back  sits on the left, and is there for the whole time you are on a
+           screen that is not a tab. The tab bar cannot take you back out of a
+           pushed view and the header's arrow is a stretch away from a thumb,
+           so this is the way back that is always under the hand.
+
+   They are the same material as the plinth below them, drawn the same way: a
+   thin skin over a blur, a hairline edge, one diagonal sheen. Concentric with
+   the bar too, sharing its 12px inset on both edges so the three line up on
+   the same edges rather than nearly lining up.
 
    ON THE HEIGHT. --hc-tabbar-space is the bar's whole footprint plus one
-   inset, so this lands exactly one inset above the plinth and the gap above
+   inset, so these land exactly one inset above the plinth and the gap above
    the bar matches the gap beside it.
 
-   ON THE SIZE. 44px is --hc-tap-min, not a number picked for looks. The disc
-   cannot get smaller without the target getting smaller with it; if it ever
+   ON THE SIZE. 44px is --hc-tap-min, not a number picked for looks. A disc
+   cannot get smaller without the target getting smaller with it; if one ever
    needs to look smaller, keep this box and shrink what is painted inside it.
    -------------------------------------------------------------------------- */
 
-.hc-totop {
+.hc-disc {
   position: fixed;
-  right: var(--hc-tabbar-inset);
   bottom: calc(var(--hc-tabbar-space) + env(safe-area-inset-bottom));
   z-index: 45;                    /* over the content, under the toast */
   width: var(--hc-tap-min);
@@ -1189,7 +1194,7 @@ a.hc-card:active { background: var(--hc-paper-sunk); }
   place-items: center;
   isolation: isolate;
 
-  /* Down by default. Everything that puts it up is in the state below, so
+  /* Down by default. Everything that puts one up is in the state below, so
      there is one place to look when it is in the wrong one. */
   opacity: 0;
   transform: translateY(10px) scale(0.86);
@@ -1198,17 +1203,20 @@ a.hc-card:active { background: var(--hc-paper-sunk); }
               transform var(--hc-dur-fast) var(--hc-ease-enter);
 }
 
+.hc-disc--top  { right: var(--hc-tabbar-inset); }
+.hc-disc--back { left: var(--hc-tabbar-inset); }
+
 /* Glass only where the browser can actually blur, exactly as the tab bar
    does it. Everywhere else the denser skin above stands in. */
 @supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
-  .hc-totop {
+  .hc-disc {
     background: var(--hc-gold-skin-lens);
     backdrop-filter: blur(20px) saturate(1.7);
     -webkit-backdrop-filter: blur(20px) saturate(1.7);
   }
 }
 
-.hc-totop::after {
+.hc-disc::after {
   content: "";
   position: absolute;
   inset: 0;
@@ -1217,7 +1225,7 @@ a.hc-card:active { background: var(--hc-paper-sunk); }
   pointer-events: none;
 }
 
-.hc-totop__icon {
+.hc-disc__icon {
   position: relative;
   z-index: 1;
   width: 19px;
@@ -1227,32 +1235,32 @@ a.hc-card:active { background: var(--hc-paper-sunk); }
   stroke-width: 1.8;
   stroke-linecap: round;
   stroke-linejoin: round;
-  /* The disc is thin enough to sit over a photograph, where neither an ink
+  /* A disc is thin enough to sit over a photograph, where neither an ink
      arrow nor a paper one is safe on its own. The halo is what carries it. */
   filter: drop-shadow(0 0 2px var(--hc-gold-halo))
           drop-shadow(0 1px 1px var(--hc-gold-halo));
 }
 
-.hc-totop[data-show="true"] {
+.hc-disc[data-show="true"] {
   opacity: 1;
   transform: none;
   pointer-events: auto;
 }
 
-.hc-totop:active { transform: scale(0.93); }
+.hc-disc:active { transform: scale(0.93); }
 
-.hc-totop:focus-visible {
+.hc-disc:focus-visible {
   outline: 2px solid var(--hc-ink);
   outline-offset: 3px;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .hc-totop {
+  .hc-disc {
     transform: none;
     transition: opacity 1ms linear;
   }
-  .hc-totop[data-show="true"] { transform: none; }
-  .hc-totop:active { transform: none; }
+  .hc-disc[data-show="true"] { transform: none; }
+  .hc-disc:active { transform: none; }
 }
 
 /* --------------------------------------------------------------------------
