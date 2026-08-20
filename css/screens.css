@@ -1385,3 +1385,79 @@
   gap: var(--hc-space-sm);
   margin-top: var(--hc-space-lg);
 }
+
+/* What you already wrote about tonight's guide, above the answer box in a
+   room. See fromJournal() in js/screens/group.js. */
+
+.hc-fromj { margin-top: var(--hc-space-base); }
+
+.hc-fromj__toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--hc-space-sm);
+  width: 100%;
+  min-height: var(--hc-tap-min);
+  padding: 0 var(--hc-space-md);
+  border-radius: var(--hc-radius-sm);
+  border: var(--hc-hairline) dashed var(--hc-rule);
+  background: transparent;
+  color: var(--hc-accent-deep);
+  font-family: var(--hc-sans);
+  font-weight: 500;
+  font-size: var(--hc-caption);
+  text-align: left;
+}
+
+.hc-fromj__icon { width: 15px; height: 15px; flex: 0 0 auto; }
+
+.hc-fromj__count {
+  margin-left: auto;
+  padding: 0 var(--hc-space-sm);
+  border-radius: var(--hc-radius-pill);
+  background: var(--hc-cream);
+  color: var(--hc-mid);
+}
+
+.hc-fromj__chevron {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+  transition: transform var(--hc-dur-fast) var(--hc-ease);
+}
+
+.hc-fromj__toggle[aria-expanded="true"] .hc-fromj__chevron { transform: rotate(180deg); }
+
+.hc-fromj__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--hc-space-sm);
+  margin-top: var(--hc-space-sm);
+}
+
+.hc-fromj__item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: var(--hc-space-md);
+  border-radius: var(--hc-radius-sm);
+  background: var(--hc-paper-sunk);
+  border: var(--hc-hairline) solid var(--hc-rule);
+  color: var(--hc-ink);
+}
+
+.hc-fromj__quote {
+  display: block;
+  margin-bottom: var(--hc-space-xs);
+  font-family: var(--hc-serif);
+  font-size: calc(15px * var(--hc-text-scale));
+  color: var(--hc-accent-deep);
+}
+
+.hc-fromj__body {
+  display: block;
+  font-family: var(--hc-sans);
+  font-size: calc(var(--hc-body-sans) * var(--hc-text-scale));
+  line-height: 1.5;
+}
+
+.hc-fromj__note { margin-top: var(--hc-space-xs); }

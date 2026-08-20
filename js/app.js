@@ -988,6 +988,38 @@
        plain buttons on every note rather than anything hidden behind a
        gesture. */
 
+    /* What you already wrote about this guide, offered above the answer box.
+       Both of these only ever touch the draft. See fromJournal() in
+       js/screens/group.js for why that line is drawn where it is. */
+
+    'room-journal-toggle': function (el) {
+      var g = HC.screens.groupHelpers;
+      var id = el.getAttribute('data-id');
+      g.setShowingJournal(g.getShowingJournal() === id ? null : id);
+      g.repaint(true);
+    },
+
+    'room-journal-use': function (el) {
+      var g = HC.screens.groupHelpers;
+      var qid = el.getAttribute('data-id');
+      var entry = HC.journal.get(el.getAttribute('data-entry'));
+      if (!entry) return;
+
+      // Appended, never substituted: a half typed answer is not ours to eat.
+      var had = (g.drafts[qid] || '').trim();
+      g.setDraft(qid, had ? had + '\n\n' + entry.bodyText : entry.bodyText);
+      g.setShowingJournal(null);
+      g.repaint(true);
+
+      var box = document.querySelector('[data-draft="' + qid + '"]');
+      if (box) {
+        box.focus();
+        box.setSelectionRange(box.value.length, box.value.length);
+      }
+      HC.native.tap('Light');
+      c.toast('In the box. Edit it, then post it when you are ready.');
+    },
+
     'room-report': function (el) {
       var why = window.prompt('What is wrong with this one? The person hosting will see it.');
       if (why === null) return;

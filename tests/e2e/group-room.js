@@ -258,6 +258,50 @@ const tap = async (p, sel) => { await p.locator(sel).first().click(); await p.wa
   ok('a takedown removes it for the room too',
      (await text(member.page)).includes('A courtroom'), false);
 
+  /* ---- 8b. what you already wrote about this guide ------------------------
+
+     The Journal's one crossing into the Group tab, and the only place private
+     writing can reach a room. Three things have to be true: it offers what
+     this person wrote about tonight's guide, tapping one only fills the box,
+     and it appends rather than eating a half typed answer. */
+
+  const guideId = await member.page.evaluate(() => HC.rooms.snapshot().room.guideId);
+  ok('the room knows which guide it came from', !!guideId, true);
+
+  await member.page.evaluate((gid) => {
+    HC.journal.create({
+      guideId: gid, kind: 'highlight',
+      quote: 'a good friend keeps it real',
+      bodyText: 'This is the line I underlined on Sunday.'
+    });
+  }, guideId);
+  await member.page.evaluate(() => HC.screens.groupHelpers.repaint(true));
+  await member.page.waitForTimeout(400);
+
+  const q3 = await member.page.locator('.hc-room-q[data-question] [data-draft]')
+    .first().getAttribute('data-draft');
+
+  ok('the room offers what you wrote about this guide',
+     (await member.page.locator('[data-action="room-journal-toggle"]').count()) > 0, true);
+
+  await tap(member.page, '[data-action="room-journal-toggle"]');
+  ok('and shows it when asked',
+     (await text(member.page)).includes('This is the line I underlined on Sunday.'), true);
+
+  // A half typed answer, to prove the suggestion does not eat it.
+  await member.page.fill('[data-draft="' + q3 + '"]', 'Still thinking, but');
+  await member.page.waitForTimeout(300);
+
+  const before = await countNotes();
+  await tap(member.page, '[data-action="room-journal-use"]');
+
+  const filled = await member.page.inputValue('[data-draft="' + q3 + '"]');
+  ok('tapping one appends to the box rather than replacing it',
+     filled, 'Still thinking, but\n\nThis is the line I underlined on Sunday.');
+  ok('and posts nothing on its own', await countNotes(), before);
+
+  ok('what crossed over is plain text, not markup', /[<>]/.test(filled), false);
+
   // ---- 9. the sheet -------------------------------------------------------
   const sheet = await host.page.evaluate(() => HC.print.buildNightPages(HC.rooms.snapshot()));
   ok('the night sheet is built from the live room', sheet.includes('Pray for my sister'), true);

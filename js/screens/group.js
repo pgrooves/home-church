@@ -31,6 +31,7 @@
   var newQuestion = '';
   var codeDraft = '';
   var editing = null;     // { id, body } while the host has a question open
+  var showingJournal = null;   // question id whose journal suggestions are open
   var busy = null;        // an id, while its button is waiting on the network
   var joinError = null;
   var lastSignature = null;
@@ -393,10 +394,13 @@
       html += '</div>';
     }
 
+    /* Your own box. The host answers too: hosting is not a reason to sit out. */
+
     // Your own box. The host answers too: hosting is not a reason to sit out.
     var already = mineHere.length > 0;
     if (!already) {
       var draft = drafts[question.id] || '';
+      html += fromJournal(question, snap);
       html += '<div class="hc-field hc-room-q__mine">' +
         '<label class="hc-visually-hidden" for="hc-answer-' + c.esc(question.id) + '">' +
           'Your answer to question ' + (index + 1) + '</label>' +
@@ -414,6 +418,76 @@
           ? 'It goes in now and shows to the room when ' + c.esc(hostName(snap)) + ' opens this question.'
           : 'Write it whenever. Nobody reads it until this question is opened.') + '</p>' +
       '</div>';
+    }
+
+    return html + '</div>';
+  }
+
+  /* ------------------------------------------------- what you already wrote
+
+     A room opens against a guide, and the person answering may well have
+     highlighted that guide on Sunday and written something about it. This
+     offers those back, above the box, so the answer to "what did that land
+     on" can start from what they already thought rather than from nothing.
+
+     THREE RULES, and all three are about consent.
+
+     It only ever fills the draft. Tapping a suggestion puts the words in the
+     box and stops; posting is still the same button it was, and the terms
+     gate is still in front of it. A one tap path from private writing to a
+     room full of people is a mistake somebody makes once, at speed, and
+     cannot take back.
+
+     It appends rather than replaces, so it cannot eat a half typed answer.
+
+     And what crosses is plain text. Room notes are read by other people and
+     are plain text in the database; stored markup has no business travelling
+     into somebody else's phone. See the note on bodyText in js/journal.js. */
+
+  function journalFor(snap) {
+    if (!snap.room || !snap.room.guideId || !HC.journal) return [];
+    return HC.journal.forGuide(snap.room.guideId)
+      .filter(function (e) { return (e.bodyText || '').trim(); });
+  }
+
+  function fromJournal(question, snap) {
+    var mine = journalFor(snap);
+    if (!mine.length) return '';
+
+    var open = showingJournal === question.id;
+
+    /* Ranked: anything anchored to this exact question first, since a room
+       question carries its guide question's text. Everything else after, as
+       it comes. */
+    var ranked = mine.slice().sort(function (a, b) {
+      var am = a.quote && question.body && question.body.indexOf(a.quote) !== -1 ? 0 : 1;
+      var bm = b.quote && question.body && question.body.indexOf(b.quote) !== -1 ? 0 : 1;
+      return am - bm;
+    });
+
+    var html = '<div class="hc-fromj">' +
+      '<button type="button" class="hc-fromj__toggle" data-action="room-journal-toggle" ' +
+        'data-id="' + c.esc(question.id) + '" aria-expanded="' + (open ? 'true' : 'false') + '">' +
+        c.icon('journal', 'hc-fromj__icon') +
+        '<span>From your journal</span>' +
+        '<span class="hc-fromj__count">' + ranked.length + '</span>' +
+        c.icon('chevronDown', 'hc-fromj__chevron') +
+      '</button>';
+
+    if (open) {
+      html += '<div class="hc-fromj__list">';
+      ranked.slice(0, 6).forEach(function (e) {
+        var line = e.bodyText.replace(/\s+/g, ' ').trim();
+        if (line.length > 120) line = line.slice(0, 119).replace(/\s\S*$/, '') + '…';
+        html += '<button type="button" class="hc-fromj__item" data-action="room-journal-use" ' +
+          'data-id="' + c.esc(question.id) + '" data-entry="' + c.esc(e.id) + '">' +
+          (e.quote ? '<span class="hc-fromj__quote">' + c.esc(e.quote) + '</span>' : '') +
+          '<span class="hc-fromj__body">' + c.esc(line) + '</span>' +
+        '</button>';
+      });
+      html += '<p class="hc-caption hc-fromj__note">Tapping one puts it in the box below. ' +
+        'Nothing is posted until you post it.</p>';
+      html += '</div>';
     }
 
     return html + '</div>';
@@ -592,7 +666,11 @@
       // Local state that changes what is drawn.
       Object.keys(drafts).map(function (k) { return k + (drafts[k].trim() ? '1' : '0'); }).join(),
       prayerDraft.trim() ? '1' : '0', newQuestion.trim() ? '1' : '0',
-      codeDraft, joinError, editing && editing.id, busy
+      codeDraft, joinError, editing && editing.id, busy, showingJournal,
+      // The suggestions themselves. A journal entry written in another tab
+      // has to be able to appear here without waiting for something else to
+      // change.
+      HC.journal ? HC.journal.forGuide(snap.room && snap.room.guideId).length : 0
     ]);
   }
 
@@ -668,6 +746,8 @@
     getCodeDraft: function () { return codeDraft; },
     setJoinError: function (v) { joinError = v; },
     setEditing: function (v) { editing = v; },
+    setShowingJournal: function (v) { showingJournal = v; },
+    getShowingJournal: function () { return showingJournal; },
     getEditing: function () { return editing; },
     setBusy: function (v) { busy = v; },
     clearDraft: function (key) { delete drafts[key]; },

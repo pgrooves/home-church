@@ -483,10 +483,11 @@ last week's JavaScript.
 
 ---
 
-## 7. Build order
+## 7. Build order, and where it got to
 
-Each phase is shippable on its own, which matters because phase 1 alone is
-already worth having.
+Each phase was shippable on its own. Phases 0 to 6 are **built, on
+`claude/journal-tab-feature-tz6oho`**, one commit each; what is listed as not
+built at the end of §8 is not built.
 
 0. **Five tabs and a More tile.** `•••` where Give was, a More screen, Give
    moved onto it. Lands before anything else because everything else needs
@@ -502,14 +503,42 @@ already worth having.
 5. **Sync.** Migration 0023, push/pull, `ownerId`, the legal copy in §2b, the
    compliance docs. One phase, together, so the promise and the code change in
    the same commit.
-6. **The seams.** Group tab suggestions, keep-tonight on room close, export.
+6. **The seams.** Group tab suggestions. Keep-tonight and export are still
+   proposals, see §8.
+
+### What it is checked against
+
+- **87 node checks** (`npm run test:js`) over the sanitizer, the plain text
+  mirror, ownership, the migration out of `guideState`, anchor resolution, and
+  the sync merge including the delete that must not come back.
+- **155 database checks** (`npm run test:db`), of which the 0023 ones ask the
+  only question that matters from every angle: can one person reach another
+  person's writing. Insert claiming somebody else's `user_id`, select by id,
+  select by body text, update, delete, anon.
+- **38 end-to-end checks** (`npm run test:e2e`) driving two browsers against a
+  real Postgres and PostgREST, now including the Journal's one crossing into a
+  group room.
+- **90 checks in a real browser** across four scripts, kept in the scratchpad
+  rather than the repo: the tab bar's geometry, the Journal's create and
+  search and delete, the editor and the scripture sheet, and highlighting a
+  real selection in a real guide.
+
+Three real bugs came out of driving a browser rather than reading the code,
+and none of them would have been found any other way: `<p><ul>` in the
+sanitizer, a selection bar placed off the bottom of the screen, and a mark
+that did not repaint after its note was written.
 
 ---
 
 ## 8. Ideas worth taking
 
+**Built**
+
 - **Reflection answers become entries** (§3). Day-one content, one concept
   instead of two.
+
+**Not built. Still worth taking, in this order**
+
 - **Keep tonight.** When a room closes, offer to save your own answers and the
   prayer requests as one entry tagged to that guide. Room data is swept at
   ninety days; this is the only thing that keeps it.
@@ -521,7 +550,9 @@ already worth having.
   reflection section. Uses data that already exists.
 - **Export.** `js/print-guide.js` already knows how to build a standalone HTML
   file and hand it to the share sheet. A third sheet, for the journal, is
-  mostly a template.
+  mostly a template. This one matters more now than it did when it was
+  written: the journal syncs, so the church holds a copy of it, and a person
+  who wants their own copy should not have to ask.
 - **Face ID lock**, later. `APP_STORE_COMPLIANCE.md:181` floats this for leader
   notes; the journal is the stronger candidate. Phase 7 at the earliest.
 
