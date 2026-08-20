@@ -1,0 +1,1478 @@
+<meta charset="utf-8">
+<title>The More Sheet</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant:ital,wght@0,400;0,600;1,400&family=Poppins:wght@400;600;800&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Serif:wght@600&display=swap">
+
+<style>
+/* ==========================================================================
+   Home Church, the More sheet, mockup
+
+   One phone, and you can actually use it. Tap the ••• tile and the overflow
+   sheet comes up out of the plinth. Drag its handle down, or tap the paper
+   behind it, and it goes back. Drag the screen sideways and the tabs move
+   under your finger, straight on through Connect into Journal and Give, with
+   the raised tile parking on ••• once it gets there.
+
+   Nothing here is wired into js/ or css/. It is the drawing the change gets
+   decided from, the same way demo-group-room and demo-listen-rail were.
+
+   Inside the phone: the tokens from css/tokens.css, unedited, and the tab bar
+   built the way css/components.css builds it, a plinth with the tile as a
+   pseudo element placed by --hc-tab-index. What the sheet is made of is the
+   claim of this mockup: it is the plinth again, same skin, same edge, same
+   sheen, same 12px gutter, one gap above the bar it grew out of.
+
+   Outside the phone: a separate palette and a separate typeface family,
+   because the annotation layer is the spec and must never be mistaken for
+   the product.
+   ========================================================================== */
+
+:root {
+  /* --- the app, lifted verbatim from css/tokens.css --------------------- */
+  --hc-paper:       #F7F4EF;
+  --hc-paper-sunk:  #EFEAE2;
+  --hc-cream:       #EDE8DF;
+  --hc-ink:         #111111;
+  --hc-dark:        #1A1918;
+  --hc-mid:         #6D6864;
+  --hc-rule:        #C8C0B0;
+  --hc-accent:      #B5A898;
+  --hc-accent-deep: #71675A;
+  --hc-on-dark:     #F7F4EF;
+  --hc-gold:        #D7BA85;
+  --hc-overlay:     rgba(26,25,24,0.55);
+
+  --hc-serif: "Cormorant", "Cormorant Garamond", Georgia, "Times New Roman", serif;
+  --hc-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --hc-sans-display: "Poppins", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+
+  /* The shipped type scale with the 1.1 reading multiplier already applied,
+     so the phone shows the sizes these screens are really read at. */
+  --hc-display-m:  26px;
+  --hc-body-serif: 17px;
+  --hc-body-sans:  16px;
+  --hc-caption:    13px;
+  --hc-eyebrow:    11px;
+  --hc-tab:        11px;
+
+  --hc-radius-sm: 8px;
+  --hc-radius-md: 10px;
+  --hc-radius-lg: 12px;
+  --hc-hairline: 0.5px;
+  --hc-ease: cubic-bezier(0.4, 0, 0.2, 1);
+  --hc-ease-out: cubic-bezier(0.22, 0.61, 0.36, 1);
+  --hc-dur-fast: 200ms;
+  --hc-dur-base: 300ms;
+  --hc-dur-sheet: 400ms;
+
+  --hc-tabbar-h: 56px;
+  --hc-tabbar-inset: 12px;
+  --hc-tabbar-pad: 6px;
+
+  --hc-tabbar-skin:      linear-gradient(178deg, rgba(255,253,250,0.94), rgba(238,233,225,0.92));
+  --hc-tabbar-skin-lens: linear-gradient(178deg, rgba(255,253,250,0.72), rgba(238,233,225,0.62));
+  --hc-tabbar-edge:      rgba(122,110,95,0.28);
+  --hc-tabbar-shadow:    0 14px 34px rgba(26,25,24,0.18),
+                         0 2px 8px rgba(26,25,24,0.08),
+                         inset 0 1px 0 rgba(255,255,255,0.70),
+                         inset 0 -1px 0 rgba(26,25,24,0.05);
+  --hc-tabbar-sheen:     linear-gradient(112deg,
+                           rgba(255,255,255,0.55) 0%,
+                           rgba(255,255,255,0.18) 26%,
+                           rgba(255,255,255,0) 52%);
+  --hc-tabbar-tile:        linear-gradient(180deg, rgba(255,255,255,0.96), rgba(247,244,239,0.86));
+  --hc-tabbar-tile-edge:   rgba(122,110,95,0.18);
+  --hc-tabbar-tile-shadow: inset 0 1px 0 rgba(255,255,255,0.90),
+                           inset 0 -1px 0 rgba(26,25,24,0.06),
+                           0 3px 9px rgba(26,25,24,0.12);
+
+  /* --- the surround, this page only ------------------------------------ */
+  --pg-ground:  #DCD3C4;   /* the table the phone is set down on */
+  --pg-raised:  #F2EDE4;   /* annotation panels */
+  --pg-well:    #D2C8B7;   /* sunk chips and controls */
+  --pg-ink:     #1F1D19;
+  --pg-mid:     #5A5349;
+  --pg-line:    rgba(90,83,73,0.24);
+  --pg-thread:  #A8823F;   /* the one accent, spent on what is new */
+  --pg-thread-soft: rgba(168,130,63,0.14);
+  --pg-shadow:  0 42px 84px -30px rgba(48,40,28,0.46), 0 10px 26px -10px rgba(48,40,28,0.26);
+  --pg-bezel:   linear-gradient(168deg, #4B443A, #26221D 46%, #3A342C);
+
+  --pg-serif: "IBM Plex Serif", Georgia, serif;
+  --pg-sans:  "IBM Plex Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --pg-mono:  "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  --hc-logo-ink:   block;
+  --hc-logo-paper: none;
+
+  color-scheme: light dark;
+}
+
+/* The system default stamps nothing on the root, so this media query is what
+   most people actually get. The :not() guard keeps an explicit light choice
+   winning over a dark OS. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --hc-paper:       #1A1918;
+    --hc-paper-sunk:  #201E1D;
+    --hc-cream:       #232120;
+    --hc-ink:         #F2EEE7;
+    --hc-dark:        #F2EEE7;
+    --hc-mid:         #9A938A;
+    --hc-rule:        #3A3633;
+    --hc-accent:      #C4B5A2;
+    --hc-accent-deep: #CFC1AE;
+    --hc-on-dark:     #1A1918;
+    --hc-gold:        #CBAC74;
+    --hc-overlay:     rgba(10,10,9,0.65);
+
+    --hc-tabbar-skin:      linear-gradient(178deg, rgba(58,54,51,0.88), rgba(26,25,24,0.86));
+    --hc-tabbar-skin-lens: linear-gradient(178deg, rgba(58,54,51,0.52), rgba(26,25,24,0.42));
+    --hc-tabbar-edge:      rgba(196,181,162,0.20);
+    --hc-tabbar-shadow:    0 16px 36px rgba(0,0,0,0.52),
+                           inset 0 1px 0 rgba(242,238,231,0.10),
+                           inset 0 -1px 0 rgba(0,0,0,0.30);
+    --hc-tabbar-sheen:     linear-gradient(112deg,
+                             rgba(247,244,239,0.15) 0%,
+                             rgba(247,244,239,0.05) 26%,
+                             rgba(247,244,239,0) 52%);
+    --hc-tabbar-tile:        linear-gradient(180deg, rgba(247,244,239,0.15), rgba(247,244,239,0.055));
+    --hc-tabbar-tile-edge:   rgba(207,193,174,0.30);
+    --hc-tabbar-tile-shadow: inset 0 1px 0 rgba(255,252,247,0.24),
+                             inset 0 -1px 0 rgba(0,0,0,0.16),
+                             0 4px 12px rgba(0,0,0,0.30);
+
+    --pg-ground:  #171614;
+    --pg-raised:  #201E1C;
+    --pg-well:    #2A2724;
+    --pg-ink:     #EDE7DD;
+    --pg-mid:     #9A9288;
+    --pg-line:    rgba(200,190,175,0.18);
+    --pg-thread:  #CBAC74;
+    --pg-thread-soft: rgba(203,172,116,0.16);
+    --pg-shadow:  0 42px 84px -30px rgba(0,0,0,0.70), 0 10px 26px -10px rgba(0,0,0,0.50);
+    --pg-bezel:   linear-gradient(168deg, #6B6153, #3B352D 46%, #554C40);
+
+    --hc-logo-ink:   none;
+    --hc-logo-paper: block;
+  }
+}
+
+/* And again for the explicit toggle, so it wins in the other direction. */
+:root[data-theme="dark"] {
+  --hc-paper:       #1A1918;
+  --hc-paper-sunk:  #201E1D;
+  --hc-cream:       #232120;
+  --hc-ink:         #F2EEE7;
+  --hc-dark:        #F2EEE7;
+  --hc-mid:         #9A938A;
+  --hc-rule:        #3A3633;
+  --hc-accent:      #C4B5A2;
+  --hc-accent-deep: #CFC1AE;
+  --hc-on-dark:     #1A1918;
+  --hc-gold:        #CBAC74;
+  --hc-overlay:     rgba(10,10,9,0.65);
+
+  --hc-tabbar-skin:      linear-gradient(178deg, rgba(58,54,51,0.88), rgba(26,25,24,0.86));
+  --hc-tabbar-skin-lens: linear-gradient(178deg, rgba(58,54,51,0.52), rgba(26,25,24,0.42));
+  --hc-tabbar-edge:      rgba(196,181,162,0.20);
+  --hc-tabbar-shadow:    0 16px 36px rgba(0,0,0,0.52),
+                         inset 0 1px 0 rgba(242,238,231,0.10),
+                         inset 0 -1px 0 rgba(0,0,0,0.30);
+  --hc-tabbar-sheen:     linear-gradient(112deg,
+                           rgba(247,244,239,0.15) 0%,
+                           rgba(247,244,239,0.05) 26%,
+                           rgba(247,244,239,0) 52%);
+  --hc-tabbar-tile:        linear-gradient(180deg, rgba(247,244,239,0.15), rgba(247,244,239,0.055));
+  --hc-tabbar-tile-edge:   rgba(207,193,174,0.30);
+  --hc-tabbar-tile-shadow: inset 0 1px 0 rgba(255,252,247,0.24),
+                           inset 0 -1px 0 rgba(0,0,0,0.16),
+                           0 4px 12px rgba(0,0,0,0.30);
+
+  --pg-ground:  #171614;
+  --pg-raised:  #201E1C;
+  --pg-well:    #2A2724;
+  --pg-ink:     #EDE7DD;
+  --pg-mid:     #9A9288;
+  --pg-line:    rgba(200,190,175,0.18);
+  --pg-thread:  #CBAC74;
+  --pg-thread-soft: rgba(203,172,116,0.16);
+  --pg-shadow:  0 42px 84px -30px rgba(0,0,0,0.70), 0 10px 26px -10px rgba(0,0,0,0.50);
+  --pg-bezel:   linear-gradient(168deg, #6B6153, #3B352D 46%, #554C40);
+
+  --hc-logo-ink:   none;
+  --hc-logo-paper: block;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--pg-ground);
+  color: var(--pg-ink);
+  font-family: var(--pg-sans);
+  font-size: 15px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+
+button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
+:focus-visible { outline: 2px solid var(--pg-thread); outline-offset: 2px; }
+
+/* --------------------------------------------------------------- the page */
+
+.pg {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 44px 24px 88px;
+  display: flex;
+  flex-direction: column;
+  gap: 40px;
+}
+
+.pg-head { max-width: 62ch; display: flex; flex-direction: column; gap: 12px; }
+
+.pg-eyebrow {
+  margin: 0;
+  font-family: var(--pg-mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--pg-thread);
+}
+
+.pg-title {
+  margin: 0;
+  font-family: var(--pg-serif);
+  font-weight: 600;
+  font-size: clamp(30px, 4.6vw, 44px);
+  line-height: 1.08;
+  letter-spacing: -0.015em;
+  text-wrap: balance;
+}
+
+.pg-lede { margin: 0; font-size: 17px; line-height: 1.6; color: var(--pg-mid); }
+
+.pg-body { display: grid; grid-template-columns: minmax(0, 420px) minmax(0, 1fr); gap: 44px; align-items: start; }
+@media (max-width: 980px) { .pg-body { grid-template-columns: minmax(0, 1fr); } }
+
+.pg-stage { position: sticky; top: 28px; display: flex; flex-direction: column; gap: 18px; align-items: center; }
+@media (max-width: 980px) { .pg-stage { position: static; } }
+
+.pg-hint {
+  font-family: var(--pg-mono);
+  font-size: 11.5px;
+  letter-spacing: 0.04em;
+  color: var(--pg-mid);
+  text-align: center;
+}
+
+/* ------------------------------------------------------------- the device */
+
+/* 375 across, which is a real iPhone in points, so the six tab labels have
+   exactly the room they will really have and the sheet's tiles are the size
+   a thumb will really find them at. */
+.device {
+  width: 397px;
+  max-width: 100%;
+  border-radius: 46px;
+  padding: 11px;
+  background: var(--pg-bezel);
+  box-shadow: var(--pg-shadow);
+  flex: 0 0 auto;
+}
+
+.screen {
+  position: relative;
+  height: 748px;
+  border-radius: 32px;
+  overflow: hidden;
+  background: var(--hc-paper);
+  display: flex;
+  flex-direction: column;
+  font-family: var(--hc-sans);
+  color: var(--hc-ink);
+  touch-action: pan-y;
+}
+
+/* top bar, matching .hc-topbar */
+.tb {
+  flex: 0 0 auto;
+  height: 52px;
+  padding: 0 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  background: var(--hc-paper);
+  border-bottom: var(--hc-hairline) solid var(--hc-rule);
+  z-index: 6;
+}
+.tb__logo { height: 17px; width: auto; }
+.tb__logo--ink   { display: var(--hc-logo-ink); }
+.tb__logo--paper { display: var(--hc-logo-paper); }
+.tb__spacer { width: 30px; }
+.tb__avatar {
+  flex: 0 0 auto;
+  width: 30px; height: 30px;
+  border-radius: 999px;
+  background: var(--hc-accent);
+  color: var(--hc-on-dark);
+  display: grid; place-items: center;
+  font-size: 11px; font-weight: 700; letter-spacing: 0.02em;
+}
+
+/* ------------------------------------------------------- the sliding deck
+
+   The app has one scroller and moves the live screen with a transform while
+   the incoming one waits in a fixed pane (js/swipe.js). A mockup does not
+   need that machinery to show the same motion, so all seven screens sit in
+   one track and the track is what moves. The point being demonstrated is
+   where the travel stops, not how it is plumbed. */
+
+.deck { position: relative; flex: 1 1 auto; overflow: hidden; }
+
+.track {
+  display: flex;
+  height: 100%;
+  width: calc(var(--n) * 100%);
+  transform: translate3d(calc(var(--pos) * -100% / var(--n)), 0, 0);
+}
+.track[data-settling="true"] { transition: transform var(--settle, 300ms) var(--hc-ease-out); }
+
+.view {
+  width: calc(100% / var(--n));
+  height: 100%;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 20px 20px 112px;
+  scrollbar-width: none;
+}
+.view::-webkit-scrollbar { display: none; }
+
+/* ------------------------------------------------------ app pieces, in-screen */
+
+.s-head { margin-bottom: 18px; }
+.s-eyebrow {
+  margin: 0 0 4px;
+  font-family: var(--hc-sans-display);
+  font-size: var(--hc-eyebrow);
+  line-height: 14px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--hc-accent-deep);
+}
+.s-title {
+  margin: 0;
+  font-family: var(--hc-serif);
+  font-weight: 600;
+  font-size: var(--hc-display-m);
+  line-height: 1.12;
+  color: var(--hc-ink);
+}
+.s-rule { width: 34px; height: 2px; margin-top: 10px; background: var(--hc-accent); }
+
+.s-card {
+  padding: 16px;
+  margin-bottom: 12px;
+  border-radius: var(--hc-radius-lg);
+  background: var(--hc-cream);
+  border: var(--hc-hairline) solid var(--hc-rule);
+}
+.s-card__t {
+  margin: 0;
+  font-family: var(--hc-serif);
+  font-weight: 600;
+  font-size: 20px;
+  line-height: 1.2;
+}
+.s-card__s {
+  margin: 6px 0 0;
+  font-size: var(--hc-caption);
+  line-height: 1.5;
+  color: var(--hc-mid);
+}
+.s-card--flat { background: var(--hc-paper-sunk); }
+
+.s-note {
+  margin: 0 0 12px;
+  font-family: var(--hc-serif);
+  font-size: var(--hc-body-serif);
+  line-height: 1.5;
+  color: var(--hc-ink);
+}
+
+.s-rail { display: flex; gap: 8px; margin-bottom: 14px; }
+.s-chip {
+  flex: 1 1 0;
+  padding: 10px 8px;
+  border-radius: var(--hc-radius-md);
+  background: var(--hc-paper-sunk);
+  border: var(--hc-hairline) solid var(--hc-rule);
+  text-align: center;
+  font-size: 12px;
+  color: var(--hc-mid);
+}
+
+/* --------------------------------------------------------------- tab bar
+
+   Rebuilt the way css/components.css builds it: a plinth, a tile as a
+   pseudo element placed by --hc-tab-index, and a sheen over the top. */
+
+.tabbar {
+  position: absolute;
+  left: var(--hc-tabbar-inset);
+  right: var(--hc-tabbar-inset);
+  bottom: var(--hc-tabbar-inset);
+  z-index: 40;
+  display: flex;
+  padding: var(--hc-tabbar-pad);
+  border-radius: 26px;
+  background: var(--hc-tabbar-skin);
+  border: 1px solid var(--hc-tabbar-edge);
+  box-shadow: var(--hc-tabbar-shadow);
+  isolation: isolate;
+}
+@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+  .tabbar {
+    background: var(--hc-tabbar-skin-lens);
+    -webkit-backdrop-filter: blur(22px) saturate(150%);
+    backdrop-filter: blur(22px) saturate(150%);
+  }
+}
+.tabbar::before {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  top: var(--hc-tabbar-pad);
+  bottom: var(--hc-tabbar-pad);
+  left: var(--hc-tabbar-pad);
+  width: calc((100% - (var(--hc-tabbar-pad) * 2)) / var(--hc-tab-count, 6));
+  border-radius: 20px;
+  background: var(--hc-tabbar-tile);
+  border: 1px solid var(--hc-tabbar-tile-edge);
+  box-shadow: var(--hc-tabbar-tile-shadow);
+  transform: translateX(calc(var(--hc-tab-index, 0) * 100%));
+  transition: transform var(--hc-tab-tween, var(--hc-dur-base)) var(--hc-ease);
+}
+.tabbar[data-swiping="true"]::before { transition: none; }
+.tabbar::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  border-radius: inherit;
+  background: var(--hc-tabbar-sheen);
+}
+
+.tab {
+  position: relative;
+  z-index: 1;
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  height: var(--hc-tabbar-h);
+  padding: 6px 2px 8px;
+  color: var(--hc-mid);
+  border-radius: 20px;
+  transition: color var(--hc-dur-fast) var(--hc-ease);
+}
+.tab svg {
+  width: 24px; height: 24px;
+  fill: none; stroke: currentColor;
+  stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round;
+}
+.tab svg.solid { fill: currentColor; stroke: none; }
+.tab__label {
+  font-family: var(--hc-sans);
+  font-weight: 500;
+  font-size: var(--hc-tab);
+  line-height: 13px;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+}
+.tab[aria-current="page"] { color: var(--hc-ink); }
+.tab[aria-current="page"] svg { color: var(--hc-accent-deep); }
+.tab:focus-visible { outline-offset: -4px; }
+
+/* ----------------------------------------------------------- the overflow
+
+   THE CLAIM OF THIS MOCKUP. The sheet is the plinth again: same skin, same
+   hairline, same sheen, same 12px gutter, same 26px corner, sitting one 8px
+   gap above the bar it came out of. It is not a modal card in the app's
+   paper, because then two different objects would be stacked at the bottom
+   of the screen and only one of them would look like the navigation. */
+
+.sheet {
+  position: absolute;
+  left: var(--hc-tabbar-inset);
+  right: var(--hc-tabbar-inset);
+  /* bar height + its own frame + its two hairlines + the inset it floats on,
+     and then 8px of air, which is what makes it read as a second object
+     rather than the bar having grown a lump. */
+  bottom: calc(var(--hc-tabbar-h) + (var(--hc-tabbar-pad) * 2) + 2px
+               + var(--hc-tabbar-inset) + 8px);
+  z-index: 42;
+  padding: 8px var(--hc-tabbar-pad) var(--hc-tabbar-pad);
+  border-radius: 26px;
+  background: var(--hc-tabbar-skin);
+  border: 1px solid var(--hc-tabbar-edge);
+  box-shadow: var(--hc-tabbar-shadow);
+  isolation: isolate;
+  /* Parked below the screen edge, far enough that the shadow clears too. */
+  transform: translateY(calc(100% + 120px));
+  transition: transform var(--hc-dur-sheet) var(--hc-ease-out);
+  touch-action: none;
+}
+@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+  .sheet {
+    background: var(--hc-tabbar-skin-lens);
+    -webkit-backdrop-filter: blur(22px) saturate(150%);
+    backdrop-filter: blur(22px) saturate(150%);
+  }
+}
+.sheet::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  border-radius: inherit;
+  background: var(--hc-tabbar-sheen);
+}
+.screen[data-sheet="open"] .sheet { transform: translateY(0); }
+.sheet[data-dragging="true"] { transition: none; }
+
+/* The handle. A grab rail with a real 44pt target around it: the drag has to
+   start somewhere a thumb can hit without aiming, and the tiles below are
+   buttons, so it cannot be the whole panel. */
+.sheet__grab {
+  display: block;
+  width: 100%;
+  height: 22px;
+  margin-bottom: 2px;
+  display: grid;
+  place-items: center;
+  cursor: grab;
+  touch-action: none;
+}
+.sheet__grab:active { cursor: grabbing; }
+.sheet__handle {
+  width: 38px;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--hc-rule);
+}
+
+/* The grid. Rows only for what is there: two modules is one row, and the row
+   is as wide as the sheet, which is why nothing looks like a hole waiting to
+   be filled. --cols is set in JS from the count, capped at four. */
+.sheet__grid {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: repeat(var(--cols, 4), minmax(0, 1fr));
+  gap: 4px;
+}
+
+.omod {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-height: 72px;
+  padding: 10px 4px;
+  border-radius: 20px;
+  border: 1px solid transparent;
+  color: var(--hc-ink);
+  transition: transform var(--hc-dur-fast) var(--hc-ease);
+}
+.omod:active { transform: scale(0.96); }
+.omod svg {
+  width: 24px; height: 24px;
+  color: var(--hc-accent-deep);
+  fill: none; stroke: currentColor;
+  stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round;
+}
+.omod__label {
+  font-family: var(--hc-sans);
+  font-size: var(--hc-tab);
+  line-height: 13px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+}
+
+/* Raised: every module borrows the bar's own tile, so the sheet reads as a
+   tray of buttons. Obvious targets, heavier ground. */
+.sheet__grid[data-face="raised"] .omod {
+  background: var(--hc-tabbar-tile);
+  border-color: var(--hc-tabbar-tile-edge);
+  box-shadow: var(--hc-tabbar-tile-shadow);
+}
+
+/* Flush: the modules sit on the glass exactly the way the five tabs do, and
+   the tile is spent on the one you are in, which is the bar's own rule
+   carried upward rather than a second rule invented for the sheet. */
+.sheet__grid[data-face="flush"] .omod[aria-current="page"] {
+  background: var(--hc-tabbar-tile);
+  border-color: var(--hc-tabbar-tile-edge);
+  box-shadow: var(--hc-tabbar-tile-shadow);
+}
+.sheet__grid[data-face="flush"] .omod:not([aria-current="page"]) svg { color: var(--hc-accent-deep); }
+
+/* The scrim stops at the tab bar rather than covering it, so the bar stays
+   lit and operable: ••• closes what it opened, and any other tab takes you
+   there and puts the sheet away on the way. */
+.scrim {
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  width: 100%;
+  background: var(--hc-overlay);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--hc-dur-base) var(--hc-ease);
+}
+.screen[data-sheet="open"] .scrim { opacity: 1; pointer-events: auto; }
+
+@media (prefers-reduced-motion: reduce) {
+  .sheet, .scrim, .track, .tabbar::before { transition: none; }
+}
+
+/* ------------------------------------------------------------ the notes */
+
+.pg-notes { display: flex; flex-direction: column; gap: 30px; min-width: 0; }
+
+.panel {
+  padding: 22px 24px 24px;
+  border-radius: 14px;
+  background: var(--pg-raised);
+  border: 1px solid var(--pg-line);
+}
+
+.panel__h {
+  margin: 0 0 4px;
+  font-family: var(--pg-serif);
+  font-weight: 600;
+  font-size: 21px;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+}
+.panel__sub { margin: 0 0 18px; font-size: 14px; color: var(--pg-mid); }
+.panel > :last-child { margin-bottom: 0; }
+
+/* controls */
+.ctl { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 16px; }
+.ctl__label {
+  flex: 0 0 96px;
+  font-family: var(--pg-mono);
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--pg-mid);
+}
+.seg {
+  display: inline-flex;
+  padding: 3px;
+  gap: 3px;
+  border-radius: 999px;
+  background: var(--pg-well);
+}
+.seg button {
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--pg-mid);
+  transition: background 160ms var(--hc-ease), color 160ms var(--hc-ease);
+}
+.seg button[aria-pressed="true"] {
+  background: var(--pg-raised);
+  color: var(--pg-ink);
+  box-shadow: 0 1px 3px rgba(48,40,28,0.18);
+}
+.ctl__note { flex: 1 1 100%; margin: 0; padding-left: 106px; font-size: 13px; color: var(--pg-mid); }
+@media (max-width: 560px) { .ctl__note { padding-left: 0; } }
+
+/* the interaction list, which is a real sequence: trigger, then the two
+   ways out, then the gesture that never opens it at all */
+.steps { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 14px; }
+.steps li { display: grid; grid-template-columns: 92px minmax(0, 1fr); gap: 14px; align-items: baseline; }
+@media (max-width: 560px) { .steps li { grid-template-columns: minmax(0, 1fr); gap: 2px; } }
+.steps dt, .steps b {
+  font-family: var(--pg-mono);
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--pg-thread);
+}
+.steps span { font-size: 14.5px; line-height: 1.5; }
+.steps span em { font-style: normal; color: var(--pg-mid); }
+
+/* the travel diagram */
+.travel {
+  display: flex;
+  align-items: stretch;
+  gap: 3px;
+  margin: 4px 0 14px;
+  padding: 6px;
+  border-radius: 12px;
+  background: var(--pg-well);
+  overflow-x: auto;
+}
+.travel__cell {
+  flex: 1 1 0;
+  min-width: 62px;
+  padding: 9px 6px;
+  border-radius: 8px;
+  text-align: center;
+  font-size: 12.5px;
+  color: var(--pg-mid);
+  background: transparent;
+  border: 1px dashed transparent;
+}
+.travel__cell[data-kind="tab"] { background: var(--pg-raised); color: var(--pg-ink); }
+.travel__cell[data-kind="overflow"] {
+  border-color: var(--pg-thread);
+  background: var(--pg-thread-soft);
+  color: var(--pg-ink);
+}
+.travel__cell small {
+  display: block;
+  font-family: var(--pg-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--pg-mid);
+  margin-top: 2px;
+}
+
+/* the file table */
+.files { width: 100%; border-collapse: collapse; font-size: 14px; }
+.files th {
+  text-align: left;
+  padding: 0 0 8px;
+  font-family: var(--pg-mono);
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--pg-mid);
+  border-bottom: 1px solid var(--pg-line);
+}
+.files td { padding: 11px 0; vertical-align: top; border-bottom: 1px solid var(--pg-line); }
+.files tr:last-child td { border-bottom: 0; }
+.files td:first-child { width: 34%; padding-right: 18px; }
+.files code, .panel code {
+  font-family: var(--pg-mono);
+  font-size: 12.5px;
+  padding: 1px 5px;
+  border-radius: 5px;
+  background: var(--pg-well);
+}
+.files-wrap { overflow-x: auto; }
+
+.asks { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 16px; }
+.asks li { padding-left: 16px; border-left: 2px solid var(--pg-thread); }
+.asks p { margin: 0; font-size: 14.5px; line-height: 1.55; }
+.asks p + p { margin-top: 5px; color: var(--pg-mid); font-size: 13.5px; }
+.asks strong { font-weight: 600; }
+
+.pg-foot {
+  font-family: var(--pg-mono);
+  font-size: 11.5px;
+  letter-spacing: 0.04em;
+  color: var(--pg-mid);
+}
+</style>
+
+<div class="pg">
+
+  <header class="pg-head">
+    <p class="pg-eyebrow">Home Church · proposed · not yet built</p>
+    <h1 class="pg-title">More stops being a screen and becomes a sheet</h1>
+    <p class="pg-lede">
+      Today the ••• tile pushes a list you have to come back from. Here it lifts an
+      overflow panel out of the tab bar instead, and the two modules behind it join
+      the sideways swipe, so Connect carries straight on into Journal and Give.
+      The phone below is live. Use it.
+    </p>
+  </header>
+
+  <div class="pg-body">
+
+    <div class="pg-stage">
+      <div class="device">
+        <div class="screen" id="screen" data-sheet="closed" style="--n:7; --pos:0;">
+
+          <header class="tb">
+            <span class="tb__spacer"></span>
+            <img class="tb__logo tb__logo--ink" src="__LOCKUP_INK__" alt="Home Church">
+            <img class="tb__logo tb__logo--paper" src="__LOCKUP__" alt="Home Church">
+            <span class="tb__avatar">TP</span>
+          </header>
+
+          <div class="deck">
+            <div class="track" id="track"></div>
+          </div>
+
+          <button type="button" class="scrim" id="scrim" aria-label="Close More" tabindex="-1"></button>
+
+          <div class="sheet" id="sheet" role="dialog" aria-modal="false" aria-label="More" aria-hidden="true">
+            <button type="button" class="sheet__grab" id="grab" aria-label="Close More">
+              <span class="sheet__handle"></span>
+            </button>
+            <div class="sheet__grid" id="grid"></div>
+          </div>
+
+          <nav class="tabbar" id="tabbar" aria-label="Sections" style="--hc-tab-count:6; --hc-tab-index:0;"></nav>
+
+        </div>
+      </div>
+
+      <p class="pg-hint">
+        Tap ••• &nbsp;·&nbsp; drag the handle down &nbsp;·&nbsp; drag the page sideways
+      </p>
+    </div>
+
+    <div class="pg-notes">
+
+      <section class="panel">
+        <h2 class="panel__h">Two ways to lay out the grid</h2>
+        <p class="panel__sub">
+          Both keep rows to what is there. They differ in what happens to the width
+          when only two modules are in it.
+        </p>
+
+        <div class="ctl">
+          <span class="ctl__label">Grid</span>
+          <div class="seg" role="group" aria-label="Grid variant">
+            <button type="button" data-variant="fill" aria-pressed="true">Fill the width</button>
+            <button type="button" data-variant="four" aria-pressed="false">Four across</button>
+          </div>
+          <p class="ctl__note" id="variant-note"></p>
+        </div>
+
+        <div class="ctl">
+          <span class="ctl__label">Tiles</span>
+          <div class="seg" role="group" aria-label="Tile treatment">
+            <button type="button" data-face="flush" aria-pressed="true">Flush</button>
+            <button type="button" data-face="raised" aria-pressed="false">Raised</button>
+          </div>
+          <p class="ctl__note" id="face-note"></p>
+        </div>
+
+        <div class="ctl">
+          <span class="ctl__label">Modules</span>
+          <div class="seg" role="group" aria-label="How many modules">
+            <button type="button" data-count="2" aria-pressed="true">2</button>
+            <button type="button" data-count="3" aria-pressed="false">3</button>
+            <button type="button" data-count="5" aria-pressed="false">5</button>
+            <button type="button" data-count="8" aria-pressed="false">8</button>
+          </div>
+          <p class="ctl__note">
+            Two is what ships. The rest are the same sheet a year from now, so the
+            rule gets chosen once rather than renegotiated at every addition.
+          </p>
+        </div>
+
+        <div class="ctl">
+          <span class="ctl__label">Theme</span>
+          <div class="seg" role="group" aria-label="Theme">
+            <button type="button" data-theme-set="light" aria-pressed="false">Light</button>
+            <button type="button" data-theme-set="system" aria-pressed="true">System</button>
+            <button type="button" data-theme-set="dark" aria-pressed="false">Dark</button>
+          </div>
+          <p class="ctl__note">
+            The glass has to hold in both, since the sheet is the plinth and the
+            plinth already does.
+          </p>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2 class="panel__h">The interaction, exactly</h2>
+        <p class="panel__sub">What the phone above is doing, in the order it does it.</p>
+        <ul class="steps">
+          <li>
+            <b>Trigger</b>
+            <span>Tapping ••• lifts the sheet out of the bar over 400ms.
+              <em>The tile stays on ••• the whole time it is open.</em></span>
+          </li>
+          <li>
+            <b>Dismiss ·&nbsp;1</b>
+            <span>Drag the handle down. The panel tracks the finger and the scrim
+              fades with it; past a third of the panel, or on a flick, it goes.
+              <em>Let go early and it springs back.</em></span>
+          </li>
+          <li>
+            <b>Dismiss ·&nbsp;2</b>
+            <span>Tap the paper behind it. <em>Esc does the same on a keyboard.</em></span>
+          </li>
+          <li>
+            <b>Dismiss ·&nbsp;3</b>
+            <span>Tap another tab. The scrim stops short of the bar on purpose, so
+              the bar never goes dead under an open sheet.</span>
+          </li>
+          <li>
+            <b>Choose</b>
+            <span>Tapping a module closes the sheet and lands on it. The ••• tile
+              stays raised, because you are somewhere, not lost.</span>
+          </li>
+          <li>
+            <b>Swipe</b>
+            <span>Sideways drag runs the whole row, tabs and modules alike. The
+              sheet is a menu, not a stop on the way.</span>
+          </li>
+        </ul>
+      </section>
+
+      <section class="panel">
+        <h2 class="panel__h">Where the swipe goes now</h2>
+        <p class="panel__sub">
+          Five tabs become seven stops. The tile only has six places to be, so it
+          parks on ••• and stays there across every module.
+        </p>
+        <div class="travel" id="travel"></div>
+        <p class="ctl__note" style="padding-left:0">
+          Left off Connect brings Journal in the way any other tab arrives. Right
+          off Journal goes back to Connect. The far ends still resist and stop.
+        </p>
+      </section>
+
+      <section class="panel">
+        <h2 class="panel__h">What building it touches</h2>
+        <p class="panel__sub">Five files, and the geometry of the bar is not one of them.</p>
+        <div class="files-wrap">
+          <table class="files">
+            <thead>
+              <tr><th>File</th><th>Change</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>js/router.js</code></td>
+                <td>Split <code>TABS</code> into the five that show in the bar and the
+                  modules behind •••, and have the swipe run the concatenation.
+                  <code>isTab</code> answers for both.</td>
+              </tr>
+              <tr>
+                <td><code>js/app.js</code></td>
+                <td>The ••• tile opens the sheet instead of routing. The module list
+                  moves next to <code>TAB_META</code> so one array feeds the sheet,
+                  the swipe order, and the lit tile.</td>
+              </tr>
+              <tr>
+                <td><code>js/swipe.js</code></td>
+                <td>Nothing structural. It already renders the neighbour into a pane
+                  and hands it to the router; it just has a longer list to index
+                  into, and the tile position clamps at five.</td>
+              </tr>
+              <tr>
+                <td><code>css/components.css</code></td>
+                <td>One new block, <code>.hc-oversheet</code>, reusing the
+                  <code>--hc-tabbar-*</code> tokens. No new colours.</td>
+              </tr>
+              <tr>
+                <td><code>js/screens/more.js</code></td>
+                <td>Keeps its route so old history entries and links still land, and
+                  stops being the thing ••• opens.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2 class="panel__h">Four calls to make before it is built</h2>
+        <ul class="asks">
+          <li>
+            <p><strong>Which grid.</strong> Filling the width is the default here,
+              since two narrow tiles floating in a wide panel is the empty space you
+              asked not to have. Four across is the alternative: tiles never change
+              size as modules are added.</p>
+            <p>Filling the width means today's two tiles are wider than tomorrow's four.</p>
+          </li>
+          <li>
+            <p><strong>Flush or raised.</strong> Flush is the default here because the
+              bar already has a rule about what a tile means, and it means <em>you are
+              here</em>. Raised spends that tile on all of them at once, which makes the
+              targets louder and the sheet heavier.</p>
+            <p>Raised looks better at eight modules than at two.</p>
+          </li>
+          <li>
+            <p><strong>Whether the More screen survives.</strong> It can stay reachable
+              at <code>?v=more</code> for old links while ••• stops opening it, or go
+              entirely and take the leader-mode row with it.</p>
+            <p>Leader mode is the only thing on it that is not in the grid.</p>
+          </li>
+          <li>
+            <p><strong>What the sheet does on a keyboard and a screen reader.</strong>
+              Drawn here as a non-modal panel: focus moves in, Esc closes, the bar
+              stays reachable. A true modal would trap focus and take the bar with it.</p>
+          </li>
+        </ul>
+      </section>
+
+    </div>
+  </div>
+
+  <p class="pg-foot">demo-more-overlay · a drawing, not a build · nothing in js/ or css/ has been touched</p>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  /* ------------------------------------------------------------- the icons
+     Lifted from PATHS in js/components.js so the sheet is drawn with the
+     app's own marks rather than lookalikes. */
+  var ICON = {
+    home: '<path d="M3 10.2 12 3l9 7.2V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/>',
+    listen: '<path d="M4 15v-3a8 8 0 0 1 16 0v3"/><path d="M4 14h2a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2H5a1 1 0 0 1-1-1z"/><path d="M20 14h-2a2 2 0 0 0-2 2v2a2 2 0 0 0 2 2h1a1 1 0 0 0 1-1z"/>',
+    guide: '<path d="M4 4.5A1.5 1.5 0 0 1 5.5 3H19v15H5.5A1.5 1.5 0 0 0 4 19.5z"/><path d="M4 19.5A1.5 1.5 0 0 1 5.5 18H19v3H5.5A1.5 1.5 0 0 1 4 19.5z"/><path d="M8 8h7M8 11.5h5"/>',
+    group: '<rect x="3" y="5" width="18" height="14" rx="4"/><circle cx="8.5" cy="12" r="1.2"/><circle cx="12" cy="12" r="1.2"/><circle cx="15.5" cy="12" r="1.2"/>',
+    connect: '<circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.2 2.7-5.2 6-5.2s6 2 6 5.2"/><path d="M16 5.4a3.2 3.2 0 0 1 0 6.2M18 14.6c2 .7 3 2.5 3 5"/>',
+    more: '<circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/>',
+    journal: '<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M8.5 13h7M8.5 16.5h4.5"/>',
+    give: '<path d="M12 20s-7.5-4.6-7.5-9.4A4.1 4.1 0 0 1 12 7.6a4.1 4.1 0 0 1 7.5 3C19.5 15.4 12 20 12 20z"/>',
+    leaf: '<path d="M20 4C10 4 4 9 4 16v4"/><path d="M20 4c0 9-5 13-11 13H4"/>',
+    message: '<path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9.5 9.5 0 0 1-2.9-.4L4 21l1.4-4.1A8.2 8.2 0 0 1 3.6 11.5 8.4 8.4 0 0 1 12 3.1a8.4 8.4 0 0 1 9 8.4z"/>',
+    pin: '<path d="M12 21s7-5.5 7-11a7 7 0 1 0-14 0c0 5.5 7 11 7 11z"/><circle cx="12" cy="10" r="2.6"/>',
+    book: '<path d="M4 5.5A1.5 1.5 0 0 1 5.5 4H11v16H5.5A1.5 1.5 0 0 1 4 18.5z"/><path d="M20 5.5A1.5 1.5 0 0 0 18.5 4H13v16h5.5a1.5 1.5 0 0 0 1.5-1.5z"/>',
+    doc: '<path d="M13.5 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8.5z"/><path d="M13.5 3v5.5H19"/>',
+    pencil: '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>'
+  };
+
+  function svg(name, solid) {
+    return '<svg viewBox="0 0 24 24" aria-hidden="true"' + (solid ? ' class="solid"' : '') + '>' +
+           ICON[name] + '</svg>';
+  }
+
+  /* ------------------------------------------------------------- the stops
+     Five tabs, then the modules. The order in this array is the swipe order,
+     which is the whole proposal in one line. */
+
+  var TABS = [
+    { name: 'home',    label: 'Home',    icon: 'home' },
+    { name: 'listen',  label: 'Listen',  icon: 'listen' },
+    { name: 'guide',   label: 'Guide',   icon: 'guide' },
+    { name: 'group',   label: 'Group',   icon: 'group' },
+    { name: 'connect', label: 'Connect', icon: 'connect' }
+  ];
+
+  /* The first two ship. The rest stand in for whatever comes next, and are
+     only here so the grid rule can be looked at before it is needed. */
+  var MODULES = [
+    { name: 'journal', label: 'Journal',  icon: 'journal' },
+    { name: 'give',    label: 'Give',     icon: 'give' },
+    { name: 'serve',   label: 'Serve',    icon: 'leaf' },
+    { name: 'prayer',  label: 'Prayer',   icon: 'message' },
+    { name: 'events',  label: 'Events',   icon: 'pin' },
+    { name: 'library', label: 'Library',  icon: 'book' },
+    { name: 'notes',   label: 'Notes',    icon: 'pencil' },
+    { name: 'forms',   label: 'Forms',    icon: 'doc' }
+  ];
+
+  /* Enough of each screen to see it arrive. Real copy, because placeholder
+     text hides how long a serif line actually runs. */
+  var CONTENT = {
+    home:    { eyebrow: 'Sunday, 23 August', title: 'This week at Home',
+               blocks: [['card', 'Baptism Sunday', 'The 9th, at the lake house. Six people so far, and the list is still open.'],
+                        ['note', 'Week 4 of David. You are two readings behind, which is nothing.'],
+                        ['rail', ['Read', 'Listen', 'Pray']]] },
+    listen:  { eyebrow: 'Latest message', title: 'A heart after God',
+               blocks: [['card', '1 Samuel 16 · 38 min', 'Preached 16 August. Ryan Pemberton.'],
+                        ['card-flat', 'The whole of David', 'Eleven messages, Aug 2026 back to May.']] },
+    guide:   { eyebrow: 'This week', title: 'Chosen, not obvious',
+               blocks: [['note', 'Six questions, one passage, and room to write between them.'],
+                        ['card', 'Open the guide', 'You left off at question three.']] },
+    group:   { eyebrow: 'Thursday, 7pm', title: 'The Pemberton house',
+               blocks: [['card', 'Room is open', 'Four here. Two answers in so far.'],
+                        ['card-flat', 'Prayer requests', 'Three from last week, still carried.']] },
+    connect: { eyebrow: 'Get in touch', title: 'Connect',
+               blocks: [['rail', ['Visit', 'Serve', 'Ask']],
+                        ['card', 'New here?', 'Tell us you came. That is the whole form.'],
+                        ['card-flat', 'On Instagram', '@homechurch, most recent nine.']] },
+    journal: { eyebrow: 'Everything written down', title: 'Journal',
+               blocks: [['card', 'From this week’s guide', 'Three answers, saved Tuesday.'],
+                        ['card-flat', 'On your own', 'Start something with nothing in front of it.']] },
+    give:    { eyebrow: 'Through Overflow', title: 'Give',
+               blocks: [['note', 'Giving opens in your own browser, on the church’s own account.'],
+                        ['card', 'Open Overflow', 'One time, or set it and forget it.']] },
+    serve:   { eyebrow: 'Where hands are needed', title: 'Serve',
+               blocks: [['card', 'Sunday setup', 'Two spots open this week.']] },
+    prayer:  { eyebrow: 'Carried this week', title: 'Prayer',
+               blocks: [['card', 'Nine requests', 'Four of them answered since Sunday.']] },
+    events:  { eyebrow: 'On the calendar', title: 'Events',
+               blocks: [['card', 'Baptism Sunday', 'The 9th, at the lake house.']] },
+    library: { eyebrow: 'Worth keeping', title: 'Library',
+               blocks: [['card', 'Every guide', 'Back to the first one.']] },
+    notes:   { eyebrow: 'Yours', title: 'Notes',
+               blocks: [['card', 'Twelve notes', 'Most recent: 1 Samuel 16.']] },
+    forms:   { eyebrow: 'Paperwork', title: 'Forms',
+               blocks: [['card', 'Membership', 'Four questions, one page.']] }
+  };
+
+  var screen  = document.getElementById('screen');
+  var track   = document.getElementById('track');
+  var tabbar  = document.getElementById('tabbar');
+  var sheet   = document.getElementById('sheet');
+  var grid    = document.getElementById('grid');
+  var scrim   = document.getElementById('scrim');
+  var grab    = document.getElementById('grab');
+  var travel  = document.getElementById('travel');
+
+  var count   = 2;          // how many modules are behind •••
+  var variant = 'fill';     // 'fill' or 'four'
+  var face    = 'flush';    // 'flush' or 'raised'
+  var pos     = 0;          // which stop, fractional mid-drag
+
+  function modules() { return MODULES.slice(0, count); }
+  function stops()   { return TABS.concat(modules()); }
+
+  function reduced() {
+    return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  }
+
+  /* ------------------------------------------------------------ the screens */
+
+  function blockHtml(b) {
+    if (b[0] === 'card')      return '<div class="s-card"><p class="s-card__t">' + b[1] + '</p><p class="s-card__s">' + b[2] + '</p></div>';
+    if (b[0] === 'card-flat') return '<div class="s-card s-card--flat"><p class="s-card__t">' + b[1] + '</p><p class="s-card__s">' + b[2] + '</p></div>';
+    if (b[0] === 'note')      return '<p class="s-note">' + b[1] + '</p>';
+    if (b[0] === 'rail')      return '<div class="s-rail">' + b[1].map(function (t) {
+      return '<span class="s-chip">' + t + '</span>';
+    }).join('') + '</div>';
+    return '';
+  }
+
+  function buildTrack() {
+    var list = stops();
+    screen.style.setProperty('--n', list.length);
+    track.innerHTML = list.map(function (s) {
+      var c = CONTENT[s.name];
+      return '<section class="view" aria-label="' + s.label + '">' +
+        '<div class="s-head">' +
+          '<p class="s-eyebrow">' + c.eyebrow + '</p>' +
+          '<h2 class="s-title">' + c.title + '</h2>' +
+          '<div class="s-rule"></div>' +
+        '</div>' +
+        c.blocks.map(blockHtml).join('') +
+      '</section>';
+    }).join('');
+  }
+
+  /* -------------------------------------------------------------- the bar */
+
+  function buildBar() {
+    tabbar.innerHTML = TABS.map(function (t) {
+      return '<button type="button" class="tab" data-go="' + t.name + '">' +
+        svg(t.icon) + '<span class="tab__label">' + t.label + '</span></button>';
+    }).join('') +
+    '<button type="button" class="tab" data-more="1" aria-label="More">' +
+      svg('more', true) + '<span class="tab__label">More</span></button>';
+  }
+
+  /* The tile has six places to stand and there are seven stops, so past
+     Connect it clamps: every module lights ••• and nothing beyond it moves. */
+  function paintBar() {
+    tabbar.style.setProperty('--hc-tab-index', Math.min(pos, TABS.length).toFixed(4));
+    var buttons = tabbar.querySelectorAll('.tab');
+    var landed = Math.round(pos);
+    buttons.forEach(function (b, i) {
+      var here = i === Math.min(landed, TABS.length);
+      if (here) b.setAttribute('aria-current', 'page');
+      else b.removeAttribute('aria-current');
+    });
+  }
+
+  /* ------------------------------------------------------------ the sheet */
+
+  function cols() {
+    var n = modules().length;
+    if (variant === 'four') return 4;
+    return Math.min(n, 4);
+  }
+
+  function buildSheet() {
+    grid.style.setProperty('--cols', cols());
+    grid.setAttribute('data-face', face);
+    var landed = Math.round(pos);
+    grid.innerHTML = modules().map(function (m, i) {
+      var here = landed === TABS.length + i;
+      return '<button type="button" class="omod" data-go="' + m.name + '"' +
+        (here ? ' aria-current="page"' : '') + '>' +
+        svg(m.icon) + '<span class="omod__label">' + m.label + '</span></button>';
+    }).join('');
+  }
+
+  function openSheet() {
+    buildSheet();
+    screen.setAttribute('data-sheet', 'open');
+    sheet.setAttribute('aria-hidden', 'false');
+    scrim.tabIndex = 0;
+    var first = grid.querySelector('.omod');
+    if (first) first.focus({ preventScroll: true });
+  }
+
+  function closeSheet() {
+    screen.setAttribute('data-sheet', 'closed');
+    sheet.setAttribute('aria-hidden', 'true');
+    sheet.style.transform = '';
+    scrim.style.opacity = '';
+    scrim.tabIndex = -1;
+  }
+
+  function sheetOpen() { return screen.getAttribute('data-sheet') === 'open'; }
+
+  /* --------------------------------------------------------- moving about */
+
+  function goTo(index, ms) {
+    var max = stops().length - 1;
+    pos = Math.max(0, Math.min(max, index));
+    track.style.setProperty('--settle', (reduced() ? 0 : (ms || 300)) + 'ms');
+    track.setAttribute('data-settling', 'true');
+    tabbar.removeAttribute('data-swiping');
+    tabbar.style.setProperty('--hc-tab-tween', (reduced() ? 0 : (ms || 300)) + 'ms');
+    screen.style.setProperty('--pos', pos);
+    paintBar();
+    window.setTimeout(function () {
+      track.removeAttribute('data-settling');
+      if (sheetOpen()) buildSheet();
+    }, (ms || 300) + 20);
+  }
+
+  function goByName(name) {
+    var list = stops();
+    for (var i = 0; i < list.length; i++) if (list[i].name === name) return goTo(i, 300);
+  }
+
+  /* ------------------------------------------------------------- gestures */
+
+  var drag = null;
+
+  function onDown(evt) {
+    if (sheetOpen()) return;
+    if (evt.button != null && evt.button !== 0) return;
+    drag = {
+      id: evt.pointerId,
+      x: evt.clientX, y: evt.clientY,
+      dx: 0, live: false, dead: false,
+      w: screen.clientWidth || 375,
+      t: Date.now(), lastX: evt.clientX, v: 0
+    };
+  }
+
+  function onMove(evt) {
+    if (!drag || drag.dead || evt.pointerId !== drag.id) return;
+    var dx = evt.clientX - drag.x;
+    var dy = evt.clientY - drag.y;
+
+    if (!drag.live) {
+      if (Math.abs(dy) > 10 && Math.abs(dy) >= Math.abs(dx)) { drag = null; return; }
+      if (Math.abs(dx) < 10 || Math.abs(dx) < Math.abs(dy) * 1.2) return;
+      drag.live = true;
+      drag.slop = dx < 0 ? -10 : 10;
+      track.removeAttribute('data-settling');
+      tabbar.setAttribute('data-swiping', 'true');
+    }
+
+    dx -= drag.slop;
+
+    var now = Date.now();
+    if (now > drag.t) { drag.v = (evt.clientX - drag.lastX) / (now - drag.t); drag.t = now; drag.lastX = evt.clientX; }
+
+    // Nothing over the far edges, so the screen follows at a third speed and
+    // stops. The pull says the gesture was understood.
+    var at = pos - dx / drag.w;
+    if (at < 0 || at > stops().length - 1) dx *= 0.32;
+
+    drag.dx = dx;
+    var fract = Math.max(0, Math.min(stops().length - 1, pos - dx / drag.w));
+    screen.style.setProperty('--pos', fract.toFixed(4));
+    tabbar.style.setProperty('--hc-tab-index', Math.min(fract, TABS.length).toFixed(4));
+  }
+
+  function onUp(evt) {
+    if (!drag || (evt && evt.pointerId !== drag.id)) return;
+    if (!drag.live) { drag = null; return; }
+
+    var dir = drag.dx < 0 ? 1 : -1;
+    var far = Math.abs(drag.dx) > drag.w * 0.26;
+    var flick = Math.abs(drag.v) > 0.45 && Math.abs(drag.dx) > 30 && (drag.v < 0) === (dir > 0);
+    var ms = Math.max(170, Math.min(380, Math.abs(drag.dx) / Math.max(Math.abs(drag.v), 0.4)));
+
+    goTo((far || flick) ? pos + dir : pos, ms);
+    drag = null;
+  }
+
+  var deck = document.querySelector('.deck');
+  deck.addEventListener('pointerdown', onDown);
+  deck.addEventListener('pointermove', onMove);
+  deck.addEventListener('pointerup', onUp);
+  deck.addEventListener('pointercancel', onUp);
+
+  /* ------------------------------------------------- drag the sheet down */
+
+  var sd = null;
+
+  grab.addEventListener('pointerdown', function (evt) {
+    if (!sheetOpen()) return;
+    sd = { id: evt.pointerId, y: evt.clientY, dy: 0, t: Date.now(), lastY: evt.clientY, v: 0 };
+    sheet.setAttribute('data-dragging', 'true');
+    grab.setPointerCapture(evt.pointerId);
+  });
+
+  grab.addEventListener('pointermove', function (evt) {
+    if (!sd || evt.pointerId !== sd.id) return;
+    var dy = Math.max(0, evt.clientY - sd.y);
+    var now = Date.now();
+    if (now > sd.t) { sd.v = (evt.clientY - sd.lastY) / (now - sd.t); sd.t = now; sd.lastY = evt.clientY; }
+    sd.dy = dy;
+    sheet.style.transform = 'translateY(' + dy + 'px)';
+    // The scrim belongs to the panel, so it lifts as the panel does.
+    scrim.style.opacity = Math.max(0, 1 - dy / (sheet.offsetHeight || 120)).toFixed(3);
+  });
+
+  function endSheetDrag(evt) {
+    if (!sd || (evt && evt.pointerId !== sd.id)) return;
+    sheet.removeAttribute('data-dragging');
+    var h = sheet.offsetHeight || 120;
+    if (sd.dy > h / 3 || sd.v > 0.5) closeSheet();
+    else { sheet.style.transform = ''; scrim.style.opacity = ''; }
+    sd = null;
+  }
+
+  grab.addEventListener('pointerup', endSheetDrag);
+  grab.addEventListener('pointercancel', endSheetDrag);
+
+  /* A tap on the handle, rather than a drag, closes it too. */
+  grab.addEventListener('click', function () { if (sheetOpen()) closeSheet(); });
+
+  /* ---------------------------------------------------------------- taps */
+
+  screen.addEventListener('click', function (evt) {
+    var moreBtn = evt.target.closest('[data-more]');
+    if (moreBtn) {
+      if (sheetOpen()) closeSheet(); else openSheet();
+      return;
+    }
+    var go = evt.target.closest('[data-go]');
+    if (go) {
+      if (sheetOpen()) closeSheet();
+      goByName(go.getAttribute('data-go'));
+    }
+  });
+
+  scrim.addEventListener('click', closeSheet);
+
+  document.addEventListener('keydown', function (evt) {
+    if (evt.key === 'Escape' && sheetOpen()) closeSheet();
+  });
+
+  /* ------------------------------------------------------ the notes panel */
+
+  var VARIANT_NOTE = {
+    fill: 'Columns fit the count, capped at four. Two modules make two wide tiles that span the sheet the way the bar spans the screen.',
+    four: 'Always four columns. Tiles are the same size forever; today that leaves two of the four standing empty.'
+  };
+
+  function paintTravel() {
+    var list = stops();
+    travel.innerHTML = list.map(function (s, i) {
+      var over = i >= TABS.length;
+      return '<div class="travel__cell" data-kind="' + (over ? 'overflow' : 'tab') + '">' +
+        s.label + '<small>' + (over ? 'the ••• tile' : 'tile ' + i) + '</small></div>';
+    }).join('');
+  }
+
+  function setVariant(v) {
+    variant = v;
+    document.querySelectorAll('[data-variant]').forEach(function (b) {
+      b.setAttribute('aria-pressed', b.getAttribute('data-variant') === v ? 'true' : 'false');
+    });
+    document.getElementById('variant-note').textContent = VARIANT_NOTE[v];
+    buildSheet();
+  }
+
+  var FACE_NOTE = {
+    flush: 'The modules sit on the glass the way the five tabs do, and the raised tile is spent on the one you are in. One rule for the whole plinth.',
+    raised: 'Every module gets the bar’s tile. Targets are unmissable; two of them fill the sheet with a lot of white.'
+  };
+
+  function setFace(f) {
+    face = f;
+    document.querySelectorAll('[data-face]').forEach(function (b) {
+      if (b.tagName !== 'BUTTON') return;
+      b.setAttribute('aria-pressed', b.getAttribute('data-face') === f ? 'true' : 'false');
+    });
+    document.getElementById('face-note').textContent = FACE_NOTE[f];
+    buildSheet();
+  }
+
+  function setCount(n) {
+    count = n;
+    document.querySelectorAll('[data-count]').forEach(function (b) {
+      b.setAttribute('aria-pressed', +b.getAttribute('data-count') === n ? 'true' : 'false');
+    });
+    // A stop that no longer exists cannot be where you are standing.
+    if (pos > stops().length - 1) pos = stops().length - 1;
+    buildTrack();
+    screen.style.setProperty('--pos', pos);
+    buildSheet();
+    paintBar();
+    paintTravel();
+  }
+
+  document.querySelectorAll('[data-variant]').forEach(function (b) {
+    b.addEventListener('click', function () { setVariant(b.getAttribute('data-variant')); if (!sheetOpen()) openSheet(); });
+  });
+  document.querySelectorAll('button[data-face]').forEach(function (b) {
+    b.addEventListener('click', function () { setFace(b.getAttribute('data-face')); if (!sheetOpen()) openSheet(); });
+  });
+  document.querySelectorAll('[data-count]').forEach(function (b) {
+    b.addEventListener('click', function () { setCount(+b.getAttribute('data-count')); if (!sheetOpen()) openSheet(); });
+  });
+  document.querySelectorAll('[data-theme-set]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      var t = b.getAttribute('data-theme-set');
+      if (t === 'system') document.documentElement.removeAttribute('data-theme');
+      else document.documentElement.setAttribute('data-theme', t);
+      document.querySelectorAll('[data-theme-set]').forEach(function (o) {
+        o.setAttribute('aria-pressed', o === b ? 'true' : 'false');
+      });
+    });
+  });
+
+  buildBar();
+  buildTrack();
+  setVariant('fill');
+  setFace('flush');
+  setCount(2);
+  goTo(4, 0);   // start on Connect, one drag away from the new part
+  paintTravel();
+
+  /* Arriving with it already up would be a picture of the sheet. Letting it
+     come up a beat after the page settles is the sheet, which is the thing
+     being decided. Focus stays out here so the page does not scroll to it. */
+  window.setTimeout(function () {
+    buildSheet();
+    screen.setAttribute('data-sheet', 'open');
+    sheet.setAttribute('aria-hidden', 'false');
+    scrim.tabIndex = 0;
+  }, reduced() ? 0 : 620);
+})();
+</script>
