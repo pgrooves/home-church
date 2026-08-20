@@ -532,9 +532,15 @@ body {
   touch-action: none;
 }
 
-/* The track. Sits over the strip, never takes a pointer of its own — every
-   pointer this component sees arrives through the strip above, so there is
-   one gesture path and not two that can disagree. */
+/* The track. Always on the glass, and it never takes a pointer of its own:
+   every pointer this component sees arrives through the strip above, so there
+   is one gesture path and not two that can disagree.
+
+   THE NOTCHES DO NOT HIDE. They are what says this edge is for something, and
+   an edge that only answers a thumb already on it is an edge nobody puts a
+   thumb on. What hides is the reading — the headings, the card and the veil
+   are the part that would be in the way, and none of them exist until a thumb
+   is down. */
 .hc-index {
   position: absolute;
   z-index: 46;
@@ -543,24 +549,14 @@ body {
   bottom: calc(var(--hc-tabbar-space) + var(--hc-tap-min) + 8px);
   width: 34px;
   pointer-events: none;
-  opacity: 0;
-  transition: opacity 380ms var(--hc-ease);
 }
 
-/* Up while a thumb is down, and while a keyboard is in the track. */
-.hc-index[data-state="on"] { opacity: 1; transition-duration: 120ms; }
-
-/* The written column and the card ride the notches' own state, so there is one
-   thing that is up or down and not three that can disagree. Their ink is drawn
-   frame by frame from the same swell, which is why only the track's own fade
-   is a transition. */
+/* The written column, the card and the veil come and go together, and their
+   ink is drawn frame by frame from the same swell, so nothing here is a
+   transition. This only takes them out of the way once the swell is spent. */
 .hc-index[data-state="off"] ~ .hc-index__titles,
 .hc-index[data-state="off"] ~ .hc-index__peek,
 .hc-index[data-state="off"] ~ .hc-index__veil { visibility: hidden; }
-
-/* The optional variant: a glance at where you are while the page itself is
-   being scrolled, at half strength and with no label. */
-.hc-index[data-state="peek"] { opacity: 0.5; transition-duration: 160ms; }
 
 .hc-index__notch {
   position: absolute;
@@ -584,7 +580,7 @@ body {
   background: var(--hc-ink);
   transform-origin: 100% 50%;
   transform: scaleX(0.3);
-  opacity: 0.3;
+  opacity: 0.2;
   will-change: transform, opacity;
 }
 
@@ -685,9 +681,7 @@ body {
   white-space: nowrap;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .hc-index { transition-duration: 1ms; }
-}
+
 
 /* --- the annotation layer, narrow ------------------------------------------
    On a phone the drawing is the thing you want, at the size your thumb will
@@ -721,13 +715,6 @@ body {
         <span class="seg" id="seg-page">
           <button type="button" data-v="home" aria-pressed="true">Home &middot; 6 stops</button>
           <button type="button" data-v="guide" aria-pressed="false">Guide &middot; 14 stops</button>
-        </span>
-      </div>
-      <div class="rig__row">
-        <span class="rig__label">While the page itself is scrolled</span>
-        <span class="seg" id="seg-peek">
-          <button type="button" data-v="off" aria-pressed="true">Rail stays hidden</button>
-          <button type="button" data-v="on" aria-pressed="false">Rail half-peeks</button>
         </span>
       </div>
       <div class="rig__row">
@@ -815,7 +802,7 @@ body {
 
       <div class="note">
         <h3><span>3</span> The fisheye</h3>
-        <p>Each notch is a hairline pinned to the right edge that grows leftward. Under the finger it runs to its full 30px at full ink; away from the finger it falls off on a gaussian, <code>exp(-(d/46)^2)</code>, to 9px at three-tenths ink. That is one smooth curve rather than a step, so the swell moves <i>through</i> the notches instead of hopping between them.</p>
+        <p>Each notch is a hairline pinned to the right edge that grows leftward. Under the finger it runs to its full 30px at full ink; away from the finger it falls off on a gaussian, <code>exp(-(d/46)^2)</code>, back to its resting 9px or 6px. Both lengths reach the same 30px at the centre of the swell, so the ruler stays a ruler and the one you are on is still unambiguous. That is one smooth curve rather than a step, so the swell moves <i>through</i> the notches instead of hopping between them.</p>
         <p>The same <code>f</code> drives the written headings beside them &mdash; scale from 0.78 to full, ink from 0.26 to solid &mdash; so the notch and its name are one movement and not two that nearly agree.</p>
         <p>Width is drawn with <code>scaleX</code> off a fixed 30px, never by setting <code>width</code>. Nothing in the gesture touches layout.</p>
       </div>
@@ -848,7 +835,7 @@ body {
       <div class="note note--open">
         <h3><span>open</span> What the right edge costs</h3>
         <p>34px of the right edge stops being content while this is on, and vertical travel inside it belongs to the rail rather than to the page. Cards have 20px of padding there so nothing tappable is under it today, but the full-bleed carousel on Home is, and so is the swipe between tabs &mdash; which is why a gesture that turns out to be sideways is handed straight back.</p>
-        <p>Also open: whether the rail should half-peek during an ordinary scroll (the second toggle). It answers "where am I" for free, and it is one more thing moving on a page somebody is reading. Shipped default in this drawing is <b>hidden</b>, per the brief.</p>
+        <p>The notches sit over whatever the page is showing. On paper and on a card that is nothing; over a photograph, 0.20 ink may want a halo the way the disc's arrow has one.</p>
       </div>
     </div>
   </div>
@@ -881,8 +868,16 @@ body {
 
   var W_MAX  = 30;    // a notch at the centre of the swell
   var W_MIN  = 9;     // a notch nowhere near the finger
+  var W_ALT  = 6;     // and every second one, so the column reads as a ruler
+                      // rather than a list: a run of even ticks is a thing you
+                      // slide along, which is the whole claim the edge makes
+                      // before anybody has touched it.
   var W_ACT  = 17;    // the section you are actually in, finger or no finger
-  var A_MIN  = 0.30;  // ink at rest
+
+  var A_REST = 0.20;  // ink with nobody's thumb on it. Enough to see the edge
+                      // is for something, not enough to read as content.
+  var A_ON   = 0.30;  // the floor once a thumb is down
+  var A_HERE = 0.55;  // the section you are in, at rest
 
   var T_DIM  = 0.26;  // a heading you are not on. Present, and clearly behind.
   var T_LOW  = 0.54;  // how small one of those is allowed to get
@@ -898,8 +893,7 @@ body {
   var LAND   = 12;    // where a jumped-to heading comes to rest under the top
   var LINE   = 72;    // the reading line the active notch is measured against
 
-  var HOLD   = 1000;  // ms the rail stays up after the thumb lifts
-  var PEEK   = 900;   // ms it stays up after an ordinary scroll, when on
+  var HOLD   = 1000;  // ms the headings stay up after the thumb lifts
   var SLOP   = 10;    // px before a gesture has to say which way it is going
   var AXIS   = 1.2;   // horizontal has to beat vertical by this to be a swipe
 
@@ -938,7 +932,6 @@ body {
   var running  = false;
   var hideTimer= 0;
   var trackTop = 0;       // the track's offset inside .app, cached
-  var peekMode = false;   // the half-peek-while-scrolling variant
 
   function clamp(v, lo, hi) { return v < lo ? lo : (v > hi ? hi : v); }
 
@@ -1039,12 +1032,17 @@ body {
         f = gain * Math.exp(-d * d);
       }
 
-      /* The notch. */
-      var w = W_MIN + (W_MAX - W_MIN) * f;
-      var a = A_MIN + (1 - A_MIN) * f;
+      /* The notch. Its resting length alternates, and both lengths run to the
+         same W_MAX under the finger, so the swell is unambiguous about which
+         one you are on while the ruler underneath stays a ruler. */
+      var base = (i % 2) ? W_ALT : W_MIN;
+      var rest = A_REST + (A_ON - A_REST) * gain;
+      var w = base + (W_MAX - base) * f;
+      var a = rest + (1 - rest) * f;
       if (i === active) {
         if (w < W_ACT) w = W_ACT;
-        if (a < 0.78)  a = 0.78;
+        var here = A_HERE + 0.23 * gain;
+        if (a < here) a = here;
       }
       var s = w / W_MAX;
       if (Math.abs(s - lastW[i]) > QUIET) {
@@ -1149,10 +1147,16 @@ body {
   }
 
   /* A timer rather than a countdown inside the frame loop, so a rail waiting
-     to fade is not a rail holding a rAF open for a second doing nothing. */
+     to fade is not a rail holding a rAF open for a second doing nothing.
+
+     The kick is not optional. A finger held still stops the loop, because a
+     still finger changes nothing; letting go is then the one moment with
+     something to animate and nothing running to animate it, and without this
+     the swell freezes at full and blinks out a second later. */
   function hideSoon(ms) {
     if (hideTimer) clearTimeout(hideTimer);
     hideTimer = setTimeout(function () { hideTimer = 0; setState('off'); }, ms);
+    kick();
   }
 
   function setActive(i, speak) {
@@ -1292,12 +1296,11 @@ body {
       topbar.setAttribute('data-scrolled', scroll.scrollTop > 24 ? 'true' : 'false');
       totop.setAttribute('data-show', scroll.scrollTop > 240 ? 'true' : 'false');
       if (engaged || gliding) return;
+      /* The ruler is on the glass whether or not anybody is holding it, so an
+         ordinary scroll still has somewhere to land: the notch you are in
+         lengthens and the one you left goes back to the ruler. */
+      measure();
       fromScroll();
-      if (peekMode) {
-        if (index.getAttribute('data-state') === 'off') { measure(); layout(); }
-        show('peek');
-        hideSoon(PEEK);
-      }
       kick();
     });
   }, { passive: true });
@@ -1377,7 +1380,6 @@ body {
   }
 
   wire('seg-page', setPage);
-  wire('seg-peek', function (v) { peekMode = (v === 'on'); });
   wire('seg-theme', function (v) { app.setAttribute('data-theme', v); });
 
   setPage('home');
