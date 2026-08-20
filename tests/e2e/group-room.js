@@ -302,6 +302,85 @@ const tap = async (p, sel) => { await p.locator(sel).first().click(); await p.wa
 
   ok('what crossed over is plain text, not markup', /[<>]/.test(filled), false);
 
+  /* ---- 8c. keeping your own half of the night ------------------------------
+
+     A room is swept ninety days after it closes. This is the only copy of
+     what somebody wrote that outlives it, and the rule is that it is *their*
+     half: their own answers and the prayer requests the whole room shared,
+     never somebody else's answers. */
+
+  /* The member's first answer was taken down by the host in step 8, so at
+     this point they have written nothing that still stands. That is worth
+     checking rather than working around: an empty room offers nothing to
+     keep. */
+  ok('with nothing of yours left standing, there is nothing to keep',
+     (await member.page.locator('[data-action="room-keep"]').count()), 0);
+
+  await member.page.fill('[data-draft="' + q2 + '"]', 'The part about not going it alone.');
+  await member.page.waitForTimeout(200);
+  // Scoped to this question. A draft left in another box puts a second Post
+  // button on the page, and .first() would press the wrong one.
+  await tap(member.page,
+    '.hc-room-q[data-question="' + q2 + '"] [data-action="room-post"]');
+  await member.page.waitForTimeout(400);
+
+  ok('once you have written something, the room offers to keep it',
+     (await member.page.locator('[data-action="room-keep"]').count()) > 0, true);
+
+  await tap(member.page, '[data-action="room-keep"]');
+  const kept = await member.page.evaluate(() =>
+    HC.journal.all().filter(e => e.kind === 'night')[0]);
+
+  ok('it lands in the journal as one entry', !!kept, true);
+  ok('tagged to the guide the room came from', kept.guideId, guideId);
+  ok('with your own answer in it',
+     kept.bodyText.includes('The part about not going it alone.'), true);
+  ok('the prayer requests come too, since the whole room shares those',
+     kept.bodyText.includes('Pray for my sister'), true);
+
+  /* The rule that matters, tested where it can actually be broken. A member
+     never receives anybody else's shut answer, so their journal could not
+     leak one if it tried. The host is the one holding other people's writing:
+     they have opened answers on screen. Keeping the night must take their own
+     half and leave everybody else's alone. */
+  await host.page.evaluate(() => HC.rooms.refresh());
+  await host.page.waitForTimeout(700);
+
+  /* The answer the member just posted is still shut, and a shut answer never
+     reaches the host at all, which is the rule the whole Group tab rests on.
+     So the host opens the room first: that is the only state in which they
+     hold somebody else's writing, and therefore the only state in which
+     keeping the night could leak it. */
+  await tap(host.page, '[data-action="room-open-all"]');
+  await host.page.evaluate(() => HC.rooms.refresh());
+  await host.page.waitForTimeout(700);
+
+  const hostSeesOthers = await host.page.evaluate(() =>
+    HC.rooms.snapshot().notes
+      .filter(n => n.kind !== 'prayer' && n.authorId !== (HC.auth.getUser() || {}).id)
+      .map(n => n.body));
+  ok('the host can see somebody else\'s answer, so this is a real check',
+     hostSeesOthers.length > 0, true);
+
+  await host.page.evaluate(() => HC.screens.groupHelpers.repaint(true));
+  await host.page.waitForTimeout(300);
+  await tap(host.page, '[data-action="room-keep"]');
+  const hostKept = await host.page.evaluate(() =>
+    HC.journal.all().filter(e => e.kind === 'night')[0]);
+
+  ok('the host keeps their own night too', !!hostKept, true);
+  ok('and not one word of anybody else\'s answers goes in',
+     hostSeesOthers.some(b => hostKept.bodyText.includes(b)), false);
+  ok('though the prayer requests, which the room shares, do',
+     hostKept.bodyText.includes('Pray for my sister'), true);
+
+  await tap(member.page, '[data-action="room-keep"]');
+  ok('keeping twice updates rather than making a second entry',
+     await member.page.evaluate(() => HC.journal.all().filter(e => e.kind === 'night').length), 1);
+  ok('and the button says so now',
+     (await text(member.page)).includes('UPDATE WHAT YOU KEPT') ||
+     (await text(member.page)).includes('Update what you kept'), true);
+
   // ---- 9. the sheet -------------------------------------------------------
   const sheet = await host.page.evaluate(() => HC.print.buildNightPages(HC.rooms.snapshot()));
   ok('the night sheet is built from the live room', sheet.includes('Pray for my sister'), true);

@@ -406,6 +406,147 @@
     window.print();
   }
 
+  /* ---------------------------------------------------------- the journal
+
+     Everything somebody has written, as one document they can keep.
+
+     THIS IS NOT A CONVENIENCE. The journal syncs to an account now, which
+     means the church holds a copy of writing that is often the most personal
+     thing in the app. A person who wants their own copy of their own words
+     should not have to ask anybody for it, and should not have to trust that
+     the app will still be here next year. So this exists for the same reason
+     the Your data screen exists, and it is one tap from the list.
+
+     Grouped by guide, newest first, exactly the way the Journal screen groups
+     them, so the paper and the screen tell the same story in the same order.
+
+     Markup goes through the sanitizer once more on the way out. This document
+     leaves the app and opens in a browser somebody else's phone chose, which
+     is the last place to start trusting a stored string. */
+
+  function journalCover(entries, when) {
+    var guides = {};
+    entries.forEach(function (e) { if (e.guideTitle) guides[e.guideTitle] = true; });
+    var count = Object.keys(guides).length;
+
+    return page('hc-print-page--cover',
+      '<p class="hc-print-eyebrow">Home Church &middot; Your Journal</p>' +
+      '<h1 class="hc-print-h1">What you wrote</h1>' +
+      '<p class="hc-print-subtitle">' +
+        entries.length + (entries.length === 1 ? ' entry' : ' entries') +
+        (count ? ', across ' + count + (count === 1 ? ' guide' : ' guides') : '') +
+      '</p>' +
+      '<div class="hc-print-divider" aria-hidden="true"></div>' +
+      '<p class="hc-print-meta">Printed ' + c.esc(when) + '</p>' +
+      '<p class="hc-print-colophon">This is your copy, and it is yours to keep. ' +
+        'Nobody else has ever read any of it.</p>'
+    );
+  }
+
+  function journalPages(entries, startNum, title) {
+    var out = [];
+    var num = startNum;
+    var budget = 26;
+    var used = 0;
+    var body = '';
+    var heading = null;      // the guide whose section we are inside
+
+    function flush() {
+      if (!body) return;
+      out.push(page('', body + footer(title, num)));
+      num++;
+      body = '';
+      used = 0;
+    }
+
+    // Grouped the way the screen groups them, loose notes last.
+    var order = [];
+    var groups = {};
+    entries.forEach(function (e) {
+      var key = e.guideId || '__loose';
+      if (!groups[key]) {
+        groups[key] = { title: e.guideTitle || 'Loose notes', entries: [] };
+        order.push(key);
+      }
+      groups[key].entries.push(e);
+    });
+    order = order.filter(function (k) { return k !== '__loose'; })
+      .concat(groups.__loose ? ['__loose'] : []);
+
+    order.forEach(function (key) {
+      var group = groups[key];
+
+      group.entries.forEach(function (e) {
+        var text = e.bodyText || '';
+        var cost = 3 + linesFor(e.quote, 52) + linesFor(text, 58);
+        var opening = heading !== key;
+        if (opening) cost += 3;
+
+        if (used && used + cost > budget) flush();
+
+        // A page that starts mid-section says which section it is, so a
+        // sheet read out of order still makes sense.
+        if (opening || !body) {
+          body += '<p class="hc-print-eyebrow">' +
+            (key === '__loose' ? 'No guide' : 'On the guide') + '</p>' +
+            '<h2 class="hc-print-h2">' + c.esc(group.title) + '</h2>';
+          heading = key;
+        }
+
+        body += '<div class="hc-print-night-q">';
+
+        if (e.quote) {
+          body += '<p class="hc-print-question">&ldquo;' + c.esc(e.quote) + '&rdquo;</p>';
+        }
+
+        body += '<div class="hc-print-night-a">' +
+          '<p class="hc-print-night-who">' +
+            c.esc(c.formatDate(String(e.createdAt).slice(0, 10))) +
+          '</p>' +
+          (text
+            ? '<div class="hc-print-body">' + HC.journal.sanitize(e.bodyHtml || '') + '</div>'
+            : '<p class="hc-print-night-none">Highlighted, with nothing written about it.</p>') +
+          ((e.refs || []).length
+            ? '<p class="hc-print-meta">' + c.esc(e.refs.join(' &middot; ')) + '</p>'
+            : '') +
+        '</div></div>';
+
+        used += cost;
+      });
+    });
+
+    flush();
+    return out;
+  }
+
+  function buildJournalPages(entries) {
+    if (!entries || !entries.length) return '';
+    var when = c.formatDate(new Date().toISOString().slice(0, 10));
+    var title = 'Your journal, ' + when;
+    var pages = [journalCover(entries, when)];
+    journalPages(entries, 2, title).forEach(function (p) { pages.push(p); });
+    return pages.join('');
+  }
+
+  function journalHtml(entries) {
+    if (!entries || !entries.length) {
+      return Promise.reject(new Error('There is nothing written down yet.'));
+    }
+    return wrap('Your journal', buildJournalPages(entries));
+  }
+
+  function journal(entries) {
+    if (!entries || !entries.length) return;
+    removeSheet();
+    var sheet = document.createElement('div');
+    sheet.id = SHEET_ID;
+    sheet.innerHTML = buildJournalPages(entries);
+    document.body.appendChild(sheet);
+    window.addEventListener('afterprint', removeSheet);
+    window.setTimeout(removeSheet, 60000);
+    window.print();
+  }
+
   function guide(guideId) {
     var g = HC.data.getGuide(guideId);
     if (!g) return;
@@ -430,7 +571,10 @@
     standaloneHtml: standaloneHtml,
     night: night,
     nightHtml: nightHtml,
-    buildNightPages: buildNightPages
+    buildNightPages: buildNightPages,
+    journal: journal,
+    journalHtml: journalHtml,
+    buildJournalPages: buildJournalPages
   };
 
 })(window.HC = window.HC || {});

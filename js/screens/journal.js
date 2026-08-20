@@ -175,6 +175,18 @@
 
     html += storageNote();
 
+    /* Your own copy of your own words. It sits under the storage note on
+       purpose: that note is where somebody finds out the church holds a copy
+       of this, and this is the answer to the next thing they think. */
+    if (everything) {
+      html += '<div class="hc-journal__export">' +
+        c.button('Save a copy of everything', {
+          action: 'journal-export', variant: 'secondary', icon: 'download'
+        }) +
+        '<p class="hc-caption">One document, every entry, yours to keep wherever you like.</p>' +
+      '</div>';
+    }
+
     html += '</div>';
     return html;
   }

@@ -396,6 +396,32 @@
       HC.highlight.remove(el.getAttribute('data-id'));
     },
 
+    /* Your own copy of your own words. Same road Download guide and the night
+       sheet take: a real file to the share sheet on a phone, where iOS offers
+       Print, Save to Files and Mail, and the print dialog in a browser, where
+       window.print() actually does something. */
+    'journal-export': function () {
+      var entries = HC.journal.all();
+      if (!entries.length) {
+        c.toast('Nothing written down yet.');
+        return;
+      }
+
+      if (!HC.native.isNative()) {
+        HC.print.journal(entries);
+        return;
+      }
+
+      c.toast('Getting your journal ready.');
+      HC.print.journalHtml(entries).then(function (html) {
+        return HC.native.shareFile('my-journal.html', html, 'text/html', 'Your journal');
+      }).then(function (ok) {
+        if (!ok) c.toast('Could not put that together. Try again in a moment.');
+      }).catch(function () {
+        c.toast('Could not put that together. Try again in a moment.');
+      });
+    },
+
     'journal-filter': function (el) {
       HC.screens.journalHelpers.setFilter(el.getAttribute('data-value'));
       HC.screens.journalHelpers.repaint();
@@ -849,15 +875,30 @@
         '. Open the Group tab and tap Join.', 'Tonight\u2019s room');
     },
 
+    'room-keep': function () {
+      var entry = keepTonight();
+      if (!entry) {
+        c.toast('You have not written anything in this room yet.');
+        return;
+      }
+      HC.native.tap('Light');
+      c.toast('Kept. It is in your Journal.');
+      HC.screens.groupHelpers.repaint(true);
+    },
+
     'room-leave': function () {
-      HC.rooms.leave().then(function () { HC.screens.groupHelpers.repaint(true); });
+      offerToKeep(function () {
+        HC.rooms.leave().then(function () { HC.screens.groupHelpers.repaint(true); });
+      });
     },
 
     'room-close': function () {
-      HC.rooms.close().then(function () {
-        HC.screens.groupHelpers.repaint(true);
-        c.toast('Room closed. The code stops working now.');
-      }).catch(roomFailed);
+      offerToKeep(function () {
+        HC.rooms.close().then(function () {
+          HC.screens.groupHelpers.repaint(true);
+          c.toast('Room closed. The code stops working now.');
+        }).catch(roomFailed);
+      });
     },
 
     /* Writing. Each one checks the terms gate first, because guideline 1.2
@@ -1153,6 +1194,93 @@
     var who = (snap.room.groupName || snap.room.guideTitle || 'group')
       .toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40);
     return who + '-' + when + '.html';
+  }
+
+  /* ------------------------------------------------------- keeping tonight
+
+     A room is swept ninety days after it closes, by migration 0022, and that
+     is right: it is other people's writing sitting in a shared place. But it
+     means what somebody wrote on a Thursday is on a clock they did not set,
+     and the only copy that outlives it is the sheet the host sends round.
+
+     So this puts your own half of the evening in your own journal. Your
+     answers, and the prayer requests, which are the one part of a room the
+     whole group sees by design and which already go out on the night sheet.
+     Nobody else's answers, ever: those were written to the room, not to you.
+
+     The entry id is derived from the room, so keeping twice updates the same
+     entry rather than making a second one, and so the room can tell whether
+     it has been kept already. */
+
+  function nightEntryId(roomId) {
+    return 'night-' + roomId;
+  }
+
+  function keepTonight() {
+    var snap = HC.rooms.snapshot();
+    if (!snap.room) return null;
+
+    var me = HC.auth.isSignedIn() && HC.auth.getUser();
+    var meId = me && me.id;
+    var mine = snap.notes.filter(function (n) {
+      return n.authorId === meId && n.kind !== 'prayer';
+    });
+    var prayers = snap.notes.filter(function (n) { return n.kind === 'prayer'; });
+
+    if (!mine.length && !prayers.length) return null;
+
+    var when = c.formatDate(new Date(snap.room.openedAt || Date.now()).toISOString().slice(0, 10));
+    var html = '';
+
+    mine.forEach(function (note) {
+      var q = snap.questions.filter(function (x) { return x.id === note.questionId; })[0];
+      if (q) html += '<p><em>' + c.esc(q.body) + '</em></p>';
+      html += '<p>' + c.esc(note.body) + '</p>';
+    });
+
+    if (prayers.length) {
+      html += '<p><strong>What the room was carrying</strong></p><ul>';
+      prayers.forEach(function (p) {
+        html += '<li>' + c.esc(p.author) + ': ' + c.esc(p.body) + '</li>';
+      });
+      html += '</ul>';
+    }
+
+    var id = nightEntryId(snap.room.id);
+    var patch = {
+      id: id,
+      kind: 'night',
+      guideId: snap.room.guideId || null,
+      guideTitle: snap.room.guideTitle || null,
+      quote: (snap.room.groupName || snap.room.guideTitle || 'Your group') + ', ' + when,
+      bodyHtml: html
+    };
+
+    return HC.journal.get(id)
+      ? HC.journal.update(id, { bodyHtml: html })
+      : HC.journal.create(patch);
+  }
+
+  /* Asked on the way out, because that is the moment somebody finds out the
+     room is over, and it is the last moment they can do anything about it.
+     window.confirm, like the other room actions that cannot be undone. It
+     never blocks: whatever they answer, `then` runs. */
+  function offerToKeep(then) {
+    var snap = HC.rooms.snapshot();
+    var kept = snap.room && HC.journal.get(nightEntryId(snap.room.id));
+
+    if (!snap.room || kept) { then(); return; }
+
+    var me = HC.auth.isSignedIn() && HC.auth.getUser();
+    var wrote = snap.notes.some(function (n) { return n.authorId === (me && me.id); });
+    if (!wrote) { then(); return; }
+
+    if (window.confirm('Keep what you wrote tonight in your Journal? ' +
+        'A room is deleted ninety days after it closes, and this is the only copy that outlives it.')) {
+      keepTonight();
+      c.toast('Kept. It is in your Journal.');
+    }
+    then();
   }
 
   /* One place for a failed room action. These are ordinary network and

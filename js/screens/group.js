@@ -551,6 +551,28 @@
     return html;
   }
 
+  /* Your own half of the evening, kept. A room is swept ninety days after it
+     closes and the sheet the host sends round is the only other copy, so this
+     is offered here as well as on the way out, for whoever would rather not
+     be asked a question while they are leaving. */
+  function keepRow(snap) {
+    if (!HC.auth.isSignedIn() || !HC.journal) return '';
+
+    var kept = !!HC.journal.get('night-' + snap.room.id);
+    var wrote = snap.notes.some(function (n) { return n.authorId === me(); });
+    if (!wrote && !kept) return '';
+
+    return '<div class="hc-keep">' +
+      c.button(kept ? 'Update what you kept' : 'Keep tonight in your journal', {
+        action: 'room-keep', variant: 'secondary', icon: 'journal', small: true
+      }) +
+      '<p class="hc-caption">' + (kept
+        ? 'Already in your Journal. Tapping again brings it up to date.'
+        : 'What you wrote, and the prayer requests, in your own Journal. Nobody else\u2019s answers.') +
+      '</p>' +
+    '</div>';
+  }
+
   function roomScreen(snap) {
     var host = HC.rooms.isHost();
     var html = '<div class="hc-screen hc-group" data-room="' + c.esc(snap.room.id) + '">';
@@ -602,11 +624,13 @@
           c.button('Send as text', { action: 'room-send-sheet', icon: 'message', variant: 'secondary' }) +
         '</div>' +
       '</div>';
+      html += keepRow(snap);
       html += '<div class="hc-group__actions hc-mt-lg">' +
         c.button('Close the room', { action: 'room-close', variant: 'tertiary' }) + '</div>';
     } else {
       html += '<p class="hc-caption hc-group__hint">' + c.esc(hostName(snap)) +
         ' sends the whole night out when you are done.</p>';
+      html += keepRow(snap);
       html += '<div class="hc-group__actions">' +
         c.button('Leave this room', { action: 'room-leave', variant: 'tertiary' }) + '</div>';
     }
@@ -667,6 +691,8 @@
       Object.keys(drafts).map(function (k) { return k + (drafts[k].trim() ? '1' : '0'); }).join(),
       prayerDraft.trim() ? '1' : '0', newQuestion.trim() ? '1' : '0',
       codeDraft, joinError, editing && editing.id, busy, showingJournal,
+      // Whether tonight has been kept changes the button at the bottom.
+      snap.room && HC.journal ? !!HC.journal.get('night-' + snap.room.id) : false,
       // The suggestions themselves. A journal entry written in another tab
       // has to be able to appear here without waiting for something else to
       // change.

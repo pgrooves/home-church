@@ -1461,3 +1461,18 @@
 }
 
 .hc-fromj__note { margin-top: var(--hc-space-xs); }
+
+/* Keeping your own half of a group night. See keepRow() in
+   js/screens/group.js and keepTonight() in js/app.js. */
+.hc-keep {
+  margin-top: var(--hc-space-lg);
+  padding-top: var(--hc-space-base);
+  border-top: var(--hc-hairline) solid var(--hc-rule);
+}
+
+.hc-keep .hc-caption { margin-top: var(--hc-space-sm); }
+
+/* Your own copy of your own journal, under the note about where it lives. */
+.hc-journal__export { margin-top: var(--hc-space-lg); }
+
+.hc-journal__export .hc-caption { margin-top: var(--hc-space-sm); }

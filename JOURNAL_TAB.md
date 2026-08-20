@@ -31,18 +31,20 @@ Four ways in:
 3. **The self-reflection questions**, which the guide reader already has. Those
    are journal entries and have been all along; they just had nowhere to live
    but the guide they came from. See §3.
-4. **The end of a group night** — *proposed, not built.* When a room closes,
-   offer to keep what you wrote. Room content is deleted after ninety days by
-   migration 0022, so this is the only way any of it survives. See §8.
+4. **The end of a group night.** A button in the room, and an offer on the way
+   out, to keep your own half of the evening: your answers and the prayer
+   requests the whole room shared, never anybody else's answers. Room content
+   is deleted after ninety days by migration 0022, so this is the only copy
+   that outlives it.
 
-One way out, and one more proposed:
+Two ways out:
 
 - **The Group tab suggests them.** Answering a room question for a guide you
   have already journaled against offers your own entries as a starting point.
   It fills the draft box. It never posts anything.
-- **Export** — *proposed, not built.* The whole journal as one file, through
-  the same share sheet the night sheet uses. If we are going to hold
-  somebody's writing we should never be the only ones who can.
+- **Export.** The whole journal as one file, through the same share sheet the
+  night sheet uses. If we are going to hold somebody's writing we should never
+  be the only ones who can.
 
 ---
 
@@ -507,8 +509,8 @@ built at the end of §8 is not built.
 5. **Sync.** Migration 0023, push/pull, `ownerId`, the legal copy in §2b, the
    compliance docs. One phase, together, so the promise and the code change in
    the same commit.
-6. **The seams.** Group tab suggestions. Keep-tonight and export are still
-   proposals, see §8.
+6. **The seams.** Group tab suggestions, keeping a group night, and the
+   export.
 
 ### What it is checked against
 
@@ -519,13 +521,18 @@ built at the end of §8 is not built.
   only question that matters from every angle: can one person reach another
   person's writing. Insert claiming somebody else's `user_id`, select by id,
   select by body text, update, delete, anon.
-- **38 end-to-end checks** (`npm run test:e2e`) driving two browsers against a
-  real Postgres and PostgREST, now including the Journal's one crossing into a
-  group room.
-- **90 checks in a real browser** across four scripts, kept in the scratchpad
+- **50 end-to-end checks** (`npm run test:e2e`) driving two browsers against a
+  real Postgres and PostgREST, including both of the Journal's crossings into
+  the Group tab. The one that matters most is tested from the host's side:
+  a member can never receive somebody else's shut answer, so their journal
+  could not leak one if it tried, but the host holds other people's writing
+  once they have opened the room. Keeping the night takes their own half and
+  leaves everybody else's alone, and the test opens the room first so that
+  claim is actually exercised.
+- **107 checks in a real browser** across five scripts, kept in the scratchpad
   rather than the repo: the tab bar's geometry, the Journal's create and
-  search and delete, the editor and the scripture sheet, and highlighting a
-  real selection in a real guide.
+  search and delete, the editor and the scripture sheet, highlighting a real
+  selection in a real guide, and the export document.
 
 Three real bugs came out of driving a browser rather than reading the code,
 and none of them would have been found any other way: `<p><ul>` in the
@@ -540,23 +547,23 @@ that did not repaint after its note was written.
 
 - **Reflection answers become entries** (§3). Day-one content, one concept
   instead of two.
+- **Keep tonight.** Your own answers and the prayer requests, as one entry
+  tagged to that guide. Offered as a button in the room and again on the way
+  out, because leaving is the moment somebody realises the room is over and
+  the last moment they can do anything about it. Keeping twice updates the
+  same entry rather than making a second.
+- **Export.** One document, every entry, through the share sheet on a phone
+  and the print dialog in a browser. It sits directly under the note that
+  tells somebody the church holds a copy of this, because that is where the
+  question occurs to them.
 
 **Not built. Still worth taking, in this order**
-
-- **Keep tonight.** When a room closes, offer to save your own answers and the
-  prayer requests as one entry tagged to that guide. Room data is swept at
-  ninety days; this is the only thing that keeps it.
 - **Your own scripture index.** Every verse you have linked or highlighted, in
   one list. The Guide reader already has a Scripture Index section, so this is
   the same component pointed at a different source.
 - **Sunday's questions, waiting.** When a new guide lands, a quiet card at the
   top of the Journal: "Three questions from Sunday." Taps straight into the
   reflection section. Uses data that already exists.
-- **Export.** `js/print-guide.js` already knows how to build a standalone HTML
-  file and hand it to the share sheet. A third sheet, for the journal, is
-  mostly a template. This one matters more now than it did when it was
-  written: the journal syncs, so the church holds a copy of it, and a person
-  who wants their own copy should not have to ask.
 - **Face ID lock**, later. `APP_STORE_COMPLIANCE.md:181` floats this for leader
   notes; the journal is the stronger candidate. Phase 7 at the earliest.
 
