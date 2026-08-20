@@ -270,6 +270,9 @@
   }
 
   function open(id) {
+    // Unreachable while locked, since no marks are drawn, but the guard costs
+    // a line and this is the function that puts somebody's writing on screen.
+    if (HC.journal.isLocked()) return;
     var entry = HC.journal.get(id);
     if (entry) openNote(entry);
   }
@@ -303,6 +306,10 @@
       // Never over a sheet: the note sheet contains its own writing surface,
       // and selecting inside it is editing, not highlighting.
       if (document.querySelector('.hc-sheet')) { hideBar(); return; }
+
+      // A locked journal has nowhere to put a highlight, and offering to make
+      // one would draw a mark that is then not drawn. See marked().
+      if (HC.journal.isLocked()) { hideBar(); return; }
 
       var at = fromSelection();
       if (!at) { hideBar(); return; }

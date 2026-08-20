@@ -48,7 +48,7 @@
        cold launch, which was a render blocking third party request that also
        handed Google every user's network address. Inside a packaged app there
        was never a reason for it. See css/fonts.css. -->
-  <link rel="stylesheet" href="css/fonts.css?v=67c39254">
+  <link rel="stylesheet" href="css/fonts.css?v=a017e8e6">
 
   <!-- DO NOT EDIT THESE STAMPS BY HAND. `npm run stamp` writes every ?v= in
        this file from a hash of css/ and js/, so they all move together and
@@ -56,11 +56,11 @@
        serving last week's JavaScript from cache, Safari most stubbornly, and
        the failure is quiet: the app works, it is just the old one.
        See scripts/stamp_assets.js. -->
-  <link rel="stylesheet" href="css/tokens.css?v=67c39254">
-  <link rel="stylesheet" href="css/base.css?v=67c39254">
-  <link rel="stylesheet" href="css/components.css?v=67c39254">
-  <link rel="stylesheet" href="css/screens.css?v=67c39254">
-  <link rel="stylesheet" href="css/print.css?v=67c39254">
+  <link rel="stylesheet" href="css/tokens.css?v=a017e8e6">
+  <link rel="stylesheet" href="css/base.css?v=a017e8e6">
+  <link rel="stylesheet" href="css/components.css?v=a017e8e6">
+  <link rel="stylesheet" href="css/screens.css?v=a017e8e6">
+  <link rel="stylesheet" href="css/print.css?v=a017e8e6">
 </head>
 <body>
   <!-- No role="application" here. That role tells a screen reader to stop
@@ -76,56 +76,56 @@
     </div>
   </noscript>
 
-  <script src="js/data.js?v=67c39254"></script>
-  <script src="js/store.js?v=67c39254"></script>
+  <script src="js/data.js?v=a017e8e6"></script>
+  <script src="js/store.js?v=a017e8e6"></script>
   <!-- Share sheet, calendar, haptics, notifications. Works in a browser
        too, quietly, so nothing below has to check where it is running. -->
-  <script src="js/native.js?v=67c39254"></script>
+  <script src="js/native.js?v=a017e8e6"></script>
   <!-- Empty until js/config.js is filled in, see that file. Now that the
        typefaces ship with the app, Supabase is the only network traffic the
        app makes on its own. -->
-  <script src="js/config.js?v=67c39254"></script>
-  <script src="js/auth.js?v=67c39254"></script>
+  <script src="js/config.js?v=a017e8e6"></script>
+  <script src="js/auth.js?v=a017e8e6"></script>
   <!-- Fills HC.data from Supabase after the first paint. Needs data.js,
        store.js, and config.js above it, and nothing below it. -->
-  <script src="js/content.js?v=67c39254"></script>
+  <script src="js/content.js?v=a017e8e6"></script>
   <!-- The Journal's data layer. Needs store.js for the cache and auth.js for
        who is signed in, and js/screens/journal.js below it. -->
-  <script src="js/journal.js?v=67c39254"></script>
+  <script src="js/journal.js?v=a017e8e6"></script>
   <!-- Sixty-six books and the length of every chapter, for the scripture
        picker. Data only, and js/editor.js below is the only thing that reads
        it. -->
-  <script src="js/bible.js?v=67c39254"></script>
-  <script src="js/components.js?v=67c39254"></script>
+  <script src="js/bible.js?v=a017e8e6"></script>
+  <script src="js/components.js?v=a017e8e6"></script>
   <!-- The writing surface in the Journal. Needs components.js above it for
        esc() and the icons, and bible.js for the scripture sheet. -->
-  <script src="js/editor.js?v=67c39254"></script>
+  <script src="js/editor.js?v=a017e8e6"></script>
   <!-- Selecting words in a guide and keeping them. Needs editor.js above it
        for the note sheet's writing surface. -->
-  <script src="js/highlight.js?v=67c39254"></script>
-  <script src="js/print-guide.js?v=67c39254"></script>
-  <script src="js/router.js?v=67c39254"></script>
+  <script src="js/highlight.js?v=a017e8e6"></script>
+  <script src="js/print-guide.js?v=a017e8e6"></script>
+  <script src="js/router.js?v=a017e8e6"></script>
   <!-- The month strip under the header on Listen. Shell chrome, so it loads
        with the router rather than with the screen it serves. -->
-  <script src="js/date-rail.js?v=67c39254"></script>
+  <script src="js/date-rail.js?v=a017e8e6"></script>
   <!-- Swiping sideways between the five tabs. Shell chrome like the rail
        above, and it needs the router, which is why it sits here. -->
-  <script src="js/swipe.js?v=67c39254"></script>
+  <script src="js/swipe.js?v=a017e8e6"></script>
   <!-- The Group tab's data layer. Needs auth.js above it for the transport
        and store.js for the cache, and js/screens/group.js below it. -->
-  <script src="js/rooms.js?v=67c39254"></script>
-  <script src="js/screens/guide.js?v=67c39254"></script>
-  <script src="js/screens/home.js?v=67c39254"></script>
-  <script src="js/screens/listen.js?v=67c39254"></script>
-  <script src="js/screens/connect.js?v=67c39254"></script>
+  <script src="js/rooms.js?v=a017e8e6"></script>
+  <script src="js/screens/guide.js?v=a017e8e6"></script>
+  <script src="js/screens/home.js?v=a017e8e6"></script>
+  <script src="js/screens/listen.js?v=a017e8e6"></script>
+  <script src="js/screens/connect.js?v=a017e8e6"></script>
   <!-- The ••• tile. Five tabs swipe, everything else is a module listed here. -->
-  <script src="js/screens/more.js?v=67c39254"></script>
-  <script src="js/screens/journal.js?v=67c39254"></script>
-  <script src="js/screens/give.js?v=67c39254"></script>
-  <script src="js/screens/profile.js?v=67c39254"></script>
-  <script src="js/screens/group.js?v=67c39254"></script>
-  <script src="js/screens/leader.js?v=67c39254"></script>
-  <script src="js/screens/legal.js?v=67c39254"></script>
-  <script src="js/app.js?v=67c39254"></script>
+  <script src="js/screens/more.js?v=a017e8e6"></script>
+  <script src="js/screens/journal.js?v=a017e8e6"></script>
+  <script src="js/screens/give.js?v=a017e8e6"></script>
+  <script src="js/screens/profile.js?v=a017e8e6"></script>
+  <script src="js/screens/group.js?v=a017e8e6"></script>
+  <script src="js/screens/leader.js?v=a017e8e6"></script>
+  <script src="js/screens/legal.js?v=a017e8e6"></script>
+  <script src="js/app.js?v=a017e8e6"></script>
 </body>
 </html>

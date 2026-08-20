@@ -1476,3 +1476,34 @@
 .hc-journal__export { margin-top: var(--hc-space-lg); }
 
 .hc-journal__export .hc-caption { margin-top: var(--hc-space-sm); }
+
+/* The Journal lock. The row only exists on a phone that can do it, see
+   paintLockRow() in js/app.js. */
+.hc-lockrow { margin-top: var(--hc-space-lg); }
+
+.hc-lockrow__note { margin-top: var(--hc-space-sm); }
+
+/* What the Journal is instead of itself while it is locked. Nothing of the
+   list is built behind this, so there is nothing to reach by scrolling. */
+.hc-lockwall {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: var(--hc-space-xxl) var(--hc-space-base);
+}
+
+.hc-lockwall__icon {
+  width: 30px;
+  height: 30px;
+  color: var(--hc-accent-deep);
+}
+
+.hc-lockwall__text {
+  margin-top: var(--hc-space-base);
+  font-family: var(--hc-serif);
+  font-size: calc(19px * var(--hc-text-scale));
+  color: var(--hc-mid);
+}
+
+.hc-lockwall__action { margin-top: var(--hc-space-lg); }

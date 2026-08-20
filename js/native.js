@@ -354,9 +354,90 @@
     enableNotifications();
   }
 
+  /* ------------------------------------------------------------- biometry
+
+     Face ID, or Touch ID, or the passcode, in front of the Journal.
+
+     WHAT THIS IS AND IS NOT, because the difference matters and the screen
+     that turns it on says the same thing. This puts the phone's own check in
+     front of a screen. It is not encryption. The entries are still in
+     localStorage, still on the church's server if somebody is signed in, and
+     still readable by anybody who can open a web inspector on an unlocked
+     phone. What it stops is the ordinary thing it is for: somebody picking up
+     your phone while it is unlocked and reading your journal.
+
+     Encrypting it properly is the same dead end as in
+     supabase/migrations/0023_journal.sql. Sign in is a one time code, so
+     there is no password to derive a key from, and a key held only by the
+     phone makes the sync decorative.
+
+     THE PLUGIN IS OPTIONAL. Everything else in this file degrades to a
+     quieter version of the same idea in a browser. This one cannot: there is
+     no browser equivalent of Face ID, and the WebAuthn dance is a different
+     feature wearing the same word. So available() answers false everywhere
+     except a native build with the plugin installed, and Profile does not
+     draw a switch that cannot do anything. A switch that stays on while
+     nothing happens is the same lie as the notification switches above.
+
+     The plugin is @aparajita/capacitor-biometric-auth, reached by name off
+     the Plugins global like every other one. If it is not installed, this is
+     simply a feature the build does not have.
+
+     THE NAME ON THE GLOBAL IS NOT THE NAME ON THE PACKAGE. It calls
+     registerPlugin('BiometricAuthNative') and exports that proxy as
+     `BiometricAuth`, so the import name and the runtime name differ. Reaching
+     for the wrong one does not throw; it returns undefined, canLock() answers
+     false forever, and the switch never appears on a phone that could have
+     had it. That is a silent nothing rather than an error, which is the worst
+     shape a bug can take, so both names are tried and the real one is first.
+     ------------------------------------------------------------------- */
+
+  function biometrics() {
+    var p = plugins();
+    if (!p) return null;
+    return p.BiometricAuthNative || p.BiometricAuth || null;
+  }
+
+  /* Resolves true only when this phone can actually challenge somebody.
+     Deliberately generous about which kind: Face ID, Touch ID, and the plain
+     device passcode are all fine here. The point is that the phone asks. */
+  function canLock() {
+    if (!isNative()) return Promise.resolve(false);
+    var b = biometrics();
+    if (!b || !b.checkBiometry) return Promise.resolve(false);
+
+    return b.checkBiometry().then(function (info) {
+      return !!(info && (info.isAvailable || info.strongBiometryIsAvailable));
+    }).catch(function () { return false; });
+  }
+
+  /* Resolves true when the person proved they are the person. A refusal and a
+     failure both resolve false rather than rejecting: to the screen waiting
+     on this they are the same answer, which is "not now", and every caller
+     would otherwise need the same catch.
+
+     allowDeviceCredential means a phone whose owner has Face ID switched off,
+     or a face the sensor cannot read today, can still get in with the
+     passcode. Without it the feature locks people out of their own writing,
+     which is a worse failure than not having it. */
+  function unlock(reason) {
+    var b = biometrics();
+    if (!b || !b.authenticate) return Promise.resolve(false);
+
+    return b.authenticate({
+      reason: reason || 'Open your journal',
+      cancelTitle: 'Not now',
+      allowDeviceCredential: true,
+      iosFallbackTitle: 'Use passcode'
+    }).then(function () { return true; })
+      .catch(function () { return false; });
+  }
+
   HC.native = {
     isNative: isNative,
     tap: tap,
+    canLock: canLock,
+    unlock: unlock,
     shareText: shareText,
     shareFile: shareFile,
     downloadInBrowser: downloadInBrowser,

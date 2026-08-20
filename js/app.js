@@ -750,6 +750,45 @@
       }
     },
 
+    /* The Journal lock. Turning it on asks for Face ID straight away rather
+       than at the next visit: a lock nobody has seen work is a lock nobody
+       trusts, and this is the one moment where failing is free. Turning it
+       off does not ask, because somebody who can already see the switch has
+       already got past the lock. */
+    'toggle-lock': function (el) {
+      var on = !HC.store.getProfile().lockJournal;
+
+      if (!on) {
+        HC.store.updateProfile({ lockJournal: false });
+        HC.journal.lockAgain();
+        setSwitch(el, false);
+        c.toast('The Journal opens without asking now.');
+        return;
+      }
+
+      HC.native.unlock('Lock your journal').then(function (ok) {
+        if (!ok) {
+          c.toast('Left as it was. Nothing was locked.');
+          return;
+        }
+        HC.store.updateProfile({ lockJournal: true });
+        // On, and locked, so the very next visit asks. Turning the lock on
+        // and finding the Journal still open would teach somebody it does
+        // not work.
+        HC.journal.lockAgain();
+        setSwitch(el, true);
+        HC.native.tap('Light');
+        c.toast('Locked. Your journal asks for you now.');
+      });
+    },
+
+    'journal-unlock': function () {
+      HC.journal.unlockNow().then(function (ok) {
+        if (ok) HC.router.go({ name: 'journal' }, { force: true });
+        else c.toast('Not unlocked. Try again whenever you like.');
+      });
+    },
+
     'toggle-theme': function (el) {
       var dark = document.documentElement.getAttribute('data-theme') === 'dark';
       HC.store.updateProfile({ theme: dark ? 'light' : 'dark' });
@@ -1352,6 +1391,13 @@
     said();
   }
 
+  function paintLockRow() {
+    var slot = document.querySelector('[data-lockrow]');
+    if (!slot) return;
+    slot.innerHTML = HC.screens.profileHelpers.lockRow();
+    slot.hidden = false;
+  }
+
   function setSwitch(el, on) {
     el.setAttribute('aria-checked', on ? 'true' : 'false');
     var knob = el.querySelector('.hc-switch');
@@ -1678,6 +1724,16 @@
     // silence rather than an error, so this re-registers on every launch
     // where somebody has already asked for notifications.
     HC.native.resumeNotifications();
+
+    /* The Journal lock row appears only on a phone that can actually
+       challenge somebody. The answer is asynchronous and Profile has already
+       painted by the time it lands, so the row is put in when it arrives and
+       whenever Profile is drawn after that. */
+    HC.native.canLock().then(function (can) {
+      if (!can) return;
+      paintLockRow();
+      HC.store.on('view', paintLockRow);
+    });
 
     // Then go and get the current content, after the first paint so nothing
     // waits on the network. If it lands and something actually changed, the

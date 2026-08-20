@@ -392,6 +392,19 @@ console.log('\n— highlights, after the guide has been edited —');
   ok('an overlapping highlight is not nested', (both.match(/<mark/g) || []).length, 1);
   ok('and the text still survives it', both.replace(/<[^>]+>/g, ''), TEXT);
 
+  // An entry that carries only the words, with no offsets, is still drawn.
+  // locate() can resolve it, so forAnchor() must not filter it out first.
+  {
+    const fresh = boot({ guides: { g1: { title: 'Held' } } }).HC;
+    fresh.journal.create({
+      kind: 'highlight', guideId: 'g1', path: 'shortSummary.0',
+      quote: 'about his father'
+    });
+    ok('a quote with no offsets is still drawn',
+       /<mark [^>]*>about his father<\/mark>/.test(
+         fresh.journal.marked('g1', 'shortSummary.0', TEXT)), true);
+  }
+
   // A paragraph with nothing in it renders exactly what it always did.
   ok('a guide with no highlights renders plain escaped text',
      HC.journal.marked('g1', 'fullSummary.0', 'Plain <b>text</b> & more'),

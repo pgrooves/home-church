@@ -165,6 +165,25 @@
   }
 
   function reflectionSection(guide) {
+    /* These answers are journal entries, so the lock reaches them here too.
+       The questions still show: they are the church's writing, not yours, and
+       a take-home question is worth reading even when you cannot see what you
+       said about it last time. */
+    if (HC.journal.isLocked()) {
+      var shut = '<p class="hc-caption hc-reflection__note">Your journal is locked, so your answers ' +
+        'are not showing. The questions are still yours to take home.</p>';
+      guide.reflectionQuestions.forEach(function (q, i) {
+        shut += c.numberedRow(i + 1, '<p class="hc-question">' + c.esc(q) + '</p>');
+      });
+      shut += '<div class="hc-mt-base">' +
+        c.button('Unlock', { action: 'journal-unlock', variant: 'secondary', icon: 'lock' }) +
+      '</div>';
+      return c.collapsible({
+        id: 'reflection', eyebrow: 'Take Home',
+        title: 'Self-Reflection Questions', body: shut
+      });
+    }
+
     /* This line used to promise these never left the phone. They are journal
        entries now and they sync to an account, so it says what is true and
        says it differently depending on whether anybody is signed in. The

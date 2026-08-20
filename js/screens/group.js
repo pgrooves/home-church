@@ -446,6 +446,10 @@
 
   function journalFor(snap) {
     if (!snap.room || !snap.room.guideId || !HC.journal) return [];
+    // Offering your journal back to you inside a room would be the widest
+    // leak of the four: it puts private writing on a screen somebody is
+    // holding in a room full of people.
+    if (HC.journal.isLocked()) return [];
     return HC.journal.forGuide(snap.room.guideId)
       .filter(function (e) { return (e.bodyText || '').trim(); });
   }
@@ -691,8 +695,10 @@
       Object.keys(drafts).map(function (k) { return k + (drafts[k].trim() ? '1' : '0'); }).join(),
       prayerDraft.trim() ? '1' : '0', newQuestion.trim() ? '1' : '0',
       codeDraft, joinError, editing && editing.id, busy, showingJournal,
-      // Whether tonight has been kept changes the button at the bottom.
+      // Whether tonight has been kept changes the button at the bottom, and
+      // the lock changes whether any of it is offered at all.
       snap.room && HC.journal ? !!HC.journal.get('night-' + snap.room.id) : false,
+      HC.journal ? HC.journal.isLocked() : false,
       // The suggestions themselves. A journal entry written in another tab
       // has to be able to appear here without waiting for something else to
       // change.

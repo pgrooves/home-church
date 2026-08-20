@@ -138,9 +138,33 @@
     return html + '</div>';
   }
 
+  /* ------------------------------------------------------------ locked
+
+     What the Journal is instead of itself while the lock is on. Not a modal
+     over the list: the list is never built, so there is nothing behind this
+     to see by scrolling, screenshotting, or reading the accessibility tree.
+
+     It says what is behind it only in the vaguest terms. "You have 34
+     entries, 12 of them about Sunday" is a small leak and an unnecessary
+     one. */
+
+  function locked() {
+    return '<div class="hc-screen hc-journal hc-locked-screen">' +
+      c.sectionHeader('Yours', 'Journal', { flush: true, tag: 'h1' }) +
+      '<div class="hc-lockwall">' +
+        c.icon('lock', 'hc-lockwall__icon') +
+        '<p class="hc-lockwall__text">Your journal is locked.</p>' +
+        '<div class="hc-lockwall__action">' +
+          c.button('Unlock', { action: 'journal-unlock', icon: 'lock' }) +
+        '</div>' +
+      '</div>' +
+    '</div>';
+  }
+
   /* ------------------------------------------------------------- the list */
 
   function list() {
+    if (HC.journal.isLocked()) return locked();
     var entries = query();
     var everything = HC.journal.count();
 
@@ -223,6 +247,11 @@
   }
 
   function entryScreen(route) {
+    // The lock is on the whole feature, not on the list screen. Somebody who
+    // left an entry open, or who has a link straight to one, meets the same
+    // wall.
+    if (HC.journal.isLocked()) return locked();
+
     var isNew = route.id === 'new';
     var entry = isNew ? null : HC.journal.get(route.id);
 
@@ -288,6 +317,14 @@
   function repaint() {
     var route = HC.router.current();
     if (!route) return;
+
+    // Locking while an entry is open has to take that screen too, not just
+    // the list behind it.
+    if (route.name === 'journal-entry' && HC.journal.isLocked()) {
+      HC.router.go({ name: 'journal' }, { force: true });
+      return;
+    }
+
     if (route.name === 'journal') {
       var mount = document.querySelector('.hc-journal');
       if (!mount || !mount.parentNode) return;

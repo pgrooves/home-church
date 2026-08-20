@@ -511,6 +511,8 @@ built at the end of §8 is not built.
    the same commit.
 6. **The seams.** Group tab suggestions, keeping a group night, and the
    export.
+7. **The lock.** Face ID, Touch ID or the passcode in front of the Journal,
+   reaching every surface its contents appear on.
 
 ### What it is checked against
 
@@ -529,10 +531,11 @@ built at the end of §8 is not built.
   once they have opened the room. Keeping the night takes their own half and
   leaves everybody else's alone, and the test opens the room first so that
   claim is actually exercised.
-- **107 checks in a real browser** across five scripts, kept in the scratchpad
+- **141 checks in a real browser** across six scripts, kept in the scratchpad
   rather than the repo: the tab bar's geometry, the Journal's create and
   search and delete, the editor and the scripture sheet, highlighting a real
-  selection in a real guide, and the export document.
+  selection in a real guide, the export document, and the lock against a
+  stubbed biometric plugin.
 
 Three real bugs came out of driving a browser rather than reading the code,
 and none of them would have been found any other way: `<p><ul>` in the
@@ -557,6 +560,12 @@ that did not repaint after its note was written.
   tells somebody the church holds a copy of this, because that is where the
   question occurs to them.
 
+- **Face ID on the Journal.** A switch under Your account, drawn only on a
+  phone that answered yes to `HC.native.canLock()`. The lock reaches every
+  surface the journal appears on, not just its own screen: marks in a guide,
+  the reflection answers, the Group tab's suggestions. Said plainly on the
+  switch and in the privacy policy that it is not encryption.
+
 **Not built. Still worth taking, in this order**
 - **Your own scripture index.** Every verse you have linked or highlighted, in
   one list. The Guide reader already has a Scripture Index section, so this is
@@ -564,8 +573,9 @@ that did not repaint after its note was written.
 - **Sunday's questions, waiting.** When a new guide lands, a quiet card at the
   top of the Journal: "Three questions from Sunday." Taps straight into the
   reflection section. Uses data that already exists.
-- **Face ID lock**, later. `APP_STORE_COMPLIANCE.md:181` floats this for leader
-  notes; the journal is the stronger candidate. Phase 7 at the earliest.
+- **Face ID on the leader's roster and prayer notes.**
+  `APP_STORE_COMPLIANCE.md:181` floated this first, and it is the same switch
+  pointed at a different screen now that the Journal has one.
 
 ## Ideas worth skipping
 

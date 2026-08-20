@@ -103,7 +103,10 @@
     },
     textScale: 1.1,    // 110%, the app's default reading size
     theme: 'system',   // system | light | dark
-    leaderMode: false
+    leaderMode: false,
+    // Face ID in front of the Journal. Off by default, and only offered on a
+    // phone that can actually do it. See js/native.js and js/journal.js.
+    lockJournal: false
   };
 
   var state = {

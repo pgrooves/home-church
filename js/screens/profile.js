@@ -274,6 +274,13 @@
     });
     html += '</div>';
 
+    /* The Journal lock. Drawn only on a phone that answered yes to
+       HC.native.canLock(), because a switch that cannot do anything is the
+       same lie as a notification switch with no permission behind it. The
+       answer is asynchronous, so Profile draws without it and the row is put
+       in afterwards by the boot check in js/app.js. */
+    html += '<div class="hc-lockrow" data-lockrow hidden></div>';
+
     html += '<div class="hc-mt-lg">' + switchRow({
       title: 'Dark mode',
       sub: 'Warm charcoal, not black',
@@ -336,9 +343,30 @@
     return c.el(html);
   }
 
+  /* Built here rather than in js/app.js so all of Profile's markup is in one
+     file, and called from there once the phone has answered. */
+  function lockRow() {
+    var p = HC.store.getProfile();
+    return switchRow({
+      title: 'Lock the Journal',
+      sub: p.lockJournal
+        ? 'Face ID, Touch ID, or your passcode before the Journal opens.'
+        : 'Ask for Face ID, Touch ID, or your passcode before opening the Journal.',
+      action: 'toggle-lock',
+      on: !!p.lockJournal
+    }) +
+    /* Said here rather than only in the privacy policy, because this is the
+       screen where somebody decides, and a lock people think is encryption
+       is worse than no lock at all. */
+    '<p class="hc-caption hc-lockrow__note">This keeps somebody who picks up your phone out of ' +
+      'the Journal. It is not encryption: what you write is still saved on this phone, and in ' +
+      'your account if you are signed in.</p>';
+  }
+
   HC.screens = HC.screens || {};
   HC.screens.profile = render;
   HC.screens.profileHelpers = {
+    lockRow: lockRow,
     TEXT_SIZES: TEXT_SIZES,
     getAuthIdentifier: function () { return authIdentifier; },
     setAuthIdentifier: function (value) { authIdentifier = value; },

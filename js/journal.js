@@ -321,10 +321,15 @@
     return guideId ? all({ guideId: guideId }) : [];
   }
 
-  // Everything anchored into one block of one guide, for drawing the marks.
+  /* Everything anchored into one block of one guide, for drawing the marks.
+
+     Either a quote or a pair of offsets is enough, because locate() below
+     resolves from either. Requiring both would have quietly refused to draw
+     an entry that carries only the words, which is the more durable half of
+     the anchor and the half that survives the guide being edited. */
   function forAnchor(guideId, path) {
     return all({ guideId: guideId }).filter(function (e) {
-      return e.path === path && typeof e.start === 'number';
+      return e.path === path && (typeof e.start === 'number' || !!e.quote);
     });
   }
 
@@ -501,6 +506,13 @@
   function marked(guideId, path, text) {
     text = String(text == null ? '' : text);
     if (!guideId) return esc(text);
+
+    /* A locked journal is locked everywhere it surfaces, not only on its own
+       screen. Which lines somebody underlined, and which of those they wrote
+       about, is their journal showing through a guide. So while the lock is
+       on, a guide renders exactly as it does for somebody who has never
+       highlighted anything. */
+    if (isLocked()) return esc(text);
 
     var ranges = [];
     forAnchor(guideId, path).forEach(function (entry) {
@@ -792,6 +804,73 @@
       .catch(function () { syncing = false; return false; });
   }
 
+  /* ------------------------------------------------------------ the lock
+
+     Face ID in front of the Journal, for whoever wants it. Off by default,
+     and off for everybody whose phone cannot do it, which includes every
+     browser. See the long note in js/native.js about what this is: the
+     phone's own check in front of a screen, not encryption.
+
+     The state is in memory and nowhere else. That is the whole design: a
+     locked flag in localStorage would survive a force quit and could be
+     edited by anybody who can edit localStorage, which is exactly the person
+     it would need to stop. In memory means every cold start begins locked,
+     with no way to write "already unlocked" from outside the running app. */
+
+  var unlocked = false;
+
+  /* Defined below the things that call it. Function declarations hoist, and
+     keeping the lock in one block reads better than scattering it through the
+     file to satisfy an ordering nothing enforces. */
+  function lockOn() {
+    return !!HC.store.getProfile().lockJournal;
+  }
+
+  // What the screens ask before drawing anything.
+  function isLocked() {
+    return lockOn() && !unlocked;
+  }
+
+  function unlockNow() {
+    if (!lockOn()) return Promise.resolve(true);
+    return HC.native.unlock('Open your journal').then(function (ok) {
+      if (ok) {
+        unlocked = true;
+        HC.store.emit('journal', null);
+      }
+      return ok;
+    });
+  }
+
+  /* Locking again is the half people forget, and it is the half that makes
+     the feature real. Three things do it: turning the switch on, leaving the
+     app, and time.
+
+     The delay exists because the alternative is unusable. Opening a scripture
+     link sends somebody to Safari and back, and a journal that demands Face
+     ID on the way back from checking a verse is a journal nobody turns the
+     lock on for twice. A minute is long enough to look something up and far
+     shorter than the time it takes to hand somebody your phone and walk
+     away. */
+  var LOCK_AFTER = 60000;
+  var leftAt = 0;
+
+  function lockAgain() {
+    unlocked = false;
+    HC.store.emit('journal', null);
+  }
+
+  function watchForeground() {
+    document.addEventListener('visibilitychange', function () {
+      if (document.hidden) {
+        leftAt = Date.now();
+        return;
+      }
+      if (lockOn() && unlocked && leftAt && Date.now() - leftAt > LOCK_AFTER) lockAgain();
+      leftAt = 0;
+    });
+  }
+
   /* ----------------------------------------------------------------- init */
 
   function init() {
@@ -821,6 +900,8 @@
     document.addEventListener('visibilitychange', function () {
       if (!document.hidden) sync();
     });
+
+    watchForeground();
   }
 
   HC.journal = {
@@ -850,6 +931,11 @@
 
     owner: owner,
     sync: sync,
+
+    isLocked: isLocked,
+    lockOn: lockOn,
+    unlockNow: unlockNow,
+    lockAgain: lockAgain,
     canSync: canSync,
 
     // Exported for the tests and for nothing else.
