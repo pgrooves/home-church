@@ -1,8 +1,27 @@
 # The side rail — mockup
 
-A standalone rendering of the proposed scroll index on the right edge, made to
-be looked at, and dragged, before anything in `js/` or `css/` is touched.
-Nothing here is wired into the app.
+A standalone rendering of the scroll index on the right edge, made to be looked
+at, and dragged, before anything in `js/` or `css/` was touched.
+
+**Built.** It shipped as `js/index-rail.js` and the `.hc-index` block in
+`css/components.css`, with the notches always on the glass and the headings
+only under a thumb — the last state this drawing carries. This folder stays as
+the drawing it was decided from.
+
+Two things the shipped one does differently, both found by building it:
+
+- **It listens on `.hc-scroll`, not on a strip of its own.** A strip with
+  `touch-action: none` down the right edge works, and silently takes the right
+  34px away from `js/swipe.js`, because a touch landing outside the scroller
+  never reaches the swipe listeners at all. The shipped rail reads the same
+  gesture swipe.js reads and simply does not claim it when it is sideways, so
+  you can still swipe to the next tab from the right edge. The mockup keeps its
+  strip; it has no tabs to swipe to.
+- **A foldable section is not always a stop.** `.hc-section` is a part of a
+  page on a guide and one item in a list on Connect, and nothing in the markup
+  tells them apart, so `collapsible()` took an `index: false` and Connect's
+  serve teams and next steps pass it. Without that the index of Connect was a
+  list of serve teams.
 
 ## What it shows
 

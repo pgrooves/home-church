@@ -127,6 +127,24 @@
         '<div id="hc-view"></div>' +
       '</main>' +
 
+      /* The right edge, in place of the scrollbar this design does not draw.
+         Four pieces, all shell chrome for the same reason the date rail is:
+         a screen earns one by having headings, and never has to ask for it.
+
+         The notches stay on the glass; the written headings, the card and the
+         veil only exist while a thumb is down. The gesture is read off
+         .hc-scroll rather than off a strip of its own, which is what leaves
+         the right edge available to the tab swipe as well. See
+         js/index-rail.js. */
+      '<div class="hc-index__veil" id="hc-index-veil" aria-hidden="true"></div>' +
+      '<nav class="hc-index" id="hc-index" data-state="off" ' +
+          'aria-label="Jump to a section" hidden>' +
+        '<div class="hc-index__track"></div>' +
+      '</nav>' +
+      '<div class="hc-index__card" id="hc-index-card" aria-hidden="true"></div>' +
+      '<div class="hc-index__titles" id="hc-index-titles" aria-hidden="true"></div>' +
+      '<p class="hc-visually-hidden" id="hc-index-live" role="status" aria-live="polite"></p>' +
+
       // Shell chrome rather than something each screen adds, so no screen has
       // to remember it and none of them can disagree about where they sit.
       // The way back on the left, the way up on the right.
@@ -234,6 +252,10 @@
     // runs against the view that was just mounted, before the scroll position
     // is restored, and the scroll handler picks it up from there.
     HC.dateRail.build(chromeless ? null : route);
+
+    // Same rule, same moment: the rail is rebuilt against the view that was
+    // just mounted, and a screen with fewer than two headings gets none.
+    HC.indexRail.build(chromeless ? null : route);
 
     /* A room is only live while you are looking at it. Leaving the tab stops
        the poll, so sitting on Home is not quietly re-reading a room every
@@ -588,6 +610,7 @@
         // The rail rides the same frame as the header rather than adding a
         // second listener to the same scroller. So do the discs.
         HC.dateRail.update();
+        HC.indexRail.update();
         paintDiscs();
         var route = HC.router.current();
         if (!route || !HC.router.isTop(route.name)) return;
@@ -829,6 +852,13 @@
 
     'date-rail-jump': function (el) {
       HC.dateRail.jump(parseInt(el.getAttribute('data-index'), 10));
+    },
+
+    /* A thumb never sends this: the notches do not take pointers, the
+       scroller does. This is the keyboard, and the screen reader, arriving at
+       the same place by the same door. */
+    'index-jump': function (el) {
+      HC.indexRail.jump(parseInt(el.getAttribute('data-index'), 10));
     },
 
     'go-legal': function (el) {
@@ -2034,6 +2064,15 @@
       scroller: scroller,
       rail: document.getElementById('hc-date-rail'),
       topbar: topbar
+    });
+
+    HC.indexRail.init({
+      scroller: scroller,
+      rail: document.getElementById('hc-index'),
+      titles: document.getElementById('hc-index-titles'),
+      card: document.getElementById('hc-index-card'),
+      veil: document.getElementById('hc-index-veil'),
+      live: document.getElementById('hc-index-live')
     });
 
     // Drag left or right on a tab and the next one comes with your thumb.

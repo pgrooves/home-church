@@ -441,12 +441,20 @@
   /* opts.anchorId puts a real id on the section itself, which is different
      from opts.id: that one keys the toggle to its panel. Something outside the
      section may need to find it on the page, the way the month rail on Listen
-     watches for the Archive to scroll past. */
+     watches for the Archive to scroll past.
+
+     opts.index === false keeps the section out of the right edge's index. A
+     foldable section is two different things in this app: a part of a page,
+     the way a guide's Discussion Questions is, and one item in a list, the way
+     each serve team on Connect is. The first belongs in an index of the page
+     and the second turns that index into a list of serve teams, and nothing
+     in the markup can tell them apart. So the call site says. */
   function collapsible(opts) {
     var open = opts.open === true;
     return '' +
       '<section class="hc-section" data-section="' + esc(opts.id) + '"' +
-        (opts.anchorId ? ' id="' + esc(opts.anchorId) + '"' : '') + '>' +
+        (opts.anchorId ? ' id="' + esc(opts.anchorId) + '"' : '') +
+        (opts.index === false ? ' data-no-index' : '') + '>' +
         '<h2>' +
           '<button type="button" class="hc-section__toggle" data-action="toggle-section" ' +
             'data-section-id="' + esc(opts.id) + '" aria-expanded="' + (open ? 'true' : 'false') + '" ' +

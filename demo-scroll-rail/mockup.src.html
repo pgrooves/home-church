@@ -886,8 +886,14 @@ body {
   var T_BITE = 1.5;   // >1 keeps the ink on the focused heading rather than
                       // spreading it over its neighbours
 
-  var SIGMA  = 46;    // px; how wide the swell is. Bigger reads softer.
-  var PITCH  = 40;    // px between notches, at most
+  /* How wide the swell is, as a multiple of the gap between notches, held
+     between these two. Not a fixed number of pixels: the notches spread to
+     fill the track, so six headings sit far apart and twenty sit close, and a
+     fixed sigma would light three of the twenty and one of the six. */
+  var SIGMA_OF = 1.25;
+  var SIGMA_MIN = 34;
+  var SIGMA_MAX = 150;
+
   var EDGE   = 14;    // px kept clear at each end of the track
 
   var LAND   = 12;    // where a jumped-to heading comes to rest under the top
@@ -918,6 +924,7 @@ body {
   var lastT  = [];
   var lastTA = [];
   var sMin   = T_HIGH;  // set from the pitch, see layout()
+  var sigma  = SIGMA_MAX;
   var lastV  = -1;
 
   var active   = -1;
@@ -948,7 +955,13 @@ body {
   function layout() {
     var n = stops.length;
     var avail = index.clientHeight - EDGE * 2;
-    var pitch = n > 1 ? Math.min(PITCH, avail / (n - 1)) : 0;
+    /* THE NOTCHES FILL THE TRACK. They used to sit in a block in the middle
+       at a capped pitch, which left most of a 650px strip with nothing under
+       the thumb: the swell stayed flat and the page jumped to the first or
+       last section. The whole strip is the target, so the whole strip is the
+       ruler. */
+    var pitch = n > 1 ? avail / (n - 1) : 0;
+    sigma = clamp(pitch * SIGMA_OF, SIGMA_MIN, SIGMA_MAX);
     var span  = pitch * (n - 1);
     var y0    = (index.clientHeight - span) / 2;
     /* How small a heading you are not on is allowed to be drawn. The column
@@ -1028,7 +1041,7 @@ body {
     for (var i = 0; i < marks.length; i++) {
       var f = 0;
       if (gain > 0.001) {
-        var d = (ys[i] - centre) / SIGMA;
+        var d = (ys[i] - centre) / sigma;
         f = gain * Math.exp(-d * d);
       }
 
@@ -1164,7 +1177,9 @@ body {
     active = i;
     fitCard(i);
     if (speak) live.textContent = stops[i].title;
-    if (navigator.vibrate) { try { navigator.vibrate(6); } catch (e) {} }
+    /* No tick on crossing a notch. It is a haptic you would feel forty times
+       in one drag, and js/native.js keeps its two taps meaning something by
+       not spending them here. */
   }
 
   function nearest(y) {
