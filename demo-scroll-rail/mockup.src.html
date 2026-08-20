@@ -123,6 +123,7 @@ body {
 
 .seg button + button { border-left: 1px solid #2B313A; }
 .seg button[aria-pressed="true"] { background: #29323C; color: #F2F5F8; }
+.seg button:focus-visible { outline: 2px solid #9FD0C4; outline-offset: -2px; }
 
 /* --- the notes ------------------------------------------------------------ */
 
@@ -613,6 +614,12 @@ body {
 .hc-index__peek[data-show="true"] { opacity: 1; }
 
 /* A live region for the section name, for anybody who cannot see the label. */
+.hc-index__notch:focus-visible {
+  outline: 2px solid var(--hc-ink);
+  outline-offset: -2px;
+  border-radius: var(--hc-radius-sm);
+}
+
 .hc-sr {
   position: absolute;
   width: 1px; height: 1px;
