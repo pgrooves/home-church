@@ -7,12 +7,13 @@ Nothing here is wired into the app.
 ## What it shows
 
 The browser's scrollbar comes off `.hc-scroll`, and the right edge becomes an
-index of the page's own headings. Press inside the last 34px on the right and a
-column of hairline notches fades up, one per heading. Drag: the notch under the
-finger swells, its neighbours swell less, the page glides to that section, and
-the section's name is held out to the left of the hand so the hand is not
-covering the answer. Tap without dragging and it jumps. Let go and it fades a
-second later.
+index of the page's own headings. Press inside the last 34px on the right and
+the page's whole contents fades up: a column of hairline notches at the edge,
+and every heading written out beside them. Drag, and the notch under the finger
+swells with its name brought forward onto a card while the page glides to that
+section; its neighbours swell part way; the rest stay small and faint behind,
+so you can see where else there is to go without letting go. Tap without
+dragging and it jumps. Let go and it fades a second later.
 
 The phone in the page is real: the tokens from `css/tokens.css` unedited, the
 top bar, the gold disc and the tab bar built the way `css/components.css`
@@ -25,11 +26,11 @@ have to sit next to.
 |---|---|---|
 | 1 | Native scrollbar hidden | `scrollbar-width: none` plus a zero-width `::-webkit-scrollbar` on `.hc-scroll`. Wheel, trackpad, thumb and momentum untouched. |
 | 2 | Appears on touch, fades on release | A transparent 34px strip listens. Up in 120ms, held **1000ms** after the thumb lifts, then out over 380ms. |
-| 3 | Fisheye | `exp(-(d/46)²)`, from 9px at rest to 30px under the finger, opacity 0.30 → 1. One curve, so the swell travels through the notches rather than hopping. |
-| 4 | Offset preview | The title floats 46px left of the notch, centred on the finger, clamped inside the screen. Tab-bar glass, tab-bar radius, section-header type one size down. |
+| 3 | Fisheye | `exp(-(d/46)²)`, from 9px at rest to 30px under the finger, opacity 0.30 → 1. The same `f` drives the written headings: scale 0.78 → 1, ink 0.26 → 1. One curve, so the swell travels through them rather than hopping. |
+| 4 | Offset preview | Every heading is written out at its notch's height, right-aligned 46px clear of the edge — inside the screen, outside the thumb. The focused one is full size and full ink on a card of tab-bar glass sized to it; the rest stay faint behind. Section-header type, one size down. |
 | 5 | Both directions | Scrub → the nearest notch is the target and the page eases toward it each frame. Scroll → the last heading past the reading line, 72px down, takes the highlight. |
 | 6 | Smooth | One `requestAnimationFrame` loop writing `transform` and `opacity` only. Measured 61fps scrubbing in Chromium. |
-| 7 | In the app's style | Ink at low opacity and the app's own glass. No track, no groove, no thumb, and nothing borrowed from the gold disc. |
+| 7 | In the app's style | The app's own section-header type at low opacity, one card of tab-bar glass, and paper drawn back over the page. No track, no groove, no thumb, no panel, and nothing borrowed from the gold disc. |
 
 ## How it is put together
 
@@ -39,9 +40,21 @@ strip, so there is one gesture path and not two that can disagree.
 
 - **Measured once per gesture.** Every heading's offset and every notch's
   centre are taken on `pointerdown`. After that the loop makes no reads.
-- **Two properties per notch.** Width is `scaleX` off a fixed 30px, never
-  `width`, so no frame of the animation touches layout. Writes that would move
-  a value less than 0.004 are skipped.
+- **Two properties per notch, two per heading.** Width is `scaleX` off a fixed
+  30px, never `width`; the headings are `translate3d` + `scale`; the card and
+  the veil are `transform` and `opacity`. No frame of the animation touches
+  layout — each heading's width is read once at build, and the card is sized
+  from that. Writes that would move a value less than 0.004 are skipped.
+  Fourteen headings is 60 writes a frame, and it holds 60fps.
+
+- **Paper comes back over the page.** A gradient with no edge to it, faded in
+  with the swell. Without it the page's own headings and the rail's are the
+  same words in the same face on top of each other and neither reads. It is
+  also what lets the faint headings be genuinely faint.
+
+- **The column squeezes with the notches.** Under about 26px of pitch the
+  unfocused headings scale down with the gap, so a long guide's contents stay a
+  column rather than a pile.
 - **The finger is eased, not followed.** The drawn centre chases the pointer at
   0.35 per frame, which takes the tremor out of the swell without adding lag
   you can feel. The page chases its target at 0.22, the swell fades in and out
@@ -79,6 +92,8 @@ is said either way.
 
 ## Still open
 
+- How faint is faint. The unfocused headings are at 0.26 ink over a veil at
+  0.94; on a photograph that is the thinnest it can safely go.
 - 34px of the right edge stops being content, and vertical travel there belongs
   to the rail. Cards have 20px of padding, so nothing tappable is under it
   today — but Home's full-bleed carousel is.

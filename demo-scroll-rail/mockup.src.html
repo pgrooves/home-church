@@ -550,6 +550,14 @@ body {
 /* Up while a thumb is down, and while a keyboard is in the track. */
 .hc-index[data-state="on"] { opacity: 1; transition-duration: 120ms; }
 
+/* The written column and the card ride the notches' own state, so there is one
+   thing that is up or down and not three that can disagree. Their ink is drawn
+   frame by frame from the same swell, which is why only the track's own fade
+   is a transition. */
+.hc-index[data-state="off"] ~ .hc-index__titles,
+.hc-index[data-state="off"] ~ .hc-index__peek,
+.hc-index[data-state="off"] ~ .hc-index__veil { visibility: hidden; }
+
 /* The optional variant: a glance at where you are while the page itself is
    being scrolled, at half strength and with no label. */
 .hc-index[data-state="peek"] { opacity: 0.5; transition-duration: 160ms; }
@@ -580,38 +588,86 @@ body {
   will-change: transform, opacity;
 }
 
-/* (4) The label, held out to the left of the finger. The pill is the tab
-   bar's glass, at the tab bar's radius, so it belongs to the same app. */
-.hc-index__peek {
+/* Paper drawn back over the right of the screen while the column is up. The
+   headings behind it are the same words in the same face as the ones in the
+   rail, and without this the two sets sit on top of each other and neither
+   reads. It is a gradient with no edge to it, so nothing about it announces
+   itself as a panel. */
+.hc-index__veil {
+  position: absolute;
+  inset: 0;
+  z-index: 39;              /* over the page, under the header and the bar */
+  pointer-events: none;
+  background: linear-gradient(to left, var(--hc-paper) 30%, rgba(247,244,239,0) 96%);
+  opacity: 0;
+  will-change: opacity;
+}
+
+.app[data-theme="dark"] .hc-index__veil {
+  background: linear-gradient(to left, var(--hc-paper) 30%, rgba(26,25,24,0) 96%);
+}
+
+/* (4) The whole contents page, held out to the left of the hand.
+
+   Every heading on the page is written out, right-aligned in one column, at
+   its own notch's height. The one under the finger is at full size and full
+   ink on a card; the rest stay small and faint behind it, which is the point
+   of them: you can see what else there is to go to without letting go, and
+   the swell tells you which one you would land on.
+
+   The column is the app's section-header type, so what you are reading in the
+   rail is the same words in the same face you will land on. */
+.hc-index__titles {
   position: absolute;
   z-index: 47;
+  inset: 0;
+  pointer-events: none;
+}
+
+.hc-index__title {
+  position: absolute;
   right: 46px;
   top: 0;
-  max-width: 62%;
-  padding: 7px 14px 8px;
-  border-radius: var(--hc-radius-pill);
-  background: var(--hc-tabbar-skin-lens);
-  backdrop-filter: blur(24px) saturate(1.6);
-  -webkit-backdrop-filter: blur(24px) saturate(1.6);
-  border: var(--hc-hairline) solid var(--hc-tabbar-edge);
-  box-shadow: var(--hc-tabbar-shadow);
+  height: 22px;
+  margin-top: -11px;
+  max-width: 66%;
   font-family: var(--hc-sans-display);
   font-weight: 800;
   font-size: 17px;
   line-height: 22px;
   letter-spacing: -0.01em;
   color: var(--hc-ink);
+  text-align: right;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  pointer-events: none;
+  transform-origin: 100% 50%;
   opacity: 0;
-  transform: translate3d(6px, 0, 0);
-  transition: opacity 140ms var(--hc-ease), transform 140ms var(--hc-ease-enter);
   will-change: transform, opacity;
 }
 
-.hc-index__peek[data-show="true"] { opacity: 1; }
+/* The card behind the one you are on. It is the tab bar's glass at the tab
+   bar's radius, sized to the title it is under and moved with it, so the
+   focused heading stays legible over a photograph while the faint ones behind
+   it are free to be faint. */
+.hc-index__peek {
+  position: absolute;
+  z-index: 46;
+  right: 32px;
+  top: 0;
+  height: 34px;
+  margin-top: -17px;
+  border-radius: var(--hc-radius-pill);
+  background: var(--hc-tabbar-skin-lens);
+  backdrop-filter: blur(24px) saturate(1.6);
+  -webkit-backdrop-filter: blur(24px) saturate(1.6);
+  border: var(--hc-hairline) solid var(--hc-tabbar-edge);
+  box-shadow: var(--hc-tabbar-shadow);
+  pointer-events: none;
+  opacity: 0;
+  transform-origin: 100% 50%;
+  will-change: transform, opacity;
+}
 
 /* A live region for the section name, for anybody who cannot see the label. */
 .hc-index__notch:focus-visible {
@@ -630,7 +686,7 @@ body {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .hc-index, .hc-index__peek { transition-duration: 1ms; }
+  .hc-index { transition-duration: 1ms; }
 }
 
 /* --- the annotation layer, narrow ------------------------------------------
@@ -705,7 +761,9 @@ body {
             <nav class="hc-index" id="index" data-state="off" aria-label="Jump to a section">
               <div id="track"></div>
             </nav>
-            <div class="hc-index__peek" id="peek" data-show="false" aria-hidden="true"></div>
+            <div class="hc-index__veil" id="veil" aria-hidden="true"></div>
+            <div class="hc-index__peek" id="peek" aria-hidden="true"></div>
+            <div class="hc-index__titles" id="titles" aria-hidden="true"></div>
             <div class="hc-index__zone" id="zone"></div>
             <p class="hc-sr" id="live" role="status" aria-live="polite"></p>
 
@@ -740,7 +798,7 @@ body {
     <div class="notes">
       <div class="note note--open">
         <h3><span>try</span> What you are looking at</h3>
-        <p>Put a thumb down in the strip and the notches fade up. Drag: the notch under the finger swells, its neighbours swell less, the page glides to that section, and the name of it is held out to the left so your hand is not covering the answer. Tap without dragging and it jumps. Let go and the rail fades a second later.</p>
+        <p>Put a thumb down in the strip and the page's whole contents fades up: every heading, written out in a column to the left of your hand. The one under the finger comes forward onto a card and the page glides to it; its neighbours swell part way; the rest stay small and faint, so you can see where else there is to go without letting go. Tap without dragging and it jumps. Let go and it all fades a second later.</p>
         <p>Nothing here is wired into <code>js/</code> or <code>css/</code>. It is the drawing the change gets decided from.</p>
       </div>
 
@@ -758,12 +816,15 @@ body {
       <div class="note">
         <h3><span>3</span> The fisheye</h3>
         <p>Each notch is a hairline pinned to the right edge that grows leftward. Under the finger it runs to its full 30px at full ink; away from the finger it falls off on a gaussian, <code>exp(-(d/46)^2)</code>, to 9px at three-tenths ink. That is one smooth curve rather than a step, so the swell moves <i>through</i> the notches instead of hopping between them.</p>
+        <p>The same <code>f</code> drives the written headings beside them &mdash; scale from 0.78 to full, ink from 0.26 to solid &mdash; so the notch and its name are one movement and not two that nearly agree.</p>
         <p>Width is drawn with <code>scaleX</code> off a fixed 30px, never by setting <code>width</code>. Nothing in the gesture touches layout.</p>
       </div>
 
       <div class="note">
-        <h3><span>4</span> The label clears the hand</h3>
-        <p>The section title floats 46px to the left of the notch, vertically centred on the finger and clamped inside the screen so the first and last stops are still readable. It is the tab bar's glass at the tab bar's radius, and the type is the section header's own: Poppins 800, one size down.</p>
+        <h3><span>4</span> The whole contents page, clear of the hand</h3>
+        <p>Every heading is written out at its own notch's height, right-aligned in a column 46px clear of the edge &mdash; well inside the screen, well outside the thumb. The focused one sits at full size and full ink on a card of the tab bar's glass, sized to that heading and moved with it. The rest hold at 0.26 ink and 0.78 scale: readable enough to choose from, plainly behind.</p>
+        <p>Under all of it the paper comes back over the right of the screen on a gradient with no edge. Without that the page's own headings and the rail's are the same words in the same face on top of each other, and neither reads. The type in the column <i>is</i> the section header's: Poppins 800, one size down, so the rail says what you will land on in the face you will land in.</p>
+        <p>The column squeezes with the notches. Under about 26px of pitch the faint headings scale down with the gap so a long guide's contents stay a column rather than a pile.</p>
       </div>
 
       <div class="note">
@@ -781,7 +842,7 @@ body {
 
       <div class="note">
         <h3><span>7</span> Minimal on purpose</h3>
-        <p>No track, no groove, no thumb, no chrome. The rail is ink at low opacity and the app's own glass, and it borrows nothing from the gold disc, which stays the only gold thing on the screen.</p>
+        <p>No track, no groove, no thumb, no chrome, no panel. The rail is the app's own section-header type at low opacity, one card of the tab bar's glass, and paper drawn back over the page. It borrows nothing from the gold disc, which stays the only gold thing on the screen.</p>
       </div>
 
       <div class="note note--open">
@@ -811,6 +872,8 @@ body {
   var index   = document.getElementById('index');
   var track   = document.getElementById('track');
   var label   = document.getElementById('peek');
+  var titles  = document.getElementById('titles');
+  var veil    = document.getElementById('veil');
   var zone    = document.getElementById('zone');
   var live    = document.getElementById('live');
 
@@ -820,6 +883,13 @@ body {
   var W_MIN  = 9;     // a notch nowhere near the finger
   var W_ACT  = 17;    // the section you are actually in, finger or no finger
   var A_MIN  = 0.30;  // ink at rest
+
+  var T_DIM  = 0.26;  // a heading you are not on. Present, and clearly behind.
+  var T_LOW  = 0.54;  // how small one of those is allowed to get
+  var T_HIGH = 0.78;  // and how large, when the notches are far enough apart
+  var T_VEIL = 0.94;  // how far the paper comes back over the page
+  var T_BITE = 1.5;   // >1 keeps the ink on the focused heading rather than
+                      // spreading it over its neighbours
 
   var SIGMA  = 46;    // px; how wide the swell is. Bigger reads softer.
   var PITCH  = 40;    // px between notches, at most
@@ -845,9 +915,16 @@ body {
 
   var stops  = [];   // { el, title, top }  measured against the scroller
   var marks  = [];   // the drawn hairlines, same order
+  var names  = [];   // the written-out headings, same order
   var ys     = [];   // each notch's centre, in track coordinates
+  var ty     = [];   // the same centres in the app's coordinates, for the names
+  var widths = [];   // each heading's natural width, measured once at build
   var lastW  = [];   // what we last wrote, so we can not write it again
   var lastA  = [];
+  var lastT  = [];
+  var lastTA = [];
+  var sMin   = T_HIGH;  // set from the pitch, see layout()
+  var lastV  = -1;
 
   var active   = -1;
   var armed    = false;   // pointer down, gesture not yet claimed
@@ -881,10 +958,18 @@ body {
     var pitch = n > 1 ? Math.min(PITCH, avail / (n - 1)) : 0;
     var span  = pitch * (n - 1);
     var y0    = (index.clientHeight - span) / 2;
+    /* How small a heading you are not on is allowed to be drawn. The column
+       has to stay a column: at 40px of pitch there is room for near enough
+       full size, and when a long guide squeezes the notches together the
+       names have to squeeze with them or they would overlap each other. */
+    sMin = clamp((pitch - 6) / 26, T_LOW, T_HIGH);
+
     ys.length = 0;
+    ty.length = 0;
     for (var i = 0; i < n; i++) {
       var y = y0 + i * pitch;
       ys.push(y);
+      ty.push(trackTop + y);
       marks[i].parentNode.style.top = (y - Math.max(11, pitch / 2)) + 'px';
       marks[i].parentNode.style.height = (Math.max(22, pitch)) + 'px';
     }
@@ -908,14 +993,31 @@ body {
     }
     track.innerHTML = html;
 
+    var written = '';
+    for (var t = 0; t < stops.length; t++) {
+      written += '<div class="hc-index__title">' + stops[t].title + '</div>';
+    }
+    titles.innerHTML = written;
+
     marks = [];
+    names = [];
+    widths = [];
     lastW = [];
     lastA = [];
+    lastT = [];
+    lastTA = [];
     var nodes = track.querySelectorAll('.hc-index__mark');
+    var written_nodes = titles.querySelectorAll('.hc-index__title');
     for (var k = 0; k < nodes.length; k++) {
       marks.push(nodes[k]);
+      names.push(written_nodes[k]);
+      // One read each, here, and never again: the card behind the focused
+      // heading is sized from this rather than from the live element.
+      widths.push(written_nodes[k].offsetWidth);
       lastW.push(-1);
       lastA.push(-1);
+      lastT.push(-1);
+      lastTA.push(-1);
     }
 
     active = -1;
@@ -929,12 +1031,15 @@ body {
 
   function paint() {
     var centre = ptrY;
+    var peak = 0;
     for (var i = 0; i < marks.length; i++) {
       var f = 0;
       if (gain > 0.001) {
         var d = (ys[i] - centre) / SIGMA;
         f = gain * Math.exp(-d * d);
       }
+
+      /* The notch. */
       var w = W_MIN + (W_MAX - W_MIN) * f;
       var a = A_MIN + (1 - A_MIN) * f;
       if (i === active) {
@@ -950,13 +1055,47 @@ body {
         marks[i].style.opacity = a.toFixed(3);
         lastA[i] = a;
       }
+
+      /* The heading written out beside it. Same f, so the words swell on the
+         same curve the notches do and the column reads as one thing. The ink
+         is taken to a power so it stays gathered on the one you are on while
+         the rest hold at T_DIM: visible enough to choose from, faint enough
+         to be behind. */
+      var ts = sMin + (1 - sMin) * f;
+      var ta = gain * (T_DIM + (1 - T_DIM) * Math.pow(f, T_BITE));
+      if (Math.abs(ts - lastT[i]) > QUIET || Math.abs(ta - lastTA[i]) > QUIET) {
+        if (Math.abs(ts - lastT[i]) > QUIET) {
+          names[i].style.transform =
+            'translate3d(0,' + ty[i].toFixed(1) + 'px,0) scale(' + ts.toFixed(3) + ')';
+          lastT[i] = ts;
+        }
+        if (Math.abs(ta - lastTA[i]) > QUIET) {
+          names[i].style.opacity = ta.toFixed(3);
+          lastTA[i] = ta;
+        }
+      }
+      if (i === active) peak = f;
+    }
+
+    var v = gain * T_VEIL;
+    if (Math.abs(v - lastV) > QUIET) {
+      veil.style.opacity = v.toFixed(3);
+      lastV = v;
+    }
+
+    /* The card, under the focused heading and moving with it. */
+    if (active >= 0) {
+      var cs = sMin + (1 - sMin) * peak;
+      label.style.transform =
+        'translate3d(0,' + ty[active].toFixed(1) + 'px,0) scale(' + cs.toFixed(3) + ')';
+      label.style.opacity = (gain * 0.96).toFixed(3);
     }
   }
 
-  function moveLabel() {
-    var h = label.offsetHeight || 36;
-    var y = clamp(trackTop + ptrY - h / 2, 8, app.clientHeight - h - 8);
-    label.style.transform = 'translate3d(0,' + Math.round(y) + 'px,0)';
+  /* Sized from a width measured at build, so the card can follow a heading
+     across the page without ever asking the layout engine a question. */
+  function fitCard(i) {
+    label.style.width = (widths[i] + 28) + 'px';
   }
 
   /* --- the one loop ------------------------------------------------------ */
@@ -993,7 +1132,6 @@ body {
     }
 
     paint();
-    if (engaged) moveLabel();
 
     running = busy;
     if (busy) requestAnimationFrame(frame);
@@ -1003,10 +1141,6 @@ body {
 
   function setState(s) {
     index.setAttribute('data-state', s);
-    if (s !== 'on') {
-      label.setAttribute('data-show', 'false');
-      label.style.opacity = '';
-    }
   }
 
   function show(s) {
@@ -1024,7 +1158,7 @@ body {
   function setActive(i, speak) {
     if (i === active || i < 0) return;
     active = i;
-    label.textContent = stops[i].title;
+    fitCard(i);
     if (speak) live.textContent = stops[i].title;
     if (navigator.vibrate) { try { navigator.vibrate(6); } catch (e) {} }
   }
@@ -1096,7 +1230,6 @@ body {
         return;
       }
       engaged = true;
-      label.setAttribute('data-show', 'true');
     }
 
     if (!engaged) return;
