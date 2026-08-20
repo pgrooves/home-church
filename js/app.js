@@ -9,20 +9,38 @@
 
   var c = HC.components;
 
-  /* Six now. The design system asks for four to five and this is the one
-     place that pushed past it, deliberately: on a 375pt phone each tile goes
-     from 67.8pt to 56.2pt, which keeps every tap target legal and leaves
-     Connect, the widest label at 48.5pt, with under 4pt of air on each side.
-     Measured rather than guessed, in demo-group-room. If it ever reads badly
-     the answer is not a smaller font, it is moving the room inside Guide. */
+  /* Six tiles, five of them tabs.
+
+     The bar has been at six since the Group tab landed, and the comment that
+     used to sit here said six was already past the four to five the design
+     system asks for: on a 375pt phone each tile is 56.2pt, which keeps every
+     tap target legal and leaves Connect, the widest label at 48.5pt, with
+     under 4pt of air on each side. Measured rather than guessed, in
+     demo-group-room.
+
+     A seventh tile would be 48.2pt and Connect would stop fitting. So rather
+     than buy one more feature and have the same argument again at eight, the
+     sixth tile stopped being a tab: ••• pushes the More list, and everything
+     that is not one of the five lives there. The geometry above is the
+     shipped geometry, unchanged, and it never has to be renegotiated again.
+
+     `tab: false` is what keeps ••• out of the sideways swipe and out of
+     HC.router.TABS. Promoting a module into the five later is a line in this
+     array and nothing else. */
   var TAB_META = [
     { name: 'home',    label: 'Home',    icon: 'home' },
     { name: 'listen',  label: 'Listen',  icon: 'listen' },
     { name: 'guide',   label: 'Guide',   icon: 'guide' },
     { name: 'group',   label: 'Group',   icon: 'group' },
     { name: 'connect', label: 'Connect', icon: 'connect' },
-    { name: 'give',    label: 'Give',    icon: 'give' }
+    { name: 'more',    label: 'More',    icon: 'more', tab: false }
   ];
+
+  /* Routes that light the ••• tile. A module opened from More is somewhere you
+     are, not a menu you got lost in, so the raised tile stays under the sixth
+     tile the whole time you are in one rather than fading out the way it does
+     for a pushed view like Your account. */
+  var MODULE_ROUTES = ['more', 'give'];
 
   var TITLES = {
     home: 'Home',
@@ -30,6 +48,7 @@
     guide: 'Guides',
     group: 'Group',
     connect: 'Connect',
+    more: 'More',
     give: 'Give',
     profile: 'Your account',
     leader: 'Leader mode',
@@ -39,6 +58,10 @@
     terms: 'Terms of use',
     data: 'Your data'
   };
+
+  function isModule(name) {
+    return MODULE_ROUTES.indexOf(name) !== -1;
+  }
 
   var mount, scroller, topbar, tabbar, totop;
 
@@ -84,8 +107,10 @@
 
       '<nav class="hc-tabbar" id="hc-tabbar" aria-label="Sections">' +
         TAB_META.map(function (t) {
+          // ••• is drawn solid, see the note on `more` in js/components.js.
+          var cls = 'hc-tab__icon' + (t.name === 'more' ? ' hc-icon--solid' : '');
           return '<button type="button" class="hc-tab" data-action="tab" data-tab="' + t.name + '">' +
-            c.icon(t.icon, 'hc-tab__icon') +
+            c.icon(t.icon, cls) +
             '<span class="hc-tab__label">' + t.label + '</span>' +
           '</button>';
         }).join('') +
@@ -157,7 +182,11 @@
     var title = document.getElementById('hc-topbar-title');
     var back = topbar.querySelector('.hc-topbar__back');
     var isTab = HC.router.isTab(route.name);
+    var module = isModule(route.name);
 
+    // More and everything under it are pushed views, so they carry the back
+    // arrow and the title the way Your account does. The tab bar below tells a
+    // different and equally true story: you are still somewhere, not adrift.
     back.hidden = isTab;
     title.textContent = TITLES[route.name] || '';
 
@@ -171,19 +200,21 @@
 
     var buttons = tabbar.querySelectorAll('.hc-tab');
     TAB_META.forEach(function (t, i) {
-      var btn = buttons[i];
-      if (t.name === route.name) {
-        btn.setAttribute('aria-current', 'page');
+      // ••• answers for every module, not just for the More list itself, so
+      // sitting in the Journal lights the tile it was opened from.
+      var here = t.name === 'more' ? module : t.name === route.name;
+      if (here) {
+        buttons[i].setAttribute('aria-current', 'page');
         // The tile travels to the tab rather than appearing under it.
         tabbar.style.setProperty('--hc-tab-index', i);
       } else {
-        btn.removeAttribute('aria-current');
+        buttons[i].removeAttribute('aria-current');
       }
     });
 
-    // A pushed view has no current tab, so the tile fades out and holds its
-    // place. Coming back, it is already where it should be.
-    tabbar.style.setProperty('--hc-tab-tile', isTab ? '1' : '0');
+    // A pushed view that is not a module has no current tab, so the tile fades
+    // out and holds its place. Coming back, it is already where it should be.
+    tabbar.style.setProperty('--hc-tab-tile', (isTab || module) ? '1' : '0');
 
     // The new view starts at the top, or is about to be scrolled to wherever
     // it was left. Either way the disc's state belongs to this view and not
@@ -294,6 +325,12 @@
 
     'go-leader': function () {
       HC.router.go({ name: 'leader' });
+    },
+
+    // Every row on the More screen. One handler rather than one per module,
+    // so adding a module is a row in js/screens/more.js and a route below.
+    'go-module': function (el) {
+      HC.router.go({ name: el.getAttribute('data-id') });
     },
 
     'open-guide': function (el) {
@@ -1204,6 +1241,7 @@
         guide: HC.screens.guide,
         group: HC.screens.group,
         connect: HC.screens.connect,
+        more: HC.screens.more,
         give: HC.screens.give,
         profile: HC.screens.profile,
         leader: HC.screens.leader,

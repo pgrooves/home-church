@@ -231,6 +231,31 @@
       close;
   }
 
+  /* Giving used to be a tile in the tab bar. That tile is ••• now, and Give
+     lives on the More screen, which is two taps from here instead of one. A
+     church's giving link is not a thing to bury two taps deep, so it keeps a
+     way in from the screen the app opens to. Quiet, at the bottom, under
+     everything the person actually came for. Never a banner, never above the
+     guide.
+
+     It goes to the Give screen rather than straight out to Overflow. That
+     screen exists to say thank you in the church's own voice before handing
+     anybody off, and skipping it to save a tap would be skipping the point. */
+  function givingRow() {
+    if (!HC.data.church.givingUrl) return '';
+    return '' +
+      '<div class="hc-home__give">' +
+        c.row({
+          title: 'Give',
+          sub: 'This place runs on people who decided it was worth it.',
+          action: 'go-module',
+          id: 'give',
+          chevron: true,
+          serif: true
+        }) +
+      '</div>';
+  }
+
   function render() {
     var html = '<div class="hc-screen hc-home">';
 
@@ -269,6 +294,8 @@
       html += c.sectionHeader('Reading together', 'Where we are');
       html += plan;
     }
+
+    html += givingRow();
 
     html += '</div>';
     return c.el(html);

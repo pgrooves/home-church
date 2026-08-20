@@ -11,7 +11,15 @@
 (function (HC) {
   'use strict';
 
-  var TABS = ['home', 'listen', 'guide', 'group', 'connect', 'give'];
+  /* The five that swipe. There is a sixth tile in the bar and it is not in
+     here on purpose: ••• pushes the More list rather than being a tab, so it
+     is not somewhere a sideways drag can land and not somewhere the raised
+     tile travels to by gesture. See TAB_META in js/app.js.
+
+     Give used to be the sixth entry. It is a module now, reached from More,
+     and its route still exists so an old history entry lands where it always
+     did. */
+  var TABS = ['home', 'listen', 'guide', 'group', 'connect'];
 
   // Old route names kept alive so a link or a restored history entry from
   // before a rename still lands somewhere real.

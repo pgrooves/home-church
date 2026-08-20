@@ -1485,6 +1485,11 @@ a.hc-card:active { background: var(--hc-paper-sunk); }
    fill="none" they carry and stay an outline the way its real mark is. */
 .hc-brand { fill: currentColor; }
 
+/* The opt out of `svg { fill: none }` in base.css, for the app's own icons
+   rather than somebody else's brand mark. Only `more` needs it so far: three
+   dots drawn as 1.5 stroke rings are mostly hole at tab size. */
+.hc-icon--solid { fill: currentColor; }
+
 .hc-social-row {
   display: flex;
   justify-content: center;

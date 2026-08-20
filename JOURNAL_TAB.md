@@ -46,29 +46,46 @@ Two ways out:
 
 Everything else is ordinary work. These five change what gets built.
 
-### 2a. There is no seventh tab slot
+### 2a. There is no seventh tab slot, so the bar stops growing entirely
 
-`js/app.js` line 12 already says this out loud:
+`js/app.js` line 12 already said this out loud, before any of this:
 
 > Six now. The design system asks for four to five and this is the one place
 > that pushed past it, deliberately: on a 375pt phone each tile goes from
 > 67.8pt to 56.2pt … If it ever reads badly the answer is not a smaller font,
 > it is moving the room inside Guide.
 
-A seventh tile is 48.2pt on a 375pt phone. The tap target is still legal, but
-"Connect" is a 48.5pt label, so it stops fitting and the bar starts hyphenating
-or truncating. This is not a font-size problem to solve; it is a slot problem.
+A seventh tile is 48.2pt. The tap target is still legal, but "Connect" is a
+48.5pt label, so it stops fitting and the bar starts truncating. And a seventh
+tile only buys one feature; the eighth is a worse version of the same argument.
 
-Three honest options:
+**Decided: five tabs and a More tile.** Give's tile becomes `•••`, and the bar
+stops being the thing that has to grow.
 
-| | What moves | Cost | My read |
-|---|---|---|---|
-| **A. Journal takes Give's slot** | Give becomes a row on Home and a row in Connect | Small. `js/screens/give.js` is 38 lines and already just hands off to Overflow. Keep the route so old links still land. | **Recommended.** Give is one button to an external site. It is the only tab that is not somewhere you spend time. Journal is somewhere you spend time. |
-| **B. No tab. Journal lives under the avatar**, next to Your account | Nothing moves | Smallest | It hides the feature. Nobody browses their account menu. If the point is that notes accumulate visibly, this defeats it. |
-| **C. Seven tabs** | Nothing | Smallest to build, largest to live with | The bar is already over budget. Do not. |
+```
+┌──────────────────────────────────────────────────┐
+│  Home   Listen   Guide   Group   Connect    •••  │
+└──────────────────────────────────────────────────┘
+   └────────── five tabs ──────────┘        └ modules
+```
 
-A is a product decision, not a technical one, so it is yours. Everything below
-works under any of the three; only `TAB_META` changes.
+- The bar keeps **six tiles**, which is the geometry already measured and
+  shipped. Nothing moves, nothing shrinks, no label re-wraps.
+- Five of them are tabs: Home, Listen, Guide, Group, Connect. Those are what
+  the sideways swipe travels between (`HC.router.TABS`), and the swipe is
+  untouched.
+- `•••` is not a tab. It pushes a **More** screen listing modules: Journal
+  first, then Give, then whatever comes next. An ordinary pushed view, so the
+  back gesture already works and no new component gets invented for it.
+- While you are in More or in any module reached from it, the raised tile sits
+  under `•••` and stays lit. Journal reads as somewhere you are, not as a menu
+  you are lost in.
+
+The cost, stated plainly: **Journal is two taps from anywhere instead of one.**
+That is the price of a bar that never has to be renegotiated again, and it is
+the same bargain iOS's own More tab makes. If Journal turns out to be the most
+used screen in the app, the answer is to promote it into the five and demote
+something else — a one-line change to `TAB_META` — not to add a seventh tile.
 
 ### 2b. "Stays on this phone" stops being true
 
@@ -80,11 +97,12 @@ The app currently promises, in five places, that notes never leave the device:
 - `js/screens/legal.js:183` — the terms' "we claim nothing over anything you write here", which says the same.
 - `js/screens/legal.js:275` and the Your data screen's two-pile explanation.
 
-Syncing the journal to an account changes all five, plus
+**Decided: the journal syncs in v1.** So all five change, plus
 `APP_STORE_COMPLIANCE.md` §2.5 and the Data Safety answers in
 `SUBMISSION_KIT.md`. That is not a blocker, it is a checklist item that is very
 easy to ship without noticing, and shipping a privacy policy that is wrong
-about where somebody's writing lives is the worst kind of quiet bug.
+about where somebody's writing lives is the worst kind of quiet bug. It lands
+in the same commit as the sync code, never after it.
 
 The shape that keeps the promise mostly intact:
 
@@ -440,7 +458,8 @@ which is why §2d insists it crosses as plain text.
 | `js/journal.js` | The data layer. Store, sanitizer, anchor resolution, sync. The `js/rooms.js` of this feature: no screen code, and the only file that talks to Supabase about entries. |
 | `js/editor.js` | The rich-text field, the format buttons, the scripture sheet. Used by two screens. |
 | `js/bible.js` | 66 books, chapter and verse counts. Data only. |
-| `js/screens/journal.js` | The tab and the single-entry view. |
+| `js/screens/journal.js` | The Journal screen and the single-entry view. |
+| `js/screens/more.js` | The More list behind `•••`. Journal, Give, and whatever comes next. |
 | `supabase/migrations/0023_journal.sql` | Table, RLS, indexes. |
 | `tests/journal.test.js` | Sanitizer, anchor re-location, sync merge, the `ownerId` rule. |
 
@@ -448,8 +467,8 @@ which is why §2d insists it crosses as plain text.
 
 | File | What |
 |---|---|
-| `js/router.js` | `journal` into `TABS` |
-| `js/app.js` | `TAB_META`, `TITLES`, the route table, and the new `data-action` handlers |
+| `js/router.js` | `TABS` down to the five that swipe |
+| `js/app.js` | `TAB_META` gains the `•••` tile, `TITLES`, the route table, which routes light the More tile, and the new `data-action` handlers |
 | `js/store.js` | The one-time migration out of `guideState[*].journal`; shims |
 | `js/screens/guide.js` | `data-hl-path` on prose blocks; reflection textareas write through the new store; marks drawn at render |
 | `js/screens/group.js` | The suggestion row in `questionBlock()`, and its signature line |
@@ -469,9 +488,12 @@ last week's JavaScript.
 Each phase is shippable on its own, which matters because phase 1 alone is
 already worth having.
 
-1. **The store and the tab.** `js/journal.js`, the tab, scratch entries, plain
-   text only, local only, plus the migration of existing reflection answers.
-   Nothing else in the app changes. Ship it.
+0. **Five tabs and a More tile.** `•••` where Give was, a More screen, Give
+   moved onto it. Lands before anything else because everything else needs
+   somewhere to be, and it is worth shipping on its own merits.
+1. **The store and the tab.** `js/journal.js`, the Journal screen, scratch
+   entries, plain text only, local only, plus the migration of existing
+   reflection answers out of `guideState`.
 2. **The editor.** Formatting, the sanitizer, the guide picker.
 3. **Scripture.** `js/bible.js` and the picker sheet.
 4. **Highlighting.** Selection bar, anchors, marks in the reader, the note
@@ -516,15 +538,22 @@ already worth having.
 
 ---
 
-## 9. Open questions
+## 9. Settled, and still open
 
-1. **Which tab slot** (§2a). A, B, or C. Everything else waits on nothing.
-2. **Does the journal sync at all in v1**, or is phase 5 a later release? Local
-   only is a smaller thing to review and keeps five pieces of privacy copy true
-   as written.
-3. **"Journal" or "Notes"** on the tile? Journal is warmer and matches what the
-   guide already calls its take-home section. Notes is shorter and would fit
-   the bar better if the seventh-tab option ever wins.
-4. **Does a highlight with no note belong in the list**, or in a quieter
-   "Highlights" filter? I have it in the list, because a highlight is a thing
+**Settled**
+
+- Five tabs and a `•••` More tile, Give moved onto it (§2a).
+- The journal syncs to the account in v1, with the privacy copy rewritten in
+  the same commit (§2b).
+
+**Still open, and none of it blocks phase 0 or 1**
+
+1. **What else belongs on the More screen** eventually. Right now it is Journal
+   and Give. Leader mode is the obvious third, since it is a pushed view today
+   with no home of its own.
+2. **Does a highlight with no note belong in the main list**, or in a quieter
+   Highlights filter? Built as: in the list, because a highlight is something
    you did on purpose.
+3. **Does the More tile remember where you were?** Tapping `•••` could land on
+   the module you used last rather than the list. Cheap to add, easy to regret
+   — a menu that moves under your thumb. Built as: always the list.

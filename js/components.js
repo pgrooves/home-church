@@ -204,7 +204,22 @@
     flag: '<path d="M5 21V4"/><path d="M5 5h11l-1.6 3.2L16 11.5H5z"/>',
     pencil: '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>',
     leaf: '<path d="M20 4C10 4 4 9 4 16v4"/><path d="M20 4c0 9-5 13-11 13H4"/>',
-    download: '<path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/>'
+    download: '<path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/>',
+
+    /* The sixth tile in the tab bar, and the only one that is not a tab. Three
+       filled dots rather than three stroked circles: at 22px a 1.5 stroke ring
+       is mostly hole, and next to five solid-feeling glyphs it reads as three
+       specks of dust. r="1.5" filled is the same visual weight as the icons it
+       sits beside. Filled means it needs the same fill="none" opt out that the
+       brand marks do, which is what hc-icon--solid is for. */
+    more: '<circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/>' +
+          '<circle cx="19" cy="12" r="1.5"/>',
+
+    /* Journal. A page with a turned corner and two written lines, which is the
+       doc glyph's cousin rather than a second notebook: `guide` is already a
+       book and these two must not read as the same tile in a list. */
+    journal: '<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/>' +
+             '<path d="M14 3v5h5"/><path d="M8.5 13h7M8.5 16.5h4.5"/>'
   };
 
   /* ------------------------------------------------------------ brand marks

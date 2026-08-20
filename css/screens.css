@@ -1207,3 +1207,63 @@
   gap: var(--hc-space-md);
 }
 .hc-terms-list li { font-size: var(--hc-body-sans); line-height: 1.55; color: var(--hc-mid); }
+
+/* ==========================================================================
+   More
+   What is behind the ••• tile. A short list of modules, drawn heavier than an
+   hc-row because this screen is nothing but the list: at row weight it read
+   as a settings page rather than as somewhere to go.
+   ========================================================================== */
+
+.hc-module-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--hc-space-sm);
+  margin-top: var(--hc-space-base);
+}
+
+.hc-module {
+  display: flex;
+  align-items: center;
+  gap: var(--hc-space-base);
+  width: 100%;
+  text-align: left;
+  min-height: var(--hc-tap-min);
+  padding: var(--hc-space-base);
+  border-radius: var(--hc-radius-lg);
+  background: var(--hc-paper-sunk);
+  border: var(--hc-hairline) solid var(--hc-rule);
+  color: var(--hc-ink);
+}
+
+/* The disc keeps the glyph off the text's baseline grid and gives the row a
+   fixed left edge, so titles of different lengths still line up. */
+.hc-module__disc {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--hc-radius-pill);
+  background: var(--hc-paper);
+  border: var(--hc-hairline) solid var(--hc-rule);
+}
+
+.hc-module__icon { width: 20px; height: 20px; color: var(--hc-accent-deep); }
+
+.hc-module__body { flex: 1 1 auto; min-width: 0; display: block; }
+
+.hc-module__title {
+  display: block;
+  font-family: var(--hc-serif);
+  font-weight: 400;
+  font-size: calc(19px * var(--hc-text-scale));
+  line-height: 1.3;
+  margin-bottom: 2px;
+}
+
+.hc-more__note { margin-top: var(--hc-space-xl); }
+
+/* Giving, at the bottom of Home. See givingRow() in js/screens/home.js. */
+.hc-home__give { margin-top: var(--hc-space-xl); }
