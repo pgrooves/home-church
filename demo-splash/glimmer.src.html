@@ -535,23 +535,35 @@ body {
 /* Soft. A wide, low highlight that reads as the room's light moving over the
    gold rather than as an effect. */
 .s-soft .stage {
-  --gleam-a: 0.72;
-  --gleam-e: 0.16;
-  --gleam-band: 13%;
-  --gleam-wide: 30%;
-  --dur-gleam: 1100ms;
+  --gleam-a: 0.95;
+  --gleam-e: 0.32;
+  --gleam-band: 11%;
+  --gleam-wide: 26%;
+  --dur-gleam: 1000ms;
   --gleam-ease: cubic-bezier(0.4, 0, 0.3, 1);
+  --bloom-blur: 7px;
+  --bloom-a: 0.34;
+}
+
+/* Even the soft pass carries a little bloom now. On paper the highlight can
+   only go as far as white, so past a point the way to make it read is to let
+   the gold throw light rather than to push the band brighter. */
+.s-soft .playing .mark {
+  animation: rise var(--dur-mark) var(--ease) var(--del-mark) forwards,
+             bloom var(--dur-gleam) ease-in-out var(--del-gleam);
 }
 
 /* Bright. A narrower, faster glint with a small bloom under it, closer to a
    catch of light on metal. */
 .s-glint .stage {
-  --gleam-a: 0.96;
-  --gleam-e: 0.30;
-  --gleam-band: 7%;
-  --gleam-wide: 22%;
-  --dur-gleam: 780ms;
+  --gleam-a: 1;
+  --gleam-e: 0.40;
+  --gleam-band: 9%;
+  --gleam-wide: 24%;
+  --dur-gleam: 800ms;
   --gleam-ease: cubic-bezier(0.5, 0, 0.4, 1);
+  --bloom-blur: 14px;
+  --bloom-a: 0.70;
 }
 
 .s-glint .playing .mark {
@@ -561,7 +573,7 @@ body {
 
 @keyframes bloom {
   0%, 100% { filter: none; }
-  50%      { filter: drop-shadow(0 0 10px rgba(215, 186, 133, 0.55)); }
+  50%      { filter: drop-shadow(0 0 var(--bloom-blur) rgba(215, 186, 133, var(--bloom-a))); }
 }
 
 /* Reduce Motion takes the travel and the light out and leaves the cross fade,
@@ -765,7 +777,7 @@ body {
         <span class="tag">Soft pass</span>
         <h2>The room's light moving</h2>
         <p>
-          A wide, low highlight over 1.1 seconds, tilted a few degrees off
+          A wide highlight over a second, tilted a few degrees off
           vertical so it falls the way light would. It brightens the gold rather
           than flashing across it, and it is gone before you have finished
           reading the welcome. The quieter of the two, and the one that still
