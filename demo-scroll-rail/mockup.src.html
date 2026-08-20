@@ -1,0 +1,1385 @@
+<meta charset="utf-8">
+<title>The Side Rail</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant:ital,wght@0,400;0,600;1,400&family=Poppins:wght@400;600;800&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+
+<style>
+/* ==========================================================================
+   Home Church, the side rail, mockup
+
+   The browser scrollbar comes off, and the right edge becomes an index. Put a
+   thumb down within about a thumb's width of the right edge and a column of
+   hairline notches fades up, one per heading on the page. Drag and the notch
+   under the finger swells, its neighbours swell less, the page glides to that
+   section, and the section's name is held out to the left of the hand so the
+   hand is not covering the answer. Let go and the rail fades back out a
+   second later.
+
+   Nothing here is wired into js/ or css/. It is the drawing the change gets
+   decided from, the same way demo-listen-rail and demo-more-overlay were.
+
+   Inside the phone: the tokens from css/tokens.css, unedited, and the chrome
+   built the way css/base.css and css/components.css build it, so what the
+   rail sits next to is the real thing it will have to sit next to.
+
+   Outside the phone: a different palette and a different typeface, because
+   the annotation layer is the spec and must never be mistaken for the
+   product.
+   ========================================================================== */
+
+/* --- the annotation layer ------------------------------------------------- */
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: #14161A;
+  color: #D9DDE3;
+  font-family: "IBM Plex Sans", -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 15px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+.doc { max-width: 1180px; margin: 0 auto; padding: 28px 24px 80px; }
+
+.doc__kicker {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 12px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #6F7A88;
+  margin: 0 0 10px;
+}
+
+.doc__title {
+  font-family: "IBM Plex Sans", sans-serif;
+  font-weight: 600;
+  font-size: 30px;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+  color: #F2F5F8;
+  margin: 0 0 12px;
+}
+
+.doc__lede { max-width: 62ch; color: #A7B0BC; margin: 0 0 6px; }
+.doc__lede b { color: #E4E9EF; font-weight: 600; }
+
+.stage {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 40px;
+  align-items: flex-start;
+  margin-top: 36px;
+}
+
+/* --- the controls --------------------------------------------------------- */
+
+.rig {
+  flex: 0 0 auto;
+  position: sticky;
+  top: 24px;
+}
+
+.rig__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 14px;
+  max-width: 390px;
+}
+
+.rig__label {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #6F7A88;
+  width: 100%;
+  margin-bottom: -4px;
+}
+
+.seg {
+  display: inline-flex;
+  border: 1px solid #2B313A;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #1A1E24;
+}
+
+.seg button {
+  appearance: none;
+  border: 0;
+  background: none;
+  color: #96A1AE;
+  font: inherit;
+  font-size: 13px;
+  padding: 7px 13px;
+  cursor: pointer;
+}
+
+.seg button + button { border-left: 1px solid #2B313A; }
+.seg button[aria-pressed="true"] { background: #29323C; color: #F2F5F8; }
+.seg button:focus-visible { outline: 2px solid #9FD0C4; outline-offset: -2px; }
+
+/* --- the notes ------------------------------------------------------------ */
+
+.notes { flex: 1 1 380px; min-width: 320px; max-width: 560px; }
+
+.note + .note { margin-top: 26px; }
+
+.note h3 {
+  font-size: 15px;
+  font-weight: 600;
+  color: #F2F5F8;
+  margin: 0 0 6px;
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+}
+
+.note h3 span {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 11px;
+  color: #5C6B7C;
+}
+
+.note p { margin: 0 0 8px; color: #A7B0BC; }
+.note p b { color: #DCE2E9; font-weight: 600; }
+.note code {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 12.5px;
+  color: #9FD0C4;
+  background: #1B2026;
+  padding: 1px 5px;
+  border-radius: 4px;
+}
+
+.note--open { border-left: 2px solid #C9A227; padding-left: 14px; }
+.note--open h3 span { color: #C9A227; }
+
+/* --- the phone ------------------------------------------------------------ */
+
+.phone {
+  position: relative;
+  width: 390px;
+  height: 800px;
+  border-radius: 46px;
+  padding: 12px;
+  background: linear-gradient(160deg, #33383F, #1B1F24);
+  box-shadow: 0 40px 90px rgba(0,0,0,0.55), 0 0 0 1px rgba(255,255,255,0.06);
+}
+
+.phone__glass {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  border-radius: 34px;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+/* ==========================================================================
+   Inside the glass. Everything below this line is app code: the tokens are
+   lifted from css/tokens.css unedited, and the chrome is the shipped chrome.
+   ========================================================================== */
+
+.app {
+  --hc-paper:       #F7F4EF;
+  --hc-paper-sunk:  #EFEAE2;
+  --hc-cream:       #EDE8DF;
+  --hc-ink:         #111111;
+  --hc-dark:        #1A1918;
+  --hc-mid:         #6D6864;
+  --hc-rule:        #C8C0B0;
+  --hc-accent:      #B5A898;
+  --hc-accent-deep: #71675A;
+  --hc-on-dark:     #F7F4EF;
+  --hc-gold:        #D7BA85;
+  --hc-gold-ink:    #1A1918;
+  --hc-gold-halo:   rgba(255,252,246,0.55);
+  --hc-gold-skin-lens: linear-gradient(178deg, rgba(233,208,158,0.34), rgba(206,177,122,0.28));
+  --hc-gold-edge:      rgba(122,96,48,0.34);
+  --hc-gold-shadow:    0 10px 24px rgba(26,25,24,0.16), 0 2px 6px rgba(26,25,24,0.08),
+                       inset 0 1px 0 rgba(255,255,255,0.40), inset 0 -1px 0 rgba(26,25,24,0.07);
+  --hc-gold-sheen:     linear-gradient(112deg, rgba(255,255,255,0.30) 0%, rgba(255,255,255,0.09) 26%, rgba(255,255,255,0) 54%);
+
+  --hc-serif: "Cormorant", "Cormorant Garamond", Georgia, serif;
+  --hc-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --hc-sans-display: "Poppins", -apple-system, BlinkMacSystemFont, sans-serif;
+
+  --hc-display-l: 32px;
+  --hc-body-serif: 17px;
+  --hc-caption: 13px;
+  --hc-eyebrow: 11px;
+  --hc-tab: 11px;
+  --hc-text-scale: 1;
+
+  --hc-space-sm: 8px;
+  --hc-space-md: 12px;
+  --hc-space-base: 16px;
+  --hc-space-lg: 24px;
+  --hc-section-top: 40px;
+  --hc-screen-pad: 20px;
+  --hc-card-pad: 20px;
+
+  --hc-radius-sm: 8px;
+  --hc-radius-md: 10px;
+  --hc-radius-lg: 12px;
+  --hc-radius-pill: 999px;
+  --hc-hairline: 0.5px;
+  --hc-edge-rule: 1.5px;
+
+  --hc-ease: cubic-bezier(0.4, 0, 0.2, 1);
+  --hc-ease-enter: cubic-bezier(0, 0, 0.2, 1);
+  --hc-dur-fast: 200ms;
+  --hc-dur-base: 300ms;
+
+  --hc-header-h: 52px;
+  --hc-tap-min: 44px;
+  --hc-tabbar-h: 56px;
+  --hc-tabbar-inset: 12px;
+  --hc-tabbar-pad: 6px;
+  --hc-tabbar-space: calc(var(--hc-tabbar-h) + (var(--hc-tabbar-pad) * 2) + (var(--hc-tabbar-inset) * 2));
+
+  --hc-tabbar-skin:      linear-gradient(178deg, rgba(255,253,250,0.94), rgba(238,233,225,0.92));
+  --hc-tabbar-skin-lens: linear-gradient(178deg, rgba(255,253,250,0.72), rgba(238,233,225,0.62));
+  --hc-tabbar-edge:      rgba(122,110,95,0.28);
+  --hc-tabbar-shadow:    0 14px 34px rgba(26,25,24,0.18), 0 2px 8px rgba(26,25,24,0.08),
+                         inset 0 1px 0 rgba(255,255,255,0.70), inset 0 -1px 0 rgba(26,25,24,0.05);
+  --hc-tabbar-sheen:     linear-gradient(112deg, rgba(255,255,255,0.55) 0%, rgba(255,255,255,0.18) 26%, rgba(255,255,255,0) 52%);
+  --hc-tabbar-tile:        linear-gradient(180deg, rgba(255,255,255,0.96), rgba(247,244,239,0.86));
+  --hc-tabbar-tile-edge:   rgba(122,110,95,0.18);
+  --hc-tabbar-tile-shadow: inset 0 1px 0 rgba(255,255,255,0.90), inset 0 -1px 0 rgba(26,25,24,0.06), 0 3px 9px rgba(26,25,24,0.12);
+
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--hc-paper);
+  color: var(--hc-ink);
+  font-family: var(--hc-sans);
+  overflow: hidden;
+}
+
+.app[data-theme="dark"] {
+  --hc-paper:       #1A1918;
+  --hc-paper-sunk:  #201E1D;
+  --hc-cream:       #232120;
+  --hc-ink:         #F2EEE7;
+  --hc-dark:        #F2EEE7;
+  --hc-mid:         #9A938A;
+  --hc-rule:        #3A3633;
+  --hc-accent:      #C4B5A2;
+  --hc-accent-deep: #CFC1AE;
+  --hc-on-dark:     #1A1918;
+  --hc-gold:        #CBAC74;
+  --hc-gold-ink:    #F4EFE6;
+  --hc-gold-halo:   rgba(12,11,10,0.55);
+  --hc-gold-skin-lens: linear-gradient(178deg, rgba(226,197,141,0.42), rgba(190,158,100,0.34));
+  --hc-gold-edge:      rgba(247,231,196,0.30);
+  --hc-gold-shadow:    0 14px 28px rgba(0,0,0,0.46), inset 0 1px 0 rgba(255,246,224,0.24), inset 0 -1px 0 rgba(0,0,0,0.20);
+  --hc-gold-sheen:     linear-gradient(112deg, rgba(255,250,236,0.24) 0%, rgba(255,250,236,0.07) 26%, rgba(255,250,236,0) 54%);
+  --hc-tabbar-skin:      linear-gradient(178deg, rgba(58,54,51,0.88), rgba(26,25,24,0.86));
+  --hc-tabbar-skin-lens: linear-gradient(178deg, rgba(58,54,51,0.52), rgba(26,25,24,0.42));
+  --hc-tabbar-edge:      rgba(196,181,162,0.20);
+  --hc-tabbar-shadow:    0 16px 36px rgba(0,0,0,0.52), inset 0 1px 0 rgba(242,238,231,0.10), inset 0 -1px 0 rgba(0,0,0,0.30);
+  --hc-tabbar-sheen:     linear-gradient(112deg, rgba(247,244,239,0.15) 0%, rgba(247,244,239,0.05) 26%, rgba(247,244,239,0) 52%);
+  --hc-tabbar-tile:        linear-gradient(180deg, rgba(247,244,239,0.15), rgba(247,244,239,0.055));
+  --hc-tabbar-tile-edge:   rgba(207,193,174,0.30);
+  --hc-tabbar-tile-shadow: inset 0 1px 0 rgba(255,252,247,0.24), inset 0 -1px 0 rgba(0,0,0,0.16), 0 4px 12px rgba(0,0,0,0.30);
+}
+
+.app * { box-sizing: border-box; }
+.app h1, .app h2, .app p { margin: 0; }
+.app button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+
+/* --- top bar -------------------------------------------------------------- */
+
+.hc-topbar {
+  position: relative;
+  z-index: 40;
+  flex: 0 0 auto;
+  height: calc(var(--hc-header-h) + 20px);
+  padding: 20px var(--hc-screen-pad) 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--hc-paper);
+  transition: box-shadow var(--hc-dur-fast) var(--hc-ease);
+}
+
+.hc-topbar[data-scrolled="true"] { box-shadow: 0 1px 0 var(--hc-rule); }
+.hc-topbar__logo { height: 22px; width: auto; display: block; }
+.app[data-theme="dark"] .hc-topbar__logo--light { display: none; }
+.app:not([data-theme="dark"]) .hc-topbar__logo--dark { display: none; }
+
+.hc-avatar {
+  position: absolute;
+  right: var(--hc-screen-pad);
+  top: 50%;
+  transform: translateY(-40%);
+  width: 30px;
+  height: 30px;
+  border-radius: var(--hc-radius-pill);
+  background: var(--hc-accent-deep);
+  color: var(--hc-on-dark);
+  font-size: 12px;
+  font-weight: 600;
+  display: grid;
+  place-items: center;
+}
+
+/* --- the one scroll container --------------------------------------------- */
+
+.hc-scroll {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+  scroll-behavior: auto;
+
+  /* (1) THE NATIVE SCROLLBAR COMES OFF. The container is still scrolled by
+     wheel, trackpad and thumb exactly as before; only the drawn bar goes. */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.hc-scroll::-webkit-scrollbar { width: 0; height: 0; display: none; }
+
+.hc-screen {
+  padding: var(--hc-space-lg) var(--hc-screen-pad) calc(var(--hc-tabbar-space) + 40px);
+}
+
+/* --- the app's own type --------------------------------------------------- */
+
+.hc-display-l {
+  font-family: var(--hc-sans-display);
+  font-weight: 800;
+  font-size: calc(32px * var(--hc-text-scale));
+  line-height: 36px;
+  letter-spacing: -0.02em;
+}
+
+.hc-eyebrow {
+  font-family: var(--hc-sans);
+  font-size: var(--hc-eyebrow);
+  line-height: 14px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--hc-accent-deep);
+}
+
+.hc-body {
+  font-family: var(--hc-serif);
+  font-size: calc(var(--hc-body-serif) * var(--hc-text-scale));
+  line-height: 26px;
+  color: var(--hc-ink);
+}
+
+.hc-caption {
+  font-size: var(--hc-caption);
+  line-height: 18px;
+  color: var(--hc-mid);
+}
+
+.hc-section-header { margin-top: var(--hc-section-top); }
+.hc-section-header--flush { margin-top: 0; }
+
+.hc-section-header__title {
+  font-family: var(--hc-sans-display);
+  font-weight: 800;
+  font-size: calc(25px * var(--hc-text-scale));
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+  color: var(--hc-ink);
+}
+
+.hc-section-header__rule {
+  margin-top: 12px;
+  width: 22%;
+  min-width: 56px;
+  height: 0.75px;
+  background: var(--hc-accent);
+}
+
+.hc-section-header + * { margin-top: var(--hc-space-base); }
+
+.hc-card {
+  margin-top: var(--hc-space-base);
+  padding: var(--hc-card-pad);
+  border-radius: var(--hc-radius-lg);
+  background: var(--hc-cream);
+  border: var(--hc-hairline) solid var(--hc-rule);
+  border-left: var(--hc-edge-rule) solid var(--hc-accent-deep);
+}
+
+.hc-card p + p { margin-top: var(--hc-space-sm); }
+
+/* --- the gold disc, unchanged --------------------------------------------- */
+
+.hc-disc {
+  position: absolute;
+  bottom: var(--hc-tabbar-space);
+  right: var(--hc-tabbar-inset);
+  z-index: 45;
+  width: var(--hc-tap-min);
+  height: var(--hc-tap-min);
+  border-radius: var(--hc-radius-pill);
+  border: var(--hc-hairline) solid var(--hc-gold-edge);
+  background: var(--hc-gold-skin-lens);
+  backdrop-filter: blur(20px) saturate(1.7);
+  -webkit-backdrop-filter: blur(20px) saturate(1.7);
+  box-shadow: var(--hc-gold-shadow);
+  color: var(--hc-gold-ink);
+  display: grid;
+  place-items: center;
+  opacity: 0;
+  transform: translateY(10px) scale(0.86);
+  pointer-events: none;
+  transition: opacity var(--hc-dur-fast) var(--hc-ease), transform var(--hc-dur-fast) var(--hc-ease-enter);
+}
+
+.hc-disc[data-show="true"] { opacity: 1; transform: none; pointer-events: auto; }
+
+.hc-disc svg {
+  width: 19px; height: 19px; fill: none; stroke: currentColor;
+  stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round;
+  filter: drop-shadow(0 0 2px var(--hc-gold-halo));
+}
+
+/* --- the tab bar, unchanged ----------------------------------------------- */
+
+.hc-tabbar {
+  position: absolute;
+  left: var(--hc-tabbar-inset);
+  right: var(--hc-tabbar-inset);
+  bottom: var(--hc-tabbar-inset);
+  z-index: 50;
+  height: calc(var(--hc-tabbar-h) + var(--hc-tabbar-pad) * 2);
+  padding: var(--hc-tabbar-pad);
+  display: flex;
+  border-radius: var(--hc-radius-lg);
+  background: var(--hc-tabbar-skin-lens);
+  backdrop-filter: blur(24px) saturate(1.6);
+  -webkit-backdrop-filter: blur(24px) saturate(1.6);
+  border: var(--hc-hairline) solid var(--hc-tabbar-edge);
+  box-shadow: var(--hc-tabbar-shadow);
+  overflow: hidden;
+}
+
+.hc-tabbar::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--hc-tabbar-sheen);
+  pointer-events: none;
+}
+
+.hc-tab {
+  position: relative;
+  z-index: 1;
+  flex: 1 1 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  border-radius: var(--hc-radius-md);
+  color: var(--hc-mid);
+  font-size: var(--hc-tab);
+  line-height: 14px;
+  font-weight: 500;
+}
+
+.hc-tab[aria-current="true"] {
+  color: var(--hc-ink);
+  background: var(--hc-tabbar-tile);
+  border: var(--hc-hairline) solid var(--hc-tabbar-tile-edge);
+  box-shadow: var(--hc-tabbar-tile-shadow);
+}
+
+.hc-tab svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+
+/* ==========================================================================
+   (2)-(7) THE SIDE RAIL ITSELF
+
+   Three elements and nothing else: an invisible strip that listens for a
+   thumb, a track of notches, and one label that floats clear of the hand.
+   ========================================================================== */
+
+/* The strip that listens. It is the width of the part of a screen a thumb
+   lands on when somebody reaches for a scrollbar that is not there, and it is
+   transparent, because what it does is put the rail up rather than be the
+   rail. touch-action tells the browser not to start its own scroll here: this
+   strip is the scrubber, so vertical travel inside it belongs to us. */
+.hc-index__zone {
+  position: absolute;
+  z-index: 44;
+  right: 0;
+  top: calc(var(--hc-header-h) + 20px);
+  /* Clear of the back-to-top disc rather than merely behind it. The disc is
+     44px of gold in that corner and it wins the tap either way, but a strip
+     that runs under it is a strip with a dead end in it, and a thumb that
+     lands there gets nothing and learns the wrong thing. */
+  bottom: calc(var(--hc-tabbar-space) + var(--hc-tap-min) + 8px);
+  width: 34px;
+  touch-action: none;
+}
+
+/* The track. Sits over the strip, never takes a pointer of its own — every
+   pointer this component sees arrives through the strip above, so there is
+   one gesture path and not two that can disagree. */
+.hc-index {
+  position: absolute;
+  z-index: 46;
+  right: 0;
+  top: calc(var(--hc-header-h) + 20px);
+  bottom: calc(var(--hc-tabbar-space) + var(--hc-tap-min) + 8px);
+  width: 34px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 380ms var(--hc-ease);
+}
+
+/* Up while a thumb is down, and while a keyboard is in the track. */
+.hc-index[data-state="on"] { opacity: 1; transition-duration: 120ms; }
+
+/* The written column and the card ride the notches' own state, so there is one
+   thing that is up or down and not three that can disagree. Their ink is drawn
+   frame by frame from the same swell, which is why only the track's own fade
+   is a transition. */
+.hc-index[data-state="off"] ~ .hc-index__titles,
+.hc-index[data-state="off"] ~ .hc-index__peek,
+.hc-index[data-state="off"] ~ .hc-index__veil { visibility: hidden; }
+
+/* The optional variant: a glance at where you are while the page itself is
+   being scrolled, at half strength and with no label. */
+.hc-index[data-state="peek"] { opacity: 0.5; transition-duration: 160ms; }
+
+.hc-index__notch {
+  position: absolute;
+  right: 0;
+  width: 34px;
+  pointer-events: none;
+  display: block;
+}
+
+/* What is actually drawn: one hairline, right-aligned, that grows leftward.
+   Width is animated with scaleX from a fixed maximum rather than by setting
+   width, so a frame of this animation never touches layout. */
+.hc-index__mark {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  width: 30px;
+  height: 2px;
+  margin-top: -1px;
+  border-radius: 1px;
+  background: var(--hc-ink);
+  transform-origin: 100% 50%;
+  transform: scaleX(0.3);
+  opacity: 0.3;
+  will-change: transform, opacity;
+}
+
+/* Paper drawn back over the right of the screen while the column is up. The
+   headings behind it are the same words in the same face as the ones in the
+   rail, and without this the two sets sit on top of each other and neither
+   reads. It is a gradient with no edge to it, so nothing about it announces
+   itself as a panel. */
+.hc-index__veil {
+  position: absolute;
+  inset: 0;
+  z-index: 39;              /* over the page, under the header and the bar */
+  pointer-events: none;
+  background: linear-gradient(to left, var(--hc-paper) 30%, rgba(247,244,239,0) 96%);
+  opacity: 0;
+  will-change: opacity;
+}
+
+.app[data-theme="dark"] .hc-index__veil {
+  background: linear-gradient(to left, var(--hc-paper) 30%, rgba(26,25,24,0) 96%);
+}
+
+/* (4) The whole contents page, held out to the left of the hand.
+
+   Every heading on the page is written out, right-aligned in one column, at
+   its own notch's height. The one under the finger is at full size and full
+   ink on a card; the rest stay small and faint behind it, which is the point
+   of them: you can see what else there is to go to without letting go, and
+   the swell tells you which one you would land on.
+
+   The column is the app's section-header type, so what you are reading in the
+   rail is the same words in the same face you will land on. */
+.hc-index__titles {
+  position: absolute;
+  z-index: 47;
+  inset: 0;
+  pointer-events: none;
+}
+
+.hc-index__title {
+  position: absolute;
+  right: 46px;
+  top: 0;
+  height: 22px;
+  margin-top: -11px;
+  max-width: 66%;
+  font-family: var(--hc-sans-display);
+  font-weight: 800;
+  font-size: 17px;
+  line-height: 22px;
+  letter-spacing: -0.01em;
+  color: var(--hc-ink);
+  text-align: right;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transform-origin: 100% 50%;
+  opacity: 0;
+  will-change: transform, opacity;
+}
+
+/* The card behind the one you are on. It is the tab bar's glass at the tab
+   bar's radius, sized to the title it is under and moved with it, so the
+   focused heading stays legible over a photograph while the faint ones behind
+   it are free to be faint. */
+.hc-index__peek {
+  position: absolute;
+  z-index: 46;
+  right: 32px;
+  top: 0;
+  height: 34px;
+  margin-top: -17px;
+  border-radius: var(--hc-radius-pill);
+  background: var(--hc-tabbar-skin-lens);
+  backdrop-filter: blur(24px) saturate(1.6);
+  -webkit-backdrop-filter: blur(24px) saturate(1.6);
+  border: var(--hc-hairline) solid var(--hc-tabbar-edge);
+  box-shadow: var(--hc-tabbar-shadow);
+  pointer-events: none;
+  opacity: 0;
+  transform-origin: 100% 50%;
+  will-change: transform, opacity;
+}
+
+/* A live region for the section name, for anybody who cannot see the label. */
+.hc-index__notch:focus-visible {
+  outline: 2px solid var(--hc-ink);
+  outline-offset: -2px;
+  border-radius: var(--hc-radius-sm);
+}
+
+.hc-sr {
+  position: absolute;
+  width: 1px; height: 1px;
+  margin: -1px; padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hc-index { transition-duration: 1ms; }
+}
+
+/* --- the annotation layer, narrow ------------------------------------------
+   On a phone the drawing is the thing you want, at the size your thumb will
+   actually meet it at, so the frame stops pretending to be a device and
+   becomes the screen. */
+
+@media (max-width: 980px) {
+  .stage { flex-direction: column; gap: 28px; }
+  .rig { position: static; width: 100%; }
+  .notes { max-width: none; }
+}
+
+@media (max-width: 460px) {
+  .doc { padding: 24px 14px 56px; }
+  .doc__title { font-size: 25px; }
+  .phone { width: 100%; height: 78vh; min-height: 560px; border-radius: 34px; padding: 8px; }
+  .phone__glass { border-radius: 27px; }
+  .seg button { padding: 8px 11px; font-size: 12.5px; }
+}
+</style>
+
+<div class="doc">
+  <p class="doc__kicker">Home Church &middot; mockup &middot; the right edge</p>
+  <h1 class="doc__title">The side rail</h1>
+  <p class="doc__lede">The scrollbar comes off every page, and the right edge becomes an index of that page's own headings. <b>Press and drag inside the last 34px on the right of the phone</b> — thumb or trackpad, both work.</p>
+
+  <div class="stage">
+    <div class="rig">
+      <div class="rig__row">
+        <span class="rig__label">Page</span>
+        <span class="seg" id="seg-page">
+          <button type="button" data-v="home" aria-pressed="true">Home &middot; 6 stops</button>
+          <button type="button" data-v="guide" aria-pressed="false">Guide &middot; 14 stops</button>
+        </span>
+      </div>
+      <div class="rig__row">
+        <span class="rig__label">While the page itself is scrolled</span>
+        <span class="seg" id="seg-peek">
+          <button type="button" data-v="off" aria-pressed="true">Rail stays hidden</button>
+          <button type="button" data-v="on" aria-pressed="false">Rail half-peeks</button>
+        </span>
+      </div>
+      <div class="rig__row">
+        <span class="rig__label">Theme</span>
+        <span class="seg" id="seg-theme">
+          <button type="button" data-v="light" aria-pressed="true">Light</button>
+          <button type="button" data-v="dark" aria-pressed="false">Dark</button>
+        </span>
+      </div>
+
+      <div class="phone">
+        <div class="phone__glass">
+          <div class="app" id="app" data-theme="light">
+
+            <header class="hc-topbar" id="topbar" data-scrolled="false">
+              <img class="hc-topbar__logo hc-topbar__logo--light" src="__LOCKUP_INK__" alt="Home Church">
+              <img class="hc-topbar__logo hc-topbar__logo--dark" src="__LOCKUP__" alt="Home Church">
+              <span class="hc-avatar">TG</span>
+            </header>
+
+            <main class="hc-scroll" id="scroll">
+              <div id="view"></div>
+            </main>
+
+            <button type="button" class="hc-disc" id="totop" data-show="false" aria-label="Back to top">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5"/><path d="m5.5 11.5 6.5-6.5 6.5 6.5"/></svg>
+            </button>
+
+            <!-- The rail. Track, label, and the strip that listens, in that
+                 order in the DOM so the label paints over the notches. -->
+            <nav class="hc-index" id="index" data-state="off" aria-label="Jump to a section">
+              <div id="track"></div>
+            </nav>
+            <div class="hc-index__veil" id="veil" aria-hidden="true"></div>
+            <div class="hc-index__peek" id="peek" aria-hidden="true"></div>
+            <div class="hc-index__titles" id="titles" aria-hidden="true"></div>
+            <div class="hc-index__zone" id="zone"></div>
+            <p class="hc-sr" id="live" role="status" aria-live="polite"></p>
+
+            <nav class="hc-tabbar">
+              <button type="button" class="hc-tab" aria-current="true">
+                <svg viewBox="0 0 24 24"><path d="M3 10.5 12 4l9 6.5"/><path d="M5.5 9.5V20h13V9.5"/></svg>
+                <span>Home</span>
+              </button>
+              <button type="button" class="hc-tab">
+                <svg viewBox="0 0 24 24"><path d="M12 3v12"/><circle cx="9" cy="17" r="3"/><path d="M12 6l6-2v10"/></svg>
+                <span>Listen</span>
+              </button>
+              <button type="button" class="hc-tab">
+                <svg viewBox="0 0 24 24"><path d="M4 5h16v14H4z"/><path d="M8 3v4M16 3v4M4 10h16"/></svg>
+                <span>Connect</span>
+              </button>
+              <button type="button" class="hc-tab">
+                <svg viewBox="0 0 24 24"><path d="M5 4h11l3 3v13H5z"/><path d="M9 9h6M9 13h6M9 17h3"/></svg>
+                <span>Journal</span>
+              </button>
+              <button type="button" class="hc-tab">
+                <svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg>
+                <span>More</span>
+              </button>
+            </nav>
+
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="notes">
+      <div class="note note--open">
+        <h3><span>try</span> What you are looking at</h3>
+        <p>Put a thumb down in the strip and the page's whole contents fades up: every heading, written out in a column to the left of your hand. The one under the finger comes forward onto a card and the page glides to it; its neighbours swell part way; the rest stay small and faint, so you can see where else there is to go without letting go. Tap without dragging and it jumps. Let go and it all fades a second later.</p>
+        <p>Nothing here is wired into <code>js/</code> or <code>css/</code>. It is the drawing the change gets decided from.</p>
+      </div>
+
+      <div class="note">
+        <h3><span>1</span> The scrollbar comes off, the scrolling does not</h3>
+        <p><code>scrollbar-width: none</code> and a zero-width <code>::-webkit-scrollbar</code> on <code>.hc-scroll</code>, which is the app's one scroll container. Wheel, trackpad, thumb and momentum are all untouched. On a phone this changes nothing visible; on the desktop build it is the difference between the design and a grey bar down the side of it.</p>
+      </div>
+
+      <div class="note">
+        <h3><span>2</span> It is not there until a thumb asks for it</h3>
+        <p>A transparent 34px strip runs down the right edge, from under the header to just clear of the gold back-to-top disc. A pointer landing in it raises the rail in 120ms. Lift the thumb and it holds for <b>one second</b>, then fades over 380ms — long enough to see where you landed, short enough that it is gone before you have read a line.</p>
+        <p>Reaching for a scrollbar that is not drawn is the gesture this is listening for, so the strip is placed where that reach lands rather than where a scrollbar would have been.</p>
+      </div>
+
+      <div class="note">
+        <h3><span>3</span> The fisheye</h3>
+        <p>Each notch is a hairline pinned to the right edge that grows leftward. Under the finger it runs to its full 30px at full ink; away from the finger it falls off on a gaussian, <code>exp(-(d/46)^2)</code>, to 9px at three-tenths ink. That is one smooth curve rather than a step, so the swell moves <i>through</i> the notches instead of hopping between them.</p>
+        <p>The same <code>f</code> drives the written headings beside them &mdash; scale from 0.78 to full, ink from 0.26 to solid &mdash; so the notch and its name are one movement and not two that nearly agree.</p>
+        <p>Width is drawn with <code>scaleX</code> off a fixed 30px, never by setting <code>width</code>. Nothing in the gesture touches layout.</p>
+      </div>
+
+      <div class="note">
+        <h3><span>4</span> The whole contents page, clear of the hand</h3>
+        <p>Every heading is written out at its own notch's height, right-aligned in a column 46px clear of the edge &mdash; well inside the screen, well outside the thumb. The focused one sits at full size and full ink on a card of the tab bar's glass, sized to that heading and moved with it. The rest hold at 0.26 ink and 0.78 scale: readable enough to choose from, plainly behind.</p>
+        <p>Under all of it the paper comes back over the right of the screen on a gradient with no edge. Without that the page's own headings and the rail's are the same words in the same face on top of each other, and neither reads. The type in the column <i>is</i> the section header's: Poppins 800, one size down, so the rail says what you will land on in the face you will land in.</p>
+        <p>The column squeezes with the notches. Under about 26px of pitch the faint headings scale down with the gap so a long guide's contents stay a column rather than a pile.</p>
+      </div>
+
+      <div class="note">
+        <h3><span>5</span> Both directions</h3>
+        <p><b>Rail to page:</b> the notch nearest the finger is the target, and the page eases toward it every frame rather than jumping, so a fast drag reads as flying down the page instead of cutting between stills.</p>
+        <p><b>Page to rail:</b> an ordinary scroll keeps the active notch in step — the last heading to have passed the reading line, 72px below the header.</p>
+        <p>A tap with no drag jumps to the notch under it. A drag that turns out to be mostly sideways is handed back: past 10px of travel with horizontal beating vertical by 1.2&times;, the rail lets go so <code>js/swipe.js</code> can still take you to the next tab from the right edge.</p>
+      </div>
+
+      <div class="note">
+        <h3><span>6</span> Why it stays smooth</h3>
+        <p>Every stop is measured once, when the thumb goes down. After that a single <code>requestAnimationFrame</code> loop writes two compositor properties per notch — <code>transform</code> and <code>opacity</code> — and skips any write that would move a value by less than 0.004. No reads, no classes, no layout, one loop that stops itself when the finger is still and the page has arrived.</p>
+        <p>The finger position is itself eased toward the raw pointer (0.35 per frame), which is what takes the tremor out of the swell without adding lag you can feel.</p>
+      </div>
+
+      <div class="note">
+        <h3><span>7</span> Minimal on purpose</h3>
+        <p>No track, no groove, no thumb, no chrome, no panel. The rail is the app's own section-header type at low opacity, one card of the tab bar's glass, and paper drawn back over the page. It borrows nothing from the gold disc, which stays the only gold thing on the screen.</p>
+      </div>
+
+      <div class="note note--open">
+        <h3><span>open</span> What the right edge costs</h3>
+        <p>34px of the right edge stops being content while this is on, and vertical travel inside it belongs to the rail rather than to the page. Cards have 20px of padding there so nothing tappable is under it today, but the full-bleed carousel on Home is, and so is the swipe between tabs &mdash; which is why a gesture that turns out to be sideways is handed straight back.</p>
+        <p>Also open: whether the rail should half-peek during an ordinary scroll (the second toggle). It answers "where am I" for free, and it is one more thing moving on a page somebody is reading. Shipped default in this drawing is <b>hidden</b>, per the brief.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ==========================================================================
+   The rail. Written the way it would ship — one closure, no dependencies, no
+   framework — so that if this drawing is approved the block below moves into
+   js/index-rail.js close to unchanged.
+   ========================================================================== */
+
+(function () {
+  'use strict';
+
+  var app     = document.getElementById('app');
+  var scroll  = document.getElementById('scroll');
+  var view    = document.getElementById('view');
+  var topbar  = document.getElementById('topbar');
+  var totop   = document.getElementById('totop');
+  var index   = document.getElementById('index');
+  var track   = document.getElementById('track');
+  var label   = document.getElementById('peek');
+  var titles  = document.getElementById('titles');
+  var veil    = document.getElementById('veil');
+  var zone    = document.getElementById('zone');
+  var live    = document.getElementById('live');
+
+  /* --- the numbers, all of them, in one place --------------------------- */
+
+  var W_MAX  = 30;    // a notch at the centre of the swell
+  var W_MIN  = 9;     // a notch nowhere near the finger
+  var W_ACT  = 17;    // the section you are actually in, finger or no finger
+  var A_MIN  = 0.30;  // ink at rest
+
+  var T_DIM  = 0.26;  // a heading you are not on. Present, and clearly behind.
+  var T_LOW  = 0.54;  // how small one of those is allowed to get
+  var T_HIGH = 0.78;  // and how large, when the notches are far enough apart
+  var T_VEIL = 0.94;  // how far the paper comes back over the page
+  var T_BITE = 1.5;   // >1 keeps the ink on the focused heading rather than
+                      // spreading it over its neighbours
+
+  var SIGMA  = 46;    // px; how wide the swell is. Bigger reads softer.
+  var PITCH  = 40;    // px between notches, at most
+  var EDGE   = 14;    // px kept clear at each end of the track
+
+  var LAND   = 12;    // where a jumped-to heading comes to rest under the top
+  var LINE   = 72;    // the reading line the active notch is measured against
+
+  var HOLD   = 1000;  // ms the rail stays up after the thumb lifts
+  var PEEK   = 900;   // ms it stays up after an ordinary scroll, when on
+  var SLOP   = 10;    // px before a gesture has to say which way it is going
+  var AXIS   = 1.2;   // horizontal has to beat vertical by this to be a swipe
+
+  var EASE_PTR   = 0.35;  // per frame, finger -> drawn centre
+  var EASE_SCROLL= 0.22;  // per frame, page -> target
+  var EASE_GAIN  = 0.14;  // per frame, swell in and out
+  var QUIET      = 0.004; // writes smaller than this are not worth making
+
+  var reduced = window.matchMedia &&
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* --- state ------------------------------------------------------------ */
+
+  var stops  = [];   // { el, title, top }  measured against the scroller
+  var marks  = [];   // the drawn hairlines, same order
+  var names  = [];   // the written-out headings, same order
+  var ys     = [];   // each notch's centre, in track coordinates
+  var ty     = [];   // the same centres in the app's coordinates, for the names
+  var widths = [];   // each heading's natural width, measured once at build
+  var lastW  = [];   // what we last wrote, so we can not write it again
+  var lastA  = [];
+  var lastT  = [];
+  var lastTA = [];
+  var sMin   = T_HIGH;  // set from the pitch, see layout()
+  var lastV  = -1;
+
+  var active   = -1;
+  var armed    = false;   // pointer down, gesture not yet claimed
+  var engaged  = false;   // it is ours
+  var rawY     = 0;
+  var ptrY     = 0;
+  var gain     = 0;       // 0 at rest, 1 under a finger
+  var glideTo  = 0;
+  var glideAt  = 0;
+  var gliding  = false;
+  var running  = false;
+  var hideTimer= 0;
+  var trackTop = 0;       // the track's offset inside .app, cached
+  var peekMode = false;   // the half-peek-while-scrolling variant
+
+  function clamp(v, lo, hi) { return v < lo ? lo : (v > hi ? hi : v); }
+
+  /* --- measuring, once per gesture -------------------------------------- */
+
+  function measure() {
+    var base = scroll.getBoundingClientRect().top - scroll.scrollTop;
+    for (var i = 0; i < stops.length; i++) {
+      stops[i].top = stops[i].el.getBoundingClientRect().top - base;
+    }
+    trackTop = index.offsetTop;
+  }
+
+  function layout() {
+    var n = stops.length;
+    var avail = index.clientHeight - EDGE * 2;
+    var pitch = n > 1 ? Math.min(PITCH, avail / (n - 1)) : 0;
+    var span  = pitch * (n - 1);
+    var y0    = (index.clientHeight - span) / 2;
+    /* How small a heading you are not on is allowed to be drawn. The column
+       has to stay a column: at 40px of pitch there is room for near enough
+       full size, and when a long guide squeezes the notches together the
+       names have to squeeze with them or they would overlap each other. */
+    sMin = clamp((pitch - 6) / 26, T_LOW, T_HIGH);
+
+    ys.length = 0;
+    ty.length = 0;
+    for (var i = 0; i < n; i++) {
+      var y = y0 + i * pitch;
+      ys.push(y);
+      ty.push(trackTop + y);
+      marks[i].parentNode.style.top = (y - Math.max(11, pitch / 2)) + 'px';
+      marks[i].parentNode.style.height = (Math.max(22, pitch)) + 'px';
+    }
+  }
+
+  /* --- building the track ----------------------------------------------- */
+
+  function build() {
+    stops.length = 0;
+    var els = view.querySelectorAll('[data-stop]');
+    for (var i = 0; i < els.length; i++) {
+      stops.push({ el: els[i], title: els[i].getAttribute('data-stop'), top: 0 });
+    }
+
+    var html = '';
+    for (var j = 0; j < stops.length; j++) {
+      html += '<button type="button" class="hc-index__notch" data-i="' + j + '">' +
+                '<span class="hc-sr">' + stops[j].title + '</span>' +
+                '<span class="hc-index__mark"></span>' +
+              '</button>';
+    }
+    track.innerHTML = html;
+
+    var written = '';
+    for (var t = 0; t < stops.length; t++) {
+      written += '<div class="hc-index__title">' + stops[t].title + '</div>';
+    }
+    titles.innerHTML = written;
+
+    marks = [];
+    names = [];
+    widths = [];
+    lastW = [];
+    lastA = [];
+    lastT = [];
+    lastTA = [];
+    var nodes = track.querySelectorAll('.hc-index__mark');
+    var written_nodes = titles.querySelectorAll('.hc-index__title');
+    for (var k = 0; k < nodes.length; k++) {
+      marks.push(nodes[k]);
+      names.push(written_nodes[k]);
+      // One read each, here, and never again: the card behind the focused
+      // heading is sized from this rather than from the live element.
+      widths.push(written_nodes[k].offsetWidth);
+      lastW.push(-1);
+      lastA.push(-1);
+      lastT.push(-1);
+      lastTA.push(-1);
+    }
+
+    active = -1;
+    measure();
+    layout();
+    fromScroll();
+    paint();
+  }
+
+  /* --- painting: two compositor properties per notch, and nothing else --- */
+
+  function paint() {
+    var centre = ptrY;
+    var peak = 0;
+    for (var i = 0; i < marks.length; i++) {
+      var f = 0;
+      if (gain > 0.001) {
+        var d = (ys[i] - centre) / SIGMA;
+        f = gain * Math.exp(-d * d);
+      }
+
+      /* The notch. */
+      var w = W_MIN + (W_MAX - W_MIN) * f;
+      var a = A_MIN + (1 - A_MIN) * f;
+      if (i === active) {
+        if (w < W_ACT) w = W_ACT;
+        if (a < 0.78)  a = 0.78;
+      }
+      var s = w / W_MAX;
+      if (Math.abs(s - lastW[i]) > QUIET) {
+        marks[i].style.transform = 'scaleX(' + s.toFixed(3) + ')';
+        lastW[i] = s;
+      }
+      if (Math.abs(a - lastA[i]) > QUIET) {
+        marks[i].style.opacity = a.toFixed(3);
+        lastA[i] = a;
+      }
+
+      /* The heading written out beside it. Same f, so the words swell on the
+         same curve the notches do and the column reads as one thing. The ink
+         is taken to a power so it stays gathered on the one you are on while
+         the rest hold at T_DIM: visible enough to choose from, faint enough
+         to be behind. */
+      var ts = sMin + (1 - sMin) * f;
+      var ta = gain * (T_DIM + (1 - T_DIM) * Math.pow(f, T_BITE));
+      if (Math.abs(ts - lastT[i]) > QUIET || Math.abs(ta - lastTA[i]) > QUIET) {
+        if (Math.abs(ts - lastT[i]) > QUIET) {
+          names[i].style.transform =
+            'translate3d(0,' + ty[i].toFixed(1) + 'px,0) scale(' + ts.toFixed(3) + ')';
+          lastT[i] = ts;
+        }
+        if (Math.abs(ta - lastTA[i]) > QUIET) {
+          names[i].style.opacity = ta.toFixed(3);
+          lastTA[i] = ta;
+        }
+      }
+      if (i === active) peak = f;
+    }
+
+    var v = gain * T_VEIL;
+    if (Math.abs(v - lastV) > QUIET) {
+      veil.style.opacity = v.toFixed(3);
+      lastV = v;
+    }
+
+    /* The card, under the focused heading and moving with it. */
+    if (active >= 0) {
+      var cs = sMin + (1 - sMin) * peak;
+      label.style.transform =
+        'translate3d(0,' + ty[active].toFixed(1) + 'px,0) scale(' + cs.toFixed(3) + ')';
+      label.style.opacity = (gain * 0.96).toFixed(3);
+    }
+  }
+
+  /* Sized from a width measured at build, so the card can follow a heading
+     across the page without ever asking the layout engine a question. */
+  function fitCard(i) {
+    label.style.width = (widths[i] + 28) + 'px';
+  }
+
+  /* --- the one loop ------------------------------------------------------ */
+
+  function kick() {
+    if (running) return;
+    running = true;
+    requestAnimationFrame(frame);
+  }
+
+  function frame() {
+    var busy = false;
+
+    if (engaged) {
+      ptrY += (rawY - ptrY) * (reduced ? 1 : EASE_PTR);
+      if (Math.abs(rawY - ptrY) < 0.2) ptrY = rawY;
+      else busy = true;
+    }
+
+    var want = engaged ? 1 : 0;
+    if (Math.abs(want - gain) > 0.002) {
+      gain += (want - gain) * (reduced ? 1 : EASE_GAIN);
+      busy = true;
+    } else if (gain !== want) {
+      gain = want;
+      busy = true;
+    }
+
+    if (gliding) {
+      glideAt += (glideTo - glideAt) * (reduced ? 1 : EASE_SCROLL);
+      if (Math.abs(glideTo - glideAt) < 0.5) { glideAt = glideTo; gliding = false; }
+      else busy = true;
+      scroll.scrollTop = glideAt;
+    }
+
+    paint();
+
+    running = busy;
+    if (busy) requestAnimationFrame(frame);
+  }
+
+  /* --- state ------------------------------------------------------------- */
+
+  function setState(s) {
+    index.setAttribute('data-state', s);
+  }
+
+  function show(s) {
+    if (hideTimer) { clearTimeout(hideTimer); hideTimer = 0; }
+    setState(s);
+  }
+
+  /* A timer rather than a countdown inside the frame loop, so a rail waiting
+     to fade is not a rail holding a rAF open for a second doing nothing. */
+  function hideSoon(ms) {
+    if (hideTimer) clearTimeout(hideTimer);
+    hideTimer = setTimeout(function () { hideTimer = 0; setState('off'); }, ms);
+  }
+
+  function setActive(i, speak) {
+    if (i === active || i < 0) return;
+    active = i;
+    fitCard(i);
+    if (speak) live.textContent = stops[i].title;
+    if (navigator.vibrate) { try { navigator.vibrate(6); } catch (e) {} }
+  }
+
+  function nearest(y) {
+    var best = 0, bd = Infinity;
+    for (var i = 0; i < ys.length; i++) {
+      var d = Math.abs(ys[i] - y);
+      if (d < bd) { bd = d; best = i; }
+    }
+    return best;
+  }
+
+  function maxScroll() {
+    return scroll.scrollHeight - scroll.clientHeight;
+  }
+
+  function goTo(i) {
+    glideTo = clamp(stops[i].top - LAND, 0, maxScroll());
+    glideAt = scroll.scrollTop;
+    gliding = true;
+    kick();
+  }
+
+  function fromScroll() {
+    var line = scroll.scrollTop + LINE;
+    var i = 0;
+    for (var k = 0; k < stops.length; k++) if (stops[k].top <= line) i = k;
+    if (scroll.scrollTop >= maxScroll() - 2) i = stops.length - 1;
+    setActive(i, false);
+  }
+
+  /* --- the gesture -------------------------------------------------------
+     One pointer path. The strip listens, the track never does, so there is no
+     second handler that can disagree with this one about what is happening. */
+
+  function localY(e) {
+    return e.clientY - index.getBoundingClientRect().top;
+  }
+
+  zone.addEventListener('pointerdown', function (e) {
+    if (stops.length < 2) return;
+    measure();
+    layout();
+    armed = true;
+    engaged = false;
+    zone._x = e.clientX;
+    zone._y = e.clientY;
+    rawY = ptrY = clamp(localY(e), 0, index.clientHeight);
+    show('on');
+    try { zone.setPointerCapture(e.pointerId); } catch (err) {}
+    e.preventDefault();
+    kick();
+  });
+
+  zone.addEventListener('pointermove', function (e) {
+    if (!armed && !engaged) return;
+    var dx = e.clientX - zone._x;
+    var dy = e.clientY - zone._y;
+
+    if (armed && !engaged) {
+      if (Math.abs(dx) + Math.abs(dy) < SLOP) return;
+      if (Math.abs(dx) > Math.abs(dy) * AXIS) {
+        /* Sideways. That is js/swipe.js's gesture, not ours: let go of it
+           cleanly rather than half-holding it. */
+        armed = false;
+        try { zone.releasePointerCapture(e.pointerId); } catch (err) {}
+        hideSoon(160);
+        return;
+      }
+      engaged = true;
+    }
+
+    if (!engaged) return;
+    rawY = clamp(localY(e), 0, index.clientHeight);
+    var i = nearest(rawY);
+    if (i !== active) { setActive(i, true); goTo(i); }
+    kick();
+    e.preventDefault();
+  });
+
+  function up(e) {
+    if (armed && !engaged) {
+      // A tap. Jump to whatever notch it landed on.
+      var i = nearest(rawY);
+      setActive(i, true);
+      goTo(i);
+    }
+    armed = false;
+    engaged = false;
+    hideSoon(HOLD);
+  }
+
+  zone.addEventListener('pointerup', up);
+  zone.addEventListener('pointercancel', up);
+
+  /* A mouse gets a hint the moment it crosses the strip, because a mouse has
+     no way to discover a target it cannot see. A thumb never fires this. */
+  zone.addEventListener('pointermove', function (e) {
+    if (e.pointerType !== 'mouse' || armed || engaged) return;
+    if (index.getAttribute('data-state') === 'off') { measure(); layout(); paint(); }
+    show('on');
+    hideSoon(HOLD);
+  });
+
+  zone.addEventListener('pointerleave', function () {
+    if (!armed && !engaged) hideSoon(240);
+  });
+
+  /* Keyboard. The notches are real buttons: tab into the track and the rail
+     comes up, arrow or enter moves the page. */
+  track.addEventListener('focusin', function () { measure(); layout(); show('on'); });
+  track.addEventListener('focusout', function () { hideSoon(200); });
+  track.addEventListener('click', function (e) {
+    var btn = e.target.closest ? e.target.closest('.hc-index__notch') : null;
+    if (!btn) return;
+    var i = parseInt(btn.getAttribute('data-i'), 10);
+    measure();
+    setActive(i, true);
+    goTo(i);
+  });
+
+  /* --- the page moving on its own ---------------------------------------- */
+
+  var ticking = false;
+  scroll.addEventListener('scroll', function () {
+    if (ticking) return;
+    ticking = true;
+    requestAnimationFrame(function () {
+      ticking = false;
+      topbar.setAttribute('data-scrolled', scroll.scrollTop > 24 ? 'true' : 'false');
+      totop.setAttribute('data-show', scroll.scrollTop > 240 ? 'true' : 'false');
+      if (engaged || gliding) return;
+      fromScroll();
+      if (peekMode) {
+        if (index.getAttribute('data-state') === 'off') { measure(); layout(); }
+        show('peek');
+        hideSoon(PEEK);
+      }
+      kick();
+    });
+  }, { passive: true });
+
+  totop.addEventListener('click', function () {
+    glideTo = 0; glideAt = scroll.scrollTop; gliding = true; kick();
+  });
+
+  window.addEventListener('resize', function () { measure(); layout(); paint(); });
+
+  /* ======================================================================
+     Everything below is the mockup's own scaffolding: two pages of real
+     Home Church copy to scroll through, and the three switches.
+     ====================================================================== */
+
+  var COPY = [
+    'We are a church that meets in houses across Metairie, and on Sunday we come together as one.',
+    'Bring somebody with you. There is coffee before, and nobody minds a late arrival.',
+    'If this is your first week, find one of us at the door and we will save you a seat.'
+  ];
+
+  function para(i) { return '<p class="hc-body">' + COPY[i % COPY.length] + '</p>'; }
+
+  function head(title, flush) {
+    return '<div class="hc-section-header' + (flush ? ' hc-section-header--flush' : '') + '" data-stop="' + title + '">' +
+             '<h2 class="hc-section-header__title">' + title + '</h2>' +
+             '<div class="hc-section-header__rule"></div>' +
+           '</div>';
+  }
+
+  function card(n) {
+    var h = '<div class="hc-card">';
+    for (var i = 0; i < n; i++) h += para(i);
+    return h + '</div>';
+  }
+
+  var PAGES = {
+    home: function () {
+      var h = '<div class="hc-screen">';
+      h += '<h1 class="hc-display-l" data-stop="Good evening, Trey">Good evening,<br>Trey.</h1>';
+      h += '<p class="hc-caption" style="margin-top:10px">Sunday, 10:00 and 11:30</p>';
+      h += head('Service times') + card(2);
+      h += head('Latest sermon') + card(3);
+      h += head('Announcements') + card(2);
+      h += head('Reading plan') + card(3);
+      h += head('Give') + card(2);
+      return h + '</div>';
+    },
+    guide: function () {
+      var titles = ['Overview', 'Sermon summary', 'Getting started', 'Going deeper',
+        'Living it out', 'Discussion questions', 'Self-reflection', 'For the week',
+        'Impactful one-liners', 'Scripture index', 'Pray together', 'Notes',
+        'Next week', 'Leader helps'];
+      var h = '<div class="hc-screen">';
+      h += '<p class="hc-eyebrow">Guide</p>';
+      h += '<h1 class="hc-display-l" data-stop="A house, and a name" style="margin-top:8px">A house, and a name.</h1>';
+      for (var i = 0; i < titles.length; i++) h += head(titles[i]) + card(i % 2 ? 2 : 3);
+      return h + '</div>';
+    }
+  };
+
+  function setPage(name) {
+    view.innerHTML = PAGES[name]();
+    scroll.scrollTop = 0;
+    build();
+  }
+
+  function wire(id, fn) {
+    var box = document.getElementById(id);
+    box.addEventListener('click', function (e) {
+      var b = e.target.closest('button');
+      if (!b) return;
+      var all = box.querySelectorAll('button');
+      for (var i = 0; i < all.length; i++) all[i].setAttribute('aria-pressed', String(all[i] === b));
+      fn(b.getAttribute('data-v'));
+    });
+  }
+
+  wire('seg-page', setPage);
+  wire('seg-peek', function (v) { peekMode = (v === 'on'); });
+  wire('seg-theme', function (v) { app.setAttribute('data-theme', v); });
+
+  setPage('home');
+})();
+</script>
