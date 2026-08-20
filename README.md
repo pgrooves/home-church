@@ -401,8 +401,12 @@ it is not part of the UI palette and no interface element should adopt it.
 
 ## Decisions worth not undoing
 
-- **Five tabs and one Profile screen.** No drawer, no More sheet. Two
-  navigation systems is one too many.
+- **One navigation system.** Five tabs, a ••• tile, and one Profile screen. No
+  drawer. The overflow sheet that ••• lifts is not a second system and must
+  never become one: it is the tab bar continued, made of the same plinth, and
+  what is behind it is stops on the same sideways swipe rather than a menu of
+  places you have to come back from. The moment it grows its own hierarchy it
+  has stopped being that.
 - **No shadows.** Surfaces separate with color and 0.5px hairlines.
 - **No streaks, badges, day counters, or completion percentages.** The reading
   plan shows position, not pressure.

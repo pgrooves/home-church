@@ -465,7 +465,7 @@ which is why §2d insists it crosses as plain text.
 | `js/editor.js` | The rich-text field, the format buttons, the scripture sheet. Used by two screens. |
 | `js/bible.js` | 66 books, chapter and verse counts. Data only. |
 | `js/screens/journal.js` | The Journal screen and the single-entry view. |
-| `js/screens/more.js` | The More list behind `•••`. Journal, Give, and whatever comes next. |
+| `js/screens/more.js` | The More list. Since the overflow sheet shipped, `•••` no longer opens it; the route survives at `?v=more` for old links and draws from the same `HC.modules` array the sheet does. See `demo-more-overlay/`. |
 | `supabase/migrations/0023_journal.sql` | Table, RLS, indexes. |
 | `tests/journal.test.js` | Sanitizer, anchor re-location, sync merge, the `ownerId` rule. |
 

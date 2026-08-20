@@ -11,15 +11,27 @@
 (function (HC) {
   'use strict';
 
-  /* The five that swipe. There is a sixth tile in the bar and it is not in
-     here on purpose: ••• pushes the More list rather than being a tab, so it
-     is not somewhere a sideways drag can land and not somewhere the raised
-     tile travels to by gesture. See TAB_META in js/app.js.
-
-     Give used to be the sixth entry. It is a module now, reached from More,
-     and its route still exists so an old history entry lands where it always
-     did. */
+  /* The five with a tile of their own in the bar. There is a sixth tile and it
+     is not in here on purpose: ••• is not a destination, it lifts the overflow
+     sheet. See TAB_META in js/app.js. */
   var TABS = ['home', 'listen', 'guide', 'group', 'connect'];
+
+  /* The modules behind •••, in the order the sheet lists them. Set once at
+     boot from the one array in js/app.js that also draws the sheet, so the
+     order you swipe through and the order you read can never disagree.
+
+     WHY THEY ARE HERE AT ALL. They used to be pushed views, and a pushed view
+     is a dead end: Connect was the last thing a sideways drag could reach and
+     the drag simply stopped there. They are stops now. Nothing else about them
+     changed, and the bar still only has six tiles, which is the whole reason
+     the sheet exists. */
+  var modules = [];
+
+  /* Everywhere a sideways drag can land, in the order it lands. The five, then
+     the modules. */
+  function stops() {
+    return TABS.concat(modules);
+  }
 
   // Old route names kept alive so a link or a restored history entry from
   // before a rename still lands somewhere real.
@@ -186,7 +198,16 @@
     replaceCurrent: replaceCurrent,
     back: back,
     current: function () { return current; },
-    isTab: function (name) { return TABS.indexOf(name) !== -1; }
+
+    setModules: function (names) { modules = names.slice(); },
+    stops: stops,
+    isModule: function (name) { return modules.indexOf(name) !== -1; },
+
+    /* A top level destination: one of the five, or one of the modules behind
+       •••. Not "is it in the tab bar", which is why it is not called that.
+       What it decides is everything a stop has and a pushed view does not: no
+       back arrow, the logo in the header, and a sideways drag that works. */
+    isTop: function (name) { return stops().indexOf(name) !== -1; }
   };
 
 })(window.HC = window.HC || {});

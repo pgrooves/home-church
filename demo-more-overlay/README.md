@@ -4,6 +4,14 @@ A standalone rendering of the proposed ••• behaviour, made to be looked at
 before anything in `js/` or `css/` is touched. Nothing here is wired into the
 app.
 
+**Built.** It shipped as *fill the width* and *flush*, the two defaults below,
+with the modules kept at `?v=more` for old links. It lives in `js/app.js`
+(the sheet, the peek, and the one `MODULES` array), `js/router.js` (the stops),
+`js/swipe.js` (the longer row and the clamped tile) and the `.hc-oversheet`
+block in `css/components.css`. This folder stays as the drawing it was decided
+from, four across and one column included, so the alternatives are still here
+if the grid ever needs revisiting.
+
 ## What it shows
 
 Tapping ••• stops pushing the More list and lifts an overflow panel out of the

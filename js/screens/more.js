@@ -7,11 +7,15 @@
    js/app.js said out loud that six was past what the design system asks for.
    Journal would have been a seventh, and whatever comes after Journal an
    eighth, so rather than renegotiate the bar every time something is added,
-   the sixth tile stopped being a tab. Five tabs swipe. This list grows.
+   the sixth tile stopped being a tab.
 
-   It is an ordinary pushed view, not a sheet or a popover. That is deliberate:
-   the back gesture, the title in the header, and the scroll restore all work
-   already, and a menu is not worth a new component nobody else uses.
+   NOTHING OPENS THIS ANY MORE. ••• lifts the overflow sheet instead, and the
+   modules are stops on the sideways swipe rather than rows you tap into and
+   come back from. The route stays at ?v=more so an old link, a bookmark, or a
+   history entry restored from a build before the change still lands somewhere
+   real rather than being bounced to Home. It draws from HC.modules, the same
+   array the sheet draws from, so a screen almost nobody reaches can never
+   start disagreeing with the one everybody does.
    ========================================================================== */
 
 (function (HC) {
@@ -19,24 +23,8 @@
 
   var c = HC.components;
 
-  /* The modules, in the order they are worth opening. Adding one is a row
-     here plus a route in js/app.js, and the tab bar never has to change
-     again, which is the whole point of this screen. */
   function modules() {
-    return [
-      {
-        route: 'journal',
-        icon: 'journal',
-        title: 'Journal',
-        sub: 'Everything you have written down, from a guide or on your own.'
-      },
-      {
-        route: 'give',
-        icon: 'give',
-        title: 'Give',
-        sub: 'Through Overflow, in your own browser.'
-      }
-    ];
+    return HC.modules || [];
   }
 
   function moduleRow(m) {

@@ -376,6 +376,198 @@
 }
 
 /* --------------------------------------------------------------------------
+   The overflow sheet. What ••• lifts.
+
+   It is the plinth again, and that is the whole design: the same skin, the
+   same hairline, the same sheen, the same 26px corner, the same 12px inset on
+   both edges, so it is exactly as wide as the bar and its edges line up with
+   the bar's rather than nearly lining up. One 8px gap between them is what
+   keeps it reading as a second object instead of the bar having grown a lump.
+
+   The modules sit on the glass the way the five tabs sit on it, and the
+   raised tile is spent on the one you are in. The bar already has a rule
+   about what a tile means and it means you are here; the sheet keeps it
+   rather than inventing a second one.
+   -------------------------------------------------------------------------- */
+
+.hc-oversheet {
+  position: fixed;
+  left: var(--hc-tabbar-inset);
+  right: var(--hc-tabbar-inset);
+  /* The bar's own height, its frame, its two hairlines and the inset it
+     floats on, and then the gap. Written out rather than measured, so moving
+     any one of those tokens moves this with it. */
+  bottom: calc(var(--hc-tabbar-h)
+               + (var(--hc-tabbar-pad) * 2)
+               + (var(--hc-hairline) * 2)
+               + var(--hc-tabbar-inset)
+               + env(safe-area-inset-bottom)
+               + 8px);
+  z-index: 46;                  /* over the discs at 45, under the toast at 60 */
+  padding: 8px var(--hc-tabbar-pad) var(--hc-tabbar-pad);
+  border-radius: 26px;
+  background: var(--hc-tabbar-skin);
+  border: var(--hc-hairline) solid var(--hc-tabbar-edge);
+  box-shadow: var(--hc-tabbar-shadow);
+  isolation: isolate;
+
+  /* Parked below the screen edge, far enough down that the shadow clears too. */
+  transform: translateY(calc(100% + 120px));
+  opacity: 1;
+  transition: transform var(--hc-dur-sheet) var(--hc-ease-enter);
+}
+
+@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+  .hc-oversheet {
+    background: var(--hc-tabbar-skin-lens);
+    -webkit-backdrop-filter: blur(22px) saturate(150%);
+    backdrop-filter: blur(22px) saturate(150%);
+  }
+}
+
+.hc-oversheet::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  border-radius: inherit;
+  background: var(--hc-tabbar-sheen);
+}
+
+.hc-oversheet[data-state="open"],
+.hc-oversheet[data-state="peek"] { transform: translateY(0); }
+
+/* The peek leaves on a fade rather than the slide it arrived on. Sliding back
+   down is what a dismissal looks like, and nobody opened this one. */
+.hc-oversheet[data-state="fade"] {
+  transform: translateY(0);
+  opacity: 0;
+  transition: opacity 320ms var(--hc-ease);
+}
+
+/* Mid drag it is under a finger, not travelling anywhere, so it must not also
+   be easing. And putting it back to parked once it is invisible must not be
+   animated at all, or it travels down through the screen on the way. */
+.hc-oversheet[data-dragging="true"],
+.hc-oversheet[data-reset="true"] { transition: none; }
+
+/* The handle. A grab rail with a real target around it: the drag has to start
+   somewhere a thumb can hit without aiming, and the modules below are buttons,
+   so it cannot be the whole panel. */
+.hc-oversheet__grab {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 22px;
+  margin-bottom: 2px;
+  padding: 0;
+  cursor: pointer;
+  touch-action: none;
+}
+
+.hc-oversheet__handle {
+  width: 38px;
+  height: 4px;
+  border-radius: var(--hc-radius-pill);
+  background: var(--hc-rule);
+}
+
+.hc-oversheet__grab:focus-visible { outline-offset: -2px; border-radius: 12px; }
+
+/* Slots only for what is there. Two modules is one row of two, filling the
+   width the way the bar fills the screen, and nothing is reserved for a third.
+   --hc-mod-count is set in js/app.js and capped at four, so a fifth module
+   starts a second row rather than a fifth narrower column. */
+.hc-oversheet__grid {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: repeat(var(--hc-mod-count, 2), minmax(0, 1fr));
+  gap: 4px;
+}
+
+.hc-oversheet__mod {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-height: 72px;
+  padding: 10px 4px;
+  border-radius: 20px;
+  border: var(--hc-hairline) solid transparent;
+  color: var(--hc-ink);
+  transition: transform var(--hc-dur-fast) var(--hc-ease);
+}
+
+.hc-oversheet__mod:active { transform: scale(0.96); }
+
+.hc-oversheet__icon {
+  width: 24px;
+  height: 24px;
+  color: var(--hc-accent-deep);
+  stroke: currentColor;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  fill: none;
+}
+
+.hc-oversheet__label {
+  font-family: var(--hc-sans);
+  font-weight: 500;
+  font-size: var(--hc-tab);
+  line-height: var(--hc-tab-line);
+  letter-spacing: 0.01em;
+}
+
+/* The one you are in, raised out of the glass exactly as the active tab is. */
+.hc-oversheet__mod[aria-current="page"] {
+  background: var(--hc-tabbar-tile);
+  border-color: var(--hc-tabbar-tile-edge);
+  box-shadow: var(--hc-tabbar-tile-shadow);
+}
+
+.hc-oversheet__mod:focus-visible { outline-offset: -3px; }
+
+/* The paper behind it. It stops at the tab bar rather than covering it, so
+   the bar stays lit and usable with the sheet up. */
+.hc-oversheet__scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  width: 100%;
+  padding: 0;
+  background: var(--hc-overlay);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--hc-dur-base) var(--hc-ease);
+}
+
+#app[data-oversheet="open"] .hc-oversheet__scrim {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* Both discs sit exactly where the sheet lands. They go down with it up, and
+   come back when it goes, rather than floating over a scrim or poking out
+   beside a panel. */
+#app[data-oversheet="open"] .hc-disc,
+#app[data-oversheet="peek"] .hc-disc,
+#app[data-oversheet="fade"] .hc-disc {
+  opacity: 0;
+  transform: translateY(10px) scale(0.86);
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hc-oversheet,
+  .hc-oversheet[data-state="fade"],
+  .hc-oversheet__scrim { transition: none; }
+}
+
+/* --------------------------------------------------------------------------
    Section header. The signature pattern: eyebrow, serif title, short rule.
    -------------------------------------------------------------------------- */
 

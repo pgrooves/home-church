@@ -26,7 +26,7 @@
 
      `tab: false` is what keeps ••• out of the sideways swipe and out of
      HC.router.TABS. Promoting a module into the five later is a line in this
-     array and nothing else. */
+     array and a line out of MODULES below. */
   var TAB_META = [
     { name: 'home',    label: 'Home',    icon: 'home' },
     { name: 'listen',  label: 'Listen',  icon: 'listen' },
@@ -36,10 +36,38 @@
     { name: 'more',    label: 'More',    icon: 'more', tab: false }
   ];
 
-  /* Routes that light the ••• tile. A module opened from More is somewhere you
-     are, not a menu you got lost in, so the raised tile stays under the sixth
-     tile the whole time you are in one rather than fading out the way it does
-     for a pushed view like Your account. */
+  /* What is behind •••. One array, and it feeds three things that used to be
+     able to drift apart: the sheet's grid, the order a sideways drag runs
+     them in, and the list on the More screen. Adding a module is a row here
+     and a route in the table at the bottom of this file.
+
+     They are stops, not pushed views. Swiping left off Connect brings the
+     first one in exactly the way Connect arrives from Group, which is the
+     whole reason the ••• tile stopped pushing a screen. */
+  var MODULES = [
+    {
+      route: 'journal',
+      icon: 'journal',
+      title: 'Journal',
+      sub: 'Everything you have written down, from a guide or on your own.'
+    },
+    {
+      route: 'give',
+      icon: 'give',
+      title: 'Give',
+      sub: 'Through Overflow, in your own browser.'
+    }
+  ];
+
+  // The More screen still exists at ?v=more so an old link or a restored
+  // history entry lands somewhere real. Nothing in the app opens it any more.
+  HC.modules = MODULES;
+
+  /* Routes that light the ••• tile. A module is somewhere you are, not a menu
+     you got lost in, so the raised tile stays under the sixth tile the whole
+     time you are in one rather than fading out the way it does for a pushed
+     view like Your account. journal-entry is in here because it is opened
+     from a module and belongs to it. */
   var MODULE_ROUTES = ['more', 'journal', 'journal-entry', 'give'];
 
   var TITLES = {
@@ -66,6 +94,7 @@
   }
 
   var mount, scroller, topbar, tabbar, totop, backdisc;
+  var sheet, sheetGrid, sheetScrim, sheetGrab;
 
   /* ------------------------------------------------------------- the shell */
 
@@ -115,6 +144,27 @@
         '</svg>' +
       '</button>' +
 
+      /* The overflow sheet, and the paper behind it. Both live in the shell
+         rather than in a screen, for the same reason the tab bar does: they
+         belong to the app, not to whatever is currently on. See the block
+         further down for what opens and closes them.
+
+         The scrim stops at the tab bar rather than covering it, so the bar
+         stays lit and usable with the sheet up: ••• closes what it opened,
+         and any other tab takes you there and puts the sheet away on the way
+         past. A bar that goes dead under a menu is a bar you have to dismiss
+         before you can use, which is one tap more than this needs. */
+      '<button type="button" class="hc-oversheet__scrim" id="hc-oversheet-scrim" ' +
+          'aria-label="Close More" aria-hidden="true" tabindex="-1"></button>' +
+
+      '<nav class="hc-oversheet" id="hc-oversheet" aria-label="More" aria-hidden="true">' +
+        '<button type="button" class="hc-oversheet__grab" id="hc-oversheet-grab" ' +
+            'aria-label="Close More" tabindex="-1">' +
+          '<span class="hc-oversheet__handle"></span>' +
+        '</button>' +
+        '<div class="hc-oversheet__grid" id="hc-oversheet-grid"></div>' +
+      '</nav>' +
+
       '<nav class="hc-tabbar" id="hc-tabbar" aria-label="Sections">' +
         TAB_META.map(function (t) {
           // ••• is drawn solid, see the note on `more` in js/components.js.
@@ -134,6 +184,10 @@
     tabbar = document.getElementById('hc-tabbar');
     totop = document.getElementById('hc-totop');
     backdisc = document.getElementById('hc-back');
+    sheet = document.getElementById('hc-oversheet');
+    sheetGrid = document.getElementById('hc-oversheet-grid');
+    sheetScrim = document.getElementById('hc-oversheet-scrim');
+    sheetGrab = document.getElementById('hc-oversheet-grab');
 
     // The sliding tile behind the active tab is a pseudo element sized by
     // this count, so the CSS never has to know how many tabs there are.
@@ -196,27 +250,29 @@
 
     var title = document.getElementById('hc-topbar-title');
     var back = topbar.querySelector('.hc-topbar__back');
-    var isTab = HC.router.isTab(route.name);
+    var isTop = HC.router.isTop(route.name);
     var module = isModule(route.name);
 
-    // More and everything under it are pushed views, so they carry the back
-    // arrow and the title the way Your account does. The tab bar below tells a
-    // different and equally true story: you are still somewhere, not adrift.
-    back.hidden = isTab;
+    /* A stop is a stop, whether it has a tile of its own or lives behind •••.
+       Journal and Give get the logo and no back arrow for the same reason
+       Connect does: you did not get sent there, you went there, and a drag
+       takes you straight back out. Only a genuinely pushed view, an entry, a
+       guide, Your account, carries the arrow and the title. */
+    back.hidden = isTop;
     title.textContent = TITLES[route.name] || '';
 
-    // The logo only ever appears on a tab, sliding to center once scrolled.
+    // The logo only ever appears on a stop, sliding to center once scrolled.
     // A pushed view has no room for it, back arrow and title fill that slot.
-    topbar.setAttribute('data-is-tab', isTab ? 'true' : 'false');
+    topbar.setAttribute('data-is-tab', isTop ? 'true' : 'false');
 
-    // The bar starts bare on a tab, and carries the title straight away on a
+    // The bar starts bare on a stop, and carries the title straight away on a
     // pushed view where the back arrow needs company.
-    topbar.setAttribute('data-scrolled', isTab ? 'false' : 'true');
+    topbar.setAttribute('data-scrolled', isTop ? 'false' : 'true');
 
     var buttons = tabbar.querySelectorAll('.hc-tab');
     TAB_META.forEach(function (t, i) {
-      // ••• answers for every module, not just for the More list itself, so
-      // sitting in the Journal lights the tile it was opened from.
+      // ••• answers for every module, so sitting in the Journal lights the
+      // tile the Journal lives behind. Which module it is, the sheet says.
       var here = t.name === 'more' ? module : t.name === route.name;
       if (here) {
         buttons[i].setAttribute('aria-current', 'page');
@@ -229,7 +285,7 @@
 
     // A pushed view that is not a module has no current tab, so the tile fades
     // out and holds its place. Coming back, it is already where it should be.
-    tabbar.style.setProperty('--hc-tab-tile', (isTab || module) ? '1' : '0');
+    tabbar.style.setProperty('--hc-tab-tile', (isTop || module) ? '1' : '0');
 
     // The new view starts at the top, or is about to be scrolled to wherever
     // it was left. Either way the discs belong to this view and not the last
@@ -243,6 +299,245 @@
     return window.matchMedia &&
            window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   }
+
+  /* ------------------------------------------------------ the overflow sheet
+
+     What ••• does now. It used to push the More list and you had to come back
+     from it; it lifts a panel out of the tab bar instead, and the modules
+     behind it are stops on the sideways swipe rather than a dead end.
+
+     WHAT IT IS MADE OF. The plinth again: the same skin, hairline, sheen and
+     26px corner as the bar, exactly the bar's width, inset the same 12px from
+     both edges, sitting one 8px gap above it. Not a card in the app's paper,
+     because that would put two different objects at the bottom of the screen
+     and only one of them would look like the navigation.
+
+     THREE STATES, and the middle one is the reason this file has any timers
+     in it at all:
+
+       open   somebody tapped •••. Scrim behind it, focus in it, Esc closes.
+       peek   a sideways drag landed on a module. The bar cannot say which one,
+              because the tile parks on ••• for all of them, so the sheet shows
+              itself for a second with that module raised and then fades. No
+              scrim, nothing dimmed: it is a label, not a menu, and it must not
+              interrupt the screen it is announcing.
+       closed parked below the edge, far enough that its shadow clears too.
+
+     The peek leaves on a fade rather than the slide it arrived on, because
+     sliding back down reads as a sheet being dismissed and nobody opened it.
+     ---------------------------------------------------------------------- */
+
+  /* Long enough to read one word, short enough to be gone before the thumb
+     wants the screen back. */
+  var PEEK_MS = 1000;
+  var PEEK_FADE_MS = 320;
+
+  var sheetState = 'closed';
+  var peekTimer = null;
+
+  function sheetIsOpen() { return sheetState === 'open'; }
+  function sheetIsPeeking() { return sheetState === 'peek' || sheetState === 'fade'; }
+
+  function setSheetState(next) {
+    sheetState = next;
+    sheet.setAttribute('data-state', next);
+    document.getElementById('app').setAttribute('data-oversheet', next);
+  }
+
+  /* A button nobody can see should not be a button anybody can reach, same
+     rule as the discs. A peek is not reachable either: it is decoration on a
+     navigation the screen has already announced by its own name, and a second
+     voice saying Journal is noise.
+
+     The scrim is never hidden outright, only made unreachable: it has a fade
+     to finish and `hidden` would cut it off mid transition. Nothing can reach
+     it meanwhile, because the CSS takes its pointer events away with its
+     opacity. */
+  function sheetReachable(on) {
+    sheet.setAttribute('aria-hidden', on ? 'false' : 'true');
+    sheetGrab.tabIndex = on ? 0 : -1;
+    sheetScrim.setAttribute('aria-hidden', on ? 'false' : 'true');
+    sheetScrim.tabIndex = on ? 0 : -1;
+    var mods = sheetGrid.querySelectorAll('.hc-oversheet__mod');
+    for (var i = 0; i < mods.length; i++) mods[i].tabIndex = on ? 0 : -1;
+  }
+
+  function paintSheet() {
+    var route = HC.router.current();
+    var here = route ? route.name : '';
+
+    sheetGrid.style.setProperty('--hc-mod-count', Math.min(MODULES.length, 4));
+    sheetGrid.innerHTML = MODULES.map(function (m) {
+      return '<button type="button" class="hc-oversheet__mod" data-action="go-module" ' +
+          'data-id="' + c.esc(m.route) + '"' +
+          (m.route === here ? ' aria-current="page"' : '') + '>' +
+        c.icon(m.icon, 'hc-oversheet__icon') +
+        '<span class="hc-oversheet__label">' + c.esc(m.title) + '</span>' +
+      '</button>';
+    }).join('');
+  }
+
+  function cancelPeek() {
+    if (peekTimer) { window.clearTimeout(peekTimer); peekTimer = null; }
+  }
+
+  /* Parking it again must not be animated, or the invisible panel travels
+     back down through the screen while its opacity is coming up. */
+  function parkSheet() {
+    sheet.setAttribute('data-reset', 'true');
+    setSheetState('closed');
+    void sheet.offsetHeight;
+    sheet.removeAttribute('data-reset');
+  }
+
+  function openSheet() {
+    cancelPeek();
+    paintSheet();
+    setSheetState('open');
+    sheetReachable(true);
+    sheet.style.transform = '';
+    sheetScrim.style.opacity = '';
+    HC.native.tap('Light');
+    var first = sheetGrid.querySelector('.hc-oversheet__mod');
+    if (first) first.focus({ preventScroll: true });
+  }
+
+  function closeSheet() {
+    var hadFocus = sheet.contains(document.activeElement) ||
+                   sheetScrim === document.activeElement;
+    cancelPeek();
+    setSheetState('closed');
+    sheetReachable(false);
+    sheet.style.transform = '';
+    sheetScrim.style.opacity = '';
+
+    // Focus goes back where it came from rather than to the top of the
+    // document, which is where a keyboard ends up when the thing it was in
+    // stops being reachable.
+    if (hadFocus) {
+      var tile = tabbar.querySelector('[data-tab="more"]');
+      if (tile) tile.focus({ preventScroll: true });
+    }
+  }
+
+  function endPeek() {
+    if (!sheetIsPeeking()) return;
+    cancelPeek();
+    parkSheet();
+  }
+
+  function peekSheet() {
+    cancelPeek();
+    paintSheet();
+    sheetReachable(false);
+    setSheetState('peek');
+    peekTimer = window.setTimeout(function () {
+      if (sheetState !== 'peek') return;
+      setSheetState('fade');
+      peekTimer = window.setTimeout(function () {
+        if (sheetState === 'fade') parkSheet();
+        peekTimer = null;
+      }, prefersReducedMotion() ? 0 : PEEK_FADE_MS);
+    }, PEEK_MS);
+  }
+
+  /* Dragged down by the handle. The panel follows the finger and the scrim
+     fades with it, so the two move as one thing; past a third of the panel,
+     or on a flick, letting go finishes it, and anything less springs back. */
+  var SHEET_FLICK = 0.5;
+
+  /* A flick has to have gone somewhere first, same guard as FLICK_MIN in
+     js/swipe.js and for the same reason: velocity is measured between two
+     adjacent points, so a thumb that twitches a few pixels quickly reads as
+     fast without having travelled at all. Without this a nudge on the handle
+     dismisses the sheet. */
+  var SHEET_FLICK_MIN = 24;
+
+  var sd = null;
+
+  function wireSheet() {
+    setSheetState('closed');
+
+    sheetGrab.addEventListener('touchstart', function (evt) {
+      if (!sheetIsOpen() || evt.touches.length !== 1) return;
+      var t = evt.touches[0];
+      sd = { y: t.clientY, dy: 0, last: t.clientY, at: Date.now(), v: 0 };
+      sheet.setAttribute('data-dragging', 'true');
+    }, { passive: true });
+
+    // Not passive: a drag on the handle is not a scroll of anything.
+    sheetGrab.addEventListener('touchmove', function (evt) {
+      if (!sd || evt.touches.length !== 1) return;
+      var t = evt.touches[0];
+      var dy = Math.max(0, t.clientY - sd.y);
+      var now = Date.now();
+      if (now > sd.at) {
+        sd.v = (t.clientY - sd.last) / (now - sd.at);
+        sd.at = now;
+        sd.last = t.clientY;
+      }
+      sd.dy = dy;
+      sheet.style.transform = 'translateY(' + dy + 'px)';
+      var h = sheet.offsetHeight || 1;
+      sheetScrim.style.opacity = String(Math.max(0, 1 - dy / h));
+      if (evt.cancelable) evt.preventDefault();
+    }, { passive: false });
+
+    function endDrag() {
+      if (!sd) return;
+      sheet.removeAttribute('data-dragging');
+      var h = sheet.offsetHeight || 1;
+      var gone = sd.dy > h / 3 ||
+                 (sd.v > SHEET_FLICK && sd.dy > SHEET_FLICK_MIN);
+      // A finger that dragged is not also a tap on the handle.
+      var dragged = sd.dy > 4;
+      sd = null;
+      if (gone) {
+        closeSheet();
+      } else {
+        sheet.style.transform = '';
+        sheetScrim.style.opacity = '';
+      }
+      return dragged;
+    }
+
+    sheetGrab.addEventListener('touchend', endDrag);
+    sheetGrab.addEventListener('touchcancel', endDrag);
+
+    // Tapping the handle rather than dragging it closes it too, and so does
+    // the paper behind. Both are the same intention.
+    sheetGrab.addEventListener('click', function () {
+      if (sheetIsOpen() && !sd) closeSheet();
+    });
+    sheetScrim.addEventListener('click', closeSheet);
+
+    document.addEventListener('keydown', function (evt) {
+      if (evt.key === 'Escape' && sheetIsOpen()) closeSheet();
+    });
+
+    /* Leaving takes the sheet with it, the same way leaving a screen takes
+       its selection bar and any open sheet. A peek is left alone here because
+       the swipe that caused it decides its own fate below: closing it on the
+       view change it was announcing would mean it never appeared at all. */
+    HC.store.on('view', function (route) {
+      if (sheetIsOpen()) closeSheet();
+      else if (sheetIsPeeking() && !isModule(route.name)) endPeek();
+    });
+  }
+
+  /* Called by js/swipe.js when a drag commits, and by nothing else, because
+     only a drag can put you somewhere the tab bar cannot name. Arriving on a
+     second module restarts the second rather than stacking one peek on
+     another, and the raised tile moves with you. */
+  HC.overflow = {
+    open: function () { openSheet(); },
+    close: function () { closeSheet(); },
+    isOpen: sheetIsOpen,
+    arrived: function (name) {
+      if (HC.router.isModule(name)) peekSheet();
+      else endPeek();
+    }
+  };
 
   /* About a card and a half of travel.
 
@@ -280,7 +575,7 @@
        stay there the whole time, at the top of a sermon guide as much as
        eleven questions down a group room. A tab is not pushed and has nowhere
        to go back to, so it does not get one. */
-    setDisc(backdisc, !chromeless && !HC.router.isTab(route.name));
+    setDisc(backdisc, !chromeless && !HC.router.isTop(route.name));
   }
 
   function watchScroll() {
@@ -295,7 +590,7 @@
         HC.dateRail.update();
         paintDiscs();
         var route = HC.router.current();
-        if (!route || !HC.router.isTab(route.name)) return;
+        if (!route || !HC.router.isTop(route.name)) return;
         topbar.setAttribute('data-scrolled', scroller.scrollTop > 24 ? 'true' : 'false');
       });
     }, { passive: true });
@@ -332,8 +627,17 @@
   /* ---------------------------------------------------------------- actions */
 
   var actions = {
+    /* Five of the six tiles go somewhere. The sixth lifts the sheet, and
+       tapping it again puts it back down, because a tile that only opens is
+       a tile you have to dismiss some other way. */
     tab: function (el) {
-      HC.router.go({ name: el.getAttribute('data-tab') });
+      var name = el.getAttribute('data-tab');
+      if (name === 'more') {
+        if (HC.overflow.isOpen()) HC.overflow.close();
+        else HC.overflow.open();
+        return;
+      }
+      HC.router.go({ name: name });
     },
 
     // Both ways back, the arrow in the header and the disc by the thumb.
@@ -1718,7 +2022,13 @@
 
     renderShell();
     wireEvents();
+    wireSheet();
     watchScroll();
+
+    /* The one array, handed to the one thing that has to agree with it. The
+       router owns the order a drag runs, this file owns what the sheet draws,
+       and this line is what keeps them the same list. */
+    HC.router.setModules(MODULES.map(function (m) { return m.route; }));
 
     HC.dateRail.init({
       scroller: scroller,

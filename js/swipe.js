@@ -1,10 +1,15 @@
 /* ==========================================================================
    Home Church, swipe between tabs
 
-   Drag left or right anywhere on a tab and the next tab comes with your
+   Drag left or right anywhere on a tab and the next one comes with your
    thumb. It is continuous, not a flick that fires an animation afterwards:
    the screen you are leaving and the screen you are arriving at move together
    under the finger, and let go early and they spring back where they were.
+
+   THE ROW IS LONGER THAN THE BAR. It runs the five tabs and then the modules
+   behind •••, so Connect is no longer where a drag stops. The bar cannot
+   follow that far, having six tiles and seven stops, so the tile parks on •••
+   and the sheet says which module you are on. See HC.router.stops().
 
    HOW IT IS PUT TOGETHER. The app has exactly one scroll container, so two
    screens cannot simply sit side by side inside it, and giving each screen
@@ -88,8 +93,18 @@
               window.matchMedia('(prefers-reduced-motion: reduce)').matches);
   }
 
-  function tabs() {
-    return HC.router.TABS;
+  /* Everywhere the drag can land: the five tabs, then the modules behind •••.
+     Connect used to be the end of the line. */
+  function stops() {
+    return HC.router.stops();
+  }
+
+  /* The bar has one more tile than it has tabs, and the last one is •••. Past
+     Connect every module lights that same tile, so the travelling tile stops
+     there rather than sliding off the end of a bar that has nowhere further
+     to go. See emitViewChange in js/app.js, which lands on the same number. */
+  function tileLimit() {
+    return HC.router.TABS.length;
   }
 
   /* --------------------------------------------------------- what to ignore */
@@ -141,7 +156,7 @@
   function paneFor(dir) {
     if (g.panes[dir] !== undefined) return g.panes[dir];
 
-    var name = tabs()[g.index + dir];
+    var name = stops()[g.index + dir];
     var el = name ? HC.router.renderRoute({ name: name }) : null;
     if (!el) {
       g.panes[dir] = null;
@@ -172,9 +187,10 @@
 
     // The tile under the tab bar is placed by a custom property that the CSS
     // multiplies by its own width, so a fraction of a tab is a fraction of the
-    // travel. It rides the finger for free.
+    // travel. It rides the finger for free, as far as ••• and no further.
     var progress = Math.max(-1, Math.min(1, -dx / g.width));
-    tabbar.style.setProperty('--hc-tab-index', (g.index + progress).toFixed(4));
+    var at = Math.min(g.index + progress, tileLimit());
+    tabbar.style.setProperty('--hc-tab-index', at.toFixed(4));
   }
 
   function begin(dir) {
@@ -214,7 +230,7 @@
     if (settling) return;
 
     var pane = dir ? g.panes[dir] : null;
-    var name = dir ? tabs()[g.index + dir] : null;
+    var name = dir ? stops()[g.index + dir] : null;
     var totopWas = g.totopWas;
 
     if (g.flat || !g.dragging) {
@@ -241,7 +257,7 @@
     // over exactly as long as the screens take, so they arrive together.
     tabbar.style.setProperty('--hc-tab-tween', ms + 'ms');
     tabbar.removeAttribute('data-swiping');
-    tabbar.style.setProperty('--hc-tab-index', g.index + dir);
+    tabbar.style.setProperty('--hc-tab-index', Math.min(g.index + dir, tileLimit()));
 
     place(to);
 
@@ -261,6 +277,13 @@
         mount.style.transform = '';
         HC.router.go({ name: name }, { adopt: el, animate: false });
         HC.native.tap('Light');
+
+        /* Past Connect the raised tile parks on ••• and stays there, so the
+           bar can no longer say which module you are in. The sheet says it:
+           it shows itself for a second with that module lit and then goes.
+           Only a drag calls this, because only a drag can land you somewhere
+           the bar cannot name. See js/app.js. */
+        if (HC.overflow) HC.overflow.arrived(name);
       } else if (totop && totopWas) {
         totop.setAttribute('data-show', totopWas);
       }
@@ -310,7 +333,7 @@
     if (g) return;
 
     var route = HC.router.current();
-    if (!route || !HC.router.isTab(route.name)) return;
+    if (!route || !HC.router.isTop(route.name)) return;
 
     var touch = evt.touches[0];
     if (typingTarget(evt.target)) return;
@@ -328,7 +351,7 @@
       lastDx: 0,
       lastT: Date.now(),
       velocity: 0,
-      index: tabs().indexOf(route.name),
+      index: stops().indexOf(route.name),
       width: scroller.clientWidth || window.innerWidth || 1,
       panes: {},
       dragging: false,
