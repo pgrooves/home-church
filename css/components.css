@@ -2153,3 +2153,181 @@ a.hc-card:active { background: var(--hc-paper-sunk); }
   0%, 100% { filter: none; }
   50%      { filter: drop-shadow(0 0 7px rgba(215, 186, 133, 0.34)); }
 }
+
+/* --------------------------------------------------------------------------
+   The index rail. The right edge, in place of a scrollbar this design does
+   not draw. See js/index-rail.js for what moves and why.
+
+   Three layers and a veil, all of them absolutely placed against #app so a
+   screen never has to know they exist: the notches, which are always on the
+   glass; the page's headings written out, which are not; the card behind the
+   focused one; and the paper that comes back over the page underneath the
+   whole thing.
+
+   NOTHING HERE TRANSITIONS. Every value that moves is written frame by frame
+   from one gaussian in the JavaScript, and a transition on top of that is a
+   second opinion about the same number. The one exception is the state below,
+   which only takes the reading out of the tree once the swell is spent.
+   -------------------------------------------------------------------------- */
+
+.hc-index {
+  position: fixed;
+  z-index: 46;                    /* over the page, beside the discs */
+  right: 0;
+  top: calc(var(--hc-header-h) + env(safe-area-inset-top));
+  /* Clear of the back to top disc rather than merely behind it. The disc is
+     44px of gold in that corner and it wins the tap either way, but a track
+     that runs under it is a track with a dead end in it. */
+  bottom: calc(var(--hc-tabbar-space) + var(--hc-tap-min) + 8px
+               + env(safe-area-inset-bottom));
+  width: 34px;
+
+  /* The notches are drawn, never touched. The gesture is read off .hc-scroll,
+     which is what leaves the right edge available to the tab swipe as well.
+     See the note at the top of js/index-rail.js. */
+  pointer-events: none;
+}
+
+/* Listen's month strip is a second band of chrome under the header, and the
+   track starts below it while it is out. 42px is that strip's own height; it
+   is written here rather than shared because the two are only ever equal by
+   agreement, and a rail that quietly resized this one would be worse than a
+   number that has to be changed twice. */
+.hc-date-rail[data-show="true"] ~ .hc-index {
+  top: calc(var(--hc-header-h) + 42px + env(safe-area-inset-top));
+}
+
+.hc-index[hidden] { display: none !important; }
+
+/* The written column, the card and the veil come and go together. */
+.hc-index[data-state="off"] ~ .hc-index__titles,
+.hc-index[data-state="off"] ~ .hc-index__card,
+.hc-index[data-state="off"] ~ .hc-index__veil { visibility: hidden; }
+
+.hc-index__track { position: absolute; inset: 0; }
+
+.hc-index__notch {
+  position: absolute;
+  right: 0;
+  width: 34px;
+  display: block;
+  /* A notch is reachable with a keyboard and drawn for a thumb. The thumb
+     never lands on it: the whole strip is the target, and the strip is the
+     scroller underneath. */
+  pointer-events: none;
+}
+
+.hc-index__notch:focus-visible {
+  outline: 2px solid var(--hc-accent-deep);
+  outline-offset: -2px;
+  border-radius: var(--hc-radius-sm);
+  pointer-events: auto;
+}
+
+/* What is actually drawn: one hairline, pinned right, growing leftward.
+   Length is scaleX off a fixed maximum rather than a width, so no frame of
+   the swell touches layout. Every second one rests shorter than its
+   neighbour, which is the whole claim the edge makes before anybody has
+   touched it: a run of even ticks is a thing you slide along. */
+.hc-index__mark {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  width: 30px;
+  height: 2px;
+  margin-top: -1px;
+  border-radius: 1px;
+  background: var(--hc-ink);
+  transform-origin: 100% 50%;
+  transform: scaleX(0.3);
+  opacity: 0.2;
+  will-change: transform, opacity;
+}
+
+/* Paper drawn back over the right of the screen while the column is up. The
+   headings behind it are the same words in the same face as the ones in the
+   rail, and without this the two sets sit on top of each other and neither
+   reads. A gradient with no edge to it, so nothing about it is a panel. */
+.hc-index__veil {
+  position: fixed;
+  inset: 0;
+  z-index: 38;                    /* over the page, under every piece of chrome */
+  pointer-events: none;
+  background: linear-gradient(to left, var(--hc-paper) 30%, rgba(247, 244, 239, 0) 96%);
+  opacity: 0;
+  will-change: opacity;
+}
+
+:root[data-theme="dark"] .hc-index__veil {
+  background: linear-gradient(to left, var(--hc-paper) 30%, rgba(26, 25, 24, 0) 96%);
+}
+
+/* The page's whole contents, held out to the left of the hand. Every heading
+   at its own notch's height; the one under the finger at full size and full
+   ink on the card below, the rest small and faint behind it, which is the
+   point of them: you can see what else there is without letting go. */
+.hc-index__titles {
+  position: fixed;
+  inset: 0;
+  z-index: 47;
+  pointer-events: none;
+}
+
+.hc-index__title {
+  position: absolute;
+  right: 46px;                    /* inside the screen, outside the thumb */
+  top: 0;
+  height: 22px;
+  margin-top: -11px;
+  max-width: 66%;
+  font-family: var(--hc-sans-display);
+  font-weight: 800;
+  font-size: 17px;
+  line-height: 22px;
+  letter-spacing: -0.01em;
+  color: var(--hc-ink);
+  text-align: right;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transform-origin: 100% 50%;
+  opacity: 0;
+  will-change: transform, opacity;
+}
+
+/* The card behind the one you are on. The tab bar's glass at the tab bar's
+   radius, sized to that heading in JavaScript and moved with it, so the
+   focused heading stays legible over a photograph and the faint ones behind
+   it are free to be faint. */
+.hc-index__card {
+  position: fixed;
+  right: 32px;
+  top: 0;
+  z-index: 46;
+  height: 34px;
+  margin-top: -17px;
+  border-radius: var(--hc-radius-pill);
+  background: var(--hc-tabbar-skin);
+  border: var(--hc-hairline) solid var(--hc-tabbar-edge);
+  box-shadow: var(--hc-tabbar-shadow);
+  pointer-events: none;
+  opacity: 0;
+  transform-origin: 100% 50%;
+  will-change: transform, opacity;
+}
+
+@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+  .hc-index__card {
+    background: var(--hc-tabbar-skin-lens);
+    backdrop-filter: blur(24px) saturate(1.6);
+    -webkit-backdrop-filter: blur(24px) saturate(1.6);
+  }
+}
+
+/* Printing a guide prints the guide. */
+@media print {
+  .hc-index,
+  .hc-index__titles,
+  .hc-index__card,
+  .hc-index__veil { display: none !important; }
+}

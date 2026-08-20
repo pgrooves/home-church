@@ -123,7 +123,10 @@
       id: 'team-' + team.id,
       eyebrow: 'Serve team',
       title: team.name,
-      body: body
+      body: body,
+      // One team is an item under Serve teams, not a part of the page. The
+      // right edge indexes the page. See collapsible() in js/components.js.
+      index: false
     });
   }
 
@@ -319,7 +322,8 @@
       id: 'step-' + step.id,
       eyebrow: 'Next step',
       title: step.title,
-      body: body
+      body: body,
+      index: false
     });
   }
 

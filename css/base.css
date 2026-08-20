@@ -114,7 +114,18 @@ button, .hc-tab, .hc-eyebrow, .hc-numeral, .hc-section__toggle, .hc-tabbar {
   /* No smooth default. A new view must land at the top instantly, and the one
      place that wants easing asks for it per call. */
   scroll-behavior: auto;
+
+  /* The scrollbar is chrome this design does not use. On a phone it is not
+     drawn at all, and on the desktop build it was a grey bar down the side of
+     a warm page. What replaces it is the index rail on the right edge, which
+     says more than a scrollbar did: see js/index-rail.js. Hidden rather than
+     styled, and only the drawing goes — wheel, trackpad, thumb and momentum
+     are all untouched. */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
+
+.hc-scroll::-webkit-scrollbar { width: 0; height: 0; display: none; }
 
 .hc-screen {
   padding-left: var(--hc-screen-pad);
