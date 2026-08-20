@@ -25,6 +25,12 @@
   function modules() {
     return [
       {
+        route: 'journal',
+        icon: 'journal',
+        title: 'Journal',
+        sub: 'Everything you have written down, from a guide or on your own.'
+      },
+      {
         route: 'give',
         icon: 'give',
         title: 'Give',

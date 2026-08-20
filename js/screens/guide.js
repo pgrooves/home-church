@@ -145,10 +145,18 @@
   }
 
   function reflectionSection(guide) {
-    var body = '<p class="hc-caption hc-reflection__note">These are yours. Anything you write stays on this phone.</p>';
+    /* This line used to promise these never left the phone. They are journal
+       entries now and they sync to an account, so it says what is true and
+       says it differently depending on whether anybody is signed in. The
+       privacy policy in js/screens/legal.js says the same thing at length. */
+    var body = '<p class="hc-caption hc-reflection__note">' +
+      (HC.auth.isSignedIn()
+        ? 'These are yours. They save to your account and turn up in your Journal, and nobody else can see them.'
+        : 'These are yours. They save on this phone and turn up in your Journal, and nobody else can see them.') +
+      '</p>';
 
     guide.reflectionQuestions.forEach(function (q, i) {
-      var saved = HC.store.getJournal(guide.id, String(i));
+      var saved = HC.journal.getReflection(guide.id, String(i));
       body += c.numberedRow(i + 1,
         '<p class="hc-question">' + c.esc(q) + '</p>' +
         '<div class="hc-journal">' +

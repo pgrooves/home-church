@@ -40,7 +40,7 @@
      are, not a menu you got lost in, so the raised tile stays under the sixth
      tile the whole time you are in one rather than fading out the way it does
      for a pushed view like Your account. */
-  var MODULE_ROUTES = ['more', 'give'];
+  var MODULE_ROUTES = ['more', 'journal', 'journal-entry', 'give'];
 
   var TITLES = {
     home: 'Home',
@@ -50,6 +50,8 @@
     connect: 'Connect',
     more: 'More',
     give: 'Give',
+    journal: 'Journal',
+    'journal-entry': 'Your entry',
     profile: 'Your account',
     leader: 'Leader mode',
     'guide-reader': 'Guide',
@@ -331,6 +333,50 @@
     // so adding a module is a row in js/screens/more.js and a route below.
     'go-module': function (el) {
       HC.router.go({ name: el.getAttribute('data-id') });
+    },
+
+    /* -------------------------------------------------------- the Journal
+
+       Same shape as the Group tab's handlers: ask js/journal.js to do the
+       thing, repaint, say something human. Nothing here touches storage
+       directly and nothing here decides what an entry is. */
+
+    'go-journal': function () {
+      HC.router.go({ name: 'journal' });
+    },
+
+    /* New does not create anything. It opens the entry screen with a draft
+       held in the screen's own state, and the first keystroke is what makes
+       a row. See the note at the top of js/screens/journal.js. */
+    'journal-new': function () {
+      HC.screens.journalHelpers.startDraft();
+      HC.router.go({ name: 'journal-entry', id: 'new' });
+    },
+
+    'journal-open': function (el) {
+      HC.router.go({ name: 'journal-entry', id: el.getAttribute('data-id') });
+    },
+
+    'journal-filter': function (el) {
+      HC.screens.journalHelpers.setFilter(el.getAttribute('data-value'));
+      HC.screens.journalHelpers.repaint();
+    },
+
+    'journal-pin': function (el) {
+      var on = HC.journal.togglePin(el.getAttribute('data-id'));
+      HC.native.tap('Light');
+      HC.router.go({ name: 'journal-entry', id: el.getAttribute('data-id') }, { force: true });
+      c.toast(on ? 'Pinned to the top.' : 'Unpinned.');
+    },
+
+    /* One confirm, and it says what is actually true. Unlike erasing the
+       phone, this one entry is the only thing going, and if it has synced it
+       goes from the account as well. */
+    'journal-delete': function (el) {
+      if (!window.confirm('Delete this entry? There is no undo.')) return;
+      HC.journal.remove(el.getAttribute('data-id'));
+      HC.router.go({ name: 'journal' }, { force: true });
+      c.toast('Deleted.');
     },
 
     'open-guide': function (el) {
@@ -1056,6 +1102,51 @@
     return true;
   }
 
+  /* Where the last thing you typed went, in four words, under the box. It
+     changes with sign-in state because the truth does, and a caption that
+     says "on this phone" to somebody whose writing is also on a server is
+     the kind of small lie that costs a privacy policy its credibility. */
+  function savedWhere() {
+    return HC.auth.isSignedIn() ? 'Saved to your account' : 'Saved on this phone';
+  }
+
+  /* The entry screen's body box. Called debounced, from one place.
+
+     The first save of a new entry is the interesting one: there is no row
+     yet, so this makes it and then replaces the route so the screen that is
+     already on screen is now looking at something real. `replace` rather than
+     push, because 'new' is not a place anybody should be able to go back to. */
+  function saveEntryBody(text) {
+    var j = HC.screens.journalHelpers;
+    var wrap = document.querySelector('[data-entry]');
+    if (!wrap) return;
+
+    var id = wrap.getAttribute('data-entry');
+    var status = document.querySelector('[data-journal-status]');
+
+    function said() {
+      if (!status) return;
+      status.textContent = text.trim() ? savedWhere() : '';
+      status.setAttribute('data-visible', text.trim() ? 'true' : 'false');
+    }
+
+    if (id !== 'new') {
+      HC.journal.update(id, { bodyText: text });
+      said();
+      return;
+    }
+
+    // Nothing but whitespace is not an entry yet. Keep waiting.
+    if (!text.trim()) return;
+
+    var draft = j.getDraft() || {};
+    var entry = HC.journal.create({ bodyText: text, guideId: draft.guideId || null });
+    j.clearDraft();
+    wrap.setAttribute('data-entry', entry.id);
+    HC.router.replaceCurrent({ name: 'journal-entry', id: entry.id });
+    said();
+  }
+
   function setSwitch(el, on) {
     el.setAttribute('aria-checked', on ? 'true' : 'false');
     var knob = el.querySelector('.hc-switch');
@@ -1148,17 +1239,58 @@
         }
       }
 
+      /* The self-reflection boxes in the guide reader. They are journal
+         entries now and always were, so they write through js/journal.js
+         rather than into guideState. The question text travels with the save
+         so the entry reads right in the Journal without having to go and look
+         the guide up again, and still reads right after the guide is
+         reworded. */
       var journalKey = el.getAttribute && el.getAttribute('data-journal-key');
       if (journalKey !== null && journalKey !== undefined) {
         var guideId = guideIdFrom(el);
         if (!guideId) return;
         debounce('journal-' + journalKey, function () {
-          HC.store.setJournal(guideId, journalKey, el.value);
+          var guide = HC.data.getGuide(guideId);
+          var question = guide && guide.reflectionQuestions && guide.reflectionQuestions[+journalKey];
+          HC.journal.setReflection(guideId, journalKey, el.value, question);
           var status = document.querySelector('[data-journal-status="' + journalKey + '"]');
           if (status) {
-            status.textContent = el.value.trim() ? 'Saved on this phone' : '';
+            status.textContent = el.value.trim() ? savedWhere() : '';
             status.setAttribute('data-visible', el.value.trim() ? 'true' : 'false');
           }
+        });
+        return;
+      }
+
+      /* The Journal's own boxes. The entry screen is the one place in the app
+         where typing can bring a row into existence: `new` has no entry
+         behind it until there are words, and the route is swapped underneath
+         once there are, so the back gesture and a reload both land on the
+         real entry rather than on a blank draft. */
+      if (el.getAttribute && el.getAttribute('data-journal-body') !== null) {
+        debounce('journal-body', function () { saveEntryBody(el.value); });
+        return;
+      }
+
+      if (el.getAttribute && el.getAttribute('data-journal-guide') !== null) {
+        var j = HC.screens.journalHelpers;
+        var wrap = el.closest('[data-entry]');
+        var entryId = wrap && wrap.getAttribute('data-entry');
+        if (entryId && entryId !== 'new') {
+          HC.journal.update(entryId, { guideId: el.value || null });
+          c.toast(el.value ? 'Tagged.' : 'Untagged.');
+        } else {
+          j.setDraft({ guideId: el.value || null });
+        }
+        return;
+      }
+
+      if (el.getAttribute && el.getAttribute('data-journal-search') !== null) {
+        debounce('journal-search', function () {
+          HC.screens.journalHelpers.setSearch(el.value);
+          HC.screens.journalHelpers.repaint();
+          var box = document.querySelector('[data-journal-search]');
+          if (box) { box.focus(); box.setSelectionRange(box.value.length, box.value.length); }
         });
         return;
       }
@@ -1242,6 +1374,8 @@
         group: HC.screens.group,
         connect: HC.screens.connect,
         more: HC.screens.more,
+        journal: HC.screens.journal,
+        'journal-entry': HC.screens.journalEntry,
         give: HC.screens.give,
         profile: HC.screens.profile,
         leader: HC.screens.leader,
@@ -1279,6 +1413,16 @@
        anything a person would notice actually moved before touching the DOM.
        Polling only runs while the Group tab is the current view, so sitting on
        Home is not quietly re-reading a room every eight seconds. */
+    /* The journal store. Reads off the phone, brings the guide reader's old
+       self-reflection answers across on the first launch that sees them, and
+       adopts anything written signed out when somebody signs in. */
+    HC.journal.init();
+
+    HC.store.on('journal', function () {
+      var route = HC.router.current();
+      if (route && route.name === 'journal') HC.screens.journalHelpers.repaint();
+    });
+
     HC.rooms.init();
 
     HC.store.on('room', function () {

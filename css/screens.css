@@ -1267,3 +1267,121 @@
 
 /* Giving, at the bottom of Home. See givingRow() in js/screens/home.js. */
 .hc-home__give { margin-top: var(--hc-space-xl); }
+
+/* ==========================================================================
+   Journal
+   The list of everything somebody has written, and the screen for one entry.
+   Cards rather than rows, because an entry has a shape: an eyebrow saying
+   where it came from, sometimes a quotation, then their own words.
+   ========================================================================== */
+
+.hc-journal__intro { margin-top: var(--hc-space-md); color: var(--hc-mid); }
+
+.hc-journal__new { margin-top: var(--hc-space-lg); }
+
+.hc-journal__search { margin-top: var(--hc-space-lg); }
+
+.hc-journal__filters { margin-top: var(--hc-space-md); }
+
+.hc-jlist {
+  display: flex;
+  flex-direction: column;
+  gap: var(--hc-space-sm);
+  margin-top: var(--hc-space-base);
+}
+
+.hc-jcard {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: var(--hc-space-base);
+  border-radius: var(--hc-radius-lg);
+  background: var(--hc-paper-sunk);
+  border: var(--hc-hairline) solid var(--hc-rule);
+  color: var(--hc-ink);
+}
+
+.hc-jcard__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--hc-space-sm);
+}
+
+.hc-jcard__pin-icon { width: 14px; height: 14px; color: var(--hc-accent-deep); }
+
+/* The quotation carries the signature left edge the guides use for anchors,
+   so a highlight reads as something lifted out of a guide rather than as
+   something the person wrote. */
+.hc-jcard__quote {
+  display: block;
+  margin-top: var(--hc-space-sm);
+  padding-left: var(--hc-space-md);
+  border-left: var(--hc-edge-rule) solid var(--hc-accent);
+  font-family: var(--hc-serif);
+  font-size: calc(16px * var(--hc-text-scale));
+  line-height: 1.45;
+  color: var(--hc-ink);
+}
+
+.hc-jcard__body {
+  display: block;
+  margin-top: var(--hc-space-sm);
+  font-family: var(--hc-sans);
+  font-size: calc(var(--hc-body-sans) * var(--hc-text-scale));
+  line-height: 1.5;
+  color: var(--hc-mid);
+}
+
+.hc-jcard__body--empty { font-style: italic; }
+
+.hc-jcard__foot {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--hc-space-sm);
+  margin-top: var(--hc-space-md);
+}
+
+.hc-jcard__refs { color: var(--hc-accent-deep); text-align: right; }
+
+/* Where it is saved, said under every box that saves. Icon and text on one
+   line, the way the offline note on the Guide index is drawn. */
+.hc-journal__where {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--hc-space-sm);
+  margin-top: var(--hc-space-xl);
+  color: var(--hc-mid);
+}
+
+.hc-journal__where-icon {
+  flex: 0 0 auto;
+  width: 16px;
+  height: 16px;
+  margin-top: 2px;
+  color: var(--hc-accent-deep);
+}
+
+/* ------------------------------------------------------------- one entry */
+
+.hc-entry__quote {
+  margin: 0 0 var(--hc-space-lg);
+  padding-left: var(--hc-space-base);
+  border-left: var(--hc-edge-rule) solid var(--hc-accent);
+}
+
+.hc-entry__quote .hc-caption { margin-top: var(--hc-space-sm); }
+
+.hc-entry__body { min-height: 40vh; }
+
+.hc-entry__guide { margin-top: var(--hc-space-lg); }
+
+.hc-entry__tag { margin-top: var(--hc-space-md); color: var(--hc-accent-deep); }
+
+.hc-entry__tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--hc-space-sm);
+  margin-top: var(--hc-space-lg);
+}

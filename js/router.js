@@ -133,6 +133,23 @@
     return view ? view(route) : null;
   }
 
+  /* Change the address of the view that is already on screen, without
+     rebuilding it. Not navigation: nothing is rendered, nothing scrolls, and
+     the history entry is replaced rather than pushed.
+
+     One caller, and the reason is worth keeping. A new journal entry has no
+     id until the first keystroke creates one, and the screen is already
+     correct at that moment: the only thing that is wrong is the address. A
+     real go() with replace:true would rebuild the screen and pull the
+     textarea out from under the thumb that is typing into it, losing focus
+     and the caret mid-word. */
+  function replaceCurrent(route) {
+    if (typeof route === 'string') route = { name: route };
+    if (!current) return;
+    current = route;
+    pushHistory(route, true);
+  }
+
   function back() {
     // Prefer real history so the platform gesture and the button agree.
     if (window.history.length > 1) {
@@ -166,6 +183,7 @@
     start: start,
     go: go,
     renderRoute: renderRoute,
+    replaceCurrent: replaceCurrent,
     back: back,
     current: function () { return current; },
     isTab: function (name) { return TABS.indexOf(name) !== -1; }
