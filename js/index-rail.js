@@ -63,12 +63,20 @@
   var T_VEIL = 0.94;  // how far the paper comes back over the page
 
   /* How wide the swell is, as a multiple of the gap between notches, held
-     between these two. Not a fixed number of pixels: the notches spread to
-     fill the track, so six headings sit far apart and twenty sit close, and a
-     fixed sigma would light three of the twenty and one of the six. */
+     between these two. Not a fixed number of pixels: the gap changes with how
+     many headings there are, and a fixed sigma would light three of twenty
+     and one of six. */
   var SIGMA_OF = 1.25;
   var SIGMA_MIN = 34;
-  var SIGMA_MAX = 150;
+  var SIGMA_MAX = 110;
+
+  /* The most air two notches get. A track is most of the height of the phone,
+     and six headings spread across all of it means a thumb travelling the
+     whole screen to see six things. Past this the block sits in the middle of
+     the track instead of filling it, and the whole of it is inside one comfor-
+     table drag. A page with enough headings to need the room still takes it:
+     the gap only ever shrinks from here. */
+  var PITCH_MAX = 64;
 
   var EDGE   = 14;    // px kept clear at each end of the track
 
@@ -130,8 +138,11 @@
   var trackTop = 0;
   var sMin     = T_HIGH;
   var sigma    = SIGMA_MAX;
+  var yFirst   = 0;       // the notch block's own range, which is what the
+  var yLast    = 0;       // finger is held to. See layout().
   var lastV    = -1;
   var swallowClick = false;
+  var pendingScan = false;
 
   function clamp(v, lo, hi) { return v < lo ? lo : (v > hi ? hi : v); }
 
@@ -199,12 +210,12 @@
     var n = stops.length;
     var height = rail.clientHeight;
     var avail = height - EDGE * 2;
-    /* THE NOTCHES FILL THE TRACK. They used to sit in a block in the middle
-       at a capped pitch, which left most of a 650px strip with nothing under
-       the thumb: the swell stayed flat and the page jumped to the first or
-       last section. The whole strip is the target, so the whole strip is the
-       ruler. */
-    var pitch = n > 1 ? avail / (n - 1) : 0;
+    /* Spread to fill the track, but never further apart than PITCH_MAX, so a
+       short contents sits as a block in the middle rather than stretched over
+       the whole phone. The strip outside that block is not dead: the finger
+       is held to the block's own range, so a thumb past the last notch swells
+       the last notch instead of swelling nothing. */
+    var pitch = n > 1 ? Math.min(avail / (n - 1), PITCH_MAX) : 0;
     sigma = clamp(pitch * SIGMA_OF, SIGMA_MIN, SIGMA_MAX);
     var span = pitch * (n - 1);
     var y0 = (height - span) / 2;
@@ -217,6 +228,8 @@
 
     ys.length = 0;
     ty.length = 0;
+    yFirst = y0;
+    yLast = y0 + span;
     for (var i = 0; i < n; i++) {
       var y = y0 + i * pitch;
       ys.push(y);
@@ -231,6 +244,7 @@
 
   function clear() {
     enabled = false;
+    pendingScan = false;
     stops = [];
     marks = [];
     names = [];
@@ -245,13 +259,48 @@
     setState('off');
   }
 
+  var liveRoute = false;   // whether the screen on now is allowed a rail
+
   function build(route) {
+    liveRoute = !!route;
+    rescan();
+  }
+
+  /* Same titles, in the same order, is the same index — whatever happened to
+     the elements underneath it. */
+  function sameTitles(found) {
+    if (found.length !== stops.length) return false;
+    for (var i = 0; i < found.length; i++) {
+      if (found[i].title !== stops[i].title) return false;
+    }
+    return true;
+  }
+
+  /* THE ELEMENTS DO NOT LAST. Several screens re-render in place rather than
+     mounting again: the Group room replaces its whole subtree on every poll,
+     and js/content.js repaints a screen when the real data lands after the
+     first paint. The rail was holding the nodes it measured at build, and a
+     detached node's rectangle is all zeros, so every heading measured to the
+     same place and every notch scrolled to the same nothing. That is the Group
+     tab bug, and it was one poll away on every other screen too.
+
+     So the stops are re-read whenever #hc-view changes. When the headings are
+     the same, only the references are swapped and the notches on screen are
+     left alone, which keeps a focused notch focused and costs one pass over a
+     handful of elements. */
+  function rescan() {
     var view = document.getElementById('hc-view');
-    if (!route || !view) { clear(); return; }
+    if (!liveRoute || !view) { clear(); return; }
 
     var found = collect(view);
     // One heading is not an index, it is a heading.
     if (found.length < 2) { clear(); return; }
+
+    if (enabled && sameTitles(found)) {
+      for (var i = 0; i < found.length; i++) stops[i].el = found[i].el;
+      settle();
+      return;
+    }
 
     stops = found;
     enabled = true;
@@ -495,7 +544,7 @@
   }
 
   function localY(y) {
-    return clamp(y - rail.getBoundingClientRect().top, 0, rail.clientHeight);
+    return clamp(y - rail.getBoundingClientRect().top, yFirst, yLast);
   }
 
   function typingTarget(el) {
@@ -566,6 +615,9 @@
     engaged = false;
     pointer = -1;
     hideSoon(HOLD);
+
+    // Whatever the page did while the thumb was down, it can be read now.
+    if (pendingScan) { pendingScan = false; rescan(); }
   }
 
   /* Vertical travel inside the strip belongs to the rail, so the page under
@@ -581,7 +633,33 @@
 
   /* --- wiring ------------------------------------------------------------ */
 
+  /* Deferred while a thumb is down: re-reading the page mid drag would swap
+     the notches out from under the finger holding them. */
+  function scanSoon() {
+    if (armed || engaged) { pendingScan = true; return; }
+    rescan();
+  }
+
   function watch() {
+    /* Anything that changes what is on the page: a poll landing, data
+       arriving after the first paint, a section folding open, a screen
+       repainting itself in place. One rAF of debounce, because a repaint is
+       many mutations and they all arrive together. */
+    if (window.MutationObserver) {
+      var view = document.getElementById('hc-view');
+      var queued = false;
+      if (view) {
+        new MutationObserver(function () {
+          if (queued) return;
+          queued = true;
+          window.requestAnimationFrame(function () {
+            queued = false;
+            scanSoon();
+          });
+        }).observe(view, { childList: true, subtree: true });
+      }
+    }
+
     if (!window.ResizeObserver) return;
     var pending = false;
     var observer = new ResizeObserver(function () {

@@ -8,7 +8,7 @@ at, and dragged, before anything in `js/` or `css/` was touched.
 only under a thumb — the last state this drawing carries. This folder stays as
 the drawing it was decided from.
 
-Two things the shipped one does differently, both found by building it:
+Three things the shipped one does differently, all found by building it:
 
 - **It listens on `.hc-scroll`, not on a strip of its own.** A strip with
   `touch-action: none` down the right edge works, and silently takes the right
@@ -22,6 +22,13 @@ Two things the shipped one does differently, both found by building it:
   tells them apart, so `collapsible()` took an `index: false` and Connect's
   serve teams and next steps pass it. Without that the index of Connect was a
   list of serve teams.
+- **The elements do not last.** Several screens re-render in place rather than
+  mounting again — the Group room replaces its whole subtree on every poll —
+  and a detached node's rectangle is all zeros, so every heading measured to
+  the same place and every notch scrolled to the same nothing. The shipped rail
+  re-reads the page on a `MutationObserver`, keeps the notches it has when the
+  headings have not changed, and defers the re-read while a thumb is down. The
+  mockup's page never changes underneath it, so it never had to learn this.
 
 ## What it shows
 
@@ -76,6 +83,13 @@ strip, so there is one gesture path and not two that can disagree.
 - **The column squeezes with the notches.** Under about 26px of pitch the
   unfocused headings scale down with the gap, so a long guide's contents stay a
   column rather than a pile.
+
+- **A short contents sits in the middle.** The notches spread to fill the
+  track, but never further apart than 64px: six headings across the whole
+  height of a phone is a thumb travelling the whole screen to see six things.
+  The strip outside the block is not dead — the finger is held to the block's
+  own range, so a thumb past the last notch swells the last notch rather than
+  swelling nothing.
 - **The finger is eased, not followed.** The drawn centre chases the pointer at
   0.35 per frame, which takes the tremor out of the swell without adding lag
   you can feel. The page chases its target at 0.22, the swell fades in and out

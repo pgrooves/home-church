@@ -892,7 +892,14 @@ body {
      fixed sigma would light three of the twenty and one of the six. */
   var SIGMA_OF = 1.25;
   var SIGMA_MIN = 34;
-  var SIGMA_MAX = 150;
+  var SIGMA_MAX = 110;
+
+  /* The most air two notches get. A track is most of the height of the phone,
+     and six headings spread across all of it means a thumb travelling the
+     whole screen to see six things. Past this the block sits in the middle of
+     the track instead of filling it, and the whole of it is inside one
+     comfortable drag. */
+  var PITCH_MAX = 64;
 
   var EDGE   = 14;    // px kept clear at each end of the track
 
@@ -925,6 +932,8 @@ body {
   var lastTA = [];
   var sMin   = T_HIGH;  // set from the pitch, see layout()
   var sigma  = SIGMA_MAX;
+  var yFirst = 0;       // the notch block's own range, which is what the
+  var yLast  = 0;       // finger is held to. See layout().
   var lastV  = -1;
 
   var active   = -1;
@@ -960,7 +969,12 @@ body {
        the thumb: the swell stayed flat and the page jumped to the first or
        last section. The whole strip is the target, so the whole strip is the
        ruler. */
-    var pitch = n > 1 ? avail / (n - 1) : 0;
+    /* Spread to fill the track, but never further apart than PITCH_MAX, so a
+       short contents sits as a block in the middle rather than stretched over
+       the whole phone. The strip outside that block is not dead: the finger is
+       held to the block's own range, so a thumb past the last notch swells the
+       last notch instead of swelling nothing. */
+    var pitch = n > 1 ? Math.min(avail / (n - 1), PITCH_MAX) : 0;
     sigma = clamp(pitch * SIGMA_OF, SIGMA_MIN, SIGMA_MAX);
     var span  = pitch * (n - 1);
     var y0    = (index.clientHeight - span) / 2;
@@ -972,6 +986,8 @@ body {
 
     ys.length = 0;
     ty.length = 0;
+    yFirst = y0;
+    yLast = y0 + span;
     for (var i = 0; i < n; i++) {
       var y = y0 + i * pitch;
       ys.push(y);
@@ -1215,7 +1231,7 @@ body {
      second handler that can disagree with this one about what is happening. */
 
   function localY(e) {
-    return e.clientY - index.getBoundingClientRect().top;
+    return clamp(e.clientY - index.getBoundingClientRect().top, yFirst, yLast);
   }
 
   zone.addEventListener('pointerdown', function (e) {
@@ -1226,7 +1242,7 @@ body {
     engaged = false;
     zone._x = e.clientX;
     zone._y = e.clientY;
-    rawY = ptrY = clamp(localY(e), 0, index.clientHeight);
+    rawY = ptrY = localY(e);
     show('on');
     try { zone.setPointerCapture(e.pointerId); } catch (err) {}
     e.preventDefault();
@@ -1252,7 +1268,7 @@ body {
     }
 
     if (!engaged) return;
-    rawY = clamp(localY(e), 0, index.clientHeight);
+    rawY = localY(e);
     var i = nearest(rawY);
     if (i !== active) { setActive(i, true); goTo(i); }
     kick();

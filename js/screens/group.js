@@ -335,7 +335,15 @@
     var openNotes = notes.filter(function (n) { return n.openedAt; });
     var isEditing = editing && editing.id === question.id;
 
-    var html = '<div class="hc-room-q" data-question="' + c.esc(question.id) + '">';
+    /* The room is one long page of numbered questions, and they are its
+       headings: the right edge indexes them, and reads the same words that
+       are printed at the top of the block. Without this the index of a room
+       is the two section headers above the questions, which is an index of
+       everything except what you are actually scrolling through. */
+    var stop = (index + 1) + (question.heading ? ' \u00b7 ' + question.heading : '');
+
+    var html = '<div class="hc-room-q" data-question="' + c.esc(question.id) + '" ' +
+      'data-index-stop="' + c.esc(stop) + '">';
 
     html += '<div class="hc-room-q__head">' +
       '<span class="hc-room-q__num">' + (index + 1) +
