@@ -518,12 +518,32 @@ else in it, and prayer requests are shown to the group by design. The warning
 was right, the change was made deliberately, and this section is now the
 harder one it predicted.
 
-Nothing else in the app changed. Guide journal entries, question checkmarks,
-the leader's roster and per member notes, and profile fields are all still
-private to their author and still never leave the phone. The UGC surface is
-the Group tab and nothing but the Group tab, which is worth saying in the
-review notes because it is a much smaller thing to review than "a church app
-with user content".
+Nothing else in the app changed. Question checkmarks, the leader's roster and
+per member notes, and profile fields are all still private to their author and
+still never leave the phone. The UGC surface is the Group tab and nothing but
+the Group tab, which is worth saying in the review notes because it is a much
+smaller thing to review than "a church app with user content".
+
+**The Journal is not a second UGC surface, and the distinction is worth being
+precise about, because a reviewer will ask.** Guideline 1.2 is about user
+generated content that *other users see*. A journal entry is read by exactly
+one person: its author. There is no feed, no sharing, no way for one account
+to reach another's entries, and migration 0023 enforces that in the database
+rather than in the app, with a test for every path in. So the journal needs no
+report button, no block, no moderation queue and no terms gate, for the same
+reason a notes app does not.
+
+Two things about it *are* new since the first version of this document, and
+both are answered elsewhere:
+
+- **It syncs to an account.** So it is in the privacy nutrition labels under
+  "Other User Content", linked to identity, not used for tracking. See §2.5
+  and the Data Safety answers in `SUBMISSION_KIT.md`.
+- **A journal entry can be offered as a starting point for a group room
+  answer.** That is a suggestion that fills a draft box the person then edits
+  and posts themselves. Nothing crosses into a room without somebody tapping
+  Post, and what crosses is plain text through the same `hc_room_post` that
+  everything else goes through, terms gate and all.
 
 ### The four requirements, and where each one is
 
@@ -798,9 +818,12 @@ submission. I am not recommending anything in the deferred list for v1.
 
 ### Deferring, deliberately
 
-Biometric lock on leader notes. Background audio with lock screen controls.
-Widgets and Live Activities. iPad layout. Sign in and profile sync. Guide
-checkmark and journal sync across devices.
+Biometric lock on leader notes, and on the Journal, which is now the stronger
+candidate of the two. Background audio with lock screen controls. Widgets and
+Live Activities. iPad layout. Guide checkmark sync across devices.
+
+Journal sync landed; see migration 0023 and `JOURNAL_TAB.md`. Sign in and
+profile sync landed with the Group tab.
 
 ### Where I am genuinely uncertain
 

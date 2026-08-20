@@ -51,9 +51,23 @@
     return state;
   }
 
+  /* Disk, then the screen, then, a moment later, the network.
+
+     The push is debounced rather than immediate because typing calls this on
+     every keystroke's debounce already, and a request per word would be both
+     wasteful and slower to settle than one request per pause. Nothing waits
+     on it: the entry is saved and on screen before this is even scheduled. */
+  var pushTimer = null;
+
   function persist() {
     HC.store.storage.set(KEY, load());
     HC.store.emit('journal', null);
+
+    if (!canSync()) return;
+    window.clearTimeout(pushTimer);
+    pushTimer = window.setTimeout(function () {
+      push().catch(function () { /* still dirty, tried again next time */ });
+    }, 1500);
   }
 
   /* ------------------------------------------------------------------ ids
@@ -625,6 +639,159 @@
     });
   }
 
+  /* ----------------------------------------------------------------- sync
+
+     Local is the source of truth and the network is a courier. Nothing below
+     is ever waited on by anything a person can see: a save is already on
+     screen and already on disk before push() is called, and a push that fails
+     leaves the entry dirty to try again later. A journal that needs a signal
+     is not a journal.
+
+     LAST WRITE WINS, PER ENTRY, ON updated_at. The realistic conflict is "I
+     edited this on my iPad an hour ago", not two people typing at once, and
+     there is only ever one person. The comparison is on when somebody typed,
+     which is why the phone sends its own updated_at and migration 0023's
+     trigger does not overwrite it.
+
+     DELETES ARE ROWS. See remove(). A tombstone is pushed like anything else
+     and only purged locally once the server has it, because a hard delete
+     syncs as an absence and the other phone would upload it again.
+
+     WHAT NEVER GOES UP. Entries owned by 'local'. Signed out, nothing here
+     runs at all. */
+
+  var TABLE = 'journal_entries';
+  var syncing = false;
+
+  function toRow(entry) {
+    return {
+      id: entry.id,
+      kind: entry.kind,
+      guide_id: entry.guideId,
+      guide_title: entry.guideTitle,
+      path: entry.path,
+      quote: entry.quote,
+      range_start: entry.start,
+      range_end: entry.end,
+      title: entry.title || null,
+      body_html: entry.bodyHtml,
+      body_text: entry.bodyText,
+      refs: entry.refs || [],
+      pinned: !!entry.pinned,
+      created_at: entry.createdAt,
+      updated_at: entry.updatedAt,
+      deleted_at: entry.deletedAt
+      // user_id is deliberately absent. Migration 0023's trigger sets it from
+      // the caller's own token, so a client cannot put a row anywhere but its
+      // own journal even if it tried.
+    };
+  }
+
+  function fromRow(row) {
+    return {
+      id: row.id,
+      ownerId: row.user_id || owner(),
+      kind: row.kind || 'entry',
+      guideId: row.guide_id,
+      guideTitle: row.guide_title,
+      path: row.path,
+      quote: row.quote,
+      start: row.range_start,
+      end: row.range_end,
+      title: row.title || '',
+      // Sanitized again on arrival. The row may have been written by an older
+      // build of this file, and the version that renders is the version that
+      // decides what is safe.
+      bodyHtml: sanitize(row.body_html || ''),
+      bodyText: row.body_text || '',
+      refs: row.refs || [],
+      pinned: !!row.pinned,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+      deletedAt: row.deleted_at,
+      dirty: false
+    };
+  }
+
+  function canSync() {
+    return !!(HC.auth && HC.auth.isConfigured() && HC.auth.isSignedIn());
+  }
+
+  // Everything written since the last time this phone looked, merged in.
+  function pull() {
+    var s = load();
+    var since = s.lastPulledAt;
+    var path = '/' + TABLE + '?select=*&order=updated_at.asc' +
+      (since ? '&updated_at=gt.' + encodeURIComponent(since) : '');
+
+    return HC.auth.restFetch(path).then(function (rows) {
+      if (!Array.isArray(rows)) return 0;
+      var changed = 0;
+
+      rows.forEach(function (row) {
+        var incoming = fromRow(row);
+        var here = s.entries[incoming.id];
+
+        // A local edit that has not gone up yet and is newer than what came
+        // down keeps the field. It is still dirty and will win on the push.
+        if (here && here.dirty && here.updatedAt >= incoming.updatedAt) return;
+        if (here && here.updatedAt > incoming.updatedAt) return;
+
+        s.entries[incoming.id] = incoming;
+        changed++;
+      });
+
+      if (rows.length) s.lastPulledAt = rows[rows.length - 1].updated_at;
+      if (changed || rows.length) persist();
+      return changed;
+    });
+  }
+
+  // Everything this phone has that the server has not been told about.
+  function push() {
+    var s = load();
+    var me = owner();
+
+    var pending = Object.keys(s.entries)
+      .map(function (id) { return s.entries[id]; })
+      .filter(function (e) { return e.dirty && e.ownerId === me; });
+
+    if (!pending.length) return Promise.resolve(0);
+
+    /* One request for the batch. Prefer: resolution=merge-duplicates is
+       PostgREST's upsert, keyed on the primary key, which is exactly what an
+       entry that may or may not have made it up before needs. */
+    return HC.auth.restFetch('/' + TABLE + '?on_conflict=id', {
+      method: 'POST',
+      headers: {
+        Prefer: 'resolution=merge-duplicates,return=minimal'
+      },
+      body: pending.map(toRow)
+    }).then(function () {
+      pending.forEach(function (entry) {
+        entry.dirty = false;
+        // Now that the server holds the tombstone, the phone does not have to.
+        if (entry.deletedAt) delete s.entries[entry.id];
+      });
+      persist();
+      return pending.length;
+    });
+  }
+
+  /* Both directions, one call, and never two at once: a second sync landing
+     mid flight would push entries the first one is already pushing and mark
+     them clean before the first one's answer arrives. Failure is silent by
+     design; the entries stay dirty and the next sync tries again. */
+  function sync() {
+    if (!canSync() || syncing) return Promise.resolve(false);
+    syncing = true;
+
+    return pull()
+      .then(push)
+      .then(function () { syncing = false; return true; })
+      .catch(function () { syncing = false; return false; });
+  }
+
   /* ----------------------------------------------------------------- init */
 
   function init() {
@@ -634,8 +801,25 @@
     // Signing in adopts what was written signed out, once, and only on a
     // phone that has not belonged to somebody else. See adoptLoose().
     HC.store.on('auth', function (evt) {
-      if (evt && evt.signedIn && evt.user && evt.user.id) adoptLoose(evt.user.id);
+      if (evt && evt.signedIn && evt.user && evt.user.id) {
+        adoptLoose(evt.user.id);
+        sync();
+      }
       HC.store.emit('journal', null);
+    });
+
+    /* Signing out is not a reason to throw anything away. The entries stay on
+       the phone, owned by the account that wrote them, which is what makes
+       them invisible to whoever signs in next and still there when their
+       owner comes back. See mine(). */
+
+    if (canSync()) sync();
+
+    /* Coming back to the app is when another phone's writing arrives. There
+       is no push channel here and there does not need to be: a journal is not
+       a conversation, and once per foreground is as live as it has to be. */
+    document.addEventListener('visibilitychange', function () {
+      if (!document.hidden) sync();
     });
   }
 
@@ -665,8 +849,15 @@
     refsIn: refsIn,
 
     owner: owner,
+    sync: sync,
+    canSync: canSync,
+
     // Exported for the tests and for nothing else.
     _state: load,
+    _push: push,
+    _pull: pull,
+    _toRow: toRow,
+    _fromRow: fromRow,
     _migrate: migrateFromGuideState,
     _adopt: adoptLoose
   };

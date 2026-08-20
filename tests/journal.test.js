@@ -99,10 +99,24 @@ function boot(opts) {
   opts = opts || {};
   const storage = fakeStorage();
 
+  // The network, as a list of what was asked for and what to answer with.
+  const wire = { sent: [], rows: opts.rows || [], fail: false };
+
   const sandbox = {
-    window: { crypto: require('crypto').webcrypto, localStorage: storage },
+    window: {
+      crypto: require('crypto').webcrypto,
+      localStorage: storage,
+      // The debounced push is scheduled, never awaited. Tests drive push()
+      // directly, so the timer only has to exist.
+      setTimeout: () => 0,
+      clearTimeout: () => {}
+    },
+    // journal.js listens for the app coming back to the foreground.
+    document: { addEventListener: () => {}, hidden: false },
     console
   };
+  sandbox.setTimeout = sandbox.window.setTimeout;
+  sandbox.clearTimeout = sandbox.window.clearTimeout;
   sandbox.window.DOMParser = fakeDOMParser();
   sandbox.DOMParser = sandbox.window.DOMParser;
   sandbox.globalThis = sandbox;
@@ -113,8 +127,15 @@ function boot(opts) {
 
   // A stand-in for auth and data. Both are read-only from journal.js's side.
   sandbox.window.HC.auth = {
+    isConfigured: () => opts.configured !== false,
     isSignedIn: () => !!opts.user,
-    getUser: () => (opts.user ? { id: opts.user } : null)
+    getUser: () => (opts.user ? { id: opts.user } : null),
+    restFetch: (path, o) => {
+      wire.sent.push({ path, opts: o });
+      if (wire.fail) return Promise.reject(new Error('offline'));
+      if (!o || (o.method || 'GET') === 'GET') return Promise.resolve(wire.rows);
+      return Promise.resolve(null);
+    }
   };
   sandbox.window.HC.data = {
     getGuide: id => (opts.guides || {})[id] || null,
@@ -130,7 +151,7 @@ function boot(opts) {
   // Booted the way the app boots it, so the migration under test is the one
   // that actually runs on somebody's phone rather than one poked by hand.
   HC.journal.init();
-  return { HC, storage, signIn: (uid) => { opts.user = uid; } };
+  return { HC, storage, wire, signIn: (uid) => { opts.user = uid; } };
 }
 
 /* ------------------------------------------------------------- the sanitizer */
@@ -379,5 +400,140 @@ console.log('\n— highlights, after the guide has been edited —');
      HC.journal.marked(null, 'x', 'a & b'), 'a &amp; b');
 }
 
-console.log('\n' + pass + ' passed' + (fail ? ', ' + fail + ' FAILED' : '') + '.');
-process.exit(fail ? 1 : 0);
+/* ------------------------------------------------------------------ sync */
+
+console.log('\n— two phones, one journal —');
+(async () => {
+  // Nothing goes up while nobody is signed in.
+  {
+    const { HC, wire } = boot();
+    HC.journal.create({ bodyText: 'written signed out' });
+    ok('signed out, nothing is sent anywhere', wire.sent.length, 0);
+    ok('and sync refuses to run', await HC.journal.sync(), false);
+  }
+
+  // A push carries what is dirty, and marks it clean.
+  {
+    const { HC, wire } = boot({ user: 'user-a' });
+    const e = HC.journal.create({ bodyText: 'a thing', guideId: 'g1' });
+    const n = await HC.journal._push();
+    // init() already ran a sync, so the first thing on the wire is its pull.
+    const posted = wire.sent.filter(r => r.opts && r.opts.method === 'POST')[0];
+
+    ok('one dirty entry, one pushed', n, 1);
+    ok('as an upsert on the primary key',
+       /on_conflict=id/.test(posted.path), true);
+    ok('with merge-duplicates, which is what makes a retry safe',
+       /merge-duplicates/.test(posted.opts.headers.Prefer), true);
+    ok('the row carries the words', posted.opts.body[0].body_text, 'a thing');
+    ok('and never claims a user_id',
+       Object.prototype.hasOwnProperty.call(posted.opts.body[0], 'user_id'), false);
+    ok('the entry is clean afterwards', HC.journal._state().entries[e.id].dirty, false);
+
+    ok('a second push has nothing to say', await HC.journal._push(), 0);
+  }
+
+  // A failed push leaves the entry dirty, to try again.
+  {
+    const { HC, wire } = boot({ user: 'user-a' });
+    const e = HC.journal.create({ bodyText: 'written on a plane' });
+    wire.fail = true;
+    ok('an offline sync fails quietly', await HC.journal.sync(), false);
+    ok('and the entry is still dirty', HC.journal._state().entries[e.id].dirty, true);
+    ok('and still on the phone', HC.journal.all().length, 1);
+  }
+
+  // A pull brings the other phone's writing in.
+  {
+    const { HC } = boot({
+      user: 'user-a',
+      rows: [{
+        id: 'from-ipad', user_id: 'user-a', kind: 'entry',
+        body_html: '<p>typed on the iPad</p>', body_text: 'typed on the iPad',
+        created_at: '2026-08-01T10:00:00Z', updated_at: '2026-08-01T10:00:00Z'
+      }]
+    });
+    await HC.journal._pull();
+    ok('the other phone\'s entry arrives', HC.journal.all().length, 1);
+    ok('with its words', HC.journal.all()[0].bodyText, 'typed on the iPad');
+    ok('not marked dirty, because it came from the server',
+       HC.journal.all()[0].dirty, false);
+    ok('and the watermark moved',
+       HC.journal._state().lastPulledAt, '2026-08-01T10:00:00Z');
+  }
+
+  // Markup arriving from the server is sanitized on the way in, not trusted.
+  {
+    const { HC } = boot({
+      user: 'user-a',
+      rows: [{
+        id: 'hostile', user_id: 'user-a',
+        body_html: '<p>hello<script>steal()</script></p>', body_text: 'hello',
+        created_at: '2026-08-01T10:00:00Z', updated_at: '2026-08-01T10:00:00Z'
+      }]
+    });
+    await HC.journal._pull();
+    ok('a row from the server goes through the allowlist too',
+       HC.journal.all()[0].bodyHtml, '<p>hellosteal()</p>');
+  }
+
+  // The conflict. Both sides edited; the later edit wins.
+  {
+    const { HC } = boot({
+      user: 'user-a',
+      rows: [{
+        id: 'shared', user_id: 'user-a',
+        body_html: '<p>the iPad version</p>', body_text: 'the iPad version',
+        created_at: '2026-08-01T10:00:00Z', updated_at: '2026-08-01T12:00:00Z'
+      }]
+    });
+    // A local copy that is older than what is coming down.
+    HC.journal.create({ id: 'shared', bodyText: 'the phone version' });
+    HC.journal._state().entries.shared.updatedAt = '2026-08-01T09:00:00Z';
+
+    await HC.journal._pull();
+    ok('an older local edit gives way to a newer remote one',
+       HC.journal.get('shared').bodyText, 'the iPad version');
+  }
+
+  {
+    const { HC } = boot({
+      user: 'user-a',
+      rows: [{
+        id: 'shared', user_id: 'user-a',
+        body_html: '<p>the iPad version</p>', body_text: 'the iPad version',
+        created_at: '2026-08-01T10:00:00Z', updated_at: '2026-08-01T10:00:00Z'
+      }]
+    });
+    HC.journal.create({ id: 'shared', bodyText: 'the phone version' });   // dirty, and newer
+    await HC.journal._pull();
+    ok('a newer local edit is not clobbered by the pull',
+       HC.journal.get('shared').bodyText, 'the phone version');
+    ok('and is still waiting to go up',
+       HC.journal._state().entries.shared.dirty, true);
+  }
+
+  // The delete that must not come back.
+  {
+    const { HC, wire } = boot({ user: 'user-a' });
+    const e = HC.journal.create({ bodyText: 'to be deleted' });
+    await HC.journal._push();
+    HC.journal.remove(e.id);
+
+    ok('a delete is a dirty tombstone, not an absence',
+       [HC.journal._state().entries[e.id].dirty,
+        !!HC.journal._state().entries[e.id].deletedAt], [true, true]);
+
+    wire.sent.length = 0;
+    await HC.journal._push();
+    const tomb = wire.sent.filter(r => r.opts && r.opts.method === 'POST')[0];
+    ok('and it is sent as a row with deleted_at set',
+       !!tomb.opts.body[0].deleted_at, true);
+    ok('only then is it dropped from the phone',
+       !!HC.journal._state().entries[e.id], false);
+  }
+
+  console.log('\n' + pass + ' passed' + (fail ? ', ' + fail + ' FAILED' : '') + '.');
+  process.exit(fail ? 1 : 0);
+})();
+  

@@ -347,7 +347,7 @@ History, no Usage Data, no Diagnostics, no Purchases.
   the token is only ever registered in a native build, and nothing sends to it
   yet. See the notification note in section 7 before answering this one.
 - **Other User Content** is the one line in this table that grew. It now
-  covers two different things and the second is the substantial one.
+  covers three different things and the last two are the substantial ones.
     - The Connect forms, which open in the system browser and post to Church
       Center, Group Vitals, Flodesk, or a Google form. The app never handles
       those values. Apple offers an optional exemption for data volunteered in

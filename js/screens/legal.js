@@ -78,18 +78,30 @@
 
     html += block('The short version', [
       'Almost everything you do in this app stays on your phone. We do not track you, there is no analytics, there is no advertising, and we do not sell your information to anyone. That is not a promise we are making for now. It is how the app is built.',
-      'Two things leave, and both are things you choose. Signing in, which puts your email address and whatever you have filled in under Your information on our server so they follow you to another phone. And writing in a group room, which is the point of a room: what you write there is read by the people in it. You can delete either from inside the app whenever you like.'
+      'Three things leave, and all three are things you choose. Signing in, which puts your email address and whatever you have filled in under Your information on our server so they follow you to another phone. Your journal, once you are signed in, so what you write follows you too. And writing in a group room, which is the point of a room: what you write there is read by the people in it. You can delete any of them from inside the app whenever you like.'
     ]);
 
     html += list('What stays on your phone, and only on your phone', [
-      'Your notes on a guide, and which questions you have checked off.',
+      'Which questions you have checked off in a guide.',
       'Your group roster, who was there, and any private notes you keep about the people in it.',
       'Prayer requests you write down in Leader mode.',
-      'Dark mode, text size, and whether Leader mode is on.'
+      'Dark mode, text size, and whether Leader mode is on.',
+      'Your journal, for as long as you are not signed in.'
     ]);
 
     html += block('', [
       'None of that is sent anywhere. The app keeps it on your device. Delete the app and it goes with it, and you can clear it yourself at any time from Your data. We do not have a copy, which means we cannot read it, hand it over, or lose it.'
+    ]);
+
+    /* The journal is the first thing in this app that somebody writes at
+       length, privately, and then syncs. That deserves its own section rather
+       than a line in a list, and it deserves the awkward paragraph as well as
+       the reassuring one. See supabase/migrations/0023_journal.sql. */
+    html += block('Your journal', [
+      'Anything you write in the Journal, and any note you attach to something you highlighted in a guide, is yours. Signed out, it never leaves your phone. Signed in, a copy is kept on our server so it is still there when you open the app on a new phone, and so that losing your phone does not lose what you wrote.',
+      'No other account can read it. That is not a setting we chose and could change by accident, it is enforced by the database itself: a request for somebody else’s journal comes back empty, and there is no screen anywhere in this app, or in anything the church runs, that shows one person another person’s writing.',
+      'Here is the part that would be easy to leave out. Your journal is stored as ordinary text, which means whoever administers our database could read it if they went looking, the same way it is true of your email at any company. We are not going to pretend otherwise by saying it is encrypted so that not even we can read it. That would need a key, and signing in here is a code sent to you rather than a password, so there is nothing to build a key from that would not either live on one phone, defeating the point of it following you, or be held by us, defeating the point of the key.',
+      'What we can tell you is what we actually do: nobody at this church reads journals, there is no screen that would show one, and deleting an entry deletes it from our server too. If you would rather keep it all on your phone, do not sign in. Everything in the Journal works either way.'
     ]);
 
     /* The Group tab is the one place this app holds something a person wrote
@@ -180,7 +192,7 @@
     ]);
 
     html += block('What you write is yours', [
-      'Your notes on a guide, your journal entries, your group’s roster and the prayer requests you keep in Leader mode. They are yours, they stay on your phone, and we do not have them. We claim nothing over anything you write here.',
+      'Your journal, your notes on a guide, your group’s roster and the prayer requests you keep in Leader mode. They are yours. We claim nothing over anything you write here, we do not read it, and we do not use it to train anything. Signed out it never leaves your phone; signed in, your journal is copied to your account so it follows you, and the privacy policy says exactly what that does and does not mean.',
       'A group room is the one place that works differently, because the whole point of it is that other people read what you wrote. It still belongs to you. You can edit it or delete it whenever you like. But once you post it, the people in that room have seen it, and the next section is about what that asks of everybody.'
     ]);
 
@@ -267,12 +279,12 @@
 
     html += block('', [
       signedIn
-        ? 'Since you are signed in, there are two piles rather than one, and they are cleared separately. Your information syncs to your account so it can follow you to another phone. Everything else has never left this phone.'
+        ? 'Since you are signed in, there are two piles rather than one, and they are cleared separately. Your information and your journal sync to your account so they can follow you to another phone. Everything else has never left this phone.'
         : 'Everything this app knows about you is on this phone. You are not signed in, so none of it has been sent to the church.'
     ]);
 
     html += list('What is stored on this device', [
-      'Your notes and checkmarks on every guide you have opened.',
+      'Your journal, and your checkmarks on every guide you have opened.',
       'Your group roster, attendance, and private notes.',
       'Prayer requests saved in Leader mode.',
       'Dark mode, text size, and Leader mode.',
@@ -282,7 +294,8 @@
     if (signedIn) {
       html += list('What is stored in your account', [
         'The email address you sign in with.',
-        'Your name, and anything else you filled in under Your information: birthday, campus, marital status, and your address if you gave one.'
+        'Your name, and anything else you filled in under Your information: birthday, campus, marital status, and your address if you gave one.',
+        'Your journal, including anything you highlighted in a guide and whatever you wrote about it.'
       ]);
     }
 
@@ -291,7 +304,9 @@
        the one they did not mean. */
     if (confirming) {
       html += block('Are you sure', [
-        'Your notes, your roster, and your prayer requests go with it. There is no undo and no copy anywhere else.'
+        signedIn
+          ? 'Your roster and your prayer requests go with it, and so does the copy of your journal on this phone. There is no undo. Because you are signed in, your journal is also in your account, and this button does not touch that: signing in again on any phone brings it back. Deleting your account is the button that removes it for good.'
+          : 'Your journal, your roster, and your prayer requests go with it. There is no undo and no copy anywhere else.'
       ]);
       html += '<div class="hc-data__action hc-data__action--confirm">' +
         c.button('Yes, erase it', { action: 'erase-confirm' }) +
@@ -299,7 +314,7 @@
       '</div>';
     } else if (confirmingAccount) {
       html += block('Are you sure', [
-        'Your account and everything synced to it are removed from the church’s server, and you are signed out. There is no undo. What is saved on this phone stays until you erase that too.'
+        'Your account and everything synced to it are removed from the church’s server, and you are signed out. That includes your journal: every entry, every highlight, and everything you wrote about them. There is no undo. What is saved on this phone stays until you erase that too, so if you want it all gone, use both buttons.'
       ]);
       html += '<div class="hc-data__action hc-data__action--confirm">' +
         c.button('Yes, delete my account', { action: 'account-delete-confirm' }) +
