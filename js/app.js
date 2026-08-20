@@ -1443,6 +1443,51 @@
       fn(el, evt);
     });
 
+    /* The dots under a carousel, told which slide is showing. Capture phase
+       for the same reason as the error listener below: a scroll event on an
+       inner scroller does not bubble, so a listener on document only ever
+       hears it on the way down.
+
+       Delegated rather than wired up by the screen that draws the carousel,
+       because screens here render to a string and hand back an element, and
+       nothing gives them a moment after it is mounted to attach anything.
+       This costs one filtered call per scroll frame on a screen with no
+       carousel on it, which is nothing, and it means any screen can draw one
+       by marking the scroller [data-carousel] and putting [data-dot] children
+       next to it.
+
+       The showing slide is the one whose left edge is nearest the scroller's,
+       measured rather than divided, so it stays right whatever the slides are
+       sized at and whichever way the writing runs. */
+    function paintDots(rail) {
+      var slides = rail.firstElementChild ? rail.firstElementChild.children : [];
+      var dots = rail.parentNode ? rail.parentNode.querySelectorAll('[data-dot]') : [];
+      if (!slides.length || !dots.length) return;
+
+      var best = 0;
+      var bestGap = Infinity;
+      for (var i = 0; i < slides.length; i++) {
+        var gap = Math.abs(slides[i].offsetLeft - rail.scrollLeft);
+        if (gap < bestGap) { bestGap = gap; best = i; }
+      }
+      for (var d = 0; d < dots.length; d++) {
+        if (d === best) dots[d].setAttribute('data-on', 'true');
+        else dots[d].removeAttribute('data-on');
+      }
+    }
+
+    var dotsPending = false;
+    document.addEventListener('scroll', function (evt) {
+      var rail = evt.target;
+      if (!rail || !rail.hasAttribute || !rail.hasAttribute('data-carousel')) return;
+      if (dotsPending) return;
+      dotsPending = true;
+      window.requestAnimationFrame(function () {
+        dotsPending = false;
+        paintDots(rail);
+      });
+    }, true);
+
     /* An image that fails to load. Capture phase, because error events from
        an <img> do not bubble and an ordinary listener here would never fire.
 

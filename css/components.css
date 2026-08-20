@@ -385,8 +385,7 @@
 .hc-section-header__eyebrow { display: block; }
 
 .hc-section-header__title {
-  margin-top: 8px;
-  /* The one deliberate departure from the reading serif: a heavy geometric
+  margin-top: 8px;  /* The one deliberate departure from the reading serif: a heavy geometric
      sans, so a section break reads instantly while scrolling fast. */
   font-family: var(--hc-sans-display);
   font-weight: 800;
@@ -395,6 +394,10 @@
   letter-spacing: -0.01em;
   color: var(--hc-ink);
 }
+
+/* An eyebrow-less header, which is how Home names its blocks. Nothing above
+   the title means nothing for it to sit under. */
+.hc-section-header__title:first-child { margin-top: 0; }
 
 .hc-section-header__rule {
   margin-top: 12px;

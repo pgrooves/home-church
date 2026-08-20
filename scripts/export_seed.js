@@ -197,6 +197,7 @@ const reading_plans = [D.readingPlan].filter(Boolean).map(p => ({
   title: p.title,
   subtitle: p.subtitle || null,
   total_weeks: p.totalWeeks,
+  starts_on: p.startsOn || null,
   current_week: p.currentWeek,
   this_week: p.thisWeek || null,
   resources: p.resources || [],

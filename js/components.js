@@ -300,13 +300,20 @@
      The signature pattern. Eyebrow, serif title, short rule. Used everywhere.
      ---------------------------------------------------------------------- */
 
+  /* The eyebrow is optional. Home runs a column of these one after another to
+     name each block, and a kicker over every one of them would be five small
+     caps lines competing with the five titles they are meant to introduce.
+     Passing a falsy eyebrow drops the span entirely rather than leaving an
+     empty one behind for CSS to have an opinion about. */
   function sectionHeader(eyebrow, title, opts) {
     opts = opts || {};
     var cls = 'hc-section-header' + (opts.flush ? ' hc-section-header--flush' : '');
     var tag = opts.tag || 'h2';
     return '' +
       '<header class="' + cls + '"' + (opts.id ? ' id="' + esc(opts.id) + '"' : '') + '>' +
-        '<span class="hc-eyebrow hc-section-header__eyebrow">' + esc(eyebrow) + '</span>' +
+        (eyebrow
+          ? '<span class="hc-eyebrow hc-section-header__eyebrow">' + esc(eyebrow) + '</span>'
+          : '') +
         '<' + tag + ' class="hc-section-header__title">' + esc(title) + '</' + tag + '>' +
         '<div class="hc-section-header__rule" aria-hidden="true"></div>' +
       '</header>';
@@ -554,6 +561,7 @@
     esc: esc,
     el: el,
     icon: icon,
+    parseDate: parseDate,
     formatDate: formatDate,
     formatDateShort: formatDateShort,
     formatDateNumeric: formatDateNumeric,

@@ -2079,13 +2079,18 @@
 
   /* ------------------------------------------------------------- reading plan */
 
-  /* Seed only. The live plan is the is_current row in `reading_plans`, and
-     current_week is bumped there every week, not here. */
+  /* Seed only. The live plan is the is_current row in `reading_plans`.
+
+     startsOn is the first day of week 1, and Home counts the weeks from it,
+     so nothing here has to be bumped on a Sunday. currentWeek is the fallback
+     for a row that has no start date on it. See supabase/migrations/
+     0024_reading_plan_starts_on.sql. */
   var readingPlan = {
     id: 'plan-david',
     title: 'The Life of David',
     subtitle: 'A twenty week walk through the whole story',
     totalWeeks: 20,
+    startsOn: '2026-06-14',
     currentWeek: 8,
     thisWeek: '2 Samuel 11 and 12, plus Psalm 51',
     current: true,
@@ -2304,6 +2309,41 @@
      See supabase/migrations/0015_instagram_posts.sql. */
   var instagramPosts = [];
 
+  /* --------------------------------------------------------------- home media
+
+     The carousel under the greeting on Home. Empty, on purpose: with nothing
+     in here Home shows the latest Instagram post on its own, exactly as it did
+     before that block could hold more than one thing.
+
+     Put a video from the pastor in here and it becomes the first slide, with
+     Instagram one swipe behind it. One object per slide:
+
+       { id: 'video-2026-08-23',              // required, unique
+         kind: 'video',                       // or 'photo', which is the default
+         label: 'From Pastor Trey',           // the eyebrow over the frame
+         videoUrl: 'https://.../update.mp4',  // kind video, plays where it sits
+         posterUrl: 'https://.../still.jpg',  // the frame before it plays
+         imageUrl: 'https://.../photo.jpg',   // kind photo
+         url: 'https://...',                  // optional, makes a photo a tap
+         aspect: '9x16',                      // the shape it was shot in
+         caption: 'Two minutes on Sunday.' }  // optional, three lines on screen
+
+     aspect is one of 4x3, 1x1, 4x5, 16x9, 9x16. A video defaults to 9x16, a
+     phone held upright, and is shown whole rather than cropped, so this is
+     the difference between a video with no bars around it and one with bars
+     down both sides. A photo defaults to the 4x3 the block has always used.
+
+     A file this size wants a real host behind it rather than the repo: an mp4
+     in assets/ ships inside the App Store build, so a weekly video would mean
+     a weekly release. Supabase Storage gives a URL that can change without one.
+
+     This is the seed, the same as every list above it. When these start
+     arriving weekly they belong in their own table, read the way the rest of
+     this file's lists are: `/new-content-type home media` scaffolds the
+     migration and the one line in content.js, and this array is what it fills.
+     Nothing in js/screens/home.js changes when that happens. */
+  var homeMedia = [];
+
   /* ------------------------------------------------------------------ export */
 
   HC.data = {
@@ -2319,6 +2359,7 @@
     nextSteps: nextSteps,
     announcements: announcements,
     instagramPosts: instagramPosts,
+    homeMedia: homeMedia,
 
     /* ------------------------------------------------------------- helpers */
 

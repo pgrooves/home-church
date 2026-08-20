@@ -32,7 +32,7 @@
 
   var cfg = HC.config || {};
   var CACHE_KEY = 'content';
-  var CACHE_VERSION = 9;      // bump when a mapping below changes shape
+  var CACHE_VERSION = 10;     // bump when a mapping below changes shape
   var TIMEOUT_MS = 12000;
 
   // The tables we pull, and the HC.data key each one fills. Adding another
@@ -337,6 +337,9 @@
       // on Home. The column is not null in the table, this is belt and braces
       // for a row that arrived from somewhere unexpected.
       totalWeeks: r.total_weeks || 1,
+      // The first day of week 1. Home counts from it rather than reading
+      // current_week, which is only the fallback for a row without one.
+      startsOn: str(r.starts_on),
       currentWeek: r.current_week || 1,
       thisWeek: str(r.this_week),
       resources: arr(r.resources),

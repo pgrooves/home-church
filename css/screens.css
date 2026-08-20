@@ -80,7 +80,10 @@
   stroke-linejoin: round;
 }
 
-.hc-home__announcement { margin-top: var(--hc-space-xl); }
+/* No top margin of its own any more. Every block on Home now sits under a
+   section header, and `.hc-section-header + *` in components.css owns the gap
+   down to what the header names. A second margin here, on top of that one,
+   would read as a break in the column rather than a heading and its block. */
 
 .hc-banner__title { margin-top: 6px; margin-bottom: 4px; }
 
@@ -787,6 +790,12 @@
   -webkit-tap-highlight-color: transparent;
 }
 
+/* A slide that is not a link: a video plays where it sits, and a photo with
+   no URL behind it has nowhere to go. Neither one should offer a finger the
+   feedback of something that can be pressed. */
+.hc-latest--static { cursor: default; }
+.hc-latest--static:active { opacity: 1; }
+
 .hc-latest__label {
   display: block;
   margin-bottom: var(--hc-space-sm);
@@ -802,6 +811,18 @@
   border-radius: var(--hc-radius-lg);
   overflow: hidden;
 }
+
+/* The frame is 4:3 by default, which is the crop the photographs above were
+   written for. A video picks its own shape instead, because it is shown whole
+   rather than cropped: 9x16 for a phone held upright, which is how a two
+   minute word from the pastor gets filmed, and the rest for the times it is
+   not. The tall ones are capped so a single slide cannot take the whole
+   screen and push Sunday off the bottom of it; at that cap the video letter
+   boxes against the cream rather than losing anybody's head to a crop. */
+.hc-latest__frame--1x1  { aspect-ratio: 1 / 1; }
+.hc-latest__frame--16x9 { aspect-ratio: 16 / 9; }
+.hc-latest__frame--4x5  { aspect-ratio: 4 / 5; max-height: 62vh; }
+.hc-latest__frame--9x16 { aspect-ratio: 9 / 16; max-height: 62vh; }
 
 .hc-latest__img {
   width: 100%;
@@ -836,6 +857,101 @@
 
 @media (prefers-reduced-motion: reduce) {
   .hc-latest__img { animation: none; }
+}
+
+/* --- The carousel these slides live in ------------------------------------
+   One slide wide, snapping, with the dots underneath. Same machinery as the
+   rail on Connect and for the same reason: an overflowing scroller is a
+   gesture every phone already knows, and swipe.js hands the drag to any
+   scroller under the finger that still has somewhere to go, so a swipe inside
+   this block moves the block and a swipe past its last slide changes tabs.
+
+   Not full bleed, unlike the rail. The rail's overrun is what says there is
+   more to the right; here every slide fills the column, and a slide that ran
+   off both edges would say the photograph had been cropped rather than that
+   there is another one behind it. The dots say it instead.
+
+   With one slide there is no overflow, so there is nothing to scroll, no dots
+   are drawn, and this is the single photograph it has always been.
+   -------------------------------------------------------------------------- */
+
+.hc-carousel { margin-bottom: var(--hc-space-lg); }
+
+.hc-carousel__viewport {
+  overflow-x: auto;
+  overflow-y: hidden;
+  /* Momentum scrolling inside the Capacitor web view. */
+  -webkit-overflow-scrolling: touch;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+}
+
+.hc-carousel__viewport::-webkit-scrollbar { display: none; }
+
+.hc-carousel__track {
+  display: flex;
+  gap: var(--hc-card-gap);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+/* Every slide is as tall as the tallest one, because they all sit in one
+   scroller and a scroller has one height. A phone video is 9:16 and an
+   Instagram photograph is 4:3, so that difference is real and has to go
+   somewhere: centered, it becomes even air above and below the shorter slide
+   and reads as framing. Left at the top, it is a hole under the caption. */
+.hc-carousel__slide {
+  flex: 0 0 100%;
+  scroll-snap-align: start;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+/* The slide inside carries no margins of its own: the carousel owns the space
+   under the whole block, and a margin on the slide would put a gap inside the
+   scroller that the snapping would then have to account for. */
+.hc-carousel .hc-latest { margin-top: 0; margin-bottom: 0; }
+
+/* contain, not cover. A photograph can lose 12.5% off its top and bottom and
+   survive it; a face two feet from a phone camera cannot. Whatever the frame
+   does not fill stays cream, the same as every other piece of missing art
+   here, so a video that is not quite the shape of its frame reads as a video
+   rather than as a mistake. */
+.hc-latest__video {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+.hc-carousel__dots {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  margin: var(--hc-space-md) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.hc-carousel__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--hc-ink);
+  opacity: 0.2;
+  transition: opacity var(--hc-dur-base) var(--hc-ease);
+}
+
+.hc-carousel__dot[data-on="true"] { opacity: 0.7; }
+
+/* Same answer as the rail: somebody who asked for less motion still has to be
+   able to reach the second slide, so the snapping goes and the scrolling
+   stays. */
+@media (prefers-reduced-motion: reduce) {
+  .hc-carousel__viewport { scroll-snap-type: none; }
+  .hc-carousel__dot { transition: none; }
 }
 
 /* ==========================================================================
@@ -1266,7 +1382,11 @@
 .hc-more__note { margin-top: var(--hc-space-xl); }
 
 /* Giving, at the bottom of Home. See givingRow() in js/screens/home.js. */
-.hc-home__give { margin-top: var(--hc-space-xl); }
+/* Same as the announcement: the "Give" header carries the space now, so this
+   keeps no margin of its own. The scripture under the row keeps the blank
+   line it is written with, which is a real newline inside one escaped string
+   rather than a second paragraph. */
+.hc-home__give .hc-caption { white-space: pre-line; }
 
 /* ==========================================================================
    Journal

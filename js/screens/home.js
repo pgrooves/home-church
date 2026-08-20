@@ -14,59 +14,188 @@
     return c.greeting() + ', ' + name + '.';
   }
 
-  /* ------------------------------------------------- the latest Instagram post
-     One photograph and its caption, between the greeting and the gathering
-     card. The same rows the Connect rail reads, but only the newest one.
+  /* ============================================================ the media block
+     The frame under the greeting. It began as one Instagram photograph and is
+     now a carousel: swipe it sideways and the next thing the church has to
+     show comes with your thumb, the same gesture as the rail on Connect.
 
-     WHY IT SORTS RATHER THAN TAKING [0]. content.js asks PostgREST for these
+     WHAT GOES IN IT. Whatever is in HC.data.homeMedia, in order, and then the
+     newest Instagram post last. The house rule is that the pastor's own word
+     comes first and Instagram is the thing you arrive at by swiping, which is
+     also the order that keeps the Instagram post in the same place it has
+     always been for a week when nothing else has been posted: alone, at the
+     front, looking exactly like it did before this was a carousel.
+
+     Each slide names itself in its own eyebrow rather than the block carrying
+     one label for all of them, because a video from the pastor and a photo
+     from Instagram are not the same kind of thing and should not claim to be.
+
+     ITEM SHAPE, for whatever ends up filling homeMedia (a data.js edit today,
+     a `home_media` table wired through content.js later, either way this
+     reads the same array):
+
+       { id:        'video-2026-08-23',        // required, unique
+         kind:      'video' | 'photo',         // defaults to photo
+         label:     'From Pastor Trey',        // the eyebrow over the frame
+         videoUrl:  'https://.../update.mp4',  // kind video, plays in place
+         posterUrl: 'https://.../still.jpg',   // the frame before it plays
+         imageUrl:  'https://.../photo.jpg',   // kind photo
+         url:       'https://...',             // optional, makes a photo a tap
+         aspect:    '9x16',                    // the shape it was shot in
+         caption:   'Two minutes on Sunday.' } // optional, three lines max
+
+     A video plays inline, in the frame, without leaving the app. It is the
+     one thing here that is not a link, which is why the slides are not all
+     buttons: a <video> with its own controls inside a button is a control
+     inside a control, and browsers resolve that however they like.
+     ------------------------------------------------------------------------ */
+
+  /* WHY THIS SORTS RATHER THAN TAKING [0]. content.js asks PostgREST for these
      newest first, so the first element is almost always right. Almost is not
      good enough for a screen that calls this post "latest" in front of a
      congregation: change that order parameter for any reason and Home starts
      presenting an old photograph as this week's news, silently. Sorting here
-     costs nothing on nine rows and makes the claim true on its own terms.
-
-     Renders nothing at all when there are no posts, like everything else that
-     reads this table. See connect.js for the whole reasoning.
-     ------------------------------------------------------------------------ */
-
-  function latestPost() {
+     costs nothing on nine rows and makes the claim true on its own terms. */
+  function latestInstagram() {
     var usable = (HC.data.instagramPosts || []).filter(function (p) {
       return p.imageUrl && p.permalink;
     });
-    if (!usable.length) return '';
+    if (!usable.length) return null;
 
     var post = usable.slice().sort(function (a, b) {
       return String(b.postedAt || '') < String(a.postedAt || '') ? -1 : 1;
     })[0];
 
-    var caption = String(post.caption || '').trim();
+    return {
+      id: 'instagram',
+      kind: 'photo',
+      label: 'Latest on Instagram',
+      imageUrl: post.imageUrl,
+      url: post.permalink,
+      caption: String(post.caption || '').trim(),
+      leaves: 'Opens Instagram.'
+    };
+  }
 
-    /* No aria-label on the button, deliberately. An aria-label would replace
-       the visible caption as the accessible name, which leaves a screen
-       reader user hearing something different from what everyone else is
-       reading. The text inside names it, and the hidden span adds the one
-       thing the visible text cannot say: that this leaves the app. */
-    return '' +
-      '<button type="button" class="hc-latest" data-action="open-url" ' +
-        'data-media-fallback data-url="' + c.esc(post.permalink) + '">' +
-        // Above the photograph, so the block says what it is before it shows
-        // it. Underneath, it read as a caption for the picture rather than a
-        // label for the section.
-        '<span class="hc-eyebrow hc-latest__label">Latest on Instagram</span>' +
-        '<span class="hc-latest__frame">' +
-          // No loading="lazy" here, unlike the rail. This one is above the
-          // fold on the screen the app opens to, so deferring it would mean
-          // watching it arrive on every launch.
-          '<img class="hc-latest__img" src="' + c.esc(post.imageUrl) + '" alt="" ' +
+  /* Anything missing the one thing its kind is for is dropped rather than
+     drawn as an empty cream rectangle with a caption under it. */
+  function mediaSlides() {
+    var items = (HC.data.homeMedia || []).filter(function (m) {
+      return m && (m.kind === 'video' ? m.videoUrl : m.imageUrl);
+    });
+    var insta = latestInstagram();
+    if (insta) items = items.concat([insta]);
+    return items;
+  }
+
+  /* The shape of the frame. Photographs are cropped to 4:3 and always have
+     been, for the reasons in screens.css. A video is not cropped at all, so
+     the frame has to be the shape the video was shot in or there are bars
+     down two of its sides. A phone held upright is 9x16, and 4x5 is the
+     portrait that does not swallow the whole screen. Anything not on this
+     list falls back to 4:3 rather than being written into a style attribute,
+     which is the only reason this is a whitelist and not a string. */
+  var ASPECTS = ['4x3', '1x1', '4x5', '16x9', '9x16'];
+
+  function frameClass(item) {
+    var want = String(item.aspect || (item.kind === 'video' ? '9x16' : '4x3'));
+    if (ASPECTS.indexOf(want) === -1) want = '4x3';
+    return 'hc-latest__frame hc-latest__frame--' + want;
+  }
+
+  function slideBody(item) {
+    var caption = String(item.caption || '').trim();
+    var label = item.label
+      ? '<span class="hc-eyebrow hc-latest__label">' + c.esc(item.label) + '</span>'
+      : '';
+
+    // Above the frame, so the slide says what it is before it shows it.
+    // Underneath, it read as a caption for the picture rather than a label.
+    var frame = item.kind === 'video'
+      ? '<span class="' + frameClass(item) + '">' +
+          // preload="metadata" so the poster and the duration are there and
+          // the video itself is not pulled down on every launch of the app.
+          '<video class="hc-latest__video" src="' + c.esc(item.videoUrl) + '" ' +
+            (item.posterUrl ? 'poster="' + c.esc(item.posterUrl) + '" ' : '') +
+            'controls playsinline preload="metadata"></video>' +
+        '</span>'
+      : '<span class="' + frameClass(item) + '">' +
+          // No loading="lazy" on the first slide, unlike the rail on Connect.
+          // This one is above the fold on the screen the app opens to, so
+          // deferring it would mean watching it arrive on every launch.
+          '<img class="hc-latest__img" src="' + c.esc(item.imageUrl) + '" alt="" ' +
             'decoding="async">' +
-        '</span>' +
-        '<span class="hc-latest__meta">' +
-          (caption
-            ? '<span class="hc-latest__caption hc-body-serif">' + c.esc(caption) + '</span>'
-            : '') +
-          '<span class="hc-visually-hidden">Opens Instagram.</span>' +
-        '</span>' +
-      '</button>';
+        '</span>';
+
+    return label + frame +
+      (caption || item.leaves
+        ? '<span class="hc-latest__meta">' +
+            (caption
+              ? '<span class="hc-latest__caption hc-body-serif">' + c.esc(caption) + '</span>'
+              : '') +
+            (item.leaves
+              ? '<span class="hc-visually-hidden">' + c.esc(item.leaves) + '</span>'
+              : '') +
+          '</span>'
+        : '');
+  }
+
+  /* No aria-label on the button, deliberately. An aria-label would replace the
+     visible caption as the accessible name, which leaves a screen reader user
+     hearing something different from what everyone else is reading. The text
+     inside names it, and the hidden span adds the one thing the visible text
+     cannot say: that this leaves the app. */
+  function slide(item) {
+    var tappable = item.kind !== 'video' && item.url;
+    var inner = slideBody(item);
+    var body = tappable
+      ? '<button type="button" class="hc-latest" data-action="open-url" ' +
+          'data-media-fallback data-url="' + c.esc(item.url) + '">' + inner + '</button>'
+      : '<div class="hc-latest hc-latest--static" data-media-fallback>' + inner + '</div>';
+
+    return '<li class="hc-carousel__slide">' + body + '</li>';
+  }
+
+  function mediaCarousel() {
+    var items = mediaSlides();
+    if (!items.length) return '';
+
+    // One slide is not a carousel. No dots, and with nothing to scroll to the
+    // viewport has no room to scroll, so the sideways gesture stays with the
+    // tab switch exactly as it does today.
+    var dots = items.length > 1
+      ? '<ol class="hc-carousel__dots" aria-hidden="true">' +
+          items.map(function (item, i) {
+            return '<li class="hc-carousel__dot" data-dot' +
+              (i === 0 ? ' data-on="true"' : '') + '></li>';
+          }).join('') +
+        '</ol>'
+      : '';
+
+    return '' +
+      '<div class="hc-carousel">' +
+        '<div class="hc-carousel__viewport" data-carousel>' +
+          '<ul class="hc-carousel__track" role="list">' +
+            items.map(slide).join('') +
+          '</ul>' +
+        '</div>' +
+        dots +
+      '</div>';
+  }
+
+  /* "Three services", counted rather than typed. The card lists whatever is in
+     church.serviceTimes, and that list is editable in Supabase, so a written
+     "Three" would go on saying three the Sunday a fourth service is added and
+     be wrong in the one place a visitor is trusting it. Past six it stops
+     spelling the number, which is the point where a church's Sunday needs a
+     different card anyway. */
+  var COUNT_WORDS = ['No', 'One', 'Two', 'Three', 'Four', 'Five', 'Six'];
+
+  function serviceCountLabel(times) {
+    var n = times.length;
+    if (n === 1) return 'One service';
+    if (n < COUNT_WORDS.length) return COUNT_WORDS[n] + ' services';
+    return n + ' services';
   }
 
   function gatheringCard() {
@@ -81,7 +210,7 @@
       : c.dayName(sunday) + ', ' + c.formatDateShort(sunday.toISOString().slice(0, 10));
 
     var inner = '' +
-      '<p class="hc-eyebrow">Next gathering</p>' +
+      '<p class="hc-eyebrow">' + c.esc(serviceCountLabel(church.serviceTimes)) + '</p>' +
       '<p class="hc-gathering__when hc-display-m">' + c.esc(when) + '</p>' +
       '<ul class="hc-gathering__times">' +
         church.serviceTimes.map(function (t) {
@@ -188,6 +317,43 @@
       '</div>';
   }
 
+  /* ------------------------------------------------------ which week it is
+     The week counts itself from the plan's start date rather than waiting for
+     somebody to bump a number every Sunday. That number was `current_week`,
+     it was the reason the reading_plans table existed, and it is exactly the
+     kind of chore that gets skipped in a busy week: the row sat on week 9 for
+     as long as nobody remembered, while the church read on without it.
+
+     starts_on is the first day of week 1, so the count rolls over on whatever
+     weekday the plan started, and a plan that starts next month reads as week
+     1 until it does. Days are compared as UTC midnights, which makes the
+     subtraction exact: local midnights are 23 or 25 hours apart twice a year,
+     and the spring one turns a full week into 6.96 and floors it to the week
+     before.
+
+     current_week is still the fallback. A row with no start date on it keeps
+     behaving exactly as it did, which is what every plan in the table does
+     until somebody fills the column in.
+     ------------------------------------------------------------------------ */
+
+  function utcDay(d) {
+    return Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) / 86400000;
+  }
+
+  function planWeek(plan) {
+    var stored = plan.currentWeek || 1;
+    if (!plan.startsOn) return stored;
+
+    var days = utcDay(new Date()) - utcDay(c.parseDate(plan.startsOn));
+    var week = Math.floor(days / 7) + 1;
+
+    if (week < 1) week = 1;                                    // not started yet
+    if (plan.totalWeeks && week > plan.totalWeeks) {
+      week = plan.totalWeeks;                                  // finished, holds
+    }
+    return week;
+  }
+
   /* The plan is one editable row in Supabase now, so this has to hold up
      against whatever is in it. No plan at all renders nothing and Home drops
      the section, rather than printing "undefined" or dividing by zero in
@@ -197,7 +363,7 @@
     if (!plan || !plan.title) return '';
 
     var total = plan.totalWeeks || 0;
-    var week = plan.currentWeek || 0;
+    var week = planWeek(plan);
     // Position, not pressure. No streak, no percentage, no badge.
     var pct = total > 0 ? Math.round((week / total) * 100) : 0;
     if (pct < 0) pct = 0;
@@ -241,13 +407,22 @@
      It goes to the Give screen rather than straight out to Overflow. That
      screen exists to say thank you in the church's own voice before handing
      anybody off, and skipping it to save a tap would be skipping the point. */
+  /* The line under it is 2 Corinthians 9:7, reference first and then the verse,
+     with a blank line between them. c.row() escapes the text and puts it in one
+     paragraph, so the break is a real newline in the string and
+     `white-space: pre-line` on .hc-home__give is what draws it. Two paragraphs
+     would have meant a second row shape for one screen's sake. */
+  var GIVING_LINE = '2 Corinthians 9:7\n\nEach one must give as he has decided ' +
+    'in his heart, not reluctantly or under compulsion, for God loves a ' +
+    'cheerful giver';
+
   function givingRow() {
     if (!HC.data.church.givingUrl) return '';
     return '' +
       '<div class="hc-home__give">' +
         c.row({
           title: 'Give',
-          sub: 'This place runs on people who decided it was worth it.',
+          sub: GIVING_LINE,
           action: 'go-module',
           id: 'give',
           chevron: true,
@@ -262,10 +437,15 @@
     // The mark now lives in the top bar, so Home does not repeat it.
     html += '<h1 class="hc-display-l hc-home__greeting">' + c.esc(greetingLine()) + '</h1>';
 
-    // Between the greeting and the gathering card. Renders nothing until
-    // there are posts, so today's Home is unchanged on a project with an
-    // empty instagram_posts table.
-    html += latestPost();
+    /* Between the greeting and the gathering card. Renders nothing until
+       there is something to show, so Home is unchanged on a project with an
+       empty instagram_posts table and no homeMedia.
+
+       No header over it, deliberately. Every slide already says what it is in
+       its own eyebrow, and a heading above a block that changes what it is
+       from slide to slide would have to be vague enough to cover all of them,
+       which is a heading that says nothing. */
+    html += mediaCarousel();
 
     /* The social links sit under the photograph, but they do not depend on
        it. A week when nothing has been posted, or a sync that has broken, is
@@ -278,24 +458,37 @@
        they like. */
     html += c.socialRow(HC.data.church.social);
 
-    html += '<div class="hc-home__stack">';
-    html += gatheringCard();
-    html += guideCard();
-    html += '</div>';
+    /* From here down, every block is named. The headings carry no eyebrow, so
+       what a person scrolling past sees is one column of titles in the same
+       weight, each one answering what the thing under it is before they have
+       to work it out from the card itself. */
 
+    html += c.sectionHeader('', 'Service times');
+    html += gatheringCard();
+
+    html += c.sectionHeader('', 'Latest sermon');
+    html += guideCard();
+
+    // No announcement, no header. An empty header over nothing reads as a bug,
+    // which is the same rule the reading plan below has always kept.
     var ann = announcement();
     if (ann) {
+      html += c.sectionHeader('', 'Announcements');
       html += '<div class="hc-home__announcement">' + ann + '</div>';
     }
 
-    // No plan, no section. An empty header over nothing reads as a bug.
     var plan = readingPlanRow();
     if (plan) {
-      html += c.sectionHeader('Reading together', 'Where we are');
+      html += c.sectionHeader('', 'Reading plan');
       html += plan;
     }
 
-    html += givingRow();
+    // Same rule again: a church with no giving link gets no giving heading.
+    var give = givingRow();
+    if (give) {
+      html += c.sectionHeader('', 'Give');
+      html += give;
+    }
 
     html += '</div>';
     return c.el(html);
