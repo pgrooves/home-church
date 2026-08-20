@@ -314,7 +314,11 @@
 
   /* ------------------------------------------------------------ quote card */
 
-  function quoteCard(text, attribution, shareData) {
+  /* opts.html lets a caller hand in text it has already escaped, which is
+     how the guide reader draws highlights inside a one-liner. Without it the
+     card would escape the <mark> tags and print them. */
+  function quoteCard(text, attribution, shareData, opts) {
+    opts = opts || {};
     var share = '';
     if (shareData) {
       share = '<button type="button" class="hc-share" data-action="share" ' +
@@ -324,8 +328,10 @@
     }
     return '' +
       '<figure class="hc-quote-card">' +
-        '<blockquote class="hc-quote hc-quote-card__text">' +
-          '“' + esc(text) + '”' +
+        '<blockquote class="hc-quote hc-quote-card__text' +
+          (opts.path ? ' hc-hl-src' : '') + '"' +
+          (opts.path ? ' data-hl-path="' + esc(opts.path) + '"' : '') + '>' +
+          '“' + (opts.html || esc(text)) + '”' +
         '</blockquote>' +
         '<figcaption class="hc-quote-card__foot">' +
           '<span class="hc-quote-card__attr">' + esc(attribution) + '</span>' +

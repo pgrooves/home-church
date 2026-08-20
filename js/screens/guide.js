@@ -9,6 +9,22 @@
 
   var c = HC.components;
 
+  /* A block of guide prose that can be highlighted. data-hl-path is the whole
+     contract with js/highlight.js: it says which block this is, as an address
+     into the guide object, and js/journal.js anchors to the same string.
+
+     The text goes through HC.journal.marked() rather than c.esc(), which
+     escapes it exactly the same way and wraps any highlight in a <mark> on
+     the way past. A guide with no highlights in it renders character for
+     character what it rendered before. */
+  function prose(guide, path, text, tag, className) {
+    tag = tag || 'p';
+    return '<' + tag + ' class="hc-hl-src' + (className ? ' ' + className : '') + '" ' +
+      'data-hl-path="' + c.esc(path) + '">' +
+      HC.journal.marked(guide.id, path, text) +
+      '</' + tag + '>';
+  }
+
   /* ------------------------------------------------------------ the index */
 
   // The series name is already on the header above these rows, so the eyebrow
@@ -74,7 +90,9 @@
 
   function shortSummarySection(guide) {
     var body = '<div class="hc-prose hc-body-serif">';
-    guide.shortSummary.forEach(function (p) { body += '<p>' + c.esc(p) + '</p>'; });
+    guide.shortSummary.forEach(function (p, i) {
+      body += prose(guide, 'shortSummary.' + i, p);
+    });
     body += '</div>';
     return c.collapsible({
       id: 'short-summary',
@@ -87,7 +105,9 @@
 
   function fullSummarySection(guide) {
     var body = '<div class="hc-prose hc-body-serif">';
-    guide.fullSummary.forEach(function (p) { body += '<p>' + c.esc(p) + '</p>'; });
+    guide.fullSummary.forEach(function (p, i) {
+      body += prose(guide, 'fullSummary.' + i, p);
+    });
     body += '</div>';
 
     if (guide.anchors && guide.anchors.length) {
@@ -96,7 +116,7 @@
       guide.anchors.forEach(function (a, i) {
         body += c.numberedRow(i + 1,
           '<p class="hc-anchors__title">' + c.esc(a.label) + '</p>' +
-          '<p class="hc-body-serif hc-anchors__body">' + c.esc(a.body) + '</p>'
+          prose(guide, 'anchors.' + i + '.body', a.body, 'p', 'hc-body-serif hc-anchors__body')
         );
       });
       body += '</div>';
@@ -182,11 +202,12 @@
     var body = '';
     var meta = HC.data.guideMeta(guide);
     var title = meta.title;
-    guide.oneLiners.forEach(function (line) {
+    guide.oneLiners.forEach(function (line, i) {
+      var path = 'oneLiners.' + i;
       body += c.quoteCard(line, meta.preacherShort + ', ' + title, {
         text: '“' + line + '”\n\n' + meta.preacherShort + ', ' + title + ', Home Church',
         title: title
-      });
+      }, { path: path, html: HC.journal.marked(guide.id, path, line) });
     });
     return c.collapsible({
       id: 'oneliners',

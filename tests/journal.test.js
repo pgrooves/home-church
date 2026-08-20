@@ -316,5 +316,68 @@ console.log('\n— the answers people already have —');
   ok('emptying the box deletes the entry', HC.journal.all().length, before - 1);
 }
 
+/* ------------------------------------------------------------- anchoring */
+
+console.log('\n— highlights, after the guide has been edited —');
+{
+  const { HC } = boot({ guides: { g1: { title: 'Held' } } });
+  const TEXT = 'He said the thing about his father, and then he said it again.';
+
+  const e = HC.journal.create({
+    kind: 'highlight', guideId: 'g1', path: 'shortSummary.0',
+    quote: 'the thing about his father', start: 8, end: 34
+  });
+
+  ok('an untouched paragraph resolves on the offsets',
+     HC.journal.locate(e, TEXT), { start: 8, end: 34 });
+
+  // Somebody fixes a typo earlier in the paragraph. Everything shifts.
+  const EDITED = 'He then said the thing about his father, and then he said it again.';
+  ok('a shifted paragraph resolves on the words',
+     HC.journal.locate(e, EDITED), { start: 13, end: 39 });
+
+  // The sentence is rewritten entirely.
+  ok('a rewritten paragraph resolves to nothing',
+     HC.journal.locate(e, 'He talked about his childhood.'), null);
+  ok('but the entry is still in the journal', HC.journal.all().length, 1);
+  ok('with the quotation it was made from',
+     HC.journal.all()[0].quote, 'the thing about his father');
+
+  // Two copies of the same sentence: take the one nearest where it was.
+  const TWICE = 'the thing about his father. And again: the thing about his father.';
+  ok('the nearer of two identical sentences wins',
+     HC.journal.locate(e, TWICE), { start: 0, end: 26 });
+
+  /* --------------------------------------------------------- drawing */
+
+  const drawn = HC.journal.marked('g1', 'shortSummary.0', TEXT);
+  ok('the mark wraps exactly the highlighted words',
+     /<mark [^>]*>the thing about his father<\/mark>/.test(drawn), true);
+  ok('and the rest of the paragraph is intact',
+     drawn.replace(/<[^>]+>/g, ''), TEXT);
+  ok('a highlight with no note is not drawn as one',
+     / hc-hl--noted/.test(drawn), false);
+
+  HC.journal.update(e.id, { bodyText: 'Ask him about it.' });
+  ok('one with a note is', / hc-hl--noted/.test(
+     HC.journal.marked('g1', 'shortSummary.0', TEXT)), true);
+
+  // Overlaps are not nested.
+  HC.journal.create({
+    kind: 'highlight', guideId: 'g1', path: 'shortSummary.0',
+    quote: 'about his father, and', start: 18, end: 39
+  });
+  const both = HC.journal.marked('g1', 'shortSummary.0', TEXT);
+  ok('an overlapping highlight is not nested', (both.match(/<mark/g) || []).length, 1);
+  ok('and the text still survives it', both.replace(/<[^>]+>/g, ''), TEXT);
+
+  // A paragraph with nothing in it renders exactly what it always did.
+  ok('a guide with no highlights renders plain escaped text',
+     HC.journal.marked('g1', 'fullSummary.0', 'Plain <b>text</b> & more'),
+     'Plain &lt;b&gt;text&lt;/b&gt; &amp; more');
+  ok('and so does one with no guide at all',
+     HC.journal.marked(null, 'x', 'a & b'), 'a &amp; b');
+}
+
 console.log('\n' + pass + ' passed' + (fail ? ', ' + fail + ' FAILED' : '') + '.');
 process.exit(fail ? 1 : 0);

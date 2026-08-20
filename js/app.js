@@ -157,6 +157,10 @@
     var app = document.getElementById('app');
     app.setAttribute('data-view', route.name);
 
+    // Anything floating over a screen belongs to that screen. Leaving takes
+    // the selection bar and any open sheet with it. See js/highlight.js.
+    HC.store.emit('view', route);
+
 
     // Presentation mode takes the whole screen. Nothing else competes with it.
     var chromeless = route.name === 'present';
@@ -378,6 +382,18 @@
     'scripture-insert': function () {
       HC.editor.insertScripture();
       HC.native.tap('Light');
+    },
+
+    /* ------------------------------------------------------ highlighting */
+
+    'hl-note': function () { HC.highlight.create(true); },
+    'hl-mark': function () { HC.highlight.create(false); },
+    'hl-open': function (el) { HC.highlight.open(el.getAttribute('data-id')); },
+    'hl-close': function () { HC.highlight.closeNote(); },
+
+    'hl-remove': function (el) {
+      if (!window.confirm('Remove this highlight? The note goes with it.')) return;
+      HC.highlight.remove(el.getAttribute('data-id'));
     },
 
     'journal-filter': function (el) {
@@ -1347,6 +1363,21 @@
       }
     });
 
+    /* A <mark> in a guide is role="button", not a real one, for the reason in
+       js/journal.js: a button inside a paragraph suppresses selection across
+       itself on iOS. A real button answers the keyboard for free and this one
+       does not, so this is that half. Space is included because a role of
+       button says it should be. */
+    document.addEventListener('keydown', function (evt) {
+      if (evt.key !== 'Enter' && evt.key !== ' ') return;
+      var el = evt.target.closest && evt.target.closest('[data-action][role="button"]');
+      if (!el) return;
+      var fn = actions[el.getAttribute('data-action')];
+      if (!fn) return;
+      evt.preventDefault();
+      fn(el, evt);
+    });
+
     /* A toolbar button must not steal the caret. mousedown is where focus
        moves, so refusing it there is what keeps the selection alive long
        enough for execCommand to act on it. The click still lands. */
@@ -1463,6 +1494,12 @@
        self-reflection answers across on the first launch that sees them, and
        adopts anything written signed out when somebody signs in. */
     HC.journal.init();
+
+    /* Selecting words in a guide. Wired after the router so the reader it
+       listens to already exists, and it listens to the document rather than
+       to any one screen, so a guide that re-renders does not take it with
+       it. */
+    HC.highlight.init();
 
     HC.store.on('journal', function () {
       var route = HC.router.current();

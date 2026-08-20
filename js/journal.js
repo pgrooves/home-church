@@ -420,6 +420,108 @@
     return guide ? HC.data.guideTitle(guide) : null;
   }
 
+  /* ------------------------------------------------------------- anchors
+
+     A highlight points at a run of characters inside one block of one guide,
+     and guides are edited from a phone with no build step. So the anchor has
+     to survive somebody fixing a typo in the paragraph it sits in.
+
+     Four things are stored, and they are tried in order of how much they can
+     be trusted:
+
+       path    which block, as an address into the guide object:
+               'shortSummary.2', 'groupSections.0.questions.3'
+       quote   the exact text that was selected
+       start   where it was, as an offset into that block's plain text
+       end
+
+     `quote` is tried first, because text that has moved is still the same
+     text. The offsets are the fallback, and they are only believed when the
+     characters they point at are still the ones that were highlighted.
+
+     WHEN BOTH FAIL, THE ENTRY SURVIVES AND THE MARK DOES NOT. The paragraph
+     was rewritten; there is nothing honest to underline any more. But the
+     quotation was stored with the entry, so the Journal still shows exactly
+     what was highlighted and what was written about it. The note is the
+     valuable thing. The mark is a convenience. */
+
+  function locate(entry, text) {
+    if (!entry || !text) return null;
+
+    if (entry.quote) {
+      // The same sentence can appear twice in a paragraph, so when it does,
+      // take the occurrence nearest to where it used to be.
+      var best = -1;
+      var from = 0;
+      var at;
+      while ((at = text.indexOf(entry.quote, from)) !== -1) {
+        if (best === -1 || Math.abs(at - (entry.start || 0)) < Math.abs(best - (entry.start || 0))) {
+          best = at;
+        }
+        from = at + 1;
+      }
+      if (best !== -1) return { start: best, end: best + entry.quote.length };
+    }
+
+    // No quote to match, or the words are gone. Believe the offsets only if
+    // what is there now is what was highlighted then.
+    if (typeof entry.start === 'number' && typeof entry.end === 'number' &&
+        entry.end <= text.length &&
+        (!entry.quote || text.slice(entry.start, entry.end) === entry.quote)) {
+      return { start: entry.start, end: entry.end };
+    }
+
+    return null;
+  }
+
+  /* One block of guide prose, escaped, with every highlight in it wrapped in
+     a <mark>. Built as a string because that is how every screen in this app
+     renders: no DOM surgery after paint, so a re-render is idempotent and
+     nothing has to be undone before it can be done again.
+
+     Overlapping highlights are not nested. The first one placed wins and a
+     later one that would collide is skipped for drawing only; its entry is
+     untouched and still in the Journal. Nested marks would need a proper
+     interval tree to render and would look like a smudge on the page. */
+
+  function marked(guideId, path, text) {
+    text = String(text == null ? '' : text);
+    if (!guideId) return esc(text);
+
+    var ranges = [];
+    forAnchor(guideId, path).forEach(function (entry) {
+      var at = locate(entry, text);
+      if (!at) return;
+      var clash = ranges.some(function (r) { return at.start < r.end && r.start < at.end; });
+      if (!clash) ranges.push({ start: at.start, end: at.end, entry: entry });
+    });
+
+    if (!ranges.length) return esc(text);
+
+    ranges.sort(function (a, b) { return a.start - b.start; });
+
+    var out = '';
+    var cursor = 0;
+    ranges.forEach(function (r) {
+      out += esc(text.slice(cursor, r.start));
+      // A highlight that carries a note is drawn a shade heavier, so the page
+      // says which ones you wrote about without opening any of them.
+      /* role and tabindex rather than a real <button>. A button inside a
+         paragraph suppresses text selection across itself on iOS, which
+         would mean the one sentence you already highlighted is the one
+         sentence you can never highlight a longer version of. See the
+         keydown handler in js/app.js for the keyboard half. */
+      out += '<mark class="hc-hl' + (r.entry.bodyText ? ' hc-hl--noted' : '') + '" ' +
+        'data-action="hl-open" data-id="' + esc(r.entry.id) + '" ' +
+        'role="button" tabindex="0" ' +
+        'aria-label="' + esc(r.entry.bodyText ? 'Your note on this' : 'Highlighted') + '">' +
+        esc(text.slice(r.start, r.end)) + '</mark>';
+      cursor = r.end;
+    });
+    out += esc(text.slice(cursor));
+    return out;
+  }
+
   /* ------------------------------------------------- the old journal keys
 
      v1 kept the guide reader's self-reflection answers in
@@ -553,6 +655,9 @@
 
     getReflection: getReflection,
     setReflection: setReflection,
+
+    locate: locate,
+    marked: marked,
 
     sanitize: sanitize,
     plainText: plainText,

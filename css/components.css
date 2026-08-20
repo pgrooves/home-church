@@ -1710,3 +1710,98 @@ a.hc-card:active { background: var(--hc-paper-sunk); }
 }
 
 .hc-sheet__note { margin-top: var(--hc-space-md); }
+
+/* --------------------------------------------------------------------------
+   Highlighting
+   A wash under the words, not a stripe over them. One treatment, plus a
+   heavier one for the ones that carry a note, because a rack of highlighter
+   colours would be the loudest thing in a calm two-palette app.
+   -------------------------------------------------------------------------- */
+
+.hc-hl {
+  background: linear-gradient(to top,
+    color-mix(in srgb, var(--hc-accent) 42%, transparent) 0.55em,
+    transparent 0.55em);
+  color: inherit;
+  border-radius: 2px;
+  cursor: pointer;
+  /* The words are the tap target. No padding, or the wash starts creeping
+     out past the sentence it belongs to. */
+  padding: 0;
+}
+
+/* One that has been written about. Same hue, more of it, and a dog-ear so it
+   is still distinguishable with no colour vision at all. */
+.hc-hl--noted {
+  background: color-mix(in srgb, var(--hc-accent) 34%, transparent);
+  box-shadow: inset 2px 0 0 var(--hc-accent-deep);
+}
+
+.hc-hl:focus-visible {
+  outline: 2px solid var(--hc-accent-deep);
+  outline-offset: 2px;
+}
+
+@supports not (color: color-mix(in srgb, red 50%, transparent)) {
+  .hc-hl { background: var(--hc-cream); }
+  .hc-hl--noted { background: var(--hc-cream); box-shadow: inset 2px 0 0 var(--hc-accent-deep); }
+}
+
+/* The bar that floats over a selection. Placed in viewport coordinates by
+   js/highlight.js, which also puts it away the moment the page scrolls. */
+.hc-hlbar {
+  position: fixed;
+  z-index: 55;
+  display: flex;
+  align-items: stretch;
+  padding: 0 var(--hc-space-xs);
+  border-radius: var(--hc-radius-pill);
+  background: var(--hc-ink);
+  box-shadow: 0 6px 20px rgba(26, 25, 24, 0.28);
+  animation: hc-hlbar-in var(--hc-dur-fast) var(--hc-ease);
+}
+
+@keyframes hc-hlbar-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) { .hc-hlbar { animation: none; } }
+
+.hc-hlbar__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--hc-space-xs);
+  min-height: var(--hc-tap-min);
+  padding: 0 var(--hc-space-base);
+  background: transparent;
+  color: var(--hc-paper);
+  font-family: var(--hc-sans);
+  font-weight: 500;
+  font-size: var(--hc-caption);
+  white-space: nowrap;
+}
+
+.hc-hlbar__icon { width: 14px; height: 14px; }
+
+.hc-hlbar__rule {
+  width: var(--hc-hairline);
+  margin: var(--hc-space-sm) 0;
+  background: var(--hc-paper);
+  opacity: 0.3;
+}
+
+/* The note sheet. The quotation on top, the writing surface under it. */
+.hc-hlsheet__quote {
+  margin: 0 0 var(--hc-space-base);
+  padding-left: var(--hc-space-base);
+  border-left: var(--hc-edge-rule) solid var(--hc-accent);
+  font-size: calc(18px * var(--hc-text-scale));
+  line-height: 1.45;
+}
+
+/* Inside a sheet the writing surface has a keyboard under it, so it gives up
+   the third of a screen it takes on the entry screen. */
+.hc-sheet .hc-rt { min-height: 22vh; }
+
+.hc-hlsheet__foot { display: flex; flex-direction: column; gap: var(--hc-space-sm); }
