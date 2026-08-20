@@ -124,6 +124,22 @@ async function phone(browser, user) {
 const text = (p) => p.locator('.hc-group').innerText();
 const tap = async (p, sel) => { await p.locator(sel).first().click(); await p.waitForTimeout(900); };
 
+/* The room draws its questions folded, one chunk per heading, and nothing in
+   this file is about the fold: it is about what the database lets through. So
+   every chunk is opened once, on whichever phone is about to write, and the
+   rest of the script types into questions that are on the screen. Which ones
+   are open is kept by the screen rather than by the DOM, so this survives the
+   repaints and the terms gate that come after it. */
+const unfold = async (p) => {
+  const heads = p.locator('.hc-group .hc-section__toggle');
+  const n = await heads.count();
+  for (let i = 0; i < n; i++) {
+    const head = heads.nth(i);
+    if (await head.getAttribute('aria-expanded') === 'false') await head.click();
+  }
+  await p.waitForTimeout(400);
+};
+
 (async () => {
   const b = await chromium.launch(chrome() ? { executablePath: chrome() } : {});
   const host = await phone(b, HOST);
@@ -140,6 +156,7 @@ const tap = async (p, sel) => { await p.locator(sel).first().click(); await p.wa
   console.log('      room code: ' + code);
   ok('and the guide questions came across',
      (await host.page.locator('.hc-room-q[data-question]').count()) > 0, true);
+  await unfold(host.page);
 
   // ---- 2. the terms gate, which the database enforces too ------------------
   const bare = code.replace(' ', '');
@@ -147,6 +164,7 @@ const tap = async (p, sel) => { await p.locator(sel).first().click(); await p.wa
   await member.page.waitForTimeout(200);
   await tap(member.page, '[data-action="room-join"]');
   ok('the member is in the room', (await text(member.page)).includes('ROOM ' + code), true);
+  await unfold(member.page);
 
   const q = await member.page.locator('.hc-room-q[data-question]').first().getAttribute('data-question');
   await member.page.fill('[data-draft="' + q + '"]', 'A courtroom, honestly.');

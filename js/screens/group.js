@@ -32,6 +32,10 @@
   var codeDraft = '';
   var editing = null;     // { id, body } while the host has a question open
   var showingJournal = null;   // question id whose journal suggestions are open
+  /* Which question chunks are open. The room redraws itself every eight
+     seconds, so unlike every other foldable section in the app this one
+     cannot leave its state in the DOM: the next repaint would shut it. */
+  var openHeads = {};
   var busy = null;        // an id, while its button is waiting on the network
   var joinError = null;
   var lastSignature = null;
@@ -338,8 +342,7 @@
     var html = '<div class="hc-room-q" data-question="' + c.esc(question.id) + '">';
 
     html += '<div class="hc-room-q__head">' +
-      '<span class="hc-room-q__num">' + (index + 1) +
-        (question.heading ? ' · ' + c.esc(question.heading.toUpperCase()) : '') + '</span>' +
+      '<span class="hc-room-q__num">' + (index + 1) + '</span>' +
       (host && !isEditing
         ? '<button type="button" class="hc-btn hc-btn--tertiary hc-btn--small" ' +
           'data-action="room-edit-question" data-id="' + c.esc(question.id) + '">' +
@@ -543,16 +546,21 @@
       '</div>' +
     '</div>';
 
-    // The code, so the host can send it again to whoever is late.
-    html += '<div class="hc-card hc-room-code">' +
+    return html;
+  }
+
+  /* The code, so the host can send it again to whoever is late. It sits at the
+     top of the room rather than the bottom: it is the one thing a host is
+     asked for out loud, usually while somebody is standing in the doorway,
+     and reading it out should not mean scrolling past the whole night. */
+  function codeCard(snap) {
+    return '<div class="hc-card hc-room-code hc-room-code--top">' +
       '<p class="hc-eyebrow">The code</p>' +
       '<p class="hc-room-code__digits">' + c.esc(spaced(snap.room.code)) + '</p>' +
       '<div class="hc-group__actions">' +
         c.button('Text it to your group', { action: 'room-share-code', icon: 'message', variant: 'secondary' }) +
       '</div>' +
     '</div>';
-
-    return html;
   }
 
   /* Your own half of the evening, kept. A room is swept ninety days after it
@@ -577,15 +585,78 @@
     '</div>';
   }
 
+  /* ---------------------------------------------------- the questions, folded
+
+     A guide's questions come across carrying the heading they sat under, and
+     a heading covers several of them. So the room draws one chunk per
+     heading rather than a column of twenty open questions, and every chunk
+     arrives shut: the group opens the part it is on.
+
+     These are c.collapsible() and not something of this screen's own, so the
+     chevron, the heading and the spacing are the ones the Guide tab uses.
+     That also buys the notches for free: the index rail counts .hc-section,
+     so each heading gets its own mark down the right edge.
+
+     WHERE THE OPEN STATE LIVES. Everywhere else in the app a section is
+     drawn once and the DOM remembers which ones are open. This screen
+     rebuilds itself whenever the room changes under it, so what is open is
+     kept in openHeads and read back on every render; app.js writes to it
+     when a section here is tapped. */
+
+  function headKey(question) {
+    var head = (question.heading || '').trim();
+    if (!head) return 'q-' + question.id;
+    return 'h-' + head.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  }
+
+  // One entry per heading, in the order the questions come, with every
+  // question carrying that heading in it wherever it fell in the list.
+  function byHeading(questions) {
+    var out = [];
+    var seen = {};
+    questions.forEach(function (q, i) {
+      var key = headKey(q);
+      if (!seen[key]) {
+        seen[key] = { key: key, title: (q.heading || '').trim() || 'Question ' + (i + 1), items: [] };
+        out.push(seen[key]);
+      }
+      seen[key].items.push({ question: q, index: i });
+    });
+    return out;
+  }
+
+  function questionSections(snap) {
+    var html = '<p class="hc-room-questions__title">Questions</p>';
+
+    byHeading(snap.questions).forEach(function (chunk) {
+      var body = '';
+      chunk.items.forEach(function (it) {
+        body += questionBlock(it.question, it.index, snap);
+      });
+      var n = chunk.items.length;
+      html += c.collapsible({
+        id: chunk.key,
+        eyebrow: n === 1 ? '1 question' : n + ' questions',
+        title: chunk.title,
+        body: body,
+        open: !!openHeads[chunk.key]
+      });
+    });
+
+    return html;
+  }
+
   function roomScreen(snap) {
     var host = HC.rooms.isHost();
     var html = '<div class="hc-screen hc-group" data-room="' + c.esc(snap.room.id) + '">';
 
     html += roomBar(snap);
+    if (host) html += codeCard(snap);
     html += c.sectionHeader(host ? 'Leader mode' : 'In the room',
                             snap.room.groupName || snap.room.guideTitle || 'Your group',
                             { flush: true, tag: 'h1' });
     html += guideCard(snap);
+    html += prayerBlock(snap);
 
     if (!HC.auth.isSignedIn()) {
       html += '<div class="hc-locked hc-mt-lg">' + c.icon('lock') +
@@ -600,12 +671,11 @@
 
     if (!snap.questions.length) {
       html += c.emptyState('This room has no questions yet.');
+    } else {
+      html += questionSections(snap);
     }
-    snap.questions.forEach(function (q, i) { html += questionBlock(q, i, snap); });
 
     if (host) html += hostExtras(snap);
-
-    html += prayerBlock(snap);
 
     // The offline promise, said out loud, same as the Guide index does.
     html += '<p class="hc-caption hc-group__offline">' + c.icon('download', 'hc-group__offline-icon') +
@@ -779,6 +849,9 @@
     setJoinError: function (v) { joinError = v; },
     setEditing: function (v) { editing = v; },
     setShowingJournal: function (v) { showingJournal = v; },
+    // Tapping a question chunk open is handled by the ordinary section
+    // toggle in app.js, which flips the DOM. This is how that gets kept.
+    rememberSection: function (key, open) { openHeads[key] = !!open; },
     getShowingJournal: function () { return showingJournal; },
     getEditing: function () { return editing; },
     setBusy: function (v) { busy = v; },

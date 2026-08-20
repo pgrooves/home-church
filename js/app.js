@@ -927,6 +927,15 @@
       var panel = document.getElementById('panel-' + el.getAttribute('data-section-id'));
       if (panel) panel.setAttribute('data-open', open ? 'false' : 'true');
 
+      /* The room is the one screen that redraws itself under you, so the DOM
+         cannot be where it remembers which question chunks are open. Nothing
+         is repainted here: the fold has already happened, and this only makes
+         it survive the next poll. */
+      var group = HC.screens && HC.screens.groupHelpers;
+      if (group && el.closest('.hc-group')) {
+        group.rememberSection(el.getAttribute('data-section-id'), !open);
+      }
+
       // The month rail reads the archive out of the page, and a closed archive
       // has no rows to read. Opening or closing it is the one section toggle
       // that changes what the rail has to say.
