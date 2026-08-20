@@ -1,0 +1,738 @@
+<title>Home Church Splash Studies</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Poppins:wght@500;800&display=swap">
+
+<style>
+/* ==========================================================================
+   Splash, four studies
+
+   Two token sets on purpose, and they must not be confused:
+
+   --pg-*  the page around the phones. Follows the reader's own appearance,
+           system default included, so this sheet is legible wherever it is
+           opened.
+   --hc-*  the app inside the phones. Lifted verbatim from css/tokens.css and
+           switched by the Light / Dark control, because that control is
+           showing the app's theme, not the reader's.
+
+   Everything inside a .stage is drawn at real iPhone points, 393 x 852, and
+   the whole stage is scaled down to fit the frame. So every number in the
+   splash rules below is the number that would ship.
+   ========================================================================== */
+
+:root {
+  --pg-paper:   #F7F4EF;
+  --pg-cream:   #EDE8DF;
+  --pg-ink:     #111111;
+  --pg-mid:     #6D6864;
+  --pg-rule:    #C8C0B0;
+  --pg-gold:    #B08D4B;
+  --pg-sunk:    #EFEAE2;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --pg-paper: #1A1918;
+    --pg-cream: #232120;
+    --pg-ink:   #F2EEE7;
+    --pg-mid:   #9A938A;
+    --pg-rule:  #3A3633;
+    --pg-gold:  #CBAC74;
+    --pg-sunk:  #201E1D;
+    color-scheme: dark;
+  }
+}
+
+:root[data-theme="dark"] {
+  --pg-paper: #1A1918;
+  --pg-cream: #232120;
+  --pg-ink:   #F2EEE7;
+  --pg-mid:   #9A938A;
+  --pg-rule:  #3A3633;
+  --pg-gold:  #CBAC74;
+  --pg-sunk:  #201E1D;
+  color-scheme: dark;
+}
+
+body {
+  margin: 0;
+  background: var(--pg-paper);
+  color: var(--pg-ink);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+.sheet {
+  max-width: 1220px;
+  margin: 0 auto;
+  padding: 56px 24px 88px;
+  display: flex;
+  flex-direction: column;
+  gap: 40px;
+}
+
+/* --- masthead -------------------------------------------------------- */
+
+.masthead { display: flex; flex-direction: column; gap: 14px; max-width: 60ch; }
+
+.eyebrow {
+  font-size: 11px;
+  line-height: 14px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--pg-gold);
+  margin: 0;
+}
+
+.masthead h1 {
+  font-family: "Poppins", -apple-system, BlinkMacSystemFont, sans-serif;
+  font-weight: 800;
+  font-size: clamp(30px, 4.6vw, 42px);
+  line-height: 1.08;
+  letter-spacing: -0.01em;
+  margin: 0;
+  text-wrap: balance;
+}
+
+.masthead p {
+  margin: 0;
+  font-size: 16px;
+  line-height: 25px;
+  color: var(--pg-mid);
+}
+
+/* --- controls -------------------------------------------------------- */
+
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 20px;
+  padding: 16px 18px;
+  background: var(--pg-cream);
+  border: 1px solid var(--pg-rule);
+  border-radius: 14px;
+  position: sticky;
+  top: 0;
+  z-index: 5;
+}
+
+.control { display: flex; align-items: center; gap: 8px; }
+
+.control > span {
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--pg-mid);
+}
+
+.seg {
+  display: inline-flex;
+  background: var(--pg-sunk);
+  border: 1px solid var(--pg-rule);
+  border-radius: 999px;
+  padding: 2px;
+}
+
+.seg button {
+  appearance: none;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 13px;
+  color: var(--pg-mid);
+  padding: 6px 14px;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.seg button[aria-pressed="true"] {
+  background: var(--pg-paper);
+  color: var(--pg-ink);
+  box-shadow: 0 1px 3px rgba(26, 25, 24, 0.14);
+}
+
+.seg button:focus-visible,
+.replay:focus-visible,
+.name-field:focus-visible { outline: 2px solid var(--pg-gold); outline-offset: 2px; }
+
+.name-field {
+  font: inherit;
+  font-size: 13px;
+  color: var(--pg-ink);
+  background: var(--pg-sunk);
+  border: 1px solid var(--pg-rule);
+  border-radius: 999px;
+  padding: 6px 14px;
+  width: 9ch;
+}
+
+.name-field:disabled { opacity: 0.45; }
+
+.replay {
+  appearance: none;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  color: var(--pg-ink);
+  background: var(--pg-paper);
+  border: 1px solid var(--pg-rule);
+  border-radius: 999px;
+  padding: 7px 16px;
+  margin-left: auto;
+}
+
+/* --- the grid of studies --------------------------------------------- */
+
+.studies {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(268px, 1fr));
+  gap: 40px 28px;
+}
+
+.study { display: flex; flex-direction: column; gap: 16px; }
+
+.frame {
+  width: 288px;
+  height: 625px;
+  margin: 0 auto;
+  border-radius: 44px;
+  padding: 5px;
+  background: linear-gradient(160deg, #3B3733, #161513);
+  box-shadow: 0 18px 40px rgba(26, 25, 24, 0.22), 0 2px 6px rgba(26, 25, 24, 0.16);
+  flex: none;
+}
+
+.screen {
+  width: 100%;
+  height: 100%;
+  border-radius: 39px;
+  overflow: hidden;
+  position: relative;
+}
+
+.stage {
+  width: 393px;
+  height: 852px;
+  transform: scale(0.73283);
+  transform-origin: 0 0;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+/* The pill and the home indicator are frame furniture, not app chrome. They
+   are here so the composition is judged against the real safe areas. */
+.pill {
+  position: absolute;
+  top: 11px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 124px;
+  height: 36px;
+  border-radius: 22px;
+  background: #161513;
+}
+
+.indicator {
+  position: absolute;
+  bottom: 9px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 140px;
+  height: 5px;
+  border-radius: 3px;
+  background: currentColor;
+  opacity: 0.28;
+}
+
+.caption { display: flex; flex-direction: column; gap: 6px; }
+
+.caption h2 {
+  font-family: "Poppins", -apple-system, BlinkMacSystemFont, sans-serif;
+  font-weight: 800;
+  font-size: 17px;
+  line-height: 22px;
+  margin: 0;
+}
+
+.caption p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 21px;
+  color: var(--pg-mid);
+}
+
+.caption .tag {
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--pg-gold);
+}
+
+/* ==========================================================================
+   The splash itself. From here down, every value is a shipping value.
+   ========================================================================== */
+
+.stage {
+  /* Light, straight out of css/tokens.css */
+  --hc-paper: #F7F4EF;
+  --hc-ink:   #111111;
+  --hc-mid:   #6D6864;
+  --hc-gold:  #D7BA85;
+  --hc-rule:  #C8C0B0;
+  --hc-glow:  rgba(215, 186, 133, 0.30);
+  --hc-serif: "Cormorant", Georgia, "Times New Roman", serif;
+  --hc-sans-display: "Poppins", -apple-system, BlinkMacSystemFont, sans-serif;
+  --hc-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+
+  background: var(--hc-paper);
+  color: var(--hc-ink);
+}
+
+.stage[data-app-theme="dark"] {
+  --hc-paper: #1A1918;
+  --hc-ink:   #F2EEE7;
+  --hc-mid:   #9A938A;
+  --hc-gold:  #CBAC74;
+  --hc-rule:  #3A3633;
+  --hc-glow:  rgba(203, 172, 116, 0.24);
+}
+
+.mark { display: block; width: 88px; height: auto; }
+
+.greeting {
+  margin: 0;
+  text-align: center;
+  text-wrap: balance;
+  padding: 0 32px;
+}
+
+.loading {
+  position: absolute;
+  left: 0;
+  right: 0;
+  /* 34pt home indicator inset plus room to breathe. */
+  bottom: 54px;
+  margin: 0;
+  text-align: center;
+  color: var(--hc-mid);
+}
+
+/* --- study A, Front door --------------------------------------------- */
+
+.s-front .mark { width: 92px; margin-bottom: 26px; }
+
+.s-front .greeting {
+  font-family: var(--hc-sans-display);
+  font-weight: 800;
+  font-size: 32px;
+  line-height: 36px;
+  letter-spacing: -0.005em;
+}
+
+.s-front .loading {
+  font-family: var(--hc-sans);
+  font-size: 13px;
+  line-height: 18px;
+}
+
+/* --- study B, Kitchen table ------------------------------------------ */
+
+.s-table .mark { width: 96px; margin-bottom: 30px; }
+
+.s-table .greeting {
+  font-family: var(--hc-serif);
+  font-weight: 400;
+  font-size: 36px;
+  line-height: 42px;
+}
+
+.s-table .loading {
+  font-family: var(--hc-serif);
+  font-style: italic;
+  font-size: 17px;
+  line-height: 22px;
+}
+
+/* --- study C, Porch light -------------------------------------------- */
+
+/* This one keeps the charcoal ground in both appearances, which is why it
+   sets the dark values on itself rather than reading the control. */
+.s-porch .stage,
+.s-porch .stage[data-app-theme="dark"] {
+  --hc-paper: #1A1918;
+  --hc-ink:   #F2EEE7;
+  --hc-mid:   #9A938A;
+  --hc-gold:  #CBAC74;
+  --hc-glow:  rgba(203, 172, 116, 0.30);
+}
+
+.s-porch .stage::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(58% 34% at 50% 42%, var(--hc-glow), transparent 70%);
+  pointer-events: none;
+}
+
+.s-porch .mark { width: 92px; margin-bottom: 28px; position: relative; }
+
+.s-porch .greeting {
+  font-family: var(--hc-serif);
+  font-weight: 300;
+  font-size: 34px;
+  line-height: 40px;
+  padding: 0 24px;
+  position: relative;
+}
+
+.s-porch .loading {
+  font-family: var(--hc-sans);
+  font-size: 13px;
+  line-height: 18px;
+}
+
+/* --- study D, Threshold ---------------------------------------------- */
+
+.s-sill .stage::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, var(--hc-glow), transparent 46%);
+  pointer-events: none;
+}
+
+.s-sill .mark { width: 104px; margin-bottom: 24px; position: relative; }
+
+.s-sill .rule {
+  width: 56px;
+  height: 1px;
+  background: var(--hc-gold);
+  margin-bottom: 24px;
+  position: relative;
+}
+
+.s-sill .greeting {
+  font-family: var(--hc-sans-display);
+  font-weight: 800;
+  font-size: 26px;
+  line-height: 30px;
+  position: relative;
+}
+
+.s-sill .loading {
+  font-family: var(--hc-sans);
+  font-size: 11px;
+  line-height: 14px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+/* --- the entrance ----------------------------------------------------- */
+
+.stage .mark,
+.stage .rule,
+.stage .greeting,
+.stage .loading { opacity: 0; }
+
+.playing .mark     { animation: rise 560ms cubic-bezier(0.22, 0.61, 0.36, 1) 60ms forwards; }
+.playing .rule     { animation: widen 520ms cubic-bezier(0.22, 0.61, 0.36, 1) 320ms forwards; }
+.playing .greeting { animation: rise 560ms cubic-bezier(0.22, 0.61, 0.36, 1) 260ms forwards; }
+.playing .loading  { animation: breathe 2600ms ease-in-out 620ms infinite; }
+
+@keyframes rise {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes widen {
+  from { opacity: 0; transform: scaleX(0.2); }
+  to   { opacity: 1; transform: scaleX(1); }
+}
+
+@keyframes breathe {
+  0%, 100% { opacity: 0.45; }
+  50%      { opacity: 0.9; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .playing .mark,
+  .playing .rule,
+  .playing .greeting,
+  .playing .loading {
+    animation: none;
+    opacity: 1;
+  }
+  .playing .loading { opacity: 0.75; }
+}
+
+/* --- notes ------------------------------------------------------------ */
+
+.notes {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 28px;
+  border-top: 1px solid var(--pg-rule);
+  padding-top: 32px;
+}
+
+.note h3 {
+  font-family: "Poppins", -apple-system, BlinkMacSystemFont, sans-serif;
+  font-weight: 800;
+  font-size: 13px;
+  line-height: 18px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin: 0 0 10px;
+}
+
+.note p, .note li {
+  font-size: 15px;
+  line-height: 24px;
+  color: var(--pg-mid);
+  margin: 0 0 10px;
+}
+
+.note ul { margin: 0; padding-left: 18px; }
+
+.note b { color: var(--pg-ink); font-weight: 600; }
+</style>
+
+<div class="sheet">
+
+  <header class="masthead">
+    <p class="eyebrow">Home Church, before the Home tab</p>
+    <h1>Four ways to open the door</h1>
+    <p>
+      Same screen in all four: the gold house, a welcome, and the word that says
+      the app is still catching up. What changes is the ground it sits on, the
+      voice the welcome is set in, and how much light is in the room. Nothing
+      here is wired into the app yet. Every phone runs the real tokens from
+      <b>css/tokens.css</b> at real iPhone points, so what you pick is what ships.
+    </p>
+  </header>
+
+  <div class="controls">
+    <div class="control">
+      <span>Who is opening it</span>
+      <div class="seg" id="who">
+        <button type="button" data-who="in" aria-pressed="true">Signed in</button>
+        <button type="button" data-who="out" aria-pressed="false">Signed out</button>
+      </div>
+      <input class="name-field" id="name" value="Trey" aria-label="First name" maxlength="14">
+    </div>
+
+    <div class="control">
+      <span>App appearance</span>
+      <div class="seg" id="theme">
+        <button type="button" data-theme="light" aria-pressed="true">Light</button>
+        <button type="button" data-theme="dark" aria-pressed="false">Dark</button>
+      </div>
+    </div>
+
+    <button type="button" class="replay" id="replay">Play them again</button>
+  </div>
+
+  <div class="studies">
+
+    <section class="study s-front">
+      <div class="frame">
+        <div class="screen">
+          <div class="stage playing" data-app-theme="light">
+            <img class="mark" src="__MARK__" alt="Home Church">
+            <h1 class="greeting">Welcome home, Trey.</h1>
+            <p class="loading">Loading...</p>
+            <div class="pill"></div>
+            <div class="indicator"></div>
+          </div>
+        </div>
+      </div>
+      <div class="caption">
+        <span class="tag">Study A</span>
+        <h2>Front door</h2>
+        <p>
+          The greeting is set in the exact face and size the Home tab uses for
+          its own greeting, on the same paper. Hand off to Home and the words
+          change but nothing moves. The safest of the four, and the one that
+          makes the app feel like one continuous room.
+        </p>
+      </div>
+    </section>
+
+    <section class="study s-table">
+      <div class="frame">
+        <div class="screen">
+          <div class="stage playing" data-app-theme="light">
+            <img class="mark" src="__MARK__" alt="Home Church">
+            <h1 class="greeting">Welcome home, Trey.</h1>
+            <p class="loading">Loading...</p>
+            <div class="pill"></div>
+            <div class="indicator"></div>
+          </div>
+        </div>
+      </div>
+      <div class="caption">
+        <span class="tag">Study B</span>
+        <h2>Kitchen table</h2>
+        <p>
+          The same paper, the guides' reading serif. Quieter and older
+          sounding, closer to a handwritten note left out for you than to an
+          app announcing itself. Loading drops to an italic line so it reads as
+          an aside rather than a status.
+        </p>
+      </div>
+    </section>
+
+    <section class="study s-porch">
+      <div class="frame">
+        <div class="screen">
+          <div class="stage playing" data-app-theme="light">
+            <img class="mark" src="__MARK__" alt="Home Church">
+            <h1 class="greeting">Welcome home, Trey.</h1>
+            <p class="loading">Loading...</p>
+            <div class="pill"></div>
+            <div class="indicator"></div>
+          </div>
+        </div>
+      </div>
+      <div class="caption">
+        <span class="tag">Study C</span>
+        <h2>Porch light</h2>
+        <p>
+          Warm charcoal in both appearances, with a low glow behind the house,
+          the way the icon on the Home Screen already looks. The gold has the
+          most life here. It is also the one that hides the launch flash best,
+          since the tap opens onto the same dark the icon just left.
+        </p>
+      </div>
+    </section>
+
+    <section class="study s-sill">
+      <div class="frame">
+        <div class="screen">
+          <div class="stage playing" data-app-theme="light">
+            <img class="mark" src="__MARK__" alt="Home Church">
+            <div class="rule"></div>
+            <h1 class="greeting">Welcome home, Trey.</h1>
+            <p class="loading">Loading...</p>
+            <div class="pill"></div>
+            <div class="indicator"></div>
+          </div>
+        </div>
+      </div>
+      <div class="caption">
+        <span class="tag">Study D</span>
+        <h2>Threshold</h2>
+        <p>
+          Light spills in from the top of the screen, the house is the biggest
+          it gets, and a short gold rule draws itself under it before the
+          welcome arrives. Loading is set as a tracked label, the same style the
+          app uses for eyebrows, so it sits down at the bottom as furniture.
+        </p>
+      </div>
+    </section>
+
+  </div>
+
+  <div class="notes">
+    <div class="note">
+      <h3>What is the same in all four</h3>
+      <ul>
+        <li>The mark alone, no lockup. The words are two lines below it anyway, so the wordmark would say Home Church twice.</li>
+        <li><b>Welcome home, Trey.</b> signed in, <b>Welcome home.</b> signed out. First name only, from the profile, and never a fallback like "friend".</li>
+        <li><b>Loading...</b> at the bottom, small, in the muted token, never in gold. It is the least important thing on the screen.</li>
+        <li>Everything fades up in sequence: house, then welcome, then the loading line breathing on a slow cycle. All of it collapses to a still screen when Reduce Motion is on.</li>
+      </ul>
+    </div>
+    <div class="note">
+      <h3>How long you would see it</h3>
+      <p>
+        The splash stays up until the app has read the signed in profile and
+        painted Home, then cross fades out over about 240ms. Cold on a phone
+        that has the app cached, that is roughly half a second.
+      </p>
+      <p>
+        It needs a floor, or a fast launch turns it into a flicker. Holding it
+        for a minimum of about <b>900ms</b> is what makes it read as a greeting
+        rather than a stutter. It also needs a ceiling, so a phone with no
+        signal gives up after about four seconds and goes to Home anyway.
+      </p>
+    </div>
+    <div class="note">
+      <h3>The one thing to decide first</h3>
+      <p>
+        The name. The splash can only greet you by name if the profile is
+        already on the phone, which it is on every launch after the first. On a
+        genuinely cold first launch it would say <b>Welcome home.</b> and stop
+        there rather than pop a name in halfway through.
+      </p>
+      <p>
+        Pick a study and the rest is small: it becomes a fixed layer in
+        <b>index.html</b> painted before any script runs, plus the matching
+        background in <b>capacitor.config.json</b> so the native launch screen
+        and this one are the same color.
+      </p>
+    </div>
+  </div>
+
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  var stages = Array.prototype.slice.call(document.querySelectorAll('.stage'));
+  var greetings = Array.prototype.slice.call(document.querySelectorAll('.greeting'));
+  var nameField = document.getElementById('name');
+  var who = 'in';
+
+  function paintGreeting() {
+    var name = nameField.value.trim();
+    var line = (who === 'in' && name) ? 'Welcome home, ' + name + '.' : 'Welcome home.';
+    greetings.forEach(function (el) { el.textContent = line; });
+  }
+
+  function press(group, value, attr) {
+    Array.prototype.forEach.call(group.querySelectorAll('button'), function (b) {
+      b.setAttribute('aria-pressed', String(b.dataset[attr] === value));
+    });
+  }
+
+  function play() {
+    stages.forEach(function (s) {
+      s.classList.remove('playing');
+      /* Reading offsetWidth restarts the animations without a timer. */
+      void s.offsetWidth;
+      s.classList.add('playing');
+    });
+  }
+
+  document.getElementById('who').addEventListener('click', function (e) {
+    var b = e.target.closest('button');
+    if (!b) return;
+    who = b.dataset.who;
+    press(this, who, 'who');
+    nameField.disabled = who === 'out';
+    paintGreeting();
+    play();
+  });
+
+  document.getElementById('theme').addEventListener('click', function (e) {
+    var b = e.target.closest('button');
+    if (!b) return;
+    press(this, b.dataset.theme, 'theme');
+    stages.forEach(function (s) { s.dataset.appTheme = b.dataset.theme; });
+    play();
+  });
+
+  nameField.addEventListener('input', paintGreeting);
+  document.getElementById('replay').addEventListener('click', play);
+
+  paintGreeting();
+}());
+</script>
