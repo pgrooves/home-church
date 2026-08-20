@@ -1696,6 +1696,11 @@
       }
     });
 
+    /* Home is on the glass. The greeting in front of it can start leaving,
+       which it does on its own schedule: it holds until its own sequence has
+       finished rather than cutting away mid animation. See js/splash.js. */
+    if (HC.splash) HC.splash.ready();
+
     // Session restore is async and best effort. If it lands while Profile
     // is on screen, repaint it so the signed-in state catches up.
     HC.store.on('auth', function () {
