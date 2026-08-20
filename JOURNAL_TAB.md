@@ -1,7 +1,11 @@
 # The Journal tab
 
-A map, not a build. What it is, what it touches, what has to be decided before
-anybody writes the first line, and what I would cut.
+What it is, what it touches, what had to be decided before the first line was
+written, and what I would still cut.
+
+This started as a map and is now also the record of what got built from it.
+Phases 0 to 6 in §7 are on `claude/journal-tab-feature-tz6oho`; anything marked
+"not built" in §8 is a proposal and nothing more.
 
 Read `Home Church app design system.md` §4f (tab bar) and §5a (navigation)
 alongside this. The relevant precedent in code is `js/rooms.js` +
@@ -27,18 +31,18 @@ Four ways in:
 3. **The self-reflection questions**, which the guide reader already has. Those
    are journal entries and have been all along; they just had nowhere to live
    but the guide they came from. See §3.
-4. **The end of a group night.** When a room closes, offer to keep what you
-   wrote. Room content is deleted after ninety days by migration 0022, so this
-   is the only way any of it survives. See §9.
+4. **The end of a group night** — *proposed, not built.* When a room closes,
+   offer to keep what you wrote. Room content is deleted after ninety days by
+   migration 0022, so this is the only way any of it survives. See §8.
 
-Two ways out:
+One way out, and one more proposed:
 
 - **The Group tab suggests them.** Answering a room question for a guide you
   have already journaled against offers your own entries as a starting point.
   It fills the draft box. It never posts anything.
-- **Export.** The whole journal as one file, through the same share sheet the
-  night sheet uses. If we are going to hold somebody's writing we should never
-  be the only ones who can.
+- **Export** — *proposed, not built.* The whole journal as one file, through
+  the same share sheet the night sheet uses. If we are going to hold
+  somebody's writing we should never be the only ones who can.
 
 ---
 
