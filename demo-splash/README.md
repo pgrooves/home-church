@@ -54,6 +54,18 @@ them and writes two files per source, none of them committed:
 - `NAME.html` — a whole document, for opening off disk.
 - `NAME.artifact.html` — the same thing as a fragment, for publishing.
 
+## Shipped
+
+**Front door with the soft pass is in the app.** The layer lives in
+`index.html` so it is on the glass at first paint, its styles are at the bottom
+of `css/components.css`, and `js/splash.js` puts the name in and takes the
+whole thing away once `boot()` says Home is painted. These two pages stay as
+the drawings it was decided from.
+
+One number moved between the drawing and the app: the greeting is 28px, not
+32, because that is what `.hc-home__greeting` actually is, and matching it was
+the whole point of this study.
+
 ## Not decided yet
 
 Soft, bright, or no glimmer at all, and whether it runs on every launch or only

@@ -1813,3 +1813,148 @@ a.hc-card:active { background: var(--hc-paper-sunk); }
 .hc-sheet .hc-rt { min-height: 22vh; }
 
 .hc-hlsheet__foot { display: flex; flex-direction: column; gap: var(--hc-space-sm); }
+
+/* ==========================================================================
+   The screen before Home
+
+   Study A out of demo-splash, at the sizes it was drawn at. The greeting
+   borrows the Home tab's own face and size exactly, so handing off reads as
+   the words changing rather than the screen changing. See js/splash.js for
+   how long it stays and what takes it away.
+   ========================================================================== */
+
+.hc-splash {
+  position: fixed;
+  inset: 0;
+  /* Over everything, including the toast at 60 and the sheets at 55. Nothing
+     in the app is meant to be reachable while this is up. */
+  z-index: 95;
+  background: var(--hc-paper);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.hc-splash--out {
+  opacity: 0;
+  transition: opacity 420ms ease-in;
+  pointer-events: none;
+}
+
+.hc-splash__markwrap {
+  position: relative;
+  width: 92px;
+  margin-bottom: var(--hc-space-lg);
+}
+
+.hc-splash__mark { display: block; width: 92px; height: auto; }
+
+/* The glimmer. The mark's own silhouette is used as a mask, so a band of warm
+   white with slightly deeper gold on either side of it slides across and is
+   clipped to the house. The light never touches the paper around it, there is
+   no second asset to draw, and nothing here has to be redone if the logo is.
+
+   The dark shoulders are not decoration. White on gold on an off-white ground
+   is very nearly nothing on its own, and the darker edges are what give the
+   highlight something to be brighter than. */
+.hc-splash__gleam {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  -webkit-mask: url('../assets/icons/mark.png') center / contain no-repeat;
+          mask: url('../assets/icons/mark.png') center / contain no-repeat;
+  background-image: linear-gradient(105deg,
+    rgba(138, 104, 44, 0) 24%,
+    rgba(138, 104, 44, 0.32) 39%,
+    rgba(255, 251, 242, 0.95) 50%,
+    rgba(138, 104, 44, 0.32) 61%,
+    rgba(138, 104, 44, 0) 76%);
+  background-repeat: no-repeat;
+  background-size: 300% 100%;
+  background-position: 100% 0;
+  opacity: 0;
+}
+
+.hc-splash__greeting {
+  margin: 0;
+  padding: 0 var(--hc-space-xl);
+  text-align: center;
+  /* Identical to .hc-home__greeting, deliberately. If that one ever moves,
+     this one moves with it. */
+  font-family: var(--hc-sans-display);
+  font-weight: 800;
+  font-size: calc(28px * var(--hc-text-scale));
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+  color: var(--hc-ink);
+}
+
+.hc-splash__loading {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: calc(var(--hc-space-lg) + env(safe-area-inset-bottom));
+  margin: 0;
+  text-align: center;
+  font-family: var(--hc-sans);
+  font-size: var(--hc-caption);
+  line-height: var(--hc-caption-line);
+  color: var(--hc-mid);
+}
+
+/* The entrance. The house settles, the welcome follows a beat behind, the
+   loading line arrives last and breathes, and the light crosses the mark at
+   1.9s, still going as the layer starts to leave.
+
+   base.css collapses all of this under Reduce Motion, which leaves the three
+   pieces on screen at once and no light. That is the intended still version,
+   and js/splash.js shortens the hold to match. */
+.hc-splash__mark,
+.hc-splash__greeting,
+.hc-splash__loading { opacity: 0; }
+
+.hc-splash__mark {
+  animation: hc-splash-rise 900ms cubic-bezier(0.16, 0.84, 0.44, 1) 140ms forwards,
+             hc-splash-bloom 1000ms ease-in-out 1900ms;
+}
+
+.hc-splash__greeting {
+  animation: hc-splash-rise 900ms cubic-bezier(0.16, 0.84, 0.44, 1) 460ms forwards;
+}
+
+.hc-splash__loading {
+  animation: hc-splash-fade 700ms ease 1000ms forwards,
+             hc-splash-breathe 2800ms ease-in-out 1800ms infinite;
+}
+
+.hc-splash__gleam {
+  animation: hc-splash-sweep 1000ms cubic-bezier(0.4, 0, 0.3, 1) 1900ms forwards;
+}
+
+@keyframes hc-splash-rise {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes hc-splash-fade { to { opacity: 1; } }
+
+@keyframes hc-splash-breathe {
+  0%, 100% { opacity: 0.45; }
+  50%      { opacity: 0.9; }
+}
+
+/* 100% to 0% and not the other way round. At 100% the gradient sits far
+   enough left that the highlight is off the left edge of the house, so
+   winding it down to 0 walks the light across to the right. */
+@keyframes hc-splash-sweep {
+  0%   { opacity: 0; background-position: 100% 0; }
+  12%  { opacity: 1; }
+  88%  { opacity: 1; }
+  100% { opacity: 0; background-position: 0% 0; }
+}
+
+@keyframes hc-splash-bloom {
+  0%, 100% { filter: none; }
+  50%      { filter: drop-shadow(0 0 7px rgba(215, 186, 133, 0.34)); }
+}
