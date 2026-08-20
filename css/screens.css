@@ -125,11 +125,54 @@
 .hc-latest__desc { margin-top: var(--hc-space-md); }
 .hc-latest__action { margin-top: var(--hc-space-base); }
 
-.hc-series-hero { margin-top: var(--hc-space-base); }
-.hc-series-hero__sub { margin-top: var(--hc-space-md); }
+/* --- The series picker -----------------------------------------------------
+   The rail is the carousel from Home, unchanged, so everything here is about
+   what sits under it: the caption that names whichever series you have landed
+   on, and that series' messages below it. The carousel's own bottom margin is
+   dropped, because the caption belongs to the tile above it and a screenful of
+   air between them would say they were two separate blocks.
+   -------------------------------------------------------------------------- */
+
+.hc-series-picker { margin-top: var(--hc-space-base); }
+.hc-series-picker .hc-carousel { margin-bottom: 0; }
+
+/* The tiles are artwork and nothing else. What names them is the caption, so
+   the slide's only child that takes space is the cover itself. Real series art
+   sits on top of that cover rather than replacing it, which is what makes a
+   photograph that never arrives fall back to the drawn tile underneath. */
+.hc-series-slide { position: relative; }
+.hc-series-slide .hc-cover { width: 100%; }
+
+.hc-series-slide__img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: var(--hc-radius-lg);
+}
+
+.hc-series-slide[data-failed="true"] .hc-series-slide__img { display: none; }
+
+.hc-series-meta { margin-top: var(--hc-space-md); }
+.hc-series-meta__kicker { display: block; }
+.hc-series-meta__title { margin-top: 4px; }
+.hc-series-meta__sub { margin-top: var(--hc-space-sm); }
+.hc-series-meta__count { margin-top: 6px; }
+
+.hc-series-list { margin-top: var(--hc-space-base); }
+
+/* The episode list closes on a hairline of its own and the Archive opens with
+   one. Two rules a thumb's width apart read as a seam rather than as the break
+   between two blocks, so the one underneath goes. */
+.hc-series-picker + .hc-section { border-top: 0; }
 
 .hc-archive-group { margin-top: var(--hc-space-lg); }
 .hc-archive-group__label { display: block; margin-bottom: var(--hc-space-sm); }
+
+/* The archive lives inside a collapsible panel, and the panel already opens a
+   gap of its own above the first thing in it. */
+.hc-section__panel > div > .hc-archive-group:first-child { margin-top: 0; }
 
 .hc-sermon {
   padding: var(--hc-space-base) 0;

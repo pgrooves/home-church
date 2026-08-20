@@ -438,10 +438,15 @@
 
   /* --------------------------------------------------- collapsible section */
 
+  /* opts.anchorId puts a real id on the section itself, which is different
+     from opts.id: that one keys the toggle to its panel. Something outside the
+     section may need to find it on the page, the way the month rail on Listen
+     watches for the Archive to scroll past. */
   function collapsible(opts) {
     var open = opts.open === true;
     return '' +
-      '<section class="hc-section" data-section="' + esc(opts.id) + '">' +
+      '<section class="hc-section" data-section="' + esc(opts.id) + '"' +
+        (opts.anchorId ? ' id="' + esc(opts.anchorId) + '"' : '') + '>' +
         '<h2>' +
           '<button type="button" class="hc-section__toggle" data-action="toggle-section" ' +
             'data-section-id="' + esc(opts.id) + '" aria-expanded="' + (open ? 'true' : 'false') + '" ' +

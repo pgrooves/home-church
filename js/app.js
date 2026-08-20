@@ -592,6 +592,11 @@
       el.setAttribute('aria-expanded', open ? 'false' : 'true');
       var panel = document.getElementById('panel-' + el.getAttribute('data-section-id'));
       if (panel) panel.setAttribute('data-open', open ? 'false' : 'true');
+
+      // The month rail reads the archive out of the page, and a closed archive
+      // has no rows to read. Opening or closing it is the one section toggle
+      // that changes what the rail has to say.
+      if (el.closest('.hc-listen')) HC.dateRail.build(HC.router.current());
     },
 
     'toggle-check': function (el) {
@@ -1459,19 +1464,21 @@
        The showing slide is the one whose left edge is nearest the scroller's,
        measured rather than divided, so it stays right whatever the slides are
        sized at and whichever way the writing runs. */
-    function paintDots(rail) {
+    function showingSlide(rail) {
       var slides = rail.firstElementChild ? rail.firstElementChild.children : [];
-      var dots = rail.parentNode ? rail.parentNode.querySelectorAll('[data-dot]') : [];
-      if (!slides.length || !dots.length) return;
-
-      var best = 0;
+      var best = -1;
       var bestGap = Infinity;
       for (var i = 0; i < slides.length; i++) {
         var gap = Math.abs(slides[i].offsetLeft - rail.scrollLeft);
         if (gap < bestGap) { bestGap = gap; best = i; }
       }
+      return best;
+    }
+
+    function paintDots(rail, index) {
+      var dots = rail.parentNode ? rail.parentNode.querySelectorAll('[data-dot]') : [];
       for (var d = 0; d < dots.length; d++) {
-        if (d === best) dots[d].setAttribute('data-on', 'true');
+        if (d === index) dots[d].setAttribute('data-on', 'true');
         else dots[d].removeAttribute('data-on');
       }
     }
@@ -1484,7 +1491,17 @@
       dotsPending = true;
       window.requestAnimationFrame(function () {
         dotsPending = false;
-        paintDots(rail);
+        var index = showingSlide(rail);
+        if (index < 0) return;
+        paintDots(rail, index);
+
+        /* A picker rather than a gallery: the series rail on Listen changes
+           what is drawn under it, so it is told where it landed as well as
+           having its dots painted. The screen ignores the frames where the
+           slide has not actually changed, which is nearly all of them. */
+        if (rail.hasAttribute('data-series-rail') && HC.screens.listenHelpers) {
+          HC.screens.listenHelpers.selectSeries(rail, index);
+        }
       });
     }, true);
 

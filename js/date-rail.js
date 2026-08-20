@@ -11,6 +11,10 @@
    only in order inside a group and the same month can come round twice. Page
    order is the one order the rail can be right about, so page order is what it
    uses.
+
+   The archive itself now folds away, and it starts folded. Reading the page is
+   what makes that free: a closed archive has no rows to find, so the rail puts
+   itself away until somebody opens it. See build().
    ========================================================================== */
 
 (function (HC) {
@@ -162,8 +166,14 @@
   function build(route) {
     var isListen = route && route.name === 'listen';
     anchor = isListen ? document.getElementById('hc-archive-start') : null;
-    var rows = isListen
-      ? document.querySelectorAll('.hc-archive-group .hc-sermon[data-date]')
+
+    /* The archive is collapsed until somebody opens it, and a closed archive is
+       a list of rows that measure nothing: every month would sit at the same
+       point on the page and a tap would land nowhere. So the rail waits for it,
+       and js/app.js rebuilds this the moment the chevron is used. */
+    var open = !!anchor && !anchor.querySelector('.hc-section__panel[data-open="false"]');
+    var rows = open
+      ? anchor.querySelectorAll('.hc-archive-group .hc-sermon[data-date]')
       : [];
 
     stops = [];
