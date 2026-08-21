@@ -29,6 +29,9 @@ Three things the shipped one does differently, all found by building it:
   re-reads the page on a `MutationObserver`, keeps the notches it has when the
   headings have not changed, and defers the re-read while a thumb is down. The
   mockup's page never changes underneath it, so it never had to learn this.
+  This is what the Group tab's notches were failing on: the room is the one
+  screen in the app that redraws itself every eight seconds whether or not
+  anybody has touched it.
 
 ## What it shows
 
