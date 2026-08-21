@@ -1070,12 +1070,18 @@
 .hc-room-bar__live--stale::before { background: var(--hc-warning); }
 
 .hc-room-guide { margin-bottom: var(--hc-space-lg); }
-.hc-room-guide__title {
+.hc-room-guide__title,
+.hc-room-questions__title {
   margin: var(--hc-space-xs) 0 var(--hc-space-xs);
   font-family: var(--hc-serif);
   font-size: calc(23px * var(--hc-text-scale));
   line-height: 1.2;
 }
+
+/* The questions are named the same way the sermon above them is, so the two
+   read as one page. Only the breathing room differs: this one opens a part of
+   the room rather than closing a card. */
+.hc-room-questions__title { margin: var(--hc-space-lg) 0 0; }
 
 /* --- the host's report queue --------------------------------------------- */
 /* Warning coloured, not danger coloured. A report is something to look at,
@@ -1327,6 +1333,8 @@
 .hc-prayers .hc-note { background: var(--hc-paper); border-left-color: var(--hc-accent-deep); }
 
 .hc-room-code { margin-top: var(--hc-space-lg); text-align: center; }
+/* Read out at the door rather than found at the end of the night. */
+.hc-room-code--top { margin-top: 0; margin-bottom: var(--hc-space-lg); }
 .hc-room-code__digits {
   margin: var(--hc-space-sm) 0 0;
   font-family: var(--hc-sans-display);
