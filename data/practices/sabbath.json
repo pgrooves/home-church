@@ -1,0 +1,21 @@
+{
+  "schema": 1,
+  "slug": "sabbath",
+  "title": "Sabbath",
+  "icon": "practiceSabbath",
+  "source": {
+    "site": "https://practicingtheway.org/sabbath",
+    "playlistId": "PL6zls_4DoKIxWQnGB_MA639KE4GZzrKK6",
+    "playlistVia": null,
+    "generatedAt": null
+  },
+  "intro": [],
+  "sessions": [],
+  "extras": [],
+  "flags": [
+    {
+      "kind": "not-yet-generated",
+      "detail": "Placeholder. No content has been pulled for this practice yet. Run `node scripts/build_practices.js --report sabbath`, read the mapping, then re-run with --write to replace this file."
+    }
+  ]
+}

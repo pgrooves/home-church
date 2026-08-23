@@ -1,0 +1,21 @@
+{
+  "schema": 1,
+  "slug": "service",
+  "title": "Service",
+  "icon": "practiceService",
+  "source": {
+    "site": "https://practicingtheway.org/service",
+    "playlistId": "PL6zls_4DoKIyLOoVi26-SS5eTNmX2e31g",
+    "playlistVia": null,
+    "generatedAt": null
+  },
+  "intro": [],
+  "sessions": [],
+  "extras": [],
+  "flags": [
+    {
+      "kind": "not-yet-generated",
+      "detail": "Placeholder. No content has been pulled for this practice yet. Run `node scripts/build_practices.js --report service`, read the mapping, then re-run with --write to replace this file."
+    }
+  ]
+}

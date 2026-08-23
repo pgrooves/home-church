@@ -1,0 +1,21 @@
+{
+  "schema": 1,
+  "slug": "witness",
+  "title": "Witness",
+  "icon": "practiceWitness",
+  "source": {
+    "site": "https://practicingtheway.org/witness",
+    "playlistId": "PL6zls_4DoKIx3qL8Fqbg5m1lNPczkPNky",
+    "playlistVia": null,
+    "generatedAt": null
+  },
+  "intro": [],
+  "sessions": [],
+  "extras": [],
+  "flags": [
+    {
+      "kind": "not-yet-generated",
+      "detail": "Placeholder. No content has been pulled for this practice yet. Run `node scripts/build_practices.js --report witness`, read the mapping, then re-run with --write to replace this file."
+    }
+  ]
+}

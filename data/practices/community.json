@@ -1,0 +1,21 @@
+{
+  "schema": 1,
+  "slug": "community",
+  "title": "Community",
+  "icon": "practiceCommunity",
+  "source": {
+    "site": "https://practicingtheway.org/community",
+    "playlistId": "PL6zls_4DoKIxayL6ukxEs-GBjN0JUCoB3",
+    "playlistVia": null,
+    "generatedAt": null
+  },
+  "intro": [],
+  "sessions": [],
+  "extras": [],
+  "flags": [
+    {
+      "kind": "not-yet-generated",
+      "detail": "Placeholder. No content has been pulled for this practice yet. Run `node scripts/build_practices.js --report community`, read the mapping, then re-run with --write to replace this file."
+    }
+  ]
+}

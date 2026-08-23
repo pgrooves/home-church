@@ -1,0 +1,207 @@
+/* ==========================================================================
+   Home Church, Practices
+   Two screens. A grid of nine, and one page that every one of the nine is
+   drawn with.
+
+   THE PART WORTH BEING STUBBORN ABOUT. There is one practice page in this
+   file, not nine. Every practice puts its own data through the same function
+   and comes out in the same order: the overview, then each session in
+   sequence with its video, its teaching, and the thing it asks you to go and
+   do, then whatever else is in the playlist, then where it all came from.
+   Sabbath has more to say than Witness does and it still says it in the same
+   shape and the same order, because somebody moving between them should be
+   learning the practice rather than relearning the page. A ninth custom
+   layout is not a feature, it is nine places to fix the next change.
+
+   NAVIGATION. The grid is a stop, like the Journal and Give: it sits behind
+   ••• and a sideways drag reaches it, so it has the logo and no back arrow. A
+   practice is a pushed view, so it gets the arrow by the thumb at the bottom
+   left, which is the shell's and not this file's. See paintDiscs() in
+   js/app.js.
+
+   VIDEO. Everything plays inside the app. There is no link out to YouTube on
+   this screen or anywhere else in it, which is why js/practices.js drops a
+   video whose owner has disabled embedding rather than degrading it into one.
+   ========================================================================== */
+
+(function (HC) {
+  'use strict';
+
+  var c = HC.components;
+
+  /* ------------------------------------------------------------- the grid */
+
+  function tile(p) {
+    return '' +
+      '<button type="button" class="hc-practice-tile" data-action="go-practice" ' +
+          'data-id="' + c.esc(p.slug) + '">' +
+        '<span class="hc-practice-tile__disc" aria-hidden="true">' +
+          c.icon(p.icon, 'hc-practice-tile__icon') +
+        '</span>' +
+        '<span class="hc-practice-tile__label">' + c.esc(p.title) + '</span>' +
+      '</button>';
+  }
+
+  function grid() {
+    var all = HC.practices.list();
+    var html = '<div class="hc-screen hc-practices">';
+
+    html += c.sectionHeader('Practices', 'Nine ways in', { flush: true, tag: 'h1' });
+
+    html += '<p class="hc-body-serif hc-practices__lede">' +
+      'Nine practices of Jesus, each one a few short sessions with something to ' +
+      'go and do. Start anywhere. They are meant to be lived rather than ' +
+      'finished.</p>';
+
+    if (!all.length) {
+      /* Before the index has landed this is a blank half second, and after a
+         build that forgot to ship data/ it is forever. The empty state covers
+         both without claiming to know which, and HC.practices.ready() is what
+         separates "not yet" from "not there". */
+      html += c.emptyState(
+        HC.practices.ready()
+          ? 'The practices could not be loaded. Reopening the app usually sorts it.'
+          : 'Loading the practices...',
+        'leaf'
+      );
+    } else {
+      html += '<div class="hc-practice-grid">' + all.map(tile).join('') + '</div>';
+    }
+
+    return c.el(html + '</div>');
+  }
+
+  /* -------------------------------------------------------------- a video
+
+     A poster with a play badge, and the real player only once somebody has
+     asked for it. Not a lazy loading trick: a practice page can carry six or
+     more videos and six YouTube iframes on one screen is several megabytes
+     and a visibly slower page, on a phone, for five videos nobody has tapped.
+
+     The poster uses the same play badge every other piece of media in this app
+     uses, so tapping it does what tapping those does. What it must never do is
+     leave: see the note at the top of this file, and the swap in js/app.js. */
+
+  function video(v, label) {
+    if (!v) return '';
+    var meta = [label, v.duration].filter(Boolean).join('  ·  ');
+    return '' +
+      '<div class="hc-video" data-video="' + c.esc(v.videoId) + '">' +
+        /* data-media-fallback hands this to the image error listener in
+           js/app.js, the same one the Instagram rail and the series carousel
+           use. A thumbnail comes from YouTube, so it is the one thing on this
+           page that needs a network, and a phone in a basement should get the
+           cream block and the play badge rather than the web view's broken
+           image glyph. The video behind it is no less playable for it. */
+        '<button type="button" class="hc-video__poster" data-media-fallback ' +
+            'data-action="play-video" ' +
+            'data-id="' + c.esc(v.videoId) + '" ' +
+            'aria-label="Play ' + c.esc(v.title || 'the video') + '">' +
+          '<img class="hc-video__thumb" src="' + c.esc(v.thumbnail) + '" alt="" ' +
+            'loading="lazy" aria-hidden="true">' +
+          c.playBadge() +
+        '</button>' +
+        (meta ? '<p class="hc-caption hc-video__meta">' + c.esc(meta) + '</p>' : '') +
+      '</div>';
+  }
+
+  /* ------------------------------------------------------------- one page */
+
+  function session(s, practice) {
+    var html = '<section class="hc-practice-session">';
+
+    html += '' +
+      '<header class="hc-practice-session__head">' +
+        '<span class="hc-eyebrow">Session ' + c.esc(String(s.number)) + '</span>' +
+        '<h2 class="hc-practice-session__title">' + c.esc(s.title) + '</h2>' +
+        '<div class="hc-practice-session__rule" aria-hidden="true"></div>' +
+      '</header>';
+
+    // Video, then teaching, then the action step. The same three, in this
+    // order, on all nine pages. A session missing one of them simply skips it
+    // rather than shuffling the other two up into a different shape.
+    html += video(s.video, 'Session ' + s.number);
+
+    s.teaching.forEach(function (p) {
+      html += '<p class="hc-body-serif hc-practice-session__p">' + c.esc(p) + '</p>';
+    });
+
+    if (s.practice) {
+      html += '' +
+        '<div class="hc-practice-step">' +
+          '<span class="hc-eyebrow hc-practice-step__label">Practice</span>' +
+          '<p class="hc-practice-step__text">' + c.esc(s.practice) + '</p>' +
+        '</div>';
+    }
+
+    return html + '</section>';
+  }
+
+  function page(route) {
+    var slug = route.id;
+    var p = HC.practices.get(slug);
+    var html = '<div class="hc-screen hc-practice">';
+
+    if (!p) {
+      var err = HC.practices.failed(slug);
+      html += c.sectionHeader('Practices', 'Practice', { flush: true, tag: 'h1' });
+      html += c.emptyState(
+        err ? err.message : 'Loading...',
+        'leaf'
+      );
+      return c.el(html + '</div>');
+    }
+
+    /* 1. Who this is. The same header on every one of the nine. */
+    html += c.sectionHeader('Practices', p.title, { flush: true, tag: 'h1' });
+
+    /* A file that exists but has nothing in it yet. Saying so is the whole
+       job here: an empty page reads as a bug, and inventing something to fill
+       it would be very much worse, because nobody downstream could tell it
+       from the real thing. See the stub in scripts/build_practices.js. */
+    if (p.pending) {
+      html += '<p class="hc-body-serif hc-practice__p">' +
+        'This practice has not been added yet. Its sessions and videos are on ' +
+        'their way.</p>';
+      return c.el(html + '</div>');
+    }
+
+    /* 2. The overview. */
+    p.intro.forEach(function (para) {
+      html += '<p class="hc-body-serif hc-practice__p">' + c.esc(para) + '</p>';
+    });
+
+    /* 3. Every session, in order, in the same shape. */
+    p.sessions.forEach(function (s) { html += session(s, p); });
+
+    /* 4. Whatever else was in the playlist. A trailer, a Q&A, a conversation.
+          Kept, and kept down here under its own heading, so that nothing in
+          the run of sessions above is something the site never taught. */
+    if (p.extras.length) {
+      html += c.sectionHeader('Also in this series', 'More to watch');
+      html += '<div class="hc-practice-extras">';
+      p.extras.forEach(function (v) {
+        html += '<div class="hc-practice-extra">' +
+          video(v, '') +
+          '<p class="hc-practice-extra__title">' + c.esc(v.title) + '</p>' +
+        '</div>';
+      });
+      html += '</div>';
+    }
+
+    /* 5. Where it came from. Last on every page, for the same reason the
+          effective date is at the top of the privacy policy: these are
+          somebody else's words and videos, and the app should say so without
+          being asked. */
+    html += '<p class="hc-caption hc-practice__source">' +
+      'Sessions and teaching from Practicing the Way. Videos from their ' +
+      'YouTube channel, played here inside the app.</p>';
+
+    return c.el(html + '</div>');
+  }
+
+  HC.screens = HC.screens || {};
+  HC.screens.practices = grid;
+  HC.screens.practice = page;
+
+})(window.HC = window.HC || {});

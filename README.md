@@ -155,6 +155,61 @@ matches its title is fine and nobody sees it.
 
 -----
 
+## The Practices
+
+Nine practices behind the ••• menu: Sabbath, Prayer, Fasting, Solitude,
+Scripture, Community, Generosity, Service, Witness. A grid of nine, and one
+page that all nine are drawn with, so they stay in the same order and the same
+shape as each other however much or little any one of them has to say.
+
+**These are the one piece of content that does not live in Supabase.** The
+words come from practicingtheway.org and the videos from their playlists.
+Neither belongs to this church, neither changes weekly, and neither is
+something anybody here should be editing in a table at midnight. So they are
+generated once into `data/practices/*.json`, reviewed by a person, and
+committed. The app reads those files and nothing else: it never scrapes that
+site and never calls the YouTube API on anybody's phone.
+
+To generate them:
+
+```
+export YOUTUBE_API_KEY=...              # or have yt-dlp on PATH
+npm run practices -- --report           # propose the mapping, write nothing
+npm run practices -- --write            # once the mapping looks right
+```
+
+`--report` is the default and `--write` has to be asked for on purpose. The
+reason is the mapping. A playlist is not guaranteed to line up with the site's
+sessions, and one of these has thirteen videos against four written sessions,
+so the script proposes pairings, marks each one `certain` or `GUESSED`, lists
+what did not map at all, and prints every flag it raised. A guessed pairing
+baked into a data file is invisible from then on: it does not fail, it just
+shows the wrong video under the wrong session forever. Read the report.
+
+Flags also travel into the file itself, so whoever opens one in six months
+sees the same warnings as the person who generated it. Promotional and
+seasonal copy on the site, book preorders in particular, is flagged and kept
+out of the data rather than pulled into the app verbatim.
+
+If the site or YouTube cannot be reached from the machine doing the build,
+both inputs can be handed over from disk instead:
+
+```
+yt-dlp --flat-playlist -J "https://www.youtube.com/playlist?list=PL..." > sabbath.pl.json
+npm run practices -- --write sabbath --html sabbath.html --playlist-json sabbath.pl.json
+```
+
+`npm run practices -- --stub` writes placeholders with no content and no
+network, which is what ships until a real run replaces them. A practice with a
+placeholder file says so on its page rather than rendering an empty one.
+
+Video plays inside the app, in an iframe, and there is no link out to YouTube
+anywhere on these screens. A video whose owner has disabled embedding is
+dropped rather than degraded into one, and the build flags it so somebody can
+still do something about it.
+
+-----
+
 ## Publishing content without an App Store build
 
 Guides, events, podcast episodes, and future content types have a home in

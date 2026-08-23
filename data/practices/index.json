@@ -1,0 +1,50 @@
+{
+  "schema": 1,
+  "practices": [
+    {
+      "slug": "sabbath",
+      "title": "Sabbath",
+      "icon": "practiceSabbath"
+    },
+    {
+      "slug": "prayer",
+      "title": "Prayer",
+      "icon": "practicePrayer"
+    },
+    {
+      "slug": "fasting",
+      "title": "Fasting",
+      "icon": "practiceFasting"
+    },
+    {
+      "slug": "solitude",
+      "title": "Solitude",
+      "icon": "practiceSolitude"
+    },
+    {
+      "slug": "scripture",
+      "title": "Scripture",
+      "icon": "practiceScripture"
+    },
+    {
+      "slug": "community",
+      "title": "Community",
+      "icon": "practiceCommunity"
+    },
+    {
+      "slug": "generosity",
+      "title": "Generosity",
+      "icon": "practiceGenerosity"
+    },
+    {
+      "slug": "service",
+      "title": "Service",
+      "icon": "practiceService"
+    },
+    {
+      "slug": "witness",
+      "title": "Witness",
+      "icon": "practiceWitness"
+    }
+  ]
+}

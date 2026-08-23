@@ -46,6 +46,12 @@
      whole reason the ••• tile stopped pushing a screen. */
   var MODULES = [
     {
+      route: 'practices',
+      icon: 'practiceSabbath',
+      title: 'Practices',
+      sub: 'Nine practices of Jesus, a few sessions each.'
+    },
+    {
       route: 'journal',
       icon: 'journal',
       title: 'Journal',
@@ -68,7 +74,10 @@
      time you are in one rather than fading out the way it does for a pushed
      view like Your account. journal-entry is in here because it is opened
      from a module and belongs to it. */
-  var MODULE_ROUTES = ['more', 'journal', 'journal-entry', 'give'];
+  /* `practice` is in here for the same reason journal-entry is: it is opened
+     from a module and belongs to it, so the ••• tile stays lit while you are
+     reading one rather than going dark the moment you tap into a practice. */
+  var MODULE_ROUTES = ['more', 'practices', 'practice', 'journal', 'journal-entry', 'give'];
 
   var TITLES = {
     home: 'Home',
@@ -77,6 +86,10 @@
     group: 'Group',
     connect: 'Connect',
     more: 'More',
+    practices: 'Practices',
+    // Replaced with the practice's own name once its file has loaded, see
+    // emitViewChange below. This is what the bar carries until then.
+    practice: 'Practice',
     give: 'Give',
     journal: 'Journal',
     'journal-entry': 'Your entry',
@@ -281,7 +294,18 @@
        takes you straight back out. Only a genuinely pushed view, an entry, a
        guide, Your account, carries the arrow and the title. */
     back.hidden = isTop;
-    title.textContent = TITLES[route.name] || '';
+
+    /* Every pushed view but one takes its title from the table above. A
+       practice page is the exception: nine pages share one route, so "Practice"
+       in the bar over a page headed Sabbath is a small thing that reads as a
+       mistake. The practice's own name goes up as soon as its file is in hand,
+       and the generic title stands in for the half second before that. */
+    var named = TITLES[route.name] || '';
+    if (route.name === 'practice' && HC.practices) {
+      var here = HC.practices.get(route.id);
+      if (here && here.title) named = here.title;
+    }
+    title.textContent = named;
 
     // The logo only ever appears on a stop, sliding to center once scrolled.
     // A pushed view has no room for it, back arrow and title fill that slot.
@@ -697,6 +721,55 @@
        Same shape as the Group tab's handlers: ask js/journal.js to do the
        thing, repaint, say something human. Nothing here touches storage
        directly and nothing here decides what an entry is. */
+
+    /* ------------------------------------------------------- the Practices */
+
+    'go-practice': function (el) {
+      HC.router.go({ name: 'practice', id: el.getAttribute('data-id') });
+    },
+
+    /* Swap the poster for the real player.
+
+       THE RULE THIS KEEPS. Video in this app plays in this app. Not a link,
+       not @capacitor/browser, not a deep link that hands somebody to the
+       YouTube app and loses them: an iframe, here, inside the page they were
+       already reading. js/practices.js drops a video that cannot be embedded
+       rather than degrading it into a link out, and this is the other half of
+       that promise.
+
+       The poster is what gets replaced rather than the whole block, so the
+       running time under it survives. And the id is checked against what a
+       YouTube id can actually be before it goes anywhere near a URL: it comes
+       out of a generated file, which is a file in this repo, but a value that
+       reaches an iframe src deserves the check whatever its provenance. */
+    'play-video': function (el) {
+      var wrap = el.closest('[data-video]');
+      var poster = wrap && wrap.querySelector('.hc-video__poster');
+      if (!poster) return;
+
+      var id = el.getAttribute('data-id') || '';
+      if (!/^[A-Za-z0-9_-]{11}$/.test(id)) {
+        c.toast('That video is unavailable.');
+        return;
+      }
+
+      HC.native.tap('Light');
+
+      /* playsinline is the one parameter that is not a preference. Without it
+         iOS takes the video full screen the instant it starts, which is the
+         same experience as leaving the app wearing a different coat. */
+      var src = 'https://www.youtube.com/embed/' + id +
+        '?autoplay=1&playsinline=1&rel=0&modestbranding=1';
+
+      poster.outerHTML = '' +
+        '<div class="hc-video__frame">' +
+          '<iframe class="hc-video__iframe" src="' + src + '" ' +
+            'title="' + c.esc(el.getAttribute('aria-label') || 'Video') + '" ' +
+            'allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" ' +
+            'allowfullscreen referrerpolicy="strict-origin-when-cross-origin" ' +
+            'loading="lazy"></iframe>' +
+        '</div>';
+    },
 
     'go-journal': function () {
       HC.router.go({ name: 'journal' });
@@ -2103,6 +2176,8 @@
         group: HC.screens.group,
         connect: HC.screens.connect,
         more: HC.screens.more,
+        practices: HC.screens.practices,
+        practice: HC.screens.practice,
         journal: HC.screens.journal,
         'journal-entry': HC.screens.journalEntry,
         give: HC.screens.give,
@@ -2151,6 +2226,24 @@
        self-reflection answers across on the first launch that sees them, and
        adopts anything written signed out when somebody signs in. */
     HC.journal.init();
+
+    /* The nine practices. index.json comes down now so the grid is ready
+       before anybody swipes to it; each practice's own file waits until its
+       page is opened. Neither blocks anything, and a screen that asked for
+       something still on its way repaints when it lands. */
+    HC.practices.init();
+    HC.store.on('practices', function () {
+      var route = HC.router.current();
+      if (!route) return;
+      if (route.name !== 'practices' && route.name !== 'practice') return;
+      /* replace, never push. This is a repaint of the screen somebody is
+         already looking at, not a place they went, and pushing here puts a
+         second identical entry on the stack: the back arrow then takes one
+         tap to go from a practice to the same practice and a second to
+         actually leave it. */
+      HC.router.go(Object.assign({}, route, { restore: true }),
+                   { force: true, animate: false, replace: true });
+    });
 
     /* Selecting words in a guide. Wired after the router so the reader it
        listens to already exists, and it listens to the document rather than

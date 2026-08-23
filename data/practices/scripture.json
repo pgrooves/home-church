@@ -1,0 +1,21 @@
+{
+  "schema": 1,
+  "slug": "scripture",
+  "title": "Scripture",
+  "icon": "practiceScripture",
+  "source": {
+    "site": "https://practicingtheway.org/scripture",
+    "playlistId": "PL6zls_4DoKIy5VUZrhMOCu62vWKa_-2RL",
+    "playlistVia": null,
+    "generatedAt": null
+  },
+  "intro": [],
+  "sessions": [],
+  "extras": [],
+  "flags": [
+    {
+      "kind": "not-yet-generated",
+      "detail": "Placeholder. No content has been pulled for this practice yet. Run `node scripts/build_practices.js --report scripture`, read the mapping, then re-run with --write to replace this file."
+    }
+  ]
+}

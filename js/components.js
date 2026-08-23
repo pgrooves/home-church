@@ -219,7 +219,83 @@
        doc glyph's cousin rather than a second notebook: `guide` is already a
        book and these two must not read as the same tile in a list. */
     journal: '<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/>' +
-             '<path d="M14 3v5h5"/><path d="M8.5 13h7M8.5 16.5h4.5"/>'
+             '<path d="M14 3v5h5"/><path d="M8.5 13h7M8.5 16.5h4.5"/>',
+
+    /* The nine practices, for the grid behind •••. Same 24 grid, same 1.5
+       stroke, same rounded caps as everything above, because they sit in the
+       same app and a second visual language for one screen is how a design
+       system starts coming apart.
+
+       They are drawn to be told apart at 30px in a three by three grid, which
+       is a harder constraint than it sounds: the nine are read side by side
+       rather than one at a time, so the test each one has to pass is not "is
+       this legible" but "is this the only thing in the grid it could be".
+       That is what settled several of them. Fasting is a plate, two concentric
+       circles, and Service is a basin, a half bowl, because an empty bowl for
+       both would have been two of the same drawing. Generosity keeps a heart
+       even though Give already has one, since generosity and giving really are
+       the same idea and pretending otherwise would have cost the clearer
+       glyph; Give's heart fills its grid and this one is small and held, so
+       they do not collide anywhere they actually appear together. */
+
+    // Sundown, and the work stops. A setting sun on the horizon rather than a
+    // crescent: rest at the end of a day of labour is the thing being named.
+    practiceSabbath: '<path d="M3.5 18.5h17"/>' +
+                     '<path d="M7.5 18.5a4.5 4.5 0 0 1 9 0"/>' +
+                     '<path d="M12 5v2.4"/><path d="M5.9 7.9 7.6 9.6"/>' +
+                     '<path d="M18.1 7.9 16.4 9.6"/>',
+
+    /* Two hands together. The splay at the bottom is the whole drawing: with
+       the heels of the hands closed this is a leaf, and with them apart it is
+       a pair of hands. Six versions of this were rendered at 30px before that
+       was obvious, so it is written down rather than left to be rediscovered. */
+    practicePrayer: '<path d="M12 2.9C9.3 5.9 7.5 9 7 12.5l-.6 3.9a1.9 1.9 0 0 0 1.6 2.2l1.9.3a1.9 1.9 0 0 0 2.1-1.6z"/>' +
+                    '<path d="M12 2.9c2.7 3 4.5 6.1 5 9.6l.6 3.9a1.9 1.9 0 0 1-1.6 2.2l-1.9.3a1.9 1.9 0 0 1-2.1-1.6z"/>',
+
+    // An empty plate. Nothing on it is the whole point, so nothing is on it.
+    practiceFasting: '<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.5"/>',
+
+    // A door standing open, which is Matthew 6:6 rather than a metaphor we
+    // reached for: go into your room and shut the door.
+    practiceSolitude: '<path d="M4 20.5h16"/>' +
+                      '<path d="M7 20.5V4.9a1 1 0 0 1 1.2-1l6.6-1.4a1 1 0 0 1 1.2 1v17z"/>' +
+                      '<circle cx="13.4" cy="12" r="0.9"/>',
+
+    // An open book. Two page curves and a spine, which is a different drawing
+    // from `book` above, two rounded panels, and from `guide`, a closed one.
+    practiceScripture: '<path d="M12 7.2C10.4 5.6 8 5 4.5 5.2v12C8 17 10.4 17.6 12 19.2"/>' +
+                       '<path d="M12 7.2C13.6 5.6 16 5 19.5 5.2v12C16 17 13.6 17.6 12 19.2"/>' +
+                       '<path d="M12 7.2v12"/>',
+
+    // Three, joined. A ring rather than a row, because a row of people is a
+    // queue and a ring is a table.
+    practiceCommunity: '<circle cx="12" cy="5.6" r="2.4"/>' +
+                       '<circle cx="5.8" cy="16.4" r="2.4"/>' +
+                       '<circle cx="18.2" cy="16.4" r="2.4"/>' +
+                       '<path d="M10.3 7.7 7.5 14.3"/><path d="m13.7 7.7 2.8 6.6"/>' +
+                       '<path d="M8.2 16.4h7.6"/>',
+
+    /* A hand seen side on, holding something out. Drawn from the side rather
+       than as a palm-up arc, because an arc under a small shape is a smiling
+       face and nothing could talk it out of it. The heart is deliberate even
+       though Give has one: generosity and giving are the same idea, and the
+       clearer glyph was worth more than the separation. */
+    practiceGenerosity: '<path d="M4.6 14.6 8 11.2a2 2 0 0 1 1.4-.6h6.2a2.4 2.4 0 0 1 0 4.8H11"/>' +
+                        '<path d="M4.6 14.6 8 18h7a2.4 2.4 0 0 0 2.4-2.4"/>' +
+                        '<path d="M12 8.4s-2.6-1.7-2.6-3.3a1.45 1.45 0 0 1 2.6-.85 1.45 1.45 0 0 1 2.6.85c0 1.6-2.6 3.3-2.6 3.3z"/>',
+
+    /* A basin with a towel over the rim. John 13, and the one image the church
+       already uses for this without anybody having to be told. The towel hangs
+       over the edge rather than standing up inside the bowl, which was the
+       first attempt and read as a spoon. */
+    practiceService: '<path d="M3.6 13h16.8a8.4 8.4 0 0 1-8.4 7.6A8.4 8.4 0 0 1 3.6 13z"/>' +
+                     '<path d="M4.8 11.2h4.6v7.4a2.3 2.3 0 0 1-4.6 0z"/>',
+
+    /* A flame, with the second flame inside it that every fire glyph has. The
+       first attempt put a narrow flame on a candle stand and it read as a wine
+       glass, which is a long way from what this practice is about. */
+    practiceWitness: '<path d="M12 3c3.5 3.6 5.5 6.2 5.5 9.1a5.5 5.5 0 1 1-11 0C6.5 9.2 8.5 6.6 12 3z"/>' +
+                     '<path d="M12 17.6a2.4 2.4 0 0 1-2.4-2.4c0-1.3.8-2.1 2.4-3.9 1.6 1.8 2.4 2.6 2.4 3.9a2.4 2.4 0 0 1-2.4 2.4z"/>'
   };
 
   /* ------------------------------------------------------------ brand marks

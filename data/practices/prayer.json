@@ -1,0 +1,21 @@
+{
+  "schema": 1,
+  "slug": "prayer",
+  "title": "Prayer",
+  "icon": "practicePrayer",
+  "source": {
+    "site": "https://practicingtheway.org/prayer",
+    "playlistId": "PL6zls_4DoKIx8AMvLlTyYFcq0HVQ7PcBv",
+    "playlistVia": null,
+    "generatedAt": null
+  },
+  "intro": [],
+  "sessions": [],
+  "extras": [],
+  "flags": [
+    {
+      "kind": "not-yet-generated",
+      "detail": "Placeholder. No content has been pulled for this practice yet. Run `node scripts/build_practices.js --report prayer`, read the mapping, then re-run with --write to replace this file."
+    }
+  ]
+}
