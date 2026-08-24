@@ -161,8 +161,22 @@ grant all on public.text_overrides to service_role;
    church's words and the only thing between it and them is RLS. RLS does hold
    here, because every write policy above names `authenticated` and anon
    matches none of them. This is the second lock, per 0001 section 8: two
-   independent things now have to be wrong rather than one. */
-revoke insert, update, delete on public.text_overrides from anon;
+   independent things now have to be wrong rather than one.
+
+   TRUNCATE IS IN THE LIST AND IS NOT PADDING. Every other revoke in this
+   project names insert, update and delete, and the default grant is ALL, so
+   every content table in this database currently hands anon TRUNCATE as well.
+   RLS does not apply to TRUNCATE. There is no policy that would stop it and no
+   row filter that would soften it: the privilege is the whole of the check,
+   and the statement empties the table. Nothing in PostgREST can issue one
+   today, which is why this has sat there harmlessly since 0001, but "the API
+   in front of it happens not to expose the verb" is a different kind of safety
+   than "the role cannot do it", and only the second one survives somebody
+   adding an RPC. The other fifteen tables want the same line; that is a
+   separate change and not this migration's to make. */
+revoke insert, update, delete, truncate on public.text_overrides from anon, authenticated;
+-- Put back the three an admin session genuinely needs. Truncate is not one.
+grant insert, update, delete on public.text_overrides to authenticated;
 
 
 -- ---------------------------------------------------------------------------
@@ -197,9 +211,9 @@ revoke insert, update, delete on public.text_overrides from anon;
 --
 -- NOTE ON church_profile. 0006 marked this table neverEmpty in the app
 -- because four screens dereference it, and nothing here changes that: the
--- grant is on two prose columns, the tagline and the serve signup blurb.
--- The address, the service times and the giving URL are not sentences and are
--- not reachable from Edit mode.
+-- grant is on three prose columns, the tagline, the serve signup blurb and the
+-- between seasons note. The address, the service times and the giving URL are
+-- not sentences and are not reachable from Edit mode.
 -- ---------------------------------------------------------------------------
 
 do $$

@@ -249,6 +249,27 @@ begin;
   select t_raises('and cannot delete one either',
     $$delete from public.text_overrides where slot = 'test.public'$$,
     '42501');
+
+  /* TRUNCATE, which is the one write RLS has nothing to say about. There is
+     no policy that applies to it and no row filter that softens it: holding
+     the privilege is the whole of the check, and the statement empties the
+     table. Supabase's default privileges hand it to anon on every new table
+     in the public schema, so this passes only because 0030 revokes it by
+     name. Nothing in PostgREST can issue one today; this is about the role
+     not being able to, rather than the API happening not to ask. */
+  select t_raises('and cannot empty the table wholesale',
+    $$truncate public.text_overrides$$,
+    '42501');
+commit;
+
+begin;
+  set local role authenticated;
+  set local request.jwt.claims = '{"sub":"cc000000-0000-0000-0000-000000000001"}';
+
+  -- Nor can an admin, who has every other write on this table.
+  select t_raises('nor can an admin, who can write every row in it one by one',
+    $$truncate public.text_overrides$$,
+    '42501');
 commit;
 
 select t_check('the sentence survived the stranger',
