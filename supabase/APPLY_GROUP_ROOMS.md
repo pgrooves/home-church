@@ -1,7 +1,8 @@
 # The group rooms migrations, and what is on the project
 
-`0016` through `0022` are **all applied** to `ibqkumxfltfiuqevviji` ("Home
-Church App"). The Group tab works against the real schema.
+`0016` through `0022`, and `0029`, are **all applied** to
+`ibqkumxfltfiuqevviji` ("Home Church App"). The Group tab works against the
+real schema.
 
 This file was the hand-off prompt for applying `0019`–`0022`. They are applied,
 so it is now the record of what went on and what the verification said, which
@@ -22,32 +23,48 @@ would be a problem.
 | **0020** `group_word_filter` | The Guideline 1.2 posting filter: a slur list, checked on post and on edit. | yes |
 | **0021** `group_answer_index` | Tells the host answers exist without telling them what they say. | yes |
 | **0022** `group_retention_schedule` | Schedules the ninety day sweep. | yes |
-| **0029** `group_room_set_guide` | Lets a host point a room already open at another Sunday's guide. | **no, see below** |
+| **0029** `group_room_set_guide` | Lets a host point a room already open at another Sunday's guide. | yes |
 
 ---
 
-## 0029, which is waiting
+## 0029, and the one thing to know about it
 
-The Group tab can now swipe between Sundays in two places: before a room is
-opened, which needs nothing from the database because `hc_room_open` already
-takes whichever guide it is handed, and inside a room, which needs
-`hc_room_set_guide` and therefore needs this migration run.
+The Group tab swipes between Sundays in two places. Before a room is opened it
+needs nothing from the database, because `hc_room_open` has always taken
+whichever guide it is handed. Inside a room it needs `hc_room_set_guide`, which
+is what this migration adds.
 
-Until it is applied the rail in the room still draws and still swipes, and the
-button on a slide answers "Changing tonight's guide is not switched on for this
-church yet" (`switchGuide` in `js/rooms.js` translates PostgREST's schema cache
-error into that, because the real one is a sentence about a function signature).
-Everything else on the tab is unaffected.
+**Swapping the guide deletes the answers written under the questions it
+replaces.** `group_room_notes.question_id` references the question row `on
+delete cascade`, from 0016, and that is the honest outcome: an answer to a
+question the room is no longer asking has nowhere left to be read, and leaving
+the rows behind would put them on the sheet at the end of the night underneath
+a guide nobody discussed. Prayer requests hang off no question and survive, and
+so do any questions the host added themselves, which are pushed below the new
+guide's rather than interleaved with them.
 
-Apply it the same way as the rest: dashboard, SQL Editor, New query, paste
-`supabase/migrations/0029_group_room_set_guide.sql`, Run. Safe to run more than
-once. `sh supabase/tests/run.sh 0016_group_rooms 0017_group_rooms_grants
-0018_group_rooms_anon 0029_group_room_set_guide` covers it locally first, and
-the thirteen checks in `supabase/tests/0029_group_room_set_guide_test.sql`
-include the one worth reading before you run anything on production: swapping
-the guide **deletes the answers written under the questions it replaces**. The
-prayer requests and the host's own added questions survive; the app asks first,
-with the number in the sentence, whenever there is anything to lose.
+Nothing about that is left to the app to remember. The slide a host swipes to
+carries the count of what would go, taken from the answer index so that
+somebody else's unopened answer is counted too, and the button asks again in a
+dialog naming both that count and anything typed into a box on this phone and
+not yet posted. With nothing written, there is no dialog.
+
+Applied 24 August 2026 with `apply_migration`, recorded as
+`20260824205057_group_room_set_guide`. Verified on the project:
+
+```
+proname            | args                                                        | secdef | anon  | signed_in | public
+hc_room_set_guide  | p_room uuid, p_guide_id text, p_guide_title text, p_questions jsonb | true | false | true      | false
+```
+
+That is the same shape as every other `hc_room_` function and it is what the
+advisor list below counts: one more `security_definer` warning under the
+`authenticated` rule, which is the architecture and not a finding.
+
+Locally, `sh supabase/tests/run.sh` covers it with thirteen checks in
+`supabase/tests/0029_group_room_set_guide_test.sql`, including that the host's
+own question survives and lands last, that the prayer requests are untouched,
+that a member is refused, and that a closed room cannot be repointed.
 
 ---
 
