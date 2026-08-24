@@ -2208,7 +2208,12 @@ a.hc-card:active { background: var(--hc-paper-sunk); }
 
   /* The notches are drawn, never touched. The gesture is read off .hc-scroll,
      which is what leaves the right edge available to the tab swipe as well.
-     See the note at the top of js/index-rail.js. */
+     See the note at the top of js/index-rail.js.
+
+     So this width is how wide the ruler looks, not how far in a thumb has to
+     land to work it. That is HOT_DRAG in js/index-rail.js, and it is wider
+     than this on purpose: few people scrub the actual glass edge. Widening
+     this instead would only draw longer marks. */
   pointer-events: none;
 }
 

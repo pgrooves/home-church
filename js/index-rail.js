@@ -59,7 +59,25 @@
 
   /* --- the numbers, all of them, in one place --------------------------- */
 
-  var HOT    = 34;    // px in from the right edge that the gesture starts in
+  /* How far in from the right edge a gesture counts as the rail's. Two
+     numbers rather than one, because a drag and a tap cost different things
+     when they are read wrongly.
+
+     A drag out here is a scrub the page would otherwise have taken as a
+     scroll, and that is a fair trade: nobody drags down the far right of the
+     screen by accident, and the ones who mean the rail rarely put a thumb on
+     the actual glass edge. 56px is the 20px page gutter plus a card's own
+     20px of padding, plus slack — a thumb landing anywhere over dead space
+     catches it, and it is still the right seventh of the phone, nowhere near
+     the middle.
+
+     A tap out here is a click taken away from whatever was under it, and
+     past about 40px what is under it is a card's contents: a chevron, a
+     count, the right end of a row. So the tap keeps the old width and stays
+     over the gutter. A still finger at 45px in is not reaching for the rail,
+     it is pressing the thing it is on. */
+  var HOT_DRAG = 56;
+  var HOT_TAP  = 34;
 
   var W_MAX  = 30;    // a notch at the centre of the swell
   var W_MIN  = 9;     // a notch at rest
@@ -688,9 +706,9 @@
      strip would take the right edge away from js/swipe.js for good, and this
      way both read the same gesture and only one of them claims it. */
 
-  function inZone(x) {
+  function inZone(x, hot) {
     var box = scroller.getBoundingClientRect();
-    return x >= box.right - HOT && x <= box.right;
+    return x >= box.right - hot && x <= box.right;
   }
 
   function localY(y) {
@@ -706,17 +724,20 @@
     if (!enabled || armed || engaged) return;
     if (evt.pointerType === 'mouse' && evt.button !== 0) return;
     if (typingTarget(evt.target)) return;
-    if (!inZone(evt.clientX)) return;
+    if (!inZone(evt.clientX, HOT_DRAG)) return;
 
     measure();
     layout();
-    // A finger on the edge is the hint's answer, whichever way the gesture
-    // turns out to go. It takes the swell over rather than starting again.
-    stopHint(true);
     armed = true;
     pointer = evt.pointerId;
     startX = evt.clientX;
     startY = evt.clientY;
+    /* A finger on the edge proper is the hint's answer, whichever way the
+       gesture turns out to go, and it takes the swell over rather than
+       starting again. Further in it is nobody's answer yet — the page is as
+       likely to be what is being pressed — so the wave carries on, and the
+       drag takes it over below if it turns into one. */
+    if (inZone(startX, HOT_TAP)) stopHint(true);
     rawY = ptrY = localY(evt.clientY);
     show();
     kick();
@@ -741,6 +762,7 @@
         return;
       }
       engaged = true;
+      stopHint(true);   // a drag out of the outer band answers it after all
       noteUse();
       try { scroller.setPointerCapture(evt.pointerId); } catch (err) { /* fine */ }
     }
@@ -755,7 +777,9 @@
   function onUp(evt) {
     if (evt.pointerId !== pointer && pointer !== -1) return;
 
-    if (armed && !engaged) {
+    var quiet = armed && !engaged;
+
+    if (quiet && inZone(startX, HOT_TAP)) {
       // A tap in the strip. Jump to the notch it landed on, and swallow the
       // click that is about to land on whatever is under it.
       var i = nearest(rawY);
@@ -764,12 +788,19 @@
       goTo(i);
       swallowClick = true;
       window.setTimeout(function () { swallowClick = false; }, 400);
+      quiet = false;
     }
 
     armed = false;
     engaged = false;
     pointer = -1;
-    hideSoon(HOLD);
+
+    /* A still finger in the outer band was pressing the page, not the rail.
+       It is given back untouched — no jump, and the click it is about to
+       fire is left alone. The reading it put up goes the short way out, the
+       way a sideways swipe's does, rather than sitting there for a second
+       over a card that has just been tapped. */
+    hideSoon(quiet ? 160 : HOLD);
 
     // Whatever the page did while the thumb was down, it can be read now.
     if (pendingScan) { pendingScan = false; rescan(); }
