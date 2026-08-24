@@ -4,18 +4,122 @@
   "title": "Scripture",
   "icon": "practiceScripture",
   "source": {
-    "site": "https://practicingtheway.org/scripture",
+    "site": "https://www.practicingtheway.org/scripture",
     "playlistId": "PL6zls_4DoKIy5VUZrhMOCu62vWKa_-2RL",
     "playlistVia": null,
-    "generatedAt": null
+    "generatedAt": "2026-08-24T18:04:17.705792Z"
   },
-  "intro": [],
-  "sessions": [],
+  "subtitle": "How do we read Scripture in the age of scrolling and skimming?",
+  "hero": {
+    "provider": "file",
+    "url": "https://cdn.prod.website-files.com/6812c045a61160f65f88adf3%2F68361721a467c625d73dc857_scripture-bg-transcode.mp4",
+    "note": "The practice's own looping header from practicingtheway.org/scripture. Muted, no controls, decorative."
+  },
+  "playlist": {
+    "provider": "youtube",
+    "playlistId": "PL6zls_4DoKIy5VUZrhMOCu62vWKa_-2RL",
+    "title": "The Scripture sessions",
+    "note": "Plays the series in order. Use the playlist button in the player to jump between sessions."
+  },
+  "intro": [
+    "The library we call “the Bible” can connect us to God and change who we are, but distraction, hurry, and confusion can hinder our experience with these ancient texts. Rediscover how to engage Scripture as an apprentice to Jesus.",
+    "Each Practice comes with four session videos, weekly exercises and readings, and additional resources to help your group create life-changing daily rhythms as you apprentice under Jesus together. The sessions are about 30 minutes long and include time for group discussion at the beginning.",
+    "Our Practices are perfect to use with small groups or to run course-style with a larger group, but they can also be modified for a churchwide Sunday teaching series, small cohorts, and many other contexts."
+  ],
+  "sessions": [
+    {
+      "number": 1,
+      "title": "Read",
+      "teaching": [
+        "Learn why following Jesus and immersing our minds in Scripture are inseparable and how to read with a heart posture attuned to his presence."
+      ],
+      "practice": "Begin reading Scripture daily.",
+      "video": null
+    },
+    {
+      "number": 2,
+      "title": "Meditate",
+      "teaching": [
+        "The digital age teaches us to read quickly and move on, but the library of Scripture was created for slow, prayerful reflection so that God’s thoughts inhabit our minds completely."
+      ],
+      "practice": "Meditate on Scripture through the practice of Lectio Divina.",
+      "video": null
+    },
+    {
+      "number": 3,
+      "title": "Study",
+      "teaching": [
+        "The library of Scripture isn’t easy to understand. The process of learning what the text says — to the original audience and to us today — helps us listen to God and obey whatever he says."
+      ],
+      "practice": "Choose a passage or theme from Scripture to study closely.",
+      "video": null
+    },
+    {
+      "number": 4,
+      "title": "Memorize",
+      "teaching": [
+        "In the age of easy access to information, we’ve lost something crucial: the practice of storing truth deep in our bodies, so that we can anchor ourselves to an “inner library” of passages throughout the day."
+      ],
+      "practice": "Memorize a passage of Scripture.",
+      "video": null
+    }
+  ],
+  "resources": [
+    {
+      "title": "The Companion Guide",
+      "body": [
+        "Each session will use the Scripture Practice Companion Guide. We created this guide to help you and your group build new daily rhythms into your lives.",
+        "The Guide includes weekly Reach Exercises, assigned readings and podcast episodes, and reflection questions."
+      ],
+      "image": "https://cdn.prod.website-files.com/6812c045a61160f65f88adf3/6833e477d0efea69dea40f24_scripture-practice-resource-cover.avif"
+    },
+    {
+      "title": "Recommended Reading",
+      "body": [
+        "The recommended reading for the Scripture Practice is Eat This Book: A Conversation in the Art of Spiritual Reading by Eugene Peterson ."
+      ],
+      "image": "https://cdn.prod.website-files.com/6812c045a61160f65f88adf3/6833e477cf0a6a7db49911ef_Eat-This-Book-Cover.avif",
+      "link": {
+        "label": "Eat This Book, by Eugene Peterson",
+        "url": "https://amzn.to/3DKDfg6"
+      }
+    },
+    {
+      "title": "The Lectio Bible",
+      "body": [
+        "The Lectio Bible was designed for a distraction-free reading experience to help you approach the Bible slowly, prayerfully, and attuned to the Spirit’s voice. We’ve also created four reading plan options to accompany it. Order your copy today."
+      ],
+      "image": "https://cdn.prod.website-files.com/6812c045a61160f65f88adf3/6833e47720cb77c0fcf5472c_lectio-resource-cover.avif",
+      "link": {
+        "label": "See the reading plans",
+        "url": "https://www.practicingtheway.org/lectio#readingplans"
+      }
+    },
+    {
+      "title": "Rule of Life Podcast",
+      "body": [
+        "The Scripture season of the Rule of Life Podcast , made with help from our friends at BibleProject, features John Mark joined by Dr. Tim Mackie, Hakeem Bradley, and Dr. Brittany Kim."
+      ],
+      "image": "https://cdn.prod.website-files.com/6812c045a61160f65f88adf3/6833df19f970ef9f6c3a42c8_ROL-Cover-Fasting.avif",
+      "link": {
+        "label": "Listen on Spotify",
+        "url": "https://open.spotify.com/show/7dHIByUQ588Li9pUtv0TDn"
+      }
+    }
+  ],
   "extras": [],
   "flags": [
     {
-      "kind": "not-yet-generated",
-      "detail": "Placeholder. No content has been pulled for this practice yet. Run `node scripts/build_practices.js --report scripture`, read the mapping, then re-run with --write to replace this file."
+      "kind": "no-videos-on-the-page",
+      "detail": "practicingtheway.org/scripture carries no session videos. Its videos are all muted, autoplaying, looping background art: the practice header mp4 used here as the hero, plus the site-wide loop 1046530705 and further decorative embeds. Both \"Run Practice\" and \"Preview Session 01\" link to launch.practicingtheway.org/signup, so the real session videos sit behind their signup. The playlist player above the sessions is what people watch until per-session ids are filled in."
+    },
+    {
+      "kind": "promotional-content",
+      "detail": "Left out of the data: purchase clauses trimmed from paragraphs that were otherwise kept, and any product-only or seasonal block. Assigned reading was kept, with its link, because the Companion Guide assigns it week by week."
+    },
+    {
+      "kind": "hand-entered",
+      "detail": "Built from a saved copy of the page rather than a pipeline run, so no video ids were fetched. Re-running `npm run practices -- --write scripture` refreshes the videos and preserves subtitle, hero, playlist and resources."
     }
   ]
 }

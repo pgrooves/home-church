@@ -4,18 +4,143 @@
   "title": "Generosity",
   "icon": "practiceGenerosity",
   "source": {
-    "site": "https://practicingtheway.org/generosity",
+    "site": "https://www.practicingtheway.org/generosity",
     "playlistId": "PL6zls_4DoKIykoOl71P4PIMfuUes_K1pq",
     "playlistVia": null,
-    "generatedAt": null
+    "generatedAt": "2026-08-24T18:04:17.824069Z"
   },
-  "intro": [],
-  "sessions": [],
+  "subtitle": "Are we really happier when we give generously?",
+  "hero": {
+    "provider": "file",
+    "url": "https://cdn.prod.website-files.com/6812c045a61160f65f88adf3%2F684211e87a8d4580e27c6411_generosity-bg-transcode.mp4",
+    "note": "The practice's own looping header from practicingtheway.org/generosity. Muted, no controls, decorative."
+  },
+  "playlist": {
+    "provider": "youtube",
+    "playlistId": "PL6zls_4DoKIykoOl71P4PIMfuUes_K1pq",
+    "title": "The Generosity sessions",
+    "note": "Plays the series in order. Use the playlist button in the player to jump between sessions."
+  },
+  "intro": [
+    "We’re made in the image of a happy, generous God. When we practice generosity, we live according to our design and tap into God’s joy.",
+    "Each Practice comes with four session videos, weekly exercises and readings, and additional resources to help your group create life-changing daily rhythms as you apprentice under Jesus together. The sessions are about 30 minutes long and include time for group discussion at the beginning.",
+    "Our Practices are perfect to use with small groups or to run course-style with a larger group, but they can also be modified for a churchwide Sunday teaching series, small cohorts, and many other contexts."
+  ],
+  "sessions": [
+    {
+      "number": 1,
+      "title": "There Is More Joy in Giving Than Receiving",
+      "teaching": [
+        "Jesus regularly made bold claims that turn our vision of the good life on its head. One of the most counter-intuitive is his statement that there is more joy in giving than in receiving, and that freedom is found as we embody God’s generous heart."
+      ],
+      "practice": "Try a spontaneous act of generosity.",
+      "video": null
+    },
+    {
+      "number": 2,
+      "title": "Watch Out for Greed!",
+      "teaching": [
+        "The majority of Jesus’ teachings on money are warnings. He understood that greed poisons us, making us anxious, distracted, discontent, and lonely. But by simplifying our lives, we open ourselves to the freedom of contentment."
+      ],
+      "practice": "Identify something you own that you do not need, and either give it away, or sell it and give the money to someone in need.",
+      "video": null
+    },
+    {
+      "number": 3,
+      "title": "All We Have Belongs to God",
+      "teaching": [
+        "Stewardship is a rich theme throughout the library of scripture and in Jesus’ instruction to his disciples. Biblical stewardship means that God owns everything, that we are entrusted with his resources to do good, and that he blesses us in order to give more."
+      ],
+      "practice": "Begin listening to God about money and generosity to identify his invitations into stewardship.",
+      "video": null
+    },
+    {
+      "number": 4,
+      "title": "Be Generous to the Poor",
+      "teaching": [
+        "Concern for the poor holds a prominent place in God’s heart, and this priority is reflected in Jesus’ teaching and in the practices of his earliest followers. For apprentices of Jesus, the goal isn’t just to share resources with those in need, but to create a new kind of family."
+      ],
+      "practice": "Share your resources with someone in need. Give to an organization doing good work serving the poor, either globally or locally.",
+      "video": null
+    },
+    {
+      "number": 5,
+      "title": "Bonus: Best Practice for Generosity",
+      "teaching": [
+        "A generous life will require a plan. This optional bonus episode explores five best practices to live out Jesus’ vision of the generous life."
+      ],
+      "practice": "Make a plan for regular giving.",
+      "video": null
+    }
+  ],
+  "resources": [
+    {
+      "title": "The Companion Guide",
+      "body": [
+        "Each session will use the Generosity Companion Guide. We created this guide to help you and your group build new daily rhythms into your lives."
+      ],
+      "image": "https://cdn.prod.website-files.com/6812c045a61160f65f88adf3/6833e2ab207bd25151f7c71b_PtWGuide-Generosity-sq.avif"
+    },
+    {
+      "title": "Recommended Reading",
+      "body": [
+        "For the Generosity Practice, we’re reading Giving is the Good Life by Randy Alcorn. Each week, you’ll be assigned readings in the Generosity Companion Guide.",
+        "As an Amazon Associate, we receive a small commission from qualifying purchases."
+      ],
+      "image": "https://cdn.prod.website-files.com/6812c045a61160f65f88adf3/6833e2ab2a30e9d309ad95f8_Giving-is-the-Good-Life-sq.avif",
+      "link": {
+        "label": "Giving is the Good Life, by Randy Alcorn",
+        "url": "https://amzn.to/4hLbSSJ"
+      }
+    },
+    {
+      "title": "Rule of Life Podcast",
+      "body": [
+        "The Generosity season of the Rule of Life podcast includes deeper conversations around each session with John Mark Comer and Christian Dawson, moving testimonials from people who’ve experienced the joy of generosity, and roundtable discussions with luminaries like Reward Sibanda (World Vision), Jimmy Mellado (Compassion International), Sara Miller (Praxis Labs), and many others."
+      ],
+      "image": "https://cdn.prod.website-files.com/6812c045a61160f65f88adf3/6833df19f970ef9f6c3a42c8_ROL-Cover-Fasting.avif",
+      "link": {
+        "label": "Listen on Spotify",
+        "url": "https://open.spotify.com/show/7dHIByUQ588Li9pUtv0TDn"
+      }
+    },
+    {
+      "title": "Simplicity Guide",
+      "body": [
+        "This four-week Guide is designed to help you step deeper into the practice of both generosity and simplicity through “de-owning” (or “owning less”), marking out the initial steps you can take to partner with God in transforming your relationship to what you own. Download the digital guide."
+      ],
+      "image": "https://cdn.prod.website-files.com/6812c045a61160f65f88adf3/69d40cd467d4b295305655af_95c6dbb7c73330476f8012c767d14207_Simplicity%20Guide%204%20%281%29.png",
+      "link": {
+        "label": "Download the guide",
+        "url": "https://cdn.prod.website-files.com/6812c045a61160f65f88adf3/69d40edbaf3d0afe1429512a_generosity-simplicity-guide-digital-v2-jfLe872t2sV608h3lu1L%20(1).pdf"
+      }
+    }
+  ],
   "extras": [],
   "flags": [
     {
-      "kind": "not-yet-generated",
-      "detail": "Placeholder. No content has been pulled for this practice yet. Run `node scripts/build_practices.js --report generosity`, read the mapping, then re-run with --write to replace this file."
+      "kind": "no-videos-on-the-page",
+      "detail": "practicingtheway.org/generosity carries no session videos. Its videos are all muted, autoplaying, looping background art: the practice header mp4 used here as the hero, plus the site-wide loop 1046530705 and further decorative embeds. Both \"Run Practice\" and \"Preview Session 01\" link to launch.practicingtheway.org/signup, so the real session videos sit behind their signup. The playlist player above the sessions is what people watch until per-session ids are filled in."
+    },
+    {
+      "kind": "promotional-content",
+      "detail": "Left out of the data: purchase clauses trimmed from paragraphs that were otherwise kept, and any product-only or seasonal block. Assigned reading was kept, with its link, because the Companion Guide assigns it week by week."
+    },
+    {
+      "kind": "extra-session",
+      "detail": "This practice has a fifth, optional \"Bonus Session\" on the site, with its own teaching and its own Practice line. It is kept as session 5 and its title carries \"Bonus:\" so it still reads as optional. Every other practice so far has exactly four."
+    },
+    {
+      "kind": "affiliate-link",
+      "detail": "The Recommended Reading link is Practicing the Way’s own Amazon affiliate link, so they earn a commission on it. Their disclosure of that is kept with the link rather than stripped, because carrying the link without it would not be honest."
+    },
+    {
+      "kind": "hand-entered",
+      "detail": "Built from a saved copy of the page rather than a pipeline run, so no video ids were fetched. Re-running `npm run practices -- --write generosity` refreshes the videos and preserves subtitle, hero, playlist and resources."
+    },
+    {
+      "kind": "transcription-repair",
+      "detail": "Two words are run together in the source page’s own HTML, \"theGenerosity\" and \"fromqualifying\", and render that way on their site. A missing space was inserted in each. No other word was changed. Every file was scanned for the same pattern and these were the only two."
     }
   ]
 }
