@@ -668,6 +668,8 @@ function toFile(practice, site, playlist, mapping, flags) {
       generatedAt: new Date().toISOString()
     },
     subtitle: site.subtitle || '',
+    hero: site.hero || null,
+    playlist: site.playlist || null,
     intro: site.intro,
     /* The closing material: companion guide, assigned reading, podcast. Put
        in by hand, preserved across reruns. See one() above. */
@@ -737,6 +739,8 @@ function stub(practice) {
       generatedAt: null
     },
     subtitle: '',
+    hero: null,
+    playlist: null,
     intro: [],
     resources: [],
     sessions: [],
@@ -780,13 +784,12 @@ async function one(practice, opts) {
     const file = path.join(OUT_DIR, practice.slug + '.json');
 
     /* Carry forward the two fields this script cannot work out on its own.
-       `subtitle` and `resources` are the page's closing material, the
-       companion guide and the assigned reading and the podcast, which sit in
-       a different shape on every practice page and are put in by hand. Re-run
-       --write to refresh the videos and they would otherwise be silently
-       deleted, which is a bad trade for a rerun somebody did to fix a
-       thumbnail. --replace-resources overrides this when a page really has
-       changed. */
+       The subtitle, the closing resources, the hero loop and the series
+       player are all put in by hand from a saved page, and none of them is
+       something this script can work out on its own. Re-run --write to
+       refresh the videos and they would otherwise be silently deleted, which
+       is a bad trade for a rerun somebody did to fix a thumbnail.
+       --replace-resources overrides this when a page really has changed. */
     if (!opts.replaceResources && fs.existsSync(file)) {
       try {
         const prev = JSON.parse(fs.readFileSync(file, 'utf8'));
@@ -794,6 +797,10 @@ async function one(practice, opts) {
         if (Array.isArray(prev.resources) && prev.resources.length) {
           site.resources = prev.resources;
         }
+        // The hero loop and the series player are the same kind of thing: put
+        // in by hand, invisible to this script, and expensive to lose.
+        if (prev.hero) site.hero = prev.hero;
+        if (prev.playlist) site.playlist = prev.playlist;
       } catch (err) {
         console.error(`  could not read the existing ${practice.slug}.json, not carrying anything over`);
       }

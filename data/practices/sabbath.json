@@ -11,10 +11,9 @@
   },
   "subtitle": "An ancient way to find rest for your soul",
   "hero": {
-    "provider": "vimeo",
-    "videoId": "1046530705",
-    "hash": "",
-    "note": "The looping band of film at the head of practicingtheway.org/sabbath. Muted, no controls, decorative. NOT a session video."
+    "provider": "file",
+    "url": "https://cdn.prod.website-files.com/6812c045a61160f65f88adf3%2F6833d6506acde6474f34fdd0_Sabbath_SS_Header_V1-transcode.mp4",
+    "note": "The practice's own looping header from practicingtheway.org/sabbath. Muted, no controls, decorative."
   },
   "playlist": {
     "provider": "youtube",

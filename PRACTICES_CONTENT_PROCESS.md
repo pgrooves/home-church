@@ -279,6 +279,111 @@ are behind Practicing the Way's signup and are not on the public page at all.
 
 -----
 
+## The worked example: how Sabbath was decided
+
+Sabbath is the one that has been done, and it is the reference. Every choice
+below was a judgement call somebody had to make, and writing them down is what
+stops the other eight drifting away from it. Open `data/practices/sabbath.json`
+next to this list. **When in doubt, do what Sabbath did.**
+
+### The order of the file
+
+`schema, slug, title, icon, source, subtitle, hero, playlist, intro, sessions,
+resources, extras, flags`. Keep it. A diff between two practices should show
+different words in the same places, not a reshuffle.
+
+### What maps to what
+
+| on the page | in the file |
+| --- | --- |
+| the line under the big title ("An ancient way to find rest for your soul") | `subtitle`, one string |
+| the paragraph defining the practice, then "What to expect" | `intro`, one string per paragraph |
+| the looping film at the top | `hero` |
+| "Week by Week" accordion, one item per session | `sessions` |
+| each accordion item's prose | `teaching`, one string per paragraph |
+| the line starting "Practice:" | `practice`, **with "Practice:" stripped** |
+| Companion Guide, Recommended Reading, podcast | `resources` |
+| the practice's YouTube playlist | `playlist` |
+
+Sabbath's `intro` is three paragraphs: the definition, then the two "What to
+expect" paragraphs. The hero tagline is **not** repeated there — it is the
+`subtitle`.
+
+### What gets left out
+
+The test is not "is this text on the page". It is **would this still be true
+and useful to somebody in this app in a year**.
+
+Leave out, and record in a `promotional-content` flag:
+
+- **Seasonal campaigns.** Sabbath's "Summer is a state of mind" / Summer
+  Slowdown block. It has a season attached and will be wrong most of the year.
+- **Pure product pitches.** Sabbath Meditations, a book of poems with an
+  Order button and nothing instructional in it.
+- **Purchase clauses inside text you are keeping.** The Companion Guide
+  paragraph was kept because it tells you what the guide is and that each
+  session uses it. The "you can purchase a beautiful printed version" clause
+  was trimmed off the end of it.
+- **Everything structural.** Nav, footer, cookie notices, "Explore Other
+  Practices", "Run Practice" buttons, login links.
+
+Keep, even though it involves buying something:
+
+- **Assigned reading.** Dan Allender's *Sabbath* is part of the curriculum —
+  the guide assigns readings from it week by week. That is instruction, not an
+  ad, and it keeps its link.
+
+### Resources
+
+Each one is `title`, `body` (array), optional `image`, optional
+`link {label, url}`. Sabbath has three: The Companion Guide, Recommended
+Reading, Rule of Life Podcast.
+
+- **Images are hot-linked** from Practicing the Way's CDN and need a network.
+  A failed image degrades to the cream block, same as everywhere else in the
+  app. Pick the largest variant, the one with no `-p-500` / `-p-800` suffix.
+- **Link labels say where they go** — "Listen on Spotify", "Sabbath, by Dan
+  Allender" — never "Click here" or a bare URL.
+- **Prefer a canonical URL.** Sabbath's podcast link on the page pointed at
+  `practicingtheway.webflow.io`, a staging domain, so it was replaced with the
+  public Spotify show. Never ship a webflow.io link.
+
+### Videos
+
+**Every video on these pages is decorative.** On Sabbath, all three Vimeo
+embeds and an mp4 header are `autoplay loop muted` with no controls. The real
+session videos are behind `launch.practicingtheway.org/signup` and are not in
+the public page in any form.
+
+So:
+
+- The top-of-page loop becomes `hero`. The others are the same kind of thing
+  further down; leave them out.
+- **Never put a background loop in as a session video.** It would render a
+  play button over silent b-roll labelled "Session 2".
+- Sessions get `"video": null` until somebody has the real ids.
+- Give the practice its `playlist` so the page has something to watch. The id
+  is in `scripts/build_practices.js`, one per practice.
+- Record what you found in a `no-videos-on-the-page` flag, naming each id and
+  what it actually is.
+
+### Flags
+
+Sabbath carries three, and they are the model: `no-videos-on-the-page`,
+`promotional-content` (listing what was dropped), and `hand-entered` (saying
+the file was built from a saved page rather than a pipeline run, and what a
+rerun would and would not overwrite). Flags are written into the file, not
+just printed, so whoever opens it later sees what you saw.
+
+### What a rerun will not clobber
+
+`npm run practices -- --write <slug>` refreshes the videos and preserves
+everything a person put in by hand: `subtitle`, `hero`, `playlist` and
+`resources`. Pass `--replace-resources` when the page has genuinely changed
+and you want them rebuilt from scratch.
+
+-----
+
 ## Checking your work
 
 ```bash

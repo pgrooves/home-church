@@ -207,15 +207,18 @@
     if (window.matchMedia &&
         window.matchMedia('(prefers-reduced-motion: reduce)').matches) return '';
 
-    var src = 'https://player.vimeo.com/video/' + c.esc(p.hero.videoId) +
-      (p.hero.hash ? '?h=' + c.esc(p.hero.hash) + '&' : '?') +
-      'background=1&muted=1&autoplay=1&loop=1&autopause=0&dnt=1';
+    /* A file plays in a <video> the app owns. An embed needs the iframe and
+       the oversized frame that crops its letterboxing, see the CSS. */
+    var inner = p.hero.provider === 'file'
+      ? '<video class="hc-practice-hero__video" src="' + c.esc(p.hero.url) + '" ' +
+          'autoplay loop muted playsinline preload="none" tabindex="-1"></video>'
+      : '<iframe class="hc-practice-hero__frame" src="' +
+          'https://player.vimeo.com/video/' + c.esc(p.hero.videoId) +
+          (p.hero.hash ? '?h=' + c.esc(p.hero.hash) + '&' : '?') +
+          'background=1&muted=1&autoplay=1&loop=1&autopause=0&dnt=1' + '" ' +
+          'title="" tabindex="-1" allow="autoplay" loading="lazy"></iframe>';
 
-    return '' +
-      '<div class="hc-practice-hero" aria-hidden="true">' +
-        '<iframe class="hc-practice-hero__frame" src="' + src + '" ' +
-          'title="" tabindex="-1" allow="autoplay" loading="lazy"></iframe>' +
-      '</div>';
+    return '<div class="hc-practice-hero" aria-hidden="true">' + inner + '</div>';
   }
 
   /* --------------------------------------------------------- the series

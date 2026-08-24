@@ -173,7 +173,20 @@
      says nothing. Keeping them in separate fields is what stops a future
      edit quietly promoting a bit of b-roll into session five. */
   function ambient(v) {
-    if (!v || !v.videoId) return null;
+    if (!v) return null;
+
+    /* A plain video file, which is what Practicing the Way actually serve at
+       the head of each practice page: one mp4 per practice. Preferred over an
+       embed when there is a choice. It is a <video> the app owns rather than
+       a third party iframe, it costs no player framework, and the loop that
+       ships with each practice is that practice's own rather than the one
+       generic clip the site reuses site-wide. */
+    if (v.provider === 'file') {
+      if (!/^https:\/\/[\w.-]+\/[^\s"']+\.(mp4|webm)$/i.test(String(v.url || ''))) return null;
+      return { provider: 'file', url: String(v.url) };
+    }
+
+    if (!v.videoId) return null;
     var provider = v.provider || 'vimeo';
     if (!validId(provider, v.videoId)) return null;
     return {

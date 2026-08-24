@@ -4,18 +4,111 @@
   "title": "Fasting",
   "icon": "practiceFasting",
   "source": {
-    "site": "https://practicingtheway.org/fasting",
+    "site": "https://www.practicingtheway.org/fasting",
     "playlistId": "PL6zls_4DoKIwEPaswOvpZUVK45P9bWHhn",
     "playlistVia": null,
-    "generatedAt": null
+    "generatedAt": "2026-08-24T15:53:40.738616Z"
   },
-  "intro": [],
-  "sessions": [],
+  "subtitle": "What if we are missing out on one of Jesus’ most essential practices?",
+  "hero": {
+    "provider": "file",
+    "url": "https://cdn.prod.website-files.com/6812c045a61160f65f88adf3%2F6833da273cd2eb76fd0b2204_Fasting_SS_Header_V1-transcode.mp4",
+    "note": "The practice's own looping header from practicingtheway.org/fasting. Muted, no controls, decorative."
+  },
+  "playlist": {
+    "provider": "youtube",
+    "playlistId": "PL6zls_4DoKIwEPaswOvpZUVK45P9bWHhn",
+    "title": "The Fasting sessions",
+    "note": "Plays the series in order. Use the playlist button in the player to jump between sessions."
+  },
+  "intro": [
+    "Fasting is going without food for a set amount of time to awaken our body and soul to our deep hunger and need for God. It’s one of the most powerful — and neglected — of all of Jesus’ practices.",
+    "Each Practice comes with four session videos, weekly exercises and readings, and additional resources to help your group create life-changing daily rhythms as you apprentice under Jesus together. The sessions are about 30 minutes long and include time for group discussion at the beginning.",
+    "Our Practices are perfect to use with small groups or to run course-style with a larger group, but they can also be modified for a churchwide Sunday teaching series, small cohorts, and many other contexts."
+  ],
+  "sessions": [
+    {
+      "number": 1,
+      "title": "To Offer Ourselves to God",
+      "teaching": [
+        "Very few modern Western followers of Jesus fast. But through the history of the Church, it was considered just as central as reading the Bible or gathering weekly. Fasting is one of the best disciplines we have to reintegrate our mind to our body and offer our whole selves to God in surrender."
+      ],
+      "practice": "Fast for one day, focusing on offering our whole selves to Jesus.",
+      "video": null
+    },
+    {
+      "number": 2,
+      "title": "To Grow in Holiness",
+      "teaching": [
+        "Fasting has many physical benefits for our bodies that mirror how it benefits our souls — our whole person. As we grow in our theology of the body, we learn how the fight for holiness involves our whole selves, including our bodies."
+      ],
+      "practice": "Fast for one day, focusing on growing in holiness.",
+      "video": null
+    },
+    {
+      "number": 3,
+      "title": "To Amplify Our Prayers",
+      "teaching": [
+        "All through the library of Scripture, fasting is a powerful aid and amplifier to prayer. When God’s people fast and pray, miracles happen, again and again."
+      ],
+      "practice": "Fast for one day, focusing on how it amplifies your prayers.",
+      "video": null
+    },
+    {
+      "number": 4,
+      "title": "To Stand With the Poor",
+      "teaching": [
+        "Fasting is not only about ourselves. It’s also a vehicle for biblical justice, for remembering the needs of our neighbors near and far. For acting on those needs, standing against evil while standing for God’s Kingdom"
+      ],
+      "practice": "Fast for one day, focusing on standing with the poor. And share the money you would have spent on food with the poor.",
+      "video": null
+    }
+  ],
+  "resources": [
+    {
+      "title": "The Companion Guide",
+      "body": [
+        "Each session will use the Fasting Companion Guide. We created this guide to help you and your group build new daily rhythms into your lives.",
+        "The Guide includes weekly Reach Exercises, assigned readings and podcast episodes, and reflection questions."
+      ],
+      "image": "https://cdn.prod.website-files.com/6812c045a61160f65f88adf3/6833dd1ce5b4f43962a316a7_PtWGuide-Fasting.avif"
+    },
+    {
+      "title": "Recommended Reading",
+      "body": [
+        "For the Fasting Practice, we’re reading God’s Chosen Fast by Arthur Wallis . Each week, you’ll be assigned readings in the Fasting Companion Guide."
+      ],
+      "image": "https://cdn.prod.website-files.com/6812c045a61160f65f88adf3/6833dd1c4e29871770da9436_Gods-Chosen-Fast.avif",
+      "link": {
+        "label": "God's Chosen Fast, by Arthur Wallis",
+        "url": "https://www.christianbook.com/chosen-fast-spiritual-practical-guide-fasting/arthur-wallis/9780875085548/pd/085547"
+      }
+    },
+    {
+      "title": "Rule of Life Podcast",
+      "body": [
+        "In the Fasting series of the Rule of Life podcast , John Mark Comer, Yinka Dawson, and Jarin Oda host guests who discuss the challenges and joys of fasting."
+      ],
+      "image": "https://cdn.prod.website-files.com/6812c045a61160f65f88adf3/6833dd1ccec64a0eb0e70172_ROL-Cover-Fasting.avif",
+      "link": {
+        "label": "Listen on Spotify",
+        "url": "https://open.spotify.com/show/7dHIByUQ588Li9pUtv0TDn"
+      }
+    }
+  ],
   "extras": [],
   "flags": [
     {
-      "kind": "not-yet-generated",
-      "detail": "Placeholder. No content has been pulled for this practice yet. Run `node scripts/build_practices.js --report fasting`, read the mapping, then re-run with --write to replace this file."
+      "kind": "no-videos-on-the-page",
+      "detail": "practicingtheway.org/fasting carries no session videos. Its videos are all muted, autoplaying, looping background art: the practice header mp4 used here as the hero, plus the site-wide loop 1046530705 and one further decorative Vimeo embed. Both \"Run Practice\" and \"Preview Session 01\" link to launch.practicingtheway.org/signup, so the four real session videos sit behind their signup. The playlist player above the sessions is what people watch until per-session ids are filled in."
+    },
+    {
+      "kind": "promotional-content",
+      "detail": "Left out of the data: the purchase clause on the Companion Guide paragraph, and any seasonal or product-only block. Assigned reading was kept, with its link, because the Companion Guide assigns it week by week."
+    },
+    {
+      "kind": "hand-entered",
+      "detail": "Built from a saved copy of the page rather than a pipeline run, so no video ids were fetched. Re-running `npm run practices -- --write fasting` refreshes the videos and preserves subtitle, hero, playlist and resources."
     }
   ]
 }

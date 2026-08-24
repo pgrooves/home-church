@@ -4,18 +4,117 @@
   "title": "Solitude",
   "icon": "practiceSolitude",
   "source": {
-    "site": "https://practicingtheway.org/solitude",
+    "site": "https://www.practicingtheway.org/solitude",
     "playlistId": "PL6zls_4DoKIwmEAighMzCWI5YdzYC1ryk",
     "playlistVia": null,
-    "generatedAt": null
+    "generatedAt": "2026-08-24T15:53:40.800016Z"
   },
-  "intro": [],
-  "sessions": [],
+  "subtitle": "Distraction is one of the greatest threats to spiritual health in the modern world.",
+  "hero": {
+    "provider": "file",
+    "url": "https://cdn.prod.website-files.com/6812c045a61160f65f88adf3%2F6833da06d24c86c1121a0137_Solitude_SS_Header_V1-transcode.mp4",
+    "note": "The practice's own looping header from practicingtheway.org/solitude. Muted, no controls, decorative."
+  },
+  "playlist": {
+    "provider": "youtube",
+    "playlistId": "PL6zls_4DoKIwmEAighMzCWI5YdzYC1ryk",
+    "title": "The Solitude sessions",
+    "note": "Plays the series in order. Use the playlist button in the player to jump between sessions."
+  },
+  "intro": [
+    "We all feel it — we’re bombarded by noise like never before. Jesus has an invitation for us: Step away from it all to be alone with him, for the sake of our souls and the sake of others.",
+    "Each Practice comes with four session videos, weekly exercises and readings, and additional resources to help your group create life-changing daily rhythms as you apprentice under Jesus together. The sessions are about 30 minutes long and include time for group discussion at the beginning.",
+    "Our Practices are perfect to use with small groups or to run course-style with a larger group, but they can also be modified for a churchwide Sunday teaching series, small cohorts, and many other contexts."
+  ],
+  "sessions": [
+    {
+      "number": 1,
+      "title": "The Quiet Place",
+      "teaching": [
+        "Distraction is a threat to our minds, bodies, and souls. But through solitude, we’re invited into Jesus’ pattern of retreating from distractions to be fully present with the Father and returning to serve in community."
+      ],
+      "practice": "Begin each day with a few minutes of solitude, silence, and stillness before God.",
+      "video": null
+    },
+    {
+      "number": 2,
+      "title": "Encounter with Our Self",
+      "teaching": [
+        "Solitude can be deeply refreshing, but just as often, it can feel like painful emotional surgery. As we notice and name the pain we’ve been avoiding through distraction, God forms us into the people he’s always desired us to become."
+      ],
+      "practice": "During solitude, notice and name your emotions and give them to God.",
+      "video": null
+    },
+    {
+      "number": 3,
+      "title": "Encounter with Our Enemy",
+      "teaching": [
+        "Jesus and his early followers fought battles in solitude. As we face resistance from three enemies of our soul — the world, the flesh, and the devil — in solitude, we learn to fight lies by listening carefully for God’s voice in Scripture."
+      ],
+      "practice": "Through solitude, fight lies from your soul’s enemies by slowly and prayerfully reflecting on Scripture.",
+      "video": null
+    },
+    {
+      "number": 4,
+      "title": "Encounter with Our God",
+      "teaching": [
+        "Through solitude, we create space for God’s presence, speaking and listening to God and simply loving him and being loved. Solitude allows the Spirit of God to interject his thoughts and desires into our souls."
+      ],
+      "practice": "In solitude, seek God himself, listening for his voice and enjoying his love.",
+      "video": null
+    }
+  ],
+  "resources": [
+    {
+      "title": "The Companion Guide",
+      "body": [
+        "Each session will use the Solitude Companion Guide. We created this guide to help you and your group build new daily rhythms into your lives."
+      ],
+      "image": "https://cdn.prod.website-files.com/6812c045a61160f65f88adf3/6833df19d0efea69dea148ec_PtWGuide-Solitude.avif"
+    },
+    {
+      "title": "Recommended Reading",
+      "body": [
+        "For the Solitude Practice, we’re reading Invitation to Solitude and Silence by Ruth Haley Barton . Each week, you’ll be assigned readings in the Solitude Companion Guide."
+      ],
+      "image": "https://cdn.prod.website-files.com/6812c045a61160f65f88adf3/6833df19098a7d3d19ba75a6_Invitation-to-Solitude-Silence.avif",
+      "link": {
+        "label": "Invitation to Solitude and Silence, by Ruth Haley Barton",
+        "url": "https://www.christianbook.com/invitation-solitude-silence-experiencing-transforming-presence/ruth-barton/9780830835454/pd/835454"
+      }
+    },
+    {
+      "title": "Invitation to Solitude Guide",
+      "body": [
+        "Our friend and collaborator at Practicing the Way, Strahan Coleman, has written this guide to help create meaningful moments of solitude, especially for those with less freedom to carve out extended time away from distractions."
+      ],
+      "image": "https://cdn.prod.website-files.com/6812c045a61160f65f88adf3/6833df190700ad0f0d6cc0f9_Solitude-Guide-ModuleImage.avif"
+    },
+    {
+      "title": "Rule of Life Podcast",
+      "body": [
+        "In the Solitude series of the Rule of Life podcast , John Mark Comer, Bethany Allen, and Bryan Rouanzoin host guests who discuss the challenges and joys of solitude."
+      ],
+      "image": "https://cdn.prod.website-files.com/6812c045a61160f65f88adf3/6833df19f970ef9f6c3a42c8_ROL-Cover-Fasting.avif",
+      "link": {
+        "label": "Listen on Spotify",
+        "url": "https://open.spotify.com/show/7dHIByUQ588Li9pUtv0TDn"
+      }
+    }
+  ],
   "extras": [],
   "flags": [
     {
-      "kind": "not-yet-generated",
-      "detail": "Placeholder. No content has been pulled for this practice yet. Run `node scripts/build_practices.js --report solitude`, read the mapping, then re-run with --write to replace this file."
+      "kind": "no-videos-on-the-page",
+      "detail": "practicingtheway.org/solitude carries no session videos. Its videos are all muted, autoplaying, looping background art: the practice header mp4 used here as the hero, plus the site-wide loop 1046530705 and one further decorative Vimeo embed. Both \"Run Practice\" and \"Preview Session 01\" link to launch.practicingtheway.org/signup, so the four real session videos sit behind their signup. The playlist player above the sessions is what people watch until per-session ids are filled in."
+    },
+    {
+      "kind": "promotional-content",
+      "detail": "Left out of the data: the purchase clause on the Companion Guide paragraph, and any seasonal or product-only block. Assigned reading was kept, with its link, because the Companion Guide assigns it week by week."
+    },
+    {
+      "kind": "hand-entered",
+      "detail": "Built from a saved copy of the page rather than a pipeline run, so no video ids were fetched. Re-running `npm run practices -- --write solitude` refreshes the videos and preserves subtitle, hero, playlist and resources."
     }
   ]
 }
