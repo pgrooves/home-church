@@ -41,12 +41,13 @@
 
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 
-type Topic = 'new_guide' | 'sunday_reminder' | 'group_day' | 'test';
+type Topic = 'new_guide' | 'sunday_reminder' | 'group_day' | 'test' | 'announcement';
 
 const TOPIC_COLUMN: Record<Topic, string | null> = {
   new_guide: 'wants_new_guide',
   sunday_reminder: 'wants_sunday_reminder',
   group_day: 'wants_group_day',
+  announcement: 'wants_announcements',
   test: null, // a test goes to every active phone, on purpose
 };
 
@@ -124,7 +125,11 @@ async function apnsToken(keyId: string, teamId: string, privateKeyPem: string): 
 
 interface Note { title: string; body: string; }
 
-async function compose(topic: Topic, admin: ReturnType<typeof createClient>): Promise<Note | null> {
+async function compose(
+  topic: Topic,
+  admin: ReturnType<typeof createClient>,
+  ref: string | null,
+): Promise<Note | null> {
   if (topic === 'test') {
     return { title: 'Home Church', body: 'This is a test. Push notifications are working.' };
   }
@@ -189,7 +194,56 @@ async function compose(topic: Topic, admin: ReturnType<typeof createClient>): Pr
     return { title: 'Your group meets today', body: 'The guide is ready when you are.' };
   }
 
+  /* An announcement is the one topic that is about a specific row rather than
+     about whatever is newest, which is why hc_admin_send_announcement passes
+     an id through as `ref`. "The newest published announcement" would be the
+     wrong row every time somebody writes next month's announcement today,
+     which is the whole reason announcements carry a date window.
+
+     Composed from the row rather than from a fixed string, because unlike the
+     Sunday reminder there is no sentence that covers every announcement. The
+     title is the announcement's own title, so what lights up the lock screen
+     is what is printed on the card they are being sent to.
+
+     Returning null here is not a failure, it is the caller having named a row
+     that has since been deleted or unpublished between the tap and the send.
+     Nothing goes out and push_log records that nothing did. */
+  if (topic === 'announcement') {
+    if (!ref) return null;
+
+    const { data: row } = await admin
+      .from('announcements')
+      .select('title, body, published')
+      .eq('id', ref)
+      .maybeSingle();
+
+    if (!row || !row.published) return null;
+
+    const title = String(row.title ?? '').trim();
+    if (!title) return null;
+
+    // APNs will happily deliver a paragraph and iOS will happily truncate it
+    // mid-word on the lock screen. One sentence, or the eyebrow, is a better
+    // thing to arrive than half of two sentences.
+    const body = String(row.body ?? '').trim();
+    return {
+      title,
+      body: body ? firstSentence(body) : 'Open the app to read it.',
+    };
+  }
+
   return null;
+}
+
+/* The first sentence, or the first 140 characters on a body that does not
+   have one. Cheap and deliberately not clever: a church announcement is
+   written in plain sentences and the failure mode of getting this slightly
+   wrong is a notification that reads a few words long, not a broken send. */
+function firstSentence(text: string): string {
+  const flat = text.replace(/\s+/g, ' ').trim();
+  const end = flat.search(/[.!?](\s|$)/);
+  if (end !== -1 && end < 200) return flat.slice(0, end + 1);
+  return flat.length > 140 ? flat.slice(0, 139).trimEnd() + '\u2026' : flat;
 }
 
 /* --------------------------------------------------------------- sending */
@@ -203,6 +257,7 @@ async function sendOne(
   bundleId: string,
   note: Note,
   topic: Topic,
+  collapseId: string,
 ): Promise<SendOutcome> {
   try {
     const res = await fetch(`https://${host}/3/device/${token}`, {
@@ -218,7 +273,14 @@ async function sendOne(
         'apns-expiration': String(Math.floor(Date.now() / 1000) + 6 * 3600),
         // Two sends of the same topic collapse into one on the lock screen
         // rather than stacking, which matters if a job is ever retried.
-        'apns-collapse-id': topic,
+        //
+        // Announcements are the exception and pass their own id, because two
+        // announcements in one week are two different things to say and
+        // collapsing them would silently replace the first on the lock screen
+        // of anybody who had not looked yet. Same reasoning, opposite answer:
+        // the rule is one notification per thing, and for the clock topics the
+        // thing is the topic.
+        'apns-collapse-id': collapseId,
         'content-type': 'application/json',
       },
       body: JSON.stringify({
@@ -266,7 +328,7 @@ Deno.serve(async (req: Request) => {
     return json({ error: 'No.' }, 401);
   }
 
-  let body: { topic?: string; dry_run?: boolean };
+  let body: { topic?: string; dry_run?: boolean; ref?: string | null };
   try {
     body = await req.json();
   } catch {
@@ -278,6 +340,8 @@ Deno.serve(async (req: Request) => {
     return json({ error: `Unknown topic: ${String(body.topic)}` }, 400);
   }
   const dryRun = body.dry_run === true;
+  // Only `announcement` uses this. Everything else composes itself.
+  const ref = typeof body.ref === 'string' && body.ref ? body.ref : null;
 
   const url = Deno.env.get('SUPABASE_URL');
   const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
@@ -290,7 +354,7 @@ Deno.serve(async (req: Request) => {
   // Compose first. If there is nothing to say, say nothing and write down
   // that we deliberately said nothing, so a quiet Monday is distinguishable
   // from a broken one when somebody reads push_log in three weeks.
-  const note = await compose(topic, admin);
+  const note = await compose(topic, admin, ref);
   if (!note) {
     await admin.from('push_log').insert({
       topic, skipped: true, note: 'Nothing new to announce.',
@@ -360,6 +424,9 @@ Deno.serve(async (req: Request) => {
   const failures: string[] = [];
   const retire: string[] = [];
 
+  // See the note next to apns-collapse-id in sendOne().
+  const collapseId = topic === 'announcement' && ref ? `announcement:${ref}` : topic;
+
   // Batched rather than all at once. This church is small enough that it will
   // never matter, and a congregation-sized list opening 400 sockets at once
   // would matter a lot.
@@ -367,7 +434,7 @@ Deno.serve(async (req: Request) => {
   for (let i = 0; i < tokens.length; i += BATCH) {
     const slice = tokens.slice(i, i + BATCH);
     const results = await Promise.all(
-      slice.map((t) => sendOne(host, t, jwt, bundleId, note, topic)),
+      slice.map((t) => sendOne(host, t, jwt, bundleId, note, topic, collapseId)),
     );
     results.forEach((r, n) => {
       if (r.ok) deliveredTokens.push(slice[n]);

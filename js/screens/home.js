@@ -252,69 +252,144 @@
     return c.card(inner, { action: 'open-guide', id: guide.id });
   }
 
-  /* Today in the phone's own zone, as 'YYYY-MM-DD'. The window columns are
-     plain dates, not timestamps, so comparing them as strings is exact and
-     sidesteps every timezone question. A church in New Orleans should see an
-     announcement retire at midnight local, not at midnight UTC. */
-  function todayLocal() {
-    var d = new Date();
-    return d.getFullYear() + '-' +
-      ('0' + (d.getMonth() + 1)).slice(-2) + '-' +
-      ('0' + d.getDate()).slice(-2);
-  }
-
-  /* startsOn is the first day it shows, endsOn is the first day it does not.
-     A Saturday event announced with endsOn set to the Sunday is gone when
-     people wake up Sunday. Either end null means that end is open. */
-  function isLive(a, today) {
-    if (a.startsOn && today < a.startsOn) return false;
-    if (a.endsOn && today >= a.endsOn) return false;
-    return true;
-  }
-
-  /* The label above the announcement. It used to be the literal "One thing"
+  /* The label above an announcement. It used to be the literal "One thing"
      carried on the row, and it is now the date the announcement went up, so a
      card that has been sitting on Home for three weeks says so rather than
      reading as news. The date is generated, not typed: nobody has to remember
      to change it, and it cannot disagree with the window the row is running
      on. A row carrying no date at all degrades to the bare word rather than to
-     "Announcement //", which is the only thing worse than no date. */
+     "Announcement //", which is the only thing worse than no date.
+
+     An eyebrow written by hand in the admin form wins over both. That field
+     exists so a genuinely different kind of card can say what it is, and a
+     church that types one means it. */
   function announcementLabel(a) {
+    if (a.eyebrow) return a.eyebrow;
     return a.publishedOn
       ? 'Announcement ' + c.formatDateNumeric(a.publishedOn)
       : 'Announcement';
   }
 
-  function announcement() {
-    var today = todayLocal();
-    var list = (HC.data.announcements || []).filter(function (a) {
-      return isLive(a, today) && !HC.store.isDismissed(a.id);
-    });
-    if (!list.length) return '';
+  /* The picture on an announcement, if there is one.
 
-    // Home shows one, so when two are live on the same day something has to
-    // break the tie deliberately rather than leaving it to whatever order the
-    // rows arrived in. Higher priority wins, then id, so it is at least stable.
-    list.sort(function (x, y) {
-      var px = x.priority || 0;
-      var py = y.priority || 0;
-      if (px !== py) return py - px;
-      return String(x.id) < String(y.id) ? -1 : 1;
-    });
+     Cropped to 4:3 like every other photograph in the app, using the same
+     frame classes the media carousel above uses, so an announcement's picture
+     and an Instagram photograph are the same shape and the same corner
+     radius. loading="lazy" here and not up there: the carousel is above the
+     fold on launch and this is not. */
+  function announcementImage(a) {
+    if (!a.imageUrl) return '';
+    return '' +
+      '<span class="hc-latest__frame hc-latest__frame--4x3 hc-banner__frame">' +
+        '<img class="hc-latest__img" src="' + c.esc(a.imageUrl) + '" alt="" ' +
+          'loading="lazy" decoding="async">' +
+      '</span>';
+  }
 
-    var a = list[0];   // one announcement maximum, on purpose
+  /* The video, as a button that leaves the app rather than as a player.
+
+     A YouTube link is not an mp4 the church hosts, and embedding one would
+     put an iframe from Google on the screen the app opens to, handing every
+     congregant's address to them on every launch. That is the trade this
+     project has already refused twice, once for the typefaces and once for
+     the Instagram rail, and an announcement is not the place to start making
+     it. The button says where it goes. See migration 0026 section 1. */
+  function announcementVideo(a) {
+    if (!a.videoUrl) return '';
+    return '<span class="hc-banner__video">' +
+      c.button('Watch', {
+        action: 'open-url',
+        url: a.videoUrl,
+        variant: 'secondary',
+        small: true,
+        icon: 'arrowOut'
+      }) +
+    '</span>';
+  }
+
+  /* ONE CARD BECAME A LIST, and the reason is worth writing down because the
+     comment that used to be here argued the other way and argued it well.
+
+     Home showed a single announcement on purpose: the screen is a front door,
+     a front door with a noticeboard on it is not a front door, and two things
+     both claiming to be "one thing" is neither. That reasoning was sound
+     while the only way to write an announcement was a migration or a service
+     role key, because the friction was doing the editing for us. Nobody
+     writes four announcements from the SQL editor on a Tuesday.
+
+     An in-app form removes that friction, so the restraint has to come from
+     somewhere else, and it comes from the date window. starts_on and ends_on
+     were always the mechanism by which an announcement retires itself, and
+     they are now also what keeps this list short: a church that dates its
+     announcements gets one or two live at a time, and one that does not gets
+     the noticeboard it asked for. That is a decision the church should be
+     allowed to make, and it is reversible from the admin screen in a way a
+     hardcoded slice(0, 1) never was.
+
+     Newest first, by created_at, with priority as the tie-break rather than
+     the sort. Priority is for the Sunday when something genuinely has to sit
+     above a newer card, which is rare, and making it the primary key of the
+     sort would mean every announcement needs a number thought about.
+
+     THE WINDOW AND THE ORDER MOVED to HC.data.liveAnnouncements(), which is
+     the same list the pinned strip in the shell is drawn from. They used to
+     be written out here, and while they were, "this announcement has come
+     down" and "its banner has come down" were two separate pieces of
+     arithmetic that had to agree forever. What is left here is the one thing
+     that is genuinely Home's business: what this phone has already put away.
+     See js/data.js, and js/app.js for the strip. */
+  function liveAnnouncements() {
+    return HC.data.liveAnnouncements().filter(function (a) {
+      return !HC.store.isDismissed(a.id);
+    });
+  }
+
+  function announcementCard(a) {
     return '' +
       '<div class="hc-banner" data-banner="' + c.esc(a.id) + '">' +
         '<div class="hc-banner__body">' +
           '<p class="hc-eyebrow">' + c.esc(announcementLabel(a)) + '</p>' +
           '<p class="hc-banner__title hc-body-serif">' + c.esc(a.title) + '</p>' +
-          '<p class="hc-caption">' + c.esc(a.body) + '</p>' +
+          (a.body ? '<p class="hc-caption">' + c.esc(a.body) + '</p>' : '') +
+          announcementImage(a) +
+          announcementVideo(a) +
         '</div>' +
         '<button type="button" class="hc-banner__dismiss" data-action="dismiss-banner" ' +
           'data-id="' + c.esc(a.id) + '" aria-label="Dismiss">' +
           c.icon('close') +
         '</button>' +
       '</div>';
+  }
+
+  function announcements() {
+    var list = liveAnnouncements();
+    if (!list.length) return '';
+    return list.map(announcementCard).join('');
+  }
+
+  /* ------------------------------------------------------- the pinned line
+
+     One sentence above everything, including the greeting. It is the only
+     thing on this screen that can outrank a person's own name, which is why
+     it is two settings rather than one: the message survives being switched
+     off, so turning it back on next time does not mean retyping it, and an
+     empty message with the switch on draws nothing rather than an empty bar.
+
+     Not dismissible, unlike an announcement, and that is the whole difference
+     between the two. An announcement is news and a person is allowed to be
+     done with it. This is the building being closed on Sunday.
+
+     Both fallbacks are the behaviour the app had before the setting existed,
+     per the note on HC.data.setting: a phone that has never reached Supabase
+     shows no banner rather than an undefined one. */
+  function pinnedBanner() {
+    if (!HC.data.setting('home_banner_on', false)) return '';
+    var message = String(HC.data.setting('home_banner_message', '') || '').trim();
+    if (!message) return '';
+
+    return '<div class="hc-pinned" role="status">' +
+      '<p class="hc-pinned__text">' + c.esc(message) + '</p>' +
+    '</div>';
   }
 
   /* ------------------------------------------------------ which week it is
@@ -434,18 +509,43 @@
   function render() {
     var html = '<div class="hc-screen hc-home">';
 
+    // Above the greeting, because the one thing that outranks saying good
+    // morning to somebody by name is the building being shut.
+    html += pinnedBanner();
+
     // The mark now lives in the top bar, so Home does not repeat it.
     html += '<h1 class="hc-display-l hc-home__greeting">' + c.esc(greetingLine()) + '</h1>';
+
+    /* Announcements sit here now, directly under the greeting, rather than
+       below Service times and Latest sermon where they used to. They are the
+       only thing on this screen that is genuinely new information: the
+       gathering card says the same thing every week and the sermon card
+       changes on a schedule everybody already knows. Something posted on
+       purpose on a Thursday should not be under two cards that did not
+       change.
+
+       Same rule as every other block here, though: no announcements, no
+       header. An empty heading over nothing reads as a bug. */
+    var ann = announcements();
+    if (ann) {
+      html += c.sectionHeader('', 'Announcements');
+      html += '<div class="hc-home__announcement">' + ann + '</div>';
+    }
 
     /* Between the greeting and the gathering card. Renders nothing until
        there is something to show, so Home is unchanged on a project with an
        empty instagram_posts table and no homeMedia.
 
-       No header over it, deliberately. Every slide already says what it is in
-       its own eyebrow, and a heading above a block that changes what it is
-       from slide to slide would have to be vague enough to cover all of them,
-       which is a heading that says nothing. */
-    html += mediaCarousel();
+       "Socials" names the carousel and the row of links under it together,
+       which is the one word broad enough to be true of both a video from the
+       pastor and the week's Instagram photograph without saying nothing.
+       Each slide still carries its own eyebrow underneath it, so the heading
+       names where this all comes from and the eyebrow names the slide.
+
+       Same rule as every other block on this screen: no header unless there
+       is something under it. On a week with no posts, no homeMedia and no
+       social links, the heading would be a title over a gap. */
+    var media = mediaCarousel();
 
     /* The social links sit under the photograph, but they do not depend on
        it. A week when nothing has been posted, or a sync that has broken, is
@@ -456,7 +556,11 @@
        Outside that block for a second reason too: it is a button, and a
        button inside a button is invalid HTML that browsers resolve however
        they like. */
-    html += c.socialRow(HC.data.church.social);
+    var social = c.socialRow(HC.data.church.social);
+
+    if (media || social) html += c.sectionHeader('', 'Socials');
+    html += media;
+    html += social;
 
     /* From here down, every block is named. The headings carry no eyebrow, so
        what a person scrolling past sees is one column of titles in the same
@@ -468,14 +572,6 @@
 
     html += c.sectionHeader('', 'Latest sermon');
     html += guideCard();
-
-    // No announcement, no header. An empty header over nothing reads as a bug,
-    // which is the same rule the reading plan below has always kept.
-    var ann = announcement();
-    if (ann) {
-      html += c.sectionHeader('', 'Announcements');
-      html += '<div class="hc-home__announcement">' + ann + '</div>';
-    }
 
     var plan = readingPlanRow();
     if (plan) {

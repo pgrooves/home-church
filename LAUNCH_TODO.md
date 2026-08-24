@@ -279,7 +279,20 @@ neither is a defect:
          so it has never been in git or in a chat window. Copy it once.
 
       3. **Set five secrets** on the function, under Edge Functions →
-         send-push → Secrets:
+         send-push → Secrets.
+
+         **Confirmed still outstanding as of the admin dashboard work.** A
+         dry run through `hc_send_push` came back
+         `500 {"error":"Not configured."}`, which is the function's own first
+         check: `HC_PUSH_CRON_SECRET` is not set on it. So push has never
+         fired on this project, and that includes the Monday guide notice and
+         the Saturday reminder, not just announcements. The vault secret from
+         0012 exists; it has simply never been copied onto the function.
+
+         Nothing in the app is wrong and nothing here needs rewriting. Until
+         these are set, posting an announcement saves the card and the Notify
+         step reports that the notification did not send, which is the right
+         way round.
 
          | Secret | Value |
          |---|---|
@@ -398,6 +411,58 @@ above, under Before submission.)*
       web app and the reviewer cannot get past the first screen. Test sign in
       on a real device from the Xcode build, not from Safari, before you
       submit.
+
+- [!] **Deploy the two Edge Functions the admin dashboard needs.** The
+      migrations are applied, the app is wired, and two of the four sections
+      go through Edge Functions that have to be pushed before they work.
+      Neither is optional and neither needs anything set up beyond the deploy:
+
+      ```
+      supabase functions deploy send-push --no-verify-jwt
+      supabase functions deploy admin-remove-user
+      ```
+
+      `send-push` already existed and has been changed rather than added: it
+      learned the `announcement` topic. **Redeploy it or posting an
+      announcement will save the card and then fail to notify anybody**, which
+      is the safer half of the two failure modes but still a broken button.
+      `--no-verify-jwt` is not new and not careless, the caller is the
+      database presenting a dedicated shared secret; the header of that file
+      explains it at length.
+
+      `admin-remove-user` is new. Until it is deployed, Remove on the Users
+      screen fails with a message rather than doing anything, which is the
+      right way round.
+
+      The APNs secrets on `send-push` are the same five as before and are
+      already on the list under "Push notifications". Announcements need
+      nothing beyond them.
+
+- [x] **The admin role and its three migrations.** Applied to the project on
+      the branch that added them: `0025_admin_role`, `0026_admin_content`,
+      `0027_announcement_push`. `teebacca@hotmail.com` is the first admin.
+
+      Two accounts predated the signup trigger from 0009 and had no
+      `profiles` row at all, which would have made Manage Users unable to
+      change their role. Backfilled blank, which is exactly what that trigger
+      writes, and they default to `member`.
+
+      **Nothing here needs the dashboard.** The `announcements` Storage bucket
+      and its four policies were created by migration 0026 rather than
+      clicked, which is the whole point of the pass.
+
+- [ ] **Expect four new security advisor warnings, and know why.** Two
+      `0028_anon_security_definer_function_executable` and
+      `0029_authenticated_security_definer_function_executable` entries for
+      `hc_is_admin`, plus `hc_admin_list_users`, `hc_admin_set_role` and
+      `hc_admin_send_announcement`.
+
+      These are the same shape as the eighteen the Group tab already carries
+      from 0016: in this project a SECURITY DEFINER function *is* the
+      permission boundary, so the ones that matter are exactly the ones that
+      have to be callable. Section 6 of `0025_admin_role.sql` has the full
+      argument, including why revoking `hc_is_admin` from `anon` is not the
+      fix and was in fact a real bug caught in testing.
 
 -----
 

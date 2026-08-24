@@ -106,7 +106,7 @@
     return MODULE_ROUTES.indexOf(name) !== -1;
   }
 
-  var mount, scroller, topbar, tabbar, totop, backdisc;
+  var mount, scroller, topbar, tabbar, totop, backdisc, pinbar;
   var sheet, sheetGrid, sheetScrim, sheetGrab;
 
   /* ------------------------------------------------------------- the shell */
@@ -129,8 +129,29 @@
         '</button>' +
       '</header>' +
 
-      // Sits directly under the header and stays out of the way until the
-      // Listen archive starts. See js/date-rail.js.
+      /* The pinned announcement, when the church has pinned one.
+
+         SHELL CHROME, and that is the whole feature. Home already draws every
+         announcement as a card, and a church that pins one is saying this
+         should not wait for somebody to open Home and scroll: it rides the
+         top of Listen, of the Journal, of a guide being read on a Sunday
+         morning. So it belongs to the app the way the tab bar does, and no
+         screen has to remember it or can disagree about where it sits.
+
+         Empty until paintPinBar() fills it, which is on the same three beats
+         everything else here repaints on: boot, a view change, and content
+         landing from Supabase.
+
+         Two buttons side by side rather than one with the other inside it.
+         The strip is a tap that goes somewhere and an x that puts it away,
+         and a button inside a button is invalid HTML that browsers resolve
+         however they like, which is the same reason the social row on Home
+         sits outside the media block rather than in it. */
+      '<div class="hc-pinbar" id="hc-pinbar" data-show="false" hidden></div>' +
+
+      // Sits directly under the header, below the pinned strip when there is
+      // one, and stays out of the way until the Listen archive starts. See
+      // js/date-rail.js.
       '<nav class="hc-date-rail" id="hc-date-rail" data-show="false" ' +
           'aria-label="Jump to a month" hidden>' +
         '<div class="hc-date-rail__track"></div>' +
@@ -215,6 +236,7 @@
     tabbar = document.getElementById('hc-tabbar');
     totop = document.getElementById('hc-totop');
     backdisc = document.getElementById('hc-back');
+    pinbar = document.getElementById('hc-pinbar');
     sheet = document.getElementById('hc-oversheet');
     sheetGrid = document.getElementById('hc-oversheet-grid');
     sheetScrim = document.getElementById('hc-oversheet-scrim');
@@ -243,6 +265,164 @@
     } else {
       disc.innerHTML = c.icon('home', 'hc-avatar__icon');
     }
+  }
+
+  /* ------------------------------------------------------- the pinned strip
+
+     The announcement an admin pinned, across the top of every tab, tappable,
+     with an x on the right.
+
+     WHY IT IS HERE AND NOT ON HOME. There is already a pinned line on Home,
+     drawn from home_banner_on and home_banner_message, and it stays: a
+     sentence with no announcement behind it is the right shape for "the
+     building is closed on Sunday", and it is not dismissible because being
+     done with that is not a thing a person gets to be. This is the other
+     kind. It has an announcement behind it by construction, which is what
+     makes it tappable, and because it can be tapped it has to be reachable
+     from wherever the tap happens, which means the shell.
+
+     WHAT IT COSTS, said plainly because it is the reason the switch that
+     draws it is off by default and the reason the x exists: this is the only
+     thing in the app that follows somebody between tabs. The x is the way
+     out, it is remembered on the phone rather than for the session, and it is
+     keyed on the announcement id, so a second pinned announcement next month
+     is a new strip rather than one that stays down forever. See
+     dismissPin() in js/store.js.
+
+     HEIGHT IS PUBLISHED RATHER THAN ASSUMED. Every screen clears the fixed
+     header with one padding-top calc, and the date rail and the index rail
+     hang off the same number. Rather than a second constant that has to be
+     kept in step with a title that wraps to two lines on a small phone, the
+     measured height goes onto #app as --hc-pin-h and the CSS adds it in. Zero
+     when there is no strip, which is what makes every one of those rules
+     unchanged on the ordinary week when nobody has pinned anything.
+     ------------------------------------------------------------------------ */
+
+  /* What is on the strip right now, or null. Three ways to be null and they
+     are all ordinary: nothing is pinned, the pinned announcement's window has
+     closed, or this phone has already put it away.
+
+     The dismissed ones are filtered out rather than only checked at the top
+     of the list, which decides the rare case where two announcements are
+     pinned at once. Tapping the x on the first says something about that
+     announcement and nothing about the second, and the second was pinned too:
+     letting a dismissal of one suppress the other would mean the second strip
+     appeared weeks later, when the first retired, which is worse than it
+     appearing now. The admin form warns before there are ever two. */
+  function pinnedNow() {
+    return HC.data.pinnedAnnouncements().filter(function (a) {
+      return !HC.store.isPinDismissed(a.id);
+    })[0] || null;
+  }
+
+  function pinBarMarkup(a) {
+    return '' +
+      '<button type="button" class="hc-pinbar__open" data-action="open-pinned" ' +
+          'data-id="' + c.esc(a.id) + '">' +
+        c.icon('pin', 'hc-pinbar__pin') +
+        // The label is what a screen reader announces along with the title,
+        // so the strip says what kind of thing it is rather than reading as a
+        // stray line of text with a button around it.
+        '<span class="hc-visually-hidden">Pinned announcement, </span>' +
+        '<span class="hc-pinbar__title">' + c.esc(a.title) + '</span>' +
+        c.icon('chevronRight', 'hc-pinbar__chev') +
+      '</button>' +
+      '<button type="button" class="hc-pinbar__dismiss" data-action="dismiss-pinned" ' +
+          'data-id="' + c.esc(a.id) + '" aria-label="Dismiss this banner">' +
+        c.icon('close') +
+      '</button>';
+  }
+
+  function paintPinBar() {
+    if (!pinbar) return;
+
+    var app = document.getElementById('app');
+    var route = HC.router.current ? HC.router.current() : null;
+    // Presentation mode takes the whole screen and nothing competes with it,
+    // the same rule the top bar and the tab bar follow above.
+    var a = (route && route.name === 'present') ? null : pinnedNow();
+
+    if (!a) {
+      pinbar.hidden = true;
+      pinbar.setAttribute('data-show', 'false');
+      pinbar.removeAttribute('data-id');
+      pinbar.removeAttribute('data-key');
+      pinbar.innerHTML = '';
+      app.style.setProperty('--hc-pin-h', '0px');
+      return;
+    }
+
+    /* Rebuilt only when it is actually a different strip, because this runs on
+       every navigation and a repaint would throw the DOM away under a thumb
+       on its way to the x.
+
+       Keyed on the title as well as the id, and the title is the reason: an
+       admin fixing a typo in a pinned announcement keeps the same permanent
+       id, so an id-only check would leave the misspelling on screen for the
+       rest of the session. The id still has to be in the key, because two
+       announcements can share a title. */
+    var key = a.id + '\n' + a.title;
+    if (pinbar.getAttribute('data-key') !== key || !pinbar.firstChild) {
+      pinbar.innerHTML = pinBarMarkup(a);
+      pinbar.setAttribute('data-id', a.id);
+      pinbar.setAttribute('data-key', key);
+    }
+
+    pinbar.hidden = false;
+    pinbar.setAttribute('data-show', 'true');
+    // Measured after it is on the glass, because a long title wraps and the
+    // screens below have to clear whatever it actually came out at.
+    app.style.setProperty('--hc-pin-h', pinbar.offsetHeight + 'px');
+  }
+
+  /* Tapping the strip. It goes to the announcement's own card on Home and
+     leaves the strip up, because the strip is the church's and the x is the
+     only thing that takes it down.
+
+     THE UNDISMISS IS NOT A LOOPHOLE. Somebody may have put this card away on
+     Home last week, before it was pinned; navigating to a card that has been
+     filtered out would land on Home with nothing to see and read as a broken
+     tap. Putting it back is the honest reading of "take me to this", and it
+     is one card, named by the tap that just happened, rather than a blanket
+     reset of everything this phone has dismissed.
+
+     force:true because Home may already be the current view, where go()
+     would otherwise take a repeat tap as "back to the top" and never rebuild
+     the list the un-dismissed card has to reappear in. */
+  function openPinned(id) {
+    HC.store.undismiss(id);
+    HC.router.go({ name: 'home' }, { force: true });
+    scrollToAnnouncement(id);
+  }
+
+  /* Down to the card, and a moment of gold around it so a person knows which
+     of three cards the strip meant.
+
+     Two frames of waiting, not one: the first is the router mounting the new
+     Home, the second is the layout it causes. Measured off the scroller
+     rather than scrollIntoView(), which scrolls the nearest scrollable
+     ancestor by its own rules and would put the card under the fixed header
+     and the strip that is still on top of it. */
+  function scrollToAnnouncement(id) {
+    window.requestAnimationFrame(function () {
+      window.requestAnimationFrame(function () {
+        var card = mount.querySelector('[data-banner="' + id + '"]');
+        if (!card || !scroller) return;
+
+        var chrome = topbar.offsetHeight + (pinbar && !pinbar.hidden ? pinbar.offsetHeight : 0);
+        var top = scroller.scrollTop + card.getBoundingClientRect().top - chrome - 12;
+
+        scroller.scrollTo({
+          top: top < 0 ? 0 : top,
+          behavior: prefersReducedMotion() ? 'auto' : 'smooth'
+        });
+
+        card.setAttribute('data-flash', 'true');
+        window.setTimeout(function () {
+          card.removeAttribute('data-flash');
+        }, 1800);
+      });
+    });
   }
 
   /* ---------------------------------------------------- view change plumbing */
@@ -339,6 +519,13 @@
     paintDiscs();
 
     paintAvatar();
+
+    /* The strip carries across, which is the point of it, so this is not
+       drawing it again from nothing: paintPinBar() rebuilds the markup only
+       when it is a different announcement. What it does do on every view
+       change is take the strip off a presentation and put it back after, and
+       re-publish its height for the screen that has just been mounted. */
+    paintPinBar();
   };
 
   function prefersReducedMotion() {
@@ -710,6 +897,318 @@
       HC.router.go({ name: 'leader' });
     },
 
+    /* ----------------------------------------------------------- the Admin
+       screen
+
+       Drawn only for an admin and refused by the database for everybody else,
+       so nothing here re-checks the role: a member who reaches these handlers
+       gets a 403 and a toast, which is the honest outcome. See the header of
+       js/admin.js.
+       ------------------------------------------------------------------- */
+
+    'go-admin': function (el) {
+      var id = el.getAttribute('data-id');
+      // Arriving at the menu clears whatever was half written, so opening a
+      // different section does not inherit the last one's fields.
+      if (!id) adminHelpers().resetDrafts();
+      HC.router.go({ name: 'admin', id: id || null });
+    },
+
+    'admin-announcement-new': function () {
+      adminHelpers().startDraft(null);
+      repaintAdmin();
+    },
+
+    'admin-announcement-edit': function (el) {
+      var row = announcementById(el.getAttribute('data-id'));
+      if (!row) return;
+      adminHelpers().startDraft(row);
+      repaintAdmin();
+    },
+
+    'admin-announcement-cancel': function () {
+      adminHelpers().clearDraft();
+      repaintAdmin();
+    },
+
+    // The two switches on the form. Both live in the draft, neither is saved
+    // until the button is pressed.
+    'admin-draft-toggle': function (el) {
+      var d = adminHelpers().getDraft();
+      if (!d) return;
+      var which = el.getAttribute('data-id');
+      d[which] = !d[which];
+      HC.native.tap('Light');
+      repaintAdmin();
+    },
+
+    'admin-image-clear': function () {
+      var d = adminHelpers().getDraft();
+      if (!d) return;
+      /* The object stays in the bucket. Deleting it here would orphan the
+         picture of any other announcement pointing at the same URL, which is
+         what happens the moment somebody reuses one, and a few unreferenced
+         images in a 5MB-per-file bucket is a much cheaper problem than a card
+         with a broken image on Home. */
+      d.imageUrl = '';
+      repaintAdmin();
+    },
+
+    /* Save, and then maybe notify. Two calls in that order and never one,
+       because they fail differently: an announcement that saved but did not
+       notify is fine and can be notified again from the list, and a
+       notification about an announcement that did not save is a lie on every
+       lock screen in the church. The second failure therefore never rolls
+       back the first, it just says so. */
+    'admin-announcement-save': function () {
+      var h = adminHelpers();
+      var d = h.getDraft();
+      if (!d) return;
+
+      if (!String(d.title || '').trim()) {
+        HC.components.toast('An announcement needs a title.');
+        return;
+      }
+      if (d.notify && !d.published) {
+        HC.components.toast('A draft cannot be announced. Publish it first.');
+        return;
+      }
+
+      adminRun('save', HC.admin.saveAnnouncement(d).then(function (saved) {
+        var wanted = d.notify;
+        h.clearDraft();
+        if (!wanted || !saved || !saved.id) {
+          HC.components.toast('Posted.');
+          return;
+        }
+        return HC.admin.notifyAnnouncement(saved.id).then(function () {
+          HC.components.toast('Posted, and everybody has been told.');
+        }).catch(function (err) {
+          HC.components.toast('Posted. The notification did not send: ' +
+            (err.message || 'try Notify from the list.'));
+        });
+      }));
+    },
+
+    /* Notify on its own, from the list. This is the second chance after a
+       failed send, and the way to announce something that was written as a
+       draft days ago. */
+    'admin-announcement-notify': function (el) {
+      var id = el.getAttribute('data-id');
+      var row = announcementById(id);
+      if (!row) return;
+
+      if (!window.confirm('Send a notification about “' + row.title + '” to everybody? ' +
+                          'This cannot be undone.')) return;
+
+      adminRun('notify:' + id, HC.admin.notifyAnnouncement(id).then(function () {
+        HC.components.toast('Everybody has been told.');
+      }));
+    },
+
+    'admin-announcement-delete': function (el) {
+      var id = el.getAttribute('data-id');
+      var row = announcementById(id);
+      if (!row) return;
+
+      if (!window.confirm('Delete “' + row.title + '”? It comes off Home for everybody, ' +
+                          'and there is no undo.')) return;
+
+      adminRun('delete:' + id, HC.admin.deleteAnnouncement(id).then(function () {
+        HC.components.toast('Deleted.');
+      }));
+    },
+
+    /* ------------------------------------------------------------- users */
+
+    'admin-role': function (el) {
+      var id = el.getAttribute('data-id');
+      var person = HC.admin.users().filter(function (u) { return u.id === id; })[0];
+      if (!person) return;
+
+      var makingAdmin = person.role !== 'admin';
+      var name = [person.first_name, person.last_name].filter(Boolean).join(' ') ||
+        person.email || 'this person';
+
+      /* Promotion is confirmed as well as demotion, which is not the usual
+         rule. It is not destructive, but it hands somebody the ability to
+         write to Home and to change everybody else's role, and that is worth
+         one deliberate tap. */
+      var question = makingAdmin
+        ? 'Make ' + name + ' an admin? They will be able to post announcements, ' +
+          'edit content, and change what everybody else can do.'
+        : 'Make ' + name + ' a member? They lose access to this screen.';
+
+      if (!window.confirm(question)) return;
+
+      adminRun('role:' + id,
+        HC.admin.setRole(id, makingAdmin ? 'admin' : 'member').then(function () {
+          HC.components.toast(makingAdmin ? 'Now an admin.' : 'Now a member.');
+        }));
+    },
+
+    'admin-user-remove': function (el) {
+      var id = el.getAttribute('data-id');
+      var person = HC.admin.users().filter(function (u) { return u.id === id; })[0];
+      if (!person) return;
+
+      var name = [person.first_name, person.last_name].filter(Boolean).join(' ') ||
+        person.email || 'this person';
+
+      /* The worst button on the screen, so the confirmation says what it
+         actually does rather than "are you sure". A member who hosted a group
+         room takes that evening's writing down with them, including other
+         people's, which is the cascade documented in the delete-account
+         function and in the privacy policy. */
+      if (!window.confirm('Remove ' + name + ' from the app?\n\n' +
+            'Their account, their profile, and anything they wrote in a group room ' +
+            'are deleted. If they hosted a room, that room goes too, including what ' +
+            'other people wrote in it. There is no undo.')) return;
+
+      adminRun('remove:' + id, HC.admin.removeUser(id).then(function () {
+        HC.components.toast('Removed.');
+      }));
+    },
+
+    /* ----------------------------------------------------------- content */
+
+    'admin-page-new': function () {
+      adminHelpers().startPageDraft(null);
+      repaintAdmin();
+    },
+
+    'admin-page-edit': function (el) {
+      var row = pageById(el.getAttribute('data-id'));
+      if (!row) return;
+      adminHelpers().startPageDraft(row);
+      repaintAdmin();
+    },
+
+    'admin-page-cancel': function () {
+      adminHelpers().clearPageDraft();
+      repaintAdmin();
+    },
+
+    'admin-page-toggle': function () {
+      var p = adminHelpers().getPageDraft();
+      if (!p) return;
+      p.published = !p.published;
+      HC.native.tap('Light');
+      repaintAdmin();
+    },
+
+    'admin-section-add': function () {
+      var p = adminHelpers().getPageDraft();
+      if (!p) return;
+      p.sections.push({ heading: '', body: '' });
+      repaintAdmin();
+    },
+
+    /* No confirmation. An unsaved section is not published anything, and
+       Cancel is still sitting at the bottom of the form. Confirmations spent
+       on reversible things are what train people to tap through the ones that
+       matter. */
+    'admin-section-remove': function (el) {
+      var p = adminHelpers().getPageDraft();
+      if (!p) return;
+      p.sections.splice(parseInt(el.getAttribute('data-id'), 10), 1);
+      repaintAdmin();
+    },
+
+    'admin-page-save': function () {
+      var h = adminHelpers();
+      var p = h.getPageDraft();
+      if (!p) return;
+
+      if (!String(p.title || '').trim()) {
+        HC.components.toast('A page needs a title.');
+        return;
+      }
+
+      adminRun('page', HC.admin.savePage(p).then(function () {
+        h.clearPageDraft();
+        HC.components.toast('Saved.');
+      }));
+    },
+
+    'admin-page-delete': function (el) {
+      var id = el.getAttribute('data-id');
+      var row = pageById(id);
+      if (!row) return;
+
+      if (!window.confirm('Delete the page “' + row.title + '”? ' +
+            'Anywhere in the app that reads it falls back to the words built into ' +
+            'the app. There is no undo.')) return;
+
+      adminRun('page-delete:' + id, HC.admin.deletePage(id).then(function () {
+        HC.components.toast('Deleted.');
+      }));
+    },
+
+    /* ---------------------------------------------------------- settings */
+
+    'admin-setting-toggle': function (el) {
+      var key = el.getAttribute('data-id');
+      var row = HC.admin.settings().filter(function (s) { return s.key === key; })[0];
+      if (!row) return;
+
+      // Moved on screen first, saved after. A switch that waits on the
+      // network to move feels broken on a bad connection, and the repaint at
+      // the end of adminRun puts it back if the write is refused.
+      setSwitch(el, !row.value_bool);
+      HC.native.tap('Light');
+
+      adminRun('setting:' + key, HC.admin.saveSetting(key, 'boolean', !row.value_bool));
+    },
+
+    'admin-setting-new': function () {
+      adminHelpers().startNewSetting();
+      repaintAdmin();
+    },
+
+    'admin-setting-cancel': function () {
+      adminHelpers().clearNewSetting();
+      repaintAdmin();
+    },
+
+    'admin-setting-kind': function (el) {
+      var n = adminHelpers().getNewSetting();
+      if (!n) return;
+      n.kind = el.getAttribute('data-id');
+      repaintAdmin();
+    },
+
+    'admin-setting-create': function () {
+      var h = adminHelpers();
+      var n = h.getNewSetting();
+      if (!n) return;
+
+      if (!String(n.label || '').trim()) {
+        HC.components.toast('Give it a name first.');
+        return;
+      }
+
+      adminRun('setting', HC.admin.createSetting(n).then(function () {
+        h.clearNewSetting();
+        HC.components.toast('Added.');
+      }));
+    },
+
+    'admin-setting-delete': function (el) {
+      var key = el.getAttribute('data-id');
+      var row = HC.admin.settings().filter(function (s) { return s.key === key; })[0];
+      if (!row) return;
+
+      if (!window.confirm('Remove the “' + row.label + '” setting? ' +
+            'Anything reading it goes back to its built-in behaviour.')) return;
+
+      adminRun('setting-delete:' + key, HC.admin.deleteSetting(key).then(function () {
+        HC.components.toast('Removed.');
+      }));
+    },
+
+
+
     // Every row on the More screen. One handler rather than one per module,
     // so adding a module is a row in js/screens/more.js and a route below.
     'go-module': function (el) {
@@ -1043,6 +1542,23 @@
       HC.store.dismiss(id);
       var banner = document.querySelector('[data-banner="' + id + '"]');
       if (banner && banner.parentNode) banner.parentNode.removeChild(banner);
+    },
+
+    /* The pinned strip, both halves of it.
+
+       Tapping it opens the announcement it names. Tapping the x puts the
+       strip away on this phone, for good, and leaves the card on Home alone:
+       the two are dismissed separately for the reason set out on
+       dismissPin() in js/store.js. */
+    'open-pinned': function (el) {
+      HC.native.tap('Light');
+      openPinned(el.getAttribute('data-id'));
+    },
+
+    'dismiss-pinned': function (el) {
+      HC.store.dismissPin(el.getAttribute('data-id'));
+      HC.native.tap('Light');
+      paintPinBar();
     },
 
     // Archive rows open in place, so you can read the episode notes without
@@ -1851,6 +2367,135 @@
     if (knob) knob.setAttribute('aria-checked', on ? 'true' : 'false');
   }
 
+
+  /* ------------------------------------------------------------- the Admin
+     screen
+
+     The markup is in js/screens/admin.js and the handling is here, the same
+     seam profileHelpers draws. Everything below either edits the draft that
+     screen is holding or makes one network call and repaints.
+     ---------------------------------------------------------------------- */
+
+  function adminHelpers() {
+    return HC.screens.adminHelpers;
+  }
+
+  /* The same 400ms debounce wireEvents() uses, hoisted so the admin handlers
+     above can reach it too. Keyed, so two fields edited in the same moment do
+     not cancel each other. */
+  var adminTimers = {};
+  function debounceGlobal(key, fn) {
+    window.clearTimeout(adminTimers[key]);
+    adminTimers[key] = window.setTimeout(fn, 400);
+  }
+
+  /* A repaint that keeps the reader where they were. Every admin action ends
+     in one of these rather than patching the DOM, because the screen is
+     rendered from the draft and the caches in one pass and there is nothing
+     to patch. restore:true is what stops a save throwing somebody back to the
+     top of a long list. */
+  function repaintAdmin() {
+    var route = HC.router.current();
+    if (!route || route.name !== 'admin') return;
+    HC.router.go({ name: 'admin', id: route.id, restore: true }, { force: true });
+  }
+
+  /* Every keystroke on the Admin screen. Writes into the draft object and
+     draws nothing, for the reason in the input listener above.
+
+     The one exception is a text app setting, which has no Save button because
+     a settings screen with one would be a settings screen people leave
+     half saved. It debounces to the table instead, keyed per setting so
+     editing two of them inside the same 400ms does not cancel the first. */
+  function adminInput(name, id, value) {
+    var h = adminHelpers();
+    var d = h.getDraft();
+    var p = h.getPageDraft();
+    var n = h.getNewSetting();
+
+    if (name === 'setting') {
+      debounceGlobal('setting-' + id, function () {
+        HC.admin.saveSetting(id, 'text', value).catch(function (err) {
+          HC.components.toast(err.message || 'That did not save.');
+        });
+      });
+      return;
+    }
+
+    if (d && ANNOUNCEMENT_FIELDS[name]) { d[name] = value; return; }
+
+    if (p) {
+      if (name === 'pageTitle') { p.title = value; return; }
+      if (name === 'pageEyebrow') { p.eyebrow = value; return; }
+      if (name === 'pageBlurb') { p.blurb = value; return; }
+      var index = parseInt(id, 10);
+      if (p.sections[index]) {
+        if (name === 'sectionHeading') p.sections[index].heading = value;
+        if (name === 'sectionBody') p.sections[index].body = value;
+      }
+      return;
+    }
+
+    if (n) {
+      if (name === 'newLabel') n.label = value;
+      if (name === 'newHelp') n.help = value;
+    }
+  }
+
+  var ANNOUNCEMENT_FIELDS = {
+    title: true, body: true, eyebrow: true,
+    imageUrl: true, videoUrl: true, startsOn: true, endsOn: true
+  };
+
+  /* The picture. Uploaded the moment it is chosen rather than when the
+     announcement is saved, so the person sees it land and can change their
+     mind, and so a failure is about the picture rather than about the whole
+     announcement. */
+  function uploadAnnouncementImage(file) {
+    var h = adminHelpers();
+    if (!file || !h.getDraft()) return;
+
+    h.setUploading(true);
+    repaintAdmin();
+
+    HC.admin.uploadImage(file).then(function (url) {
+      var d = h.getDraft();
+      if (d) d.imageUrl = url;
+    }).catch(function (err) {
+      HC.components.toast(err.message || 'That picture would not upload.');
+    }).then(function () {
+      h.setUploading(false);
+      repaintAdmin();
+    });
+  }
+
+  /* Wraps a network call in the busy flag, so the button that started it is
+     disabled and marked while it is out. One helper because every admin write
+     wants exactly this and forgetting it is how somebody double posts an
+     announcement on a slow connection. */
+  function adminRun(token, promise, onDone) {
+    var h = adminHelpers();
+    h.setBusy(token);
+    repaintAdmin();
+
+    return promise.then(function (result) {
+      if (onDone) onDone(result);
+    }).catch(function (err) {
+      HC.components.toast(err.message || 'That did not go through. Try again in a moment.');
+    }).then(function () {
+      h.setBusy('');
+      repaintAdmin();
+    });
+  }
+
+  function announcementById(id) {
+    return HC.admin.announcements().filter(function (a) { return a.id === id; })[0] || null;
+  }
+
+  function pageById(id) {
+    return HC.admin.pages().filter(function (p) { return p.id === id; })[0] || null;
+  }
+
   /* -------------------------------------------------------------- listeners */
 
   function wireEvents() {
@@ -2052,6 +2697,23 @@
         return;
       }
 
+      /* The Admin screen. Every field writes into the draft object that
+         js/screens/admin.js is holding rather than into the DOM, so a content
+         refresh landing mid-sentence redraws the form with the words still in
+         it. Nothing is saved to Supabase here: an announcement is saved when
+         somebody presses the button, which is what makes Cancel mean
+         something.
+
+         No repaint on keystroke, deliberately. The form is already showing
+         what was typed, and rebuilding it would pull the caret out from under
+         the thumb, which is the bug the router's replaceCurrent() exists to
+         avoid on the Journal. */
+      var adminField = el.getAttribute && el.getAttribute('data-admin-field');
+      if (adminField) {
+        adminInput(adminField, el.getAttribute('data-id'), el.value);
+        return;
+      }
+
       var profileField = el.getAttribute && el.getAttribute('data-profile-field');
       if (profileField) {
         // Keyed per field, not shared, so editing first name and then last
@@ -2101,6 +2763,12 @@
     document.addEventListener('change', function (evt) {
       var what = evt.target.getAttribute && evt.target.getAttribute('data-scripture');
       if (what) HC.editor.setPick(what, evt.target.value);
+
+      // The announcement picture. A file input only ever reports 'change',
+      // never 'input', which is why this is here rather than above.
+      if (evt.target.hasAttribute && evt.target.hasAttribute('data-admin-image')) {
+        uploadAnnouncementImage(evt.target.files && evt.target.files[0]);
+      }
     });
 
     // Forms are inert in v1. Stop the browser from navigating away.
@@ -2182,6 +2850,8 @@
         'journal-entry': HC.screens.journalEntry,
         give: HC.screens.give,
         profile: HC.screens.profile,
+        admin: HC.screens.admin,
+        page: HC.screens.page,
         leader: HC.screens.leader,
         'guide-reader': HC.screens.guideReader,
         present: HC.screens.present,
@@ -2207,6 +2877,18 @@
     // A content check finishing changes the line at the bottom of Profile even
     // when the content itself did not change, so repaint it the same way.
     HC.store.on('content', function () {
+      /* A newly pinned announcement has to reach a phone that is already
+         open, which is the whole path an admin takes: they post it from this
+         screen, and the person in the next room is sitting on Listen. The
+         strip is shell chrome, so the router's redraw of the current view
+         does not touch it, and this is what does.
+
+         Unconditional, unlike the repaint below, because js/content.js only
+         redraws when its fingerprint changed and that fingerprint does not
+         look at every row. A pin toggled on the third announcement in the
+         table is exactly the change it would miss. */
+      paintPinBar();
+
       var route = HC.router.current();
       if (route && route.name === 'profile') {
         HC.router.go({ name: 'profile', restore: true }, { force: true });
@@ -2232,6 +2914,22 @@
        page is opened. Neither blocks anything, and a screen that asked for
        something still on its way repaints when it lands. */
     HC.practices.init();
+    /* A list the Admin screen asked for has arrived. Same shape as the
+       practices subscriber below and for the same reason: js/admin.js fetches
+       after the screen has already drawn, because a screen here renders to a
+       string in one pass and cannot wait.
+
+       Without this the sections draw "Loading…" and stay there forever, which
+       is exactly what they did until a browser was pointed at them. Every
+       admin write also ends in a repaint, and those go through repaintAdmin()
+       directly; this is the one for a read nobody is standing over. */
+    HC.store.on('admin', function () {
+      var route = HC.router.current();
+      if (!route || route.name !== 'admin') return;
+      HC.router.go(Object.assign({}, route, { restore: true }),
+                   { force: true, animate: false, replace: true });
+    });
+
     HC.store.on('practices', function () {
       var route = HC.router.current();
       if (!route) return;

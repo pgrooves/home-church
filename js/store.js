@@ -99,11 +99,20 @@
     notifications: {
       newGuide: true,
       sundayReminder: true,
-      groupWeek: false
+      groupWeek: false,
+      // The church posting something on purpose. Default on for the reason in
+      // migration 0027: a phone with notifications on at all wants to hear it.
+      announcements: true
     },
     textScale: 1.1,    // 110%, the app's default reading size
     theme: 'system',   // system | light | dark
     leaderMode: false,
+    /* member or admin, mirrored from profiles.role by js/auth.js on every
+       sign in and session refresh. Read only on this side: nothing in the app
+       writes it, the database refuses the write anyway (migration 0025), and
+       it is cleared on sign out. It decides one thing, whether Your account
+       draws the Admin row. */
+    role: 'member',
     // Face ID in front of the Journal. Off by default, and only offered on a
     // phone that can actually do it. See js/native.js and js/journal.js.
     lockJournal: false
@@ -114,15 +123,36 @@
     // Per guide: { checked: { "0-1": true }, journal: { "3": "text" } }
     guideState: storage.get('guideState', {}),
     dismissed: storage.get('dismissed', {}),
+    dismissedPins: storage.get('dismissedPins', {}),
     roster: storage.get('roster', null),
     prayers: storage.get('prayers', [])
   };
 
-  // Notifications is nested, so a shallow merge can leave it undefined on an
-  // older stored profile. Backfill it rather than guarding at every read.
+  /* Notifications is nested, so a shallow merge can leave it undefined on an
+     older stored profile. Backfill it rather than guarding at every read.
+
+     `announcements` is newer than the other three and cannot simply take the
+     default, which is the interesting case. A phone that already has the app
+     has a stored notifications object with three keys in it and no fourth,
+     and merging the default over it would turn a switch ON for somebody who
+     had deliberately turned every notification OFF. That is the one outcome
+     a notification setting must never produce, so the new switch inherits
+     whether this phone wanted to hear anything at all, and only a genuinely
+     fresh profile gets the default. */
+  var storedNotifications = state.profile.notifications || null;
+
   state.profile.notifications = Object.assign(
-    {}, DEFAULT_PROFILE.notifications, state.profile.notifications || {}
+    {}, DEFAULT_PROFILE.notifications, storedNotifications || {}
   );
+
+  if (storedNotifications && storedNotifications.announcements === undefined) {
+    state.profile.notifications.announcements = !!(
+      storedNotifications.newGuide ||
+      storedNotifications.sundayReminder ||
+      storedNotifications.groupWeek
+    );
+    storage.set('profile', state.profile);
+  }
 
   // v1 shipped with a single free-text `name` field. Split it once into
   // firstName/lastName so anyone with the old app already installed does not
@@ -220,6 +250,39 @@
 
   function dismiss(id) {
     state.dismissed[id] = true;
+    storage.set('dismissed', state.dismissed);
+    emit('dismissed', state.dismissed);
+  }
+
+  /* The pinned strip across the top of every tab is dismissed separately from
+     the announcement card it points at, and both are keyed on the same
+     permanent announcement id.
+
+     Two maps rather than one, because they are two answers to two different
+     questions. Putting the card away on Home means "I have read this"; taking
+     the strip down means "stop following me between tabs about it". Somebody
+     who dismisses the strip should still find the announcement where the
+     church put it, and somebody who has read the card should not have the
+     strip vanish out from under the tap they were about to make. Sharing one
+     map would make each of those dismiss the other.
+
+     Undismissing exists for exactly one caller: tapping the strip. It takes
+     you to the card, and a tap that navigates to a card this phone has
+     already put away would arrive at a screen with nothing on it. See
+     'open-pinned' in js/app.js. */
+  function isPinDismissed(id) {
+    return state.dismissedPins[id] === true;
+  }
+
+  function dismissPin(id) {
+    state.dismissedPins[id] = true;
+    storage.set('dismissedPins', state.dismissedPins);
+    emit('dismissed', state.dismissed);
+  }
+
+  function undismiss(id) {
+    if (!state.dismissed[id]) return;
+    delete state.dismissed[id];
     storage.set('dismissed', state.dismissed);
     emit('dismissed', state.dismissed);
   }
@@ -323,6 +386,7 @@
     state.profile = Object.assign({}, DEFAULT_PROFILE);
     state.guideState = {};
     state.dismissed = {};
+    state.dismissedPins = {};
     state.roster = [];      // [] not null, so getRoster does not reseed the sample names
     state.prayers = [];
 
@@ -376,6 +440,9 @@
 
     isDismissed: isDismissed,
     dismiss: dismiss,
+    undismiss: undismiss,
+    isPinDismissed: isPinDismissed,
+    dismissPin: dismissPin,
 
     getRoster: getRoster,
     updateMember: updateMember,

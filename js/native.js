@@ -237,7 +237,8 @@
       active: true,
       wants_new_guide: !!prefs.newGuide,
       wants_sunday_reminder: !!prefs.sundayReminder,
-      wants_group_day: !!prefs.groupWeek
+      wants_group_day: !!prefs.groupWeek,
+      wants_announcements: !!prefs.announcements
     };
   }
 
@@ -338,7 +339,8 @@
         active: false,
         wants_new_guide: false,
         wants_sunday_reminder: false,
-        wants_group_day: false
+        wants_group_day: false,
+        wants_announcements: false
       })
     }).then(function () { return true; }).catch(function () { return true; });
   }
@@ -350,7 +352,8 @@
   function resumeNotifications() {
     if (!isNative()) return;
     var prefs = HC.store.getProfile().notifications || {};
-    if (!prefs.newGuide && !prefs.sundayReminder && !prefs.groupWeek) return;
+    if (!prefs.newGuide && !prefs.sundayReminder && !prefs.groupWeek &&
+        !prefs.announcements) return;
     enableNotifications();
   }
 

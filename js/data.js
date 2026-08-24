@@ -2305,9 +2305,34 @@
       body: 'Four sites, one Saturday, every hand we can get. Sign up at the Welcome Desk or tell your group leader.',
       startsOn: null,
       endsOn: null,
-      priority: 0
+      priority: 0,
+      // A bundled announcement has no picture and no video. Both fields exist
+      // anyway so the shape matches the mapper in js/content.js exactly, and
+      // Home never has to ask which kind of announcement it is holding.
+      imageUrl: null,
+      videoUrl: null,
+      // Never pinned. A bundled announcement is the floor a phone with no
+      // signal stands on, and a strip across the top of every tab that no
+      // admin chose and no admin can take down is not a floor, it is a fault.
+      pinned: false,
+      createdAt: '2026-08-16T12:00:00Z'
     }
   ];
+
+  /* ------------------------------------------------- pages and settings
+
+     Both empty, and both for the same reason the Instagram rail is: they hold
+     what an admin has written from inside the app, and a copy frozen at build
+     time would be a stale answer presented as the current one. The screens
+     that read them fall back to the words in their own source file when the
+     table has not been reached, which is a better floor than a snapshot.
+
+     They exist here at all because js/content.js fills HC.data by mutating
+     these arrays in place rather than replacing them, so the key has to be
+     present before the first fetch lands. See the header of that file. */
+
+  var contentPages = [];
+  var appSettings = [];
 
   /* Instagram posts, for the rail at the top of Connect.
 
@@ -2375,11 +2400,35 @@
     announcements: announcements,
     instagramPosts: instagramPosts,
     homeMedia: homeMedia,
+    contentPages: contentPages,
+    appSettings: appSettings,
 
     /* ------------------------------------------------------------- helpers */
 
     getSeries: function (id) {
       return series.filter(function (s) { return s.id === id; })[0] || null;
+    },
+
+    /* A page by its permanent id, or null. Null is a real answer and every
+       caller handles it: it is what a screen sees before the first content
+       fetch lands, and what it sees forever on a project where nobody has
+       written that page yet. Both cases want the same thing, the words still
+       in the source file. */
+    getPage: function (id) {
+      return contentPages.filter(function (p) { return p.id === id; })[0] || null;
+    },
+
+    /* One app setting's value, or the fallback.
+
+       The fallback is not decoration. These rows are read over the network
+       like all other content, so every read has to work on a phone that has
+       never reached Supabase, and the honest default for a feature flag is
+       the behaviour the app had before the flag existed. Passing one is
+       required rather than optional for that reason: `undefined` leaking into
+       a switch is how a banner appears on every phone at once. */
+    setting: function (key, fallback) {
+      var row = appSettings.filter(function (s) { return s.key === key; })[0];
+      return row ? row.value : fallback;
     },
 
     getSermon: function (id) {
@@ -2485,6 +2534,72 @@
       if (!sermon) return [];
       if (sermon.summary && sermon.summary.length) return sermon.summary;
       return sermon.description ? [sermon.description] : [];
+    },
+
+    /* ------------------------------------------------------ announcements
+
+       Which announcements the church is showing today, in the order they go
+       on screen: priority first for the rare Sunday when something has to sit
+       above a newer card, then newest, then the id so a tie is broken
+       deliberately rather than by whatever order the rows arrived in.
+
+       ONE DEFINITION, because two places read it and they must agree. Home
+       draws this list as cards, and the shell draws the top pinned one of
+       them as the strip under the top bar. While that was two copies of the
+       same three date comparisons, "the announcement came down" and "its
+       banner came down" were two facts that could quietly drift, and the one
+       that drifts is the banner, because it is the one nobody is looking at.
+
+       Dates are compared as 'YYYY-MM-DD' strings in the phone's own zone,
+       which is exact: starts_on and ends_on are plain dates, not timestamps,
+       so no timezone is involved. startsOn is the first day it shows, endsOn
+       is the first day it does not, and either end null means that end is
+       open. A Saturday event announced with endsOn on the Sunday is gone when
+       people wake up Sunday.
+
+       DISMISSALS ARE NOT APPLIED HERE, on purpose. Whether this phone has put
+       something away lives in js/store.js, which loads after this file and
+       knows nothing about content, and the two callers put away different
+       things anyway: a card on Home and a strip in the shell are dismissed
+       separately. So this answers what the church is saying today, and each
+       caller decides what this phone has already been told. */
+    liveAnnouncements: function () {
+      var d = new Date();
+      var today = d.getFullYear() + '-' +
+        ('0' + (d.getMonth() + 1)).slice(-2) + '-' +
+        ('0' + d.getDate()).slice(-2);
+
+      return (announcements || []).filter(function (a) {
+        if (a.startsOn && today < a.startsOn) return false;
+        if (a.endsOn && today >= a.endsOn) return false;
+        return true;
+      }).sort(function (x, y) {
+        var px = x.priority || 0;
+        var py = y.priority || 0;
+        if (px !== py) return py - px;
+        var cx = String(x.createdAt || x.publishedOn || '');
+        var cy = String(y.createdAt || y.publishedOn || '');
+        if (cx !== cy) return cx < cy ? 1 : -1;
+        return String(x.id) < String(y.id) ? -1 : 1;
+      });
+    },
+
+    /* The announcements an admin has pinned and that are on screen today, in
+       the order they would take the strip under the top bar. Almost always
+       none or one.
+
+       A LIST RATHER THAN THE TOP ONE, which is the only reason this is not
+       called pinnedAnnouncement(). More than one row can carry the flag, on
+       purpose: migration 0028 says why a unique index is worse. The strip
+       shows one at a time, and which one is a question this file cannot
+       answer, because the answer depends on what this phone has already
+       dismissed and dismissals live in js/store.js. So the order is decided
+       here, where the order of announcements is decided, and the shell takes
+       the first one still standing. See pinnedNow() in js/app.js. */
+    pinnedAnnouncements: function () {
+      return this.liveAnnouncements().filter(function (a) {
+        return !!a.pinned;
+      });
     }
   };
 

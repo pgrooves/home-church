@@ -78,13 +78,15 @@ SQL that lists the tables.
 | `guides` | Small group guides, the whole `Guide {}` model | Grow, guide reader, leader mode |
 | `podcasts` | Sunday messages as episodes, external media links | Listen |
 | `events` | The events calendar | Connect |
-| `announcements` | The single announcement card, with a date window | Home |
+| `announcements` | The announcement cards at the top of Home, each with a date window, an optional picture and an optional video link | Home, Admin |
 | `reading_plans` | The Reading together plan, one row per plan | Home |
 | `groups` | Small groups, night, host, neighborhood, and whether there is room | Connect |
 | `serve_teams` | The Lend a hand list | Connect |
 | `next_steps` | The next step cards | Connect |
 | `church_profile` | Name, address, service times, giving and social links. One row | Home, Profile, Give, the PDF |
 | `podcast_show` | The show card, not the episodes. One row | Listen |
+| `content_pages` | Prose the church owns, edited in the app rather than in a source file. Not the Practices, those are somebody else's writing | Give, Admin |
+| `app_settings` | App-wide switches and short strings, one row per setting, carrying its own label and type | Home, Admin |
 
 **That is all of it.** Every piece of content the app renders now lives in a
 table. Nothing left in `js/data.js` has to be edited to change what a phone
@@ -200,6 +202,40 @@ Project Settings, API keys, and update `.env`.
 
 `verify` checks all of this against the live project rather than trusting that
 the SQL did what it says.
+
+### The three tables that break that rule, on purpose
+
+`announcements`, `content_pages` and `app_settings` have a second writer: a
+signed in admin, from inside the app, holding nothing but their own session.
+The Admin dashboard is that writer. Migration `0026_admin_content.sql` gives
+each of the three an INSERT, UPDATE and DELETE policy gated on
+`public.hc_is_admin()`, and grants those privileges to `authenticated`.
+
+**This is one layer of defence where the other tables have two**, and that is
+the unavoidable cost of letting anybody write from a phone. The other tables
+are safe both because RLS denies by default and because the write privileges
+are revoked outright; either alone would hold. These three depend on RLS
+alone. It is why the write policies are generated from one loop with one
+condition in them, and why `supabase/tests/0026_admin_content_test.sql`
+asserts the refusal as a real member rather than reading the policy and
+nodding.
+
+Their SELECT policies are `published or public.hc_is_admin()`, which is what
+lets an admin see their own drafts. The app's content sync reads with the
+publishable key and no session, so a draft can never reach Home even on an
+admin's own phone.
+
+`profiles` gains no new policy at all, which is deliberate and is the more
+interesting half. The obvious design is "admins can read and update every
+profile", and it is wrong: RLS cannot be restricted to particular columns, so
+an admin UPDATE policy would hand every admin the ability to rewrite anybody's
+home address as a side effect of being able to change a role. Roles are read
+through `hc_admin_list_users()` and written through `hc_admin_set_role()`,
+both of which check `hc_is_admin()` on their first line and touch exactly the
+columns they name. A trigger, `hc_guard_role_change`, refuses any write to
+`profiles.role` that did not come from an admin acting on somebody else, which
+is what closes the hole that everybody has always been allowed to write their
+own profile row and `role` is now a column on it.
 
 ---
 

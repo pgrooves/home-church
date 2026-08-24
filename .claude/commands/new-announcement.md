@@ -34,6 +34,14 @@ the chat.
 | Body | yes | One or two sentences, what to do about it |
 | Runs from | no | Null shows it immediately |
 | Runs until | no | Null runs until you take it down |
+| Pin a banner | no | Off unless they ask. See below |
+
+**Only pin when somebody asks for it in those words.** `pinned` puts the title
+across the top of every tab, not just Home: it follows a person into Listen,
+the Journal and a guide they are reading, and it stays there until they tap the
+x on it. That is the right volume for "no gathering Sunday, the building is
+flooded" and much too loud for a serve day. Default it to false and ask only
+if the announcement sounds like the first kind.
 
 **There is no eyebrow to write.** Home labels the card `Announcement 08/16/2026`
 and generates that date itself, from `starts_on` when it is set and from
@@ -86,8 +94,12 @@ unpublish the old one:
 
 ```bash
 python3 scripts/hc_supabase.py select announcements --eq published=true \
-  --columns id,title,starts_on,ends_on,priority
+  --columns id,title,starts_on,ends_on,priority,pinned
 ```
+
+If this one is being pinned and something else already is, say so. Two pinned
+rows is not an error, the app shows the higher priority one and then the newer,
+but the church should know which of the two the congregation will actually see.
 
 ## Step 5. Confirm before writing
 
@@ -118,6 +130,7 @@ python3 scripts/hc_supabase.py upsert announcements /tmp/announcement-your-slug.
   "starts_on": null,          // null shows it immediately
   "ends_on": "2026-09-13",    // takes itself down, nobody has to remember
   "priority": 0,
+  "pinned": false,            // true rides the top of every tab, see step 1
   "published": true
 }
 ```
