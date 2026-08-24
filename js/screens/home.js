@@ -539,22 +539,6 @@
     // The mark now lives in the top bar, so Home does not repeat it.
     html += '<h1 class="hc-display-l hc-home__greeting">' + c.esc(greetingLine()) + '</h1>';
 
-    /* Announcements sit here now, directly under the greeting, rather than
-       below Service times and Latest sermon where they used to. They are the
-       only thing on this screen that is genuinely new information: the
-       gathering card says the same thing every week and the sermon card
-       changes on a schedule everybody already knows. Something posted on
-       purpose on a Thursday should not be under two cards that did not
-       change.
-
-       Same rule as every other block here, though: no announcements, no
-       header. An empty heading over nothing reads as a bug. */
-    var ann = announcements();
-    if (ann) {
-      html += c.sectionHeader('', 'Announcements');
-      html += '<div class="hc-home__announcement">' + ann + '</div>';
-    }
-
     /* Between the greeting and the gathering card. Renders nothing until
        there is something to show, so Home is unchanged on a project with an
        empty instagram_posts table and no homeMedia.
@@ -583,6 +567,20 @@
 
     html += c.sectionHeader('', 'Service times');
     html += gatheringCard();
+
+    /* Announcements sit between the gathering card and the sermon: after the
+       one thing a person opening the app on a Sunday morning is most likely
+       looking for, and before the cards that change on a schedule everybody
+       already knows. They are the only genuinely new information on this
+       screen, so they go above Latest sermon rather than at the bottom of it.
+
+       Same rule as every other block here, though: no announcements, no
+       header. An empty heading over nothing reads as a bug. */
+    var ann = announcements();
+    if (ann) {
+      html += c.sectionHeader('', 'Announcements');
+      html += '<div class="hc-home__announcement">' + ann + '</div>';
+    }
 
     html += c.sectionHeader('', 'Latest sermon');
     html += guideCard();
