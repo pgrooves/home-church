@@ -1992,12 +1992,38 @@
       var guide = HC.data.getGuide(el.getAttribute('data-id'));
       if (!guide) return;
 
+      /* The rail is only drawn for the host and hc_room_set_guide refuses
+         anybody else, so this is the third answer to the same question. It is
+         here because the first two are a screen and a server, and a button
+         that arrived by some other route should stop at the door rather than
+         at a toast. */
+      if (!HC.rooms.isHost()) return;
+
       var title = HC.data.guideTitle(guide);
+
+      /* Everything the swap would take, in one sentence, before it happens.
+         Two sources, because there are two kinds of writing at risk and only
+         one of them has left a phone: answers already posted, counted from
+         the index so somebody else's shut answer is counted too, and whatever
+         is sitting in a box on this phone unposted. */
       var n = HC.rooms.answerCounts().total;
-      if (n && !window.confirm(
-          'Run the room on “' + title + '” instead? Tonight’s questions are replaced on ' +
-          'every phone, and ' + (n === 1 ? 'the one answer' : 'all ' + n + ' answers') +
-          ' written under them go too. The prayer requests stay.')) return;
+      var mine = g.draftCount();
+      var lost = [];
+      if (n) {
+        lost.push(n === 1 ? 'the one answer already written under them'
+                          : 'all ' + n + ' answers already written under them');
+      }
+      if (mine) {
+        lost.push(mine === 1 ? 'the answer you have typed and not posted'
+                             : 'the ' + mine + ' answers you have typed and not posted');
+      }
+
+      if (lost.length && !window.confirm(
+          'Switching to “' + title + '” deletes what the group has written.\n\n' +
+          'Tonight’s questions are replaced on every phone in the room, and ' +
+          lost.join(' and ') + ' go with them. This cannot be undone. ' +
+          'The prayer requests stay.\n\n' +
+          'Switch anyway?')) return;
 
       g.setBusy('switch');
       g.repaint(true);

@@ -332,6 +332,21 @@
     if (at === -1) at = Math.max(indexOfGuide(choices, here.id), 0);
     roomPicked = choices[at].id;
 
+    /* What a swap would cost, counted before anybody swipes rather than only
+       in the dialog afterwards. The count is the answer index, so it is every
+       answer in the room and not only the ones this phone can read: a shut
+       answer belonging to somebody else is exactly the kind of writing a
+       leader would not otherwise know was there. */
+    var written = HC.rooms.answerCounts().total;
+    var atRisk = written
+      ? 'Swapping puts this guide’s questions in the room on every phone, and deletes ' +
+        (written === 1 ? 'the one answer' : 'all ' + written + ' answers') +
+        ' already written under tonight’s. The prayer requests, and any question you added ' +
+        'yourself, stay.'
+      : 'Swapping puts this guide’s questions in the room on every phone. Nothing has been ' +
+        'written yet, so there is nothing to lose. The prayer requests, and any question you ' +
+        'added yourself, stay.';
+
     return guidePicker(choices, at, function (guide) {
       var now = guide.id === here.id;
       return '<li class="hc-carousel__slide hc-guide-slide">' +
@@ -343,9 +358,8 @@
             ? '<p class="hc-caption hc-group__carry">Questions carried over from the guide. ' +
                 (snap.questions.length === 1 ? 'One question' : snap.questions.length + ' questions') +
                 ' in the room tonight.</p>'
-            : '<p class="hc-caption hc-group__carry">Swapping puts this guide’s questions in the room ' +
-                'on every phone. Anything already written under tonight’s questions goes with them. ' +
-                'The prayer requests, and any question you added yourself, stay.</p>' +
+            : '<p class="hc-caption hc-group__carry' + (written ? ' hc-group__carry--warn' : '') + '">' +
+                atRisk + '</p>' +
               '<div class="hc-group__actions">' +
                 c.button('Run the room on this', {
                   action: 'room-switch-guide', id: guide.id, small: true, busy: busy === 'switch'
@@ -1070,6 +1084,15 @@
     selectGuide: selectGuide,
     pickedGuide: function () { return picked; },
     pickedRoomGuide: function () { return roomPicked; },
+    /* Boxes with something in them that has not been posted. The answer index
+       cannot see these, because they have never left the phone: they are the
+       half of "what would be lost" that only this screen knows about, and a
+       host who has typed an answer and not sent it should be told it goes. */
+    draftCount: function () {
+      return Object.keys(drafts).filter(function (k) {
+        return (drafts[k] || '').trim();
+      }).length;
+    },
     getShowingJournal: function () { return showingJournal; },
     getEditing: function () { return editing; },
     setBusy: function (v) { busy = v; },

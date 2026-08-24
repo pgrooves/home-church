@@ -1007,6 +1007,11 @@
 .hc-group__intro { margin: 0 0 var(--hc-space-base); }
 .hc-group__hint  { margin: var(--hc-space-md) 0 0; }
 .hc-group__carry { margin: var(--hc-space-sm) 0 0; }
+
+/* The same line, on a slide where taking it would cost the group something.
+   Warning coloured rather than danger coloured, for the reason the report
+   queue is: nothing is wrong, and this is a thing to read before tapping. */
+.hc-group__carry--warn { color: var(--hc-warning); }
 .hc-group__error { margin: var(--hc-space-sm) 0 0; font-size: var(--hc-caption); color: var(--hc-error); }
 
 .hc-group__actions {
