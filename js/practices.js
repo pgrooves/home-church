@@ -133,6 +133,7 @@
       // written before it existed simply do not have one.
       subtitle: p.subtitle || '',
       hero: ambient(p.hero),
+      playlist: series(p.playlist),
       intro: Array.isArray(p.intro) ? p.intro : [],
       /* Everything the practice closes with: the companion guide, the book it
          assigns, the podcast series. Each one is a title, some prose, and
@@ -157,7 +158,7 @@
     // Nothing has been generated yet. The pipeline says so in the flags and
     // the page reads it from here rather than counting empty arrays itself.
     out.pending = !out.intro.length && !out.sessions.length &&
-                  !out.extras.length && !out.resources.length;
+                  !out.extras.length && !out.resources.length && !out.playlist;
 
     return out;
   }
@@ -190,6 +191,28 @@
     id = String(id || '');
     if (provider === 'vimeo') return /^[0-9]{6,12}$/.test(id);
     return /^[A-Za-z0-9_-]{11}$/.test(id);
+  }
+
+  /* A whole playlist, played in the app with sound and controls.
+
+     WHY THIS EXISTS ALONGSIDE PER-SESSION VIDEOS. The ideal is a video per
+     session, sitting with the teaching it belongs to. That needs somebody to
+     have matched each video to each session, and until that has happened the
+     alternative is not "a tidier page", it is a page with nothing to watch.
+     A playlist player is the honest middle: it plays the real sessions, in
+     the order the series was published, with the playlist menu to pick from.
+
+     It is a real player, not the muted wallpaper `hero` is. Somebody taps it
+     and it plays out loud, which is the whole point of it. */
+  function series(pl) {
+    if (!pl || !pl.playlistId) return null;
+    // Every YouTube playlist id starts PL, UU, OL, FL or RD.
+    if (!/^(PL|UU|OL|FL|RD)[A-Za-z0-9_-]{10,48}$/.test(String(pl.playlistId))) return null;
+    return {
+      playlistId: String(pl.playlistId),
+      title: pl.title || 'Watch the sessions',
+      note: pl.note || ''
+    };
   }
 
   /* A video this app can actually play, or nothing.

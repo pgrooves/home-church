@@ -227,5 +227,20 @@ ok('a Vimeo id passes', okVimeo('1046530705'), true);
 ok('a short number is not a Vimeo id', okVimeo('12'), false);
 ok('a YouTube id is not a Vimeo id', okVimeo('dQw4w9WgXcQ'), false);
 
+/* ---------------------------------------------------------- playlist ids
+
+   The series player takes a playlist id, never a URL, and builds the
+   videoseries embed itself. That separation is the point: pasting a playlist
+   URL into a single video's field is the mistake this guards against, and it
+   is a quiet one because "videoseries" passes the single-video check. */
+
+const okList = (id) => /^(PL|UU|OL|FL|RD)[A-Za-z0-9_-]{10,48}$/.test(String(id));
+
+ok('the Sabbath playlist id passes', okList('PL6zls_4DoKIxWQnGB_MA639KE4GZzrKK6'), true);
+ok('a channel uploads id passes', okList('UU6zls_4DoKIxWQnGB_MA639KE'), true);
+ok('a bare video id is not a playlist', okList('dQw4w9WgXcQ'), false);
+ok('a full URL is not a playlist id', okList('https://youtube.com/playlist?list=PLabcdefghijk'), false);
+ok('videoseries is not a playlist id', okList('videoseries'), false);
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

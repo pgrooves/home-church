@@ -1241,6 +1241,40 @@
        YouTube id can actually be before it goes anywhere near a URL: it comes
        out of a generated file, which is a file in this repo, but a value that
        reaches an iframe src deserves the check whatever its provenance. */
+    /* The whole series, in one player, out loud.
+
+       This is the one place a playlist embed is built, and it is built here
+       rather than accepted from a data file as a URL. "videoseries" is
+       YouTube's playlist path and is also a valid eleven character id, so a
+       pasted playlist URL sails past the single video guard above and renders
+       an error player; keeping the two paths apart, each with its own guard,
+       is what stops that. */
+    'play-series': function (el) {
+      var wrap = el.closest('[data-video]');
+      var poster = wrap && wrap.querySelector('.hc-video__poster');
+      if (!poster) return;
+
+      var list = el.getAttribute('data-list') || '';
+      if (!/^(PL|UU|OL|FL|RD)[A-Za-z0-9_-]{10,48}$/.test(list)) {
+        c.toast('That series is unavailable.');
+        return;
+      }
+
+      HC.native.tap('Light');
+
+      var src = 'https://www.youtube.com/embed/videoseries?list=' + list +
+        '&autoplay=1&playsinline=1&rel=0&modestbranding=1';
+
+      poster.outerHTML = '' +
+        '<div class="hc-video__frame">' +
+          '<iframe class="hc-video__iframe" src="' + src + '" ' +
+            'title="' + c.esc(el.getAttribute('aria-label') || 'The sessions') + '" ' +
+            'allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" ' +
+            'allowfullscreen referrerpolicy="strict-origin-when-cross-origin" ' +
+            'loading="lazy"></iframe>' +
+        '</div>';
+    },
+
     'play-video': function (el) {
       var wrap = el.closest('[data-video]');
       var poster = wrap && wrap.querySelector('.hc-video__poster');

@@ -230,6 +230,32 @@ Rules that are easy to get wrong:
 You can do this for one practice and let the script do the other eight. The
 files are independent.
 
+### The series player
+
+A practice can carry one `playlist`, which plays the whole series in the app
+with sound and controls:
+
+```json
+"playlist": {
+  "provider": "youtube",
+  "playlistId": "PL6zls_4DoKIxWQnGB_MA639KE4GZzrKK6",
+  "title": "The Sabbath sessions",
+  "note": "Plays the series in order."
+}
+```
+
+**It takes the id, never a URL.** The app builds the `videoseries` embed
+itself. This matters more than it looks: `videoseries` is a valid eleven
+character id, so a playlist URL pasted into a *session's* `videoId` passes
+that field's check and then renders an error player, because the session path
+builds its own query string and the `list` parameter never survives. Two
+fields, two guards, and a test for each.
+
+Use it when the per-session mapping is not done yet. A page with a playlist
+player has something real to watch; a page waiting for a perfect mapping has
+nothing. Both can be on the same page, and the playlist sits above the
+sessions because watching is what people came for.
+
 ### The hero loop
 
 A practice page can carry one `hero`: the looping band of film at the top,

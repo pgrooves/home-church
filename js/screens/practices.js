@@ -218,6 +218,33 @@
       '</div>';
   }
 
+  /* --------------------------------------------------------- the series
+
+     One player for the whole practice, with sound, sitting between the
+     overview and the sessions. It is what somebody came here to watch, so it
+     goes above the reading rather than under it.
+
+     Same poster and same play badge as every other video in the app, because
+     tapping it does the same thing: it plays here, in the app. */
+
+  function series(p) {
+    if (!p.playlist) return '';
+
+    return '' +
+      c.sectionHeader('Watch', p.playlist.title) +
+      '<div class="hc-video" data-video="series">' +
+        '<button type="button" class="hc-video__poster" ' +
+            'data-action="play-series" ' +
+            'data-list="' + c.esc(p.playlist.playlistId) + '" ' +
+            'aria-label="Play ' + c.esc(p.playlist.title) + '">' +
+          c.playBadge() +
+        '</button>' +
+        (p.playlist.note
+          ? '<p class="hc-caption hc-video__meta">' + c.esc(p.playlist.note) + '</p>'
+          : '') +
+      '</div>';
+  }
+
   /* ------------------------------------------------------------- one page */
 
   function session(s, practice) {
@@ -333,7 +360,10 @@
       html += '<p class="hc-body-serif hc-practice__p">' + c.esc(para) + '</p>';
     });
 
-    /* 3. Every session, in order, in the same shape. */
+    /* 3. The videos, before the reading. */
+    html += series(p);
+
+    /* 4. Every session, in order, in the same shape. */
     p.sessions.forEach(function (s) { html += session(s, p); });
 
     /* 4. What the practice closes with. Same place on every page. */
