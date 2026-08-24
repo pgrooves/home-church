@@ -29,6 +29,81 @@
 
   var c = HC.components;
 
+  var PTW = 'https://practicingtheway.org';
+
+  /* --------------------------------------------------------------- credit
+
+     WHOSE WORK THIS IS. Every word and every video under Practices was made
+     by Practicing the Way. Home Church wrote none of it. That is not a
+     footnote to tuck at the bottom of a scroll somebody may never reach, so
+     this block sits directly under the header on the grid AND on all nine
+     practice pages, in the same place, saying the same thing.
+
+     One function rather than two pieces of copy, so the disclaimer on a
+     practice page can never drift from the one on the grid. The link out is
+     deliberate and is the single exception to the no-external-links rule
+     these screens otherwise keep: that rule exists so video plays in the app
+     instead of throwing somebody to YouTube, and it should never be the
+     reason a person cannot get to the people who actually made this. */
+
+  function credit(practice) {
+    var here = practice && practice.source && practice.source.site
+      ? practice.source.site
+      : PTW;
+
+    return '' +
+      '<aside class="hc-ptw" aria-label="Source and credit">' +
+        '<p class="hc-ptw__text">' +
+          'The nine practices, the session teaching, and the videos ' +
+          (practice ? 'on this page' : 'in here') + ' are the work of ' +
+          '<strong>Practicing the Way</strong>. Home Church did not write any ' +
+          'of it. We have gathered it here so our people can walk through it ' +
+          'together, and every word of it belongs to them.' +
+        '</p>' +
+        c.button('practicingtheway.org', {
+          action: 'open-url',
+          url: here,
+          variant: 'secondary',
+          icon: 'arrowOut'
+        }) +
+      '</aside>';
+  }
+
+  /* ----------------------------------------------------------- signing up
+
+     The church already has one texting number and one signup pattern, the
+     one the Connect tab uses for serving. This is that pattern again rather
+     than a second one: same number, same helper, same "opens Messages" note,
+     so a person who has signed up for anything else here recognises it.
+
+     Dropped rather than shown dead when there is no number on file, which is
+     what serveSignup() in js/screens/connect.js does for the same reason. */
+
+  function signup() {
+    var church = (HC.data && HC.data.church) || {};
+    var number = (church.serve || {}).number;
+    var cfg = church.practicesSignup || {};
+    if (!number) return '';
+
+    var link = c.smsUrl(number, cfg.keyword);
+    if (!link) return '';
+
+    return '' +
+      '<div class="hc-practice-signup">' +
+        '<p class="hc-practice-signup__lead">' +
+          c.esc(cfg.blurb || 'To sign up for our next Practicing the Way, text us.') +
+        '</p>' +
+        c.button('Text ' + number, {
+          action: 'open-url',
+          url: link,
+          icon: 'message'
+        }) +
+        '<p class="hc-caption hc-practice-signup__note">' +
+          'Opens Messages with the number filled in.' +
+        '</p>' +
+      '</div>';
+  }
+
   /* ------------------------------------------------------------- the grid */
 
   function tile(p) {
@@ -46,7 +121,9 @@
     var all = HC.practices.list();
     var html = '<div class="hc-screen hc-practices">';
 
-    html += c.sectionHeader('Practices', 'Nine ways in', { flush: true, tag: 'h1' });
+    html += c.sectionHeader('Practices', 'Practicing the Way', { flush: true, tag: 'h1' });
+
+    html += credit(null);
 
     html += '<p class="hc-body-serif hc-practices__lede">' +
       'Nine practices of Jesus, each one a few short sessions with something to ' +
@@ -66,6 +143,7 @@
       );
     } else {
       html += '<div class="hc-practice-grid">' + all.map(tile).join('') + '</div>';
+      html += signup();
     }
 
     return c.el(html + '</div>');
@@ -152,8 +230,11 @@
       return c.el(html + '</div>');
     }
 
-    /* 1. Who this is. The same header on every one of the nine. */
+    /* 1. Who this is, and whose work it is. The same header and the same
+          credit on every one of the nine, in the same place, above anything
+          a person might stop reading before. */
     html += c.sectionHeader('Practices', p.title, { flush: true, tag: 'h1' });
+    html += credit(p);
 
     /* A file that exists but has nothing in it yet. Saying so is the whole
        job here: an empty page reads as a bug, and inventing something to fill
@@ -194,8 +275,9 @@
           somebody else's words and videos, and the app should say so without
           being asked. */
     html += '<p class="hc-caption hc-practice__source">' +
-      'Sessions and teaching from Practicing the Way. Videos from their ' +
-      'YouTube channel, played here inside the app.</p>';
+      'Sessions and teaching from Practicing the Way, at ' +
+      c.esc((p.source && p.source.site) || PTW) + '. Videos are theirs too, ' +
+      'played here from their YouTube channel.</p>';
 
     return c.el(html + '</div>');
   }

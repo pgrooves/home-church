@@ -1689,6 +1689,66 @@
   color: var(--hc-mid);
 }
 
+/* ------------------------------------------------------------------ credit
+
+   Whose work the practices are. Sits under the header on the grid and on all
+   nine practice pages. Set on the sunk paper with the signature left edge
+   rather than in a card, because it is not one more thing to read on the way
+   down, it is the frame around everything below it. */
+
+.hc-ptw {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--hc-space-md);
+  margin-top: var(--hc-space-lg);
+  padding: var(--hc-space-base);
+  border-left: var(--hc-edge-rule) solid var(--hc-accent);
+  background: var(--hc-paper-sunk);
+  border-radius: 0 var(--hc-radius-lg) var(--hc-radius-lg) 0;
+}
+
+.hc-ptw__text {
+  font-family: var(--hc-sans);
+  font-size: calc(var(--hc-caption) * var(--hc-text-scale));
+  line-height: 1.55;
+  color: var(--hc-mid);
+}
+
+/* The one name on this screen that has to be read rather than skimmed. */
+.hc-ptw__text strong {
+  font-weight: 600;
+  color: var(--hc-ink);
+}
+
+/* ----------------------------------------------------------- signing up
+
+   Under the grid, centered. The button keeps its own width rather than
+   stretching the full column, so it reads as one thing to tap rather than a
+   tenth tile in the grid above it. */
+
+.hc-practice-signup {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: var(--hc-space-md);
+  margin-top: var(--hc-space-xxl);
+  padding-top: var(--hc-space-lg);
+  border-top: var(--hc-hairline) solid var(--hc-rule);
+}
+
+.hc-practice-signup__lead {
+  font-family: var(--hc-serif);
+  font-size: calc(var(--hc-question) * var(--hc-text-scale));
+  line-height: var(--hc-question-line);
+  max-width: 28ch;
+}
+
+.hc-practice-signup .hc-btn { width: auto; }
+
+.hc-practice-signup__note { color: var(--hc-mid); }
+
 /* Three by three, fixed. Not auto-fit: nine things in a three by three grid
    is the shape people are being shown, and letting a wide phone reflow it to
    four across and then two would make the same screen a different screen

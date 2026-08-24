@@ -200,7 +200,9 @@ npm run practices -- --write sabbath --html sabbath.html --playlist-json sabbath
 ```
 
 `npm run practices -- --stub` writes placeholders with no content and no
-network, which is what ships until a real run replaces them. A practice with a
+network, which is what ships until a real run replaces them. The full
+walkthrough, including how to fill a practice in by hand and what to check
+before shipping one, is in **`PRACTICES_CONTENT_PROCESS.md`**. A practice with a
 placeholder file says so on its page rather than rendering an empty one.
 
 Video plays inside the app, in an iframe, and there is no link out to YouTube

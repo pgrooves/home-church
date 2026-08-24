@@ -62,6 +62,21 @@
       title: 'Sign up to serve',
       blurb: 'Interested in serving with Home Church? Tap below and a member of our team will be in touch. We cannot wait to serve with you.'
     },
+    /* Signing up for the next Practicing the Way group, under the grid of
+       nine. Deliberately has no number of its own: it borrows serve.number
+       above, so the church has one texting number on file and changing
+       providers is one edit rather than two. See js/screens/practices.js.
+
+       THE KEYWORD HAS TO BE PROVISIONED. SERVE above is a real keyword the
+       church's SMS provider routes somewhere. PRACTICES is not, yet. The
+       message still arrives either way, because this only prefills the body
+       of a text a person then sends by hand, so the worst case is that a
+       human reads the word instead of an autoresponder. Set it up on the
+       provider's side, or change the keyword here to one that already works. */
+    practicesSignup: {
+      keyword: 'PRACTICES',
+      blurb: 'To sign up for our next Practicing the Way, text us.'
+    },
     // Between seasons. The four groups below never render while this is false,
     // which is deliberate: they are still placeholders with invented hosts.
     // Replace them with the real groups before flipping this back to true.
