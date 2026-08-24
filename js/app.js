@@ -106,7 +106,7 @@
     return MODULE_ROUTES.indexOf(name) !== -1;
   }
 
-  var mount, scroller, topbar, tabbar, totop, backdisc;
+  var mount, scroller, topbar, tabbar, totop, backdisc, pinbar;
   var sheet, sheetGrid, sheetScrim, sheetGrab;
 
   /* ------------------------------------------------------------- the shell */
@@ -129,8 +129,29 @@
         '</button>' +
       '</header>' +
 
-      // Sits directly under the header and stays out of the way until the
-      // Listen archive starts. See js/date-rail.js.
+      /* The pinned announcement, when the church has pinned one.
+
+         SHELL CHROME, and that is the whole feature. Home already draws every
+         announcement as a card, and a church that pins one is saying this
+         should not wait for somebody to open Home and scroll: it rides the
+         top of Listen, of the Journal, of a guide being read on a Sunday
+         morning. So it belongs to the app the way the tab bar does, and no
+         screen has to remember it or can disagree about where it sits.
+
+         Empty until paintPinBar() fills it, which is on the same three beats
+         everything else here repaints on: boot, a view change, and content
+         landing from Supabase.
+
+         Two buttons side by side rather than one with the other inside it.
+         The strip is a tap that goes somewhere and an x that puts it away,
+         and a button inside a button is invalid HTML that browsers resolve
+         however they like, which is the same reason the social row on Home
+         sits outside the media block rather than in it. */
+      '<div class="hc-pinbar" id="hc-pinbar" data-show="false" hidden></div>' +
+
+      // Sits directly under the header, below the pinned strip when there is
+      // one, and stays out of the way until the Listen archive starts. See
+      // js/date-rail.js.
       '<nav class="hc-date-rail" id="hc-date-rail" data-show="false" ' +
           'aria-label="Jump to a month" hidden>' +
         '<div class="hc-date-rail__track"></div>' +
@@ -215,6 +236,7 @@
     tabbar = document.getElementById('hc-tabbar');
     totop = document.getElementById('hc-totop');
     backdisc = document.getElementById('hc-back');
+    pinbar = document.getElementById('hc-pinbar');
     sheet = document.getElementById('hc-oversheet');
     sheetGrid = document.getElementById('hc-oversheet-grid');
     sheetScrim = document.getElementById('hc-oversheet-scrim');
@@ -243,6 +265,164 @@
     } else {
       disc.innerHTML = c.icon('home', 'hc-avatar__icon');
     }
+  }
+
+  /* ------------------------------------------------------- the pinned strip
+
+     The announcement an admin pinned, across the top of every tab, tappable,
+     with an x on the right.
+
+     WHY IT IS HERE AND NOT ON HOME. There is already a pinned line on Home,
+     drawn from home_banner_on and home_banner_message, and it stays: a
+     sentence with no announcement behind it is the right shape for "the
+     building is closed on Sunday", and it is not dismissible because being
+     done with that is not a thing a person gets to be. This is the other
+     kind. It has an announcement behind it by construction, which is what
+     makes it tappable, and because it can be tapped it has to be reachable
+     from wherever the tap happens, which means the shell.
+
+     WHAT IT COSTS, said plainly because it is the reason the switch that
+     draws it is off by default and the reason the x exists: this is the only
+     thing in the app that follows somebody between tabs. The x is the way
+     out, it is remembered on the phone rather than for the session, and it is
+     keyed on the announcement id, so a second pinned announcement next month
+     is a new strip rather than one that stays down forever. See
+     dismissPin() in js/store.js.
+
+     HEIGHT IS PUBLISHED RATHER THAN ASSUMED. Every screen clears the fixed
+     header with one padding-top calc, and the date rail and the index rail
+     hang off the same number. Rather than a second constant that has to be
+     kept in step with a title that wraps to two lines on a small phone, the
+     measured height goes onto #app as --hc-pin-h and the CSS adds it in. Zero
+     when there is no strip, which is what makes every one of those rules
+     unchanged on the ordinary week when nobody has pinned anything.
+     ------------------------------------------------------------------------ */
+
+  /* What is on the strip right now, or null. Three ways to be null and they
+     are all ordinary: nothing is pinned, the pinned announcement's window has
+     closed, or this phone has already put it away.
+
+     The dismissed ones are filtered out rather than only checked at the top
+     of the list, which decides the rare case where two announcements are
+     pinned at once. Tapping the x on the first says something about that
+     announcement and nothing about the second, and the second was pinned too:
+     letting a dismissal of one suppress the other would mean the second strip
+     appeared weeks later, when the first retired, which is worse than it
+     appearing now. The admin form warns before there are ever two. */
+  function pinnedNow() {
+    return HC.data.pinnedAnnouncements().filter(function (a) {
+      return !HC.store.isPinDismissed(a.id);
+    })[0] || null;
+  }
+
+  function pinBarMarkup(a) {
+    return '' +
+      '<button type="button" class="hc-pinbar__open" data-action="open-pinned" ' +
+          'data-id="' + c.esc(a.id) + '">' +
+        c.icon('pin', 'hc-pinbar__pin') +
+        // The label is what a screen reader announces along with the title,
+        // so the strip says what kind of thing it is rather than reading as a
+        // stray line of text with a button around it.
+        '<span class="hc-visually-hidden">Pinned announcement, </span>' +
+        '<span class="hc-pinbar__title">' + c.esc(a.title) + '</span>' +
+        c.icon('chevronRight', 'hc-pinbar__chev') +
+      '</button>' +
+      '<button type="button" class="hc-pinbar__dismiss" data-action="dismiss-pinned" ' +
+          'data-id="' + c.esc(a.id) + '" aria-label="Dismiss this banner">' +
+        c.icon('close') +
+      '</button>';
+  }
+
+  function paintPinBar() {
+    if (!pinbar) return;
+
+    var app = document.getElementById('app');
+    var route = HC.router.current ? HC.router.current() : null;
+    // Presentation mode takes the whole screen and nothing competes with it,
+    // the same rule the top bar and the tab bar follow above.
+    var a = (route && route.name === 'present') ? null : pinnedNow();
+
+    if (!a) {
+      pinbar.hidden = true;
+      pinbar.setAttribute('data-show', 'false');
+      pinbar.removeAttribute('data-id');
+      pinbar.removeAttribute('data-key');
+      pinbar.innerHTML = '';
+      app.style.setProperty('--hc-pin-h', '0px');
+      return;
+    }
+
+    /* Rebuilt only when it is actually a different strip, because this runs on
+       every navigation and a repaint would throw the DOM away under a thumb
+       on its way to the x.
+
+       Keyed on the title as well as the id, and the title is the reason: an
+       admin fixing a typo in a pinned announcement keeps the same permanent
+       id, so an id-only check would leave the misspelling on screen for the
+       rest of the session. The id still has to be in the key, because two
+       announcements can share a title. */
+    var key = a.id + '\n' + a.title;
+    if (pinbar.getAttribute('data-key') !== key || !pinbar.firstChild) {
+      pinbar.innerHTML = pinBarMarkup(a);
+      pinbar.setAttribute('data-id', a.id);
+      pinbar.setAttribute('data-key', key);
+    }
+
+    pinbar.hidden = false;
+    pinbar.setAttribute('data-show', 'true');
+    // Measured after it is on the glass, because a long title wraps and the
+    // screens below have to clear whatever it actually came out at.
+    app.style.setProperty('--hc-pin-h', pinbar.offsetHeight + 'px');
+  }
+
+  /* Tapping the strip. It goes to the announcement's own card on Home and
+     leaves the strip up, because the strip is the church's and the x is the
+     only thing that takes it down.
+
+     THE UNDISMISS IS NOT A LOOPHOLE. Somebody may have put this card away on
+     Home last week, before it was pinned; navigating to a card that has been
+     filtered out would land on Home with nothing to see and read as a broken
+     tap. Putting it back is the honest reading of "take me to this", and it
+     is one card, named by the tap that just happened, rather than a blanket
+     reset of everything this phone has dismissed.
+
+     force:true because Home may already be the current view, where go()
+     would otherwise take a repeat tap as "back to the top" and never rebuild
+     the list the un-dismissed card has to reappear in. */
+  function openPinned(id) {
+    HC.store.undismiss(id);
+    HC.router.go({ name: 'home' }, { force: true });
+    scrollToAnnouncement(id);
+  }
+
+  /* Down to the card, and a moment of gold around it so a person knows which
+     of three cards the strip meant.
+
+     Two frames of waiting, not one: the first is the router mounting the new
+     Home, the second is the layout it causes. Measured off the scroller
+     rather than scrollIntoView(), which scrolls the nearest scrollable
+     ancestor by its own rules and would put the card under the fixed header
+     and the strip that is still on top of it. */
+  function scrollToAnnouncement(id) {
+    window.requestAnimationFrame(function () {
+      window.requestAnimationFrame(function () {
+        var card = mount.querySelector('[data-banner="' + id + '"]');
+        if (!card || !scroller) return;
+
+        var chrome = topbar.offsetHeight + (pinbar && !pinbar.hidden ? pinbar.offsetHeight : 0);
+        var top = scroller.scrollTop + card.getBoundingClientRect().top - chrome - 12;
+
+        scroller.scrollTo({
+          top: top < 0 ? 0 : top,
+          behavior: prefersReducedMotion() ? 'auto' : 'smooth'
+        });
+
+        card.setAttribute('data-flash', 'true');
+        window.setTimeout(function () {
+          card.removeAttribute('data-flash');
+        }, 1800);
+      });
+    });
   }
 
   /* ---------------------------------------------------- view change plumbing */
@@ -339,6 +519,13 @@
     paintDiscs();
 
     paintAvatar();
+
+    /* The strip carries across, which is the point of it, so this is not
+       drawing it again from nothing: paintPinBar() rebuilds the markup only
+       when it is a different announcement. What it does do on every view
+       change is take the strip off a presentation and put it back after, and
+       re-publish its height for the screen that has just been mounted. */
+    paintPinBar();
   };
 
   function prefersReducedMotion() {
@@ -1355,6 +1542,23 @@
       HC.store.dismiss(id);
       var banner = document.querySelector('[data-banner="' + id + '"]');
       if (banner && banner.parentNode) banner.parentNode.removeChild(banner);
+    },
+
+    /* The pinned strip, both halves of it.
+
+       Tapping it opens the announcement it names. Tapping the x puts the
+       strip away on this phone, for good, and leaves the card on Home alone:
+       the two are dismissed separately for the reason set out on
+       dismissPin() in js/store.js. */
+    'open-pinned': function (el) {
+      HC.native.tap('Light');
+      openPinned(el.getAttribute('data-id'));
+    },
+
+    'dismiss-pinned': function (el) {
+      HC.store.dismissPin(el.getAttribute('data-id'));
+      HC.native.tap('Light');
+      paintPinBar();
     },
 
     // Archive rows open in place, so you can read the episode notes without
@@ -2673,6 +2877,18 @@
     // A content check finishing changes the line at the bottom of Profile even
     // when the content itself did not change, so repaint it the same way.
     HC.store.on('content', function () {
+      /* A newly pinned announcement has to reach a phone that is already
+         open, which is the whole path an admin takes: they post it from this
+         screen, and the person in the next room is sitting on Listen. The
+         strip is shell chrome, so the router's redraw of the current view
+         does not touch it, and this is what does.
+
+         Unconditional, unlike the repaint below, because js/content.js only
+         redraws when its fingerprint changed and that fingerprint does not
+         look at every row. A pin toggled on the third announcement in the
+         table is exactly the change it would miss. */
+      paintPinBar();
+
       var route = HC.router.current();
       if (route && route.name === 'profile') {
         HC.router.go({ name: 'profile', restore: true }, { force: true });

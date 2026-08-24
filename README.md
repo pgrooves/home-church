@@ -284,7 +284,7 @@ Four sections.
 
 | Section | Does |
 |---|---|
-| **Announcements** | Write, edit, delete the cards on Home. Title, text, an optional picture uploaded from the phone or pasted as a link, an optional video link, and the dates it goes up and comes down. Posting can send a push notification to everybody. |
+| **Announcements** | Write, edit, delete the cards on Home. Title, text, an optional picture uploaded from the phone or pasted as a link, an optional video link, and the dates it goes up and comes down. Posting can send a push notification to everybody, and can pin the announcement as a banner. |
 | **Users** | Everybody who has signed in, with their name, email and role. Promote to admin, demote to member, remove an account entirely. |
 | **Content** | Pages of the church's own writing, edited in a form. The Give screen's paragraph is the first one. |
 | **App settings** | Switches and short messages that change the whole app, drawn as real toggles and text fields rather than as JSON. Ships with a pinned Home banner and its message, and a default for whether posting an announcement offers to notify. |
@@ -298,6 +298,17 @@ update public.profiles set role = 'admin'
 ```
 
 After that, admins promote each other from inside the app.
+
+**Pinning an announcement** is the one control on that form whose effect is
+outside Home. With it on, the announcement's title rides a strip under the top
+bar on every tab, tapping the strip scrolls to that announcement's card on
+Home, and an x on the right of it puts it away on that phone for good. It is
+deliberately the loudest thing the app can do, so it is off unless somebody
+turns it on, and the strip retires when the announcement's own `ends_on` does
+rather than on a second schedule of its own. It is a separate thing from the
+pinned Home banner under App settings, which is a sentence with no announcement
+behind it and so has nowhere to send anybody: that one stays, on Home, and is
+not dismissible. The migration is `0028_announcement_pin.sql`.
 
 **Three guards are worth knowing about**, because they are deliberate and will
 otherwise read as bugs. An admin cannot change their own role and cannot remove
@@ -318,8 +329,9 @@ nodding, including the one path that is easy to miss: everybody has always been
 allowed to write their own profile row, and `role` is a column on it, so the
 guard is a trigger rather than a policy.
 
-The migrations are `0025_admin_role.sql`, `0026_admin_content.sql` and
-`0027_announcement_push.sql`, each with the full reasoning in its header.
+The migrations are `0025_admin_role.sql`, `0026_admin_content.sql`,
+`0027_announcement_push.sql` and `0028_announcement_pin.sql`, each with the
+full reasoning in its header.
 
 -----
 

@@ -130,8 +130,15 @@ button, .hc-tab, .hc-eyebrow, .hc-numeral, .hc-section__toggle, .hc-tabbar {
 .hc-screen {
   padding-left: var(--hc-screen-pad);
   padding-right: var(--hc-screen-pad);
-  /* Clear the fixed header, plus the tab bar and home indicator at the end. */
-  padding-top: calc(var(--hc-header-h) + env(safe-area-inset-top) + var(--hc-space-sm));
+  /* Clear the fixed header, plus the tab bar and home indicator at the end.
+
+     --hc-pin-h is the pinned announcement strip under the header, and it is
+     0px on every screen of every week nobody has pinned anything: js/app.js
+     publishes the strip's measured height onto #app when it draws one and
+     zeroes it when it does not. Measured rather than a constant because the
+     strip is a title, and a long one wraps to two lines on a small phone. */
+  padding-top: calc(var(--hc-header-h) + var(--hc-pin-h, 0px)
+                    + env(safe-area-inset-top) + var(--hc-space-sm));
   padding-bottom: calc(var(--hc-tabbar-space) + env(safe-area-inset-bottom) + var(--hc-space-xxl));
   max-width: 720px;
   margin: 0 auto;

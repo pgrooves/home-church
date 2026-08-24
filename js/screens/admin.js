@@ -174,6 +174,10 @@
       imageUrl: '', videoUrl: '',
       startsOn: '', endsOn: '', priority: 0,
       published: true,
+      // Off unless somebody asks for it. The strip is the most insistent
+      // thing in the app, and a default that puts one there is a default that
+      // puts one there on a week nobody meant to.
+      pinned: false,
       notify: HC.data.setting('announcement_push_default', true)
     };
   }
@@ -190,11 +194,30 @@
       endsOn: row.ends_on || '',
       priority: row.priority || 0,
       published: row.published !== false,
+      // Unlike the notification below, this one is read off the row: it is a
+      // state the announcement is in rather than something that happens when
+      // you save, so opening an announcement that is pinned has to show it
+      // pinned, or saving a typo fix would quietly take the strip down.
+      pinned: !!row.pinned,
       // Never on by default when editing. The notification is for the moment
       // an announcement goes up, and fixing a typo an hour later should not
       // buzz four hundred phones a second time.
       notify: false
     };
+  }
+
+  /* Somebody else's announcement that is already pinned and already on Home,
+     or null. Asked of the list this screen is holding rather than of the
+     network, which is the same list the rows underneath the form are drawn
+     from, so it cannot disagree with what is on the screen.
+
+     `id` is the row being edited, and is null while writing a new one, which
+     is why the comparison is against it rather than a bare `!row.pinned`: an
+     announcement is not its own rival. */
+  function otherPinned(id) {
+    return HC.admin.announcements().filter(function (row) {
+      return row.pinned && row.id !== id && isLiveNow(row);
+    })[0] || null;
   }
 
   function announcementForm() {
@@ -260,6 +283,41 @@
       on: d.published
     });
 
+    /* The pinned strip, and it sits directly under Published because that is
+       the order the two happen in: an announcement goes up, and then it is
+       either quiet on Home or it is across the top of everything.
+
+       It is the most insistent thing this form can do. A card waits on Home
+       until somebody scrolls to it; this follows a person into Listen and the
+       Journal and stays there until they tap the x. So the sentence under it
+       says what it does in those terms, including the way out, because the
+       congregation's way out is the only part of it they control. */
+    html += switchRow({
+      title: 'Pin a banner',
+      sub: d.pinned
+        ? 'The title above rides across the top of every tab. Tapping it opens ' +
+          'this announcement, and the x puts it away.'
+        : 'No banner. The announcement is a card on Home like any other.',
+      action: 'admin-draft-toggle',
+      id: 'pinned',
+      on: d.pinned
+    });
+
+    if (d.pinned && !d.published) {
+      html += '<p class="hc-caption hc-admin__warn">A draft has no banner. ' +
+        'Turn Published on, or turn this off.</p>';
+    }
+
+    /* One strip, however many rows carry the flag. Said here, once, at the
+       moment somebody is about to create the second one, rather than left for
+       them to discover by pinning something and watching nothing change. */
+    var rival = d.pinned && d.published ? otherPinned(d.id) : null;
+    if (rival) {
+      html += '<p class="hc-caption hc-admin__warn">“' + c.esc(rival.title) +
+        '” is pinned as well. Only one banner shows: the higher priority one, ' +
+        'and then the newer.</p>';
+    }
+
     /* The notification switch, and the sentence under it is the whole design.
        A push cannot be unsent, so the one thing this control must never be is
        ambiguous about what happens when the button is pressed. */
@@ -312,11 +370,16 @@
      columns. */
   function announcementStatus(row) {
     var today = todayLocal();
+    // The pin rides on the front of whatever the row's status already is, so
+    // an admin scanning the list can see which one is across the top of the
+    // app without opening it. A pinned draft says "Draft" and nothing more,
+    // which is the truth: there is no banner until it is published.
+    var pin = row.pinned && isLiveNow(row) ? 'Pinned · ' : '';
     if (row.published === false) return 'Draft';
     if (row.starts_on && today < row.starts_on) return 'Goes up ' + c.formatDateShort(row.starts_on);
     if (row.ends_on && today >= row.ends_on) return 'Came down ' + c.formatDateShort(row.ends_on);
-    if (row.ends_on) return 'On Home until ' + c.formatDateShort(row.ends_on);
-    return 'On Home';
+    if (row.ends_on) return pin + 'On Home until ' + c.formatDateShort(row.ends_on);
+    return pin + 'On Home';
   }
 
   function announcementsSection() {

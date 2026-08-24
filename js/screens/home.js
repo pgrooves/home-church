@@ -252,26 +252,6 @@
     return c.card(inner, { action: 'open-guide', id: guide.id });
   }
 
-  /* Today in the phone's own zone, as 'YYYY-MM-DD'. The window columns are
-     plain dates, not timestamps, so comparing them as strings is exact and
-     sidesteps every timezone question. A church in New Orleans should see an
-     announcement retire at midnight local, not at midnight UTC. */
-  function todayLocal() {
-    var d = new Date();
-    return d.getFullYear() + '-' +
-      ('0' + (d.getMonth() + 1)).slice(-2) + '-' +
-      ('0' + d.getDate()).slice(-2);
-  }
-
-  /* startsOn is the first day it shows, endsOn is the first day it does not.
-     A Saturday event announced with endsOn set to the Sunday is gone when
-     people wake up Sunday. Either end null means that end is open. */
-  function isLive(a, today) {
-    if (a.startsOn && today < a.startsOn) return false;
-    if (a.endsOn && today >= a.endsOn) return false;
-    return true;
-  }
-
   /* The label above an announcement. It used to be the literal "One thing"
      carried on the row, and it is now the date the announcement went up, so a
      card that has been sitting on Home for three weeks says so rather than
@@ -349,21 +329,18 @@
      Newest first, by created_at, with priority as the tie-break rather than
      the sort. Priority is for the Sunday when something genuinely has to sit
      above a newer card, which is rare, and making it the primary key of the
-     sort would mean every announcement needs a number thought about. */
+     sort would mean every announcement needs a number thought about.
+
+     THE WINDOW AND THE ORDER MOVED to HC.data.liveAnnouncements(), which is
+     the same list the pinned strip in the shell is drawn from. They used to
+     be written out here, and while they were, "this announcement has come
+     down" and "its banner has come down" were two separate pieces of
+     arithmetic that had to agree forever. What is left here is the one thing
+     that is genuinely Home's business: what this phone has already put away.
+     See js/data.js, and js/app.js for the strip. */
   function liveAnnouncements() {
-    var today = todayLocal();
-    return (HC.data.announcements || []).filter(function (a) {
-      return isLive(a, today) && !HC.store.isDismissed(a.id);
-    }).sort(function (x, y) {
-      var px = x.priority || 0;
-      var py = y.priority || 0;
-      if (px !== py) return py - px;
-      var cx = String(x.createdAt || x.publishedOn || '');
-      var cy = String(y.createdAt || y.publishedOn || '');
-      if (cx !== cy) return cx < cy ? 1 : -1;
-      // Same priority, same day. Something has to break the tie deliberately
-      // rather than leaving it to whatever order the rows arrived in.
-      return String(x.id) < String(y.id) ? -1 : 1;
+    return HC.data.liveAnnouncements().filter(function (a) {
+      return !HC.store.isDismissed(a.id);
     });
   }
 

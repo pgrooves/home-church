@@ -123,6 +123,7 @@
     // Per guide: { checked: { "0-1": true }, journal: { "3": "text" } }
     guideState: storage.get('guideState', {}),
     dismissed: storage.get('dismissed', {}),
+    dismissedPins: storage.get('dismissedPins', {}),
     roster: storage.get('roster', null),
     prayers: storage.get('prayers', [])
   };
@@ -253,6 +254,39 @@
     emit('dismissed', state.dismissed);
   }
 
+  /* The pinned strip across the top of every tab is dismissed separately from
+     the announcement card it points at, and both are keyed on the same
+     permanent announcement id.
+
+     Two maps rather than one, because they are two answers to two different
+     questions. Putting the card away on Home means "I have read this"; taking
+     the strip down means "stop following me between tabs about it". Somebody
+     who dismisses the strip should still find the announcement where the
+     church put it, and somebody who has read the card should not have the
+     strip vanish out from under the tap they were about to make. Sharing one
+     map would make each of those dismiss the other.
+
+     Undismissing exists for exactly one caller: tapping the strip. It takes
+     you to the card, and a tap that navigates to a card this phone has
+     already put away would arrive at a screen with nothing on it. See
+     'open-pinned' in js/app.js. */
+  function isPinDismissed(id) {
+    return state.dismissedPins[id] === true;
+  }
+
+  function dismissPin(id) {
+    state.dismissedPins[id] = true;
+    storage.set('dismissedPins', state.dismissedPins);
+    emit('dismissed', state.dismissed);
+  }
+
+  function undismiss(id) {
+    if (!state.dismissed[id]) return;
+    delete state.dismissed[id];
+    storage.set('dismissed', state.dismissed);
+    emit('dismissed', state.dismissed);
+  }
+
   /* --------------------------------------------------------------- leader */
 
   // Roster and prayer capture are local only in v1. Real data lands here later.
@@ -352,6 +386,7 @@
     state.profile = Object.assign({}, DEFAULT_PROFILE);
     state.guideState = {};
     state.dismissed = {};
+    state.dismissedPins = {};
     state.roster = [];      // [] not null, so getRoster does not reseed the sample names
     state.prayers = [];
 
@@ -405,6 +440,9 @@
 
     isDismissed: isDismissed,
     dismiss: dismiss,
+    undismiss: undismiss,
+    isPinDismissed: isPinDismissed,
+    dismissPin: dismissPin,
 
     getRoster: getRoster,
     updateMember: updateMember,

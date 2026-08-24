@@ -215,6 +215,13 @@
       // frame is worse than no frame. Same rule as episodeUrl above.
       imageUrl: r.image_url || null,
       videoUrl: r.video_url || null,
+      /* The strip under the top bar, on every tab, carrying this
+         announcement's title. Coerced rather than passed through, because a
+         phone holding a cached payload written before migration 0028 has no
+         such key and `undefined` in a flag is how a banner appears on every
+         phone at once. See the note on HC.data.setting for the same rule one
+         table over. */
+      pinned: !!r.pinned,
       // Sorting the list needs something monotonic that survives the cache.
       // starts_on is the date the church chose and is frequently null;
       // created_at always exists and is what the table is indexed on.

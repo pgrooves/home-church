@@ -173,7 +173,12 @@
       starts_on: row.startsOn || null,
       ends_on:   row.endsOn || null,
       priority:  row.priority || 0,
-      published: row.published !== false
+      published: row.published !== false,
+      // The strip under the top bar. Written on every save, including the
+      // saves that turn it off: `!!` rather than `|| null`, because the
+      // column is not null and "unpin this" has to be a value the PATCH
+      // actually carries. See migration 0028.
+      pinned:    !!row.pinned
     };
 
     var done = row.id

@@ -155,7 +155,9 @@
 .hc-date-rail {
   position: fixed;
   z-index: 39;   /* under the top bar it slides out from */
-  top: calc(var(--hc-header-h) + env(safe-area-inset-top));
+  /* Below the pinned strip when there is one, which is what --hc-pin-h is:
+     0px unless js/app.js has drawn one. See .hc-pinbar further down. */
+  top: calc(var(--hc-header-h) + var(--hc-pin-h, 0px) + env(safe-area-inset-top));
   left: 0; right: 0;
   height: 42px;
   background: var(--hc-paper);
@@ -2174,7 +2176,7 @@ a.hc-card:active { background: var(--hc-paper-sunk); }
   position: fixed;
   z-index: 46;                    /* over the page, beside the discs */
   right: 0;
-  top: calc(var(--hc-header-h) + env(safe-area-inset-top));
+  top: calc(var(--hc-header-h) + var(--hc-pin-h, 0px) + env(safe-area-inset-top));
   /* Clear of the back to top disc rather than merely behind it. The disc is
      44px of gold in that corner and it wins the tap either way, but a track
      that runs under it is a track with a dead end in it. */
@@ -2194,7 +2196,7 @@ a.hc-card:active { background: var(--hc-paper-sunk); }
    agreement, and a rail that quietly resized this one would be worse than a
    number that has to be changed twice. */
 .hc-date-rail[data-show="true"] ~ .hc-index {
-  top: calc(var(--hc-header-h) + 42px + env(safe-area-inset-top));
+  top: calc(var(--hc-header-h) + var(--hc-pin-h, 0px) + 42px + env(safe-area-inset-top));
 }
 
 .hc-index[hidden] { display: none !important; }
@@ -2374,6 +2376,125 @@ a.hc-card:active { background: var(--hc-paper-sunk); }
   border-radius: var(--hc-radius-sm);
   padding: var(--hc-space-md) var(--hc-space-base);
   margin-bottom: var(--hc-space-lg);
+}
+
+/* --------------------------------------------------------------------------
+   The pinned strip
+
+   The other pinned thing, and the difference is worth keeping straight. The
+   block above is a sentence typed into App settings, it lives on Home, and it
+   cannot be put away. This is an announcement an admin pinned: it is shell
+   chrome, so it carries across every tab, it opens the announcement when it
+   is tapped, and the x on the right takes it down on that phone for good.
+
+   Same fill as the block above on purpose. Two pinned things in two different
+   colours would read as two systems, and they are one idea at two volumes.
+
+   FIXED, UNDER THE HEADER, and the screens below clear it by adding
+   --hc-pin-h into their padding rather than by knowing anything about it.
+   js/app.js measures the strip and publishes that number on #app.
+   -------------------------------------------------------------------------- */
+
+.hc-pinbar {
+  position: fixed;
+  z-index: 39;                 /* with the date rail, under the top bar */
+  top: calc(var(--hc-header-h) + env(safe-area-inset-top));
+  left: 0; right: 0;
+  display: flex;
+  align-items: stretch;
+  gap: var(--hc-space-xs);
+  padding: 0 var(--hc-screen-pad);
+  background: var(--hc-accent-deep);
+}
+
+.hc-pinbar[hidden] { display: none; }
+
+/* The tap. Everything but the x, so a thumb landing anywhere along the strip
+   opens the announcement rather than having to find the title. */
+.hc-pinbar__open {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--hc-space-sm);
+  /* The 44pt minimum is the floor, not the height: a title that wraps to two
+     lines makes the strip taller and the screens below follow it. */
+  min-height: var(--hc-tap-min);
+  padding: var(--hc-space-sm) 0;
+  text-align: left;
+  color: var(--hc-on-dark);
+}
+
+.hc-pinbar__pin {
+  flex: 0 0 auto;
+  width: 15px; height: 15px;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  opacity: 0.85;
+}
+
+.hc-pinbar__title {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-family: var(--hc-sans);
+  font-weight: 600;
+  /* Not scaled by --hc-text-scale, like the rest of the chrome. This has to
+     stay one or two lines at every reading size, or the strip starts eating
+     the screen it is announcing something above. */
+  font-size: 14px;
+  line-height: 1.35;
+  color: var(--hc-on-dark);
+}
+
+.hc-pinbar__chev {
+  flex: 0 0 auto;
+  width: 15px; height: 15px;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  opacity: 0.7;
+}
+
+.hc-pinbar__open:active { opacity: 0.72; }
+
+/* The way out. Its own button, beside the tap rather than inside it, and a
+   full tap target of its own so putting the strip away never opens the
+   announcement by accident. */
+.hc-pinbar__dismiss {
+  flex: 0 0 auto;
+  width: var(--hc-tap-min);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: -10px;
+  color: var(--hc-on-dark);
+}
+
+.hc-pinbar__dismiss svg {
+  width: 16px; height: 16px;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  opacity: 0.85;
+}
+
+.hc-pinbar__dismiss:active svg { opacity: 0.5; }
+
+/* Where the strip lands you. The card is already on the screen by the time
+   this runs, and a scroll that ends somewhere in a list of three
+   announcements does not say which one was meant, so the one that was asked
+   for holds a moment of gold and then lets it go. Two seconds, no movement,
+   nothing to dismiss. See scrollToAnnouncement() in js/app.js. */
+/* The transition is on the card and not on the flashed state, so the gold
+   fades out as well as in. On the state it would only ever be applied while
+   the attribute was there, and taking it off would snap. */
+.hc-banner {
+  transition: box-shadow var(--hc-dur-base) var(--hc-ease),
+              border-color var(--hc-dur-base) var(--hc-ease);
+}
+
+.hc-banner[data-flash="true"] {
+  border-left-color: var(--hc-gold);
+  box-shadow: 0 0 0 1.5px var(--hc-gold);
 }
 
 .hc-pinned__text {
