@@ -178,5 +178,31 @@ ok('and how sure the pairing is', file.sessions[0].video.confidence, 'labelled')
 ok('extras survive into the file', file.extras.length, 4);
 ok('so do the flags', file.flags.length > 0, true);
 
+/* ------------------------------------------------- entities and hex refs */
+
+// Webflow writes apostrophes as &#x27;. Without hex decoding, every
+// contraction on the page arrives as literal "&#x27;" mid-sentence. It folds
+// to the same curly apostrophe &#39; does, so one page cannot come out half
+// straight and half curly.
+ok('hex character references decode',
+   b.pageToBlocks('<p>There&#x27;s no wrong time to slow down and rest here</p>')[0],
+   'There’s no wrong time to slow down and rest here');
+ok('decimal character references still decode',
+   b.pageToBlocks('<p>There&#39;s no wrong time to slow down and rest here</p>')[0],
+   'There’s no wrong time to slow down and rest here');
+
+/* ---------------------------------------------- real-world session headings */
+
+// The live page writes "Session 01: Stop", zero-padded and colon-separated,
+// which is not the shape the first fixture used.
+const PADDED = b.parseSite(
+  '<h2>Session 01: Stop</h2><p>' + 'x'.repeat(60) + '</p>' +
+  '<p>Practice: Set a time to rest and pick an activity to begin.</p>' +
+  '<h2>Session 02: Rest</h2><p>' + 'y'.repeat(60) + '</p>' +
+  '<p>Practice: Make a list of what you will not do on the Sabbath.</p>',
+  { slug: 'sabbath', title: 'Sabbath' });
+ok('zero-padded session numbers parse', PADDED.sessions.map(s => s.number), [1, 2]);
+ok('and keep their titles', PADDED.sessions.map(s => s.title), ['Stop', 'Rest']);
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

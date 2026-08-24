@@ -129,7 +129,14 @@
       title: p.title || '',
       icon: p.icon || '',
       source: p.source || {},
+      // The hero line on the practice's own page. Optional, and older files
+      // written before it existed simply do not have one.
+      subtitle: p.subtitle || '',
       intro: Array.isArray(p.intro) ? p.intro : [],
+      /* Everything the practice closes with: the companion guide, the book it
+         assigns, the podcast series. Each one is a title, some prose, and
+         optionally a picture and one link. */
+      resources: Array.isArray(p.resources) ? p.resources.map(resource).filter(Boolean) : [],
       sessions: Array.isArray(p.sessions) ? p.sessions : [],
       extras: Array.isArray(p.extras) ? p.extras : [],
       flags: Array.isArray(p.flags) ? p.flags : []
@@ -148,7 +155,8 @@
 
     // Nothing has been generated yet. The pipeline says so in the flags and
     // the page reads it from here rather than counting empty arrays itself.
-    out.pending = !out.intro.length && !out.sessions.length && !out.extras.length;
+    out.pending = !out.intro.length && !out.sessions.length &&
+                  !out.extras.length && !out.resources.length;
 
     return out;
   }
@@ -161,6 +169,19 @@
      turned into a link out to YouTube, it is dropped, and the page shows the
      session without one. scripts/build_practices.js flags those at build
      time, which is where somebody can still do something about it. */
+  /* One closing resource. Dropped rather than half drawn if it has no title,
+     because a picture and a link with nothing saying what they are is not
+     something to put on a page. */
+  function resource(r) {
+    if (!r || !r.title) return null;
+    return {
+      title: r.title,
+      body: Array.isArray(r.body) ? r.body : (r.body ? [r.body] : []),
+      image: r.image || '',
+      link: (r.link && r.link.url) ? { label: r.link.label || 'Open', url: r.link.url } : null
+    };
+  }
+
   function playable(v) {
     if (!v || !v.videoId) return null;
     if (v.embeddable === false) return null;

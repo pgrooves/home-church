@@ -215,6 +215,45 @@
     return html + '</section>';
   }
 
+  /* ---------------------------------------------------------- resources
+
+     What a practice closes with: the companion guide, the book it assigns,
+     the podcast series. Title, prose, optionally a picture and one link out.
+
+     The pictures are hosted by Practicing the Way and are the one thing on
+     these screens that needs a network, so they carry data-media-fallback and
+     the block reads perfectly well without them. The links out are the same
+     exception the credit block already makes: this material is theirs and
+     pointing at it is the honest thing to do. */
+
+  function resourceBlock(r) {
+    var html = '<section class="hc-practice-resource">';
+
+    if (r.image) {
+      html += '<div class="hc-practice-resource__art" data-media-fallback>' +
+        '<img class="hc-practice-resource__img" src="' + c.esc(r.image) + '" ' +
+          'alt="" loading="lazy" aria-hidden="true">' +
+      '</div>';
+    }
+
+    html += '<h3 class="hc-practice-resource__title">' + c.esc(r.title) + '</h3>';
+
+    r.body.forEach(function (para) {
+      html += '<p class="hc-body-serif hc-practice-resource__p">' + c.esc(para) + '</p>';
+    });
+
+    if (r.link) {
+      html += c.button(r.link.label, {
+        action: 'open-url',
+        url: r.link.url,
+        variant: 'secondary',
+        icon: 'arrowOut'
+      });
+    }
+
+    return html + '</section>';
+  }
+
   function page(route) {
     var slug = route.id;
     var p = HC.practices.get(slug);
@@ -234,6 +273,11 @@
           credit on every one of the nine, in the same place, above anything
           a person might stop reading before. */
     html += c.sectionHeader('Practices', p.title, { flush: true, tag: 'h1' });
+
+    if (p.subtitle) {
+      html += '<p class="hc-practice__subtitle">' + c.esc(p.subtitle) + '</p>';
+    }
+
     html += credit(p);
 
     /* A file that exists but has nothing in it yet. Saying so is the whole
@@ -255,7 +299,15 @@
     /* 3. Every session, in order, in the same shape. */
     p.sessions.forEach(function (s) { html += session(s, p); });
 
-    /* 4. Whatever else was in the playlist. A trailer, a Q&A, a conversation.
+    /* 4. What the practice closes with. Same place on every page. */
+    if (p.resources.length) {
+      html += c.sectionHeader('To go further', 'Resources');
+      html += '<div class="hc-practice-resources">';
+      p.resources.forEach(function (r) { html += resourceBlock(r); });
+      html += '</div>';
+    }
+
+    /* 5. Whatever else was in the playlist. A trailer, a Q&A, a conversation.
           Kept, and kept down here under its own heading, so that nothing in
           the run of sessions above is something the site never taught. */
     if (p.extras.length) {
@@ -270,7 +322,7 @@
       html += '</div>';
     }
 
-    /* 5. Where it came from. Last on every page, for the same reason the
+    /* 6. Where it came from. Last on every page, for the same reason the
           effective date is at the top of the privacy policy: these are
           somebody else's words and videos, and the app should say so without
           being asked. */

@@ -1932,3 +1932,62 @@
 /* A thumbnail that did not arrive. The cream block and the play badge stay,
    which is how missing art behaves everywhere else in this app. */
 .hc-video__poster[data-failed="true"] .hc-video__thumb { display: none; }
+
+/* The hero line off the practice's own page, under the title. */
+.hc-practice__subtitle {
+  margin-top: var(--hc-space-md);
+  font-family: var(--hc-serif);
+  font-style: italic;
+  font-size: calc(var(--hc-quote) * var(--hc-text-scale));
+  line-height: var(--hc-quote-line);
+  color: var(--hc-accent-deep);
+}
+
+/* ---------------------------------------------------------------- resources
+
+   What a practice closes with. Stacked blocks rather than cards, because they
+   are read once on the way out rather than scanned, and a row of cards here
+   would compete with the sessions above them for the same attention. */
+
+.hc-practice-resources {
+  display: flex;
+  flex-direction: column;
+  gap: var(--hc-space-xl);
+  margin-top: var(--hc-space-base);
+}
+
+.hc-practice-resource {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--hc-space-md);
+}
+
+/* Their artwork, on their CDN. Sized rather than full bleed: these are book
+   covers and podcast art, and stretching one to the column width makes a
+   product shot out of something that is really an illustration. */
+.hc-practice-resource__art {
+  width: 128px;
+  border-radius: var(--hc-radius-lg);
+  overflow: hidden;
+  background: var(--hc-cream);
+}
+
+.hc-practice-resource__img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+/* The one thing on these screens that needs a network. Without it the block
+   still reads, so the empty frame goes rather than sitting there. */
+.hc-practice-resource__art[data-failed="true"] { display: none; }
+
+.hc-practice-resource__title {
+  font-family: var(--hc-serif);
+  font-weight: 400;
+  font-size: calc(22px * var(--hc-text-scale));
+  line-height: 1.25;
+}
+
+.hc-practice-resource__p { margin: 0; }

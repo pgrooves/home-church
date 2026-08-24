@@ -332,13 +332,21 @@ function pageToBlocks(html) {
   s = s.replace(/&nbsp;/gi, ' ')
        .replace(/&amp;/gi, '&')
        .replace(/&quot;/gi, '"')
-       .replace(/&#0?39;|&apos;|&rsquo;/gi, '’')
+       /* &#x27; is the same apostrophe as &#39;, and Webflow writes both. They
+          are folded to the curly one together rather than separately, because
+          a page that arrives half straight and half curly reads as a typo in
+          a serif column. */
+       .replace(/&#0?39;|&#x27;|&apos;|&rsquo;/gi, '’')
        .replace(/&lsquo;/gi, '‘')
        .replace(/&ldquo;/gi, '“')
        .replace(/&rdquo;/gi, '”')
        .replace(/&mdash;/gi, '—')
        .replace(/&ndash;/gi, '–')
-       .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(parseInt(n, 10)));
+       .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(parseInt(n, 10)))
+       // Hex character references. Webflow writes apostrophes as &#x27;, and
+       // without this line every contraction on the page arrives as literal
+       // "&#x27;" in the middle of a sentence.
+       .replace(/&#x([0-9a-f]+);/gi, (_, n) => String.fromCharCode(parseInt(n, 16)));
   return s.split('\n')
     .map((line) => line.replace(/[ \t ]+/g, ' ').trim())
     .filter((line) => line.length > 0);
@@ -659,7 +667,11 @@ function toFile(practice, site, playlist, mapping, flags) {
       playlistVia: playlist.source,
       generatedAt: new Date().toISOString()
     },
+    subtitle: site.subtitle || '',
     intro: site.intro,
+    /* The closing material: companion guide, assigned reading, podcast. Put
+       in by hand, preserved across reruns. See one() above. */
+    resources: site.resources || [],
     sessions: site.sessions.map((s) => {
       const m = bySession.get(s.number) || {};
       return {
@@ -724,7 +736,9 @@ function stub(practice) {
       playlistVia: null,
       generatedAt: null
     },
+    subtitle: '',
     intro: [],
+    resources: [],
     sessions: [],
     extras: [],
     flags: [{
@@ -764,6 +778,26 @@ async function one(practice, opts) {
   if (opts.write) {
     fs.mkdirSync(OUT_DIR, { recursive: true });
     const file = path.join(OUT_DIR, practice.slug + '.json');
+
+    /* Carry forward the two fields this script cannot work out on its own.
+       `subtitle` and `resources` are the page's closing material, the
+       companion guide and the assigned reading and the podcast, which sit in
+       a different shape on every practice page and are put in by hand. Re-run
+       --write to refresh the videos and they would otherwise be silently
+       deleted, which is a bad trade for a rerun somebody did to fix a
+       thumbnail. --replace-resources overrides this when a page really has
+       changed. */
+    if (!opts.replaceResources && fs.existsSync(file)) {
+      try {
+        const prev = JSON.parse(fs.readFileSync(file, 'utf8'));
+        if (prev.subtitle && !site.subtitle) site.subtitle = prev.subtitle;
+        if (Array.isArray(prev.resources) && prev.resources.length) {
+          site.resources = prev.resources;
+        }
+      } catch (err) {
+        console.error(`  could not read the existing ${practice.slug}.json, not carrying anything over`);
+      }
+    }
     fs.writeFileSync(file, JSON.stringify(toFile(practice, site, playlist, mapping, flags), null, 2) + '\n');
     console.log(`\n  written  data/practices/${practice.slug}.json`);
   }
@@ -782,7 +816,10 @@ function writeIndex() {
 
 async function main() {
   const argv = process.argv.slice(2);
-  const opts = { write: argv.includes('--write') };
+  const opts = {
+    write: argv.includes('--write'),
+    replaceResources: argv.includes('--replace-resources')
+  };
   const htmlAt = argv.indexOf('--html');
   if (htmlAt !== -1) opts.html = argv[htmlAt + 1];
   const plAt = argv.indexOf('--playlist-json');

@@ -4,18 +4,104 @@
   "title": "Sabbath",
   "icon": "practiceSabbath",
   "source": {
-    "site": "https://practicingtheway.org/sabbath",
+    "site": "https://www.practicingtheway.org/sabbath",
     "playlistId": "PL6zls_4DoKIxWQnGB_MA639KE4GZzrKK6",
-    "playlistVia": null,
+    "playlistVia": "not yet pulled",
     "generatedAt": null
   },
-  "intro": [],
-  "sessions": [],
+  "subtitle": "An ancient way to find rest for your soul",
+  "intro": [
+    "The Sabbath is a 24-hour time period set aside to stop, rest, delight, and worship. It is the best day of the week. In our era of chronic exhaustion, emotional unhealth, and spiritual stagnation, few things are more necessary than the recovery of this ancient practice.",
+    "Each Practice comes with four session videos, weekly exercises and readings, and additional resources to help your group create life-changing daily rhythms as you apprentice under Jesus together. The sessions are about 30 minutes long and include time for group discussion at the beginning.",
+    "Our Practices are perfect to use with small groups or to run course-style with a larger group, but they can also be modified for a churchwide Sunday teaching series, small cohorts, and many other contexts."
+  ],
+  "sessions": [
+    {
+      "number": 1,
+      "title": "Stop",
+      "teaching": [
+        "The word “sabbath” means “to stop.” In Genesis, God worked for six days but then rested on the seventh. In doing so, he built a rhythm into the fabric of creation. When we live in alignment with this ancient rhythm, we find peace and joy, but when we fight it, we fracture our souls."
+      ],
+      "practice": "Set a time to rest, develop a beginning and ending ritual, and pick one to three Sabbath activities to begin our practice.",
+      "video": null
+    },
+    {
+      "number": 2,
+      "title": "Rest",
+      "teaching": [
+        "We hear about Sabbath rest and we imagine sleeping or taking a day off to chill. But Sabbath rest is a form of resistance. There are powerful forces — both external and internal — that war against a Sabbath spirituality. To sabbath will require that we resist."
+      ],
+      "practice": "Make a list of what you will not do on the Sabbath, and explore a prayer exercise.",
+      "video": null
+    },
+    {
+      "number": 3,
+      "title": "Delight",
+      "teaching": [
+        "Sabbath is not an onerous day for dour religious duty, but a life-giving day of delight — a weekly party. It’s a full day set aside to celebrate our life with God in his world. And it’s designed to be done in community, not alone. Few things are more provocative in the modern world than communities of joy."
+      ],
+      "practice": "Throw a Sabbath feast with our community and pick one to three of our favorite activities to curate joy.",
+      "video": null
+    },
+    {
+      "number": 4,
+      "title": "Worship",
+      "teaching": [
+        "Sabbath isn’t just a day to stop, rest, and throw a feast in community. Ultimately, it’s a holy day — set apart for and dedicated to God himself. Early Christians called it “the Lord’s Day.” It’s a weekly day of worship by which we cultivate a spirit of worship all week long."
+      ],
+      "practice": "Identify one to three of our sacred pathways (ways we deeply enjoy God with our personality and stage of life), and learn to spend the day in worship.",
+      "video": null
+    }
+  ],
+  "resources": [
+    {
+      "title": "The Companion Guide",
+      "body": [
+        "Each session will use the Sabbath Companion Guide. We created this guide to help you and your group build new daily rhythms.",
+        "The Guide includes weekly Reach Exercises, assigned readings and podcast episodes, and reflection questions."
+      ],
+      "image": "https://cdn.prod.website-files.com/6812c045a61160f65f88adf3/6830d1f7d6205245e36f5815_PtWGuide-Sabbath-p-500.avif",
+      "link": {
+        "label": "practicingtheway.org/sabbath",
+        "url": "https://www.practicingtheway.org/sabbath"
+      }
+    },
+    {
+      "title": "Recommended Reading",
+      "body": [
+        "For the Sabbath Practice, we recommend picking up Sabbath by Dr. Dan Allender. Each week, you’ll be assigned readings in the Sabbath Companion Guide."
+      ],
+      "image": "",
+      "link": {
+        "label": "Sabbath, by Dan Allender",
+        "url": "https://theallendercenter.org/store/products/sabbath/"
+      }
+    },
+    {
+      "title": "Rule of Life Podcast",
+      "body": [
+        "In the Sabbath series of the Rule of Life podcast, John Mark Comer, Bethany Allen and Bryan Rouanzoin dive into the countercultural act of Sabbath in today’s world."
+      ],
+      "image": "https://cdn.prod.website-files.com/6812c045a61160f65f88adf3/6830d1f7e39562c470b969dc_rol-podcast-cover.avif",
+      "link": {
+        "label": "Listen on Spotify",
+        "url": "https://open.spotify.com/show/7dHIByUQ588Li9pUtv0TDn"
+      }
+    }
+  ],
   "extras": [],
   "flags": [
     {
-      "kind": "not-yet-generated",
-      "detail": "Placeholder. No content has been pulled for this practice yet. Run `node scripts/build_practices.js --report sabbath`, read the mapping, then re-run with --write to replace this file."
+      "kind": "no-videos-on-the-page",
+      "detail": "The practicingtheway.org/sabbath page carries no session videos. Its only three video embeds are muted, autoplaying, looping background art. Both 'Run Practice' and 'Preview Session 01' link to launch.practicingtheway.org/signup, so the four session videos sit behind their signup. The YouTube playlist is the only available source for them; run `npm run practices -- --write sabbath --playlist-json <dump>` to fill them in."
+    },
+    {
+      "kind": "promotional-content",
+      "detail": "Left out of this file on purpose: 'Sabbath Meditations' (a book of poems to order) and 'Summer is a state of mind' (the seasonal Summer Slowdown guide). Both are product and seasonal marketing rather than teaching. The Companion Guide's 'you can purchase a beautiful printed version' clause was trimmed for the same reason; the guide itself is described because every session uses it."
+    },
+    {
+      "kind": "hand-entered",
+      "detail": "Text taken from a saved copy of the page rather than a live fetch, and the intro, subtitle and resources were assembled by hand. Nothing here has been checked against the live page since."
     }
   ]
 }
