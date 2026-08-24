@@ -16,10 +16,21 @@
    is clamped to the one it started in. Anchoring across blocks doubles the
    problem in §2c of JOURNAL_TAB.md and buys nothing anybody asked for.
 
-   WE DO NOT FIGHT THE SYSTEM MENU. iOS puts up its own Copy / Look Up callout
-   on a selection. Ours sits above the words, theirs sits wherever it likes,
-   and both work. Trying to suppress the platform one costs the ability to
-   copy a line out of a guide, which is a thing people do.
+   WE DO NOT FIGHT THE SYSTEM MENU, AND WE DO NOT SIT WHERE IT SITS. iOS puts
+   up its own Copy / Look Up callout on a selection, directly above the words
+   whenever there is room above them, which in a guide there almost always is.
+   A bar of ours placed there too is simply covered: the callout is drawn by
+   the system, outside the web view, so no amount of z-index reaches over it.
+   Suppressing it is worse, because it costs the ability to copy a line out of
+   a guide, which is a thing people do.
+
+   So ours is docked instead of floated: a pill above the tab bar, in the band
+   the two discs use, for as long as something is selected. Nothing of the
+   system's is ever drawn down there, so the collision cannot happen rather
+   than usually not happening. It also puts Note this under the thumb instead
+   of under the finger that just made the selection. What it gives up is the
+   bar pointing at the sentence it is about, which the quotation in the note
+   sheet says anyway.
    ========================================================================== */
 
 (function (HC) {
@@ -101,24 +112,28 @@
     if (bar && bar.parentNode) bar.parentNode.removeChild(bar);
     bar = null;
     pending = null;
+    document.getElementById('app').removeAttribute('data-hlbar');
   }
 
-  /* Where the selection is on screen, or null when it is nowhere: a range
-     inside a collapsed section has no box. A person cannot select text they
-     cannot see, so this is not a case anybody reaches by hand, but a bar
-     placed from a zero rect lands in the corner of the screen attached to
-     nothing, which is worse than no bar. */
-  function rectOf() {
+  /* Whether the selection is anywhere on screen. A range inside a collapsed
+     section has no box, and offering to keep words nobody can see is offering
+     to keep nothing. A person cannot select text they cannot see, so this is
+     not a case anybody reaches by hand, but the selection outlives the section
+     it is in and this is what notices. */
+  function onScreen() {
     var sel = window.getSelection();
-    if (!sel || !sel.rangeCount) return null;
+    if (!sel || !sel.rangeCount) return false;
     var rect = sel.getRangeAt(0).getBoundingClientRect();
-    if (!rect || (!rect.width && !rect.height)) return null;
-    return rect;
+    return !!(rect && (rect.width || rect.height));
   }
 
+  /* The bar is placed by CSS, in the band above the tab bar. All this does is
+     put it there and tell the app it is up, which is what takes the two discs
+     down: three things cannot share that band, and the bar is the one the
+     person is currently looking for. */
   function showBar(at) {
     hideBar();
-    if (!rectOf()) return;
+    if (!onScreen()) return;
     pending = at;
 
     bar = c.el(
@@ -130,36 +145,9 @@
           'Highlight</button>' +
       '</div>');
 
-    document.getElementById('app').appendChild(bar);
-    place();
-  }
-
-  // Centered over the selection, above it, and never off either edge.
-  function place() {
-    if (!bar) return;
-    var rect = rectOf();
-    if (!rect) { hideBar(); return; }
-
-    var width = bar.offsetWidth || 220;
-    var pad = 8;
-    var left = rect.left + (rect.width / 2) - (width / 2);
-    left = Math.max(pad, Math.min(left, window.innerWidth - width - pad));
-
-    /* Above the words when there is room, otherwise below them, so the bar
-       never covers what is about to be quoted.
-
-       Then clamped into the viewport, which is not belt and braces: select
-       the last line on screen and "below" is off the bottom edge, so the bar
-       is drawn where nobody can reach it and the feature looks broken rather
-       than misplaced. 60 clears the header; the bottom margin clears the tab
-       bar. */
-    var height = bar.offsetHeight || 44;
-    var above = rect.top - height - 10;
-    var top = above > 60 ? above : rect.bottom + 10;
-    top = Math.max(60, Math.min(top, window.innerHeight - height - 90));
-
-    bar.style.left = Math.round(left) + 'px';
-    bar.style.top = Math.round(top) + 'px';
+    var app = document.getElementById('app');
+    app.appendChild(bar);
+    app.setAttribute('data-hlbar', 'true');
   }
 
   /* ---------------------------------------------------------- the sheet
@@ -320,13 +308,11 @@
   function init() {
     document.addEventListener('selectionchange', onSelectionChange);
 
-    // The bar is placed in viewport coordinates, so it has to go when the
-    // words underneath it move. Hiding beats chasing: a bar that follows a
-    // scrolling paragraph is harder to hit than one that waits to be asked
-    // again.
-    var scroller = document.getElementById('hc-scroll');
-    if (scroller) scroller.addEventListener('scroll', function () { if (bar) hideBar(); },
-      { passive: true });
+    /* Scrolling no longer takes the bar away. It used to have to: a bar
+       floating over the words was pointing at a particular line, and a line
+       that has moved makes it a liar. A docked bar points at nothing but the
+       selection, and the selection survives a scroll, so the only things that
+       end it are ending the selection or leaving. */
 
     // Leaving the guide takes both of these with it.
     HC.store.on('view', function () { hideBar(); closeNote(); });

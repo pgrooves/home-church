@@ -331,7 +331,8 @@ Notes on that:
 
 Every block of guide prose gets `data-hl-path="shortSummary.2"` when rendered.
 A `selectionchange` handler scoped to `.hc-reader` waits for a non-collapsed
-selection inside one of those, then floats a two-button bar above it:
+selection inside one of those, then docks a two-button bar in the band above
+the tab bar for as long as the selection lasts:
 
     ┌─────────────────────────┐
     │  Note this  ·  Highlight │
@@ -342,8 +343,13 @@ selection inside one of those, then floats a two-button bar above it:
 - **Note this** does the same and immediately opens the note sheet, with the
   quote pinned above the editor and the full editor toolbar below it.
 
-Do not try to replace the iOS callout menu. It appears alongside, ours sits
-above the selection, and both are fine.
+Do not try to replace the iOS callout menu. Suppressing it costs Copy, which
+people use on a guide. Do not sit where it sits either: it takes the space
+directly above the selection whenever there is room above, which in a guide
+there almost always is, and it is drawn outside the web view, so a bar of ours
+placed there is simply covered however high its `z-index`. Ours is docked
+above the tab bar instead, where nothing of the system's is ever drawn. The two
+discs stand down while it is up, since one band cannot hold three things.
 
 Drawing the marks: highlights are applied at render time by splitting the
 block's plain text at the offsets and escaping each segment separately, then

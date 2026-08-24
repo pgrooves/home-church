@@ -1952,11 +1952,23 @@ a.hc-card:active { background: var(--hc-paper-sunk); }
   .hc-hl--noted { background: var(--hc-cream); box-shadow: inset 2px 0 0 var(--hc-accent-deep); }
 }
 
-/* The bar that floats over a selection. Placed in viewport coordinates by
-   js/highlight.js, which also puts it away the moment the page scrolls. */
+/* The bar for a selection. Docked in the band above the tab bar rather than
+   floated over the words, because that band is the one place iOS never draws
+   its own Copy / Look Up callout. The reasoning is at the top of
+   js/highlight.js; all this file does is centre a pill down there.
+
+   Centred by margin between two insets, not by translate, because the entry
+   animation owns transform. */
 .hc-hlbar {
   position: fixed;
+  left: var(--hc-tabbar-inset);
+  right: var(--hc-tabbar-inset);
+  bottom: calc(var(--hc-tabbar-space) + env(safe-area-inset-bottom));
   z-index: 55;
+  width: -webkit-fit-content;
+  width: fit-content;
+  max-width: calc(100% - (var(--hc-tabbar-inset) * 2));
+  margin: 0 auto;
   display: flex;
   align-items: stretch;
   padding: 0 var(--hc-space-xs);
@@ -1964,6 +1976,16 @@ a.hc-card:active { background: var(--hc-paper-sunk); }
   background: var(--hc-ink);
   box-shadow: 0 6px 20px rgba(26, 25, 24, 0.28);
   animation: hc-hlbar-in var(--hc-dur-fast) var(--hc-ease);
+}
+
+/* The discs stand down while it is up. The band is 44px tall and holds one
+   thing: a back arrow the guide is not going anywhere without, and a way to
+   the top that a scroll will offer again, both of which can wait for the
+   answer to a question the person is being asked right now. */
+#app[data-hlbar="true"] .hc-disc {
+  opacity: 0;
+  transform: translateY(10px) scale(0.86);
+  pointer-events: none;
 }
 
 @keyframes hc-hlbar-in {
