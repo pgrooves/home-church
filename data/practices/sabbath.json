@@ -10,6 +10,12 @@
     "generatedAt": null
   },
   "subtitle": "An ancient way to find rest for your soul",
+  "hero": {
+    "provider": "vimeo",
+    "videoId": "1046530705",
+    "hash": "",
+    "note": "The looping band of film at the head of practicingtheway.org/sabbath. Muted, no controls, decorative. NOT a session video."
+  },
   "intro": [
     "The Sabbath is a 24-hour time period set aside to stop, rest, delight, and worship. It is the best day of the week. In our era of chronic exhaustion, emotional unhealth, and spiritual stagnation, few things are more necessary than the recovery of this ancient practice.",
     "Each Practice comes with four session videos, weekly exercises and readings, and additional resources to help your group create life-changing daily rhythms as you apprentice under Jesus together. The sessions are about 30 minutes long and include time for group discussion at the beginning.",
@@ -93,7 +99,7 @@
   "flags": [
     {
       "kind": "no-videos-on-the-page",
-      "detail": "The practicingtheway.org/sabbath page carries no session videos. Its only three video embeds are muted, autoplaying, looping background art. Both 'Run Practice' and 'Preview Session 01' link to launch.practicingtheway.org/signup, so the four session videos sit behind their signup. The YouTube playlist is the only available source for them; run `npm run practices -- --write sabbath --playlist-json <dump>` to fill them in."
+      "detail": "The practicingtheway.org/sabbath page carries no session videos. Its three Vimeo embeds are all muted, autoplaying, looping background art (muted=1&autoplay=1&loop=1, no controls): 1046530705 behind the hero, 754586783 mid-page, and 756428466 above the Week by Week accordion. The first is used here as the page hero, which is what it is for. The other two are the same kind of thing lower down and were left out. Both 'Run Practice' and 'Preview Session 01' link to launch.practicingtheway.org/signup, so the four real session videos sit behind their signup and are not in this page at all. Fill them in with `npm run practices -- --write sabbath --playlist-json <dump>`, or by hand if you get the Vimeo ids: a session video takes provider, videoId and hash."
     },
     {
       "kind": "promotional-content",

@@ -174,12 +174,47 @@
         '<button type="button" class="hc-video__poster" data-media-fallback ' +
             'data-action="play-video" ' +
             'data-id="' + c.esc(v.videoId) + '" ' +
+            'data-provider="' + c.esc(v.provider) + '" ' +
+            (v.hash ? 'data-hash="' + c.esc(v.hash) + '" ' : '') +
             'aria-label="Play ' + c.esc(v.title || 'the video') + '">' +
-          '<img class="hc-video__thumb" src="' + c.esc(v.thumbnail) + '" alt="" ' +
-            'loading="lazy" aria-hidden="true">' +
+          // Vimeo has no guessable thumbnail URL, so that poster is the cream
+          // block and the badge, which is what a failed thumbnail looks like
+          // anyway. See playable() in js/practices.js.
+          (v.thumbnail
+            ? '<img class="hc-video__thumb" src="' + c.esc(v.thumbnail) + '" alt="" ' +
+                'loading="lazy" aria-hidden="true">'
+            : '') +
           c.playBadge() +
         '</button>' +
         (meta ? '<p class="hc-caption hc-video__meta">' + c.esc(meta) + '</p>' : '') +
+      '</div>';
+  }
+
+  /* --------------------------------------------------------------- hero
+
+     The looping band of film at the top of a practice page, the same one
+     Practicing the Way run at the head of theirs. Muted, no controls, nothing
+     to tap: it is wallpaper with a pulse.
+
+     Two reasons it is not drawn for everybody. Somebody who has asked their
+     phone for less motion has asked for exactly this to stop, and an
+     autoplaying video is the clearest possible case of it. And it is the only
+     thing on these screens that spends data before anybody has chosen to
+     watch anything, so it goes first when the page has to be cheap. */
+
+  function hero(p) {
+    if (!p.hero) return '';
+    if (window.matchMedia &&
+        window.matchMedia('(prefers-reduced-motion: reduce)').matches) return '';
+
+    var src = 'https://player.vimeo.com/video/' + c.esc(p.hero.videoId) +
+      (p.hero.hash ? '?h=' + c.esc(p.hero.hash) + '&' : '?') +
+      'background=1&muted=1&autoplay=1&loop=1&autopause=0&dnt=1';
+
+    return '' +
+      '<div class="hc-practice-hero" aria-hidden="true">' +
+        '<iframe class="hc-practice-hero__frame" src="' + src + '" ' +
+          'title="" tabindex="-1" allow="autoplay" loading="lazy"></iframe>' +
       '</div>';
   }
 
@@ -273,6 +308,8 @@
           credit on every one of the nine, in the same place, above anything
           a person might stop reading before. */
     html += c.sectionHeader('Practices', p.title, { flush: true, tag: 'h1' });
+
+    html += hero(p);
 
     if (p.subtitle) {
       html += '<p class="hc-practice__subtitle">' + c.esc(p.subtitle) + '</p>';

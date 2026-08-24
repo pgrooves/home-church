@@ -204,5 +204,28 @@ const PADDED = b.parseSite(
 ok('zero-padded session numbers parse', PADDED.sessions.map(s => s.number), [1, 2]);
 ok('and keep their titles', PADDED.sessions.map(s => s.title), ['Stop', 'Rest']);
 
+/* ------------------------------------------------------------- providers
+
+   The id rules that guard both iframe srcs, kept here in the same shape
+   js/practices.js and the click handler in js/app.js use them. A YouTube id
+   is eleven characters of base64url; a Vimeo id is digits.
+
+   `videoseries` is rejected by name, and that is the whole point of this
+   block. It is a real eleven-character base64url string, so no pattern can
+   tell it from an id: it is YouTube's playlist-embed path, and a pasted
+   playlist URL would otherwise pass validation and render an error player
+   inside the page, which is the worst way for this to fail. */
+
+const okYouTube = (id) => /^[A-Za-z0-9_-]{11}$/.test(id) && id !== 'videoseries';
+const okVimeo = (id) => /^[0-9]{6,12}$/.test(String(id));
+
+ok('a real YouTube id passes', okYouTube('dQw4w9WgXcQ'), true);
+ok('videoseries is rejected by name', okYouTube('videoseries'), false);
+ok('and it would otherwise have passed', /^[A-Za-z0-9_-]{11}$/.test('videoseries'), true);
+ok('a path traversal is rejected', okYouTube('../../evil'), false);
+ok('a Vimeo id passes', okVimeo('1046530705'), true);
+ok('a short number is not a Vimeo id', okVimeo('12'), false);
+ok('a YouTube id is not a Vimeo id', okVimeo('dQw4w9WgXcQ'), false);
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

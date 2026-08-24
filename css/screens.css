@@ -2088,3 +2088,31 @@
 
 .hc-page__lede { margin-top: var(--hc-space-md); }
 .hc-page__text { margin-top: var(--hc-space-md); }
+
+/* The looping band of film at the head of a practice page. Sized like a wide
+   strip rather than a 16:9 block, because it is a header and not something
+   anybody is meant to sit and watch. Pointer events off: there is nothing to
+   tap and a stray tap that did nothing would feel broken. */
+.hc-practice-hero {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 21 / 9;
+  margin-top: var(--hc-space-base);
+  border-radius: var(--hc-radius-lg);
+  overflow: hidden;
+  background: var(--hc-cream);
+  pointer-events: none;
+}
+
+.hc-practice-hero__frame {
+  position: absolute;
+  /* A background Vimeo embed letterboxes itself to its own aspect ratio, so
+     the frame is oversized and centred and the strip crops it, rather than
+     the strip showing two black bars. */
+  top: 50%;
+  left: 50%;
+  width: 178%;
+  height: 178%;
+  transform: translate(-50%, -50%);
+  border: 0;
+}

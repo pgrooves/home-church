@@ -1247,18 +1247,35 @@
       if (!poster) return;
 
       var id = el.getAttribute('data-id') || '';
-      if (!/^[A-Za-z0-9_-]{11}$/.test(id)) {
+      var provider = el.getAttribute('data-provider') === 'vimeo' ? 'vimeo' : 'youtube';
+      var hash = el.getAttribute('data-hash') || '';
+
+      /* Checked here as well as in js/practices.js. Two different shapes: a
+         YouTube id is eleven characters of base64url, a Vimeo id is digits.
+         The literal "videoseries" is rejected by name because it is a real
+         eleven character base64url string, so no pattern can tell it from an
+         id: it is YouTube's playlist embed path, and pasting a playlist URL
+         in here would otherwise sail through and render an error player. */
+      var ok = provider === 'vimeo'
+        ? /^[0-9]{6,12}$/.test(id)
+        : /^[A-Za-z0-9_-]{11}$/.test(id) && id !== 'videoseries';
+      if (!ok || (hash && !/^[a-f0-9]{6,20}$/i.test(hash))) {
         c.toast('That video is unavailable.');
         return;
       }
 
       HC.native.tap('Light');
 
-      /* playsinline is the one parameter that is not a preference. Without it
-         iOS takes the video full screen the instant it starts, which is the
-         same experience as leaving the app wearing a different coat. */
-      var src = 'https://www.youtube.com/embed/' + id +
-        '?autoplay=1&playsinline=1&rel=0&modestbranding=1';
+      /* playsinline is the one parameter that is not a preference on either
+         provider. Without it iOS takes the video full screen the instant it
+         starts, which is the same experience as leaving the app wearing a
+         different coat. */
+      var src = provider === 'vimeo'
+        ? 'https://player.vimeo.com/video/' + id +
+            (hash ? '?h=' + hash + '&' : '?') +
+            'autoplay=1&playsinline=1&title=0&byline=0&portrait=0&dnt=1'
+        : 'https://www.youtube.com/embed/' + id +
+            '?autoplay=1&playsinline=1&rel=0&modestbranding=1';
 
       poster.outerHTML = '' +
         '<div class="hc-video__frame">' +

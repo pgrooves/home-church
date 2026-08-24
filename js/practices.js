@@ -132,6 +132,7 @@
       // The hero line on the practice's own page. Optional, and older files
       // written before it existed simply do not have one.
       subtitle: p.subtitle || '',
+      hero: ambient(p.hero),
       intro: Array.isArray(p.intro) ? p.intro : [],
       /* Everything the practice closes with: the companion guide, the book it
          assigns, the podcast series. Each one is a title, some prose, and
@@ -161,6 +162,36 @@
     return out;
   }
 
+  /* The ambient loop at the top of a practice page. Muted, looping, no
+     controls, which is the only thing it is for: it is wallpaper with a
+     pulse, not something anybody watches. Practicing the Way run one at the
+     head of each practice page and this is the same video used the same way.
+
+     It is NOT a session video and must never be treated as one. A session
+     video is something a person chooses to play; this starts on its own and
+     says nothing. Keeping them in separate fields is what stops a future
+     edit quietly promoting a bit of b-roll into session five. */
+  function ambient(v) {
+    if (!v || !v.videoId) return null;
+    var provider = v.provider || 'vimeo';
+    if (!validId(provider, v.videoId)) return null;
+    return {
+      provider: provider,
+      videoId: String(v.videoId),
+      hash: v.hash || ''
+    };
+  }
+
+  /* What a video id is allowed to look like, per provider. Both of these end
+     up inside an iframe src, so they are checked here and again in the click
+     handler in js/app.js. A generated file is a file in this repo, but a
+     value that reaches an iframe deserves the check whatever its provenance. */
+  function validId(provider, id) {
+    id = String(id || '');
+    if (provider === 'vimeo') return /^[0-9]{6,12}$/.test(id);
+    return /^[A-Za-z0-9_-]{11}$/.test(id);
+  }
+
   /* A video this app can actually play, or nothing.
 
      `embeddable: false` is the interesting case. This app has no external
@@ -185,11 +216,23 @@
   function playable(v) {
     if (!v || !v.videoId) return null;
     if (v.embeddable === false) return null;
+    /* Defaults to YouTube because every file written before Vimeo was
+       supported is a YouTube file and none of them names a provider. */
+    var provider = v.provider === 'vimeo' ? 'vimeo' : 'youtube';
+    if (!validId(provider, v.videoId)) return null;
     return {
-      videoId: v.videoId,
+      provider: provider,
+      // Unlisted Vimeo videos need their privacy hash to embed at all.
+      hash: v.hash || '',
+      videoId: String(v.videoId),
       title: v.title || '',
       duration: v.duration || '',
-      thumbnail: v.thumbnail || ('https://i.ytimg.com/vi/' + v.videoId + '/hqdefault.jpg'),
+      /* Only YouTube gives a thumbnail away at a guessable URL. Vimeo's needs
+         an API call, so a Vimeo video with no thumbnail in the file simply
+         has none, and the poster falls back to the cream block and the play
+         badge, which is what a failed thumbnail already looks like. */
+      thumbnail: v.thumbnail ||
+        (provider === 'youtube' ? 'https://i.ytimg.com/vi/' + v.videoId + '/hqdefault.jpg' : ''),
       confidence: v.confidence || ''
     };
   }

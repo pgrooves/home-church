@@ -208,6 +208,10 @@ Then fill it in. The whole shape:
 
 Rules that are easy to get wrong:
 
+- **A video can be YouTube or Vimeo.** Add `"provider": "vimeo"` and the id is
+  the digits in `player.vimeo.com/video/1046530705`. An unlisted Vimeo video
+  also needs its `"hash"`, which is the `h=` in the embed URL. Leave `provider`
+  off and it is treated as YouTube, which is what every earlier file is.
 - **`videoId` is the eleven characters after `v=`**, not the whole URL. In
   `youtube.com/watch?v=dQw4w9WgXcQ&list=PL...` it is `dQw4w9WgXcQ`. The app
   refuses anything that is not eleven characters of letters, digits, `-` and
@@ -225,6 +229,27 @@ Rules that are easy to get wrong:
 
 You can do this for one practice and let the script do the other eight. The
 files are independent.
+
+### The hero loop
+
+A practice page can carry one `hero`: the looping band of film at the top,
+muted and with no controls, the same way practicingtheway.org runs one at the
+head of each practice.
+
+```json
+"hero": { "provider": "vimeo", "videoId": "1046530705", "hash": "" }
+```
+
+It is deliberately a separate field from a session's `video`, and the two must
+not be confused. A session video is something a person chooses to play. A hero
+starts on its own and says nothing, so it is never counted as a session and
+never gets a play button. It is also skipped entirely for anybody whose phone
+asks for reduced motion, and it is the only thing on these screens that spends
+data before somebody has chosen to watch anything.
+
+**Do not put a page's background loops in as session videos.** On the Sabbath
+page all three Vimeo embeds are background art; the four real session videos
+are behind Practicing the Way's signup and are not on the public page at all.
 
 -----
 
