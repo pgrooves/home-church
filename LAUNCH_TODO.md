@@ -279,7 +279,20 @@ neither is a defect:
          so it has never been in git or in a chat window. Copy it once.
 
       3. **Set five secrets** on the function, under Edge Functions →
-         send-push → Secrets:
+         send-push → Secrets.
+
+         **Confirmed still outstanding as of the admin dashboard work.** A
+         dry run through `hc_send_push` came back
+         `500 {"error":"Not configured."}`, which is the function's own first
+         check: `HC_PUSH_CRON_SECRET` is not set on it. So push has never
+         fired on this project, and that includes the Monday guide notice and
+         the Saturday reminder, not just announcements. The vault secret from
+         0012 exists; it has simply never been copied onto the function.
+
+         Nothing in the app is wrong and nothing here needs rewriting. Until
+         these are set, posting an announcement saves the card and the Notify
+         step reports that the notification did not send, which is the right
+         way round.
 
          | Secret | Value |
          |---|---|
