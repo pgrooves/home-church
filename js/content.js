@@ -32,7 +32,7 @@
 
   var cfg = HC.config || {};
   var CACHE_KEY = 'content';
-  var CACHE_VERSION = 10;     // bump when a mapping below changes shape
+  var CACHE_VERSION = 11;     // bump when a mapping below changes shape
   var TIMEOUT_MS = 12000;
 
   // The tables we pull, and the HC.data key each one fills. Adding another
@@ -47,7 +47,13 @@
     { table: 'guides',        target: 'guides',        map: mapGuide },
     { table: 'podcasts',      target: 'sermons',       map: mapSermon },
     { table: 'events',        target: 'events',        map: mapEvent },
-    { table: 'announcements', target: 'announcements', map: mapAnnouncement },
+    // Home lists these newest first now rather than showing one, so the order
+    // it draws is the order they arrive in rather than something the screen
+    // has to re-sort. It still sorts, because a cached payload from before
+    // this line existed is not ordered, and because Home's tie-break is
+    // priority rather than date.
+    { table: 'announcements', target: 'announcements', map: mapAnnouncement,
+      order: 'created_at.desc' },
     { table: 'reading_plans', target: 'readingPlan',   map: mapReadingPlan, single: true },
     // `order` matters here and nowhere else so far: Connect shows the first
     // group as "your group", and PostgREST returns rows in no guaranteed
@@ -72,6 +78,18 @@
     // church.address.city without checking, so a cleared profile is not an
     // empty state, it is four broken screens. A church with no name is not
     // something anyone means to say. Edit the row, do not delete it.
+    /* Prose the church owns, written from Settings -> Admin -> Content
+       instead of from a source file. Deliberately not the nine Practices,
+       which are somebody else's work and stay on the build script that
+       generates them: see the header of js/practices.js and migration 0026. */
+    { table: 'content_pages', target: 'contentPages', map: mapContentPage,
+      order: 'sort_order.asc,title.asc' },
+
+    /* App-wide switches. Read with the publishable key like everything else
+       here, which is what lets a signed out phone see the pinned banner. */
+    { table: 'app_settings', target: 'appSettings', map: mapAppSetting,
+      order: 'sort_order.asc,label.asc' },
+
     { table: 'church_profile', target: 'church',  map: mapChurch,
       single: true, neverEmpty: true },
     { table: 'podcast_show',   target: 'podcast', map: mapPodcastShow,
@@ -191,7 +209,50 @@
       // an expired announcement disappear. null on either end means open.
       startsOn: r.starts_on || null,
       endsOn: r.ends_on || null,
-      priority: r.priority == null ? 0 : r.priority
+      priority: r.priority == null ? 0 : r.priority,
+      // null rather than '' on both, because Home tests them for truthiness
+      // to decide whether to draw a frame or a button at all, and an empty
+      // frame is worse than no frame. Same rule as episodeUrl above.
+      imageUrl: r.image_url || null,
+      videoUrl: r.video_url || null,
+      // Sorting the list needs something monotonic that survives the cache.
+      // starts_on is the date the church chose and is frequently null;
+      // created_at always exists and is what the table is indexed on.
+      createdAt: r.created_at || null
+    };
+  }
+
+  /* A page of the church's own words. `sections` is [{heading, body}] where
+     body is one string, blank lines and all: splitting it into paragraphs is
+     the screen's business, because that is a rendering decision and this file
+     only translates. See migration 0026 section 2 for why the shape is this
+     plain. */
+  function mapContentPage(r) {
+    return {
+      id: r.id,
+      title: str(r.title),
+      eyebrow: str(r.eyebrow),
+      blurb: str(r.blurb),
+      sections: arr(r.sections).map(function (s) {
+        return { heading: str(s && s.heading), body: str(s && s.body) };
+      }),
+      sortOrder: r.sort_order == null ? 0 : r.sort_order
+    };
+  }
+
+  /* One switch or one short string. `kind` names which column is live, and
+     the mapper resolves it here rather than making four screens each work it
+     out: everything downstream reads `.value` and gets a boolean or a string
+     according to the row's own type. */
+  function mapAppSetting(r) {
+    var kind = r.kind === 'text' ? 'text' : 'boolean';
+    return {
+      key: r.key,
+      label: str(r.label),
+      help: str(r.help),
+      kind: kind,
+      value: kind === 'text' ? str(r.value_text) : !!r.value_bool,
+      sortOrder: r.sort_order == null ? 0 : r.sort_order
     };
   }
 

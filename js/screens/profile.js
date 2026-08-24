@@ -241,7 +241,14 @@
       id: 'sundayReminder',
       on: p.notifications.sundayReminder
     });
-    /* The third switch is season gated, the same way Connect gates the group
+    html += switchRow({
+      title: 'Announcements',
+      sub: 'When the church posts something on purpose',
+      action: 'toggle-notify',
+      id: 'announcements',
+      on: p.notifications.announcements
+    });
+    /* The fourth switch is season gated, the same way Connect gates the group
        finder, and for a harder reason than symmetry. "Only on your group's
        day" needs to know which group you are in, and nothing in this app
        models that: there is no membership, only a roster a leader keeps on
@@ -302,6 +309,33 @@
       html += '<div class="hc-mt-lg">' +
         c.button('Open leader tools', { action: 'go-leader', variant: 'secondary', icon: 'connect' }) +
       '</div>';
+    }
+
+    /* Admin. Drawn only for somebody whose profiles.role is 'admin', which
+       js/auth.js mirrors onto this phone on every sign in and every session
+       refresh, and clears on sign out.
+
+       NOT A SWITCH, unlike Leader mode directly above it, and the difference
+       is worth reading. Leader mode is a preference: anybody can turn it on,
+       because all it does is change what this phone shows its owner. This is
+       a permission the church granted, it cannot be turned on from here, and
+       the row is either there or it is not.
+
+       Hiding it is presentation and nothing more. Every button behind it is
+       checked by the database, in the policies from migration 0026 and the
+       admin-gated functions from 0025 and 0027, so a member who made this row
+       appear would find a screen where nothing works. See js/admin.js. */
+    if (HC.admin && HC.admin.isAdmin()) {
+      html += c.sectionHeader('For the church', 'Admin');
+      html += '<p class="hc-body-serif hc-profile__leader-copy">Announcements, who can edit, ' +
+        'the church’s own pages, and the switches that change the whole app.</p>';
+      html += c.row({
+        title: 'Open the admin dashboard',
+        sub: 'Everything here is live the moment you save it.',
+        action: 'go-admin',
+        chevron: true,
+        serif: true
+      });
     }
 
     // Help and about

@@ -2305,9 +2305,30 @@
       body: 'Four sites, one Saturday, every hand we can get. Sign up at the Welcome Desk or tell your group leader.',
       startsOn: null,
       endsOn: null,
-      priority: 0
+      priority: 0,
+      // A bundled announcement has no picture and no video. Both fields exist
+      // anyway so the shape matches the mapper in js/content.js exactly, and
+      // Home never has to ask which kind of announcement it is holding.
+      imageUrl: null,
+      videoUrl: null,
+      createdAt: '2026-08-16T12:00:00Z'
     }
   ];
+
+  /* ------------------------------------------------- pages and settings
+
+     Both empty, and both for the same reason the Instagram rail is: they hold
+     what an admin has written from inside the app, and a copy frozen at build
+     time would be a stale answer presented as the current one. The screens
+     that read them fall back to the words in their own source file when the
+     table has not been reached, which is a better floor than a snapshot.
+
+     They exist here at all because js/content.js fills HC.data by mutating
+     these arrays in place rather than replacing them, so the key has to be
+     present before the first fetch lands. See the header of that file. */
+
+  var contentPages = [];
+  var appSettings = [];
 
   /* Instagram posts, for the rail at the top of Connect.
 
@@ -2375,11 +2396,35 @@
     announcements: announcements,
     instagramPosts: instagramPosts,
     homeMedia: homeMedia,
+    contentPages: contentPages,
+    appSettings: appSettings,
 
     /* ------------------------------------------------------------- helpers */
 
     getSeries: function (id) {
       return series.filter(function (s) { return s.id === id; })[0] || null;
+    },
+
+    /* A page by its permanent id, or null. Null is a real answer and every
+       caller handles it: it is what a screen sees before the first content
+       fetch lands, and what it sees forever on a project where nobody has
+       written that page yet. Both cases want the same thing, the words still
+       in the source file. */
+    getPage: function (id) {
+      return contentPages.filter(function (p) { return p.id === id; })[0] || null;
+    },
+
+    /* One app setting's value, or the fallback.
+
+       The fallback is not decoration. These rows are read over the network
+       like all other content, so every read has to work on a phone that has
+       never reached Supabase, and the honest default for a feature flag is
+       the behaviour the app had before the flag existed. Passing one is
+       required rather than optional for that reason: `undefined` leaking into
+       a switch is how a banner appears on every phone at once. */
+    setting: function (key, fallback) {
+      var row = appSettings.filter(function (s) { return s.key === key; })[0];
+      return row ? row.value : fallback;
     },
 
     getSermon: function (id) {

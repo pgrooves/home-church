@@ -45,8 +45,11 @@ grant usage on schema auth to anon, authenticated, service_role;
 grant usage on schema public to anon, authenticated, service_role;
 
 create table auth.users (
-  id    uuid primary key default gen_random_uuid(),
-  email text
+  id         uuid primary key default gen_random_uuid(),
+  email      text,
+  -- Real auth.users has this and hc_admin_list_users (0025) reads it, so the
+  -- stub needs it or that function fails at run time rather than at review.
+  created_at timestamptz not null default now()
 );
 
 -- Supabase's own definition, near enough: the signed in user's id off the JWT.
@@ -69,10 +72,110 @@ $$;
 create table public.profiles (
   id         uuid primary key references auth.users (id) on delete cascade,
   first_name text,
+  last_name  text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
 alter table public.profiles enable row level security;
 create policy "people can read their own profile"
   on public.profiles for select to authenticated using (auth.uid() = id);
+
+/* The UPDATE policy from 0009, which 0016 does not need and 0025 very much
+   does. It is the reason the role guard in 0025 section 3 exists at all:
+   everybody can already write their own profile row, and `role` is a column
+   on that row, so without the trigger any member could promote themselves
+   with one PATCH. Leaving this out of the harness would make 0025's test file
+   pass while testing nothing. */
+create policy "people can update their own profile"
+  on public.profiles for update to authenticated
+  using (auth.uid() = id) with check (auth.uid() = id);
+
 grant select, insert, update on public.profiles to authenticated;
+
+-- From 0003, which 0026 alters rather than creates.
+create table public.announcements (
+  id          text primary key,
+  eyebrow     text,
+  title       text not null,
+  body        text,
+  starts_on   date,
+  ends_on     date,
+  priority    integer not null default 0,
+  published   boolean not null default true,
+  created_at  timestamptz not null default now(),
+  updated_at  timestamptz not null default now()
+);
+alter table public.announcements enable row level security;
+grant select on public.announcements to anon, authenticated;
+
+-- From 0010 and 0012, which 0027 alters rather than creates.
+create table public.device_tokens (
+  token       text primary key,
+  platform    text not null default 'ios',
+  active      boolean not null default true,
+  wants_new_guide       boolean not null default true,
+  wants_sunday_reminder boolean not null default true,
+  wants_group_day       boolean not null default false,
+  created_at  timestamptz not null default now(),
+  updated_at  timestamptz not null default now()
+);
+
+create table public.push_log (
+  id         bigint generated always as identity primary key,
+  topic      text not null,
+  ran_at     timestamptz not null default now(),
+  recipients integer not null default 0,
+  delivered  integer not null default 0,
+  failed     integer not null default 0,
+  retired    integer not null default 0,
+  skipped    boolean not null default false,
+  note       text,
+  constraint push_log_topic_known
+    check (topic in ('new_guide', 'sunday_reminder', 'group_day', 'test'))
+);
+
+/* ---------------------------------------------------------------------------
+   A stand-in for Supabase Storage.
+
+   0026 creates a bucket and four policies on storage.objects, and a bare
+   Postgres has neither. These two tables carry only the columns the migration
+   names, which is enough for the policies to be created and therefore for the
+   SQL to be proven valid.
+
+   WHAT THIS DOES NOT TEST, said plainly so nobody reads more into a green run
+   than is there: Storage's own API is a Go service in front of these tables,
+   and nothing here exercises it. The policies are checked for syntax and for
+   referring to columns that exist. That an upload by a member is actually
+   refused is a claim about the real project, and the only honest way to check
+   it is to try it there.
+   --------------------------------------------------------------------------- */
+create schema if not exists storage;
+grant usage on schema storage to anon, authenticated, service_role;
+
+create table storage.buckets (
+  id                 text primary key,
+  name               text not null,
+  public             boolean not null default false,
+  file_size_limit    bigint,
+  allowed_mime_types text[]
+);
+
+create table storage.objects (
+  id        uuid primary key default gen_random_uuid(),
+  bucket_id text references storage.buckets (id),
+  name      text,
+  owner     uuid
+);
+alter table storage.objects enable row level security;
+
+/* Supabase's own vault, near enough for 0027 to run. The real one decrypts
+   through an extension; this one just has to exist and hold a row, because
+   what 0027's test asks is whether hc_send_push refuses an unknown topic and
+   whether hc_admin_send_announcement refuses a draft, and both of those are
+   decided before the secret is ever read. */
+create schema if not exists vault;
+create table vault.decrypted_secrets (
+  name             text primary key,
+  decrypted_secret text
+);
+create schema if not exists net;

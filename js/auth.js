@@ -202,7 +202,16 @@
     var done = session
       ? gotrueFetch('/logout', { headers: { Authorization: 'Bearer ' + session.accessToken } }).catch(function () {})
       : Promise.resolve();
-    return done.then(function () { setSession(null); });
+    return done.then(function () {
+      setSession(null);
+      /* The rest of the profile survives signing out on purpose, because it
+         is also what an account-less phone keeps. role does not: it describes
+         a relationship to the church rather than something about this device,
+         and leaving it behind would draw the Admin row for whoever signs in
+         on this phone next. Every button behind that row would still be
+         refused by the database, and it should not be drawn at all. */
+      HC.store.updateProfile({ role: 'member' });
+    });
   }
 
   /* ---------------------------------------------------- account deletion
@@ -224,34 +233,56 @@
     return cfg.SUPABASE_URL.replace(/\/$/, '') + '/functions/v1' + path;
   }
 
-  function deleteAccount() {
+  /* Anything that needs a live access token and is not a REST call. Refreshes
+     first, so a tab left open over lunch does not fail with a 401 that looks
+     like a bug, and rejects in the person's own language when the session is
+     genuinely gone rather than signing them out quietly, which looks like it
+     worked.
+
+     Exported, because the Storage upload in js/admin.js needs exactly this
+     and writing a second copy of the refresh is how the two drift. */
+  function withSession(run) {
     if (!isSignedIn()) return Promise.reject(new Error('You are not signed in.'));
-
     return ensureFreshSession().then(function (fresh) {
-      // A session that would not refresh cannot authorize a deletion. Say so,
-      // rather than signing them out quietly, which looks like it worked.
       if (!fresh) throw new Error('That sign in has expired. Sign in again and try once more.');
+      return run(fresh);
+    });
+  }
 
-      return networkSafe(fetch(functionsUrl('/delete-account'), {
+  /* An Edge Function, called with the caller's own token and nothing else.
+     Both functions this app has work that way on purpose, see the headers of
+     supabase/functions/delete-account and admin-remove-user. */
+  function callFunction(path, body, fallbackMessage) {
+    return withSession(function (fresh) {
+      return networkSafe(fetch(functionsUrl(path), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           apikey: cfg.SUPABASE_ANON_KEY,
           Authorization: 'Bearer ' + fresh.accessToken
-        }
+        },
+        body: body ? JSON.stringify(body) : undefined
       })).then(function (res) {
-        return res.json().catch(function () { return {}; }).then(function (body) {
+        return res.json().catch(function () { return {}; }).then(function (payload) {
           if (!res.ok) {
-            throw new Error(friendlyError(body,
-              'We could not finish deleting your account. Please email the church and we will do it by hand.'));
+            throw new Error(friendlyError(payload,
+              fallbackMessage || 'That did not go through. Try again in a moment.'));
           }
-          // The user this session belonged to no longer exists, so the tokens
-          // are dead. Drop them here instead of calling /logout, which would
-          // 401 against a deleted user and look like a failure.
-          setSession(null);
-          return true;
+          return payload;
         });
       });
+    });
+  }
+
+  function deleteAccount() {
+    return callFunction('/delete-account', null,
+      'We could not finish deleting your account. Please email the church and we will do it by hand.'
+    ).then(function () {
+      // The user this session belonged to no longer exists, so the tokens
+      // are dead. Drop them here instead of calling /logout, which would
+      // 401 against a deleted user and look like a failure.
+      setSession(null);
+      return true;
     });
   }
 
@@ -350,6 +381,17 @@
       // also correctly turns Leader mode back off on the phone if the church
       // ever revokes it.
       if (remote && typeof remote.can_host === 'boolean') patch.canHost = remote.can_host;
+      /* Same one-way rule as can_host above, and it matters more here. role is
+         not in FIELD_MAP, so toRemote() cannot carry it back up: a local edit
+         to it is unsendable by construction rather than merely unintended.
+         The database refuses it too, in the trigger from migration 0025, and
+         these are the two halves of the same statement, that the church sets
+         this and the app only ever reads it.
+
+         Defaulted rather than left alone when the column is missing, so a
+         project that has not run 0025 yet reads as a congregation of members
+         instead of leaving whatever this phone last held. */
+      patch.role = (remote && remote.role === 'admin') ? 'admin' : 'member';
       HC.store.updateProfile(patch);
     }).catch(function () {
       // Offline, or the table is not there yet. Sign-in still succeeded,
@@ -428,6 +470,8 @@
     restFetch: restFetch,
     rpc: rpc,
     publicGet: publicGet,
+    withSession: withSession,
+    callFunction: callFunction,
     isSignedIn: isSignedIn,
     getUser: getUser,
     classify: classify,

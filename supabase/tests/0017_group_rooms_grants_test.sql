@@ -176,11 +176,26 @@ select t_check('authenticated cannot execute the sweep',
 select t_check('but service_role can, because something has to run it',
   has_function_privilege('service_role', 'public.hc_purge_group_rooms(integer)', 'EXECUTE'), true);
 
--- Every hc_ function anon is allowed to call, named. Exactly two, and both are
--- policy helpers rather than anything that writes: the `questions follow the
--- room` policy calls them while a signed out phone is reading a room by its
--- code, and a policy expression runs with the caller's privileges.
-select t_check('anon can execute exactly the two policy helpers it needs',
+-- Every hc_ function anon is allowed to call, named. All three are policy
+-- helpers rather than anything that writes, which is the property that matters
+-- rather than the count: a policy expression runs with the caller's
+-- privileges, so a policy anon evaluates needs the functions in it to be
+-- callable by anon.
+--
+-- hc_room_is_live and hc_room_is_member are read by the `questions follow the
+-- room` policy while a signed out phone is reading a room by its code.
+--
+-- hc_is_admin arrived with migration 0025 and is read by the SELECT policies
+-- in 0026, which say `published or hc_is_admin()`. It is on this list on
+-- purpose and the first version of 0025 left it off, which is worth recording
+-- because the failure was not the one anybody would predict. Postgres short
+-- circuits `or`, so the function is only reached on an unpublished row; a role
+-- without EXECUTE therefore does not see fewer rows, it gets
+-- `permission denied for function hc_is_admin` and PostgREST returns a 500.
+-- One saved draft would have taken announcements off Home for every signed out
+-- phone. It leaks nothing: with no session auth.uid() is null, so it can only
+-- ever answer false.
+select t_check('anon can execute exactly the three policy helpers it needs',
   (select coalesce(string_agg(p.proname, ', ' order by p.proname), 'none')
      from pg_proc p
      join pg_type t on t.oid = p.prorettype
@@ -188,7 +203,7 @@ select t_check('anon can execute exactly the two policy helpers it needs',
       and p.proname like 'hc\_%'
       and t.typname <> 'trigger'
       and has_function_privilege('anon', p.oid, 'EXECUTE')),
-  'hc_room_is_live, hc_room_is_member');
+  'hc_is_admin, hc_room_is_live, hc_room_is_member');
 
 -- The standing guard, and the reason migration 0017 does not try to solve this
 -- with ALTER DEFAULT PRIVILEGES. Postgres hands PUBLIC an EXECUTE grant on
@@ -204,6 +219,6 @@ select t_check('and nothing else in the schema is reachable by a signed out clie
     where p.pronamespace = 'public'::regnamespace
       and p.proname like 'hc\_%'
       and t.typname <> 'trigger'
-      and p.proname not in ('hc_room_is_live', 'hc_room_is_member')
+      and p.proname not in ('hc_room_is_live', 'hc_room_is_member', 'hc_is_admin')
       and has_function_privilege('anon', p.oid, 'EXECUTE')),
   'none');

@@ -710,6 +710,318 @@
       HC.router.go({ name: 'leader' });
     },
 
+    /* ----------------------------------------------------------- the Admin
+       screen
+
+       Drawn only for an admin and refused by the database for everybody else,
+       so nothing here re-checks the role: a member who reaches these handlers
+       gets a 403 and a toast, which is the honest outcome. See the header of
+       js/admin.js.
+       ------------------------------------------------------------------- */
+
+    'go-admin': function (el) {
+      var id = el.getAttribute('data-id');
+      // Arriving at the menu clears whatever was half written, so opening a
+      // different section does not inherit the last one's fields.
+      if (!id) adminHelpers().resetDrafts();
+      HC.router.go({ name: 'admin', id: id || null });
+    },
+
+    'admin-announcement-new': function () {
+      adminHelpers().startDraft(null);
+      repaintAdmin();
+    },
+
+    'admin-announcement-edit': function (el) {
+      var row = announcementById(el.getAttribute('data-id'));
+      if (!row) return;
+      adminHelpers().startDraft(row);
+      repaintAdmin();
+    },
+
+    'admin-announcement-cancel': function () {
+      adminHelpers().clearDraft();
+      repaintAdmin();
+    },
+
+    // The two switches on the form. Both live in the draft, neither is saved
+    // until the button is pressed.
+    'admin-draft-toggle': function (el) {
+      var d = adminHelpers().getDraft();
+      if (!d) return;
+      var which = el.getAttribute('data-id');
+      d[which] = !d[which];
+      HC.native.tap('Light');
+      repaintAdmin();
+    },
+
+    'admin-image-clear': function () {
+      var d = adminHelpers().getDraft();
+      if (!d) return;
+      /* The object stays in the bucket. Deleting it here would orphan the
+         picture of any other announcement pointing at the same URL, which is
+         what happens the moment somebody reuses one, and a few unreferenced
+         images in a 5MB-per-file bucket is a much cheaper problem than a card
+         with a broken image on Home. */
+      d.imageUrl = '';
+      repaintAdmin();
+    },
+
+    /* Save, and then maybe notify. Two calls in that order and never one,
+       because they fail differently: an announcement that saved but did not
+       notify is fine and can be notified again from the list, and a
+       notification about an announcement that did not save is a lie on every
+       lock screen in the church. The second failure therefore never rolls
+       back the first, it just says so. */
+    'admin-announcement-save': function () {
+      var h = adminHelpers();
+      var d = h.getDraft();
+      if (!d) return;
+
+      if (!String(d.title || '').trim()) {
+        HC.components.toast('An announcement needs a title.');
+        return;
+      }
+      if (d.notify && !d.published) {
+        HC.components.toast('A draft cannot be announced. Publish it first.');
+        return;
+      }
+
+      adminRun('save', HC.admin.saveAnnouncement(d).then(function (saved) {
+        var wanted = d.notify;
+        h.clearDraft();
+        if (!wanted || !saved || !saved.id) {
+          HC.components.toast('Posted.');
+          return;
+        }
+        return HC.admin.notifyAnnouncement(saved.id).then(function () {
+          HC.components.toast('Posted, and everybody has been told.');
+        }).catch(function (err) {
+          HC.components.toast('Posted. The notification did not send: ' +
+            (err.message || 'try Notify from the list.'));
+        });
+      }));
+    },
+
+    /* Notify on its own, from the list. This is the second chance after a
+       failed send, and the way to announce something that was written as a
+       draft days ago. */
+    'admin-announcement-notify': function (el) {
+      var id = el.getAttribute('data-id');
+      var row = announcementById(id);
+      if (!row) return;
+
+      if (!window.confirm('Send a notification about “' + row.title + '” to everybody? ' +
+                          'This cannot be undone.')) return;
+
+      adminRun('notify:' + id, HC.admin.notifyAnnouncement(id).then(function () {
+        HC.components.toast('Everybody has been told.');
+      }));
+    },
+
+    'admin-announcement-delete': function (el) {
+      var id = el.getAttribute('data-id');
+      var row = announcementById(id);
+      if (!row) return;
+
+      if (!window.confirm('Delete “' + row.title + '”? It comes off Home for everybody, ' +
+                          'and there is no undo.')) return;
+
+      adminRun('delete:' + id, HC.admin.deleteAnnouncement(id).then(function () {
+        HC.components.toast('Deleted.');
+      }));
+    },
+
+    /* ------------------------------------------------------------- users */
+
+    'admin-role': function (el) {
+      var id = el.getAttribute('data-id');
+      var person = HC.admin.users().filter(function (u) { return u.id === id; })[0];
+      if (!person) return;
+
+      var makingAdmin = person.role !== 'admin';
+      var name = [person.first_name, person.last_name].filter(Boolean).join(' ') ||
+        person.email || 'this person';
+
+      /* Promotion is confirmed as well as demotion, which is not the usual
+         rule. It is not destructive, but it hands somebody the ability to
+         write to Home and to change everybody else's role, and that is worth
+         one deliberate tap. */
+      var question = makingAdmin
+        ? 'Make ' + name + ' an admin? They will be able to post announcements, ' +
+          'edit content, and change what everybody else can do.'
+        : 'Make ' + name + ' a member? They lose access to this screen.';
+
+      if (!window.confirm(question)) return;
+
+      adminRun('role:' + id,
+        HC.admin.setRole(id, makingAdmin ? 'admin' : 'member').then(function () {
+          HC.components.toast(makingAdmin ? 'Now an admin.' : 'Now a member.');
+        }));
+    },
+
+    'admin-user-remove': function (el) {
+      var id = el.getAttribute('data-id');
+      var person = HC.admin.users().filter(function (u) { return u.id === id; })[0];
+      if (!person) return;
+
+      var name = [person.first_name, person.last_name].filter(Boolean).join(' ') ||
+        person.email || 'this person';
+
+      /* The worst button on the screen, so the confirmation says what it
+         actually does rather than "are you sure". A member who hosted a group
+         room takes that evening's writing down with them, including other
+         people's, which is the cascade documented in the delete-account
+         function and in the privacy policy. */
+      if (!window.confirm('Remove ' + name + ' from the app?\n\n' +
+            'Their account, their profile, and anything they wrote in a group room ' +
+            'are deleted. If they hosted a room, that room goes too, including what ' +
+            'other people wrote in it. There is no undo.')) return;
+
+      adminRun('remove:' + id, HC.admin.removeUser(id).then(function () {
+        HC.components.toast('Removed.');
+      }));
+    },
+
+    /* ----------------------------------------------------------- content */
+
+    'admin-page-new': function () {
+      adminHelpers().startPageDraft(null);
+      repaintAdmin();
+    },
+
+    'admin-page-edit': function (el) {
+      var row = pageById(el.getAttribute('data-id'));
+      if (!row) return;
+      adminHelpers().startPageDraft(row);
+      repaintAdmin();
+    },
+
+    'admin-page-cancel': function () {
+      adminHelpers().clearPageDraft();
+      repaintAdmin();
+    },
+
+    'admin-page-toggle': function () {
+      var p = adminHelpers().getPageDraft();
+      if (!p) return;
+      p.published = !p.published;
+      HC.native.tap('Light');
+      repaintAdmin();
+    },
+
+    'admin-section-add': function () {
+      var p = adminHelpers().getPageDraft();
+      if (!p) return;
+      p.sections.push({ heading: '', body: '' });
+      repaintAdmin();
+    },
+
+    /* No confirmation. An unsaved section is not published anything, and
+       Cancel is still sitting at the bottom of the form. Confirmations spent
+       on reversible things are what train people to tap through the ones that
+       matter. */
+    'admin-section-remove': function (el) {
+      var p = adminHelpers().getPageDraft();
+      if (!p) return;
+      p.sections.splice(parseInt(el.getAttribute('data-id'), 10), 1);
+      repaintAdmin();
+    },
+
+    'admin-page-save': function () {
+      var h = adminHelpers();
+      var p = h.getPageDraft();
+      if (!p) return;
+
+      if (!String(p.title || '').trim()) {
+        HC.components.toast('A page needs a title.');
+        return;
+      }
+
+      adminRun('page', HC.admin.savePage(p).then(function () {
+        h.clearPageDraft();
+        HC.components.toast('Saved.');
+      }));
+    },
+
+    'admin-page-delete': function (el) {
+      var id = el.getAttribute('data-id');
+      var row = pageById(id);
+      if (!row) return;
+
+      if (!window.confirm('Delete the page “' + row.title + '”? ' +
+            'Anywhere in the app that reads it falls back to the words built into ' +
+            'the app. There is no undo.')) return;
+
+      adminRun('page-delete:' + id, HC.admin.deletePage(id).then(function () {
+        HC.components.toast('Deleted.');
+      }));
+    },
+
+    /* ---------------------------------------------------------- settings */
+
+    'admin-setting-toggle': function (el) {
+      var key = el.getAttribute('data-id');
+      var row = HC.admin.settings().filter(function (s) { return s.key === key; })[0];
+      if (!row) return;
+
+      // Moved on screen first, saved after. A switch that waits on the
+      // network to move feels broken on a bad connection, and the repaint at
+      // the end of adminRun puts it back if the write is refused.
+      setSwitch(el, !row.value_bool);
+      HC.native.tap('Light');
+
+      adminRun('setting:' + key, HC.admin.saveSetting(key, 'boolean', !row.value_bool));
+    },
+
+    'admin-setting-new': function () {
+      adminHelpers().startNewSetting();
+      repaintAdmin();
+    },
+
+    'admin-setting-cancel': function () {
+      adminHelpers().clearNewSetting();
+      repaintAdmin();
+    },
+
+    'admin-setting-kind': function (el) {
+      var n = adminHelpers().getNewSetting();
+      if (!n) return;
+      n.kind = el.getAttribute('data-id');
+      repaintAdmin();
+    },
+
+    'admin-setting-create': function () {
+      var h = adminHelpers();
+      var n = h.getNewSetting();
+      if (!n) return;
+
+      if (!String(n.label || '').trim()) {
+        HC.components.toast('Give it a name first.');
+        return;
+      }
+
+      adminRun('setting', HC.admin.createSetting(n).then(function () {
+        h.clearNewSetting();
+        HC.components.toast('Added.');
+      }));
+    },
+
+    'admin-setting-delete': function (el) {
+      var key = el.getAttribute('data-id');
+      var row = HC.admin.settings().filter(function (s) { return s.key === key; })[0];
+      if (!row) return;
+
+      if (!window.confirm('Remove the “' + row.label + '” setting? ' +
+            'Anything reading it goes back to its built-in behaviour.')) return;
+
+      adminRun('setting-delete:' + key, HC.admin.deleteSetting(key).then(function () {
+        HC.components.toast('Removed.');
+      }));
+    },
+
+
+
     // Every row on the More screen. One handler rather than one per module,
     // so adding a module is a row in js/screens/more.js and a route below.
     'go-module': function (el) {
@@ -1851,6 +2163,135 @@
     if (knob) knob.setAttribute('aria-checked', on ? 'true' : 'false');
   }
 
+
+  /* ------------------------------------------------------------- the Admin
+     screen
+
+     The markup is in js/screens/admin.js and the handling is here, the same
+     seam profileHelpers draws. Everything below either edits the draft that
+     screen is holding or makes one network call and repaints.
+     ---------------------------------------------------------------------- */
+
+  function adminHelpers() {
+    return HC.screens.adminHelpers;
+  }
+
+  /* The same 400ms debounce wireEvents() uses, hoisted so the admin handlers
+     above can reach it too. Keyed, so two fields edited in the same moment do
+     not cancel each other. */
+  var adminTimers = {};
+  function debounceGlobal(key, fn) {
+    window.clearTimeout(adminTimers[key]);
+    adminTimers[key] = window.setTimeout(fn, 400);
+  }
+
+  /* A repaint that keeps the reader where they were. Every admin action ends
+     in one of these rather than patching the DOM, because the screen is
+     rendered from the draft and the caches in one pass and there is nothing
+     to patch. restore:true is what stops a save throwing somebody back to the
+     top of a long list. */
+  function repaintAdmin() {
+    var route = HC.router.current();
+    if (!route || route.name !== 'admin') return;
+    HC.router.go({ name: 'admin', id: route.id, restore: true }, { force: true });
+  }
+
+  /* Every keystroke on the Admin screen. Writes into the draft object and
+     draws nothing, for the reason in the input listener above.
+
+     The one exception is a text app setting, which has no Save button because
+     a settings screen with one would be a settings screen people leave
+     half saved. It debounces to the table instead, keyed per setting so
+     editing two of them inside the same 400ms does not cancel the first. */
+  function adminInput(name, id, value) {
+    var h = adminHelpers();
+    var d = h.getDraft();
+    var p = h.getPageDraft();
+    var n = h.getNewSetting();
+
+    if (name === 'setting') {
+      debounceGlobal('setting-' + id, function () {
+        HC.admin.saveSetting(id, 'text', value).catch(function (err) {
+          HC.components.toast(err.message || 'That did not save.');
+        });
+      });
+      return;
+    }
+
+    if (d && ANNOUNCEMENT_FIELDS[name]) { d[name] = value; return; }
+
+    if (p) {
+      if (name === 'pageTitle') { p.title = value; return; }
+      if (name === 'pageEyebrow') { p.eyebrow = value; return; }
+      if (name === 'pageBlurb') { p.blurb = value; return; }
+      var index = parseInt(id, 10);
+      if (p.sections[index]) {
+        if (name === 'sectionHeading') p.sections[index].heading = value;
+        if (name === 'sectionBody') p.sections[index].body = value;
+      }
+      return;
+    }
+
+    if (n) {
+      if (name === 'newLabel') n.label = value;
+      if (name === 'newHelp') n.help = value;
+    }
+  }
+
+  var ANNOUNCEMENT_FIELDS = {
+    title: true, body: true, eyebrow: true,
+    imageUrl: true, videoUrl: true, startsOn: true, endsOn: true
+  };
+
+  /* The picture. Uploaded the moment it is chosen rather than when the
+     announcement is saved, so the person sees it land and can change their
+     mind, and so a failure is about the picture rather than about the whole
+     announcement. */
+  function uploadAnnouncementImage(file) {
+    var h = adminHelpers();
+    if (!file || !h.getDraft()) return;
+
+    h.setUploading(true);
+    repaintAdmin();
+
+    HC.admin.uploadImage(file).then(function (url) {
+      var d = h.getDraft();
+      if (d) d.imageUrl = url;
+    }).catch(function (err) {
+      HC.components.toast(err.message || 'That picture would not upload.');
+    }).then(function () {
+      h.setUploading(false);
+      repaintAdmin();
+    });
+  }
+
+  /* Wraps a network call in the busy flag, so the button that started it is
+     disabled and marked while it is out. One helper because every admin write
+     wants exactly this and forgetting it is how somebody double posts an
+     announcement on a slow connection. */
+  function adminRun(token, promise, onDone) {
+    var h = adminHelpers();
+    h.setBusy(token);
+    repaintAdmin();
+
+    return promise.then(function (result) {
+      if (onDone) onDone(result);
+    }).catch(function (err) {
+      HC.components.toast(err.message || 'That did not go through. Try again in a moment.');
+    }).then(function () {
+      h.setBusy('');
+      repaintAdmin();
+    });
+  }
+
+  function announcementById(id) {
+    return HC.admin.announcements().filter(function (a) { return a.id === id; })[0] || null;
+  }
+
+  function pageById(id) {
+    return HC.admin.pages().filter(function (p) { return p.id === id; })[0] || null;
+  }
+
   /* -------------------------------------------------------------- listeners */
 
   function wireEvents() {
@@ -2052,6 +2493,23 @@
         return;
       }
 
+      /* The Admin screen. Every field writes into the draft object that
+         js/screens/admin.js is holding rather than into the DOM, so a content
+         refresh landing mid-sentence redraws the form with the words still in
+         it. Nothing is saved to Supabase here: an announcement is saved when
+         somebody presses the button, which is what makes Cancel mean
+         something.
+
+         No repaint on keystroke, deliberately. The form is already showing
+         what was typed, and rebuilding it would pull the caret out from under
+         the thumb, which is the bug the router's replaceCurrent() exists to
+         avoid on the Journal. */
+      var adminField = el.getAttribute && el.getAttribute('data-admin-field');
+      if (adminField) {
+        adminInput(adminField, el.getAttribute('data-id'), el.value);
+        return;
+      }
+
       var profileField = el.getAttribute && el.getAttribute('data-profile-field');
       if (profileField) {
         // Keyed per field, not shared, so editing first name and then last
@@ -2101,6 +2559,12 @@
     document.addEventListener('change', function (evt) {
       var what = evt.target.getAttribute && evt.target.getAttribute('data-scripture');
       if (what) HC.editor.setPick(what, evt.target.value);
+
+      // The announcement picture. A file input only ever reports 'change',
+      // never 'input', which is why this is here rather than above.
+      if (evt.target.hasAttribute && evt.target.hasAttribute('data-admin-image')) {
+        uploadAnnouncementImage(evt.target.files && evt.target.files[0]);
+      }
     });
 
     // Forms are inert in v1. Stop the browser from navigating away.
@@ -2182,6 +2646,8 @@
         'journal-entry': HC.screens.journalEntry,
         give: HC.screens.give,
         profile: HC.screens.profile,
+        admin: HC.screens.admin,
+        page: HC.screens.page,
         leader: HC.screens.leader,
         'guide-reader': HC.screens.guideReader,
         present: HC.screens.present,
@@ -2232,6 +2698,22 @@
        page is opened. Neither blocks anything, and a screen that asked for
        something still on its way repaints when it lands. */
     HC.practices.init();
+    /* A list the Admin screen asked for has arrived. Same shape as the
+       practices subscriber below and for the same reason: js/admin.js fetches
+       after the screen has already drawn, because a screen here renders to a
+       string in one pass and cannot wait.
+
+       Without this the sections draw "Loading…" and stay there forever, which
+       is exactly what they did until a browser was pointed at them. Every
+       admin write also ends in a repaint, and those go through repaintAdmin()
+       directly; this is the one for a read nobody is standing over. */
+    HC.store.on('admin', function () {
+      var route = HC.router.current();
+      if (!route || route.name !== 'admin') return;
+      HC.router.go(Object.assign({}, route, { restore: true }),
+                   { force: true, animate: false, replace: true });
+    });
+
     HC.store.on('practices', function () {
       var route = HC.router.current();
       if (!route) return;

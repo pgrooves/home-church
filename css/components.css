@@ -2331,3 +2331,60 @@ a.hc-card:active { background: var(--hc-paper-sunk); }
   .hc-index__card,
   .hc-index__veil { display: none !important; }
 }
+
+/* --------------------------------------------------------------------------
+   Announcements, continued
+
+   The banner used to be one card at a time. It is a list now, written from
+   Settings -> Admin, and it can carry a photograph and a link to a video.
+   See the long note in js/screens/home.js about why the one-card rule went.
+   -------------------------------------------------------------------------- */
+
+.hc-banner + .hc-banner { margin-top: var(--hc-space-md); }
+
+/* The picture sits under the words rather than beside them. A photograph
+   next to two lines of text on a 375pt screen is a thumbnail, and a
+   thumbnail of a serve day is not worth the row it costs. */
+.hc-banner__frame {
+  display: block;
+  margin-top: var(--hc-space-md);
+  border-radius: var(--hc-radius-sm);
+}
+
+.hc-banner__video {
+  display: block;
+  margin-top: var(--hc-space-md);
+}
+
+.hc-banner__video .hc-btn { margin-top: 0; }
+
+/* --------------------------------------------------------------------------
+   The pinned line
+
+   Above the greeting, and the only thing in the app that outranks somebody's
+   own name. Not dismissible on purpose: an announcement is news and a person
+   is allowed to be done with it, and this is the building being shut.
+
+   role="status" rather than role="alert", so a screen reader reads it when it
+   reaches it instead of interrupting whatever is being read.
+   -------------------------------------------------------------------------- */
+
+.hc-pinned {
+  background: var(--hc-accent-deep);
+  border-radius: var(--hc-radius-sm);
+  padding: var(--hc-space-md) var(--hc-space-base);
+  margin-bottom: var(--hc-space-lg);
+}
+
+.hc-pinned__text {
+  font-family: var(--hc-sans);
+  font-weight: 600;
+  font-size: 14px;
+  line-height: 1.45;
+  /* --hc-on-dark and not --hc-ink. The pair above is the same one the primary
+     button uses, and it is the only pair in the palette that inverts together:
+     --hc-accent-deep is a dark taupe in light mode and a pale one in dark, so
+     text on it has to flip with it. Hardcoding either half is how this ends up
+     as pale text on a pale ground for everybody who reads at night. */
+  color: var(--hc-on-dark);
+}

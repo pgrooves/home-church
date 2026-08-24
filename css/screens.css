@@ -1932,3 +1932,101 @@
 /* A thumbnail that did not arrive. The cream block and the play badge stay,
    which is how missing art behaves everywhere else in this app. */
 .hc-video__poster[data-failed="true"] .hc-video__thumb { display: none; }
+
+/* --------------------------------------------------------------------------
+   Admin
+
+   Settings -> Admin, drawn only for somebody whose profiles.role is 'admin'.
+   Nothing here is a new visual language: the item card is the banner's cream
+   surface without the accent edge, the fields are the profile form's fields,
+   and the switches are the same switches. An admin screen that looked like an
+   admin screen would be the one part of this app that felt like software.
+   -------------------------------------------------------------------------- */
+
+.hc-admin__intro {
+  margin-top: var(--hc-space-md);
+  margin-bottom: var(--hc-space-lg);
+  color: var(--hc-mid);
+}
+
+.hc-admin__new { margin: var(--hc-space-lg) 0; }
+
+.hc-admin__form > * + * { margin-top: var(--hc-space-lg); }
+
+/* One announcement, page, person or setting in a list. */
+.hc-admin__item {
+  background: var(--hc-cream);
+  border-radius: var(--hc-radius-lg);
+  padding: var(--hc-space-base);
+  margin-top: var(--hc-space-md);
+}
+
+.hc-admin__item-head > * + * { margin-top: 4px; }
+
+/* Buttons wrap rather than shrink. Three small buttons and a long name is a
+   real row on a narrow phone, and a squeezed tap target is worse than a
+   second line. */
+.hc-admin__item-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--hc-space-sm);
+  margin-top: var(--hc-space-md);
+}
+
+.hc-admin__item-actions .hc-btn { margin-top: 0; }
+
+.hc-admin__loading,
+.hc-admin__self {
+  color: var(--hc-mid);
+  margin-top: var(--hc-space-sm);
+}
+
+.hc-admin__warn {
+  color: var(--hc-accent-deep);
+  margin-top: var(--hc-space-sm);
+}
+
+/* The picture block on the announcement form. */
+.hc-admin__image > * + * { margin-top: var(--hc-space-md); }
+
+.hc-admin__thumb {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--hc-space-sm);
+}
+
+.hc-admin__thumb img {
+  width: 100%;
+  max-width: 260px;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  border-radius: var(--hc-radius-sm);
+  background: var(--hc-paper-sunk);
+}
+
+/* A file input cannot be styled, so the real one is hidden and its <label>
+   carries the button. Clicking a label opens the picker natively, which is
+   why this is a label and not a button with a click handler on it. */
+.hc-admin__file { display: block; }
+.hc-admin__file .hc-btn { width: 100%; }
+
+/* The caption under a field, explaining what leaving it empty does. */
+.hc-field__help {
+  display: block;
+  margin-top: 6px;
+  color: var(--hc-mid);
+}
+
+/* --------------------------------------------------------------------------
+   A content page
+
+   One screen for every row in content_pages. Nothing but prose, so the only
+   thing to say is how far apart the paragraphs sit.
+   -------------------------------------------------------------------------- */
+
+.hc-page__lede + .hc-page__lede,
+.hc-page__text + .hc-page__text { margin-top: var(--hc-space-base); }
+
+.hc-page__lede { margin-top: var(--hc-space-md); }
+.hc-page__text { margin-top: var(--hc-space-md); }
