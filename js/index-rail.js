@@ -38,6 +38,20 @@
    NO HAPTICS. Crossing a notch is a tick you would feel forty times in one
    drag, and js/native.js keeps its two taps meaning something by not
    spending them here.
+
+   THE HINT. A ruler nobody touches is a ruler nobody knows is there, so the
+   rail shows its hand: two seconds after Home is on the glass, one swell
+   travels from the top notch to the bottom, as though a thumb went down the
+   edge without you. Still untouched thirty seconds in, it does it again, and
+   every thirty seconds after that, on whatever screen you are on, until you
+   use it. Then it stops for good, and the next launch starts the whole thing
+   over.
+
+   The hint is the notches and nothing else. The headings, the card and the
+   veil are what happens when a finger is down, and putting the contents of
+   the page up unasked every thirty seconds is not a hint, it is an
+   interruption. So the hint drives its own swell, and paint() gives it the
+   marks while the reading stays with the thumb.
    ========================================================================== */
 
 (function (HC) {
@@ -86,6 +100,21 @@
   var HOLD   = 1000;  // ms the headings stay up after the thumb lifts
   var SLOP   = 10;    // px before a gesture has to say which way it is going
   var AXIS   = 1.2;   // horizontal has to beat vertical by this to be a swipe
+
+  /* The hint. FIRST is counted from the moment the greeting lifts off, not
+     from boot: two seconds after boot is still the middle of js/splash.js.
+     EVERY is the standing offer after that, on any screen, until the rail is
+     used. WAVE is one pass top to bottom — long enough to read as one
+     movement travelling down the edge, short enough that looking away for a
+     moment is what it takes to miss it. LEAD holds the swell off the ends of
+     the block so the first notch rises into it rather than starting lit, and
+     EDGE is the fraction of the pass spent fading the whole thing in and out
+     again. */
+  var HINT_FIRST = 2000;
+  var HINT_EVERY = 30000;
+  var HINT_WAVE  = 1150;
+  var HINT_LEAD  = 1.6;     // in sigmas, outside the first and last notch
+  var HINT_EDGE  = 0.18;
 
   var EASE_PTR    = 0.35;   // per frame, finger -> drawn centre
   var EASE_SCROLL = 0.22;   // per frame, page -> target
@@ -143,6 +172,15 @@
   var lastV    = -1;
   var swallowClick = false;
   var pendingScan = false;
+
+  var hinting  = false;   // a hint wave is on
+  var hintAt   = 0;       // when it started, off the frame clock. 0 = next frame
+  var hintY    = 0;       // the swell's centre, in the track's coordinates
+  var hintGain = 0;       // and how much of it there is
+  var used     = false;   // the rail has been used, so the hints are done
+  var hintsSet = false;   // the hints have been set going for this launch
+  var firstTimer = 0;
+  var everyTimer = 0;
 
   function clamp(v, lo, hi) { return v < lo ? lo : (v > hi ? hi : v); }
 
@@ -245,6 +283,8 @@
   function clear() {
     enabled = false;
     pendingScan = false;
+    hinting = false;
+    hintGain = 0;
     stops = [];
     marks = [];
     names = [];
@@ -263,7 +303,11 @@
 
   function build(route) {
     liveRoute = !!route;
+    // Leaving a screen mid hint takes the hint with it; the timer that sent
+    // it is still running and the next screen gets its own.
+    stopHint(false);
     rescan();
+    armHints(route);
   }
 
   /* Same titles, in the same order, is the same index — whatever happened to
@@ -361,16 +405,21 @@
 
   function paint() {
     if (!enabled) return;
-    var centre = ptrY;
+    /* Two swells, and only one of them at a time: the thumb's, or the hint's
+       when there is no thumb. The marks take whichever is running. Everything
+       below them — the headings, the card, the veil — takes the thumb's and
+       only the thumb's, which is what keeps a hint to the ruler. */
+    var centre = hinting ? hintY : ptrY;
+    var swell  = hinting ? hintGain : gain;
     var peak = 0;
-    var rest = A_REST + (A_ON - A_REST) * gain;
-    var here = A_HERE + 0.23 * gain;
+    var rest = A_REST + (A_ON - A_REST) * swell;
+    var here = A_HERE + 0.23 * swell;
 
     for (var i = 0; i < marks.length; i++) {
       var f = 0;
-      if (gain > 0.001) {
+      if (swell > 0.001) {
         var d = (ys[i] - centre) / sigma;
-        f = gain * Math.exp(-d * d);
+        f = swell * Math.exp(-d * d);
       }
 
       /* The notch. Its resting length alternates, and both lengths run to the
@@ -394,9 +443,12 @@
       }
 
       /* The heading written out beside it, on the same f, so a name and its
-         notch are one movement rather than two that nearly agree. */
-      var ts = sMin + (1 - sMin) * f;
-      var ta = gain * (T_DIM + (1 - T_DIM) * Math.pow(f, T_BITE));
+         notch are one movement rather than two that nearly agree. Under a
+         hint there is no f to share: the names sit at rest, which is where
+         they already are, so the two writes below are not made at all. */
+      var tf = hinting ? 0 : f;
+      var ts = sMin + (1 - sMin) * tf;
+      var ta = gain * (T_DIM + (1 - T_DIM) * Math.pow(tf, T_BITE));
       if (Math.abs(ts - lastT[i]) > QUIET) {
         names[i].style.transform =
           'translate3d(0,' + ty[i].toFixed(1) + 'px,0) scale(' + ts.toFixed(3) + ')';
@@ -407,7 +459,7 @@
         lastTA[i] = ta;
       }
 
-      if (i === active) peak = f;
+      if (i === active) peak = tf;
     }
 
     var v = gain * T_VEIL;
@@ -416,12 +468,108 @@
       lastV = v;
     }
 
-    if (active >= 0) {
+    if (active >= 0 && !hinting) {
       var cs = sMin + (1 - sMin) * peak;
       card.style.transform =
         'translate3d(0,' + ty[active].toFixed(1) + 'px,0) scale(' + cs.toFixed(3) + ')';
       card.style.opacity = (gain * 0.96).toFixed(3);
     }
+  }
+
+  /* --- the hint ---------------------------------------------------------
+     One swell sent down the edge on a timer instead of a thumb. It borrows
+     the loop, the gaussian and the marks, and touches nothing else. */
+
+  function clock() {
+    return (window.performance && window.performance.now)
+      ? window.performance.now() : Date.now();
+  }
+
+  function smooth(p) { return p * p * (3 - 2 * p); }
+
+  /* Where the swell is and how much of it there is, at this point through the
+     pass. The centre runs from clear of the first notch to clear of the last
+     on a smoothstep, so it leans into the travel and settles out of it rather
+     than starting and stopping at full speed. Returns whether there is more
+     of it to come. */
+  function wave(now) {
+    if (!hintAt) hintAt = now;
+    var p = (now - hintAt) / HINT_WAVE;
+
+    if (p >= 1) {
+      hinting = false;
+      hintGain = 0;
+      return false;
+    }
+    if (p < 0) p = 0;
+
+    var lead = sigma * HINT_LEAD;
+    hintY = (yFirst - lead) + ((yLast + lead) - (yFirst - lead)) * smooth(p);
+
+    var up = p / HINT_EDGE;
+    var down = (1 - p) / HINT_EDGE;
+    var e = up < down ? up : down;
+    hintGain = smooth(e > 1 ? 1 : e);
+    return true;
+  }
+
+  function hint() {
+    if (used || hinting || !enabled) return;
+    // Not over a thumb already on the rail, not over a jump in flight, not
+    // into a screen nobody is looking at, and not at all where the phone has
+    // asked for stillness.
+    if (armed || engaged || gliding || document.hidden || reduced()) return;
+
+    hinting = true;
+    hintAt = 0;             // taken off the frame clock, on the first frame
+    hintGain = 0;
+    hintY = yFirst;
+    kick();
+  }
+
+  /* A hint that is interrupted hands its swell to the finger that
+     interrupted it, rather than dropping the marks to rest for one frame and
+     growing them again from nothing. */
+  function stopHint(keep) {
+    if (!hinting) return;
+    hinting = false;
+    if (keep && hintGain > gain) gain = hintGain;
+    hintGain = 0;
+  }
+
+  /* The rail has been used. That is the end of the hints for this launch —
+     there is nothing left to hint at — and a reload is what starts them
+     again, which is the same thing as opening the app. */
+  function noteUse() {
+    stopHint(false);
+    if (used) return;
+    used = true;
+    if (firstTimer) { window.clearTimeout(firstTimer); firstTimer = 0; }
+    if (everyTimer) { window.clearInterval(everyTimer); everyTimer = 0; }
+  }
+
+  /* Set going once per launch, from the first screen that is allowed a rail.
+     The two second one is Home's, because Home is what the app opens onto and
+     a hint two seconds into somewhere you navigated to is a hint about a rail
+     you just watched appear. The standing thirty second one belongs to
+     whatever screen you happen to be on. */
+  function armHints(route) {
+    if (hintsSet || !route) return;
+    hintsSet = true;
+
+    var home = route.name === 'home';
+    var start = function () {
+      if (home) {
+        firstTimer = window.setTimeout(function () {
+          firstTimer = 0;
+          hint();
+        }, HINT_FIRST);
+      }
+      everyTimer = window.setInterval(hint, HINT_EVERY);
+    };
+
+    if (HC.splash && HC.splash.whenGone) HC.splash.whenGone(start);
+    else start();
   }
 
   /* --- the one loop ----------------------------------------------------- */
@@ -432,9 +580,11 @@
     window.requestAnimationFrame(frame);
   }
 
-  function frame() {
+  function frame(now) {
     var busy = false;
     var slow = reduced();
+
+    if (hinting && wave(now || clock())) busy = true;
 
     if (engaged) {
       ptrY += (rawY - ptrY) * (slow ? 1 : EASE_PTR);
@@ -560,6 +710,9 @@
 
     measure();
     layout();
+    // A finger on the edge is the hint's answer, whichever way the gesture
+    // turns out to go. It takes the swell over rather than starting again.
+    stopHint(true);
     armed = true;
     pointer = evt.pointerId;
     startX = evt.clientX;
@@ -588,6 +741,7 @@
         return;
       }
       engaged = true;
+      noteUse();
       try { scroller.setPointerCapture(evt.pointerId); } catch (err) { /* fine */ }
     }
 
@@ -605,6 +759,7 @@
       // A tap in the strip. Jump to the notch it landed on, and swallow the
       // click that is about to land on whatever is under it.
       var i = nearest(rawY);
+      noteUse();
       setActive(i, true);
       goTo(i);
       swallowClick = true;
@@ -707,6 +862,7 @@
 
     // A notch is a button, so a keyboard gets the same jumps a thumb does.
     track.addEventListener('focusin', function () {
+      noteUse();
       measure();
       layout();
       show();
@@ -725,6 +881,7 @@
   /* The shell's click delegation sends [data-action="index-jump"] here. */
   function jump(i) {
     if (!enabled || !stops[i]) return;
+    noteUse();
     measure();
     setActive(i, true);
     goTo(i);

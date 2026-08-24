@@ -62,10 +62,28 @@
     line.textContent = name ? 'Welcome home, ' + name + '.' : 'Welcome home.';
   }
 
+  /* WHAT WAITS ON THIS. Anything timed from the moment somebody can actually
+     see Home, rather than from the moment the app started, which is still the
+     middle of this. The index rail's hint is the first of them: two seconds
+     in, and two seconds in from here is two seconds of Home. */
+  var waiting = [];
+
+  function gone() {
+    var list = waiting;
+    waiting = [];
+    for (var i = 0; i < list.length; i++) list[i]();
+  }
+
+  function whenGone(fn) {
+    if (!el) { fn(); return; }
+    waiting.push(fn);
+  }
+
   function remove() {
     if (!el) return;
     if (el.parentNode) el.parentNode.removeChild(el);
     el = null;
+    gone();
   }
 
   /* Called by boot() the moment Home is on the glass. Everything after this
@@ -109,6 +127,7 @@
 
   HC.splash = {
     ready: ready,
+    whenGone: whenGone,
     /* For anything that needs to know whether the greeting is still up, and
        for the tests. */
     showing: function () { return !!el; }
