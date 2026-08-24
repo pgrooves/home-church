@@ -286,7 +286,7 @@ Four sections.
 |---|---|
 | **Announcements** | Write, edit, delete the cards on Home. Title, text, an optional picture uploaded from the phone or pasted as a link, an optional video link, and the dates it goes up and comes down. Posting can send a push notification to everybody, and can pin the announcement as a banner. |
 | **Users** | Everybody who has signed in, with their name, email and role. Promote to admin, demote to member, remove an account entirely. |
-| **Content** | Pages of the church's own writing, edited in a form. The Give screen's paragraph is the first one. |
+| **Content** | Pages of the church's own writing, edited in a form. The Give screen's paragraph is the first one. Also the switch for **Edit mode**, below. |
 | **App settings** | Switches and short messages that change the whole app, drawn as real toggles and text fields rather than as JSON. Ships with a pinned Home banner and its message, and a default for whether posting an announcement offers to notify. |
 
 **The first admin is made by hand and only once**, because until one exists
@@ -332,6 +332,68 @@ guard is a trigger rather than a policy.
 The migrations are `0025_admin_role.sql`, `0026_admin_content.sql`,
 `0027_announcement_push.sql` and `0028_announcement_pin.sql`, each with the
 full reasoning in its header.
+
+### Edit mode
+
+**Admin → Content → Edit mode** turns the rest of the app into something an
+admin can type into. Every sentence the app is willing to have changed outlines
+itself with a pencil in the corner; tapping one turns it into a text box with
+Save, Cancel, and sometimes Reset to original. Saving is live for everybody on
+their next content sync, with no publish step and no build, the same as the
+rest of Admin.
+
+It exists because the form is the wrong shape for the thing that actually
+happens, which is somebody reading Give on a Sunday, noticing one sentence
+lands badly, and wanting to fix that sentence rather than navigate to a page
+editor and find it.
+
+**What is editable.** Two kinds of sentence, and they save differently:
+
+| | Where the words live | Examples |
+|---|---|---|
+| **Rows** | A column in a table the app already syncs | A next step's blurb, a serve team's description, an event's description, the church's tagline and its invitation to serve, the podcast show's blurb, an announcement's text, a content page's opening paragraph |
+| **Slots** | A string in a source file, overridden by a row in `text_overrides` | The line under the Give button, what Home says before the week's guide is up, what Listen says before the first message, what the group finder says when nothing matches |
+
+A slot with no override draws the words that ship inside the app, so a phone
+that has never reached Supabase, and a project where nobody ran `0030`, are
+unaffected. **Reset to original** deletes the override rather than writing the
+old words back, which is what keeps the source file the one home of that
+sentence. Saving an empty slot is allowed and means the church took that line
+off the screen; a row cannot be emptied, because there is nothing underneath it
+to fall back to.
+
+**What is not editable, and will not become editable by accident.** A sentence
+is only ever reachable because a screen wrapped it on purpose, so headings,
+button labels, tab names, dates, scripture, and anything the code compares
+against are simply never offered. Neither are the nine Practices, which are
+Practicing the Way's words and not this church's; the legal pages, which were
+shown to App Review as they are; or anything a person wrote in the Journal or a
+group room. An announcement's title stays on the form as well, because it is
+what the push notification already said.
+
+**Three promises about the switch**, all kept by the device rather than by the
+database:
+
+- Only an admin sees it, and only an admin can write. `hc_is_admin()` decides,
+  and `supabase/tests/0030_text_overrides_test.sql` asserts the refusals as a
+  real member and a real signed out phone.
+- It is on for **that phone only**, for as long as it is being used. There is
+  deliberately no row anywhere recording that edit mode is on.
+- It turns itself off when the app is closed, and after **30 minutes** with
+  nothing touched. Closing the app reloads `js/edit-mode.js`, and a reloaded
+  module is one with the switch off. A pill above the tab bar says it is on
+  while it is, and is the fastest way out.
+
+**The one thing an edit cannot do** is reach past the sentence. Migration
+`0030` grants an admin session the individual prose columns, not the tables, so
+a phone in edit mode cannot unpublish a next step, retitle one, move the giving
+link or change a service time even if something asked it to. Those are 42501
+from Postgres before a policy is consulted, and they are four of the tests in
+that file.
+
+Who last changed a sentence and when is recorded on `text_overrides`. The
+migration is `0030_text_overrides.sql`, the module is `js/edit-mode.js`, and
+`tests/edit-mode.test.js` covers the saving, the failing, and the clock.
 
 -----
 

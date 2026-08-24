@@ -39,9 +39,23 @@
       .join('');
   }
 
+  /* The opening paragraph is editable in place; the sections are not, and
+     that split is on purpose. `sections` is one jsonb array, so editing one
+     section's body means writing the whole array back, and two admins editing
+     two different sections of the same page from two phones would have the
+     second one overwrite the first without either of them seeing it. The
+     blurb is its own column and cannot do that. Sections stay on the form in
+     Settings -> Admin -> Content, where the page is edited whole. */
   function body(page) {
     var html = '';
-    if (page.blurb) html += paragraphs(page.blurb, 'hc-body-serif hc-page__lede');
+    if (page.blurb) {
+      html += HC.edit.wrap(
+        paragraphs(page.blurb, 'hc-body-serif hc-page__lede'),
+        { table: 'content_pages', id: page.id, column: 'blurb',
+          target: page, field: 'blurb',
+          value: page.blurb, label: 'the opening paragraph', rows: 6 }
+      );
+    }
 
     (page.sections || []).forEach(function (section) {
       if (section.heading) html += c.sectionHeader('', section.heading);

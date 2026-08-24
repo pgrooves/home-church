@@ -31,6 +31,8 @@
      clears this from an empty table, it only overwrites it from a real row. */
 
   var church = {
+    // The row in `church_profile` this seeds. Only Edit mode reads it.
+    id: 'church-home',
     name: 'Home Church',
     tagline: 'A church of the city. Built from New Orleans. Built for New Orleans.',
     pastors: 'Stephen and Laura Daigle',
@@ -92,6 +94,9 @@
      -------------------------------------------------------------------- */
 
   var podcast = {
+    // The row in `podcast_show` this seeds. Only Edit mode reads it, to write
+    // the blurb back to the right row.
+    id: 'show-home-church-nola',
     name: 'Home Church NOLA',
     platform: 'Spotify',
     showUrl: 'https://open.spotify.com/show/7iJGZvY5MVm7CjPggvvPOa',
@@ -2334,6 +2339,14 @@
   var contentPages = [];
   var appSettings = [];
 
+  /* Sentences the church has rewritten from inside the app, one row per slot,
+     filled from text_overrides. Empty here for the same reason as the two
+     above, and more so: an override only means anything against the string it
+     replaces, and that string is in the screen that draws it. No row means
+     the app draws its own words, which is exactly what a phone that has never
+     reached Supabase should do. See js/edit-mode.js and migration 0030. */
+  var textOverrides = [];
+
   /* Instagram posts, for the rail at the top of Connect.
 
      Empty on purpose, and it is the one collection in this file that should
@@ -2402,6 +2415,7 @@
     homeMedia: homeMedia,
     contentPages: contentPages,
     appSettings: appSettings,
+    textOverrides: textOverrides,
 
     /* ------------------------------------------------------------- helpers */
 
@@ -2428,6 +2442,25 @@
        a switch is how a banner appears on every phone at once. */
     setting: function (key, fallback) {
       var row = appSettings.filter(function (s) { return s.key === key; })[0];
+      return row ? row.value : fallback;
+    },
+
+    /* One sentence, either as the church last rewrote it or as it ships in
+       the app. Every editable string in a screen is read through here.
+
+       THE FALLBACK IS THE SENTENCE ITSELF, passed in by the screen that draws
+       it, and it is required rather than optional. That is what keeps the
+       words in the source file the real floor: a phone with no signal, a
+       project with no 0030, and a slot nobody has ever edited all draw the
+       same thing, and it is a real sentence rather than a gap.
+
+       An empty override is honored and is not the same as no override. A row
+       holding '' is an admin having deliberately taken a line off the screen,
+       which is a thing people want on a week when a note under a button is no
+       longer true, and falling back to the built-in words there would be the
+       app arguing with them. See migration 0030 section 1. */
+    copy: function (slot, fallback) {
+      var row = textOverrides.filter(function (o) { return o.slot === slot; })[0];
       return row ? row.value : fallback;
     },
 

@@ -233,10 +233,20 @@
     return c.card(inner, { edge: true });
   }
 
+  /* What Home says when there is no guide yet. Editable because it is the
+     church talking about its own week, and a church that moves its guide to
+     Tuesdays should not need a build to stop promising it on Sunday. */
+  var NO_GUIDE = 'Nothing here yet. Your guide shows up after Sunday.';
+
   function guideCard() {
     var guide = HC.data.latestGuide();
     if (!guide) {
-      return c.card(c.emptyState('Nothing here yet. Your guide shows up after Sunday.'));
+      var empty = HC.data.copy('home.guide-empty', NO_GUIDE);
+      return c.card(HC.edit.wrap(
+        empty ? c.emptyState(empty) : '',
+        { slot: 'home.guide-empty', value: empty,
+          label: 'what Home says before the week’s guide is up' }
+      ));
     }
     var series = HC.data.getSeries(guide.seriesId);
     var meta = HC.data.guideMeta(guide);
@@ -350,7 +360,19 @@
         '<div class="hc-banner__body">' +
           '<p class="hc-eyebrow">' + c.esc(announcementLabel(a)) + '</p>' +
           '<p class="hc-banner__title hc-body-serif">' + c.esc(a.title) + '</p>' +
-          (a.body ? '<p class="hc-caption">' + c.esc(a.body) + '</p>' : '') +
+          /* The words of an announcement, editable where they are read. The
+             title above is not: it is what the notification said and what the
+             card is known by, and a title that drifts from the notification
+             people already got is a small lie on their lock screen. Fixing
+             the paragraph under it is the thing that actually gets asked for.
+             The announcement's dates, its picture and its pinning stay on the
+             Admin form, where the whole announcement is in view at once. */
+          HC.edit.wrap(
+            a.body ? '<p class="hc-caption">' + c.esc(a.body) + '</p>' : '',
+            { table: 'announcements', id: a.id, column: 'body',
+              target: a, field: 'body',
+              value: a.body, label: 'the announcement’s words', rows: 5 }
+          ) +
           announcementImage(a) +
           announcementVideo(a) +
         '</div>' +

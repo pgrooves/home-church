@@ -563,6 +563,38 @@
     return html;
   }
 
+  /* The switch that turns the rest of the app into something you can type
+     into. It lives in Content rather than in App settings on purpose: this is
+     not a switch about how the app behaves for the church, it is a thing this
+     phone is doing for the next half hour, and App settings is a list of rows
+     in a table that are true for everybody.
+
+     THE THREE SENTENCES UNDER IT ARE THE FEATURE'S CONTRACT and they are
+     worth keeping accurate if any of this changes. Somebody who turns this on
+     and walks away has to know it will be off when they come back, or they
+     will assume the app is broken when their next tap does not open a box. */
+  function editModeSection() {
+    var on = HC.edit.isOn();
+
+    var html = c.sectionHeader('', 'Edit in place');
+    html += switchRow({
+      title: 'Edit mode',
+      sub: on
+        ? 'On. Outlined text anywhere in the app opens for editing when you tap it.'
+        : 'Outline the text you are allowed to change, anywhere in the app, and edit it where it sits.',
+      action: 'edit-mode-toggle',
+      id: 'edit-mode',
+      on: on
+    });
+    html += '<p class="hc-caption hc-admin__loading">' +
+      'Saving an edit changes it for everybody, straight away. Headings, buttons and ' +
+      'anything the app relies on are never outlined. Edit mode is only ever on for this ' +
+      'phone, it turns itself off after thirty minutes of nothing happening, and closing ' +
+      'the app turns it off too.</p>';
+
+    return html;
+  }
+
   function contentSection() {
     var html = '<div class="hc-screen hc-admin">';
     html += c.sectionHeader('For the church', 'Content', { flush: true, tag: 'h1' });
@@ -575,6 +607,8 @@
 
     html += '<p class="hc-body-serif hc-admin__intro">Pages of the church’s own writing. ' +
       'Edit one here and it changes in the app straight away, with no new version to ship.</p>';
+
+    html += editModeSection();
 
     var rows = HC.admin.pages();
     if (!rows.length) {

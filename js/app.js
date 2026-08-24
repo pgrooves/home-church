@@ -957,6 +957,85 @@
       HC.router.go({ name: 'leader' });
     },
 
+    /* ------------------------------------------------------------ Edit mode
+
+       Fixing a sentence where it is written rather than on a form. The state
+       is in js/edit-mode.js and none of these handlers is a security
+       boundary: every write below is judged by the policies in migration
+       0030, so a member who makes these buttons appear gets a 403 and a
+       toast, the same as the rest of Admin.
+
+       Every one of them repaints, because what is drawn changes: the outlines
+       appear, a sentence becomes a box, a box becomes the new sentence.
+       ------------------------------------------------------------------- */
+
+    'edit-mode-toggle': function () {
+      if (!HC.edit.available()) {
+        HC.components.toast('Edit mode is for admins.');
+        return;
+      }
+      var nowOn = HC.edit.toggle();
+      HC.native.tap('Light');
+      repaintView();
+      HC.components.toast(nowOn
+        ? 'Edit mode on. Tap any outlined text to change it.'
+        : 'Edit mode off.');
+    },
+
+    // The Done button on the pill, which is the way out from wherever you
+    // happen to be reading when you finish.
+    'edit-mode-off': function () {
+      HC.edit.disable();
+      HC.native.tap('Light');
+      repaintView();
+      HC.components.toast('Edit mode off.');
+    },
+
+    'edit-open': function (el) {
+      if (!HC.edit.open(el.getAttribute('data-slot'))) return;
+      HC.native.tap('Light');
+      repaintView();
+      focusEditor();
+    },
+
+    'edit-cancel': function () {
+      HC.edit.cancel();
+      repaintView();
+    },
+
+    /* Save is two repaints, and the first one is not cosmetic. The button
+       says Saving… and goes dead while the write is in the air, which is the
+       only thing stopping a slow connection from being sent the same sentence
+       four times by somebody who thinks nothing happened. */
+    'edit-save': function () {
+      var pending = HC.edit.save();
+      repaintView();
+      pending.then(function (saved) {
+        repaintView();
+        if (saved) HC.components.toast('Saved. Everybody sees it now.');
+      }).catch(function (err) {
+        repaintView();
+        focusEditor();
+        HC.components.toast(err.message ||
+          'That did not save. The words are still here, try again in a moment.');
+      });
+    },
+
+    /* Back to the words the app shipped with. Not behind a confirmation:
+       nothing is lost that was not already replaceable by typing it again,
+       and the sentence it restores is right there in the box afterwards. */
+    'edit-reset': function () {
+      var pending = HC.edit.reset();
+      repaintView();
+      pending.then(function (done) {
+        repaintView();
+        if (done) HC.components.toast('Back to the app’s own words.');
+      }).catch(function (err) {
+        repaintView();
+        HC.components.toast(err.message || 'That did not go through. Try again in a moment.');
+      });
+    },
+
     /* ----------------------------------------------------------- the Admin
        screen
 
@@ -1653,7 +1732,13 @@
           pill.setAttribute('aria-pressed', pill === el ? 'true' : 'false');
         }
       );
-      HC.screens.connectHelpers.repaintGroups(mount);
+      /* Normally only the list is redrawn, which keeps the filter strip and
+         the scroll exactly where they are. While edit mode is on, the whole
+         screen is: the list is written straight into innerHTML here, and a
+         sentence somebody has open for editing inside it would be thrown away
+         by a tap on a filter chip. */
+      if (HC.edit.isOn()) repaintView();
+      else HC.screens.connectHelpers.repaintGroups(mount);
     },
 
     /* join-group, serve, and submit-step used to live here. All three showed a
@@ -2524,6 +2609,33 @@
      rendered from the draft and the caches in one pass and there is nothing
      to patch. restore:true is what stops a save throwing somebody back to the
      top of a long list. */
+  /* Redraw whatever is on screen, in place, keeping the scroll position. The
+     same move js/content.js makes when a refresh lands, and for the same
+     reason: screens here render to a string in one pass, so anything that
+     changes what a screen would draw has to draw it again. */
+  function repaintView() {
+    var route = HC.router.current();
+    if (!route) return;
+    HC.router.go(
+      { name: route.name, id: route.id, index: route.index, restore: true },
+      { force: true }
+    );
+  }
+
+  /* The caret, after the repaint that put the box on screen. Deferred a frame
+     because the element it is looking for does not exist until the router has
+     mounted the new view, and the caret goes to the end rather than the start
+     so somebody fixing a typo at the end of a sentence is already there. */
+  function focusEditor() {
+    window.requestAnimationFrame(function () {
+      var box = document.querySelector('[data-edit-field]');
+      if (!box) return;
+      box.focus();
+      try { box.setSelectionRange(box.value.length, box.value.length); }
+      catch (err) { /* Some browsers refuse this on a just-focused element. */ }
+    });
+  }
+
   function repaintAdmin() {
     var route = HC.router.current();
     if (!route || route.name !== 'admin') return;
@@ -2734,6 +2846,15 @@
          would be correct and would also mean rebuilding the room between two
          letters of a word. */
       if (el.getAttribute) {
+        /* Edit mode's box. Writes into js/edit-mode.js and draws nothing, the
+           same arrangement as the Admin form: a content sync landing between
+           two letters redraws the screen from that module, so the words
+           survive it. */
+        if (el.getAttribute('data-edit-field')) {
+          HC.edit.setValue(el.value);
+          return;
+        }
+
         var g = HC.screens.groupHelpers;
         var draftKey = el.getAttribute('data-draft');
         if (draftKey) {
@@ -2937,6 +3058,13 @@
     wireEvents();
     wireSheet();
     watchScroll();
+
+    /* Edit mode's idle clock and the two listeners that feed it. Wired on
+       every boot rather than when the switch goes on, and off by definition
+       at this point: the state lives in a variable in js/edit-mode.js, so a
+       cold start is a phone with edit mode off, which is what "turns off when
+       you close the app" means here. */
+    HC.edit.start();
 
     /* The one list, handed to the one thing that has to agree with it. The
        router owns the order a drag runs, this file owns what the sheet draws,

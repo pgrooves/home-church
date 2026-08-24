@@ -60,6 +60,8 @@
      Everything a person needs in order to decide is on the card instead, and
      the one thing the app cannot honestly offer, joining, is not pretended at.
      See LAUNCH_TODO.md, this is the last open destination on this screen. */
+  var NO_MATCH = 'No group matches that yet. Widen the filter, or tell us what you need and we will start one.';
+
   function groupCard(group) {
     var status = group.openings ? 'Room for more' : 'Full for now';
     var inner = '' +
@@ -74,10 +76,24 @@
     return c.card(inner);
   }
 
+  /* What the filter says when it has filtered everything away. Editable,
+     because "we will start one" is a promise this church makes and a church
+     between seasons may not want to make it.
+
+     THE ONE THING TO KNOW ABOUT EDITING THIS ONE: the list is also redrawn on
+     its own by repaintGroups() below, straight into innerHTML, without the
+     router and without a render pass, which would throw away an open editor.
+     js/app.js therefore repaints the whole screen instead of just the list
+     while edit mode is on. See the filter handler there. */
   function groupList() {
+    var empty = HC.data.copy('connect.groups-empty', NO_MATCH);
     var list = (HC.data.groups || []).filter(matches);
     if (!list.length) {
-      return c.emptyState('No group matches that yet. Widen the filter, or tell us what you need and we will start one.');
+      return HC.edit.wrap(
+        empty ? c.emptyState(empty) : '',
+        { slot: 'connect.groups-empty', value: empty,
+          label: 'what the group finder says when nothing matches' }
+      );
     }
     return list.map(groupCard).join('');
   }
@@ -91,7 +107,13 @@
     if (!note) return '';
     return '' +
       c.sectionHeader('Between seasons', 'Home groups') +
-      c.card('<p class="hc-body-serif hc-group__off-season">' + c.esc(note) + '</p>', { edge: true });
+      c.card(HC.edit.wrap(
+        '<p class="hc-body-serif hc-group__off-season">' + c.esc(note) + '</p>',
+        { table: 'church_profile', id: HC.data.church.id || 'church-home',
+          column: 'groups_off_season_note',
+          target: HC.data.church, field: 'groupsOffSeasonNote',
+          value: note, label: 'the between seasons note', rows: 4 }
+      ), { edge: true });
   }
 
   /* --------------------------------------------------------- serve teams
@@ -110,7 +132,18 @@
       body += '<p class="hc-eyebrow hc-eyebrow--legible hc-serve__commitment">' + c.esc(team.commitment) + '</p>';
     }
 
-    body += '<p class="hc-body-serif hc-serve__blurb">' + c.esc(team.blurb) + '</p>';
+    /* The team's description, editable where it is read. The name, the
+       commitment line and the requirement are not: the first is what the team
+       is called on Sunday, and the other two are the two facts somebody
+       decides on, which belong on a form where the whole team is in view.
+       Migration 0030 grants an admin `blurb` on this table and nothing
+       else, so this is also all a phone could write. */
+    body += HC.edit.wrap(
+      '<p class="hc-body-serif hc-serve__blurb">' + c.esc(team.blurb) + '</p>',
+      { table: 'serve_teams', id: team.id, column: 'blurb',
+        target: team, field: 'blurb',
+        value: team.blurb, label: team.name + ', what the team does', rows: 4 }
+    );
 
     // A background check or a training process. Its own line, after the
     // description, because it is the thing somebody needs before they decide
@@ -139,7 +172,13 @@
     var link = c.smsUrl(serve.number, serve.keyword);
     var html = '' +
       c.sectionHeader('Interested?', serve.title || 'Sign up to serve') +
-      '<p class="hc-body-serif hc-serve__signup-copy">' + c.esc(serve.blurb) + '</p>';
+      HC.edit.wrap(
+        '<p class="hc-body-serif hc-serve__signup-copy">' + c.esc(serve.blurb) + '</p>',
+        { table: 'church_profile', id: HC.data.church.id || 'church-home',
+          column: 'serve_signup_blurb',
+          target: serve, field: 'blurb',
+          value: serve.blurb, label: 'the invitation to serve', rows: 4 }
+      );
 
     if (link) {
       var label = serve.keyword
@@ -285,7 +324,16 @@
         '<p class="hc-eyebrow">' + c.esc(c.formatDate(evt.date)) + '</p>' +
         '<p class="hc-row__title">' + c.esc(evt.title) + '</p>' +
         '<p class="hc-caption">' + c.esc(evt.time) + ' &middot; ' + c.esc(evt.location) + '</p>' +
-        '<p class="hc-body-serif hc-event__blurb">' + c.esc(evt.blurb) + '</p>' +
+        /* The paragraph, not the date, the time, the place or the title. An
+           event's when and where are what the Add to calendar button writes
+           into somebody's phone, and a description that has drifted is a much
+           smaller problem than a calendar entry that has. */
+        HC.edit.wrap(
+          evt.blurb ? '<p class="hc-body-serif hc-event__blurb">' + c.esc(evt.blurb) + '</p>' : '',
+          { table: 'events', id: evt.id, column: 'description',
+            target: evt, field: 'blurb',
+            value: evt.blurb, label: evt.title + ', the description', rows: 4 }
+        ) +
         '<div class="hc-event__action">' +
           '<button type="button" class="hc-inline-link" data-action="add-to-calendar" ' +
             'data-id="' + c.esc(evt.id) + '">' +
@@ -305,7 +353,16 @@
      ------------------------------------------------------------------- */
 
   function nextStep(step) {
-    var body = '<p class="hc-body-serif hc-step__blurb">' + c.esc(step.blurb) + '</p>';
+    /* The one on this screen that goes stale fastest, and the reason edit
+       mode exists. Migration 0006 shipped "The next one is August 23" in the
+       baptism step, which is a date sitting inside a paragraph that nobody
+       thinks of as a date until it is wrong. */
+    var body = HC.edit.wrap(
+      '<p class="hc-body-serif hc-step__blurb">' + c.esc(step.blurb) + '</p>',
+      { table: 'next_steps', id: step.id, column: 'blurb',
+        target: step, field: 'blurb',
+        value: step.blurb, label: step.title + ', the description', rows: 4 }
+    );
 
     if (step.url) {
       body += '<div class="hc-step__action">' +

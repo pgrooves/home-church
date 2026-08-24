@@ -2536,3 +2536,163 @@ a.hc-card:active { background: var(--hc-paper-sunk); }
      as pale text on a pale ground for everybody who reads at night. */
   color: var(--hc-on-dark);
 }
+
+/* ==========================================================================
+   Edit mode
+   The half hour in which an admin can fix a sentence where it is written.
+   See js/edit-mode.js, which decides what is outlined, and migration 0030,
+   which decides what may be written.
+
+   THE OUTLINE HAS TO BE OBVIOUS AND HAS TO NOT MOVE ANYTHING. It is drawn
+   with an inset box-shadow rather than a border, so turning edit mode on does
+   not reflow every screen it touches by two pixels: text that shifts when the
+   switch is flipped is text somebody misreads as already edited. The padding
+   is negative-margined back out for the same reason.
+   ========================================================================== */
+
+.hc-editable {
+  position: relative;
+  display: block;
+  margin: 0 calc(var(--hc-space-sm) * -1);
+  padding: var(--hc-space-sm);
+  padding-right: calc(var(--hc-space-base) + var(--hc-space-lg));
+  border-radius: var(--hc-radius-sm);
+  box-shadow: inset 0 0 0 1.5px var(--hc-accent);
+  background: color-mix(in srgb, var(--hc-accent) 8%, transparent);
+  cursor: pointer;
+  text-align: left;
+  transition: box-shadow var(--hc-dur-fast) var(--hc-ease),
+              background var(--hc-dur-fast) var(--hc-ease);
+}
+
+/* Hover is a desktop nicety, the active state is the one that matters: it is
+   what a thumb gets in the moment between the tap and the box appearing. */
+.hc-editable:hover,
+.hc-editable:active {
+  box-shadow: inset 0 0 0 1.5px var(--hc-accent-deep);
+  background: color-mix(in srgb, var(--hc-accent) 16%, transparent);
+}
+
+.hc-editable:focus-visible {
+  outline: 2px solid var(--hc-accent-deep);
+  outline-offset: 2px;
+}
+
+/* The pencil, top right of whatever is outlined. Absolute so it never joins
+   the text flow, and aria-hidden in the markup because the wrapper already
+   announces itself as "Edit the line under the Give button". */
+.hc-editable__mark {
+  position: absolute;
+  top: var(--hc-space-xs);
+  right: var(--hc-space-xs);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: var(--hc-radius-pill);
+  background: var(--hc-accent-deep);
+  color: var(--hc-on-dark);
+}
+
+.hc-editable__icon {
+  width: 13px;
+  height: 13px;
+}
+
+/* A sentence the church has cleared. Only ever drawn while edit mode is on,
+   because the whole point of clearing it is that everybody else sees nothing.
+   Italic so it cannot be mistaken for the church's own words. */
+.hc-editable__empty {
+  font-style: italic;
+  opacity: 0.75;
+}
+
+/* ------------------------------------------------------------- the editor */
+
+.hc-edit {
+  display: block;
+  margin: 0 calc(var(--hc-space-sm) * -1);
+  padding: var(--hc-space-md);
+  border-radius: var(--hc-radius-lg);
+  box-shadow: inset 0 0 0 1.5px var(--hc-accent-deep);
+  background: var(--hc-paper-sunk);
+}
+
+.hc-edit__label {
+  display: block;
+  margin-bottom: var(--hc-space-xs);
+  font-family: var(--hc-sans);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--hc-mid);
+}
+
+.hc-edit__box {
+  width: 100%;
+  /* 16px or iOS zooms the whole screen on focus, which on a screen that has
+     just repainted under a thumb reads as the app losing its place. */
+  font-size: 16px;
+}
+
+.hc-edit__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--hc-space-sm);
+  margin-top: var(--hc-space-sm);
+}
+
+.hc-edit__note {
+  margin-top: var(--hc-space-sm);
+}
+
+/* ---------------------------------------------------------------- the pill
+
+   Edit mode can end on its own, after thirty minutes, so something has to say
+   it is on, and it has to be somewhere no screen redraws. js/edit-mode.js
+   appends this to the body once and takes it away again, which is also why it
+   carries its own safe-area padding rather than inheriting a screen's. */
+
+.hc-edit-pill {
+  position: fixed;
+  /* Over the tab bar and the page, under the toast at 60, and sitting a
+     toast's height clear of it: this thing is on screen for half an hour and
+     the toast that says "Saved" arrives right where it is standing. */
+  z-index: 50;
+  left: var(--hc-screen-pad);
+  right: var(--hc-screen-pad);
+  bottom: calc(var(--hc-tabbar-space) + env(safe-area-inset-bottom) +
+               var(--hc-space-base) + 52px);
+  display: flex;
+  align-items: center;
+  gap: var(--hc-space-sm);
+  padding: var(--hc-space-sm) var(--hc-space-sm) var(--hc-space-sm) var(--hc-space-base);
+  border-radius: var(--hc-radius-pill);
+  background: var(--hc-accent-deep);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.18);
+}
+
+.hc-edit-pill__text {
+  flex: 1 1 auto;
+  font-family: var(--hc-sans);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.35;
+  /* The same inverting pair the pinned strip uses. See the note there. */
+  color: var(--hc-on-dark);
+}
+
+.hc-edit-pill__done {
+  flex: 0 0 auto;
+  min-height: 34px;
+  padding: 0 var(--hc-space-base);
+  border: none;
+  border-radius: var(--hc-radius-pill);
+  background: var(--hc-on-dark);
+  color: var(--hc-accent-deep);
+  font-family: var(--hc-sans);
+  font-size: 13px;
+  font-weight: 600;
+}

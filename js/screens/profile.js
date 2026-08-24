@@ -365,7 +365,15 @@
     html += '<div class="hc-about">';
     html += '<img class="hc-mark" src="assets/icons/mark.png" alt="Home Church">';
     html += '<p class="hc-caption">' + c.esc(HC.data.church.name) + ', ' + c.esc(HC.data.church.pastors) + '</p>';
-    html += '<p class="hc-caption">' + c.esc(HC.data.church.tagline) + '</p>';
+    /* The church's own line about itself, at the foot of Your account.
+       Editable here and nowhere else: the name and the pastors above it are
+       facts, and the version under it is the build. */
+    html += HC.edit.wrap(
+      '<p class="hc-caption">' + c.esc(HC.data.church.tagline) + '</p>',
+      { table: 'church_profile', id: HC.data.church.id || 'church-home', column: 'tagline',
+        target: HC.data.church, field: 'tagline',
+        value: HC.data.church.tagline, label: 'the church’s tagline', rows: 3 }
+    );
     html += '<p class="hc-caption hc-about__version">Version 1.0</p>';
     html += contentLine();
     if (!HC.store.storage.available) {

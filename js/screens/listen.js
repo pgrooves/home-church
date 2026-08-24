@@ -217,12 +217,28 @@
     if (list) list.innerHTML = seriesEpisodes(series);
   }
 
+  /* The empty screen, which a church that has just installed this sees for a
+     week and nobody else ever sees again. Editable anyway, because "on
+     Monday" is a promise about this church's week and this church may keep a
+     different one. */
+  var NOTHING_YET = 'Nothing to listen to yet. Sunday’s message lands here on Monday.';
+
   function showCard() {
     var podcast = HC.data.podcast;
     var inner = '' +
       '<p class="hc-eyebrow">On ' + c.esc(podcast.platform) + '</p>' +
       '<p class="hc-card__title">' + c.esc(podcast.name) + '</p>' +
-      '<p class="hc-caption hc-card__meta">' + c.esc(podcast.blurb) + '</p>' +
+      /* The show's own sentence, editable in place. The name and the platform
+         above it are not: they are what the show is called on Spotify, and a
+         card that disagrees with the app it opens is worse than one with a
+         dated blurb. `podcast_show` is one row and its id is fixed, so this
+         reaches it directly. */
+      HC.edit.wrap(
+        podcast.blurb ? '<p class="hc-caption hc-card__meta">' + c.esc(podcast.blurb) + '</p>' : '',
+        { table: 'podcast_show', id: podcast.id || 'show-home-church-nola', column: 'blurb',
+          target: podcast, field: 'blurb',
+          value: podcast.blurb, label: 'what the show card says', rows: 4 }
+      ) +
       '<div class="hc-show-card__action">' +
         c.button('Follow the show', {
           action: 'open-url',
@@ -239,8 +255,13 @@
     var html = '<div class="hc-screen hc-listen">';
 
     if (!all.length) {
+      var empty = HC.data.copy('listen.empty', NOTHING_YET);
       html += c.sectionHeader('', 'Latest sermon', { flush: true, tag: 'h1' });
-      html += c.emptyState('Nothing to listen to yet. Sunday’s message lands here on Monday.');
+      html += HC.edit.wrap(
+        empty ? c.emptyState(empty) : '',
+        { slot: 'listen.empty', value: empty,
+          label: 'what Listen says before the first message is up' }
+      );
       html += '</div>';
       return c.el(html);
     }

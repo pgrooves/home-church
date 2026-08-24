@@ -179,3 +179,85 @@ create table vault.decrypted_secrets (
   decrypted_secret text
 );
 create schema if not exists net;
+
+/* ---------------------------------------------------------------------------
+   The content tables 0030 opens to an admin, from 0001, 0006 and 0007.
+
+   Only the columns that migration names, plus enough of the rest for the
+   claim it makes to be worth checking. `published`, `title`, `giving_url` and
+   `service_times` are not decoration here: the point of the column level
+   grants in 0030 section 3 is that an admin phone can write the prose and
+   cannot write those, and a stub without them could not tell the difference.
+
+   Closed the way every content table in this project starts: RLS on, a public
+   read of published rows, and no write policy at all. 0030 is what adds one.
+   --------------------------------------------------------------------------- */
+
+create table public.serve_teams (
+  id          text primary key,
+  name        text not null,
+  commitment  text,
+  blurb       text,
+  published   boolean not null default true,
+  updated_at  timestamptz not null default now()
+);
+
+create table public.next_steps (
+  id          text primary key,
+  title       text not null,
+  blurb       text,
+  published   boolean not null default true,
+  updated_at  timestamptz not null default now()
+);
+
+create table public.podcast_show (
+  id          text primary key,
+  name        text not null,
+  blurb       text,
+  published   boolean not null default true,
+  updated_at  timestamptz not null default now()
+);
+
+create table public.events (
+  id          text primary key,
+  title       text not null,
+  description text,
+  starts_at   timestamptz not null default now(),
+  signup_url  text,
+  published   boolean not null default true,
+  updated_at  timestamptz not null default now()
+);
+
+create table public.church_profile (
+  id                  text primary key,
+  name                text not null,
+  tagline             text,
+  giving_url          text,
+  service_times       jsonb not null default '[]'::jsonb,
+  serve_signup_blurb  text,
+  groups_off_season_note text,
+  groups_in_season    boolean not null default true,
+  published           boolean not null default true,
+  updated_at          timestamptz not null default now()
+);
+
+insert into public.church_profile (id, name, tagline, giving_url, serve_signup_blurb)
+values ('church-home', 'Home Church', 'Built from New Orleans.',
+        'https://donate.overflow.co/homechurchnola',
+        'Tap below and a member of our team will be in touch.');
+
+do $$
+declare t text;
+begin
+  foreach t in array array['serve_teams', 'next_steps', 'podcast_show',
+                           'events', 'church_profile']
+  loop
+    execute format('alter table public.%I enable row level security', t);
+    execute format('grant select on public.%I to anon, authenticated', t);
+    execute format('revoke insert, update, delete on public.%I from anon, authenticated', t);
+    execute format($p$create policy %I on public.%I for select
+                        to anon, authenticated using (published)$p$,
+                   t || ' are publicly readable', t);
+  end loop;
+end;
+$$;

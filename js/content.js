@@ -32,7 +32,7 @@
 
   var cfg = HC.config || {};
   var CACHE_KEY = 'content';
-  var CACHE_VERSION = 11;     // bump when a mapping below changes shape
+  var CACHE_VERSION = 12;     // bump when a mapping below changes shape
   var TIMEOUT_MS = 12000;
 
   // The tables we pull, and the HC.data key each one fills. Adding another
@@ -89,6 +89,15 @@
        here, which is what lets a signed out phone see the pinned banner. */
     { table: 'app_settings', target: 'appSettings', map: mapAppSetting,
       order: 'sort_order.asc,label.asc' },
+
+    /* Sentences an admin rewrote in place, from Edit mode. Read like every
+       other table here, with no session, because a rewritten caption is not
+       an admin's private view of the app: it is what the church now says, and
+       a signed out phone has to read the same words. An empty table is the
+       normal state and means nothing has been rewritten. See js/edit-mode.js
+       and migration 0030. */
+    { table: 'text_overrides', target: 'textOverrides', map: mapTextOverride,
+      order: 'slot.asc', whole: true },
 
     { table: 'church_profile', target: 'church',  map: mapChurch,
       single: true, neverEmpty: true },
@@ -263,6 +272,19 @@
     };
   }
 
+  /* Deliberately not run through str() on the way in the way every other
+     mapper's text is. An override's value is not null in the table, and the
+     difference between '' and absent is load bearing here: '' is the church
+     having taken a line off a screen. str(null) would turn a row that somehow
+     arrived empty into the same thing, which is fine, and is why this still
+     coerces rather than passing the value straight through. */
+  function mapTextOverride(r) {
+    return {
+      slot: str(r.slot),
+      value: r.value == null ? '' : String(r.value)
+    };
+  }
+
   function mapGroup(r) {
     return {
       id: r.id,
@@ -352,6 +374,10 @@
 
   function mapChurch(r) {
     return {
+      // Carried through for the same reason as podcast_show above: Edit mode
+      // PATCHes this row by its id when the tagline or the serve invitation
+      // is rewritten where it is read.
+      id: r.id,
       name: str(r.name),
       tagline: str(r.tagline),
       pastors: str(r.pastors),
@@ -389,6 +415,9 @@
 
   function mapPodcastShow(r) {
     return {
+      // Carried through because Edit mode PATCHes this row by its id when
+      // somebody rewrites the show's blurb on Listen. Nothing else reads it.
+      id: r.id,
       name: str(r.name),
       platform: str(r.platform),
       showUrl: str(r.show_url),
@@ -700,6 +729,15 @@
       // Home keeps last week's reading until the next cold start.
       if (spec.single) {
         return spec.target + '=' + JSON.stringify(HC.data[spec.target] || {});
+      }
+      /* `whole` is the same argument as `single`, for a list. The overrides
+         table is a handful of short rows and the thing that changes in it is
+         one sentence inside one of them, which is precisely what the cheap
+         fingerprint below is built not to notice. Missing it would mean an
+         edit made on one admin's phone did not appear on anybody else's until
+         their next cold start, which is the one promise Edit mode makes. */
+      if (spec.whole) {
+        return spec.target + '=' + JSON.stringify(HC.data[spec.target] || []);
       }
       var list = HC.data[spec.target] || [];
       var head = list.length ? JSON.stringify(list[0]).length + ':' + (list[0].id || '') : '';

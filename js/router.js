@@ -107,6 +107,13 @@
 
     current = route;
 
+    /* Edit mode keeps a registry of the editable sentences on the glass, and
+       it is rebuilt by the draw that is about to happen rather than added to
+       forever. Announced from here because this is the one place every screen
+       goes through, and skipped for an adopted view, which was already
+       rendered and already registered what it drew. */
+    if (HC.edit && !opts.adopt) HC.edit.beginRender();
+
     // opts.adopt is a screen somebody else already built, handed over rather
     // than rendered again. The swipe gesture drags the next tab in as a real
     // screen, and mounting that same element is what makes the last frame of
