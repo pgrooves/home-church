@@ -40,6 +40,14 @@
   var joinError = null;
   var lastSignature = null;
   var pendingWrite = false;   // somebody tried to write before agreeing to terms
+  /* Which slide each guide carousel is sitting on, as a guide id. Two of
+     them, and they are separate questions: one is which Sunday a host is
+     about to open a room on, the other is which Sunday a host in a room is
+     looking at. Null means the default, which is this week for the first and
+     whatever the room is already running for the second. */
+  var picked = null;
+  var roomPicked = null;
+  var railRoom = null;    // which room roomPicked was chosen in
 
   /* ---------------------------------------------------------------- helpers */
 
@@ -82,6 +90,134 @@
     return 'room';
   }
 
+  /* -------------------------------------------------------- the guide rails
+
+     A room runs on one Sunday's guide, and until now that Sunday was always
+     the most recent one: the host card named the latest guide and its only
+     button opened a room on that. A group meeting on a Thursday and running a
+     week behind had no way to say so, and a host who wanted last week's
+     questions back in front of the group had none either.
+
+     So both places this tab names a guide are a carousel now, and it is the
+     one Home and Listen already use: an overflowing scroller with snap
+     points, which js/swipe.js knows to hand a sideways drag to while it still
+     has somewhere to go and to take back at the last slide, and which
+     js/app.js already watches in order to paint the dots underneath. Nothing
+     new was built for the gesture, which is the point: a swipe here is the
+     same swipe as everywhere else in the app.
+
+     A SWIPE MOVES THE SELECTION AND NOTHING ELSE. Opening a room, and
+     swapping the guide of a room already open, are both a tap on a button
+     inside the slide you are looking at, and every slide carries its own
+     guide's id. So what a button does is never a question of what some other
+     piece of state believes is selected. That matters most in the room, where
+     committing throws away the questions the room is holding: a gesture that
+     did that by itself would put one careless flick of a thumb between a
+     leader and the night's answers.
+
+     WHERE THE SELECTION LIVES. Here, not in the DOM, for the same reason the
+     open chunks are: the room rebuilds itself whenever anybody writes
+     anything, and a rail that snapped back to Sunday every eight seconds
+     would be unusable. build() draws the rails from these two variables and
+     restoreRails() puts the scrollers back where they were afterwards. */
+
+  // How far back the rails reach. Long enough to cover a group that has
+  // fallen a month behind, short enough that a host is not scrolling through
+  // a year of Sundays to find last week.
+  var HISTORY = 12;
+
+  function guideChoices() {
+    return HC.data.guidesByDate().slice(0, HISTORY);
+  }
+
+  function indexOfGuide(list, id) {
+    for (var i = 0; i < list.length; i++) {
+      if (list[i].id === id) return i;
+    }
+    return -1;
+  }
+
+  // The two lines that name a message, the same pair in both rails and on the
+  // card a member sees.
+  function guideLines(guide) {
+    var meta = HC.data.guideMeta(guide);
+    return '<p class="hc-card__title">' + c.esc(HC.data.guideTitle(guide)) + '</p>' +
+      '<p class="hc-caption hc-card__meta">' +
+        c.esc(c.byline(meta.preacherShort, meta.preachedOn)) + '</p>';
+  }
+
+  /* The scroller itself, built the same way for both. The ids ride on the
+     wrapper because js/app.js hands back a slide number and nothing else, and
+     the dots are drawn only when there is more than one Sunday to reach: one
+     guide is not a carousel, and it draws as the single card it always was. */
+  function guidePicker(list, at, slide, opts) {
+    opts = opts || {};
+    var many = list.length > 1;
+
+    var dots = many
+      ? '<ol class="hc-carousel__dots" aria-hidden="true">' +
+          list.map(function (guide, i) {
+            return '<li class="hc-carousel__dot" data-dot' +
+              (i === at ? ' data-on="true"' : '') + '></li>';
+          }).join('') +
+        '</ol>'
+      : '';
+
+    var ids = list.map(function (guide) { return guide.id; }).join(',');
+
+    return '<div class="hc-guide-picker' + (opts.className ? ' ' + opts.className : '') + '" ' +
+        'data-index="' + at + '" data-guide-ids="' + c.esc(ids) + '"' +
+        (opts.room ? ' data-room-rail' : '') + '>' +
+      '<div class="hc-carousel">' +
+        '<div class="hc-carousel__viewport" data-carousel data-guide-rail>' +
+          '<ul class="hc-carousel__track" role="list">' +
+            list.map(slide).join('') +
+          '</ul>' +
+        '</div>' +
+        dots +
+      '</div>' +
+      (many ? '<p class="hc-caption hc-guide-picker__hint">' + c.esc(opts.hint) + '</p>' : '') +
+    '</div>';
+  }
+
+  /* Called by js/app.js when one of these rails settles on a slide, exactly
+     the way the series picker on Listen is. All it does is remember, and mark
+     the wrapper so the rest of the frames in the same swipe cost nothing. */
+  function selectGuide(rail, index) {
+    var wrap = rail.closest ? rail.closest('.hc-guide-picker') : null;
+    if (!wrap || String(index) === wrap.getAttribute('data-index')) return;
+
+    var ids = (wrap.getAttribute('data-guide-ids') || '').split(',');
+    if (!ids[index]) return;
+
+    wrap.setAttribute('data-index', String(index));
+    if (wrap.hasAttribute('data-room-rail')) roomPicked = ids[index];
+    else picked = ids[index];
+  }
+
+  /* A fresh render draws every rail parked at its first slide, because a
+     scroll position is not markup. This puts them back, in the frame after
+     the screen is in the document, which is the first moment a slide has a
+     width to measure. */
+  function restoreRails(root) {
+    var rails = root.querySelectorAll ? root.querySelectorAll('[data-guide-rail]') : [];
+    if (!rails.length) return;
+
+    window.requestAnimationFrame(function () {
+      for (var i = 0; i < rails.length; i++) {
+        var wrap = rails[i].closest('.hc-guide-picker');
+        var at = wrap ? parseInt(wrap.getAttribute('data-index'), 10) || 0 : 0;
+        var track = rails[i].firstElementChild;
+        var slide = track && track.children[at];
+        // Measured against the track rather than taken raw. offsetLeft is
+        // counted from whichever ancestor is positioned, which is not the
+        // scroller and is twenty pixels of screen padding away from it; the
+        // difference between the two is what scrollLeft actually wants.
+        if (slide) rails[i].scrollLeft = slide.offsetLeft - track.offsetLeft;
+      }
+    });
+  }
+
   /* ------------------------------------------------------------------ join */
 
   function joinScreen() {
@@ -109,21 +245,31 @@
 
     html += '<p class="hc-caption hc-group__hint" id="hc-join-help">A code is good for one night.</p>';
 
-    // Hosting, for the people the church has marked.
+    // Hosting, for the people the church has marked. This week is the slide
+    // the rail opens on, and it is the one nearly every host will open a room
+    // on; the Sundays behind it are there for the group that is running late.
     if (canHost()) {
-      var guide = HC.data.latestGuide();
+      var choices = guideChoices();
       html += c.sectionHeader('Leader mode', 'Host tonight');
-      if (guide) {
-        html += c.card(
-          '<p class="hc-eyebrow">This week</p>' +
-          '<p class="hc-card__title">' + c.esc(HC.data.guideTitle(guide)) + '</p>' +
-          '<p class="hc-caption hc-card__meta">' +
-            c.esc(c.byline(HC.data.guideMeta(guide).preacherShort, HC.data.guideMeta(guide).preachedOn)) + '</p>' +
-          '<p class="hc-caption hc-group__carry">Its discussion questions come across into the room. You can ' +
-            'reword them, drop them, or add your own once you are in.</p>' +
-          '<div class="hc-group__actions">' +
-            c.button('Open a room', { action: 'room-open', id: guide.id, icon: 'plus' }) +
-          '</div>', { edge: true });
+      if (choices.length) {
+        var at = Math.max(indexOfGuide(choices, picked), 0);
+        picked = choices[at].id;
+
+        html += guidePicker(choices, at, function (guide, i) {
+          return '<li class="hc-carousel__slide hc-guide-slide">' +
+            '<div class="hc-card hc-card--edge hc-guide-slide__card">' +
+              '<p class="hc-eyebrow">' + (i === 0 ? 'This week' : 'An earlier Sunday') + '</p>' +
+              guideLines(guide) +
+              '<p class="hc-caption hc-group__carry">Its discussion questions come across into the room. ' +
+                'You can reword them, drop them, or add your own once you are in.</p>' +
+              '<div class="hc-group__actions">' +
+                c.button('Open a room', {
+                  action: 'room-open', id: guide.id, icon: 'plus', busy: busy === 'open'
+                }) +
+              '</div>' +
+            '</div>' +
+          '</li>';
+        }, { hint: 'Swipe for an earlier Sunday. The room opens on whichever guide you are looking at.' });
       } else {
         html += c.emptyState('No guide this week yet. A room opens against one, so this waits for Sunday.');
       }
@@ -150,12 +296,68 @@
     '</div>';
   }
 
+  /* What the room is running on. Everybody sees it; only the host can move
+     it, so only the host gets the rail. A member swiping guides around would
+     be swiping other people's questions around, and there is nothing they
+     could usefully do with a Sunday the room is not discussing. */
   function guideCard(snap) {
-    return '<div class="hc-card hc-card--edge hc-room-guide">' +
-      '<p class="hc-eyebrow">Tonight</p>' +
-      '<p class="hc-room-guide__title">' + c.esc(snap.room.guideTitle || 'Your group') + '</p>' +
-      '<p class="hc-caption">Questions carried over from the guide.</p>' +
-    '</div>';
+    var here = HC.data.getGuide(snap.room.guideId);
+
+    // No rail for a member, and none for a host whose room is running on
+    // something this phone's catalogue does not have: the room title is still
+    // true, and a carousel that cannot show the slide you are on is worse
+    // than the card it replaced.
+    if (!HC.rooms.isHost() || !here) {
+      return '<div class="hc-card hc-card--edge hc-room-guide">' +
+        '<p class="hc-eyebrow">Tonight</p>' +
+        '<p class="hc-room-guide__title">' + c.esc(snap.room.guideTitle || 'Your group') + '</p>' +
+        '<p class="hc-caption">Questions carried over from the guide.</p>' +
+      '</div>';
+    }
+
+    /* Newest first, and the room's own guide is in the list wherever it
+       falls. Appended rather than prepended when it is older than the twelve
+       the rail carries, because everything in that slice is newer than it and
+       the end is where it belongs. */
+    var choices = guideChoices();
+    if (indexOfGuide(choices, here.id) === -1) choices = choices.concat([here]);
+
+    // A different room is a different question. Without this, the slide a
+    // host left showing in last Thursday's room would decide what tonight's
+    // rail opens on, and "the room's own guide" is the only right answer to
+    // that on the first draw.
+    if (railRoom !== snap.room.id) { railRoom = snap.room.id; roomPicked = null; }
+
+    var at = indexOfGuide(choices, roomPicked);
+    if (at === -1) at = Math.max(indexOfGuide(choices, here.id), 0);
+    roomPicked = choices[at].id;
+
+    return guidePicker(choices, at, function (guide) {
+      var now = guide.id === here.id;
+      return '<li class="hc-carousel__slide hc-guide-slide">' +
+        '<div class="hc-card hc-card--edge hc-guide-slide__card' +
+          (now ? ' hc-guide-slide__card--now' : '') + '">' +
+          '<p class="hc-eyebrow">' + (now ? 'Tonight' : 'Another Sunday') + '</p>' +
+          guideLines(guide) +
+          (now
+            ? '<p class="hc-caption hc-group__carry">Questions carried over from the guide. ' +
+                (snap.questions.length === 1 ? 'One question' : snap.questions.length + ' questions') +
+                ' in the room tonight.</p>'
+            : '<p class="hc-caption hc-group__carry">Swapping puts this guide’s questions in the room ' +
+                'on every phone. Anything already written under tonight’s questions goes with them. ' +
+                'The prayer requests, and any question you added yourself, stay.</p>' +
+              '<div class="hc-group__actions">' +
+                c.button('Run the room on this', {
+                  action: 'room-switch-guide', id: guide.id, small: true, busy: busy === 'switch'
+                }) +
+              '</div>') +
+        '</div>' +
+      '</li>';
+    }, {
+      room: true,
+      className: 'hc-room-guide',
+      hint: 'Swipe to another Sunday to run the room on its guide.'
+    });
   }
 
   // The host's one control for the whole room, above the questions where a
@@ -626,7 +828,15 @@
   }
 
   function questionSections(snap) {
-    var html = '<p class="hc-room-questions__title">Questions</p>';
+    /* The sub-header says what this list is and what happens to it, once, at
+       the top, where a leader looking at it for the first time on a Thursday
+       night will read it. Every guide's questions arrive under the same
+       sentence, because the same four things are true of all of them. */
+    var html = '<p class="hc-room-questions__title">Questions</p>' +
+      '<p class="hc-caption hc-room-questions__note">Some example questions to discuss with your group ' +
+      'below. Leaders can edit before or during the group night. Notes left here appear in everyone’s ' +
+      'app. Download the group’s output at the end, and send the file as a text to pray throughout ' +
+      'the week.</p>';
 
     byHeading(snap.questions).forEach(function (chunk) {
       var body = '';
@@ -794,6 +1004,7 @@
   function render() {
     lastSignature = null;   // a fresh mount always draws
     var node = c.el(build());
+    restoreRails(node);
     return node;
   }
 
@@ -834,6 +1045,7 @@
     var fresh = c.el(build());
     mount.parentNode.replaceChild(fresh, mount);
     restore(memo, fresh);
+    restoreRails(fresh);
   }
 
   HC.screens = HC.screens || {};
@@ -852,6 +1064,12 @@
     // Tapping a question chunk open is handled by the ordinary section
     // toggle in app.js, which flips the DOM. This is how that gets kept.
     rememberSection: function (key, open) { openHeads[key] = !!open; },
+    // js/app.js watches every [data-carousel] on the page to paint its dots,
+    // and hands a guide rail's slide number here the same way it hands
+    // Listen's series rail to selectSeries.
+    selectGuide: selectGuide,
+    pickedGuide: function () { return picked; },
+    pickedRoomGuide: function () { return roomPicked; },
     getShowingJournal: function () { return showingJournal; },
     getEditing: function () { return editing; },
     setBusy: function (v) { busy = v; },

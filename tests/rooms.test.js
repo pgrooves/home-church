@@ -259,6 +259,35 @@ const rooms = sandbox.window.HC.rooms;
   ok('accepting terms calls the function', calls[0][0], 'hc_room_accept_terms');
   ok('and mirrors it onto the profile', 'termsAcceptedAt' in profilePatch, true);
 
+  // ---- swapping the guide a room is running
+  //
+  // The host swiped the rail in the room to another Sunday. What crosses the
+  // wire is the same flattening open() does, which is the point: a room set
+  // to a guide holds exactly what it would hold had it been opened on it.
+  calls.length = 0;
+  await rooms.switchGuide({
+    id: 'guide-slow-burn',
+    title: 'Slow Burn',
+    groupSections: [
+      { heading: 'Getting started', questions: ['One?', 'Two?'] },
+      { heading: 'Going deeper', questions: ['Three?'] }
+    ]
+  });
+  ok('switching sends the room, the guide, and its questions in reading order',
+     calls[0], ['hc_room_set_guide', {
+       p_room: 'r-1',
+       p_guide_id: 'guide-slow-burn',
+       p_guide_title: 'Slow Burn',
+       p_questions: [
+         { heading: 'Getting started', body: 'One?' },
+         { heading: 'Getting started', body: 'Two?' },
+         { heading: 'Going deeper', body: 'Three?' }
+       ]
+     }]);
+  await rooms.switchGuide(null).then(
+    () => ok('switching to nothing is refused', 'resolved', 'rejected'),
+    e => ok('switching to nothing is refused', e.message, 'No guide to switch to.'));
+
   // ---- the cache, which is the offline promise
   ok('the room was written to disk', !!disk.room, true);
   const before = rooms.snapshot();

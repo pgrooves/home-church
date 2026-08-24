@@ -1016,6 +1016,33 @@
   margin-top: var(--hc-space-md);
 }
 
+/* --- the guide rails -------------------------------------------------------
+   Two of them, one on the way into a room and one inside it, and both are the
+   carousel from Home with a card in the slide instead of a photograph. So
+   there is nothing here about the gesture, the snapping, or the dots: that is
+   all .hc-carousel, unchanged.
+
+   THE SLIDES ARE AS TALL AS THE TALLEST. One scroller has one height, and the
+   slide a host can act on carries a sentence and a button the one they are
+   already running does not. The carousel centres a short slide in that
+   height, which is right for a photograph and wrong for a card: it leaves the
+   card floating with air above and below it. These sit at the top instead, so
+   every card starts on the same line however tall it is, and they keep their
+   own height rather than stretching into a box with a hole in it.
+   -------------------------------------------------------------------------- */
+
+.hc-guide-picker .hc-carousel { margin-bottom: 0; }
+.hc-guide-picker__hint { margin: var(--hc-space-md) 0 0; text-align: center; }
+
+.hc-guide-slide { justify-content: flex-start; }
+.hc-guide-slide__card { width: 100%; }
+
+/* The Sunday the room is actually running, marked by darkening the edge rule
+   every card here already carries rather than by adding anything. The word
+   "Tonight" above it is what says it; this is only so the right slide is
+   recognisable from half a swipe away. */
+.hc-guide-slide__card--now { border-left-color: var(--hc-accent-deep); }
+
 .hc-group__offline {
   display: flex;
   align-items: flex-start;
@@ -1082,6 +1109,13 @@
    read as one page. Only the breathing room differs: this one opens a part of
    the room rather than closing a card. */
 .hc-room-questions__title { margin: var(--hc-space-lg) 0 0; }
+
+/* What the list is, under its name. Four sentences is a lot for a caption and
+   it earns the room: it is the only place the app tells a leader that these
+   are a starting point, that editing them is allowed, that what gets typed
+   below is not private to the phone it was typed on, and that the night can
+   be carried out at the end. */
+.hc-room-questions__note { margin: var(--hc-space-sm) 0 0; }
 
 /* --- the host's report queue --------------------------------------------- */
 /* Warning coloured, not danger coloured. A report is something to look at,

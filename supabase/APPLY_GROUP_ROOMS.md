@@ -22,6 +22,32 @@ would be a problem.
 | **0020** `group_word_filter` | The Guideline 1.2 posting filter: a slur list, checked on post and on edit. | yes |
 | **0021** `group_answer_index` | Tells the host answers exist without telling them what they say. | yes |
 | **0022** `group_retention_schedule` | Schedules the ninety day sweep. | yes |
+| **0029** `group_room_set_guide` | Lets a host point a room already open at another Sunday's guide. | **no, see below** |
+
+---
+
+## 0029, which is waiting
+
+The Group tab can now swipe between Sundays in two places: before a room is
+opened, which needs nothing from the database because `hc_room_open` already
+takes whichever guide it is handed, and inside a room, which needs
+`hc_room_set_guide` and therefore needs this migration run.
+
+Until it is applied the rail in the room still draws and still swipes, and the
+button on a slide answers "Changing tonight's guide is not switched on for this
+church yet" (`switchGuide` in `js/rooms.js` translates PostgREST's schema cache
+error into that, because the real one is a sentence about a function signature).
+Everything else on the tab is unaffected.
+
+Apply it the same way as the rest: dashboard, SQL Editor, New query, paste
+`supabase/migrations/0029_group_room_set_guide.sql`, Run. Safe to run more than
+once. `sh supabase/tests/run.sh 0016_group_rooms 0017_group_rooms_grants
+0018_group_rooms_anon 0029_group_room_set_guide` covers it locally first, and
+the thirteen checks in `supabase/tests/0029_group_room_set_guide_test.sql`
+include the one worth reading before you run anything on production: swapping
+the guide **deletes the answers written under the questions it replaces**. The
+prayer requests and the host's own added questions survive; the app asks first,
+with the number in the sentence, whenever there is anything to lose.
 
 ---
 

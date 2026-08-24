@@ -346,18 +346,26 @@
     });
   }
 
-  // Opening one. The questions come from the guide as [{heading, body}] in the
-  // order they are read, and the room owns its copy from that moment on.
-  function open(guide) {
-    if (!signedIn()) return Promise.reject(new Error('Sign in to host your group.'));
-    if (!guide) return Promise.reject(new Error('No guide to open a room against.'));
-
+  // A guide's discussion questions, flattened into the shape a room stores
+  // them in: one row each, carrying the heading of the section they were read
+  // under, in the order they are read.
+  function questionsFrom(guide) {
     var questions = [];
     (guide.groupSections || []).forEach(function (section) {
       (section.questions || []).forEach(function (q) {
         questions.push({ heading: section.heading, body: q });
       });
     });
+    return questions;
+  }
+
+  // Opening one. The questions come from the guide as [{heading, body}] in the
+  // order they are read, and the room owns its copy from that moment on.
+  function open(guide) {
+    if (!signedIn()) return Promise.reject(new Error('Sign in to host your group.'));
+    if (!guide) return Promise.reject(new Error('No guide to open a room against.'));
+
+    var questions = questionsFrom(guide);
 
     return HC.auth.rpc('hc_room_open', {
       p_guide_id: guide.id,
@@ -373,6 +381,43 @@
       state.room = mapRoom(Array.isArray(row) ? row[0] : row);
       state.stale = false;
       return pull().then(function (snap) { startPolling(); return snap; });
+    });
+  }
+
+  /* Changing which guide a room is running, once it is already open. Hosts
+     only, and the database says so rather than this file: hc_room_set_guide
+     from migration 0029 checks the room's host_id the same way every other
+     write here does.
+
+     WHAT IT COSTS, said plainly because the screen has to say it out loud
+     before anybody taps. The questions carried in from the old guide are
+     replaced, and the answers written under them go with them: they hang off
+     a question row by a foreign key declared on delete cascade in 0016, and
+     an answer to a question the room is no longer asking has nowhere left to
+     be read. Prayer requests hang off no question at all and are untouched,
+     and so is anything the host added themselves. */
+  function switchGuide(guide) {
+    if (!state.room) return Promise.reject(new Error('You are not in a room.'));
+    if (!guide) return Promise.reject(new Error('No guide to switch to.'));
+
+    return HC.auth.rpc('hc_room_set_guide', {
+      p_room: state.room.id,
+      p_guide_id: guide.id,
+      p_guide_title: HC.data.guideTitle(guide),
+      p_questions: questionsFrom(guide)
+    }).then(function (row) {
+      var next = mapRoom(Array.isArray(row) ? row[0] : row);
+      if (next) state.room = next;
+      return pull();
+    }).catch(function (err) {
+      /* The one failure here that is not about the person holding the phone.
+         hc_room_set_guide ships in migration 0029, and a project it has not
+         been applied to answers with PostgREST's schema cache message, which
+         is true and is not a sentence to show a leader in a living room. */
+      if (/hc_room_set_guide/.test((err && err.message) || '')) {
+        throw new Error('Changing tonight’s guide is not switched on for this church yet.');
+      }
+      throw err;
     });
   }
 
@@ -621,6 +666,7 @@
     peek: peek,
     join: join,
     open: open,
+    switchGuide: switchGuide,
     close: close,
     leave: leave,
     refresh: pull,

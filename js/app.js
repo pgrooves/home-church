@@ -1978,6 +1978,37 @@
       }).catch(roomFailed);
     },
 
+    /* Swapping the guide of a room that is already open. The host swiped the
+       rail to another Sunday and tapped the button on that slide.
+
+       THE CONFIRM IS NOT DECORATION, and it only appears when it is true.
+       Replacing the questions deletes the answers written under them, so
+       whoever is about to do it is told how many, in the same sentence as
+       what survives. With nothing written yet there is nothing to lose and
+       nothing to ask about, and a leader tidying up before the group arrives
+       should not have to argue with a dialog. */
+    'room-switch-guide': function (el) {
+      var g = HC.screens.groupHelpers;
+      var guide = HC.data.getGuide(el.getAttribute('data-id'));
+      if (!guide) return;
+
+      var title = HC.data.guideTitle(guide);
+      var n = HC.rooms.answerCounts().total;
+      if (n && !window.confirm(
+          'Run the room on “' + title + '” instead? Tonight’s questions are replaced on ' +
+          'every phone, and ' + (n === 1 ? 'the one answer' : 'all ' + n + ' answers') +
+          ' written under them go too. The prayer requests stay.')) return;
+
+      g.setBusy('switch');
+      g.repaint(true);
+      HC.rooms.switchGuide(guide).then(function () {
+        g.setBusy(null);
+        g.repaint(true);
+        HC.native.tap('Light');
+        c.toast('The room is on “' + title + '” now.');
+      }).catch(roomFailed);
+    },
+
     'room-share-code': function () {
       var snap = HC.rooms.snapshot();
       if (!snap.room) return;
@@ -2673,6 +2704,15 @@
            slide has not actually changed, which is nearly all of them. */
         if (rail.hasAttribute('data-series-rail') && HC.screens.listenHelpers) {
           HC.screens.listenHelpers.selectSeries(rail, index);
+        }
+
+        /* The same arrangement on Group, where the rails pick which Sunday's
+           guide a room opens on and which one a room already open is running.
+           Nothing is redrawn when one of these lands: every slide carries its
+           own guide's id on the button inside it, so the screen only has to
+           remember where the rail stopped. */
+        if (rail.hasAttribute('data-guide-rail') && HC.screens.groupHelpers) {
+          HC.screens.groupHelpers.selectGuide(rail, index);
         }
       });
     }, true);
