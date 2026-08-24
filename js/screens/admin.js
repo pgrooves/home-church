@@ -41,15 +41,13 @@
      does not inherit the first one's fields. */
 
   var draft = null;        // the announcement being written or edited
-  var pageDraft = null;    // the content page being written or edited
-  var newSetting = null;   // the app setting being added
+  var pageDraft = null;    // the content page being edited
   var busy = '';           // the id of whatever is mid network call
   var uploading = false;
 
   function resetDrafts() {
     draft = null;
     pageDraft = null;
-    newSetting = null;
     busy = '';
     uploading = false;
   }
@@ -501,10 +499,6 @@
 
   /* ================================================================ content */
 
-  function blankPageDraft() {
-    return { id: null, title: '', eyebrow: '', blurb: '', sections: [], published: true, sortOrder: 0 };
-  }
-
   function pageEditorFor(row) {
     return {
       id: row.id,
@@ -561,9 +555,7 @@
     });
 
     html += '<div class="hc-mt-lg">' +
-      c.button(d.id ? 'Save changes' : 'Create the page', {
-        action: 'admin-page-save', busy: busy === 'page'
-      }) +
+      c.button('Save changes', { action: 'admin-page-save', busy: busy === 'page' }) +
       c.button('Cancel', { action: 'admin-page-cancel', variant: 'tertiary' }) +
     '</div>';
 
@@ -583,10 +575,6 @@
 
     html += '<p class="hc-body-serif hc-admin__intro">Pages of the church’s own writing. ' +
       'Edit one here and it changes in the app straight away, with no new version to ship.</p>';
-
-    html += '<div class="hc-admin__new">' +
-      c.button('New page', { action: 'admin-page-new', icon: 'plus' }) +
-    '</div>';
 
     var rows = HC.admin.pages();
     if (!rows.length) {
@@ -683,29 +671,6 @@
         'Switches save the moment you tap them.</p>';
     }
 
-    html += c.sectionHeader('', 'Add a setting');
-    if (newSetting) {
-      html += '<form class="hc-form hc-admin__form" novalidate>' +
-        field({ name: 'newLabel', label: 'What is it called', value: newSetting.label,
-          placeholder: 'Show the prayer wall' }) +
-        textarea({ name: 'newHelp', label: 'A line explaining it', value: newSetting.help, rows: 2 }) +
-        '<div class="hc-pills">' +
-          '<button type="button" class="hc-pill" data-action="admin-setting-kind" data-id="boolean" ' +
-            'aria-pressed="' + (newSetting.kind !== 'text' ? 'true' : 'false') + '">A switch</button>' +
-          '<button type="button" class="hc-pill" data-action="admin-setting-kind" data-id="text" ' +
-            'aria-pressed="' + (newSetting.kind === 'text' ? 'true' : 'false') + '">A short message</button>' +
-        '</div>' +
-        '<div class="hc-mt-lg">' +
-          c.button('Add it', { action: 'admin-setting-create', busy: busy === 'setting' }) +
-          c.button('Cancel', { action: 'admin-setting-cancel', variant: 'tertiary' }) +
-        '</div>' +
-      '</form>';
-    } else {
-      html += '<div class="hc-admin__new">' +
-        c.button('Add a setting', { action: 'admin-setting-new', variant: 'secondary', icon: 'plus' }) +
-      '</div>';
-    }
-
     html += '</div>';
     return html;
   }
@@ -755,12 +720,8 @@
     clearDraft: function () { draft = null; },
 
     getPageDraft: function () { return pageDraft; },
-    startPageDraft: function (row) { pageDraft = row ? pageEditorFor(row) : blankPageDraft(); },
+    startPageDraft: function (row) { pageDraft = pageEditorFor(row); },
     clearPageDraft: function () { pageDraft = null; },
-
-    getNewSetting: function () { return newSetting; },
-    startNewSetting: function () { newSetting = { label: '', help: '', kind: 'boolean' }; },
-    clearNewSetting: function () { newSetting = null; },
 
     setBusy: function (value) { busy = value || ''; },
     setUploading: function (value) { uploading = !!value; }

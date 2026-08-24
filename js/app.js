@@ -1132,11 +1132,6 @@
 
     /* ----------------------------------------------------------- content */
 
-    'admin-page-new': function () {
-      adminHelpers().startPageDraft(null);
-      repaintAdmin();
-    },
-
     'admin-page-edit': function (el) {
       var row = pageById(el.getAttribute('data-id'));
       if (!row) return;
@@ -1219,39 +1214,6 @@
       HC.native.tap('Light');
 
       adminRun('setting:' + key, HC.admin.saveSetting(key, 'boolean', !row.value_bool));
-    },
-
-    'admin-setting-new': function () {
-      adminHelpers().startNewSetting();
-      repaintAdmin();
-    },
-
-    'admin-setting-cancel': function () {
-      adminHelpers().clearNewSetting();
-      repaintAdmin();
-    },
-
-    'admin-setting-kind': function (el) {
-      var n = adminHelpers().getNewSetting();
-      if (!n) return;
-      n.kind = el.getAttribute('data-id');
-      repaintAdmin();
-    },
-
-    'admin-setting-create': function () {
-      var h = adminHelpers();
-      var n = h.getNewSetting();
-      if (!n) return;
-
-      if (!String(n.label || '').trim()) {
-        HC.components.toast('Give it a name first.');
-        return;
-      }
-
-      adminRun('setting', HC.admin.createSetting(n).then(function () {
-        h.clearNewSetting();
-        HC.components.toast('Added.');
-      }));
     },
 
     'admin-setting-delete': function (el) {
@@ -2579,7 +2541,6 @@
     var h = adminHelpers();
     var d = h.getDraft();
     var p = h.getPageDraft();
-    var n = h.getNewSetting();
 
     if (name === 'setting') {
       debounceGlobal('setting-' + id, function () {
@@ -2602,11 +2563,6 @@
         if (name === 'sectionBody') p.sections[index].body = value;
       }
       return;
-    }
-
-    if (n) {
-      if (name === 'newLabel') n.label = value;
-      if (name === 'newHelp') n.help = value;
     }
   }
 
