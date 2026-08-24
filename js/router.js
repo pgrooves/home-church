@@ -16,9 +16,14 @@
      sheet. See TAB_META in js/app.js. */
   var TABS = ['home', 'listen', 'guide', 'group', 'connect'];
 
-  /* The modules behind •••, in the order the sheet lists them. Set once at
-     boot from the one array in js/app.js that also draws the sheet, so the
-     order you swipe through and the order you read can never disagree.
+  /* The modules behind •••, in the order the sheet lists them. Handed over by
+     js/app.js from the one list that also draws the sheet, so the order you
+     swipe through and the order you read can never disagree.
+
+     NOT SET ONCE ANY MORE. It was, until Admin joined the row: that tile is
+     there for admins and not for anybody else, so the row is as long as the
+     phone holding it says and js/app.js hands this over again whenever the
+     signed-in person changes.
 
      WHY THEY ARE HERE AT ALL. They used to be pushed views, and a pushed view
      is a dead end: Connect was the last thing a sideways drag could reach and
@@ -207,7 +212,26 @@
        •••. Not "is it in the tab bar", which is why it is not called that.
        What it decides is everything a stop has and a pushed view does not: no
        back arrow, the logo in the header, and a sideways drag that works. */
-    isTop: function (name) { return stops().indexOf(name) !== -1; }
+    isTop: function (name) { return stops().indexOf(name) !== -1; },
+
+    /* The same question asked of a whole route rather than a name, which for
+       one route is a different question.
+
+       Admin is a stop and its four sections are pushed views of it. They share
+       a route name, because sharing it is what makes the back gesture walk out
+       of a section into the menu and then out of the menu, so the name alone
+       cannot tell them apart and the id can: `admin` is a place you swipe to,
+       `admin` with a section on it is somewhere you went from there and needs
+       the arrow back. Every other stop is a stop however it is addressed.
+
+       Anything deciding chrome or gestures for the view on screen wants this
+       one. isTop above stays what it says on the tin, a question about a name,
+       and is what the sheet and the tab bar ask when all they have is one. */
+    isStop: function (route) {
+      if (!route) return false;
+      if (route.name === 'admin' && route.id) return false;
+      return stops().indexOf(route.name) !== -1;
+    }
   };
 
 })(window.HC = window.HC || {});

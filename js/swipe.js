@@ -8,8 +8,10 @@
 
    THE ROW IS LONGER THAN THE BAR. It runs the five tabs and then the modules
    behind •••, so Connect is no longer where a drag stops. The bar cannot
-   follow that far, having six tiles and seven stops, so the tile parks on •••
-   and the sheet says which module you are on. See HC.router.stops().
+   follow that far, having six tiles and more stops than that, so the tile
+   parks on ••• and the sheet says which module you are on. How many stops
+   there are is not fixed: an admin has one more, Admin itself, at the end.
+   See HC.router.stops().
 
    HOW IT IS PUT TOGETHER. The app has exactly one scroll container, so two
    screens cannot simply sit side by side inside it, and giving each screen
@@ -332,8 +334,12 @@
     if (settling && finishSettle) finishSettle();
     if (g) return;
 
+    /* Asked of the whole route, not its name. The Admin menu is the last stop
+       in the row and its four sections are pushed views wearing the same
+       name, and a drag inside Manage users belongs to that screen rather than
+       to the row. See HC.router.isStop. */
     var route = HC.router.current();
-    if (!route || !HC.router.isTop(route.name)) return;
+    if (!route || !HC.router.isStop(route)) return;
 
     var touch = evt.touches[0];
     if (typingTarget(evt.target)) return;

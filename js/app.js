@@ -77,7 +77,11 @@
   /* `practice` is in here for the same reason journal-entry is: it is opened
      from a module and belongs to it, so the ••• tile stays lit while you are
      reading one rather than going dark the moment you tap into a practice. */
-  var MODULE_ROUTES = ['more', 'practices', 'practice', 'journal', 'journal-entry', 'give'];
+  /* `admin` is in here for admins and harmless for everybody else, who can no
+     more reach that route than they can reach the tile. Its four sections
+     share the route name, so the tile stays lit down inside Manage users the
+     way it stays lit inside a practice. */
+  var MODULE_ROUTES = ['more', 'practices', 'practice', 'journal', 'journal-entry', 'give', 'admin'];
 
   var TITLES = {
     home: 'Home',
@@ -93,6 +97,10 @@
     give: 'Give',
     journal: 'Journal',
     'journal-entry': 'Your entry',
+    // The menu carries this the way any stop does, once the screen scrolls.
+    // A section is a pushed view and carries it from the moment it opens,
+    // beside the arrow back to the menu, where until now it carried nothing.
+    admin: 'Admin',
     profile: 'Your account',
     leader: 'Leader mode',
     'guide-reader': 'Guide',
@@ -465,14 +473,18 @@
 
     var title = document.getElementById('hc-topbar-title');
     var back = topbar.querySelector('.hc-topbar__back');
-    var isTop = HC.router.isTop(route.name);
+    var isTop = HC.router.isStop(route);
     var module = isModule(route.name);
 
     /* A stop is a stop, whether it has a tile of its own or lives behind •••.
        Journal and Give get the logo and no back arrow for the same reason
        Connect does: you did not get sent there, you went there, and a drag
        takes you straight back out. Only a genuinely pushed view, an entry, a
-       guide, Your account, carries the arrow and the title. */
+       guide, Your account, an Admin section, carries the arrow and the title.
+
+       Asked of the route rather than of its name, which matters for exactly
+       one route: the Admin menu is a stop and its four sections are pushed
+       views wearing the same name. See HC.router.isStop. */
     back.hidden = isTop;
 
     /* Every pushed view but one takes its title from the table above. A
@@ -595,24 +607,31 @@
     for (var i = 0; i < mods.length; i++) mods[i].tabIndex = on ? 0 : -1;
   }
 
-  /* What the sheet draws: every module, and then Admin for the few people who
-     have one.
+  /* What is behind ••• on this phone: every module, and then Admin for the few
+     people the church made an admin.
 
-     ADMIN IS NOT A MODULE AND MUST NOT BECOME ONE. It is a pushed view you
-     come back from rather than a stop on the sideways drag, so it stays out
-     of MODULES, out of HC.router.setModules, and out of the peek. It is a
-     tile here anyway because ••• is where somebody looks for the parts of the
-     app that are not tabs, and until now the only door to the dashboard was
-     several taps down Your account.
+     ADMIN IS A STOP LIKE THE REST OF THEM. It is the last one, past Give, and
+     it is reached the way Give is: a drag left off Give brings it in, a drag
+     right takes you back to Give, and the ••• tile stays lit the whole time.
+     It was a tile you could only tap for exactly one build, which is how long
+     it took to notice that a stop you cannot swipe to is not really in the
+     row, it is just drawn beside the things that are.
 
-     Recomputed on every paint rather than built once at boot, so signing in,
-     signing out, or a promotion arriving on the next session refresh is
-     reflected the next time the sheet comes up.
+     ITS SECTIONS ARE NOT STOPS. The menu is the place; Manage users and the
+     other three are pushed views of it, told apart by the id on the route.
+     See HC.router.isStop.
 
-     Whether the tile is drawn is presentation and nothing more, the same as
-     the Admin row in js/screens/profile.js: every button behind it is checked
-     live by the database, so a member who forged the tile would find a screen
-     where nothing works. See the header of js/admin.js. */
+     ONE LIST, TWO CONSUMERS. This draws the sheet and it also feeds
+     HC.router.setModules through syncModules below, so the order the sheet
+     lists and the order a drag runs are the same order by construction rather
+     than by two people remembering to edit both.
+
+     Recomputed rather than built once at boot, so signing in, signing out, or
+     a promotion arriving on the next session refresh changes both the sheet
+     and the row. Whether the tile is there at all is presentation and nothing
+     more, the same as the Admin row in js/screens/profile.js: every button
+     behind it is checked live by the database, so a member who forged the tile
+     would find a screen where nothing works. See the header of js/admin.js. */
   function sheetTiles() {
     var tiles = MODULES.map(function (m) {
       return { route: m.route, icon: m.icon, title: m.title, action: 'go-module', id: m.route };
@@ -625,6 +644,13 @@
     }
 
     return tiles;
+  }
+
+  /* Hand the row to the router, which owns where a drag can land. Called at
+     boot and again whenever who is signed in changes, because the last stop
+     belongs to the person rather than to the build. */
+  function syncModules() {
+    HC.router.setModules(sheetTiles().map(function (t) { return t.route; }));
   }
 
   function paintSheet() {
@@ -842,7 +868,7 @@
        stay there the whole time, at the top of a sermon guide as much as
        eleven questions down a group room. A tab is not pushed and has nowhere
        to go back to, so it does not get one. */
-    setDisc(backdisc, !chromeless && !HC.router.isTop(route.name));
+    setDisc(backdisc, !chromeless && !HC.router.isStop(route));
   }
 
   function watchScroll() {
@@ -858,7 +884,7 @@
         HC.indexRail.update();
         paintDiscs();
         var route = HC.router.current();
-        if (!route || !HC.router.isTop(route.name)) return;
+        if (!route || !HC.router.isStop(route)) return;
         topbar.setAttribute('data-scrolled', scroller.scrollTop > 24 ? 'true' : 'false');
       });
     }, { passive: true });
@@ -2890,10 +2916,11 @@
     wireSheet();
     watchScroll();
 
-    /* The one array, handed to the one thing that has to agree with it. The
+    /* The one list, handed to the one thing that has to agree with it. The
        router owns the order a drag runs, this file owns what the sheet draws,
-       and this line is what keeps them the same list. */
-    HC.router.setModules(MODULES.map(function (m) { return m.route; }));
+       and syncModules is what keeps them the same list. Called again on every
+       'auth' below, because the last stop belongs to whoever is signed in. */
+    syncModules();
 
     HC.dateRail.init({
       scroller: scroller,
@@ -2955,6 +2982,14 @@
     // is on screen, repaint it so the signed-in state catches up.
     HC.store.on('auth', function () {
       paintAvatar();
+
+      /* The row a drag runs is as long as the person holding the phone: Admin
+         is the last stop for an admin and is not there at all for anybody
+         else. Signing in, signing out, and the role landing on the session
+         refresh all arrive here, and this is what makes the swipe agree with
+         the sheet from that moment on. */
+      syncModules();
+
       var route = HC.router.current();
       if (route && route.name === 'profile') HC.router.go({ name: 'profile' }, { force: true });
     });
