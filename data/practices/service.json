@@ -4,18 +4,121 @@
   "title": "Service",
   "icon": "practiceService",
   "source": {
-    "site": "https://practicingtheway.org/service",
+    "site": "https://www.practicingtheway.org/service",
     "playlistId": "PL6zls_4DoKIyLOoVi26-SS5eTNmX2e31g",
     "playlistVia": null,
-    "generatedAt": null
+    "generatedAt": "2026-08-24T18:10:43.712262Z"
   },
-  "intro": [],
-  "sessions": [],
+  "subtitle": "Embodying the self-giving love of Jesus",
+  "hero": {
+    "provider": "file",
+    "url": "https://cdn.prod.website-files.com/6812c045a61160f65f88adf3%2F689ea4a35e3b2f3c9565d42d_service-ambient-bg-transcode.mp4",
+    "note": "The practice's own looping header from practicingtheway.org/service. Muted, no controls, decorative."
+  },
+  "playlist": {
+    "provider": "youtube",
+    "playlistId": "PL6zls_4DoKIyLOoVi26-SS5eTNmX2e31g",
+    "title": "The Service sessions",
+    "note": "Plays the series in order. Use the playlist button in the player to jump between sessions."
+  },
+  "intro": [
+    "Love is the hallmark of Jesus’ followers, but what does it look like? In the Way of Jesus, it means offering hidden acts of service to those right in front of us, allowing ourselves to be interrupted by unexpected needs, and overlapping our lives with those on the margins.",
+    "Each Practice comes with four video sessions, weekly exercises and readings, and additional resources to help your group create life-changing daily rhythms as you apprentice under Jesus together. The sessions are about 30 minutes long and include time for group discussion.",
+    "Our Practices work well for small groups or for running course-style with a larger group, but they can also be modified for a churchwide Sunday teaching series, small cohorts, and many other contexts."
+  ],
+  "sessions": [
+    {
+      "number": 1,
+      "title": "Love",
+      "teaching": [
+        "In the Way of Jesus, love isn’t just a warm feeling or a general sense of goodwill towards those in need. It is embodied, practical actions of self-giving service, modeled by Jesus and given to us as the hallmark of true apprenticeship."
+      ],
+      "practice": "Meet a simple practical need.",
+      "video": null
+    },
+    {
+      "number": 2,
+      "title": "Hiddenness",
+      "teaching": [
+        "Jesus grounded service in ordinary places, and among everyday relationships. And so we’re often invited to embrace hidden service to those right in front of us before more visible acts of service to the marginalized."
+      ],
+      "practice": "Commit to a hidden act of service.",
+      "video": null
+    },
+    {
+      "number": 3,
+      "title": "Availability",
+      "teaching": [
+        "Jesus was both intentional and interruptible. And as we apprentice under him with intention, we increasingly respond to the unplanned and the unexpected in the same way Jesus would: with loving presence and willingness to help."
+      ],
+      "practice": "Respond to an interruption with an unplanned act of service.",
+      "video": null
+    },
+    {
+      "number": 4,
+      "title": "Kinship",
+      "teaching": [
+        "Jesus’ calling to serve those in need is radical, because it involves more than giving from a safe distance. It is a call to kinship–to embrace those outside our circle and outside our comfort zone as if they were family."
+      ],
+      "practice": "Commit to an act of service to someone in need.",
+      "video": null
+    }
+  ],
+  "resources": [
+    {
+      "title": "About Tyler Staton",
+      "body": [
+        "Tyler Staton is a friend of Practicing the Way and the Lead Pastor of Bridgetown Church in Portland, Oregon, a community known for serving those in need. His books include Praying Like Monks, Living Like Fools , and most recently, The Familiar Stranger: (Re)Introducing the Holy Spirit to Those in Search of an Experiential Spirituality ."
+      ],
+      "image": "https://cdn.prod.website-files.com/6812c045a61160f65f88adf3/68aba9647d83729d52384480_tyler-staton.jpg"
+    },
+    {
+      "title": "The Companion Guide",
+      "body": [
+        "Each session will use the Service Practice Companion Guide, which contains weekly Reach Exercises, assigned readings and podcast episodes, and reflection questions."
+      ],
+      "image": "https://cdn.prod.website-files.com/6812c045a61160f65f88adf3/68abbbcc0ce2996940a6edc2_Service-Practice-Companion-Guide-Mockup.jpg"
+    },
+    {
+      "title": "Recommended Reading",
+      "body": [
+        "The recommended reading for the Service Practice is The Active Life by Parker Palmer . Each week, you’ll be assigned readings in the Service Companion Guide."
+      ],
+      "image": "https://cdn.prod.website-files.com/6812c045a61160f65f88adf3/689eb66ff3044cd481766367_The-Active-Life-Cover-small.avif",
+      "link": {
+        "label": "The Active Life, by Parker Palmer",
+        "url": "https://amzn.to/3UxDRuN"
+      }
+    },
+    {
+      "title": "Rule of Life Podcast",
+      "body": [
+        "The Service season is hosted by Shelbi Shutt and Tyler Staton and features conversations with Edwin Colon (Next Step Community Church), Gary Haugen (International Justice Mission), Jonathan-Tremaine Thomas (Civil Righteousness), and a roundtable discussion with thoughtful leaders and entrepreneurs committed to loving those on the margins."
+      ],
+      "image": "https://cdn.prod.website-files.com/6812c045a61160f65f88adf3/682fa30e2b39359a238d9596_ROL-Podcast-Image.png.avif",
+      "link": {
+        "label": "Listen on Spotify",
+        "url": "https://open.spotify.com/show/7dHIByUQ588Li9pUtv0TDn"
+      }
+    }
+  ],
   "extras": [],
   "flags": [
     {
-      "kind": "not-yet-generated",
-      "detail": "Placeholder. No content has been pulled for this practice yet. Run `node scripts/build_practices.js --report service`, read the mapping, then re-run with --write to replace this file."
+      "kind": "no-videos-on-the-page",
+      "detail": "practicingtheway.org/service carries no session videos. Its videos are all muted, autoplaying, looping background art: the practice header mp4 used here as the hero, plus the site-wide loop and further decorative embeds. Both \"Run Practice\" and \"Preview Session 01\" link to launch.practicingtheway.org/signup, so the real session videos sit behind their signup. The playlist player above the sessions is what people watch until per-session ids are filled in."
+    },
+    {
+      "kind": "promotional-content",
+      "detail": "Left out of the data: purchase clauses trimmed from paragraphs that were otherwise kept, and any product-only or seasonal block. Assigned reading was kept, with its link, because the Companion Guide assigns it week by week."
+    },
+    {
+      "kind": "extra-resource",
+      "detail": "This page introduces its teacher, Tyler Staton, which no other practice page does. Kept as the first resource because it is who is speaking on the videos, not marketing."
+    },
+    {
+      "kind": "hand-entered",
+      "detail": "Built from a saved copy of the page rather than a pipeline run, so no video ids were fetched. Re-running `npm run practices -- --write service` refreshes the videos and preserves subtitle, hero, playlist and resources."
     }
   ]
 }

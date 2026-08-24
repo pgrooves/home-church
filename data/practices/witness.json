@@ -4,18 +4,114 @@
   "title": "Witness",
   "icon": "practiceWitness",
   "source": {
-    "site": "https://practicingtheway.org/witness",
+    "site": "https://www.practicingtheway.org/witness",
     "playlistId": "PL6zls_4DoKIx3qL8Fqbg5m1lNPczkPNky",
     "playlistVia": null,
-    "generatedAt": null
+    "generatedAt": "2026-08-24T18:10:43.780720Z"
   },
-  "intro": [],
-  "sessions": [],
+  "subtitle": "The Spirit is inviting people all around us",
+  "hero": {
+    "provider": "file",
+    "url": "https://cdn.prod.website-files.com/6812c045a61160f65f88adf3%2F69715beeecdb0ffa24405d00_C007_L007_0530AA%20%281%29_mp4.mp4",
+    "note": "The practice's own looping header from practicingtheway.org/witness. Muted, no controls, decorative."
+  },
+  "playlist": {
+    "provider": "youtube",
+    "playlistId": "PL6zls_4DoKIx3qL8Fqbg5m1lNPczkPNky",
+    "title": "The Witness sessions",
+    "note": "Plays the series in order. Use the playlist button in the player to jump between sessions."
+  },
+  "intro": [
+    "In a post-Christian culture, the idea of “sharing the gospel” seems intimidating — even offensive. But the Spirit in us seeks to draw near those who are far from God; and we embody his heart by inviting people to our table, listening deeply, and testifying simply to the good news of Jesus.",
+    "Each Practice comes with four video sessions, weekly exercises and readings, and additional resources to help your group create life-changing daily rhythms as you apprentice under Jesus together. The sessions are about 30 minutes long and include time for group discussion.",
+    "Our Practices work well for small groups or for running course-style with a larger group, but they can also be modified for a churchwide Sunday teaching series, small cohorts, and many other contexts."
+  ],
+  "sessions": [
+    {
+      "number": 1,
+      "title": "Begin With Love",
+      "teaching": [
+        "To be a witness is simply to tell others what we’ve seen, heard, and know to be true — through our words and our way of life. As apprentices of Jesus, our motivation to be a witness in a pluralistic, post-Christian culture is loving compassion for others."
+      ],
+      "practice": "Identify three to five people you care about who are not followers of Jesus, and begin praying for them daily.",
+      "video": null
+    },
+    {
+      "number": 2,
+      "title": "Practice Hospitality",
+      "teaching": [
+        "Jesus shared the good news of the kingdom with people who were far from God by inviting them to the table. He welcomed “tax collectors and sinners” into the new community of God, one meal at a time. As his apprentices, we’re invited to do the same."
+      ],
+      "practice": "Invite someone to share a meal. Aim for someone in your life who hasn’t been over before and who is not yet a follower of Jesus.",
+      "video": null
+    },
+    {
+      "number": 3,
+      "title": "Partner With the Holy Spirit",
+      "teaching": [
+        "Many of us start from the false assumption that the pressure is on us to bring God to people. But what if God is working in the lives of every person we know, gently guiding them to himself — and our role is to join what he is already doing?"
+      ],
+      "practice": "Get together with someone who is not a follower of Jesus. Practice listening to them as deeply as you can, and ask the Spirit to show you what he is up to in their life.",
+      "video": null
+    },
+    {
+      "number": 4,
+      "title": "Share the Good News",
+      "teaching": [
+        "Scripture outlines two essential components of being a witness: living a beautiful life in community and sharing the good news of Jesus. As we listen to the Spirit, he provides opportunities to tell people who Jesus is, what he’s done in human history, what he’s done in your life."
+      ],
+      "practice": "Get together with another person from your community and practice articulating the gospel in your own words.",
+      "video": null
+    }
+  ],
+  "resources": [
+    {
+      "title": "The Companion Guide",
+      "body": [
+        "Each session will use the Witness Practice Companion Guide , which contains weekly Reach Exercises, assigned readings and podcast episodes, and reflection questions."
+      ],
+      "image": "https://cdn.prod.website-files.com/6812c045a61160f65f88adf3/697153ce448a7f8dce57f7f5_witness-companion-guide.png"
+    },
+    {
+      "title": "Recommended Reading",
+      "body": [
+        "The recommended reading for the Witness Practice is The Gospel Comes with a House Key by Rosaria Butterfield. Each week, you’ll be assigned readings in the Witness Companion Guide."
+      ],
+      "image": "https://cdn.prod.website-files.com/6812c045a61160f65f88adf3/697128ea2e0b7a130e888b75_Witnessrecommendedreading.avif",
+      "link": {
+        "label": "The Gospel Comes with a House Key, by Rosaria Butterfield",
+        "url": "https://amzn.to/4r868qk"
+      }
+    },
+    {
+      "title": "Rule of Life Podcast",
+      "body": [
+        "The Witness season is hosted by Shelbi Shutt and John Mark Comer and features conversations with Ger Jones (Vintage Church LA), Drew Hyun (Hope Church NYC), Pete Hughes (King’s Cross Church), and Shaila Visser (Alpha)."
+      ],
+      "image": "https://cdn.prod.website-files.com/6812c045a61160f65f88adf3/69714ed91c8b30f606ca1297_PTW-Cover-Art-Updated-082523.png",
+      "link": {
+        "label": "Listen on Spotify",
+        "url": "https://open.spotify.com/show/7dHIByUQ588Li9pUtv0TDn"
+      }
+    }
+  ],
   "extras": [],
   "flags": [
     {
-      "kind": "not-yet-generated",
-      "detail": "Placeholder. No content has been pulled for this practice yet. Run `node scripts/build_practices.js --report witness`, read the mapping, then re-run with --write to replace this file."
+      "kind": "no-videos-on-the-page",
+      "detail": "practicingtheway.org/witness carries no session videos. Its videos are all muted, autoplaying, looping background art: the practice header mp4 used here as the hero, plus the site-wide loop and further decorative embeds. Both \"Run Practice\" and \"Preview Session 01\" link to launch.practicingtheway.org/signup, so the real session videos sit behind their signup. The playlist player above the sessions is what people watch until per-session ids are filled in."
+    },
+    {
+      "kind": "promotional-content",
+      "detail": "Left out of the data: purchase clauses trimmed from paragraphs that were otherwise kept, and any product-only or seasonal block. Assigned reading was kept, with its link, because the Companion Guide assigns it week by week."
+    },
+    {
+      "kind": "promotional-content",
+      "detail": "The Companion Guide on this page is described as \"available for preorder\", so that paragraph was dropped whole rather than trimmed: a preorder has a date on it and will be wrong in the app before anybody notices."
+    },
+    {
+      "kind": "hand-entered",
+      "detail": "Built from a saved copy of the page rather than a pipeline run, so no video ids were fetched. Re-running `npm run practices -- --write witness` refreshes the videos and preserves subtitle, hero, playlist and resources."
     }
   ]
 }
