@@ -65,6 +65,25 @@
       '</div>';
     }
 
+    /* Admin is not in the module list either, and for the opposite reason to
+       Leader mode: not a switch, but a pushed view most people do not have.
+       The sheet grows the same tile for the same people, in js/app.js, and
+       this row is here so this screen keeps agreeing with the one everybody
+       actually sees. Drawn from local state and gated for real by the
+       database, exactly as in js/screens/profile.js. */
+    if (HC.admin && HC.admin.isAdmin()) {
+      html += c.sectionHeader('For the church', 'Admin');
+      html += '<div class="hc-module-list">' +
+        c.row({
+          title: 'Open the admin dashboard',
+          sub: 'Everything here is live the moment you save it.',
+          action: 'go-admin',
+          chevron: true,
+          serif: true
+        }) +
+      '</div>';
+    }
+
     html += '<p class="hc-caption hc-more__note">Your account, notifications, and text size are under the ' +
       'circle at the top right of every screen.</p>';
 

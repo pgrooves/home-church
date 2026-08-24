@@ -595,14 +595,48 @@
     for (var i = 0; i < mods.length; i++) mods[i].tabIndex = on ? 0 : -1;
   }
 
+  /* What the sheet draws: every module, and then Admin for the few people who
+     have one.
+
+     ADMIN IS NOT A MODULE AND MUST NOT BECOME ONE. It is a pushed view you
+     come back from rather than a stop on the sideways drag, so it stays out
+     of MODULES, out of HC.router.setModules, and out of the peek. It is a
+     tile here anyway because ••• is where somebody looks for the parts of the
+     app that are not tabs, and until now the only door to the dashboard was
+     several taps down Your account.
+
+     Recomputed on every paint rather than built once at boot, so signing in,
+     signing out, or a promotion arriving on the next session refresh is
+     reflected the next time the sheet comes up.
+
+     Whether the tile is drawn is presentation and nothing more, the same as
+     the Admin row in js/screens/profile.js: every button behind it is checked
+     live by the database, so a member who forged the tile would find a screen
+     where nothing works. See the header of js/admin.js. */
+  function sheetTiles() {
+    var tiles = MODULES.map(function (m) {
+      return { route: m.route, icon: m.icon, title: m.title, action: 'go-module', id: m.route };
+    });
+
+    if (HC.admin && HC.admin.isAdmin()) {
+      // No id: go-admin reads data-id as the section to open, and this tile
+      // opens the menu of all four.
+      tiles.push({ route: 'admin', icon: 'shield', title: 'Admin', action: 'go-admin', id: '' });
+    }
+
+    return tiles;
+  }
+
   function paintSheet() {
     var route = HC.router.current();
     var here = route ? route.name : '';
+    var tiles = sheetTiles();
 
-    sheetGrid.style.setProperty('--hc-mod-count', Math.min(MODULES.length, 4));
-    sheetGrid.innerHTML = MODULES.map(function (m) {
-      return '<button type="button" class="hc-oversheet__mod" data-action="go-module" ' +
-          'data-id="' + c.esc(m.route) + '"' +
+    sheetGrid.style.setProperty('--hc-mod-count', Math.min(tiles.length, 4));
+    sheetGrid.innerHTML = tiles.map(function (m) {
+      return '<button type="button" class="hc-oversheet__mod" ' +
+          'data-action="' + c.esc(m.action) + '"' +
+          (m.id ? ' data-id="' + c.esc(m.id) + '"' : '') +
           (m.route === here ? ' aria-current="page"' : '') + '>' +
         c.icon(m.icon, 'hc-oversheet__icon') +
         '<span class="hc-oversheet__label">' + c.esc(m.title) + '</span>' +

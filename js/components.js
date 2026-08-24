@@ -198,6 +198,15 @@
             '<path d="M6.4 8.1A17 17 0 0 0 2 12s3.8 6.4 10 6.4a10 10 0 0 0 3.6-.7"/>',
     lock: '<rect x="4.5" y="10.5" width="15" height="9.5" rx="2.2"/>' +
           '<path d="M8 10.5V8a4 4 0 0 1 8 0v2.5"/>',
+
+    /* Admin. A shield with a check in it: what the church trusted somebody
+       with, rather than a cog, which would read as settings, and this is not
+       where anybody changes their text size. Not `lock` either, which is
+       already the closed door in the sign-in flow and would say the opposite
+       of what this tile does. The check sits low and small so the shield's
+       silhouette still carries at 24px in the sheet's grid. */
+    shield: '<path d="M12 3.1 5 5.9v5.5c0 4.2 2.9 7.6 7 9.5 4.1-1.9 7-5.3 7-9.5V5.9z"/>' +
+            '<path d="m9.3 12.1 1.9 1.9 3.5-3.7"/>',
     doc: '<path d="M13.5 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8.5z"/>' +
          '<path d="M13.5 3v5.5H19"/>',
     message: '<path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9.5 9.5 0 0 1-2.9-.4L4 21l1.4-4.1A8.2 8.2 0 0 1 3.6 11.5 8.4 8.4 0 0 1 12 3.1a8.4 8.4 0 0 1 9 8.4z"/>',
