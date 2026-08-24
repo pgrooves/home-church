@@ -536,11 +536,16 @@
        there is something to show, so Home is unchanged on a project with an
        empty instagram_posts table and no homeMedia.
 
-       No header over it, deliberately. Every slide already says what it is in
-       its own eyebrow, and a heading above a block that changes what it is
-       from slide to slide would have to be vague enough to cover all of them,
-       which is a heading that says nothing. */
-    html += mediaCarousel();
+       "Socials" names the carousel and the row of links under it together,
+       which is the one word broad enough to be true of both a video from the
+       pastor and the week's Instagram photograph without saying nothing.
+       Each slide still carries its own eyebrow underneath it, so the heading
+       names where this all comes from and the eyebrow names the slide.
+
+       Same rule as every other block on this screen: no header unless there
+       is something under it. On a week with no posts, no homeMedia and no
+       social links, the heading would be a title over a gap. */
+    var media = mediaCarousel();
 
     /* The social links sit under the photograph, but they do not depend on
        it. A week when nothing has been posted, or a sync that has broken, is
@@ -551,7 +556,11 @@
        Outside that block for a second reason too: it is a button, and a
        button inside a button is invalid HTML that browsers resolve however
        they like. */
-    html += c.socialRow(HC.data.church.social);
+    var social = c.socialRow(HC.data.church.social);
+
+    if (media || social) html += c.sectionHeader('', 'Socials');
+    html += media;
+    html += social;
 
     /* From here down, every block is named. The headings carry no eyebrow, so
        what a person scrolling past sees is one column of titles in the same
