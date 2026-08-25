@@ -284,7 +284,7 @@ Four sections.
 
 | Section | Does |
 |---|---|
-| **Announcements** | Write, edit, delete the cards on Home. Title, text, an optional picture uploaded from the phone or pasted as a link, an optional video link, and the dates it goes up and comes down. Posting can send a push notification to everybody, and can pin the announcement as a banner. |
+| **Announcements** | Write, edit, delete the cards on Home. Title, the words in a rich text editor with bold, italic, underline, lists, hyperlinks and the scripture button, as many pictures as it needs, a YouTube link that plays inside the app, a link with a thumbnail, and the dates it goes up and comes down. Posting can send a push notification to everybody, and can pin the announcement as a banner. |
 | **Users** | Everybody who has signed in, with their name, email and role. Promote to admin, demote to member, remove an account entirely. |
 | **Content** | Pages of the church's own writing, edited in a form. The Give screen's paragraph is the first one. Also the switch for **Edit mode**, below. |
 | **App settings** | Switches and short messages that change the whole app, drawn as real toggles and text fields rather than as JSON. Ships with a pinned Home banner and its message, and a default for whether posting an announcement offers to notify. |
@@ -301,8 +301,8 @@ After that, admins promote each other from inside the app.
 
 **Pinning an announcement** is the one control on that form whose effect is
 outside Home. With it on, the announcement's title rides a strip under the top
-bar on every tab, tapping the strip scrolls to that announcement's card on
-Home, and an x on the right of it puts it away on that phone for good. It is
+bar on every tab, tapping the strip opens that announcement's own page, and an
+x on the right of it puts the strip away on that phone for good. It is
 deliberately the loudest thing the app can do, so it is off unless somebody
 turns it on, and the strip retires when the announcement's own `ends_on` does
 rather than on a second schedule of its own. It is a separate thing from the
@@ -330,8 +330,49 @@ allowed to write their own profile row, and `role` is a column on it, so the
 guard is a trigger rather than a policy.
 
 The migrations are `0025_admin_role.sql`, `0026_admin_content.sql`,
-`0027_announcement_push.sql` and `0028_announcement_pin.sql`, each with the
-full reasoning in its header.
+`0027_announcement_push.sql`, `0028_announcement_pin.sql` and
+`0033_announcement_media.sql`, each with the full reasoning in its header.
+
+### An announcement's own page
+
+**A card on Home opens the announcement it summarises.** The card carries the
+label, the title, the first picture, the opening of the words and a line saying
+what else is behind it; tapping it pushes a page with the whole thing: the
+words with their formatting, the video, every picture, and the link. It is a
+pushed view like a guide or a journal entry, so it carries the arrow in the top
+bar, the back disc at the bottom left, and no sideways drag.
+
+The page holds an announcement whose dates have run out, on purpose, and says
+so in a line under the title. A card comes off Home at midnight because Home is
+what the church is saying today; a page is an address, in somebody's history
+and behind a notification they left on their lock screen for a fortnight, and
+emptying it under a reader would be worse than dating it.
+
+**Three things about what an announcement can hold** are worth knowing:
+
+  * **The words are two columns.** `body_html` is the markup the editor wrote
+    and the page draws. `body` is its plain text mirror, written on every save,
+    and it is what the push notification puts on a lock screen, what the Admin
+    list shows under each row, and what the card on Home prints under the
+    title. Nothing types into `body` directly.
+  * **The video plays here.** A YouTube link becomes a poster with a play
+    badge, and the iframe only exists once somebody has tapped it, which is the
+    same arrangement the nine Practices use. Nothing is requested from Google
+    until then. A playlist link is refused by name, because "videoseries" is a
+    valid eleven character video id and would otherwise render an error player.
+  * **A link's thumbnail is a choice, not a scrape.** The app fills one in for
+    a YouTube link and for a link that is itself a photograph, and otherwise
+    leaves it empty for an admin to paste or upload. There is no server that
+    fetches URLs to read their `og:image`, and there is not going to be: that
+    is a small open proxy pointed at the internet in exchange for a picture.
+    The x in the thumbnail's top right corner takes it off and keeps the link.
+
+Every link in an announcement, including the ones inside the words, opens in
+the phone's own browser through the same `openExternal()` every other outbound
+link in this app goes through. Markup somebody typed is sanitized against the
+allowlist in `js/richtext.js` twice, once when it is saved and once before it
+reaches the page, and only four schemes survive: `http`, `https`, `mailto` and
+`tel`.
 
 ### Edit mode
 
@@ -364,7 +405,7 @@ are not, and the difference is navigation:
 
 | | Where the words live | Examples |
 |---|---|---|
-| **Rows** | a column in a table the app already syncs | serve team descriptions, how often a team serves and what it asks first, next-step descriptions and their button labels, group descriptions, event descriptions, series subtitles and blurbs, the sentence under a message, a guide's subtitle, what the reading plan reads this week, the church's tagline and its invitation to serve, the between-seasons note, the podcast blurb, an announcement's label and text, a content page's eyebrow, opening paragraph and section bodies |
+| **Rows** | a column in a table the app already syncs | serve team descriptions, how often a team serves and what it asks first, next-step descriptions and their button labels, group descriptions, event descriptions, series subtitles and blurbs, the sentence under a message, a guide's subtitle, what the reading plan reads this week, the church's tagline and its invitation to serve, the between-seasons note, the podcast blurb, an announcement's label, and its words while they are still plain text, a content page's eyebrow, opening paragraph and section bodies |
 | **Slots** | a string in a source file, overridden by a row in `text_overrides` | the line under the Give button, Home's "no guide yet", Listen's "nothing yet", the group finder's no-match line, the notes under the next-step and serve buttons, the lines under each module on More, the Journal's intro, and the words on the Give, Directions, Follow-the-show and Add-to-calendar buttons |
 | **Settings** | the text half of an `app_settings` row | the pinned banner's sentence, edited on Home where it appears. The switch that puts it there stays in Admin → App settings: fixing a typo is a wording, taking the banner down is a decision |
 
@@ -386,6 +427,7 @@ actually reads the value:
 | `groups.day`, `groups.neighborhood` | the finder's filter chips are built from these values and compared against them |
 | `events.starts_at`, `time_label`, `location` | Connect parses them back into a real Date for Add to calendar, and all three land in the entry a person keeps |
 | `announcements.title` | the notification already said it on every lock screen |
+| `announcements.body_html` and its pictures, video and link | Edit mode is a textarea over one sentence, and a textarea over markup shows somebody their own `<strong>` tags. Edited on the Admin form, where the editor that made them is. An announcement still written in plain text is editable in place, which is what that feature is for |
 | church address, service times, giving URL, SMS number and keyword | facts and destinations, not sentences |
 | `guides.reflection_questions`, `group_sections` | a group room copies its questions when it opens, so an edit would change the next room and not tonight's |
 | the guide reader's prose | `js/highlight.js` turns a selection there into a highlight and a note; a tap that might mean "edit" and might mean "highlight" does neither well |

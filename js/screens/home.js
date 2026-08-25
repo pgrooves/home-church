@@ -285,7 +285,13 @@
       : 'Announcement';
   }
 
-  /* The picture on an announcement, if there is one.
+  /* The lead picture on an announcement, if there is one.
+
+     THE FIRST OF THEM AND NOT ALL OF THEM. An announcement can carry a
+     gallery now, and a gallery on the front door is a gallery somebody
+     scrolls past on the way to Sunday. The card shows the first picture, the
+     announcement's own page shows every one, and which is which is decided
+     here rather than by an admin having to think about it.
 
      Cropped to 4:3 like every other photograph in the app, using the same
      frame classes the media carousel above uses, so an announcement's picture
@@ -293,33 +299,30 @@
      radius. loading="lazy" here and not up there: the carousel is above the
      fold on launch and this is not. */
   function announcementImage(a) {
-    if (!a.imageUrl) return '';
+    var url = (a.images && a.images[0]) || a.imageUrl;
+    if (!url) return '';
     return '' +
-      '<span class="hc-latest__frame hc-latest__frame--4x3 hc-banner__frame">' +
-        '<img class="hc-latest__img" src="' + c.esc(a.imageUrl) + '" alt="" ' +
+      '<span class="hc-latest__frame hc-latest__frame--4x3 hc-banner__frame" ' +
+          'data-media-fallback>' +
+        '<img class="hc-latest__img" src="' + c.esc(url) + '" alt="" ' +
           'loading="lazy" decoding="async">' +
       '</span>';
   }
 
-  /* The video, as a button that leaves the app rather than as a player.
+  /* What else is inside, said in three words rather than shown.
 
-     A YouTube link is not an mp4 the church hosts, and embedding one would
-     put an iframe from Google on the screen the app opens to, handing every
-     congregant's address to them on every launch. That is the trade this
-     project has already refused twice, once for the typefaces and once for
-     the Instagram rail, and an announcement is not the place to start making
-     it. The button says where it goes. See migration 0026 section 1. */
-  function announcementVideo(a) {
-    if (!a.videoUrl) return '';
-    return '<span class="hc-banner__video">' +
-      c.button('Watch', {
-        action: 'open-url',
-        url: a.videoUrl,
-        variant: 'secondary',
-        small: true,
-        icon: 'arrowOut'
-      }) +
-    '</span>';
+     The card is a button and a button can hold no player, no gallery and no
+     link, so what it can honestly do is say that there is more and open the
+     page that has it. This is the line that makes "open this" worth a tap: a
+     card that carries a video and says nothing about it is a card people
+     scroll past. */
+  function announcementExtras(a) {
+    var images = (a.images && a.images.length) || (a.imageUrl ? 1 : 0);
+    return c.metaLine([
+      a.videoUrl ? 'Video' : '',
+      images > 1 ? images + ' pictures' : '',
+      a.linkUrl ? 'A link' : ''
+    ]);
   }
 
   /* ONE CARD BECAME A LIST, and the reason is worth writing down because the
@@ -359,40 +362,49 @@
     });
   }
 
+  /* THE CARD IS A DOOR NOW, which is the one thing about it that changed.
+
+     Every announcement has a page of its own, and this opens it. What is on
+     the card is a summary that reads as a whole thing on its own: the label,
+     the title, the first picture, the opening of the words, and a line saying
+     what else is behind it. What is on the page is the announcement: the
+     formatted words, the video playing in the app, every picture, and the
+     link.
+
+     THE WORDS ARE THE PLAIN TEXT MIRROR AND NOT THE MARKUP. `body` is what
+     `body_html` says with the tags taken off, written on every save by
+     announcementWords() in js/admin.js. It is what belongs here for two
+     reasons and either would be enough: a card is a summary and a summary is
+     not the place for a bulleted list, and this card is a <button>, inside
+     which an <a> is a tap target inside a tap target. Migration 0033 says the
+     same thing from the table's side.
+
+     THE PENCILS MOVED TO THE PAGE, for the same reason. Edit mode's way in is
+     a role="button" div around the sentence, and nesting one of those inside a
+     real button is invalid markup that browsers resolve differently and that
+     makes a tap ambiguous between "edit this" and "open this". So the label
+     and the words are edited on the announcement's own page, one tap away,
+     where the whole announcement is in view anyway. See
+     js/screens/announcement.js. */
   function announcementCard(a) {
+    var extras = announcementExtras(a);
+
     return '' +
       '<div class="hc-banner" data-banner="' + c.esc(a.id) + '">' +
-        '<div class="hc-banner__body">' +
-          /* The small label over the title. Editable, unlike the title under
-             it: an announcement's title is what the notification already said
-             on every lock screen in the church. Empty here means the label is
-             the date the card went up, which is what announcementLabel()
-             works out, so the box opens holding nothing rather than holding a
-             date somebody would then have to keep in step. */
-          HC.edit.wrap(
-            '<p class="hc-eyebrow">' + c.esc(announcementLabel(a)) + '</p>',
-            { table: 'announcements', id: a.id, column: 'eyebrow',
-              target: a, field: 'eyebrow',
-              value: a.eyebrow || '', label: 'the label over the announcement',
-              rows: 2 }
-          ) +
-          '<p class="hc-banner__title hc-body-serif">' + c.esc(a.title) + '</p>' +
-          /* The words of an announcement, editable where they are read. The
-             title above is not: it is what the notification said and what the
-             card is known by, and a title that drifts from the notification
-             people already got is a small lie on their lock screen. Fixing
-             the paragraph under it is the thing that actually gets asked for.
-             The announcement's dates, its picture and its pinning stay on the
-             Admin form, where the whole announcement is in view at once. */
-          HC.edit.wrap(
-            a.body ? '<p class="hc-caption">' + c.esc(a.body) + '</p>' : '',
-            { table: 'announcements', id: a.id, column: 'body',
-              target: a, field: 'body',
-              value: a.body, label: 'the announcement’s words', rows: 5 }
-          ) +
+        '<button type="button" class="hc-banner__open" data-action="open-announcement" ' +
+            'data-id="' + c.esc(a.id) + '">' +
+          '<span class="hc-eyebrow hc-banner__label">' +
+            c.esc(announcementLabel(a)) + '</span>' +
+          '<span class="hc-banner__title hc-body-serif">' + c.esc(a.title) + '</span>' +
+          (a.body
+            ? '<span class="hc-caption hc-banner__snippet">' + c.esc(a.body) + '</span>'
+            : '') +
           announcementImage(a) +
-          announcementVideo(a) +
-        '</div>' +
+          '<span class="hc-banner__cue hc-caption">' +
+            c.esc(extras || 'Read it') +
+            c.icon('chevronRight', 'hc-banner__chev') +
+          '</span>' +
+        '</button>' +
         '<button type="button" class="hc-banner__dismiss" data-action="dismiss-banner" ' +
           'data-id="' + c.esc(a.id) + '" aria-label="Dismiss">' +
           c.icon('close') +

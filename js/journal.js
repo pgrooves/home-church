@@ -4,9 +4,10 @@
    something they highlighted in a guide, an answer to a self-reflection
    question, or a blank page opened in somebody's living room.
 
-   This file is the Journal tab's js/rooms.js. It owns the store, the
-   sanitizer, and later the sync, and it knows nothing about how any of it is
-   drawn. js/screens/journal.js only ever renders what this hands it.
+   This file is the Journal tab's js/rooms.js. It owns the store, the link
+   policy the sanitizer runs under, and later the sync, and it knows nothing
+   about how any of it is drawn. js/screens/journal.js only ever renders what
+   this hands it.
 
    THREE RULES THIS FILE EXISTS TO KEEP.
 
@@ -17,9 +18,10 @@
 
    2. NOTHING IS STORED AS HTML THAT HAS NOT BEEN THROUGH sanitize(). Every
       other screen in this app renders strings it built itself and escapes
-      every value through c.esc(). This is the first feature that keeps markup
-      somebody typed, so the allowlist below is the only door it comes through,
-      and it runs on the way in and again on the way out. See sanitize().
+      every value through c.esc(). This was the first feature that kept markup
+      somebody typed, so the allowlist in js/richtext.js is the only door it
+      comes through, and it runs on the way in and again on the way out. See
+      sanitize() below, which is that allowlist under this tab's link policy.
 
    3. AN ENTRY BELONGS TO WHOEVER WROTE IT, AND ONLY THEY SEE IT. Sign out,
       hand somebody the phone, and they must not find your journal sitting
@@ -133,140 +135,37 @@
 
   /* ------------------------------------------------------------ sanitizer
 
-     The allowlist, and nothing else gets through. Everything not named here
-     is unwrapped: the tag goes, its text stays. That is deliberately not the
-     same as dropping the element, because a person who pastes a paragraph
-     wrapped in something we do not keep should still have their words.
+     MOVED, AND STILL MEANS THE SAME THING. The allowlist, the unwrapping rule
+     and the plain text mirror now live in js/richtext.js, because a second
+     feature keeps markup somebody typed: an admin writes an announcement in
+     the same editor this tab does. Two copies of a sanitizer is one copy that
+     gets fixed.
 
-     <a> is the one that carries an attribute, and href has to survive because
-     the whole point of the scripture button is a link. It survives only when
-     it points at Bible Gateway, which is the only place this app ever links a
-     verse. Anything else, including javascript: and data:, loses the href and
-     keeps the text.
+     What is left here is the Journal's half of the decision, which is the link
+     policy. 'bible' means the only href that survives is Bible Gateway's, so
+     the scripture button works and a paragraph pasted out of an email cannot
+     smuggle a link into somebody's notes. That matters more here than it looks:
+     an entry can be pushed to a group room, where other people read it.
 
-     b and i are mapped rather than allowed. contenteditable emits either
-     depending on the browser and the day, and one representation in storage is
-     worth more than being permissive about two. */
-
-  var ALLOWED = {
-    STRONG: 'strong', B: 'strong',
-    EM: 'em', I: 'em',
-    U: 'u', S: 's', STRIKE: 's',
-    UL: 'ul', OL: 'ol', LI: 'li',
-    P: 'p', BR: 'br', DIV: 'p',
-    A: 'a'
-  };
-
-  var VOID = { br: true };
-  var BIBLE = 'https://www.biblegateway.com/';
-
-  // Blocks that must never end up inside a <p>. See the note in cleanNodes().
-  var BLOCK_INSIDE = /<(ul|ol|p)[\s>]/i;
+     Rule 2 in the header is unchanged. Nothing is stored as HTML that has not
+     been through sanitize(), and it runs on the way in and again on the way
+     out. */
 
   function esc(value) {
-    return String(value == null ? '' : value)
-      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    return HC.richtext.esc(value);
   }
 
-  function cleanNodes(nodes) {
-    var out = '';
-    Array.prototype.forEach.call(nodes, function (node) {
-      if (node.nodeType === 3) {          // text
-        out += esc(node.nodeValue);
-        return;
-      }
-      if (node.nodeType !== 1) return;    // comments and the rest, gone
-
-      var tag = ALLOWED[node.tagName];
-      var inner = VOID[tag] ? '' : cleanNodes(node.childNodes);
-
-      if (!tag) {
-        out += inner;                     // unwrap, keep the words
-        return;
-      }
-      if (tag === 'br') {
-        out += '<br>';
-        return;
-      }
-      if (tag === 'a') {
-        var href = node.getAttribute('href') || '';
-        // Not startsWith: this has to run in older WKWebViews too.
-        out += href.indexOf(BIBLE) === 0
-          ? '<a href="' + esc(href) + '">' + inner + '</a>'
-          : inner;
-        return;
-      }
-
-      /* A paragraph cannot contain a list. This is not pedantry: press
-         return and then the bullet button and a browser hands back
-         `first line<div><ul>…</ul></div>`, div maps to p above, and what
-         would be stored is `<p><ul>…</ul></p>`. Every parser that then reads
-         it back closes the p before the ul and leaves a stray empty one
-         after, so the markup changes shape every time it is saved and
-         reloaded. Unwrap instead: the block inside already carries the
-         break. */
-      if (tag === 'p' && BLOCK_INSIDE.test(inner)) {
-        out += inner;
-        return;
-      }
-
-      out += '<' + tag + '>' + inner + '</' + tag + '>';
-    });
-    return out;
-  }
-
-  /* Runs on the way in, when something is saved, and again on the way out,
-     before anything reaches innerHTML. Twice is not belt and braces: the copy
-     on the phone can have been written by an older build of this file, or by
-     a sync from one, and the version that renders is the version that must
-     decide what is safe. */
   function sanitize(html) {
-    if (!html) return '';
-    try {
-      var doc = new DOMParser().parseFromString('<body>' + html + '</body>', 'text/html');
-      return cleanNodes(doc.body.childNodes).trim();
-    } catch (err) {
-      // No DOMParser, or something malformed enough to throw. Fall back to
-      // the safest possible reading: it is all text.
-      return esc(String(html).replace(/<[^>]*>/g, ''));
-    }
+    return HC.richtext.sanitize(html, { links: 'bible' });
   }
 
-  /* The plain text mirror. Search runs on it, the export writes it, and it is
-     what crosses into a group room, where other people read it and where
-     stored markup has no business going. Block tags become line breaks so a
-     bulleted list does not come out as one run-on sentence. */
   function plainText(html) {
-    if (!html) return '';
-    try {
-      var doc = new DOMParser().parseFromString('<body>' + html + '</body>', 'text/html');
-      var walk = function (nodes) {
-        var out = '';
-        Array.prototype.forEach.call(nodes, function (node) {
-          if (node.nodeType === 3) { out += node.nodeValue; return; }
-          if (node.nodeType !== 1) return;
-          var tag = node.tagName;
-          if (tag === 'BR') { out += '\n'; return; }
-          var inner = walk(node.childNodes);
-          if (tag === 'LI') out += '\n' + inner;
-          else if (tag === 'P' || tag === 'DIV' || tag === 'UL' || tag === 'OL') out += '\n' + inner + '\n';
-          else out += inner;
-        });
-        return out;
-      };
-      return walk(doc.body.childNodes).replace(/\n{3,}/g, '\n\n').trim();
-    } catch (err) {
-      return String(html).replace(/<[^>]*>/g, '').trim();
-    }
+    return HC.richtext.plainText(html);
   }
 
   // Plain text on its way to becoming an entry: paragraphs, escaped.
   function textToHtml(text) {
-    var paras = String(text || '').split(/\n{2,}/).filter(function (p) { return p.trim(); });
-    return paras.map(function (p) {
-      return '<p>' + esc(p.trim()).replace(/\n/g, '<br>') + '</p>';
-    }).join('');
+    return HC.richtext.textToHtml(text);
   }
 
   /* Every Bible Gateway link in the body, as the references they name. What

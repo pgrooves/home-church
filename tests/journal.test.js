@@ -1,5 +1,5 @@
 /* ===========================================================================
-   js/journal.js, on its own.
+   js/journal.js, on its own, and js/richtext.js underneath it.
 
    The four things worth a test here are the four that are easy to get wrong
    and expensive to get wrong:
@@ -8,6 +8,13 @@
      the plain text     because that is what crosses into a group room
      ownership          because signing out must not hand your journal over
      the migration      because it runs against writing people already have
+
+   THE SANITIZER IS TESTED TWICE, under both of its link policies, and both
+   halves belong here because this is where the DOMParser stand-in lives. The
+   journal's policy keeps Bible Gateway and nothing else; an announcement's
+   keeps the four schemes a church writing to its church needs. The second one
+   is markup an admin types and every phone in the building renders, so its
+   refusals matter more, not less.
 
    No browser. jsdom is not a dependency of this project and is not going to
    become one, so localStorage and DOMParser are faked below with the smallest
@@ -145,6 +152,10 @@ function boot(opts) {
 
   if (opts.seed) storage.setItem('hc:' + opts.seed.key, JSON.stringify(opts.seed.value));
 
+  // The allowlist and the plain text mirror, which journal.js runs under its
+  // own link policy. Below store.js and above journal.js, the same order
+  // index.html loads them in.
+  vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'js', 'richtext.js'), 'utf8'), sandbox);
   vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'js', 'journal.js'), 'utf8'), sandbox);
 
   const HC = sandbox.window.HC;
@@ -198,6 +209,59 @@ console.log('\n— the allowlist —');
      s('<marquee>still here</marquee>'), 'still here');
   ok('angle brackets in text are escaped, not executed',
      s('a &lt; b'), 'a &lt; b');
+}
+
+/* ------------------------------------------------ the announcement's policy
+
+   The same allowlist under the other link policy. What an admin writes on the
+   Admin form and what every phone in the church then renders into a page, so
+   the refusals below are the ones that matter most in this file. */
+
+console.log('\n— the same allowlist, an announcement’s links —');
+{
+  const { HC } = boot();
+  const s = (html) => HC.richtext.sanitize(html, { links: 'web' });
+
+  ok('the formatting is the same formatting',
+     s('<b>held</b><i>held</i>'), '<strong>held</strong><em>held</em>');
+
+  ok('an ordinary link survives, which is the whole difference',
+     s('<a href="https://homechurch.org/serve">Sign up</a>'),
+     '<a href="https://homechurch.org/serve">Sign up</a>');
+  ok('so does an email address',
+     s('<a href="mailto:hello@homechurch.org">Email us</a>'),
+     '<a href="mailto:hello@homechurch.org">Email us</a>');
+  ok('and a phone number',
+     s('<a href="tel:+15045551234">Call</a>'), '<a href="tel:+15045551234">Call</a>');
+  ok('and a scripture link, because the button that makes them is still there',
+     s('<a href="https://www.biblegateway.com/x">John 3:16</a>'),
+     '<a href="https://www.biblegateway.com/x">John 3:16</a>');
+
+  ok('javascript: keeps only the words, never the scheme',
+     s('<a href="javascript:steal()">tap</a>'), 'tap');
+  ok('and neither does data:',
+     s('<a href="data:text/html;base64,c3RlYWwoKQ==">tap</a>'), 'tap');
+  /* A browser follows `\njavascript:` exactly as it follows `javascript:`,
+     which is why the href is stripped of leading control characters before it
+     is read. Written with a real newline in the attribute, the way it would
+     arrive. */
+  ok('a scheme hiding behind a newline is still that scheme',
+     s('<a href="\njavascript:steal()">tap</a>'), 'tap');
+  ok('a relative link has no scheme to trust and loses its href',
+     s('<a href="/give">tap</a>'), 'tap');
+
+  ok('an event handler cannot ride in on a link either',
+     s('<a href="https://homechurch.org" onclick="steal()">tap</a>'),
+     '<a href="https://homechurch.org">tap</a>');
+  ok('a script tag loses the tag and the code with it',
+     s('<script>alert(1)</script>'), 'alert(1)');
+  ok('an image with onerror is not an image any more',
+     s('<img src=x onerror="steal()">'), '');
+
+  // The default is the stricter policy, so a caller that forgets to say gets a
+  // link that lost its href rather than one that kept an href it should not.
+  ok('and a caller that says nothing gets the journal’s policy',
+     HC.richtext.sanitize('<a href="https://homechurch.org">tap</a>'), 'tap');
 }
 
 /* --------------------------------------------------------------- plain text */

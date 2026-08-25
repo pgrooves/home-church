@@ -101,6 +101,10 @@
     // A section is a pushed view and carries it from the moment it opens,
     // beside the arrow back to the menu, where until now it carried nothing.
     admin: 'Admin',
+    // One announcement, on its own page. A pushed view like a guide or a
+    // journal entry: the arrow and this word in the bar, the back disc by the
+    // thumb, and no sideways drag. The card on Home is what opens it.
+    announcement: 'Announcement',
     profile: 'Your account',
     leader: 'Leader mode',
     'guide-reader': 'Guide',
@@ -383,54 +387,28 @@
     app.style.setProperty('--hc-pin-h', pinbar.offsetHeight + 'px');
   }
 
-  /* Tapping the strip. It goes to the announcement's own card on Home and
-     leaves the strip up, because the strip is the church's and the x is the
-     only thing that takes it down.
+  /* Tapping the strip. It opens the announcement's own page, and it leaves the
+     strip up, because the strip is the church's and the x is the only thing
+     that takes it down.
 
-     THE UNDISMISS IS NOT A LOOPHOLE. Somebody may have put this card away on
-     Home last week, before it was pinned; navigating to a card that has been
-     filtered out would land on Home with nothing to see and read as a broken
-     tap. Putting it back is the honest reading of "take me to this", and it
-     is one card, named by the tap that just happened, rather than a blanket
-     reset of everything this phone has dismissed.
+     IT USED TO LAND ON HOME and scroll to the card, with a moment of gold
+     around it so a person could tell which of three cards the strip had meant.
+     That was the best available answer while the card was the whole
+     announcement. It is not any more: an announcement has a page now, with the
+     video in it and the pictures and the link, and a strip that says "open
+     this" should open it rather than pointing at a summary of it. The card on
+     Home does the same thing when it is tapped, so both ways in arrive at the
+     same screen.
 
-     force:true because Home may already be the current view, where go()
-     would otherwise take a repeat tap as "back to the top" and never rebuild
-     the list the un-dismissed card has to reappear in. */
+     THE UNDISMISS STAYS, and it means something slightly different now.
+     Somebody may have put this card away on Home last week, before it was
+     pinned. Reading the announcement from the strip is as clear a signal as
+     there is that they are not done with it, so it goes back on Home for when
+     they get there. One card, named by the tap that just happened, and never a
+     blanket reset of everything this phone has dismissed. */
   function openPinned(id) {
     HC.store.undismiss(id);
-    HC.router.go({ name: 'home' }, { force: true });
-    scrollToAnnouncement(id);
-  }
-
-  /* Down to the card, and a moment of gold around it so a person knows which
-     of three cards the strip meant.
-
-     Two frames of waiting, not one: the first is the router mounting the new
-     Home, the second is the layout it causes. Measured off the scroller
-     rather than scrollIntoView(), which scrolls the nearest scrollable
-     ancestor by its own rules and would put the card under the fixed header
-     and the strip that is still on top of it. */
-  function scrollToAnnouncement(id) {
-    window.requestAnimationFrame(function () {
-      window.requestAnimationFrame(function () {
-        var card = mount.querySelector('[data-banner="' + id + '"]');
-        if (!card || !scroller) return;
-
-        var chrome = topbar.offsetHeight + (pinbar && !pinbar.hidden ? pinbar.offsetHeight : 0);
-        var top = scroller.scrollTop + card.getBoundingClientRect().top - chrome - 12;
-
-        scroller.scrollTo({
-          top: top < 0 ? 0 : top,
-          behavior: prefersReducedMotion() ? 'auto' : 'smooth'
-        });
-
-        card.setAttribute('data-flash', 'true');
-        window.setTimeout(function () {
-          card.removeAttribute('data-flash');
-        }, 1800);
-      });
-    });
+    HC.router.go({ name: 'announcement', id: id });
   }
 
   /* ---------------------------------------------------- view change plumbing */
@@ -1081,7 +1059,17 @@
       repaintAdmin();
     },
 
-    'admin-image-clear': function () {
+    /* One more empty box in the list of pictures. This is change A's + and it
+       adds a row rather than a picture: what goes in it is a link somebody
+       pastes, or the next thing the file picker uploads. */
+    'admin-image-add': function () {
+      var d = adminHelpers().getDraft();
+      if (!d) return;
+      d.images.push('');
+      repaintAdmin();
+    },
+
+    'admin-image-remove': function (el) {
       var d = adminHelpers().getDraft();
       if (!d) return;
       /* The object stays in the bucket. Deleting it here would orphan the
@@ -1089,7 +1077,19 @@
          what happens the moment somebody reuses one, and a few unreferenced
          images in a 5MB-per-file bucket is a much cheaper problem than a card
          with a broken image on Home. */
-      d.imageUrl = '';
+      d.images.splice(parseInt(el.getAttribute('data-id'), 10), 1);
+      repaintAdmin();
+    },
+
+    /* The x in the corner of the link's thumbnail. It takes the picture off
+       the link card and leaves the link, which is exactly what change A asked
+       for, and it is remembered: `linkImageTouched` is what stops the next
+       keystroke in the link field putting the thumbnail back. */
+    'admin-link-thumb-clear': function () {
+      var d = adminHelpers().getDraft();
+      if (!d) return;
+      d.linkImageUrl = '';
+      d.linkImageTouched = true;
       repaintAdmin();
     },
 
@@ -1461,6 +1461,23 @@
       HC.native.tap('Light');
     },
 
+    /* The link sheet, which is only ever on screen for a writing surface whose
+       links survive the sanitizer. Today that is the announcement form. See
+       toolbar() in js/editor.js. */
+
+    'link-open': function () {
+      HC.editor.openLink();
+    },
+
+    'link-close': function () {
+      HC.editor.closeLink();
+    },
+
+    'link-insert': function () {
+      HC.editor.insertLink();
+      HC.native.tap('Light');
+    },
+
     /* ------------------------------------------------------ highlighting */
 
     'hl-note': function () { HC.highlight.create(true); },
@@ -1687,6 +1704,20 @@
       );
       repaintCoverage(guideId);
       c.toast('Cleared. Fresh start.');
+    },
+
+    /* The card on Home, tapped. Every announcement has a page of its own now,
+       and this is the way in: the card is a summary and the page is the whole
+       thing, with the video, the pictures and the link on it.
+
+       The x beside it is a sibling and not a child, which is what lets both
+       exist: a button inside a button is invalid markup that every browser
+       resolves differently, and the one thing it must never do is make "put
+       this away" ambiguous with "open this". See announcementCard() in
+       js/screens/home.js. */
+    'open-announcement': function (el) {
+      HC.native.tap('Light');
+      HC.router.go({ name: 'announcement', id: el.getAttribute('data-id') });
     },
 
     'dismiss-banner': function (el) {
@@ -2663,6 +2694,37 @@
       return;
     }
 
+    /* One box in the list of pictures, addressed by where it sits in the list.
+       An index the list does not have is dropped rather than created: the only
+       way to see that box is for the draft to have drawn it, so a stale index
+       means the form has moved on under a keystroke that was already in
+       flight. */
+    if (d && name === 'imageUrl') {
+      var at = parseInt(id, 10);
+      if (d.images[at] !== undefined) d.images[at] = value;
+      paintDraftThumbs(d);
+      return;
+    }
+
+    /* The link, and the one field on this form that fills in another. Pasting
+       a link works out a thumbnail for the two kinds of link this app can work
+       one out for, and stops the moment somebody has had an opinion of their
+       own: the x sets linkImageTouched, and so does typing a thumbnail link by
+       hand, and neither is ever overwritten afterwards. */
+    if (d && name === 'linkUrl') {
+      d.linkUrl = value;
+      if (!d.linkImageTouched) d.linkImageUrl = HC.admin.suggestLinkImage(value);
+      paintDraftThumbs(d);
+      return;
+    }
+
+    if (d && name === 'linkImageUrl') {
+      d.linkImageUrl = value;
+      d.linkImageTouched = true;
+      paintDraftThumbs(d);
+      return;
+    }
+
     if (d && ANNOUNCEMENT_FIELDS[name]) { d[name] = value; return; }
 
     if (p) {
@@ -2678,15 +2740,86 @@
     }
   }
 
+  /* The previews on the announcement form, patched in place rather than
+     redrawn.
+
+     WHY THIS IS THE ONE PLACE THE ADMIN SCREEN TOUCHES THE DOM. Everything
+     else on that screen ends in repaintAdmin(), which rebuilds the form from
+     the draft, and that is the right move for a tap. It is the wrong move for
+     a keystroke, twice over: a repaint mid-word pulls the caret out from under
+     the thumb, and a repaint triggered by a field losing focus destroys the
+     button the thumb is in the middle of pressing, so the tap that caused it
+     never lands. Both were tried. This is what is left: three <img> elements
+     and two hidden attributes, changed under a form that is otherwise
+     untouched.
+
+     Every preview is in the markup from the first draw, hidden until it has
+     something to show, so nothing here creates or removes an element. A
+     picture link typed into a box shows the picture; a link pasted into the
+     link field shows the thumbnail the app worked out for it, with the x that
+     takes it off. See thumb() in js/screens/admin.js. */
+  function paintDraftThumbs(d) {
+    var nodes = document.querySelectorAll('[data-thumb-for]');
+    for (var i = 0; i < nodes.length; i++) {
+      var node = nodes[i];
+      var key = node.getAttribute('data-thumb-for');
+      var url = key === 'link'
+        ? d.linkImageUrl
+        : d.images[parseInt(key.slice('image:'.length), 10)];
+      url = String(url == null ? '' : url).trim();
+
+      var img = node.querySelector('img');
+      // Only when it actually moved. Writing the same src back would restart
+      // the request and flicker the picture on every keystroke.
+      if (img && img.getAttribute('src') !== url) {
+        if (url) img.setAttribute('src', url);
+        else img.removeAttribute('src');
+        // A previous URL that did not load left this behind, and the new one
+        // deserves its own chance to fail.
+        node.removeAttribute('data-failed');
+      }
+      node.hidden = !url;
+
+      /* The row's other way out, for a box with no picture in it yet and so no
+         x to tap. One of the two is always on screen and never both. */
+      var alt = node.parentNode &&
+        node.parentNode.querySelector('[data-thumb-alt="' + key + '"]');
+      if (alt) alt.hidden = !!url;
+    }
+
+    /* The thumbnail box, when the app worked one out from the link rather than
+       somebody typing it. Written into the field as well as into the preview,
+       because a picture on screen that no box accounts for is a picture nobody
+       can tell where came from.
+
+       Never while the caret is in it. Somebody typing their own thumbnail link
+       has already set linkImageTouched, so nothing above would be overwriting
+       them, and this is the belt to that pair of braces. */
+    var box = document.querySelector('[data-admin-field="linkImageUrl"]');
+    if (box && box !== document.activeElement) {
+      var want = String(d.linkImageUrl == null ? '' : d.linkImageUrl);
+      if (box.value !== want) box.value = want;
+    }
+  }
+
+  /* The fields that are one box and one value on the draft. The list of
+     pictures and the two link fields that fill each other in are handled above
+     rather than here, because neither of them is a plain assignment. */
   var ANNOUNCEMENT_FIELDS = {
-    title: true, body: true, eyebrow: true,
-    imageUrl: true, videoUrl: true, startsOn: true, endsOn: true
+    title: true, eyebrow: true, videoUrl: true,
+    linkTitle: true, startsOn: true, endsOn: true
   };
 
   /* The picture. Uploaded the moment it is chosen rather than when the
      announcement is saved, so the person sees it land and can change their
      mind, and so a failure is about the picture rather than about the whole
-     announcement. */
+     announcement.
+
+     Appended rather than assigned, which is the whole of "and another one":
+     choosing three photographs off the phone is three taps of the same button
+     and never a decision about which of them survives. A box somebody added
+     with + and left empty takes the upload instead of growing the list, so
+     tapping + and then Choose a picture does what it looks like it does. */
   function uploadAnnouncementImage(file) {
     var h = adminHelpers();
     if (!file || !h.getDraft()) return;
@@ -2696,7 +2829,10 @@
 
     HC.admin.uploadImage(file).then(function (url) {
       var d = h.getDraft();
-      if (d) d.imageUrl = url;
+      if (!d) return;
+      var empty = d.images.indexOf('');
+      if (empty > -1) d.images[empty] = url;
+      else d.images.push(url);
     }).catch(function (err) {
       HC.components.toast(err.message || 'That picture would not upload.');
     }).then(function () {
@@ -2736,6 +2872,29 @@
 
   function wireEvents() {
     document.addEventListener('click', function (evt) {
+      /* A real <a> in text somebody wrote: a scripture reference in a journal
+         entry, a link in an announcement. Nothing else in this app renders
+         one, because every other destination is a button carrying a
+         data-action.
+
+         Intercepted rather than followed, and this is not a nicety. Left
+         alone, a tap on one navigates the web view itself: in a browser that
+         is the app replaced by a web page with no way back to where somebody
+         was reading, and in the packaged app it is a chance the native shell
+         happens to catch it first. openExternal() is the one door every other
+         outbound link in this app already goes through, so it lands in the
+         phone's browser, or in Mail or the dialer for the schemes that want
+         those, and the app is still behind it.
+
+         Skipped inside a writing surface, where a tap is somebody putting the
+         caret in their own sentence and not asking to go anywhere. */
+      var link = evt.target.closest && evt.target.closest('a[href]');
+      if (link && !link.closest('[contenteditable="true"]')) {
+        evt.preventDefault();
+        c.openExternal(link.getAttribute('href'));
+        return;
+      }
+
       var el = evt.target.closest('[data-action]');
       if (!el) return;
       var name = el.getAttribute('data-action');
@@ -2928,6 +3087,27 @@
         return;
       }
 
+      /* The announcement's words, in the same editor. Into the draft and
+         nowhere else, the same as every other field on that form: nothing is
+         saved to Supabase until somebody presses the button, which is what
+         makes Cancel mean something. Not debounced and not sanitized here
+         either, for the same reason the Admin form does neither: the markup is
+         cleaned on the way out, in announcementWords(), where it can also be
+         mirrored to plain text in the same pass. */
+      if (el.getAttribute && el.getAttribute('data-admin-body') !== null) {
+        var draft = adminHelpers().getDraft();
+        if (draft) draft.bodyHtml = el.innerHTML;
+        return;
+      }
+
+      // The link sheet's two boxes. Nothing repaints, for the reason on
+      // linkPick in js/editor.js: a repaint mid-word takes the keyboard down.
+      var linkPart = el.getAttribute && el.getAttribute('data-link');
+      if (linkPart) {
+        HC.editor.setLink(linkPart, el.value);
+        return;
+      }
+
       if (el.getAttribute && el.getAttribute('data-journal-guide') !== null) {
         var j = HC.screens.journalHelpers;
         var wrap = el.closest('[data-entry]');
@@ -3113,6 +3293,7 @@
         give: HC.screens.give,
         profile: HC.screens.profile,
         admin: HC.screens.admin,
+        announcement: HC.screens.announcement,
         page: HC.screens.page,
         leader: HC.screens.leader,
         'guide-reader': HC.screens.guideReader,

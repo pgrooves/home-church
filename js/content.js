@@ -198,6 +198,19 @@
     };
   }
 
+  /* An announcement's pictures, as one list. image_urls when the row has one,
+     the single image_url when it does not, and [] when there is no picture at
+     all. Strings only: anything else in the array is dropped rather than
+     drawn. */
+  function imageList(r) {
+    var list = Array.isArray(r.image_urls) ? r.image_urls : [];
+    var urls = list.filter(function (u) {
+      return typeof u === 'string' && u.trim();
+    }).map(function (u) { return u.trim(); });
+    if (urls.length) return urls;
+    return r.image_url ? [String(r.image_url)] : [];
+  }
+
   function mapAnnouncement(r) {
     return {
       id: r.id,
@@ -212,6 +225,13 @@
         (r.created_at ? localDate(new Date(r.created_at)) : null),
       title: str(r.title),
       body: str(r.body),
+      /* The same words as markup, or null for a row written before migration
+         0033. Not sanitized here, deliberately: this file runs before
+         js/richtext.js is loaded and, more to the point, the screen that draws
+         it sanitizes on the way to innerHTML, which is the only place that can
+         be true of a payload restored from a cache written by an older build.
+         See js/screens/announcement.js. */
+      bodyHtml: r.body_html || null,
       // The window has to survive the mapping or it may as well not be in the
       // table. Home applies it at render, not here, because this payload gets
       // cached: a phone that opens tomorrow on today's cache still has to see
@@ -224,6 +244,24 @@
       // frame is worse than no frame. Same rule as episodeUrl above.
       imageUrl: r.image_url || null,
       videoUrl: r.video_url || null,
+      /* Every picture, in order. One list rather than a lead image and a list
+         beside it, so nothing downstream has to work out whether image_url is
+         also the first of these: the mapper answers that here, once, and falls
+         back to the single column for a row written before 0033 and for a
+         cached payload that has never seen one.
+
+         Filtered rather than trusted, because this array crosses the network
+         and comes back out of localStorage: a null in it would draw an <img>
+         with no src, which is the broken image glyph in the middle of a
+         gallery. */
+      images: imageList(r),
+      /* The attached link. All three can be null and each of them means
+         something on its own: no link at all, a link with no name of its own,
+         and a link whose thumbnail the admin took off with the x on the form.
+         See js/screens/announcement.js. */
+      linkUrl: r.link_url || null,
+      linkTitle: r.link_title || null,
+      linkImageUrl: r.link_image_url || null,
       /* The strip under the top bar, on every tab, carrying this
          announcement's title. Coerced rather than passed through, because a
          phone holding a cached payload written before migration 0028 has no

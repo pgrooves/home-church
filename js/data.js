@@ -2331,14 +2331,24 @@
       publishedOn: '2026-08-16',
       title: 'City Serve Day, September 12',
       body: 'Four sites, one Saturday, every hand we can get. Sign up at the Welcome Desk or tell your group leader.',
+      // No markup, so the announcement's own page draws `body` as paragraphs
+      // the way it did before the editor existed. A bundled announcement is
+      // the floor a phone with no signal stands on and it is one sentence:
+      // there is nothing here worth a bold word.
+      bodyHtml: null,
       startsOn: null,
       endsOn: null,
       priority: 0,
-      // A bundled announcement has no picture and no video. Both fields exist
-      // anyway so the shape matches the mapper in js/content.js exactly, and
-      // Home never has to ask which kind of announcement it is holding.
+      // A bundled announcement has no picture, no video and no link. Every
+      // field exists anyway so the shape matches the mapper in js/content.js
+      // exactly, and no screen has to ask which kind of announcement it is
+      // holding.
       imageUrl: null,
       videoUrl: null,
+      images: [],
+      linkUrl: null,
+      linkTitle: null,
+      linkImageUrl: null,
       // Never pinned. A bundled announcement is the floor a phone with no
       // signal stands on, and a strip across the top of every tab that no
       // admin chose and no admin can take down is not a floor, it is a fault.
@@ -2656,6 +2666,25 @@
       return this.liveAnnouncements().filter(function (a) {
         return !!a.pinned;
       });
+    },
+
+    /* One announcement by its permanent id, or null.
+
+       ASKED OF THE WHOLE LIST AND NOT OF THE LIVE ONE, which is the only
+       interesting thing about it. An announcement's own page is a route with
+       an id in it, so it is a real address: it is in the history stack, the
+       back gesture returns to it, and a phone that was reading one when its
+       dates ran out should see the words it was reading rather than a screen
+       that empties itself mid-sentence. The card comes off Home at midnight,
+       which is what the window is for; the page somebody navigated to does
+       not, and the screen says how old it is instead. See
+       js/screens/announcement.js.
+
+       Null is a real answer. It is what a deleted announcement gives, and
+       what an id from a history entry written by an older build gives, and
+       the screen draws the warm version of "not here" for both. */
+    getAnnouncement: function (id) {
+      return announcements.filter(function (a) { return a.id === id; })[0] || null;
     }
   };
 

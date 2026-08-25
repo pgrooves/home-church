@@ -163,6 +163,76 @@
       encodeURIComponent(reference) + '&version=ESV';
   }
 
+  /* ------------------------------------------------------------------ links
+
+     What somebody typed, as a URL the app is willing to open, or '' for
+     something it is not. Three callers: the link button in the editor, the
+     link field on the announcement form, and the announcement screen that
+     draws the card. One reading of "is that a link" between them, because a
+     URL the form accepted and the screen then refused to draw would be a
+     silently missing card.
+
+     A bare host gets https:// because that is what somebody typing
+     `homechurch.org/serve` into a phone means, and a bare email address gets
+     mailto: for the same reason. Everything else has to name its own scheme,
+     and only four are allowed: the same four js/richtext.js keeps inside an
+     announcement's markup, so a link cannot be attached that could not have
+     been typed into the words.
+     ---------------------------------------------------------------------- */
+
+  var WEB_SCHEME = /^(?:https?|mailto|tel):/i;
+
+  function webUrl(value) {
+    var url = String(value == null ? '' : value).trim();
+    if (!url) return '';
+    if (WEB_SCHEME.test(url)) return url;
+    if (/^[^\s@:/]+@[^\s@:/]+\.[a-z]{2,}$/i.test(url)) return 'mailto:' + url;
+    // A host, with an optional path, query or fragment after it. Deliberately
+    // not a general URL parser: this only has to recognise what a person
+    // pastes out of a browser's address bar with the scheme trimmed off.
+    if (/^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]*[a-z0-9])?)+(?:[:/?#].*)?$/i.test(url)) {
+      return 'https://' + url;
+    }
+    return '';
+  }
+
+  /* The host, without the www., for a link card that has no title of its own.
+     "eventbrite.com" is a better thing to show under a thumbnail than the
+     ninety character tracking URL underneath it. */
+  function urlHost(url) {
+    var m = /^[a-z][a-z0-9+.-]*:\/\/([^/?#]+)/i.exec(String(url || ''));
+    if (!m) {
+      var mail = /^mailto:(.+)$/i.exec(String(url || ''));
+      return mail ? mail[1] : '';
+    }
+    return m[1].replace(/^www\./i, '').replace(/:\d+$/, '');
+  }
+
+  /* The eleven characters in the middle of a YouTube link, or ''. Every shape
+     a person can arrive with: the watch URL, the share URL, the embed URL, the
+     live URL, and a bare id pasted on its own.
+
+     "videoseries" is refused by name, exactly as js/app.js refuses it before
+     building a player: it is a real eleven character base64url string, so no
+     pattern can tell it from an id, and it is YouTube's playlist path. A
+     pasted playlist URL would otherwise sail through here and render an error
+     player on Home. */
+  function youtubeId(url) {
+    var value = String(url == null ? '' : url).trim();
+    if (!value) return '';
+    var m = /(?:youtu\.be\/|\/embed\/|\/live\/|\/shorts\/|[?&]v=)([A-Za-z0-9_-]{11})/.exec(value) ||
+            /^([A-Za-z0-9_-]{11})$/.exec(value);
+    if (!m || m[1] === 'videoseries') return '';
+    return m[1];
+  }
+
+  // YouTube's own poster for a video. hqdefault rather than maxresdefault:
+  // every video has one, and the larger size is missing on plenty of them,
+  // which would draw the broken image glyph in place of a photograph.
+  function youtubeThumb(id) {
+    return id ? 'https://i.ytimg.com/vi/' + id + '/hqdefault.jpg' : '';
+  }
+
   /* ----------------------------------------------------------------- icons
      Thin line icons, 1.5 stroke, rounded caps, drawn on a 24 grid.
      ---------------------------------------------------------------------- */
@@ -714,6 +784,10 @@
     openExternal: openExternal,
     bibleUrl: bibleUrl,
     smsUrl: smsUrl,
+    webUrl: webUrl,
+    urlHost: urlHost,
+    youtubeId: youtubeId,
+    youtubeThumb: youtubeThumb,
 
     sectionHeader: sectionHeader,
     quoteCard: quoteCard,

@@ -168,8 +168,22 @@
 
   function blankDraft() {
     return {
-      id: null, eyebrow: '', title: '', body: '',
-      imageUrl: '', videoUrl: '',
+      id: null, eyebrow: '', title: '',
+      // Markup, from the same editor the Journal writes in. The plain text
+      // the notification reads is derived from this on save and is not a
+      // field anybody fills in. See announcementWords() in js/admin.js.
+      bodyHtml: '',
+      // Every picture, in the order they will be shown. Empty, so a new
+      // announcement opens with no picture box at all: most of them have no
+      // photograph, and an empty box is a question nobody asked.
+      images: [],
+      videoUrl: '',
+      linkUrl: '', linkTitle: '', linkImageUrl: '',
+      // Whether somebody has had an opinion about the thumbnail yet. Until
+      // they have, pasting a link fills it in for them; once they have, a
+      // second paste never overwrites what they chose. See the x in
+      // linkFields() and 'admin-link-thumb-clear' in js/app.js.
+      linkImageTouched: false,
       startsOn: '', endsOn: '', priority: 0,
       published: true,
       // Off unless somebody asks for it. The strip is the most insistent
@@ -180,14 +194,46 @@
     };
   }
 
+  /* An announcement written before the rich text editor existed has words in
+     `body` and nothing in `body_html`. Opening it here has to put those words
+     in the editor, or saving a date change would take the paragraph off Home.
+     So plain text becomes paragraphs on the way in, which is the same
+     conversion js/journal.js makes for an entry that started as a highlight,
+     and after one save the row has both columns like every other one. */
+  function draftBody(row) {
+    if (row.body_html) return row.body_html;
+    return row.body ? HC.richtext.textToHtml(row.body) : '';
+  }
+
+  /* The pictures, from whichever column this row actually has. 0033's list
+     wins; 0026's single column is the fallback, so an announcement written
+     last month opens with its photograph in the first box rather than with an
+     empty one and a picture that reappears on Home after the save. */
+  function draftImages(row) {
+    var list = Array.isArray(row.image_urls) ? row.image_urls : [];
+    var urls = list.filter(function (u) {
+      return typeof u === 'string' && u.trim();
+    }).map(function (u) { return u.trim(); });
+    if (urls.length) return urls;
+    return row.image_url ? [String(row.image_url)] : [];
+  }
+
   function editorFor(row) {
     return {
       id: row.id,
       eyebrow: row.eyebrow || '',
       title: row.title || '',
-      body: row.body || '',
-      imageUrl: row.image_url || '',
+      bodyHtml: draftBody(row),
+      images: draftImages(row),
       videoUrl: row.video_url || '',
+      linkUrl: row.link_url || '',
+      linkTitle: row.link_title || '',
+      linkImageUrl: row.link_image_url || '',
+      // True from the moment an announcement is opened, never derived. What
+      // is on the row is what somebody already decided, including the
+      // decision to have no thumbnail at all, and re-deriving one here would
+      // put back the picture they took off last week.
+      linkImageTouched: true,
       startsOn: row.starts_on || '',
       endsOn: row.ends_on || '',
       priority: row.priority || 0,
@@ -218,6 +264,135 @@
     })[0] || null;
   }
 
+  /* -------------------------------------------------------- the pictures
+
+     A list rather than a field, which is the whole of change A's second half.
+     Each row is a box holding one URL with its own preview above it and its
+     own x, and the + at the bottom adds another empty one. The file picker
+     appends rather than replaces, so choosing three photographs off the phone
+     is three taps of the same button and not a decision about which one wins.
+
+     THE PREVIEW IS THE POINT OF THE X BEING WHERE IT IS. Every thumbnail in
+     this form carries its remove in its own top right corner, the picture
+     rows and the link's thumbnail alike, so "take this one off" is the same
+     gesture wherever somebody meets it.
+
+     IT IS ALWAYS IN THE MARKUP, hidden while it has no picture to show, and
+     `key` is how paintDraftThumbs() in js/app.js finds it again. That is what
+     lets a pasted picture link appear under the box as it is typed without the
+     form being redrawn: a redraw on a keystroke takes the caret with it, and a
+     redraw on a field losing focus destroys the button that is in the middle
+     of being pressed. Drawn here with the state the draft is already in, so
+     opening an announcement that has pictures shows them without waiting for
+     anybody to type.
+
+     No src attribute at all while it is empty, because `src=""` is a real
+     request, for the page itself. */
+  function thumb(key, url, action, id, label) {
+    return '' +
+      '<div class="hc-admin__thumb" data-media-fallback ' +
+          'data-thumb-for="' + c.esc(key) + '"' + (url ? '' : ' hidden') + '>' +
+        '<img' + (url ? ' src="' + c.esc(url) + '"' : '') +
+          ' alt="" decoding="async" loading="lazy">' +
+        '<button type="button" class="hc-admin__thumb-x" data-action="' + c.esc(action) + '" ' +
+          (id == null ? '' : 'data-id="' + c.esc(id) + '" ') +
+          'aria-label="' + c.esc(label) + '">' + c.icon('close') + '</button>' +
+      '</div>';
+  }
+
+  function imageFields(d) {
+    var html = '<div class="hc-admin__image">';
+    html += '<span class="hc-field__label">Pictures</span>';
+
+    if (!d.images.length) {
+      html += '<p class="hc-caption hc-admin__loading">No pictures yet. Choose one ' +
+        'off this phone, or paste a link to one.</p>';
+    }
+
+    d.images.forEach(function (url, i) {
+      html += '<div class="hc-admin__image-row">';
+      html += thumb('image:' + i, url, 'admin-image-remove', String(i),
+        'Remove this picture');
+      html += field({
+        name: 'imageUrl', id: String(i),
+        label: 'Picture ' + (i + 1),
+        value: url,
+        placeholder: 'https://…'
+      });
+      /* The row's other way out, for a box with nothing in it yet and so no
+         thumbnail to carry an x. One of the two is on screen and never both,
+         which paintDraftThumbs() keeps true as the box is typed into. */
+      html += '<div class="hc-admin__item-actions" data-thumb-alt="image:' + i + '"' +
+          (url ? ' hidden' : '') + '>' +
+        c.button('Remove', { action: 'admin-image-remove', id: String(i),
+          variant: 'tertiary', small: true }) +
+      '</div>';
+      html += '</div>';
+    });
+
+    /* Two ways to add one, because they solve different problems: the file
+       picker is for the photograph that is already on this phone, which is
+       most of them, and + is for one that lives somewhere else already. Both
+       append to the same list. */
+    html += '<div class="hc-admin__image-add">';
+    html += '<label class="hc-admin__file">' +
+      '<input type="file" accept="image/*" data-admin-image hidden>' +
+      '<span class="hc-btn hc-btn--secondary hc-btn--small">' +
+        c.icon('plus', 'hc-btn__icon') +
+        '<span>' + (uploading ? 'Uploading…' : 'Choose a picture') + '</span>' +
+      '</span>' +
+    '</label>';
+    html += c.button('Add a picture link', { action: 'admin-image-add',
+      variant: 'secondary', small: true, icon: 'plus' });
+    html += '</div>';
+
+    html += '<p class="hc-caption hc-field__help">They appear in this order, ' +
+      'under the words. The first one is the picture on the card on Home.</p>';
+
+    return html + '</div>';
+  }
+
+  /* ----------------------------------------------------------- the link
+
+     One link, with a thumbnail that can be taken off. The x sits in the
+     thumbnail's own top right corner, which is where change A asked for it and
+     is the same corner the picture rows put theirs in.
+
+     The thumbnail is filled in for a YouTube link and for a link that is
+     itself a photograph, and left empty for everything else, which is most
+     links. suggestLinkImage() in js/admin.js says at length why the app does
+     not go and fetch the page to look for an og:image. Where it cannot guess,
+     the Picture control above is the answer: paste or upload one and it is the
+     card's thumbnail. */
+  function linkFields(d) {
+    var html = '<div class="hc-admin__link">';
+    html += '<span class="hc-field__label">A link</span>';
+
+    html += field({ name: 'linkUrl', label: 'Where it goes', value: d.linkUrl,
+      placeholder: 'homechurch.org/serve',
+      help: 'A web address, an email address, or a phone number.' });
+
+    /* All three fields are always here, and none of them appears or
+       disappears as the one above is typed into. That is not tidiness: making
+       these conditional on d.linkUrl would mean the form changing shape on the
+       first letter of a link, which either costs a redraw mid-word or leaves
+       the fields hidden until something else redraws. Two optional boxes with
+       a sentence under each is the cheaper answer. */
+    html += field({ name: 'linkTitle', label: 'What to call it', value: d.linkTitle,
+      placeholder: 'Sign up for Serve Day',
+      help: 'Optional. Empty shows the link’s own address.' });
+
+    html += thumb('link', d.linkImageUrl, 'admin-link-thumb-clear', null,
+      'Show this link without a thumbnail');
+
+    html += field({ name: 'linkImageUrl', label: 'Thumbnail', value: d.linkImageUrl,
+      placeholder: 'https://…',
+      help: 'Filled in for a YouTube link. The x on the picture takes it off ' +
+        'and leaves the link.' });
+
+    return html + '</div>';
+  }
+
   function announcementForm() {
     var d = draft;
     var isNew = !d.id;
@@ -227,42 +402,45 @@
     html += field({ name: 'title', label: 'Title', value: d.title,
       placeholder: 'City Serve Day, September 12' });
 
-    html += textarea({ name: 'body', label: 'What it says', value: d.body, rows: 4,
-      placeholder: 'One or two warm sentences.' });
+    /* The words, in the app's own editor rather than in a textarea. Bold,
+       italic, underline, both kinds of list, a real hyperlink, and the
+       scripture button the Journal has. Same surface an admin has already used
+       to write a journal entry, which is the reason it is this one and not a
+       second editor written for this form. See js/editor.js.
+
+       links: 'web' is what separates it from the Journal's: an announcement
+       may carry an ordinary link and an entry may not. js/richtext.js says
+       why. */
+    html += '<div class="hc-field">' +
+      '<span class="hc-field__label">What it says</span>' +
+      HC.editor.field({
+        hook: 'admin-body',
+        links: 'web',
+        status: false,
+        className: 'hc-rt--admin',
+        html: d.bodyHtml,
+        label: 'What the announcement says',
+        placeholder: 'One or two warm sentences.'
+      }) +
+    '</div>';
 
     html += field({ name: 'eyebrow', label: 'Label', value: d.eyebrow,
       placeholder: 'One thing',
       help: 'Optional. Leave it empty and the card shows the date it went up.' });
 
-    /* The picture. Two ways in, because they solve different problems: the
-       file picker is for the photograph that is already on this phone, which
-       is most of them, and the URL field is for one that already lives
-       somewhere else. They write the same column, so the second overwrites
-       the first and the preview always shows what will actually be saved. */
-    html += '<div class="hc-admin__image">';
-    html += '<span class="hc-field__label">Picture</span>';
-    if (d.imageUrl) {
-      html += '<div class="hc-admin__thumb">' +
-        '<img src="' + c.esc(d.imageUrl) + '" alt="" decoding="async">' +
-        '<button type="button" class="hc-btn hc-btn--tertiary hc-btn--small" ' +
-          'data-action="admin-image-clear">Remove picture</button>' +
-      '</div>';
-    }
-    html += '<label class="hc-admin__file">' +
-      '<input type="file" accept="image/*" data-admin-image hidden>' +
-      '<span class="hc-btn hc-btn--secondary">' +
-        c.icon('plus', 'hc-btn__icon') +
-        '<span>' + (uploading ? 'Uploading…' : (d.imageUrl ? 'Choose a different one' : 'Choose a picture')) + '</span>' +
-      '</span>' +
-    '</label>';
-    html += field({ name: 'imageUrl', label: 'Or paste a picture link', value: d.imageUrl,
-      placeholder: 'https://…',
-      help: 'Only if the picture already lives somewhere else.' });
-    html += '</div>';
+    html += imageFields(d);
 
-    html += field({ name: 'videoUrl', label: 'Video link', value: d.videoUrl,
+    html += field({ name: 'videoUrl', label: 'YouTube video', value: d.videoUrl,
       placeholder: 'https://youtube.com/watch?v=…',
-      help: 'Optional. Shows a button on the card that opens the video in your browser.' });
+      help: 'Optional. The video plays inside the announcement, in the app.' });
+
+    if (d.videoUrl && !c.youtubeId(d.videoUrl)) {
+      html += '<p class="hc-caption hc-admin__warn">That is not a YouTube link ' +
+        'this app can play. A watch, share or embed link works; a playlist ' +
+        'does not.</p>';
+    }
+
+    html += linkFields(d);
 
     html += '<div class="hc-form-row">' +
       field({ name: 'startsOn', label: 'Starts', type: 'date', value: d.startsOn,

@@ -1330,7 +1330,61 @@ a.hc-card:active { background: var(--hc-paper-sunk); }
   padding: var(--hc-space-base) var(--hc-space-base) var(--hc-space-base) var(--hc-card-pad);
 }
 
-.hc-banner__body { flex: 1 1 auto; min-width: 0; }
+/* The card is a door. Everything but the x is inside one button, which is
+   what makes the whole surface open the announcement's own page, and the x is
+   its sibling rather than its child because a button inside a button is
+   invalid markup and an ambiguous tap. See announcementCard() in
+   js/screens/home.js. */
+.hc-banner__open {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: none;
+  color: inherit;
+}
+
+/* No `> * + *` stack here on purpose: the title and the picture frame already
+   carry their own margins from before the card became a button, and a second
+   rule on top of them would double every gap. */
+.hc-banner__label,
+.hc-banner__snippet { display: block; }
+
+/* Three lines of the announcement and then it stops, the same rule an
+   Instagram caption is held to on Connect and for the same reason: the front
+   door shows enough to decide with, and the whole of it is one tap away on a
+   screen where it reads properly. */
+.hc-banner__snippet {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  color: var(--hc-mid);
+}
+
+/* What else is behind the card, and the chevron that says there is a behind.
+   Same shape as the cue on the guide card above it, so two tappable cards on
+   one screen say "there is more of this" the same way. */
+.hc-banner__cue {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: var(--hc-space-md);
+  color: var(--hc-accent-deep);
+}
+
+.hc-banner__chev {
+  width: 14px; height: 14px;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  fill: none;
+}
+
+.hc-banner__open:active { opacity: 0.85; }
 
 .hc-banner__dismiss {
   flex: 0 0 auto;
@@ -2365,8 +2419,10 @@ a.hc-card:active { background: var(--hc-paper-sunk); }
    Announcements, continued
 
    The banner used to be one card at a time. It is a list now, written from
-   Settings -> Admin, and it can carry a photograph and a link to a video.
-   See the long note in js/screens/home.js about why the one-card rule went.
+   Settings -> Admin, and each card is a door into the announcement's own
+   page. See the long note in js/screens/home.js about why the one-card rule
+   went, and the one above announcementCard() about why the card became a
+   button.
    -------------------------------------------------------------------------- */
 
 .hc-banner + .hc-banner { margin-top: var(--hc-space-md); }
@@ -2380,12 +2436,10 @@ a.hc-card:active { background: var(--hc-paper-sunk); }
   border-radius: var(--hc-radius-sm);
 }
 
-.hc-banner__video {
-  display: block;
-  margin-top: var(--hc-space-md);
-}
-
-.hc-banner__video .hc-btn { margin-top: 0; }
+/* The video used to be a Watch button on the card, opening YouTube in the
+   phone's browser. It plays in the app now, on the announcement's own page,
+   so there is no button here any more. See video() in
+   js/screens/announcement.js. */
 
 /* --------------------------------------------------------------------------
    The pinned line
@@ -2506,23 +2560,10 @@ a.hc-card:active { background: var(--hc-paper-sunk); }
 
 .hc-pinbar__dismiss:active svg { opacity: 0.5; }
 
-/* Where the strip lands you. The card is already on the screen by the time
-   this runs, and a scroll that ends somewhere in a list of three
-   announcements does not say which one was meant, so the one that was asked
-   for holds a moment of gold and then lets it go. Two seconds, no movement,
-   nothing to dismiss. See scrollToAnnouncement() in js/app.js. */
-/* The transition is on the card and not on the flashed state, so the gold
-   fades out as well as in. On the state it would only ever be applied while
-   the attribute was there, and taking it off would snap. */
-.hc-banner {
-  transition: box-shadow var(--hc-dur-base) var(--hc-ease),
-              border-color var(--hc-dur-base) var(--hc-ease);
-}
-
-.hc-banner[data-flash="true"] {
-  border-left-color: var(--hc-gold);
-  box-shadow: 0 0 0 1.5px var(--hc-gold);
-}
+/* The strip used to land on Home and flash the card gold, which was how a
+   person told which of three cards it had meant. It opens the announcement's
+   own page now, so there is nothing left to point at and the gold has gone
+   with the scroll that needed it. See openPinned() in js/app.js. */
 
 .hc-pinned__text {
   font-family: var(--hc-sans);

@@ -32,9 +32,27 @@ the chat.
 |---|---|---|
 | Title | yes | `City Serve Day, September 12`. The thing itself, with its date in it |
 | Body | yes | One or two sentences, what to do about it |
+| Pictures | no | Any number, as https URLs. The first one is the picture on the card on Home |
+| Video | no | A YouTube link. It plays inside the app, on the announcement's own page |
+| Link | no | Where to sign up. Optionally a name for it and a thumbnail |
 | Runs from | no | Null shows it immediately |
 | Runs until | no | Null runs until you take it down |
 | Pin a banner | no | Off unless they ask. See below |
+
+**The words are two columns and you write both.** `body` is the plain text, and
+it is what the push notification puts on a lock screen and what Home prints
+under the title on the card. `body_html` is the same words as markup, and it is
+what the announcement's own page draws. Write `body_html` as simple paragraphs,
+`<p>…</p>`, with `<strong>`, `<em>`, `<ul><li>` and `<a href>` only where they
+earn their place, and make `body` say exactly the same thing with the tags
+taken off. A row with only `body` is fine and is what every announcement
+written before the editor looks like; a row with only `body_html` is not, and
+would send an empty notification.
+
+**Only four link schemes survive**, in `body_html` and in `link_url` alike:
+`http`, `https`, `mailto` and `tel`. The app sanitizes markup on the way in and
+again on the way out, against the allowlist in `js/richtext.js`, so anything
+else is dropped on the floor by the phone rather than refused here.
 
 **Only pin when somebody asks for it in those words.** `pinned` puts the title
 across the top of every tab, not just Home: it follows a person into Listen,
@@ -127,6 +145,13 @@ python3 scripts/hc_supabase.py upsert announcements /tmp/announcement-your-slug.
   "eyebrow": null,            // unread, Home dates the label itself
   "title": "City Serve Day, September 12",
   "body": "Four sites, one Saturday, every hand we can get. Sign up at the Welcome Desk or tell your group leader.",
+  "body_html": "<p>Four sites, one Saturday, every hand we can get. Sign up at the Welcome Desk or tell your group leader.</p>",
+  "image_urls": [],           // https URLs, in the order they are shown
+  "image_url": null,          // the first of image_urls, for older builds
+  "video_url": null,          // a YouTube link, played in the app
+  "link_url": null,           // where to sign up
+  "link_title": null,         // null shows the link's own host
+  "link_image_url": null,     // null draws the link card without a thumbnail
   "starts_on": null,          // null shows it immediately
   "ends_on": "2026-09-13",    // takes itself down, nobody has to remember
   "priority": 0,
@@ -134,6 +159,11 @@ python3 scripts/hc_supabase.py upsert announcements /tmp/announcement-your-slug.
   "published": true
 }
 ```
+
+**`image_url` is not a second opinion.** It is the first entry of `image_urls`,
+written by whoever writes the list, and it exists so a phone running a build
+from before `0033_announcement_media.sql` still shows a photograph. Keep them
+in step or that phone shows a picture the church has taken off.
 
 To pull one early, unpublish rather than delete:
 

@@ -78,7 +78,7 @@ SQL that lists the tables.
 | `guides` | Small group guides, the whole `Guide {}` model | Grow, guide reader, leader mode |
 | `podcasts` | Sunday messages as episodes, external media links | Listen |
 | `events` | The events calendar | Connect |
-| `announcements` | The announcement cards at the top of Home, each with a date window, an optional picture and an optional video link | Home, Admin |
+| `announcements` | The announcement cards at the top of Home, each with a date window, formatted words, any number of pictures, an optional YouTube video and an optional link | Home, Admin, the announcement's own page |
 | `reading_plans` | The Reading together plan, one row per plan | Home |
 | `groups` | Small groups, night, host, neighborhood, and whether there is room | Connect |
 | `serve_teams` | The Lend a hand list | Connect |

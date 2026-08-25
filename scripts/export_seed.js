@@ -183,6 +183,20 @@ const announcements = D.announcements.map(a => ({
   eyebrow: null,
   title: a.title,
   body: a.body || null,
+  /* The markup half of the words. A bundled announcement is the floor a phone
+     with no signal stands on and it is one sentence, so this is normally null,
+     which is exactly what a row written before the editor looks like. Passed
+     through rather than derived from `body`: a paragraph the seed invented
+     would be a paragraph nobody wrote. See migration 0033. */
+  body_html: a.bodyHtml || null,
+  image_urls: a.images || [],
+  // The first of the list, kept in step by whoever writes the list, for a
+  // phone running a build from before 0033. Never a second opinion.
+  image_url: (a.images && a.images[0]) || a.imageUrl || null,
+  video_url: a.videoUrl || null,
+  link_url: a.linkUrl || null,
+  link_title: a.linkTitle || null,
+  link_image_url: a.linkImageUrl || null,
   starts_on: a.startsOn || null,
   ends_on: a.endsOn || null,
   priority: a.priority || 0,

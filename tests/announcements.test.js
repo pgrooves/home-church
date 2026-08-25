@@ -14,6 +14,15 @@
    did both, the bug would look like the app forgetting things people had not
    asked it to forget.
 
+   AND SINCE AN ANNOUNCEMENT GREW A PAGE, two more seams that fail quietly.
+   getAnnouncement() answers for an announcement whose dates have run out,
+   deliberately, and a test is the only thing that stops somebody "fixing"
+   that into liveAnnouncements() and emptying a page under a reader. And the
+   three URL readings in js/components.js are shared by the admin form, the
+   editor's link button and the announcement screen: a link the form accepted
+   and the screen then refused to draw would be a card that silently is not
+   there.
+
    No browser. jsdom is not a dependency of this project and is not going to
    become one, so localStorage is faked below with the smallest thing that
    behaves correctly for what js/store.js asks of it, exactly as
@@ -78,11 +87,16 @@ function ann(over) {
     publishedOn: TODAY,
     title: 'Something',
     body: '',
+    bodyHtml: null,
     startsOn: null,
     endsOn: null,
     priority: 0,
     imageUrl: null,
     videoUrl: null,
+    images: [],
+    linkUrl: null,
+    linkTitle: null,
+    linkImageUrl: null,
     pinned: false,
     createdAt: TODAY + 'T12:00:00Z'
   }, over || {});
@@ -194,6 +208,88 @@ const ids = list => list.map(a => a.id);
   // if something ever hands it a row that skipped that mapping.
   withAnnouncements(HC, [ann({ id: 'no-key', pinned: undefined })]);
   ok('a row with no pinned key is not pinned', ids(HC.data.pinnedAnnouncements()), []);
+}
+
+/* -------------------------------------------------- an announcement's page */
+
+{
+  const HC = load(['data.js']);
+
+  withAnnouncements(HC, [
+    ann({ id: 'up' }),
+    ann({ id: 'came-down', endsOn: TODAY }),
+    ann({ id: 'not-yet', startsOn: TOMORROW })
+  ]);
+
+  ok('the page finds an announcement that is on Home',
+    (HC.data.getAnnouncement('up') || {}).id, 'up');
+
+  /* THE WHOLE POINT OF IT BEING getAnnouncement AND NOT getLiveAnnouncement.
+     A page is an address: it is in somebody's history, and it is where a
+     notification left on a lock screen for a fortnight lands. The card comes
+     off Home at midnight, which is what the window is for; the page still has
+     to hold the words that were being read, with a line saying it has come
+     down. See windowNote() in js/screens/announcement.js. */
+  ok('and one whose dates have run out, which the page says so about',
+    (HC.data.getAnnouncement('came-down') || {}).id, 'came-down');
+  ok('and one that has not gone up yet',
+    (HC.data.getAnnouncement('not-yet') || {}).id, 'not-yet');
+
+  // Deleted, or an id off a history entry written by an older build. Both
+  // want the same screen, which is not an error page.
+  ok('an id nobody has is null', HC.data.getAnnouncement('nonsense'), null);
+  ok('and so is no id at all', HC.data.getAnnouncement(''), null);
+}
+
+/* ------------------------------------------------------------ the two URLs
+
+   Read by three places that must agree: the admin form, which decides whether
+   to draw a thumbnail; the link button in the editor, which decides whether to
+   insert an anchor; and the announcement screen, which decides whether to draw
+   the card at all. A link one of them accepts and another refuses is a card
+   that is silently missing. */
+
+{
+  const sandbox = { window: {} };
+  sandbox.window.window = sandbox.window;
+  vm.createContext(sandbox);
+  vm.runInContext(
+    fs.readFileSync(path.join(__dirname, '..', 'js', 'components.js'), 'utf8'), sandbox);
+  const c = sandbox.window.HC.components;
+
+  ok('a full link is left alone',
+    c.webUrl('https://homechurch.org/serve'), 'https://homechurch.org/serve');
+  ok('a bare host gets https, which is what typing one means',
+    c.webUrl('homechurch.org/serve'), 'https://homechurch.org/serve');
+  ok('an email address gets mailto',
+    c.webUrl('hello@homechurch.org'), 'mailto:hello@homechurch.org');
+  ok('a phone number is kept as one', c.webUrl('tel:+15045551234'), 'tel:+15045551234');
+
+  // The three that must never come back as something the app will open.
+  ok('javascript: is not a link', c.webUrl('javascript:steal()'), '');
+  ok('nor is data:', c.webUrl('data:text/html,<script>steal()</script>'), '');
+  ok('nor is a sentence somebody typed', c.webUrl('ask at the welcome desk'), '');
+  ok('and empty is empty', c.webUrl(''), '');
+
+  ok('the host is what a link card says under its title',
+    c.urlHost('https://www.eventbrite.com/e/serve-day?aff=x'), 'eventbrite.com');
+  ok('an email link says the address',
+    c.urlHost('mailto:hello@homechurch.org'), 'hello@homechurch.org');
+
+  // Every shape somebody can arrive with, because they will.
+  ok('a watch link is a video', c.youtubeId('https://www.youtube.com/watch?v=dQw4w9WgXcQ'), 'dQw4w9WgXcQ');
+  ok('a share link is the same video', c.youtubeId('https://youtu.be/dQw4w9WgXcQ'), 'dQw4w9WgXcQ');
+  ok('an embed link too', c.youtubeId('https://www.youtube.com/embed/dQw4w9WgXcQ'), 'dQw4w9WgXcQ');
+  ok('and a bare id pasted on its own', c.youtubeId('dQw4w9WgXcQ'), 'dQw4w9WgXcQ');
+
+  /* The one that has to be refused by name. "videoseries" is a valid eleven
+     character base64url string, so no pattern can tell it from an id, and it
+     is YouTube's playlist path: a pasted playlist URL would sail through and
+     render an error player inside the announcement. */
+  ok('a playlist is not a video',
+    c.youtubeId('https://www.youtube.com/embed/videoseries?list=PLabcdefghij'), '');
+  ok('and something that is not YouTube at all is not a video',
+    c.youtubeId('https://vimeo.com/12345'), '');
 }
 
 /* ------------------------------------------------------- the two dismissals */

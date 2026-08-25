@@ -159,17 +159,67 @@
     return newId('announcement', title, list('announcements').map(function (a) { return a.id; }));
   }
 
+  /* Every picture on the draft that is actually a picture. The form keeps a
+     list of text boxes and an admin who taps + twice and fills in one of them
+     has two empty strings in it, which are not pictures and must not become
+     rows of nothing on Home. Trimmed here rather than in the form, for the
+     same reason cleanSections() below trims there: the form is where somebody
+     changes their mind, and the save is where it stops mattering. */
+  function cleanImages(list) {
+    return (list || []).map(function (u) {
+      return String(u == null ? '' : u).trim();
+    }).filter(Boolean);
+  }
+
+  /* The two columns that hold the words, written together and never apart.
+
+     body_html is what the announcement's own page draws. body is the plain
+     text mirror of it, and three things read that and can read nothing else:
+     the push notification, which puts its first sentence on every lock screen
+     in the church; the list on this screen; and the snippet under the title on
+     Home, which sits inside a button and so can hold no link. Migration 0033
+     says the same thing from the table's side.
+
+     The sanitizer runs here, on the way out, as well as on the way in when the
+     page draws it. That is the same twice-over rule js/journal.js has kept
+     since it shipped: the version that writes and the version that renders
+     both decide, so markup from an admin's phone that is three releases behind
+     is judged by the build that is actually storing it. */
+  function announcementWords(row) {
+    var html = HC.richtext.sanitize(row.bodyHtml || '', { links: 'web' });
+    // Nothing but an empty paragraph a browser left behind. Stored as null,
+    // so "this announcement has no words" is one answer and not two.
+    var text = HC.richtext.plainText(html).trim();
+    if (!text) return { body_html: null, body: null };
+    return { body_html: html, body: text };
+  }
+
   /* Insert or update, decided by whether the caller handed us an id. The two
      are one function because the form is one form: the only difference a
      person sees between writing an announcement and fixing one is what was
      in the fields when it opened. */
   function saveAnnouncement(row) {
+    var images = cleanImages(row.images);
+    var words = announcementWords(row);
+
     var body = {
       eyebrow:   row.eyebrow || null,
       title:     row.title,
-      body:      row.body || null,
-      image_url: row.imageUrl || null,
+      body:      words.body,
+      body_html: words.body_html,
+      // image_url is the first of the list rather than a field of its own.
+      // 0026's column stays because a phone running an older build reads it
+      // and nothing else, and the day the two disagree is the day that phone
+      // shows a photograph the church took off the announcement.
+      image_url: images[0] || null,
+      image_urls: images,
       video_url: row.videoUrl || null,
+      link_url:  row.linkUrl || null,
+      link_title: row.linkTitle || null,
+      // Written even when it is null, and that is the x on the form: "this
+      // link has no thumbnail" is a decision somebody made and a PATCH that
+      // left the column out would quietly undo it on the next save.
+      link_image_url: row.linkImageUrl || null,
       starts_on: row.startsOn || null,
       ends_on:   row.endsOn || null,
       priority:  row.priority || 0,
@@ -279,6 +329,43 @@
         return base + '/storage/v1/object/public/announcements/' + path;
       });
     });
+  }
+
+  /* ------------------------------------------------------ the link thumbnail
+
+     A thumbnail for the link an admin just pasted, or '' for one this app
+     cannot work out.
+
+     WHY THIS IS NOT OPEN GRAPH. The honest way to get a thumbnail for an
+     arbitrary page is to fetch it and read its og:image, and the app cannot:
+     a cross origin fetch from the web view is refused by the browser, and the
+     way round that is a server that fetches URLs on somebody else's behalf,
+     which is a new Edge Function, a new thing to keep running, and a small
+     open proxy pointed at the internet. That is a great deal of machinery for
+     a picture.
+
+     So this answers the two cases it can answer without asking anybody
+     anything, and for everything else the form's Picture control is right
+     there: an admin can upload or paste a thumbnail in two taps, and the x
+     takes it off again. A link card with no thumbnail is a perfectly good link
+     card, which is the other half of why this is enough.
+
+     A NOTE ON THE YOUTUBE CASE. It is the same poster the video player uses,
+     which means a link to a video and the video field itself draw the same
+     picture, which is right: they are the same video. */
+  var IMAGE_EXT = /\.(?:jpe?g|png|gif|webp|avif)(?:[?#].*)?$/i;
+
+  function suggestLinkImage(url) {
+    var web = HC.components.webUrl(url);
+    if (!web) return '';
+
+    var videoId = HC.components.youtubeId(web);
+    if (videoId) return HC.components.youtubeThumb(videoId);
+
+    // A link that is itself a photograph. Somebody pasting one means it.
+    if (/^https?:/i.test(web) && IMAGE_EXT.test(web)) return web;
+
+    return '';
   }
 
   /* ---------------------------------------------------------------- users */
@@ -461,6 +548,7 @@
     deleteAnnouncement: deleteAnnouncement,
     notifyAnnouncement: notifyAnnouncement,
     uploadImage: uploadImage,
+    suggestLinkImage: suggestLinkImage,
 
     users: function () { return list('users'); },
     loadUsers: loadUsers,

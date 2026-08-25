@@ -263,6 +263,7 @@ button, .hc-tab, .hc-eyebrow, .hc-numeral, .hc-section__toggle, .hc-tabbar {
 .hc-stack-lg > * + * { margin-top: var(--hc-space-lg); }
 
 .hc-center { text-align: center; }
+.hc-mt-md { margin-top: var(--hc-space-md); }
 .hc-mt-lg { margin-top: var(--hc-space-lg); }
 .hc-mt-xl { margin-top: var(--hc-space-xl); }
 .hc-mb-md { margin-bottom: var(--hc-space-md); }

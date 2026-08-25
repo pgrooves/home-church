@@ -85,7 +85,10 @@
    down to what the header names. A second margin here, on top of that one,
    would read as a break in the column rather than a heading and its block. */
 
-.hc-banner__title { margin-top: 6px; margin-bottom: 4px; }
+/* A <span> now rather than a <p>, because the card is a button and a
+   paragraph inside one is invalid markup. The margins stay the same and
+   display:block is what a span needs to keep them. */
+.hc-banner__title { display: block; margin-top: 6px; margin-bottom: 4px; }
 
 .hc-plan {
   display: block;
@@ -2083,30 +2086,86 @@
   margin-top: var(--hc-space-sm);
 }
 
-/* The picture block on the announcement form. */
-.hc-admin__image > * + * { margin-top: var(--hc-space-md); }
+/* The picture block on the announcement form, and the link block under it.
+   Both are lists of things with previews, so they share the preview. */
+.hc-admin__image > * + *,
+.hc-admin__link > * + * { margin-top: var(--hc-space-md); }
 
+/* One picture in the list: its preview, and the box holding its address. */
+.hc-admin__image-row + .hc-admin__image-row { margin-top: var(--hc-space-lg); }
+.hc-admin__image-row > * + * { margin-top: var(--hc-space-sm); }
+
+/* A preview with its own remove in its own top right corner. Every thumbnail
+   on this form carries one, the pictures and the link's alike, so "take this
+   one off" is the same gesture wherever somebody meets it. */
 .hc-admin__thumb {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: var(--hc-space-sm);
+  position: relative;
+  display: block;
+  width: 100%;
+  max-width: 260px;
 }
 
 .hc-admin__thumb img {
   width: 100%;
-  max-width: 260px;
   aspect-ratio: 4 / 3;
   object-fit: cover;
   border-radius: var(--hc-radius-sm);
   background: var(--hc-paper-sunk);
+  display: block;
 }
+
+/* Set by the image error listener in app.js. A link somebody mistyped shows
+   the cream block rather than the web view's broken image glyph. */
+.hc-admin__thumb[data-failed="true"] img { display: none; }
+
+/* On the picture rather than beside it, because the picture is what it takes
+   away. The disc is the app's paper at full opacity so the x reads over a
+   photograph of anything, including a white wall. */
+.hc-admin__thumb-x {
+  position: absolute;
+  top: var(--hc-space-sm);
+  right: var(--hc-space-sm);
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--hc-paper);
+  color: var(--hc-ink);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.18);
+}
+
+.hc-admin__thumb-x svg {
+  width: 15px; height: 15px;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+}
+
+.hc-admin__thumb-x:active { opacity: 0.6; }
+
+/* The two ways to add a picture, side by side, wrapping on a narrow phone
+   rather than shrinking into two half buttons. */
+.hc-admin__image-add {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--hc-space-sm);
+}
+
+.hc-admin__image-add > * { flex: 1 1 10rem; }
+.hc-admin__image-add .hc-btn { margin-top: 0; width: 100%; }
 
 /* A file input cannot be styled, so the real one is hidden and its <label>
    carries the button. Clicking a label opens the picker natively, which is
    why this is a label and not a button with a click handler on it. */
 .hc-admin__file { display: block; }
 .hc-admin__file .hc-btn { width: 100%; }
+
+/* The writing surface on the announcement form. Shorter than the Journal's,
+   which owns a whole screen: this one has a dozen fields under it and a box
+   that fills a third of the phone puts the Save button two scrolls away. */
+.hc-rt--admin { min-height: 20vh; }
 
 /* The caption under a field, explaining what leaving it empty does. */
 .hc-field__help {
@@ -2127,6 +2186,140 @@
 
 .hc-page__lede { margin-top: var(--hc-space-md); }
 .hc-page__text { margin-top: var(--hc-space-md); }
+
+
+/* --------------------------------------------------------------------------
+   One announcement
+
+   The page behind a card on Home. See js/screens/announcement.js.
+
+   Nothing here is a new visual language either. The words are the serif every
+   other piece of prose in this app is set in, the pictures are the same 4:3
+   frame the Instagram rail and the card use, and the video is the same poster
+   and play badge as a practice's. What is new is the link card, and it is the
+   row from Connect with a photograph on the front.
+   -------------------------------------------------------------------------- */
+
+.hc-announce__note {
+  margin-top: var(--hc-space-md);
+  color: var(--hc-accent-deep);
+}
+
+.hc-announce__text + .hc-announce__text { margin-top: var(--hc-space-base); }
+.hc-announce__text { margin-top: var(--hc-space-md); }
+
+/* Markup somebody typed, after the sanitizer. Only seven tags can be in here
+   and every one of them is given a size, because a paragraph with no rule is
+   a paragraph at whatever the browser's default happens to be.
+
+   Set in the serif rather than the sans. This is the church writing to the
+   church at length, which is what the serif is for everywhere else in this
+   app, and it is the one thing that keeps a formatted announcement from
+   reading like a form. */
+.hc-rich {
+  margin-top: var(--hc-space-base);
+  font-family: var(--hc-serif);
+  font-size: calc(var(--hc-body-serif) * var(--hc-text-scale));
+  line-height: 1.6;
+  color: var(--hc-ink);
+  /* Long words and pasted URLs must not push the screen sideways. */
+  overflow-wrap: break-word;
+}
+
+.hc-rich p { margin: 0 0 var(--hc-space-base); }
+.hc-rich p:last-child { margin-bottom: 0; }
+.hc-rich ul, .hc-rich ol { margin: 0 0 var(--hc-space-base); padding-left: 1.4em; }
+.hc-rich ul { list-style: disc; }
+.hc-rich ol { list-style: decimal; }
+.hc-rich li { margin-bottom: var(--hc-space-xs); }
+.hc-rich strong { font-weight: 600; }
+
+/* A link in an announcement, which unlike a scripture reference in a journal
+   entry is a destination somebody is meant to notice. Underlined in the
+   accent, and it opens in the phone's own browser: every <a> in this app goes
+   through openExternal(), see the click listener in js/app.js. */
+.hc-rich a {
+  color: var(--hc-accent-deep);
+  text-decoration: none;
+  border-bottom: var(--hc-hairline) solid var(--hc-accent);
+}
+
+/* Stacked, not a carousel. Two pictures of a serve day are two things to see
+   and not a gesture to discover. */
+.hc-announce__gallery {
+  display: flex;
+  flex-direction: column;
+  gap: var(--hc-space-md);
+  margin-top: var(--hc-space-base);
+}
+
+/* --- the link card ------------------------------------------------------- */
+
+.hc-linkcard {
+  display: flex;
+  align-items: center;
+  gap: var(--hc-space-md);
+  width: 100%;
+  margin-top: var(--hc-space-base);
+  padding: var(--hc-space-md);
+  text-align: left;
+  background: var(--hc-cream);
+  border-radius: var(--hc-radius-lg);
+  color: inherit;
+}
+
+.hc-linkcard:active { opacity: 0.85; }
+
+/* Square and small, because the thumbnail is a hint about where the tap goes
+   and not the picture on the announcement. The pictures above are that. */
+.hc-linkcard__frame {
+  flex: 0 0 auto;
+  width: 64px;
+  height: 64px;
+  border-radius: var(--hc-radius-sm);
+  overflow: hidden;
+  background: var(--hc-paper-sunk);
+}
+
+.hc-linkcard__img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.hc-linkcard__frame[data-failed="true"] .hc-linkcard__img { display: none; }
+
+.hc-linkcard__body { flex: 1 1 auto; min-width: 0; }
+
+.hc-linkcard__title {
+  display: block;
+  font-family: var(--hc-serif);
+  font-size: calc(17px * var(--hc-text-scale));
+  line-height: 1.35;
+}
+
+/* The host, and it is always drawn even when the title above it is the same
+   words: a link card that does not say where it goes is a link card asking
+   somebody to trust it. One line, ellipsised, never wrapped. */
+.hc-linkcard__host {
+  display: block;
+  margin-top: 2px;
+  color: var(--hc-mid);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.hc-linkcard__icon {
+  flex: 0 0 auto;
+  width: 18px; height: 18px;
+  stroke: var(--hc-mid);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  fill: none;
+}
 
 /* The looping band of film at the head of a practice page. Sized like a wide
    strip rather than a 16:9 block, because it is a header and not something
