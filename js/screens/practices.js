@@ -31,6 +31,32 @@
 
   var PTW = 'https://practicingtheway.org';
 
+  /* ------------------------------------------- the church's own words here
+
+     WHOSE WORDS ARE WHOSE, on a screen where that question has a real answer.
+     Everything under a practice, the subtitle, the overview, every session's
+     teaching, the resources, is Practicing the Way's, generated once by
+     scripts/build_practices.js from their published material and reviewed by
+     a person before it ships. None of it is editable from inside the app, and
+     that is not caution about layout: it is somebody else's copyrighted
+     teaching and an edit box over it would be the app quietly inviting
+     somebody to rewrite it.
+
+     These five are Home Church's own sentences about that material, and they
+     were wrongly swept up in the same exclusion at first. They are the church
+     framing somebody else's work, which is exactly the kind of thing that
+     goes slightly stale, and every one of them is now a slot. See
+     js/edit-mode.js. */
+
+  var LEDE = 'Nine practices of Jesus, each one a few short sessions with ' +
+    'something to go and do. Start anywhere. They are meant to be lived ' +
+    'rather than finished.';
+
+  var SIGNUP_LEAD = 'To join our next Practicing the Way small group, text us:';
+  var SIGNUP_NOTE = 'Opens Messages with the number filled in.';
+  var LOAD_FAILED = 'The practices could not be loaded. Reopening the app usually sorts it.';
+  var NOT_ADDED = 'This practice has not been added yet. Its sessions and videos are on their way.';
+
   /* --------------------------------------------------------------- credit
 
      WHOSE WORK THIS IS. Every word and every video under Practices was made
@@ -51,15 +77,38 @@
       ? practice.source.site
       : PTW;
 
+    /* The attribution is the church's own sentence and is editable like the
+       rest of its voice, with one deliberate exception: the link out to
+       practicingtheway.org underneath is not, because it is the part that
+       actually gets somebody to the people who made this. Reword the credit
+       and the destination is unchanged.
+
+       Worth saying plainly to whoever edits it: this paragraph exists to say
+       that none of the teaching here is ours. Soften it as you like; do not
+       remove that. */
+    var text = HC.data.copy(practice ? 'practices.credit-page' : 'practices.credit-grid',
+      'The nine practices, the session teaching, and the videos ' +
+      (practice ? 'on this page' : 'in here') + ' are the work of ' +
+      'Practicing the Way. Home Church did not write any of it. We have ' +
+      'gathered it here so our people can walk through it together, and ' +
+      'every word of it belongs to them.');
+
+    /* Escaped first, then the one phrase this paragraph is about is set in
+       bold, which is the design it has always had. Doing it in that order is
+       what keeps the bolding a rendering detail rather than a hole: the words
+       come out of a text box, so they are escaped like everything else, and
+       only a literal that survived escaping is marked up. An admin who
+       rewrites the sentence without the phrase in it simply gets no bold. */
+    var shown = c.esc(text).replace(/Practicing the Way/g,
+      '<strong>Practicing the Way</strong>');
+
     return '' +
       '<aside class="hc-ptw" aria-label="Source and credit">' +
-        '<p class="hc-ptw__text">' +
-          'The nine practices, the session teaching, and the videos ' +
-          (practice ? 'on this page' : 'in here') + ' are the work of ' +
-          '<strong>Practicing the Way</strong>. Home Church did not write any ' +
-          'of it. We have gathered it here so our people can walk through it ' +
-          'together, and every word of it belongs to them.' +
-        '</p>' +
+        HC.edit.wrap(
+          '<p class="hc-ptw__text">' + shown + '</p>',
+          { slot: practice ? 'practices.credit-page' : 'practices.credit-grid',
+            value: text, label: 'the credit to Practicing the Way', rows: 6 }
+        ) +
         c.button('practicingtheway.org', {
           action: 'open-url',
           url: here,
@@ -88,19 +137,31 @@
     var link = c.smsUrl(number, cfg.keyword);
     if (!link) return '';
 
+    /* The lead line reads from the slot first and the church profile second,
+       so an admin editing it in place wins over whatever is in the seed. The
+       button is not editable at all: its words are the phone number, and a
+       button that says one number and dials another is worse than any wording
+       problem this feature exists to solve. */
+    var lead = HC.data.copy('practices.signup-lead', cfg.blurb || SIGNUP_LEAD);
+    var note = HC.data.copy('practices.signup-note', SIGNUP_NOTE);
+
     return '' +
       '<div class="hc-practice-signup">' +
-        '<p class="hc-practice-signup__lead">' +
-          c.esc(cfg.blurb || 'To sign up for our next Practicing the Way, text us.') +
-        '</p>' +
+        HC.edit.wrap(
+          lead ? '<p class="hc-practice-signup__lead">' + c.esc(lead) + '</p>' : '',
+          { slot: 'practices.signup-lead', value: lead,
+            label: 'the line above the texting button', rows: 3 }
+        ) +
         c.button('Text ' + number, {
           action: 'open-url',
           url: link,
           icon: 'message'
         }) +
-        '<p class="hc-caption hc-practice-signup__note">' +
-          'Opens Messages with the number filled in.' +
-        '</p>' +
+        HC.edit.wrap(
+          note ? '<p class="hc-caption hc-practice-signup__note">' + c.esc(note) + '</p>' : '',
+          { slot: 'practices.signup-note', value: note,
+            label: 'the note under the texting button', rows: 3 }
+        ) +
       '</div>';
   }
 
@@ -125,22 +186,30 @@
 
     html += credit(null);
 
-    html += '<p class="hc-body-serif hc-practices__lede">' +
-      'Nine practices of Jesus, each one a few short sessions with something to ' +
-      'go and do. Start anywhere. They are meant to be lived rather than ' +
-      'finished.</p>';
+    var lede = HC.data.copy('practices.lede', LEDE);
+    html += HC.edit.wrap(
+      lede ? '<p class="hc-body-serif hc-practices__lede">' + c.esc(lede) + '</p>' : '',
+      { slot: 'practices.lede', value: lede,
+        label: 'the opening line on Practices', rows: 5 }
+    );
 
     if (!all.length) {
       /* Before the index has landed this is a blank half second, and after a
          build that forgot to ship data/ it is forever. The empty state covers
          both without claiming to know which, and HC.practices.ready() is what
          separates "not yet" from "not there". */
-      html += c.emptyState(
-        HC.practices.ready()
-          ? 'The practices could not be loaded. Reopening the app usually sorts it.'
-          : 'Loading the practices...',
-        'leaf'
-      );
+      /* Only the failure is editable. "Loading the practices..." is on screen
+         for half a second and is the app talking about itself. */
+      if (!HC.practices.ready()) {
+        html += c.emptyState('Loading the practices...', 'leaf');
+      } else {
+        var failed = HC.data.copy('practices.load-failed', LOAD_FAILED);
+        html += HC.edit.wrap(
+          failed ? c.emptyState(failed, 'leaf') : '',
+          { slot: 'practices.load-failed', value: failed,
+            label: 'what Practices says when it cannot load', rows: 3 }
+        );
+      }
     } else {
       html += '<div class="hc-practice-grid">' + all.map(tile).join('') + '</div>';
       html += signup();
@@ -352,9 +421,12 @@
        it would be very much worse, because nobody downstream could tell it
        from the real thing. See the stub in scripts/build_practices.js. */
     if (p.pending) {
-      html += '<p class="hc-body-serif hc-practice__p">' +
-        'This practice has not been added yet. Its sessions and videos are on ' +
-        'their way.</p>';
+      var soon = HC.data.copy('practices.not-added', NOT_ADDED);
+      html += HC.edit.wrap(
+        soon ? '<p class="hc-body-serif hc-practice__p">' + c.esc(soon) + '</p>' : '',
+        { slot: 'practices.not-added', value: soon,
+          label: 'what a practice says before it is written', rows: 3 }
+      );
       return c.el(html + '</div>');
     }
 

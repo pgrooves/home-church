@@ -25,6 +25,9 @@
   var INTRO = 'Everything you have written down, from a guide or on your own. ' +
     'Nobody else can see any of it.';
   var EXPORT_NOTE = 'One document, every entry, yours to keep wherever you like.';
+  var NO_MATCHES = 'Nothing matches that. Try fewer words.';
+  var NOTHING_YET = 'Nothing here yet. Highlight something in a guide, or start ' +
+    'with a blank page. Both count.';
 
   /* Local to this screen, like the drafts in js/screens/group.js. A filter is
      not worth persisting and a person who leaves the tab and comes back is
@@ -205,9 +208,19 @@
     }
 
     if (!entries.length) {
-      html += c.emptyState(everything
-        ? 'Nothing matches that. Try fewer words.'
-        : 'Nothing here yet. Highlight something in a guide, or start with a blank page. Both count.');
+      /* Two different empty states and only one of them is the church
+         talking. "Nothing matches that" is about a search somebody just
+         typed, so it is wrapped too, but the one that matters is the second:
+         it is the sentence a person sees the first time they open the
+         Journal. */
+      var slot = everything ? 'journal.no-matches' : 'journal.empty';
+      var line = HC.data.copy(slot, everything ? NO_MATCHES : NOTHING_YET);
+      html += HC.edit.wrap(
+        line ? c.emptyState(line) : '',
+        { slot: slot, value: line,
+          label: everything ? 'what a search with no results says'
+                            : 'what an empty Journal says', rows: 4 }
+      );
     } else {
       html += grouped(entries);
     }

@@ -77,7 +77,7 @@
        provider's side, or change the keyword here to one that already works. */
     practicesSignup: {
       keyword: 'PRACTICES',
-      blurb: 'To sign up for our next Practicing the Way, text us.'
+      blurb: 'To join our next Practicing the Way small group, text us:'
     },
     // Between seasons. The four groups below never render while this is false,
     // which is deliberate: they are still placeholders with invented hosts.

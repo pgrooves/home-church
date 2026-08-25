@@ -10,6 +10,7 @@
   var c = HC.components;
 
   var NO_GUIDES = 'Nothing here yet. Your guide shows up after Sunday.';
+  var LOST_GUIDE = 'That guide is not here. Head back to the list and pick another.';
 
   /* A block of guide prose that can be highlighted. data-hl-path is the whole
      contract with js/highlight.js: it says which block this is, as an address
@@ -166,6 +167,11 @@
     });
   }
 
+  /* NOT EDITABLE, and the reason is mechanical rather than editorial. This
+     block is redrawn by repaintCoverage() in js/app.js straight into
+     innerHTML every time a question is ticked, outside the router and outside
+     a render pass, so an editor opened inside it would be thrown away by the
+     next checkmark. The other half of the line is a count anyway. */
   function coverageText(covered, total) {
     if (!covered) return 'Check questions off as you go. ' + total + ' in all, and you will not get to them all. That is fine.';
     return covered + ' of ' + total + ' covered';
@@ -264,7 +270,11 @@
       return c.el(
         '<div class="hc-screen">' +
           c.sectionHeader('Guides', 'We lost that one', { flush: true, tag: 'h1' }) +
-          c.emptyState('That guide is not here. Head back to the list and pick another.') +
+          HC.edit.wrap(
+            c.emptyState(HC.data.copy('guide.missing', LOST_GUIDE)),
+            { slot: 'guide.missing', value: HC.data.copy('guide.missing', LOST_GUIDE),
+              label: 'what a missing guide says', rows: 3 }
+          ) +
           '<div class="hc-mt-lg">' + c.button('Back to guides', { action: 'go-guide', variant: 'secondary' }) + '</div>' +
         '</div>'
       );

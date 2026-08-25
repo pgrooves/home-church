@@ -12,6 +12,9 @@
 
   var c = HC.components;
 
+  var NO_NAMES = 'No names yet. Add the people who show up and this becomes useful fast.';
+  var NO_PRAYERS = 'Nothing saved yet. What people ask for out loud is worth writing down.';
+
   function memberRow(member) {
     return '' +
       '<div class="hc-member" data-member="' + c.esc(member.id) + '">' +
@@ -78,7 +81,12 @@
 
     html += '<div class="hc-roster" data-roster>';
     if (!roster.length) {
-      html += c.emptyState('No names yet. Add the people who show up and this becomes useful fast.');
+      html += HC.edit.wrap(
+        c.emptyState(HC.data.copy('leader.roster-empty', NO_NAMES)),
+        { slot: 'leader.roster-empty',
+          value: HC.data.copy('leader.roster-empty', NO_NAMES),
+          label: 'what the roster says when it is empty', rows: 3 }
+      );
     } else {
       roster.forEach(function (m) { html += memberRow(m); });
     }
@@ -108,7 +116,12 @@
 
     html += '<div class="hc-prayer-list" data-prayers>';
     if (!prayers.length) {
-      html += c.emptyState('Nothing saved yet. What people ask for out loud is worth writing down.');
+      html += HC.edit.wrap(
+        c.emptyState(HC.data.copy('leader.prayers-empty', NO_PRAYERS)),
+        { slot: 'leader.prayers-empty',
+          value: HC.data.copy('leader.prayers-empty', NO_PRAYERS),
+          label: 'what the prayer list says when it is empty', rows: 3 }
+      );
     } else {
       prayers.forEach(function (p) { html += prayerRow(p); });
     }

@@ -642,9 +642,11 @@
     html += c.sectionHeader('', 'Not edited here');
     html += c.row({
       title: 'The nine Practices',
-      sub: 'Those words and videos are Practicing the Way’s, not ours. They are built ' +
-        'from their published material and reviewed before they ship, so they are not ' +
-        'editable in the app.',
+      sub: 'The teaching, the sessions and the videos are Practicing the Way’s, not ' +
+        'ours. They are built from their published material and reviewed before they ' +
+        'ship, so they are not editable in the app. Our own words around them, the ' +
+        'opening line, the credit and the texting invitation, are: turn on Edit mode ' +
+        'and tap them on the Practices screen.',
       serif: true
     });
 

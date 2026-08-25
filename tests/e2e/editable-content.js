@@ -74,7 +74,8 @@ const ok = (label, good, detail) => {
   else { console.log('FAIL  ' + label + (detail ? '\n        ' + detail : '')); fail++; }
 };
 
-const TABS = ['home', 'listen', 'connect', 'give', 'more', 'journal', 'profile', 'guide'];
+const TABS = ['home', 'listen', 'connect', 'give', 'more', 'journal', 'profile',
+              'guide', 'practices', 'leader'];
 
 const HOSTILE = [
   { name: 'emptied', value: '' },
@@ -93,9 +94,16 @@ const SLOTS = [
   'connect.step-note', 'connect.serve-sms-note', 'connect.add-to-calendar',
   'connect.eyebrow', 'connect.groups-eyebrow', 'connect.serve-eyebrow',
   'connect.events-eyebrow', 'connect.steps-eyebrow', 'connect.off-season-eyebrow',
-  'connect.serve-signup-eyebrow', 'more.note', 'more.practices-sub',
-  'more.journal-sub', 'more.give-sub', 'journal.intro', 'journal.eyebrow',
-  'journal.export-note', 'guide.empty'
+  'connect.serve-signup-eyebrow', 'connect.instagram-eyebrow',
+  'more.note', 'more.practices-sub', 'more.journal-sub', 'more.give-sub',
+  'journal.intro', 'journal.eyebrow', 'journal.export-note', 'journal.empty',
+  'journal.no-matches', 'guide.empty', 'guide.missing',
+  'leader.roster-empty', 'leader.prayers-empty',
+  'practices.lede', 'practices.signup-lead', 'practices.signup-note',
+  'practices.credit-grid', 'practices.credit-page', 'practices.load-failed',
+  'practices.not-added',
+  'profile.notify-guide', 'profile.notify-sunday', 'profile.notify-news',
+  'profile.leader-copy', 'profile.leader-sub'
 ];
 
 function serve() {

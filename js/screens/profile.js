@@ -9,6 +9,19 @@
 
   var c = HC.components;
 
+  /* The church's own descriptions of what each switch on this screen does.
+     The switches themselves, and the titles beside them, are not editable:
+     "A new guide is posted" names a notification somebody is choosing to
+     receive, and the row under it is what that choice means in practice. That
+     second half is the part that goes stale, when the church moves the send
+     from Monday morning to Sunday night. */
+  var NOTIFY_GUIDE = 'Monday morning, once a week';
+  var NOTIFY_SUNDAY = 'Saturday evening, service times and address';
+  var NOTIFY_NEWS = 'When the church posts something on purpose';
+  var LEADER_COPY = 'If you lead a group, turn this on. You get presentation mode ' +
+    'inside every guide, a roster, and somewhere to keep prayer requests.';
+  var LEADER_SUB = 'Adds leader tools, changes nothing else';
+
   // Standard now means 110%, the app's default reading size, not 100%.
   var TEXT_SIZES = [
     { label: 'Standard', value: 1.1 },
@@ -227,27 +240,33 @@
 
     // Notifications
     html += c.sectionHeader('When we reach out', 'Notifications');
-    html += switchRow({
+    html += HC.edit.mark(switchRow({
       title: 'A new guide is posted',
-      sub: 'Monday morning, once a week',
+      sub: HC.data.copy('profile.notify-guide', NOTIFY_GUIDE),
       action: 'toggle-notify',
       id: 'newGuide',
       on: p.notifications.newGuide
-    });
-    html += switchRow({
+    }), { slot: 'profile.notify-guide',
+      value: HC.data.copy('profile.notify-guide', NOTIFY_GUIDE),
+      label: 'when a new guide goes out', rows: 2 });
+    html += HC.edit.mark(switchRow({
       title: 'Sunday reminder',
-      sub: 'Saturday evening, service times and address',
+      sub: HC.data.copy('profile.notify-sunday', NOTIFY_SUNDAY),
       action: 'toggle-notify',
       id: 'sundayReminder',
       on: p.notifications.sundayReminder
-    });
-    html += switchRow({
+    }), { slot: 'profile.notify-sunday',
+      value: HC.data.copy('profile.notify-sunday', NOTIFY_SUNDAY),
+      label: 'what the Sunday reminder is', rows: 2 });
+    html += HC.edit.mark(switchRow({
       title: 'Announcements',
-      sub: 'When the church posts something on purpose',
+      sub: HC.data.copy('profile.notify-news', NOTIFY_NEWS),
       action: 'toggle-notify',
       id: 'announcements',
       on: p.notifications.announcements
-    });
+    }), { slot: 'profile.notify-news',
+      value: HC.data.copy('profile.notify-news', NOTIFY_NEWS),
+      label: 'when announcements are sent', rows: 2 });
     /* The fourth switch is season gated, the same way Connect gates the group
        finder, and for a harder reason than symmetry. "Only on your group's
        day" needs to know which group you are in, and nothing in this app
@@ -297,13 +316,22 @@
 
     // Leader mode
     html += c.sectionHeader('For leaders', 'Leader mode');
-    html += '<p class="hc-body-serif hc-profile__leader-copy">If you lead a group, turn this on. You get presentation mode inside every guide, a roster, and somewhere to keep prayer requests.</p>';
-    html += switchRow({
+    var leaderCopy = HC.data.copy('profile.leader-copy', LEADER_COPY);
+    html += HC.edit.wrap(
+      leaderCopy
+        ? '<p class="hc-body-serif hc-profile__leader-copy">' + c.esc(leaderCopy) + '</p>'
+        : '',
+      { slot: 'profile.leader-copy', value: leaderCopy,
+        label: 'what leader mode is for', rows: 5 }
+    );
+    html += HC.edit.mark(switchRow({
       title: 'Leader mode',
-      sub: 'Adds leader tools, changes nothing else',
+      sub: HC.data.copy('profile.leader-sub', LEADER_SUB),
       action: 'toggle-leader',
       on: p.leaderMode
-    });
+    }), { slot: 'profile.leader-sub',
+      value: HC.data.copy('profile.leader-sub', LEADER_SUB),
+      label: 'the line under the Leader mode switch', rows: 2 });
 
     if (p.leaderMode) {
       html += '<div class="hc-mt-lg">' +
