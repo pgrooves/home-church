@@ -414,10 +414,20 @@ Those are 42501 from Postgres before a policy is consulted, and the SQL test
 asserts the exact set of updatable columns per table rather than a few
 examples.
 
+**And it is checked by changing things rather than by reasoning about them.**
+`npm run test:content` rewrites every editable field in the app to something
+hostile — emptied, `<script>` tags, unbalanced quotes, 2000 characters, emoji
+and newlines — then draws all eight screens and asserts each one still paints,
+does not push the layout sideways, and renders the words rather than running
+them. It finishes by checking the two places that read a value back instead of
+drawing it: the group finder still matches its own chips, and an event still
+parses into a calendar entry. 132 assertions, no database needed.
+
 Who last changed a sentence and when is recorded on `text_overrides`. The
 migrations are `0030_text_overrides.sql` and `0031_editable_columns.sql`, the
-module is `js/edit-mode.js`, and `tests/edit-mode.test.js` covers the saving,
-the failing, the allowlist and the clock.
+module is `js/edit-mode.js`, `tests/edit-mode.test.js` covers the saving, the
+failing, the allowlist and the clock, and `tests/e2e/editable-content.js` is
+the one above.
 
 Who last changed a sentence and when is recorded on `text_overrides`. The
 migration is `0030_text_overrides.sql`, the module is `js/edit-mode.js`, and

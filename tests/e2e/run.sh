@@ -53,6 +53,10 @@ command -v node >/dev/null || { echo "SKIP  no node."; exit 0; }
 node -e "require.resolve('playwright-core')" 2>/dev/null || {
   echo "SKIP  playwright-core is not installed. npm install."; exit 0; }
 
+# Edit mode's screens, against the bundled seed. No database, nothing to stand
+# up, so it runs first and its failures are read before anything slower.
+node "$(dirname "$0")/editable-content.js" || exit 1
+
 # The database, built the same way the migration tests build it. Doing it
 # through that script rather than by hand means this can never run against a
 # schema the migration tests have not also seen.
