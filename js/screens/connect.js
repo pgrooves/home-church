@@ -55,13 +55,20 @@
     return true;
   }
 
+  /* The church's own words that still live in this file. Each one is the
+     default for a slot: an admin rewriting one from inside the app writes a
+     row in text_overrides and these stay as the floor a phone with no signal
+     draws. See js/edit-mode.js. */
+  var NO_MATCH = 'No group matches that yet. Widen the filter, or tell us what you need and we will start one.';
+  var STEP_NOTE = 'Opens in your browser.';
+  var SMS_NOTE = 'Opens Messages with the number filled in.';
+  var ADD_TO_CALENDAR = 'Add to calendar';
+
   /* An information card, not a button. It was a button, and tapping it claimed
      a name would be passed to the host from a card with nowhere to type one.
      Everything a person needs in order to decide is on the card instead, and
      the one thing the app cannot honestly offer, joining, is not pretended at.
      See LAUNCH_TODO.md, this is the last open destination on this screen. */
-  var NO_MATCH = 'No group matches that yet. Widen the filter, or tell us what you need and we will start one.';
-
   function groupCard(group) {
     var status = group.openings ? 'Room for more' : 'Full for now';
     var inner = '' +
@@ -70,7 +77,18 @@
       '<p class="hc-caption hc-card__meta">' +
         c.esc(group.neighborhood) + ' &middot; ' + c.esc(group.host) + ' &middot; ' + c.esc(group.lifeStage) +
       '</p>' +
-      '<p class="hc-body-serif hc-group__blurb">' + c.esc(group.blurb) + '</p>' +
+      /* What the group is like, which is the only part of a group card that
+         is a description. The name, the day, the neighborhood, the host and
+         the life stage are not: the first is what the group is called, and the
+         day and the neighborhood are what the filter chips above the list are
+         built from and compared against. Reword one of those and the chip that
+         used to select it matches nothing. */
+      HC.edit.wrap(
+        '<p class="hc-body-serif hc-group__blurb">' + c.esc(group.blurb) + '</p>',
+        { table: 'groups', id: group.id, column: 'blurb',
+          target: group, field: 'blurb',
+          value: group.blurb, label: group.name + ', what the group is like', rows: 4 }
+      ) +
       '<p class="hc-caption hc-group__status" data-open="' + (group.openings ? 'true' : 'false') + '">' +
         c.esc(status) + '</p>';
     return c.card(inner);
@@ -106,7 +124,7 @@
     var note = HC.data.church.groupsOffSeasonNote;
     if (!note) return '';
     return '' +
-      c.sectionHeader('Between seasons', 'Home groups') +
+      c.sectionHeader('Between seasons', 'Home groups', { eyebrowSlot: 'connect.off-season-eyebrow' }) +
       c.card(HC.edit.wrap(
         '<p class="hc-body-serif hc-group__off-season">' + c.esc(note) + '</p>',
         { table: 'church_profile', id: HC.data.church.id || 'church-home',
@@ -129,15 +147,21 @@
     // Only two teams publish a schedule. The line drops rather than leaving a
     // gap on the five that do not.
     if (team.commitment) {
-      body += '<p class="hc-eyebrow hc-eyebrow--legible hc-serve__commitment">' + c.esc(team.commitment) + '</p>';
+      body += HC.edit.wrap(
+        '<p class="hc-eyebrow hc-eyebrow--legible hc-serve__commitment">' +
+          c.esc(team.commitment) + '</p>',
+        { table: 'serve_teams', id: team.id, column: 'commitment',
+          target: team, field: 'commitment',
+          value: team.commitment, label: team.name + ', how often', rows: 2 }
+      );
     }
 
-    /* The team's description, editable where it is read. The name, the
-       commitment line and the requirement are not: the first is what the team
-       is called on Sunday, and the other two are the two facts somebody
-       decides on, which belong on a form where the whole team is in view.
-       Migration 0030 grants an admin `blurb` on this table and nothing
-       else, so this is also all a phone could write. */
+    /* The team's description. This, the commitment line above it and the
+       requirement below are all editable where they are read; the team's name
+       is not, because that is what the team is called on a Sunday and in the
+       bulletin, and it is edited from the Admin form where the whole team is
+       in view. Migration 0031 grants an admin those three columns on this
+       table and nothing else, so that is also all a phone could write. */
     body += HC.edit.wrap(
       '<p class="hc-body-serif hc-serve__blurb">' + c.esc(team.blurb) + '</p>',
       { table: 'serve_teams', id: team.id, column: 'blurb',
@@ -149,7 +173,12 @@
     // description, because it is the thing somebody needs before they decide
     // and not a detail to find out later.
     if (team.requirement) {
-      body += '<p class="hc-caption hc-serve__requirement">' + c.esc(team.requirement) + '</p>';
+      body += HC.edit.wrap(
+        '<p class="hc-caption hc-serve__requirement">' + c.esc(team.requirement) + '</p>',
+        { table: 'serve_teams', id: team.id, column: 'requirement',
+          target: team, field: 'requirement',
+          value: team.requirement, label: team.name + ', what it asks first', rows: 3 }
+      );
     }
 
     return c.collapsible({
@@ -171,7 +200,7 @@
 
     var link = c.smsUrl(serve.number, serve.keyword);
     var html = '' +
-      c.sectionHeader('Interested?', serve.title || 'Sign up to serve') +
+      c.sectionHeader('Interested?', serve.title || 'Sign up to serve', { eyebrowSlot: 'connect.serve-signup-eyebrow' }) +
       HC.edit.wrap(
         '<p class="hc-body-serif hc-serve__signup-copy">' + c.esc(serve.blurb) + '</p>',
         { table: 'church_profile', id: HC.data.church.id || 'church-home',
@@ -186,7 +215,13 @@
         : 'Text us at ' + serve.number;
       html += '<div class="hc-serve__signup-action">' +
         c.button(label, { action: 'open-url', url: link, icon: 'connect' }) +
-        '<p class="hc-caption hc-serve__signup-note">Opens Messages with the number filled in.</p>' +
+        HC.edit.wrap(
+          '<p class="hc-caption hc-serve__signup-note">' +
+            c.esc(HC.data.copy('connect.serve-sms-note', SMS_NOTE)) + '</p>',
+          { slot: 'connect.serve-sms-note',
+            value: HC.data.copy('connect.serve-sms-note', SMS_NOTE),
+            label: 'the note under the serve signup button' }
+        ) +
       '</div>';
     }
 
@@ -274,7 +309,7 @@
 
     // role="list" restores the semantics Safari drops the moment a list has
     // list-style: none, which is every styled list in this app.
-    var html = c.sectionHeader('Lately', 'On Instagram') +
+    var html = c.sectionHeader('Lately', 'On Instagram', { eyebrowSlot: 'connect.instagram-eyebrow' }) +
       '<div class="hc-rail">' +
         '<ul class="hc-rail__track" role="list">';
 
@@ -335,11 +370,16 @@
             value: evt.blurb, label: evt.title + ', the description', rows: 4 }
         ) +
         '<div class="hc-event__action">' +
-          '<button type="button" class="hc-inline-link" data-action="add-to-calendar" ' +
-            'data-id="' + c.esc(evt.id) + '">' +
-            c.icon('plus', 'hc-share__icon') +
-            '<span>Add to calendar</span>' +
-          '</button>' +
+          HC.edit.mark(
+            '<button type="button" class="hc-inline-link" data-action="add-to-calendar" ' +
+              'data-id="' + c.esc(evt.id) + '">' +
+              c.icon('plus', 'hc-share__icon') +
+              '<span>' + c.esc(HC.data.copy('connect.add-to-calendar', ADD_TO_CALENDAR)) + '</span>' +
+            '</button>',
+            { slot: 'connect.add-to-calendar',
+              value: HC.data.copy('connect.add-to-calendar', ADD_TO_CALENDAR),
+              label: 'the Add to calendar link' }
+          ) +
         '</div>' +
       '</div>';
   }
@@ -365,13 +405,27 @@
     );
 
     if (step.url) {
+      /* The button's words are the church's, in a column of its own, so they
+         are edited as a row rather than as a slot. Where it goes is not
+         editable: a relabelled button still opens the same link. */
+      var note = HC.data.copy('connect.step-note', STEP_NOTE);
       body += '<div class="hc-step__action">' +
-        c.button(step.ctaLabel || 'Open', {
-          action: 'open-url',
-          url: step.url,
-          icon: 'arrowOut'
-        }) +
-        '<p class="hc-caption hc-step__note">Opens in your browser.</p>' +
+        HC.edit.mark(
+          c.button(step.ctaLabel || 'Open', {
+            action: 'open-url',
+            url: step.url,
+            icon: 'arrowOut'
+          }),
+          { table: 'next_steps', id: step.id, column: 'cta_label',
+            target: step, field: 'ctaLabel',
+            value: step.ctaLabel || 'Open',
+            label: step.title + ', the words on the button', rows: 2 }
+        ) +
+        HC.edit.wrap(
+          note ? '<p class="hc-caption hc-step__note">' + c.esc(note) + '</p>' : '',
+          { slot: 'connect.step-note', value: note,
+            label: 'the note under a next step button' }
+        ) +
       '</div>';
     }
 
@@ -389,7 +443,7 @@
     var groups = HC.data.groups || [];
     var html = '<div class="hc-screen hc-connect">';
 
-    html += c.sectionHeader('Find your people', 'Connect', { flush: true, tag: 'h1' });
+    html += c.sectionHeader('Find your people', 'Connect', { flush: true, tag: 'h1', eyebrowSlot: 'connect.eyebrow' });
 
     // Under the h1, never above it. A screen whose first element is a strip of
     // unlabeled photographs reads as an ad banner to a person and as an
@@ -400,7 +454,7 @@
     if (!church.groupsInSeason) {
       html += offSeason();
     } else if (groups.length) {
-      html += c.sectionHeader('Open seats', 'Find a group');
+      html += c.sectionHeader('Open seats', 'Find a group', { eyebrowSlot: 'connect.groups-eyebrow' });
       html += '<div class="hc-filters">';
       html += '<p class="hc-eyebrow hc-eyebrow--legible hc-filters__label">Day</p>';
       html += pills('day', uniq(groups, 'day'), filters.day);
@@ -419,14 +473,14 @@
     // the whole section drops instead.
     var serveTeams = HC.data.serveTeams || [];
     if (serveTeams.length) {
-      html += c.sectionHeader('Lend a hand', 'Serve teams');
+      html += c.sectionHeader('Lend a hand', 'Serve teams', { eyebrowSlot: 'connect.serve-eyebrow' });
       serveTeams.forEach(function (t) { html += serveTeam(t); });
       html += serveSignup();
     }
 
     var events = HC.data.events || [];
     if (events.length) {
-      html += c.sectionHeader('On the calendar', 'Events');
+      html += c.sectionHeader('On the calendar', 'Events', { eyebrowSlot: 'connect.events-eyebrow' });
       html += '<div class="hc-event-list">';
       events.forEach(function (e) { html += eventRow(e); });
       html += '</div>';
@@ -434,7 +488,7 @@
 
     var nextSteps = HC.data.nextSteps || [];
     if (nextSteps.length) {
-      html += c.sectionHeader('Start somewhere', 'Next steps');
+      html += c.sectionHeader('Start somewhere', 'Next steps', { eyebrowSlot: 'connect.steps-eyebrow' });
       nextSteps.forEach(function (s) { html += nextStep(s); });
     }
 

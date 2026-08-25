@@ -2696,3 +2696,44 @@ a.hc-card:active { background: var(--hc-paper-sunk); }
   font-size: 13px;
   font-weight: 600;
 }
+
+/* Edit mode's second shape: the element drawn exactly as it always is, with a
+   pencil beside it. Used where the text is already inside a tap target, which
+   a button's label is.
+
+   The wrapper is a block with the chip positioned off it rather than a flex
+   row, so it changes nothing about how the element inside lays out: every
+   place this is used sits in a plain block container, and a button that is
+   inline-flex keeps its own width inside it. */
+.hc-edit-inline {
+  position: relative;
+  display: block;
+}
+
+.hc-edit-chip {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: none;
+  border-radius: var(--hc-radius-pill);
+  background: var(--hc-accent-deep);
+  color: var(--hc-on-dark);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+}
+
+.hc-edit-chip__icon {
+  width: 14px;
+  height: 14px;
+}
+
+.hc-edit-chip:focus-visible {
+  outline: 2px solid var(--hc-accent-deep);
+  outline-offset: 2px;
+}

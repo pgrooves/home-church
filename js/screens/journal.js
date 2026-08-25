@@ -22,6 +22,10 @@
 
   var c = HC.components;
 
+  var INTRO = 'Everything you have written down, from a guide or on your own. ' +
+    'Nobody else can see any of it.';
+  var EXPORT_NOTE = 'One document, every entry, yours to keep wherever you like.';
+
   /* Local to this screen, like the drafts in js/screens/group.js. A filter is
      not worth persisting and a person who leaves the tab and comes back is
      asking for the whole list, not for last Tuesday's search. */
@@ -170,9 +174,20 @@
 
     var html = '<div class="hc-screen hc-journal">';
 
-    html += c.sectionHeader('Yours', 'Journal', { flush: true, tag: 'h1' });
-    html += '<p class="hc-body-serif hc-journal__intro">Everything you have written down, from a guide or on ' +
-      'your own. Nobody else can see any of it.</p>';
+    /* The screen's own two sentences are the church's to word; everything
+       below them is somebody's private writing and is never editable by
+       anybody but its author. The promise in the second sentence is the app's
+       behaviour rather than a claim the church makes, so it is worth reading
+       twice before rewording it: entries are held on the phone and, when
+       somebody is signed in, in a row only they can read. */
+    var intro = HC.data.copy('journal.intro', INTRO);
+    html += c.sectionHeader('Yours', 'Journal',
+      { flush: true, tag: 'h1', eyebrowSlot: 'journal.eyebrow' });
+    html += HC.edit.wrap(
+      intro ? '<p class="hc-body-serif hc-journal__intro">' + c.esc(intro) + '</p>' : '',
+      { slot: 'journal.intro', value: intro,
+        label: 'the line under the Journal title', rows: 4 }
+    );
 
     html += '<div class="hc-journal__new">' +
       c.button('New entry', { action: 'journal-new', icon: 'plus' }) +
@@ -207,7 +222,12 @@
         c.button('Save a copy of everything', {
           action: 'journal-export', variant: 'secondary', icon: 'download'
         }) +
-        '<p class="hc-caption">One document, every entry, yours to keep wherever you like.</p>' +
+        HC.edit.wrap(
+          '<p class="hc-caption">' + c.esc(HC.data.copy('journal.export-note', EXPORT_NOTE)) + '</p>',
+          { slot: 'journal.export-note',
+            value: HC.data.copy('journal.export-note', EXPORT_NOTE),
+            label: 'the line about exporting', rows: 3 }
+        ) +
       '</div>';
     }
 

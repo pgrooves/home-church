@@ -390,15 +390,37 @@
      caps lines competing with the five titles they are meant to introduce.
      Passing a falsy eyebrow drops the span entirely rather than leaving an
      empty one behind for CSS to have an opinion about. */
+  /* opts.eyebrowSlot marks the small tracked line above the heading as
+     something an admin may rewrite from inside the app. The heading itself
+     never is, anywhere: it is how somebody finds their place on a screen, it
+     is what the right hand index rail lists, and a church that renames
+     "Serve teams" has renamed the thing the tab bar and the index still call
+     serve teams. The eyebrow above it carries none of that weight and is
+     pure voice, which is why the line is drawn between them. See
+     js/edit-mode.js. */
   function sectionHeader(eyebrow, title, opts) {
     opts = opts || {};
     var cls = 'hc-section-header' + (opts.flush ? ' hc-section-header--flush' : '');
     var tag = opts.tag || 'h2';
+    var eyebrowHtml = eyebrow
+      ? '<span class="hc-eyebrow hc-section-header__eyebrow">' + esc(eyebrow) + '</span>'
+      : '';
+    /* Two ways to say the eyebrow is editable, because eyebrows come from two
+       places. opts.eyebrowSlot names a string that lives in a source file;
+       opts.eyebrowEdit is a whole descriptor for one that is already a column,
+       which is what a content page's own eyebrow is. */
+    if (HC.edit && (opts.eyebrowSlot || opts.eyebrowEdit)) {
+      var desc = opts.eyebrowEdit || {
+        slot: opts.eyebrowSlot,
+        value: eyebrow
+      };
+      if (!desc.label) desc.label = opts.eyebrowLabel || ('the line above “' + title + '”');
+      if (!desc.rows) desc.rows = 2;
+      eyebrowHtml = HC.edit.wrap(eyebrowHtml, desc);
+    }
     return '' +
       '<header class="' + cls + '"' + (opts.id ? ' id="' + esc(opts.id) + '"' : '') + '>' +
-        (eyebrow
-          ? '<span class="hc-eyebrow hc-section-header__eyebrow">' + esc(eyebrow) + '</span>'
-          : '') +
+        eyebrowHtml +
         '<' + tag + ' class="hc-section-header__title">' + esc(title) + '</' + tag + '>' +
         '<div class="hc-section-header__rule" aria-hidden="true"></div>' +
       '</header>';
@@ -478,8 +500,28 @@
     if (opts.disabled || opts.busy) attrs.push('disabled');
     if (opts.busy) attrs.push('aria-busy="true"');
 
+    /* opts.labelSlot makes the words on the button editable, with the pencil
+       drawn beside the button rather than inside it: a tap target inside a tap
+       target is invalid markup and, worse, an ambiguous tap. What the button
+       DOES never moves, only what it says, so a relabelled button still opens
+       the same link.
+
+       Not offered on anything destructive or on the sign in flow. A button
+       that says one thing and deletes another is a different class of problem
+       from a caption that has gone stale. */
     var iconHtml = opts.icon ? icon(opts.icon, 'hc-btn__icon') : '';
-    return '<button ' + attrs.join(' ') + '>' + iconHtml + '<span>' + esc(label) + '</span></button>';
+    var html = '<button ' + attrs.join(' ') + '>' + iconHtml +
+      '<span>' + esc(label) + '</span></button>';
+
+    if (opts.labelSlot && HC.edit) {
+      return HC.edit.mark(html, {
+        slot: opts.labelSlot,
+        value: label,
+        label: opts.labelName || ('the “' + label + '” button'),
+        rows: 2
+      });
+    }
+    return html;
   }
 
   /* ------------------------------------------------------------------ card */

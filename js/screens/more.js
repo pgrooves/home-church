@@ -23,20 +23,32 @@
 
   var c = HC.components;
 
+  var WHERE_SETTINGS_ARE = 'Your account, notifications, and text size are under the ' +
+    'circle at the top right of every screen.';
+
   function modules() {
     return HC.modules || [];
   }
 
+  /* The line under each module's name is a description of what is behind the
+     door, so it is editable. The name itself is not: it is what the module is
+     called in the sheet, in the tab bar's ••• list and in the index rail, and
+     those three have to keep agreeing. The pencil sits beside the row rather
+     than inside it, because the row is already a button. */
   function moduleRow(m) {
-    return '' +
+    var sub = HC.data.copy('more.' + m.route + '-sub', m.sub);
+    return HC.edit.mark(
       '<button type="button" class="hc-module" data-action="go-module" data-id="' + c.esc(m.route) + '">' +
         '<span class="hc-module__disc" aria-hidden="true">' + c.icon(m.icon, 'hc-module__icon') + '</span>' +
         '<span class="hc-module__body">' +
           '<span class="hc-module__title">' + c.esc(m.title) + '</span>' +
-          '<span class="hc-caption">' + c.esc(m.sub) + '</span>' +
+          '<span class="hc-caption">' + c.esc(sub) + '</span>' +
         '</span>' +
         c.icon('chevronRight', 'hc-row__chevron') +
-      '</button>';
+      '</button>',
+      { slot: 'more.' + m.route + '-sub', value: sub,
+        label: m.title + ', the line under it', rows: 3 }
+    );
   }
 
   function render() {
@@ -84,8 +96,12 @@
       '</div>';
     }
 
-    html += '<p class="hc-caption hc-more__note">Your account, notifications, and text size are under the ' +
-      'circle at the top right of every screen.</p>';
+    var note = HC.data.copy('more.note', WHERE_SETTINGS_ARE);
+    html += HC.edit.wrap(
+      note ? '<p class="hc-caption hc-more__note">' + c.esc(note) + '</p>' : '',
+      { slot: 'more.note', value: note,
+        label: 'the note at the foot of More', rows: 3 }
+    );
 
     html += '</div>';
     return c.el(html);

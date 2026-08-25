@@ -39,13 +39,28 @@
       .join('');
   }
 
-  /* The opening paragraph is editable in place; the sections are not, and
-     that split is on purpose. `sections` is one jsonb array, so editing one
-     section's body means writing the whole array back, and two admins editing
-     two different sections of the same page from two phones would have the
-     second one overwrite the first without either of them seeing it. The
-     blurb is its own column and cannot do that. Sections stay on the form in
-     Settings -> Admin -> Content, where the page is edited whole. */
+  /* A section's words, editable in place; its heading is not, for the same
+     reason no heading in this app is: a heading is how somebody finds their
+     place on a page.
+
+     THE ONE CAVEAT WORTH KNOWING. `sections` is a single jsonb column, so
+     saving one section writes the whole array back, and two admins editing
+     two different sections of the same page in the same minute would have the
+     second save overwrite the first without either of them seeing it. Sections
+     are rare and rarely touched, and the opening paragraph beside them is its
+     own column and cannot race at all. Editing the page whole is still on the
+     form in Settings -> Admin -> Content. */
+  function sectionBody(page, section, index, className) {
+    return HC.edit.wrap(
+      paragraphs(section.body, 'hc-body-serif ' + (className || 'hc-page__text')),
+      { table: 'content_pages', id: page.id, column: 'sections',
+        path: [index, 'body'], target: page, field: 'sections',
+        value: section.body,
+        label: (section.heading || 'this section') + ', the words',
+        rows: 7 }
+    );
+  }
+
   function body(page) {
     var html = '';
     if (page.blurb) {
@@ -57,9 +72,9 @@
       );
     }
 
-    (page.sections || []).forEach(function (section) {
+    (page.sections || []).forEach(function (section, i) {
       if (section.heading) html += c.sectionHeader('', section.heading);
-      if (section.body) html += paragraphs(section.body, 'hc-body-serif hc-page__text');
+      if (section.body) html += sectionBody(page, section, i);
     });
 
     return html;
@@ -81,7 +96,14 @@
     }
 
     var html = '<div class="hc-screen hc-page">';
-    html += c.sectionHeader(page.eyebrow || '', page.title, { flush: true, tag: 'h1' });
+    html += c.sectionHeader(page.eyebrow || '', page.title, {
+      flush: true, tag: 'h1',
+      eyebrowEdit: {
+        table: 'content_pages', id: page.id, column: 'eyebrow',
+        target: page, field: 'eyebrow',
+        value: page.eyebrow || '', label: 'the line above the page title'
+      }
+    });
     html += body(page);
     html += '</div>';
 
@@ -94,6 +116,6 @@
   // The Give screen draws its own copy from a page row and needs the same
   // paragraph rule. One exported helper rather than a second copy of the
   // split, so the two can never disagree about what a paragraph is.
-  HC.screens.pageHelpers = { paragraphs: paragraphs };
+  HC.screens.pageHelpers = { paragraphs: paragraphs, sectionBody: sectionBody };
 
 })(window.HC = window.HC || {});

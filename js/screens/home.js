@@ -222,11 +222,13 @@
         c.esc(church.address.city + ', ' + church.address.state + ' ' + church.address.zip) +
       '</p>' +
       '<div class="hc-gathering__action">' +
-        c.button('Directions', {
+        c.button(HC.data.copy('home.directions', DIRECTIONS), {
           action: 'open-url',
           url: church.mapsUrl,
           variant: 'secondary',
-          icon: 'pin'
+          icon: 'pin',
+          labelSlot: 'home.directions',
+          labelName: 'the Directions button'
         }) +
       '</div>';
 
@@ -237,6 +239,8 @@
      church talking about its own week, and a church that moves its guide to
      Tuesdays should not need a build to stop promising it on Sunday. */
   var NO_GUIDE = 'Nothing here yet. Your guide shows up after Sunday.';
+  var GUIDE_CUE = 'Open this week’s guide';
+  var DIRECTIONS = 'Directions';
 
   function guideCard() {
     var guide = HC.data.latestGuide();
@@ -256,7 +260,8 @@
       '<p class="hc-caption hc-card__meta">' +
         c.esc(c.byline(meta.preacherShort, meta.preachedOn)) +
       '</p>' +
-      '<p class="hc-guide-card__cue hc-caption">Open this week’s guide' +
+      '<p class="hc-guide-card__cue hc-caption">' +
+        c.esc(HC.data.copy('home.guide-cue', GUIDE_CUE)) +
         c.icon('chevronRight', 'hc-guide-card__chev') + '</p>';
 
     return c.card(inner, { action: 'open-guide', id: guide.id });
@@ -358,7 +363,19 @@
     return '' +
       '<div class="hc-banner" data-banner="' + c.esc(a.id) + '">' +
         '<div class="hc-banner__body">' +
-          '<p class="hc-eyebrow">' + c.esc(announcementLabel(a)) + '</p>' +
+          /* The small label over the title. Editable, unlike the title under
+             it: an announcement's title is what the notification already said
+             on every lock screen in the church. Empty here means the label is
+             the date the card went up, which is what announcementLabel()
+             works out, so the box opens holding nothing rather than holding a
+             date somebody would then have to keep in step. */
+          HC.edit.wrap(
+            '<p class="hc-eyebrow">' + c.esc(announcementLabel(a)) + '</p>',
+            { table: 'announcements', id: a.id, column: 'eyebrow',
+              target: a, field: 'eyebrow',
+              value: a.eyebrow || '', label: 'the label over the announcement',
+              rows: 2 }
+          ) +
           '<p class="hc-banner__title hc-body-serif">' + c.esc(a.title) + '</p>' +
           /* The words of an announcement, editable where they are read. The
              title above is not: it is what the notification said and what the
@@ -409,8 +426,17 @@
     var message = String(HC.data.setting('home_banner_message', '') || '').trim();
     if (!message) return '';
 
+    /* The sentence is editable here, on the screen it appears on, and the
+       switch that puts it there is not: it stays in Admin -> App settings.
+       Fixing a typo in a banner is a wording; taking the banner down is a
+       decision about what the whole church sees, and the two want different
+       amounts of ceremony. See writeSetting() in js/edit-mode.js. */
     return '<div class="hc-pinned" role="status">' +
-      '<p class="hc-pinned__text">' + c.esc(message) + '</p>' +
+      HC.edit.wrap(
+        '<p class="hc-pinned__text">' + c.esc(message) + '</p>',
+        { setting: 'home_banner_message', value: message,
+          label: 'the pinned banner', rows: 3 }
+      ) +
     '</div>';
   }
 
@@ -488,8 +514,19 @@
         '<div class="hc-progress" role="presentation">' +
           '<div class="hc-progress__fill" style="width:' + pct + '%"></div>' +
         '</div>' +
+        /* What the plan is reading this week. The week number and the bar
+           above it are arithmetic from the plan's start date and are not
+           editable: a number that disagrees with the date it is counted from
+           is worse than a stale one. */
         (plan.thisWeek
-          ? '<p class="hc-caption hc-plan__reading">This week, ' + c.esc(plan.thisWeek) + '</p>'
+          ? HC.edit.wrap(
+              '<p class="hc-caption hc-plan__reading">This week, ' +
+                c.esc(plan.thisWeek) + '</p>',
+              { table: 'reading_plans', id: plan.id, column: 'this_week',
+                target: plan, field: 'thisWeek',
+                value: plan.thisWeek, label: 'what the plan reads this week',
+                rows: 2 }
+            )
           : '') +
       close;
   }

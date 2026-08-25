@@ -10,30 +10,43 @@
    sentence it draws. There is no publish step, the same as everywhere else on
    the Admin screen.
 
-   WHAT IT DOES NOT TOUCH, and this is the part worth being strict about,
-   because the failure mode of a loose answer is a heading that reads
-   "Anncouncements" for a fortnight or a button whose label no longer matches
-   what the code looks for. A slot is only ever created by a screen calling
-   wrap() around a sentence on purpose. Headings, button labels, tab names,
-   dates, scripture, anything compared against in code, the nine Practices
-   (somebody else's words, see js/practices.js), the legal pages (the App
-   Store was shown those exact words), and anything a person wrote in the
-   Journal or a group room are all simply never wrapped, so no amount of
-   flipping the switch reveals them.
+   WHERE THE LINE IS. Descriptions, subtitles, captions, eyebrows, notes under
+   buttons, empty states, and the words on a button are editable. Two things
+   are not, and the difference is navigation:
 
-   THE TWO KINDS OF SENTENCE, which is the whole shape of this file:
+     A screen's title and a section's heading are how somebody finds their
+     place. They are what the right hand index rail lists and what the tab bar
+     agrees with, and a church that renames "Serve teams" has renamed only one
+     of the three places that phrase appears. Fixed, everywhere.
 
-     A row.   A next step's blurb, a serve team's blurb, an event's
-              description, the church's tagline, the podcast blurb. These are
-              already columns in tables the app syncs. Saving PATCHes that
-              column. Migration 0030 section 3 grants an admin exactly those
-              columns and nothing else on those tables.
+     An item's own name, a serve team's or an event's or a group's, is what
+     that thing is called on a Sunday, in a bulletin and in somebody's
+     calendar. Fixed too, and edited from the Admin form where the whole item
+     is in view.
+
+   Below those, the ALLOWLIST further down this file is the real answer, and
+   it is enforced rather than described: a column not named there cannot be
+   opened for editing however a screen asks. Read its comment before adding
+   anything.
+
+   THE THREE KINDS OF SENTENCE, which is the whole shape of this file:
+
+     A row.   A next step's blurb, a serve team's commitment, an event's
+              description, a sermon's description, the church's tagline.
+              Already columns in tables the app syncs; saving PATCHes the
+              column. Migration 0031 grants an admin exactly the allowed
+              columns and nothing else on those tables. One of them,
+              content_pages.sections, is jsonb and is written whole.
 
      A slot.  A string that still lives in a source file, like the line under
               the Give button. Saving upserts a row into text_overrides keyed
               by a slot name, and js/data.js copy() prefers that row over the
               string in the binary. Reset deletes the row and the app's own
               words come back. Migration 0030 sections 1 and 2.
+
+     A setting. The text half of an app_settings row, so the pinned banner can
+              be fixed on Home where somebody is looking at it. The switch
+              beside it never moves: turning the banner off is a decision.
 
    WHY THE STATE IS IN THIS FILE AND NOWHERE ELSE. Edit mode has to turn
    itself off when the app is closed and after thirty minutes of nobody
@@ -187,6 +200,92 @@
     return isOn() ? (disable(), false) : enable();
   }
 
+  /* ---------------------------------------------------- what may be edited
+
+     THE ALLOWLIST, and it is the most important thing in this file.
+
+     Every other guard here is a decision a screen makes: a sentence is
+     editable because js/screens/connect.js chose to wrap it. This is the
+     guard that does not depend on anybody remembering. A column that is not
+     named below cannot be opened for editing no matter what a screen asks
+     for, so a wrap() added later around the wrong field draws nothing rather
+     than quietly putting a text box over something the app depends on.
+
+     It is the client half of a pair. The other half is migration 0031, which
+     grants a signed in admin exactly these columns and no others, and it is
+     the half that actually holds: a phone can send whatever it likes to
+     PostgREST, and Postgres refuses the rest with 42501. The two lists are
+     asserted equal in supabase/tests/0031_editable_columns_test.sql, because
+     two lists that are meant to match and are never compared do not stay
+     matching.
+
+     WHAT IS DELIBERATELY ABSENT, having been checked one at a time against
+     what the code actually reads:
+
+       groups.day, groups.neighborhood   The group finder's filter chips are
+                                         built from these values and compared
+                                         against them. Reword one and the chip
+                                         that used to select it no longer
+                                         matches anything.
+       events.time_label, starts_at      Connect parses these back into a real
+                                         Date for Add to calendar. A time that
+                                         reads well and does not parse puts the
+                                         wrong hour in somebody's calendar.
+       events.location                   Goes into the calendar entry a person
+                                         keeps, so it is an address rather than
+                                         a description of one.
+       announcements.title               Already said on every lock screen by
+                                         the notification.
+       church_profile.*                  Address, service times, giving URL,
+                                         the SMS number and keyword: facts and
+                                         destinations, not sentences.
+       every *_title, every heading      Answer to "where does the line sit":
+                                         screen titles and section headings are
+                                         how somebody navigates, and the index
+                                         rail lists them.
+       guides.group_sections,
+       guides.reflection_questions       A room copies its questions from the
+                                         guide when it opens, so an edit would
+                                         change future rooms and not tonight's.
+
+     Adding a column here is a deliberate act that needs a migration beside it.
+     ---------------------------------------------------------------------- */
+
+  var ALLOWED = {
+    announcements:  ['eyebrow', 'body'],
+    content_pages:  ['eyebrow', 'blurb', 'sections'],
+    church_profile: ['tagline', 'serve_signup_blurb', 'groups_off_season_note'],
+    serve_teams:    ['blurb', 'commitment', 'requirement'],
+    next_steps:     ['blurb', 'cta_label'],
+    events:         ['description'],
+    groups:         ['blurb'],
+    series:         ['subtitle', 'blurb'],
+    podcasts:       ['description', 'summary'],
+    guides:         ['subtitle'],
+    reading_plans:  ['subtitle', 'this_week'],
+    podcast_show:   ['blurb']
+  };
+
+  /* Refused descriptors, kept rather than dropped so a screen asking for
+     something it may not have is findable in a test instead of being a
+     sentence that mysteriously never outlines. */
+  var refused = [];
+
+  function permitted(desc) {
+    if (desc.setting) {
+      // Only a setting the church already writes as text. A boolean is a
+      // switch, and a switch is a decision rather than a wording.
+      var row = (HC.data.appSettings || []).filter(function (s) {
+        return s.key === desc.setting;
+      })[0];
+      return !!row && row.kind === 'text';
+    }
+    if (!desc.table) return true;   // a source string, owned by this app
+    var cols = Object.prototype.hasOwnProperty.call(ALLOWED, desc.table)
+      ? ALLOWED[desc.table] : null;
+    return !!cols && cols.indexOf(desc.column) > -1;
+  }
+
   /* ------------------------------------------------------------ the slots */
 
   /* A row's slot name is derived rather than chosen, so two screens drawing
@@ -200,17 +299,57 @@
      to text_overrides, they name a column to PATCH. */
   function slotFor(desc) {
     if (desc.slot) return desc.slot;
-    return desc.table + ':' + desc.id + ':' + desc.column;
+    if (desc.setting) return 'setting:' + desc.setting;
+    /* `scope` distinguishes two drawings of one sentence on one screen, which
+       Listen does: a message appears under its series and again in the
+       archive. Without it both would carry the same slot, tapping one would
+       open a box in both places, and Cancel would be ambiguous. It names the
+       drawing, never the row, so both still write the same column. */
+    return desc.table + ':' + desc.id + ':' + desc.column +
+      (desc.path ? ':' + desc.path.join('.') : '') +
+      (desc.scope ? '@' + desc.scope : '');
+  }
+
+  function kindOf(desc) {
+    if (desc.setting) return 'setting';
+    if (desc.table) return 'row';
+    return 'copy';
   }
 
   function register(desc) {
     var slot = slotFor(desc);
+
+    /* Refused, and the caller gets null rather than an entry. wrap() and
+       mark() then draw exactly what they were handed, so a screen asking for
+       something it may not have loses the pencil and nothing else: the words
+       are still on the screen and the app is unchanged. */
+    if (!permitted(desc)) {
+      if (refused.indexOf(slot) < 0) refused.push(slot);
+      return null;
+    }
+
     slots[slot] = {
       slot: slot,
-      kind: desc.table ? 'row' : 'copy',
+      kind: kindOf(desc),
       table: desc.table || '',
       id: desc.id || '',
       column: desc.column || '',
+      // A row's app_settings key, for the handful of switches whose text is
+      // read straight off the screen it appears on. See writeSetting().
+      setting: desc.setting || '',
+      /* Where inside a jsonb column the sentence sits, as [index, key]. Only
+         content_pages.sections uses this. The whole column is written back on
+         save, because a jsonb array is one value to Postgres, which is also
+         why two admins editing two sections of one page at the same moment is
+         a last-one-wins race. Sections are rare and long-lived; the blurb
+         beside them is its own column and cannot race at all. */
+      path: desc.path || null,
+      /* A column that is an array of paragraphs rather than one string, which
+         podcasts.summary is. The box holds them joined by blank lines, which
+         is how somebody types paragraphs, and the save splits them back. The
+         same rule js/screens/page.js draws content pages by, so a person who
+         has edited one has already learned this one. */
+      paragraphs: !!desc.paragraphs,
       // The in-memory object and key to patch on a successful save, so the
       // sentence changes under the thumb rather than a second later when the
       // content sync lands. Optional: without it the refresh is what updates
@@ -222,8 +361,12 @@
       // A source string can go back to what shipped in the app. A table row
       // has no such thing to go back to: the words in the table are the only
       // copy the church has.
-      resettable: !desc.table,
-      rows: desc.rows || 0
+      resettable: !desc.table && !desc.setting,
+      rows: desc.rows || 0,
+      // An empty value is a real state for a caption and not for a row, with
+      // one exception: a setting's text can be cleared, which is how the
+      // pinned banner's sentence is taken down without touching its switch.
+      emptiable: !desc.table || !!desc.setting
     };
     return slots[slot];
   }
@@ -267,7 +410,7 @@
      again first. */
   function wrap(html, desc) {
     var entry = register(desc);
-    if (!isOn()) return html;
+    if (!entry || !isOn()) return html;
     if (editing && editing.slot === entry.slot) return editor(entry);
 
     /* A sentence the church cleared draws nothing, which is the point of
@@ -288,6 +431,34 @@
           HC.components.icon('pencil', 'hc-editable__icon') +
         '</span>' +
       '</div>';
+  }
+
+  /* THE SECOND SHAPE, for text that cannot be wrapped in a tap target because
+     it already is one. A button's label is the case that forces this: putting
+     a role="button" div around the inside of a <button> is invalid HTML that
+     every browser resolves differently, and the one thing it must never do is
+     eat the tap that presses the button.
+
+     So the element is drawn untouched and a small pencil sits beside it. Same
+     editor, same slot, same everything else; only the way in is different.
+     Used for button labels, and for the tracked eyebrow inside a collapsible
+     section's own toggle. */
+  function mark(html, desc) {
+    var entry = register(desc);
+    if (!entry || !isOn()) return html;
+    if (editing && editing.slot === entry.slot) {
+      return '<span class="hc-edit-inline">' + html + '</span>' + editor(entry);
+    }
+
+    return '' +
+      '<span class="hc-edit-inline">' +
+        html +
+        '<button type="button" class="hc-edit-chip" data-action="edit-open" ' +
+          'data-slot="' + esc(entry.slot) + '" ' +
+          'aria-label="Edit ' + esc(entry.label) + '">' +
+          HC.components.icon('pencil', 'hc-edit-chip__icon') +
+        '</button>' +
+      '</span>';
   }
 
   /* The box, drawn in place of the sentence. Deliberately not a sheet over
@@ -407,12 +578,51 @@
 
   function writeRow(entry, value) {
     var patch = {};
-    patch[entry.column] = value;
+    patch[entry.column] = entry.path ? patched(entry, value)
+      : entry.paragraphs ? splitParagraphs(value)
+      : value;
     return HC.auth.restFetch('/' + entry.table +
       '?id=eq.' + encodeURIComponent(entry.id), {
       method: 'PATCH',
       headers: { Prefer: 'return=minimal' },
       body: patch
+    });
+  }
+
+  /* Blank lines separate paragraphs, a single newline does not, which is the
+     rule js/screens/page.js already draws prose by. Empty parts are dropped so
+     three blank lines in a row do not become an empty paragraph on a card. */
+  function splitParagraphs(value) {
+    return String(value || '').split(/\n\s*\n/)
+      .map(function (part) { return part.trim(); })
+      .filter(Boolean);
+  }
+
+  /* A copy of a jsonb column with one sentence inside it changed. Deliberately
+     built from what this phone last synced rather than from a fresh read: a
+     read first would narrow the race between two admins from seconds to
+     milliseconds without closing it, at the cost of a round trip on every
+     save, and the honest fix for a race that matters is a column per
+     sentence, which is what every other editable field here already is. */
+  function patched(entry, value) {
+    var whole = entry.target && entry.field ? entry.target[entry.field] : null;
+    var copy = JSON.parse(JSON.stringify(Array.isArray(whole) ? whole : []));
+    var slotAt = copy[entry.path[0]];
+    if (!slotAt) return copy;
+    slotAt[entry.path[1]] = value;
+    return copy;
+  }
+
+  /* A switch's text, which is the same PATCH the App settings screen makes and
+     is here so the pinned banner can be fixed on Home, where somebody is
+     actually looking at it. Only the text ever moves: the switch beside it
+     stays on the settings screen, because turning the banner off is a decision
+     and fixing its wording is not. */
+  function writeSetting(entry, value) {
+    return HC.auth.restFetch('/app_settings?key=eq.' + encodeURIComponent(entry.setting), {
+      method: 'PATCH',
+      headers: { Prefer: 'return=minimal' },
+      body: { value_text: value }
     });
   }
 
@@ -422,8 +632,25 @@
      between a save that feels like it worked and one that feels like it
      might not have. */
   function applyLocally(entry, value) {
+    if (entry.kind === 'setting') {
+      var list = HC.data.appSettings || [];
+      for (var s = 0; s < list.length; s++) {
+        if (list[s] && list[s].key === entry.setting) list[s].value = value;
+      }
+      entry.value = value;
+      return;
+    }
     if (entry.kind === 'row') {
-      if (entry.target && entry.field) entry.target[entry.field] = value;
+      if (entry.target && entry.field) {
+        if (entry.path) {
+          var whole = entry.target[entry.field];
+          if (Array.isArray(whole) && whole[entry.path[0]]) {
+            whole[entry.path[0]][entry.path[1]] = value;
+          }
+        } else {
+          entry.target[entry.field] = entry.paragraphs ? splitParagraphs(value) : value;
+        }
+      }
       entry.value = value;
       return;
     }
@@ -460,7 +687,7 @@
       return Promise.reject(new Error('That is longer than this space can hold. ' +
         'Try a shorter sentence, or write it as a page in Admin.'));
     }
-    if (entry.kind === 'row' && !value) {
+    if (!entry.emptiable && !value) {
       return Promise.reject(new Error('This one cannot be left empty. ' +
         'Rewrite it, or take the whole item down from Admin.'));
     }
@@ -468,7 +695,9 @@
     editing.busy = true;
     touch();
 
-    var write = entry.kind === 'row' ? writeRow(entry, value) : writeCopy(entry.slot, value);
+    var write = entry.kind === 'row' ? writeRow(entry, value)
+      : entry.kind === 'setting' ? writeSetting(entry, value)
+      : writeCopy(entry.slot, value);
 
     return write.then(function () {
       applyLocally(entry, value);
@@ -520,6 +749,7 @@
 
     beginRender: beginRender,
     wrap: wrap,
+    mark: mark,
 
     open: open,
     cancel: cancel,
@@ -532,6 +762,8 @@
 
     // Test seams. Nothing in the app calls these.
     _slots: function () { return slots; },
+    _allowed: ALLOWED,
+    _refused: function () { return refused; },
     _idleMs: IDLE_MS
   };
 

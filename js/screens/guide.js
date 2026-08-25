@@ -9,6 +9,8 @@
 
   var c = HC.components;
 
+  var NO_GUIDES = 'Nothing here yet. Your guide shows up after Sunday.';
+
   /* A block of guide prose that can be highlighted. data-hl-path is the whole
      contract with js/highlight.js: it says which block this is, as an address
      into the guide object, and js/journal.js anchors to the same string.
@@ -58,7 +60,12 @@
     '</p>';
 
     if (!guides.length) {
-      html += c.emptyState('Nothing here yet. Your guide shows up after Sunday.');
+      var empty = HC.data.copy('guide.empty', NO_GUIDES);
+      html += HC.edit.wrap(
+        empty ? c.emptyState(empty) : '',
+        { slot: 'guide.empty', value: empty,
+          label: 'what the guide list says before the first one is up' }
+      );
       html += '</div>';
       return c.el(html);
     }
@@ -273,7 +280,19 @@
     html += '<p class="hc-eyebrow">' + c.esc(series ? series.title : 'Home Church') + '</p>';
     var meta = HC.data.guideMeta(guide);
     html += '<h1 class="hc-display-l hc-reader__title">' + c.esc(meta.title) + '</h1>';
-    html += '<p class="hc-reader__subtitle hc-body-serif">' + c.esc(guide.subtitle) + '</p>';
+    /* The guide's subtitle, and only the subtitle. Everything below it, the
+       summaries, the one liners and the questions, is a reading surface with
+       its own gesture: js/highlight.js turns a selection in that prose into a
+       highlight and a note, and a tap that might mean "edit this" and might
+       mean "highlight this" is a tap that does neither well. The questions
+       carry a second reason of their own, in js/edit-mode.js: a group room
+       copies them when it opens. Both are edited by republishing the guide. */
+    html += HC.edit.wrap(
+      '<p class="hc-reader__subtitle hc-body-serif">' + c.esc(guide.subtitle) + '</p>',
+      { table: 'guides', id: guide.id, column: 'subtitle',
+        target: guide, field: 'subtitle',
+        value: guide.subtitle, label: 'the guide’s subtitle', rows: 3 }
+    );
     html += '<div class="hc-reader__rule" aria-hidden="true"></div>';
     html += '<p class="hc-caption hc-reader__meta">' +
       c.esc(c.metaLine([meta.preacher, meta.preachedOn ? c.formatDate(meta.preachedOn) : '', meta.passage])) + '</p>';

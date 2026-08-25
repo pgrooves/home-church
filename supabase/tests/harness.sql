@@ -197,6 +197,7 @@ create table public.serve_teams (
   id          text primary key,
   name        text not null,
   commitment  text,
+  requirement text,
   blurb       text,
   published   boolean not null default true,
   updated_at  timestamptz not null default now()
@@ -206,6 +207,8 @@ create table public.next_steps (
   id          text primary key,
   title       text not null,
   blurb       text,
+  url         text,
+  cta_label   text,
   published   boolean not null default true,
   updated_at  timestamptz not null default now()
 );
@@ -255,6 +258,101 @@ begin
     execute format('alter table public.%I enable row level security', t);
     execute format('grant select on public.%I to anon, authenticated', t);
     execute format('revoke insert, update, delete on public.%I from anon, authenticated', t);
+    execute format($p$create policy %I on public.%I for select
+                        to anon, authenticated using (published)$p$,
+                   t || ' are publicly readable', t);
+  end loop;
+end;
+$$;
+
+/* ---------------------------------------------------------------------------
+   The rest of the content tables, from 0001 and 0004, for 0031.
+
+   Same rule as the block above: only the columns the migration names, plus
+   the ones whose refusal is the point. guides.reflection_questions and
+   podcasts.title are here so "an admin cannot write these" is a real
+   assertion rather than a claim about a column that does not exist and would
+   have been refused for the wrong reason.
+   --------------------------------------------------------------------------- */
+
+create table public.series (
+  id          text primary key,
+  title       text not null,
+  subtitle    text,
+  blurb       text,
+  published   boolean not null default true,
+  updated_at  timestamptz not null default now()
+);
+
+create table public.podcasts (
+  id          text primary key,
+  title       text not null,
+  description text,
+  summary     text[],
+  episode_url text,
+  published   boolean not null default true,
+  updated_at  timestamptz not null default now()
+);
+
+create table public.guides (
+  id                   text primary key,
+  subtitle             text,
+  theme_title          text,
+  reflection_questions jsonb not null default '[]'::jsonb,
+  published            boolean not null default true,
+  updated_at           timestamptz not null default now()
+);
+
+create table public.reading_plans (
+  id          text primary key,
+  title       text not null,
+  subtitle    text,
+  this_week   text,
+  total_weeks integer not null default 1,
+  published   boolean not null default true,
+  updated_at  timestamptz not null default now()
+);
+
+create table public.groups (
+  id           text primary key,
+  name         text not null,
+  day          text,
+  neighborhood text,
+  blurb        text,
+  published    boolean not null default true,
+  updated_at   timestamptz not null default now()
+);
+
+create table public.instagram_posts (
+  id         text primary key,
+  caption    text,
+  posted_at  timestamptz
+);
+
+insert into public.groups (id, name, day, neighborhood, blurb)
+values ('group-uptown', 'Uptown', 'Thursday', 'Uptown', 'Come as you are.');
+insert into public.series (id, title, subtitle, blurb)
+values ('series-david', 'The Life of David', 'A man after God''s heart', 'Eight weeks.');
+insert into public.podcasts (id, title, description)
+values ('sermon-test', 'The Weight of a Crown', 'What David carried.');
+insert into public.guides (id, subtitle, reflection_questions)
+values ('guide-test', 'Week one', '[]'::jsonb);
+insert into public.reading_plans (id, title, subtitle, this_week)
+values ('plan-test', 'The Gospels', 'Ninety days', 'Matthew 1 to 4');
+
+do $$
+declare t text;
+begin
+  foreach t in array array['series', 'podcasts', 'guides', 'reading_plans',
+                           'groups', 'instagram_posts']
+  loop
+    execute format('alter table public.%I enable row level security', t);
+    execute format('grant select on public.%I to anon, authenticated', t);
+    execute format('revoke insert, update, delete on public.%I from anon, authenticated', t);
+  end loop;
+
+  foreach t in array array['series', 'podcasts', 'guides', 'reading_plans', 'groups']
+  loop
     execute format($p$create policy %I on public.%I for select
                         to anon, authenticated using (published)$p$,
                    t || ' are publicly readable', t);

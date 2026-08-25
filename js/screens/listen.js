@@ -36,10 +36,33 @@
     });
   }
 
-  function summaryHtml(sermon) {
-    return HC.data.episodeSummary(sermon).map(function (para) {
+  /* The message's own notes. Two columns can hold them: `summary`, which is a
+     list of paragraphs, and `description`, which is one string and is what a
+     message falls back to. Whichever one this message actually uses is the one
+     Edit mode writes, so an admin fixing a sentence never has to know which
+     shape it was published in. The title, the preacher and the date above are
+     not editable: they are what the episode is called on Spotify. */
+  function summaryHtml(sermon, scope) {
+    var paras = HC.data.episodeSummary(sermon);
+    var usesList = !!(sermon.summary && sermon.summary.length);
+    var html = paras.map(function (para) {
       return '<p class="hc-body-serif hc-episode__para">' + c.esc(para) + '</p>';
     }).join('');
+
+    return HC.edit.wrap(html, {
+      table: 'podcasts', id: sermon.id,
+      column: usesList ? 'summary' : 'description',
+      target: sermon, field: usesList ? 'summary' : 'description',
+      paragraphs: usesList,
+      value: paras.join('\n\n'),
+      label: sermon.title + ', what the message is about',
+      rows: 7,
+      // The same message is drawn twice on this screen, under its series and
+      // in the archive, and two open editors for one sentence would be two
+      // boxes to lose track of. The scope keeps them separate slots the way
+      // the panel ids are kept separate, so tapping one opens one.
+      scope: scope
+    });
   }
 
   /* The date under the section header is the Sunday this was preached, so the
@@ -58,7 +81,7 @@
         '<p class="hc-caption hc-latest__meta">' +
           c.esc(c.metaLine([sermon.preacher, sermon.duration])) +
         '</p>' +
-        '<div class="hc-latest__desc">' + summaryHtml(sermon) + '</div>' +
+        '<div class="hc-latest__desc">' + summaryHtml(sermon, 'latest') + '</div>' +
         '<div class="hc-latest__action">' + listenButton(sermon, 'primary') + '</div>' +
         guideLink(sermon) +
       '</div>';
@@ -89,7 +112,7 @@
         '</button>' +
         '<div class="hc-episode" id="' + c.esc(panelId) + '" data-open="false">' +
           '<div class="hc-episode__inner">' +
-            summaryHtml(sermon) +
+            summaryHtml(sermon, scope || 'archive') +
             '<div class="hc-episode__action">' + listenButton(sermon) + '</div>' +
             guideLink(sermon) +
           '</div>' +
@@ -137,9 +160,18 @@
       '<p class="hc-eyebrow hc-series-meta__kicker">' +
         (series.current ? 'Current series' : 'Past series') + '</p>' +
       '<h3 class="hc-display-m hc-series-meta__title">' + c.esc(series.title) + '</h3>' +
-      (series.subtitle
-        ? '<p class="hc-body-serif hc-series-meta__sub">' + c.esc(series.subtitle) + '</p>'
-        : '') +
+      /* The series' own line. Its title above is what the series is called on
+         the artwork and in the guide list, and the count below it is counted
+         rather than written. */
+      HC.edit.wrap(
+        series.subtitle
+          ? '<p class="hc-body-serif hc-series-meta__sub">' + c.esc(series.subtitle) + '</p>'
+          : '',
+        { table: 'series', id: series.id, column: 'subtitle',
+          target: series, field: 'subtitle',
+          value: series.subtitle, label: series.title + ', the line under it',
+          rows: 3 }
+      ) +
       '<p class="hc-caption hc-series-meta__count">' +
         count + ' episode' + (count === 1 ? '' : 's') + (series.current ? ' so far' : '') +
       '</p>';
@@ -222,6 +254,7 @@
      Monday" is a promise about this church's week and this church may keep a
      different one. */
   var NOTHING_YET = 'Nothing to listen to yet. Sunday’s message lands here on Monday.';
+  var FOLLOW = 'Follow the show';
 
   function showCard() {
     var podcast = HC.data.podcast;
@@ -240,7 +273,9 @@
           value: podcast.blurb, label: 'what the show card says', rows: 4 }
       ) +
       '<div class="hc-show-card__action">' +
-        c.button('Follow the show', {
+        c.button(HC.data.copy('listen.follow', FOLLOW), {
+          labelSlot: 'listen.follow',
+          labelName: 'the Follow the show button',
           action: 'open-url',
           url: podcast.showUrl,
           variant: 'secondary',
@@ -313,7 +348,8 @@
       open: false
     });
 
-    html += c.sectionHeader('Wherever you listen', 'The show');
+    html += c.sectionHeader('Wherever you listen', 'The show',
+      { eyebrowSlot: 'listen.show-eyebrow' });
     html += showCard();
 
     html += '</div>';

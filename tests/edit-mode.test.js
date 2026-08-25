@@ -375,6 +375,91 @@ const noteDesc = () => ({
     HC.edit.open('give.note'), false);
 }
 
+/* ------------------------------------------------- what may be edited at all ---
+
+   THE GUARD, and the reason this block is worth more than the rest of the
+   file. Every wrap() in every screen is a decision somebody made once; the
+   ALLOWLIST is the thing that holds when a later decision is wrong. These
+   assertions are about the two ways it could quietly stop holding: a screen
+   asking for a column that is not on the list, and the list drifting away from
+   the grants that actually enforce it. */
+
+{
+  const { HC } = load();
+  HC.edit.enable();
+
+  // A column the app depends on. groups.day is what the finder's filter chips
+  // are compared against, so a text box over it would be a filter that stops
+  // matching the moment somebody rewords a day.
+  const before = HC.edit.wrap('<p>Thursdays</p>', {
+    table: 'groups', id: 'group-uptown', column: 'day',
+    value: 'Thursday', label: 'the day'
+  });
+  ok('a column that is not on the list is not editable, however a screen asks',
+    before, '<p>Thursdays</p>');
+  ok('and it never becomes a slot that Save could reach',
+    HC.edit._slots()['groups:group-uptown:day'], undefined);
+  okTrue('and the refusal is findable rather than silent',
+    HC.edit._refused().indexOf('groups:group-uptown:day') > -1);
+
+  // The same test for the two that would put the wrong hour in a calendar.
+  ok('an event\'s time is not editable',
+    HC.edit.wrap('<p>6:30 PM</p>', { table: 'events', id: 'event-x',
+      column: 'time_label', value: '6:30 PM', label: 'the time' }),
+    '<p>6:30 PM</p>');
+  ok('nor its location',
+    HC.edit.wrap('<p>The Loft</p>', { table: 'events', id: 'event-x',
+      column: 'location', value: 'The Loft', label: 'where' }),
+    '<p>The Loft</p>');
+  ok('nor an announcement\'s title, which the notification already said',
+    HC.edit.wrap('<p>Baptism</p>', { table: 'announcements', id: 'ann-x',
+      column: 'title', value: 'Baptism', label: 'the title' }),
+    '<p>Baptism</p>');
+  ok('nor a guide\'s questions, which a group room copies when it opens',
+    HC.edit.wrap('<p>Questions</p>', { table: 'guides', id: 'guide-x',
+      column: 'reflection_questions', value: 'x', label: 'the questions' }),
+    '<p>Questions</p>');
+
+  // And one that is on the list, so the test above is not passing by accident.
+  okTrue('a column that is on the list still is editable',
+    HC.edit.wrap('<p>Come as you are.</p>', { table: 'groups', id: 'group-uptown',
+      column: 'blurb', value: 'Come as you are.', label: 'what it is like' })
+      .indexOf('hc-editable') > -1);
+}
+
+{
+  /* The client's list and the migration's, compared rather than trusted. Both
+     are hand written, they are meant to be the same set, and the failure if
+     they drift is silent in both directions: a column the app offers and the
+     database refuses is a Save that always fails, and a column the database
+     grants and the app never offers is a privilege nobody meant to hand out. */
+  const { HC } = load();
+  const sql = fs.readFileSync(
+    path.join(__dirname, '..', 'supabase', 'migrations', '0031_editable_columns.sql'), 'utf8');
+
+  const granted = [];
+  const list = sql.slice(sql.indexOf('select * from (values'), sql.indexOf('as v(tbl, col)'));
+  list.replace(/\('(\w+)',\s*'(\w+)'\)/g, (all, tbl, col) => { granted.push(tbl + '.' + col); });
+
+  const allowed = [];
+  Object.keys(HC.edit._allowed).forEach(function (t) {
+    HC.edit._allowed[t].forEach(function (col) { allowed.push(t + '.' + col); });
+  });
+
+  /* The three the migration deliberately does not name: announcements and
+     content_pages carry a full admin UPDATE from 0026, which the Admin form
+     has been writing since, so Edit mode is narrower than its privileges there
+     rather than the other way round. */
+  const COVERED_BY_0026 = ['announcements.body', 'content_pages.blurb', 'content_pages.sections'];
+
+  ok('every column the migration grants is one the app actually offers',
+    granted.filter(g => allowed.indexOf(g) < 0), []);
+  ok('and every column the app offers is granted, or covered by 0026',
+    allowed.filter(a => granted.indexOf(a) < 0 && COVERED_BY_0026.indexOf(a) < 0), []);
+  okTrue('and the lists are not empty, which would pass both tests above',
+    granted.length > 15 && allowed.length > 15);
+}
+
 /* ------------------------------------------------------------------ done --- */
 
 setTimeout(function () {

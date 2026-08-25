@@ -35,6 +35,7 @@
      true, and nobody is going to ship a build for one clause. See
      js/edit-mode.js. */
   var NOTE = 'Opens Overflow in your browser. Cash, card, and stock, all in one place.';
+  var GIVE_BUTTON = 'Give through Overflow';
 
   function render() {
     var church = HC.data.church;
@@ -63,16 +64,27 @@
         c.sectionHeader(
           (page && page.eyebrow) || 'Thank you',
           (page && page.title) || 'Give',
-          { flush: true, tag: 'h1' }
+          { flush: true, tag: 'h1',
+            // The small line over the title, which is the church's voice. The
+            // title under it is the screen's name and is not editable
+            // anywhere. Only offered once the page row exists, for the same
+            // reason as the paragraph below it.
+            eyebrowEdit: page ? {
+              table: 'content_pages', id: page.id, column: 'eyebrow',
+              target: page, field: 'eyebrow',
+              value: page.eyebrow || '', label: 'the line above “Give”'
+            } : null }
         ) +
 
         ledeHtml +
 
         '<div class="hc-give__action">' +
-          c.button('Give through Overflow', {
+          c.button(HC.data.copy('give.button', GIVE_BUTTON), {
             action: 'open-url',
             url: church.givingUrl,
-            icon: 'arrowOut'
+            icon: 'arrowOut',
+            labelSlot: 'give.button',
+            labelName: 'the giving button'
           }) +
           HC.edit.wrap(
             note ? '<p class="hc-caption hc-give__note">' + c.esc(note) + '</p>' : '',
@@ -84,9 +96,9 @@
         // Almost always nothing, and drawn under the button rather than above
         // it so the reason somebody came here stays at the top.
         ((page && page.sections && page.sections.length)
-          ? page.sections.map(function (section) {
+          ? page.sections.map(function (section, i) {
               return (section.heading ? c.sectionHeader('', section.heading) : '') +
-                HC.screens.pageHelpers.paragraphs(section.body, 'hc-body-serif hc-give__line');
+                HC.screens.pageHelpers.sectionBody(page, section, i, 'hc-give__line');
             }).join('')
           : '') +
 

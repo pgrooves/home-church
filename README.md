@@ -347,36 +347,58 @@ happens, which is somebody reading Give on a Sunday, noticing one sentence
 lands badly, and wanting to fix that sentence rather than navigate to a page
 editor and find it.
 
-**What is editable.** Two kinds of sentence, and they save differently:
+**Where the line is.** Descriptions, subtitles, captions, eyebrows, empty
+states, notes under buttons, and the words on a button are editable. Two things
+are not, and the difference is navigation:
+
+- **A screen's title and a section's heading.** They are how somebody finds
+  their place, they are what the right-hand index rail lists, and the tab bar
+  agrees with them. A church that renames "Serve teams" has renamed one of
+  three places that phrase appears.
+- **An item's own name** — a serve team's, an event's, a group's, a message's.
+  That is what the thing is called on a Sunday, in a bulletin, and in
+  somebody's calendar. Those stay on the Admin form, where the whole item is in
+  view.
+
+**What is editable.** Three kinds of sentence, saved three ways:
 
 | | Where the words live | Examples |
 |---|---|---|
-| **Rows** | A column in a table the app already syncs | A next step's blurb, a serve team's description, an event's description, the church's tagline and its invitation to serve, the podcast show's blurb, an announcement's text, a content page's opening paragraph |
-| **Slots** | A string in a source file, overridden by a row in `text_overrides` | The line under the Give button, what Home says before the week's guide is up, what Listen says before the first message, what the group finder says when nothing matches |
+| **Rows** | a column in a table the app already syncs | serve team descriptions, how often a team serves and what it asks first, next-step descriptions and their button labels, group descriptions, event descriptions, series subtitles and blurbs, the sentence under a message, a guide's subtitle, what the reading plan reads this week, the church's tagline and its invitation to serve, the between-seasons note, the podcast blurb, an announcement's label and text, a content page's eyebrow, opening paragraph and section bodies |
+| **Slots** | a string in a source file, overridden by a row in `text_overrides` | the line under the Give button, Home's "no guide yet", Listen's "nothing yet", the group finder's no-match line, the notes under the next-step and serve buttons, the lines under each module on More, the Journal's intro, and the words on the Give, Directions, Follow-the-show and Add-to-calendar buttons |
+| **Settings** | the text half of an `app_settings` row | the pinned banner's sentence, edited on Home where it appears. The switch that puts it there stays in Admin → App settings: fixing a typo is a wording, taking the banner down is a decision |
 
-A slot with no override draws the words that ship inside the app, so a phone
-that has never reached Supabase, and a project where nobody ran `0030`, are
-unaffected. **Reset to original** deletes the override rather than writing the
-old words back, which is what keeps the source file the one home of that
-sentence. Saving an empty slot is allowed and means the church took that line
-off the screen; a row cannot be emptied, because there is nothing underneath it
-to fall back to.
+A slot with no override draws the words that ship inside the app, so an offline
+phone and a project without `0030` are unaffected. **Reset to original** deletes
+the override rather than writing the old words back. Saving an empty slot is
+allowed and means the church took that line off the screen; a database row
+cannot be emptied, because there is nothing underneath it to fall back on.
 
-**What is not editable, and will not become editable by accident.** A sentence
-is only ever reachable because a screen wrapped it on purpose, so headings,
-button labels, tab names, dates, scripture, and anything the code compares
-against are simply never offered. Neither are the nine Practices, which are
-Practicing the Way's words and not this church's; the legal pages, which were
-shown to App Review as they are; or anything a person wrote in the Journal or a
-group room. An announcement's title stays on the form as well, because it is
-what the push notification already said.
+**Nothing editable can break the app, and that is enforced rather than
+promised.** Every editable column is named in one allowlist at the top of
+`js/edit-mode.js`; a column not on it cannot be opened for editing however a
+screen asks, and `tests/edit-mode.test.js` asserts that list matches the grants
+in `0031` exactly, in both directions. Each exclusion was checked against what
+actually reads the value:
+
+| Not editable | Because |
+|---|---|
+| `groups.day`, `groups.neighborhood` | the finder's filter chips are built from these values and compared against them |
+| `events.starts_at`, `time_label`, `location` | Connect parses them back into a real Date for Add to calendar, and all three land in the entry a person keeps |
+| `announcements.title` | the notification already said it on every lock screen |
+| church address, service times, giving URL, SMS number and keyword | facts and destinations, not sentences |
+| `guides.reflection_questions`, `group_sections` | a group room copies its questions when it opens, so an edit would change the next room and not tonight's |
+| the guide reader's prose | `js/highlight.js` turns a selection there into a highlight and a note; a tap that might mean "edit" and might mean "highlight" does neither well |
+| `reading_plans.total_weeks` | the progress bar divides by it |
+| the nine Practices, the legal pages, Journal entries, group rooms | somebody else's words, App Review's exact words, and people's own writing |
 
 **Three promises about the switch**, all kept by the device rather than by the
 database:
 
 - Only an admin sees it, and only an admin can write. `hc_is_admin()` decides,
-  and `supabase/tests/0030_text_overrides_test.sql` asserts the refusals as a
-  real member and a real signed out phone.
+  and `supabase/tests/0030_text_overrides_test.sql` and
+  `0031_editable_columns_test.sql` assert the refusals as a real member and a
+  real signed out phone.
 - It is on for **that phone only**, for as long as it is being used. There is
   deliberately no row anywhere recording that edit mode is on.
 - It turns itself off when the app is closed, and after **30 minutes** with
@@ -384,12 +406,18 @@ database:
   module is one with the switch off. A pill above the tab bar says it is on
   while it is, and is the fastest way out.
 
-**The one thing an edit cannot do** is reach past the sentence. Migration
-`0030` grants an admin session the individual prose columns, not the tables, so
-a phone in edit mode cannot unpublish a next step, retitle one, move the giving
-link or change a service time even if something asked it to. Those are 42501
-from Postgres before a policy is consulted, and they are four of the tests in
-that file.
+**The lock underneath all of it** is that migration `0031` grants an admin
+session the individual prose *columns*, not the tables, so a phone in edit mode
+cannot unpublish a message, rename a group, retitle a sermon, move the giving
+link, change a service time or empty a table even if something asked it to.
+Those are 42501 from Postgres before a policy is consulted, and the SQL test
+asserts the exact set of updatable columns per table rather than a few
+examples.
+
+Who last changed a sentence and when is recorded on `text_overrides`. The
+migrations are `0030_text_overrides.sql` and `0031_editable_columns.sql`, the
+module is `js/edit-mode.js`, and `tests/edit-mode.test.js` covers the saving,
+the failing, the allowlist and the clock.
 
 Who last changed a sentence and when is recorded on `text_overrides`. The
 migration is `0030_text_overrides.sql`, the module is `js/edit-mode.js`, and
