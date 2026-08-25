@@ -438,6 +438,11 @@
       // current_week, which is only the fallback for a row without one.
       startsOn: str(r.starts_on),
       currentWeek: r.current_week || 1,
+      /* The whole schedule, one entry per week in the order the church reads
+         them, so the reading advances with the week number instead of waiting
+         for somebody to retype it on a Sunday. Empty until a plan has one, and
+         then thisWeek is what Home draws. See 0032. */
+      weeks: arr(r.weeks).map(str),
       thisWeek: str(r.this_week),
       resources: arr(r.resources),
       current: !!r.is_current

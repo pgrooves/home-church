@@ -262,7 +262,7 @@
     series:         ['subtitle', 'blurb'],
     podcasts:       ['description', 'summary'],
     guides:         ['subtitle'],
-    reading_plans:  ['subtitle', 'this_week'],
+    reading_plans:  ['subtitle', 'this_week', 'weeks'],
     podcast_show:   ['blurb']
   };
 
@@ -337,12 +337,14 @@
       // A row's app_settings key, for the handful of switches whose text is
       // read straight off the screen it appears on. See writeSetting().
       setting: desc.setting || '',
-      /* Where inside a jsonb column the sentence sits, as [index, key]. Only
-         content_pages.sections uses this. The whole column is written back on
-         save, because a jsonb array is one value to Postgres, which is also
-         why two admins editing two sections of one page at the same moment is
-         a last-one-wins race. Sections are rare and long-lived; the blurb
-         beside them is its own column and cannot race at all. */
+      /* Where inside a jsonb column the sentence sits: [index, key] for an
+         array of objects, which content_pages.sections is, or [index] for an
+         array of plain strings, which reading_plans.weeks is. The whole column
+         is written back on save, because a jsonb array is one value to
+         Postgres, which is also why two admins editing two sections of one
+         page at the same moment is a last-one-wins race. Sections and a
+         plan's weeks are both written once and read for months; the sentences
+         that do change often are each their own column and cannot race. */
       path: desc.path || null,
       /* A column that is an array of paragraphs rather than one string, which
          podcasts.summary is. The box holds them joined by blank lines, which
@@ -603,12 +605,23 @@
      read first would narrow the race between two admins from seconds to
      milliseconds without closing it, at the cost of a round trip on every
      save, and the honest fix for a race that matters is a column per
-     sentence, which is what every other editable field here already is. */
+     sentence, which is what every other editable field here already is.
+
+     An index the array does not have is left alone rather than created. The
+     screen only ever offers a pencil over a sentence it drew out of the array,
+     so a missing index means this phone's copy has moved on, and growing the
+     column to fit a stale descriptor would write a week into a plan that does
+     not have one. */
   function patched(entry, value) {
     var whole = entry.target && entry.field ? entry.target[entry.field] : null;
     var copy = JSON.parse(JSON.stringify(Array.isArray(whole) ? whole : []));
     var slotAt = copy[entry.path[0]];
-    if (!slotAt) return copy;
+    if (slotAt == null) return copy;
+    // [index], an array of plain strings. reading_plans.weeks.
+    if (entry.path.length < 2) {
+      copy[entry.path[0]] = value;
+      return copy;
+    }
     slotAt[entry.path[1]] = value;
     return copy;
   }
@@ -644,8 +657,9 @@
       if (entry.target && entry.field) {
         if (entry.path) {
           var whole = entry.target[entry.field];
-          if (Array.isArray(whole) && whole[entry.path[0]]) {
-            whole[entry.path[0]][entry.path[1]] = value;
+          if (Array.isArray(whole) && whole[entry.path[0]] != null) {
+            if (entry.path.length < 2) whole[entry.path[0]] = value;
+            else whole[entry.path[0]][entry.path[1]] = value;
           }
         } else {
           entry.target[entry.field] = entry.paragraphs ? splitParagraphs(value) : value;

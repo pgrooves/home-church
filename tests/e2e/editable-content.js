@@ -181,7 +181,13 @@ function serve() {
       // last assertion in this file is about.
       D.church.groupsInSeason = true;
       D.podcast.blurb = v;
-      if (D.readingPlan) { D.readingPlan.subtitle = v; D.readingPlan.thisWeek = v; }
+      if (D.readingPlan) {
+        D.readingPlan.subtitle = v;
+        D.readingPlan.thisWeek = v;
+        // The schedule is what Home actually draws now, thisWeek only when it
+        // cannot. Both, so this round reaches whichever one is on the card.
+        D.readingPlan.weeks = (D.readingPlan.weeks || []).map(() => v);
+      }
 
       D.textOverrides.length = 0;
       input.slots.forEach(slot => D.textOverrides.push({ slot: slot, value: v }));

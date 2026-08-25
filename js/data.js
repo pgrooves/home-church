@@ -2101,10 +2101,11 @@
 
   /* Seed only. The live plan is the is_current row in `reading_plans`.
 
-     startsOn is the first day of week 1, and Home counts the weeks from it,
-     so nothing here has to be bumped on a Sunday. currentWeek is the fallback
-     for a row that has no start date on it. See supabase/migrations/
-     0024_reading_plan_starts_on.sql. */
+     Nothing in here has to be bumped on a Sunday, which took two migrations to
+     be true of both halves of the row. startsOn is the first day of week 1 and
+     Home counts the weeks from it (0024); weeks is the whole schedule and Home
+     takes the entry for the week it just counted (0032). currentWeek and
+     thisWeek are what a plan missing either of those falls back to. */
   var readingPlan = {
     id: 'plan-david',
     title: 'The Life of David',
@@ -2113,6 +2114,28 @@
     startsOn: '2026-06-14',
     currentWeek: 8,
     thisWeek: '2 Samuel 11 and 12, plus Psalm 51',
+    weeks: [
+      '1 Samuel 16 and 17',
+      '1 Samuel 18 to 20',
+      '1 Samuel 21 to 24',
+      '1 Samuel 25 to 27',
+      '1 Samuel 28 to 31',
+      '2 Samuel 1 to 5',
+      '2 Samuel 6 to 10',
+      '2 Samuel 11 and 12, plus Psalm 51',
+      '2 Samuel 13',
+      '2 Samuel 14 and 15',
+      '2 Samuel 16 to 18',
+      '2 Samuel 19 and 20',
+      '2 Samuel 21 and 22, plus Psalm 18',
+      '2 Samuel 23 and 24',
+      '1 Kings 1 and 2',
+      'Psalms 3 to 8',
+      'Psalms 22 to 25',
+      'Psalms 27, 30 and 31',
+      'Psalms 32, 34 and 37',
+      'Psalms 138 to 145'
+    ],
     current: true,
     resources: [
       { label: 'The Bible Project, 2 Samuel', url: 'https://bibleproject.com/explore/video/2-samuel/' },

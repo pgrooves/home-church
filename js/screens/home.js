@@ -477,6 +477,45 @@
     return week;
   }
 
+  /* --------------------------------------------------- and what it reads
+     The other half of the same chore, and the half 0024 left behind: the week
+     number counted itself while the reading beside it sat where somebody last
+     typed it, so Home printed "Week 17 of 20" over a chapter the church
+     finished in June. A stale number reads as neglect. A number that advances
+     over a reading that does not reads as correct, which is worse, because
+     nobody checks a screen that looks right.
+
+     So the plan carries its whole schedule, `weeks`, one entry per week in the
+     order the church reads them, and this picks the entry for the week the
+     arithmetic above just derived. Written once at the start of a plan, read
+     for the twenty after it.
+
+     this_week is still the fallback, and it earns its keep three ways: a plan
+     with no schedule on it yet, a schedule shorter than the plan, and a plan
+     running past its last week. Every one of those draws exactly what Home
+     drew before this existed.
+
+     The descriptor comes back with it, because the two answers are not
+     editable in the same place. A reading out of the schedule is one cell of a
+     jsonb array and has to be written back by index; the fallback is its own
+     column. Deciding that here, once, is what keeps the pencil on Home
+     pointing at the sentence it is actually under. */
+  function planReading(plan, week) {
+    var weeks = Array.isArray(plan.weeks) ? plan.weeks : [];
+    var listed = week >= 1 && week <= weeks.length
+      ? String(weeks[week - 1] == null ? '' : weeks[week - 1]).trim() : '';
+
+    if (listed) {
+      return { text: listed, column: 'weeks', field: 'weeks', path: [week - 1] };
+    }
+
+    var single = String(plan.thisWeek == null ? '' : plan.thisWeek).trim();
+    if (single) {
+      return { text: single, column: 'this_week', field: 'thisWeek', path: null };
+    }
+    return null;
+  }
+
   /* The plan is one editable row in Supabase now, so this has to hold up
      against whatever is in it. No plan at all renders nothing and Home drops
      the section, rather than printing "undefined" or dividing by zero in
@@ -505,6 +544,8 @@
       ? '<span class="hc-caption">Week ' + week + ' of ' + total + '</span>'
       : '';
 
+    var reading = planReading(plan, week);
+
     return '' +
       open +
         '<div class="hc-plan__head">' +
@@ -514,17 +555,19 @@
         '<div class="hc-progress" role="presentation">' +
           '<div class="hc-progress__fill" style="width:' + pct + '%"></div>' +
         '</div>' +
-        /* What the plan is reading this week. The week number and the bar
-           above it are arithmetic from the plan's start date and are not
-           editable: a number that disagrees with the date it is counted from
-           is worse than a stale one. */
-        (plan.thisWeek
+        /* What the plan is reading this week, taken from the schedule by the
+           week number above it. The number and the bar are arithmetic from the
+           plan's start date and are not editable: a number that disagrees with
+           the date it is counted from is worse than a stale one. The reading
+           is a sentence, so it is, and the pencil writes back to wherever this
+           particular week's words came from. */
+        (reading
           ? HC.edit.wrap(
               '<p class="hc-caption hc-plan__reading">This week, ' +
-                c.esc(plan.thisWeek) + '</p>',
-              { table: 'reading_plans', id: plan.id, column: 'this_week',
-                target: plan, field: 'thisWeek',
-                value: plan.thisWeek, label: 'what the plan reads this week',
+                c.esc(reading.text) + '</p>',
+              { table: 'reading_plans', id: plan.id, column: reading.column,
+                path: reading.path, target: plan, field: reading.field,
+                value: reading.text, label: 'what the plan reads this week',
                 rows: 2 }
             )
           : '') +
@@ -651,5 +694,15 @@
 
   HC.screens = HC.screens || {};
   HC.screens.home = render;
+
+  /* The reading plan's two pieces of arithmetic, out where a test can reach
+     them, the same way group.js and guide.js hand over theirs. Both are pure
+     functions of a plan and a date, and both are wrong in the quiet way: a
+     week off by one is a screen that still looks perfectly correct.
+     tests/reading-plan.test.js. */
+  HC.screens.homeHelpers = {
+    planWeek: planWeek,
+    planReading: planReading
+  };
 
 })(window.HC = window.HC || {});

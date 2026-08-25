@@ -109,24 +109,40 @@ stale the week a group fills up.
 it shows the first one. Tens, so a group can be slotted between two others
 without renumbering everything.
 
-**`reading_plans` is the one to know about**, because it moves every week.
-`current_week` and `this_week` are the two fields that change, the rest of the
-row sits still for the length of a plan. Starting a new plan is a second row
-with `is_current` true and the old one flipped to false, never a deletion, so
-last year's plan stays on record.
+**`reading_plans` used to be the one to know about**, because it moved every
+week and moving it was a chore that lost to a busy Sunday. It does not any
+more. Two columns are written once when a plan starts and nothing is touched
+again for the length of it:
 
-Bumping the week, three ways, all equivalent:
+- **`starts_on`**, the first day of week 1. Home counts the weeks from it
+  (0024), so a plan that began on May 3rd is on week 17 in August without
+  anybody saying so.
+- **`weeks`**, the whole schedule as a jsonb array, one entry per week in
+  reading order. Home takes the entry for the week it just counted (0032), so
+  the reading advances with the number beside it.
 
-- **Ask Claude Code.** "Move the reading plan to week 9, 2 Samuel 13." This is
-  the one that works from a phone with nothing installed.
-- **Supabase dashboard**, Table Editor, `reading_plans`, edit the two cells.
-  Also works from a phone.
+`current_week` and `this_week` are now fallbacks, for a plan missing either of
+the two above, or one running past the end of its list.
+
+Starting a new plan is a second row with `is_current` true and the old one
+flipped to false, never a deletion, so last year's plan stays on record.
+
+Writing a new plan's schedule, three ways, all equivalent:
+
+- **Ask Claude Code.** "Start the Philippians plan on September 6th, eight
+  weeks, one chapter a week." This is the one that works from a phone with
+  nothing installed.
+- **Supabase dashboard**, Table Editor, `reading_plans`, edit the row. Also
+  works from a phone.
 - **From a machine with `.env`:**
 
   ```bash
   python3 scripts/hc_supabase.py update reading_plans plan-david \
-    '{"current_week": 9, "this_week": "2 Samuel 13"}'
+    '{"starts_on": "2026-05-03", "weeks": ["1 Samuel 16 and 17", "1 Samuel 18 to 20"]}'
   ```
+
+A single week's wording can also be fixed from Home in Edit mode, by an admin,
+without touching the rest of the row.
 
 It reaches phones on the next app open. No build, no merge, no release.
 

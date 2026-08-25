@@ -91,7 +91,10 @@ select t_columns('events',         'description');
 select t_columns('series',         'blurb,subtitle');
 select t_columns('podcasts',       'description,summary');
 select t_columns('guides',         'subtitle');
-select t_columns('reading_plans',  'subtitle,this_week');
+-- weeks is granted by 0032, not here, and this file asserts the schema as
+-- production has it rather than as it was halfway through. Running 0031's test
+-- against 0031 alone is the one way to see this fail honestly.
+select t_columns('reading_plans',  'subtitle,this_week,weeks');
 select t_columns('podcast_show',   'blurb');
 select t_columns('church_profile', 'groups_off_season_note,serve_signup_blurb,tagline');
 

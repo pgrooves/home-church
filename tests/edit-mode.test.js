@@ -261,6 +261,62 @@ const noteDesc = () => ({
   });
 }
 
+/* ---------------------------------------- saving one week of a jsonb column --- */
+/* A reading plan's schedule is one column holding twenty sentences, so fixing
+   the current week's reading means sending the other nineteen back with it.
+   The bug worth testing for is the one where they do not come back: a Save on
+   Home that quietly shortens the plan, or blanks the weeks after it, and shows
+   nothing wrong on the card that was just corrected. */
+
+{
+  const { HC, auth } = load();
+  const plan = {
+    id: 'plan-david',
+    weeks: ['1 Samuel 16 and 17', '1 Samuel 18 to 20', '1 Samuel 21 to 24']
+  };
+  HC.edit.enable();
+  const desc = {
+    table: 'reading_plans', id: plan.id, column: 'weeks', path: [1],
+    target: plan, field: 'weeks', value: plan.weeks[1],
+    label: 'what the plan reads this week'
+  };
+  HC.edit.wrap('<p>' + plan.weeks[1] + '</p>', desc);
+
+  const slot = 'reading_plans:plan-david:weeks:1';
+  okTrue('one week of a schedule gets a slot naming the week', HC.edit._slots()[slot]);
+
+  HC.edit.open(slot);
+  HC.edit.setValue('1 Samuel 18 and 19');
+  HC.edit.save().then(function () {
+    ok('it saves as a patch of the whole column',
+      auth.calls[0].path, '/reading_plans?id=eq.plan-david');
+    ok('with the week rewritten and every other week intact',
+      auth.calls[0].opts.body,
+      { weeks: ['1 Samuel 16 and 17', '1 Samuel 18 and 19', '1 Samuel 21 to 24'] });
+    ok('and the card changes under the thumb', plan.weeks,
+      ['1 Samuel 16 and 17', '1 Samuel 18 and 19', '1 Samuel 21 to 24']);
+  });
+}
+
+/* An index the plan does not have, which is a phone whose copy of the row has
+   moved on since it drew. Growing the array to fit would write a week into a
+   plan that does not have one. */
+{
+  const { HC, auth } = load();
+  const plan = { id: 'plan-david', weeks: ['1 Samuel 16 and 17'] };
+  HC.edit.enable();
+  HC.edit.wrap('<p>gone</p>', {
+    table: 'reading_plans', id: plan.id, column: 'weeks', path: [4],
+    target: plan, field: 'weeks', value: 'gone', label: 'what the plan reads this week'
+  });
+  HC.edit.open('reading_plans:plan-david:weeks:4');
+  HC.edit.setValue('Something else');
+  HC.edit.save().then(function () {
+    ok('a week the plan no longer has is not invented', auth.calls[0].opts.body,
+      { weeks: ['1 Samuel 16 and 17'] });
+  });
+}
+
 /* -------------------------------------------------- when the save does not --- */
 
 {
@@ -434,12 +490,22 @@ const noteDesc = () => ({
      database refuses is a Save that always fails, and a column the database
      grants and the app never offers is a privilege nobody meant to hand out. */
   const { HC } = load();
-  const sql = fs.readFileSync(
-    path.join(__dirname, '..', 'supabase', 'migrations', '0031_editable_columns.sql'), 'utf8');
+  const migrations = path.join(__dirname, '..', 'supabase', 'migrations');
+  const sql = fs.readFileSync(path.join(migrations, '0031_editable_columns.sql'), 'utf8');
 
   const granted = [];
   const list = sql.slice(sql.indexOf('select * from (values'), sql.indexOf('as v(tbl, col)'));
   list.replace(/\('(\w+)',\s*'(\w+)'\)/g, (all, tbl, col) => { granted.push(tbl + '.' + col); });
+
+  /* 0031's table is the bulk of the list and not the whole of it: a later
+     migration that adds an editable column grants it where it adds it, which
+     is where the reasoning for opening it belongs. So the plain form counts
+     too, from every migration in the folder. */
+  fs.readdirSync(migrations).filter(f => /^\d+.*\.sql$/.test(f)).forEach(function (f) {
+    fs.readFileSync(path.join(migrations, f), 'utf8')
+      .replace(/grant update \((\w+)\) on public\.(\w+) to authenticated/g,
+        (all, col, tbl) => { granted.push(tbl + '.' + col); });
+  });
 
   const allowed = [];
   Object.keys(HC.edit._allowed).forEach(function (t) {
