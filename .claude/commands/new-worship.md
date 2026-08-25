@@ -87,59 +87,70 @@ deliberately. `podcasts.title` is the only place a message is named and the
 screen reads through to it, which is what makes renaming a message rename it
 here too. Migration `0034_worship_sets.sql` is the long version.
 
-## Step 3. Find the art and the links
+## Step 3. Resolve the art and the links
 
-Per song, and in this order, because each step feeds the next:
+**One command. Do not hand roll this with curl, and do not fill in a link from
+memory.** `scripts/resolve_songs.js` reads the list, searches iTunes for each
+song, takes the album art and the Apple Music link off the best match, asks
+Odesli for every other platform, and writes the finished row:
 
-1. **Look back first.** A song the church has played before already has its
-   art and its links resolved, and reusing them costs one query and keeps the
-   same recording on the screen two months running:
+```bash
+node scripts/resolve_songs.js --served-on 2026-08-23 \
+  --sermon sermon-last-words \
+  --out /tmp/worship-2026-08-23.json < /tmp/songs.txt
+```
 
-   ```bash
-   python3 scripts/hc_supabase.py select worship_sets --order served_on.desc \
-     --limit 12 --columns songs
-   ```
+The row goes to stdout and to `--out`. A summary for a human goes to stderr,
+and that summary is what Step 5 shows.
 
-   Match on title and artist together. Same title, different artist, is a
-   different recording and not a match.
+**Reuse what earlier Sundays already resolved.** A song the church played in
+June keeps its art and its links, which saves the lookups and keeps the same
+recording on screen two months running:
 
-2. **iTunes Search** for anything left, which gives the canonical title and
-   artist, the album art, and the Apple Music link, with no key and no
-   account:
+```bash
+python3 scripts/hc_supabase.py select worship_sets --order served_on.desc \
+  --limit 12 --columns songs > /tmp/known.json
+node scripts/resolve_songs.js --served-on 2026-08-23 --known /tmp/known.json ... 
+```
 
-   ```bash
-   curl -s "https://itunes.apple.com/search?term=oceans+hillsong+united&entity=song&limit=5"
-   ```
+### What its exit code means
 
-   Take `artworkUrl100` and swap `100x100bb` for `600x600bb` in the URL. That
-   is a real size on the same CDN and it is the one the screen wants: the art
-   is drawn at up to 320pt and 100px would be a blur.
+| Code | Meaning | What to do |
+|---|---|---|
+| 0 | Every song came back with art and links | Go to Step 5 |
+| 2 | At least one song came back thin | Go to Step 5 and **say which ones** |
+| 1 | Something went wrong, nothing was written | Read the message, do not publish |
 
-3. **Odesli** for everything else, from the Apple link:
+The message on exit 1 that matters most is `could not reach
+itunes.apple.com`. **That is a blocked egress proxy, not a song without art**,
+and it is the difference between "these four songs have no art" and "nothing
+was resolved at all". Do not publish a set on the back of it. Either run the
+command on a machine with open network access, or ask for the links and pass
+them in by hand. This exact failure is how the first setlist went up with four
+titles and nothing else.
 
-   ```bash
-   curl -s "https://api.song.link/v1-alpha.1/links?url=<apple url>&userCountry=US"
-   ```
+### The two things it will not decide for you
 
-   `linksByPlatform` has `spotify`, `youtube`, `youtubeMusic`, `amazonMusic`,
-   `tidal` and `pandora`. `pageUrl` is the song.link page itself, which goes
-   in `links.all`. Store every platform it returns, not only the three the
-   screen draws today: the row is cheap and adding a fourth mark later is one
-   line in `js/screens/worship.js`.
+- **A line naming two artists.** `Holy Spirit: Jesus Culture or Bryan & Katie
+  Torwalt` is two recordings of one song. The script uses the first so the run
+  can finish, and prints `! the line named two artists`. **Ask which one the
+  band played before Step 6**, and rerun with the answer. The Torwalts wrote
+  that one and Jesus Culture cut the version most people know, so say that
+  rather than asking a bare question.
+- **A match it is not sure of.** Anything printed `[low, ...]` or
+  `[none, ...]` gets a `! check this one` and usually a runner up. Read the
+  match out in Step 5 and let somebody confirm it. A wrong recording under the
+  right title is the one mistake nobody catches by looking at the screen.
 
-4. **Lyrics.** Search for the song's page on a lyrics site and check the
-   result is that song by that artist. **If you cannot resolve one you trust,
-   say so and leave `lyricsUrl` out.** A missing Lyrics link draws nothing,
-   and a Lyrics link that lands on a search page or on the wrong song is worse
-   than no link at all. Never invent a URL and never publish a search query
-   as a link.
+### Lyrics
 
-**If the egress proxy blocks these**, which is normal in a web session and
-looks like `ERR_TUNNEL_CONNECTION_FAILED` or a 403 on CONNECT, do not guess
-URLs from memory. Say which songs you could not resolve, ask for the links, or
-publish the titles and artists now and fill the rest in on a later run. A set
-of four titles with no art is a real screen. Four links to the wrong
-recordings is not.
+Filled in automatically when `GENIUS_TOKEN` is in `.env`, checked against the
+song that was actually matched rather than the line that was typed. Left empty
+when there is no token, and an empty one draws no Lyrics link at all.
+
+**Never invent a lyrics URL and never publish a search query as a link.** A
+Lyrics button that lands on a results page or on somebody else's song is worse
+than no button.
 
 ## Step 4. Pick an id
 
@@ -157,20 +168,35 @@ changes, and upsert over it.
 ## Step 5. Confirm before writing
 
 **Always show the finished set and wait for a yes.** This is a required step,
-not a courtesy. Show what a person can actually check, which is the songs and
-the Sunday, and be explicit about anything you could not find:
+not a courtesy.
+
+The summary Step 3 printed to stderr is already the right shape, so show that
+rather than rewriting it, and add the message and the question:
 
 ```
-Sunday      August 23 2026
-Message     Last Words, linked
+Sunday      2026-08-23
+Message     sermon-last-words
 
-1. So Much            Life.Church Worship     art, 3 links, lyrics
-2. Holy Spirit        Jesus Culture           art, 3 links, lyrics
-3. Lean Back          Maverick City Music     art, 3 links, no lyrics found
-4. No Body            Elevation Worship       art, 3 links, lyrics
+1. So Much  /  Life.Church Worship
+   art, 5 links, lyrics   [high, via iTunes]
+
+2. Holy Spirit  /  Jesus Culture
+   art, 5 links, lyrics   [high, via iTunes]
+   ! the line named two artists: Jesus Culture / Bryan & Katie Torwalt.
+     Used the first. Ask before writing.
+
+3. Lean Back (feat. Amanda Lindsey Cook & Chandler Moore)  /  Maverick City Music
+   art, 5 links, no lyrics   [medium, via iTunes]
+
+4. No Body  /  Elevation Worship
+   art, 5 links, lyrics   [high, via iTunes]
 
 Write it?
 ```
+
+**Every `!` line is a question, not a footnote.** Do not write a set with one
+still unanswered. Rerun Step 3 with the answer rather than editing the row by
+hand, so what gets published is what the resolver actually found.
 
 ## Step 6. Write it
 
@@ -178,7 +204,11 @@ Write it?
 python3 scripts/hc_supabase.py upsert worship_sets /tmp/worship-2026-08-23.json
 ```
 
-The row:
+That file is what Step 3 wrote. **Do not retype it and do not edit the links
+in it by hand**: every URL in there came back from a service, and one typed
+from memory is a dead button in front of a congregation.
+
+The shape, for reading rather than for writing:
 
 ```jsonc
 {
@@ -216,10 +246,16 @@ same as podcasts and Instagram, and it is still a cost decision.
 
 ```
 Published  4 songs for August 23 2026
-Linked to Last Words
+Linked to Last Words, art and links on all four
 ```
 
-Two lines and stop, no postamble.
+Two lines and stop, no postamble. **If any song went up thin, say so on the
+second line** rather than letting "published" imply it is complete:
+
+```
+Published  4 songs for August 23 2026
+Lean Back has no art or links, nothing matched it
+```
 
 ---
 

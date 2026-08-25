@@ -85,7 +85,7 @@ assets/fonts          Cormorant and Poppins, latin subset, plus the OFL
 assets/icons          the mark, favicon, app icons, all without alpha
 assets/img            placeholder note, real photography goes here later
 ios-config/           hand written files for the generated Xcode project
-scripts/              publishing, icons, cache stamps, the www/ copy
+scripts/              publishing, setlist resolving, icons, cache stamps, www/
 manifest.webmanifest
 capacitor.config.json
 ```
@@ -166,9 +166,26 @@ opens on and older weeks are to the right, which is the direction the archive
 runs everywhere else in this app.
 
 Publish one with **`/new-worship`** and a list of the songs, however it was
-typed. It reads the artists off the line, finds each song's art and links,
-reuses whatever a previous week already resolved, and asks rather than
-guessing when a song names two possible recordings.
+typed. It reads the artists off the line and then runs
+`scripts/resolve_songs.js`, which searches iTunes for each song, takes the
+album art and the Apple Music link off the best match, and asks Odesli for
+every other platform in one call. Neither service needs a key. Lyrics come
+from Genius when `GENIUS_TOKEN` is in `.env` and are left empty when it is
+not.
+
+**The resolver is a script rather than instructions, and that is the point.**
+The first setlist went up with four titles and no art, because the pipeline
+lived in prose, the egress proxy refused the calls, and prose has no way to
+fail loudly. The script exits 2 when a song comes back thin and 1 when it
+could not reach a service at all, so "published with gaps" and "nothing
+resolved" stop looking the same. Nothing in it is ever invented: a song it
+cannot match keeps its title and its artist and loses everything else, which
+the screen draws as the house cover and no buttons.
+
+It also reuses what earlier Sundays resolved, so a song played in June keeps
+its links in August, and it refuses to choose when a line names two
+recordings: `Holy Spirit: Jesus Culture or Bryan & Katie Torwalt` is flagged
+for asking rather than settled by picking the first one and hoping.
 
 **The setlist does not carry the sermon's title.** `worship_sets` has no
 column for one. The header resolves it through `podcasts.title` every time it
