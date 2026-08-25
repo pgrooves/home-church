@@ -294,6 +294,28 @@
     more: '<circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/>' +
           '<circle cx="19" cy="12" r="1.5"/>',
 
+    /* Worship. Two notes beamed together, which is the one music glyph that
+       is unmistakable at 24px in a row of five tiles. A single note was the
+       first drawing and it lost: on its own it reads as a stray mark rather
+       than as music, and next to `journal`, which is also a shape with a stem
+       on the right, the two were telling each other apart by their heads.
+
+       The stems carry the weight. The beam is what says music from across the
+       glass, so it is the full 1.5 stroke and the note heads are solid discs
+       rather than stroked rings, for exactly the reason `more` is filled: a
+       1.5 stroke ring at this size is mostly hole.
+
+       The fill comes back on the two circles rather than on the svg, which is
+       what makes this one different from `more`. hc-icon--solid would fill
+       the stems and the beam as well and close up the shape entirely, so the
+       opt out of `svg { fill: none }` is per child here, the way Instagram's
+       mark opts the other way per child below. Inheritance is what the reset
+       reaches, and an attribute on the element itself beats it. */
+    worship: '<path d="M9 17.5V5.2l10-1.7v12"/>' +
+             '<path d="M9 8.6 19 6.9"/>' +
+             '<circle cx="6.6" cy="17.7" r="2.6" fill="currentColor" stroke="none"/>' +
+             '<circle cx="16.6" cy="15.9" r="2.6" fill="currentColor" stroke="none"/>',
+
     /* Journal. A page with a turned corner and two written lines, which is the
        doc glyph's cousin rather than a second notebook: `guide` is already a
        book and these two must not read as the same tile in a list. */
@@ -398,7 +420,24 @@
     Facebook: '<path d="M13.4 21v-8h2.7l.4-3.1h-3.1V7.9c0-.9.25-1.5 1.55-1.5h1.65V3.6a22 22 0 0 0-2.4-.12c-2.4 0-4.05 1.47-4.05 4.16V9.9H7.4V13h2.75v8z"/>',
     YouTube: '<path fill-rule="evenodd" d="M21.6 7.3a2.55 2.55 0 0 0-1.8-1.8C18.2 5.05 12 5.05 12 5.05s-6.2 0-7.8.45a2.55 2.55 0 0 0-1.8 1.8A26.6 26.6 0 0 0 2 12a26.6 26.6 0 0 0 .4 4.7 2.55 2.55 0 0 0 1.8 1.8c1.6.45 7.8.45 7.8.45s6.2 0 7.8-.45a2.55 2.55 0 0 0 1.8-1.8A26.6 26.6 0 0 0 22 12a26.6 26.6 0 0 0-.4-4.7zM10.15 15.05V8.95L15.4 12z"/>',
     X: '<path d="M13.6 10.6 20.9 2h-1.73l-6.35 7.38L7.75 2H2l7.66 11.12L2 22h1.73l6.7-7.79L15.78 22H21.5zm-2.37 2.76-.78-1.11L4.35 3.3h2.66l4.99 7.14.77 1.11 6.48 9.27h-2.66z"/>',
-    TikTok: '<path d="M16.5 5.8a4.35 4.35 0 0 1-1.02-2.8h-3.13v11.55a2.47 2.47 0 1 1-2.47-2.47c.26 0 .5.04.74.12V9.02a5.7 5.7 0 0 0-.74-.05 5.68 5.68 0 1 0 5.68 5.68V8.86a7.3 7.3 0 0 0 4.28 1.37V7.14a4.32 4.32 0 0 1-3.34-1.34z"/>'
+    TikTok: '<path d="M16.5 5.8a4.35 4.35 0 0 1-1.02-2.8h-3.13v11.55a2.47 2.47 0 1 1-2.47-2.47c.26 0 .5.04.74.12V9.02a5.7 5.7 0 0 0-.74-.05 5.68 5.68 0 1 0 5.68 5.68V8.86a7.3 7.3 0 0 0 4.28 1.37V7.14a4.32 4.32 0 0 1-3.34-1.34z"/>',
+
+    /* The two the Worship screen links every song on, added when that screen
+       landed. Same rules as the five above them: somebody else's mark, drawn
+       the way that somebody draws it, solid on a 24 grid.
+
+       Spotify's three waves are holes rather than shapes, exactly as
+       YouTube's play triangle is, so the same fill-rule="evenodd" knockout
+       does the work and the waves take the colour of whatever the glyph is
+       sitting on. Painting them the paper's colour instead would be a third
+       place the theme has to be kept in step, and it would be wrong in dark
+       mode the first time somebody forgot. */
+    Spotify: '<path fill-rule="evenodd" d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.601.301.96zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/>',
+
+    /* Apple Music, which is the beamed pair inside the rounded square rather
+       than the wordmark, because the wordmark is unreadable at 24px and this
+       app has nowhere it would be bigger. */
+    'Apple Music': '<path fill-rule="evenodd" d="M17.6 2H6.4A4.4 4.4 0 0 0 2 6.4v11.2A4.4 4.4 0 0 0 6.4 22h11.2a4.4 4.4 0 0 0 4.4-4.4V6.4A4.4 4.4 0 0 0 17.6 2zm-.35 3.99v7.7c0 .53-.1 1-.42 1.4-.33.4-.79.63-1.32.72l-.5.09c-.9.15-1.62-.42-1.72-1.26-.1-.85.46-1.6 1.35-1.77l.62-.11c.34-.07.5-.25.5-.6V8.62c0-.24-.12-.35-.36-.31l-4.9.99c-.27.06-.38.2-.38.48v7.4c0 .53-.1 1-.42 1.4-.33.4-.79.63-1.32.72l-.5.09c-.9.15-1.62-.42-1.72-1.26-.1-.85.46-1.6 1.35-1.77l.62-.11c.34-.07.5-.25.5-.6V7.34c0-.5.25-.79.73-.89l6.44-1.3c.5-.1.95.17.95.7z"/>'
   };
 
   /* A platform this app has no mark for still gets a link rather than being

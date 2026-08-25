@@ -45,6 +45,17 @@
      first one in exactly the way Connect arrives from Group, which is the
      whole reason the ••• tile stopped pushing a screen. */
   var MODULES = [
+    /* First in the row, and the position is the argument. A drag left off
+       Connect brings in the first module, and Worship is the one of these
+       that belongs to Sunday morning the way Listen and Guide do: it is the
+       songs from the same service as the message two tabs to its left. The
+       three below it are things you do during the week. */
+    {
+      route: 'worship',
+      icon: 'worship',
+      title: 'Worship',
+      sub: 'The songs from Sunday, and where to hear them again.'
+    },
     {
       route: 'practices',
       icon: 'practiceSabbath',
@@ -81,7 +92,8 @@
      more reach that route than they can reach the tile. Its four sections
      share the route name, so the tile stays lit down inside Manage users the
      way it stays lit inside a practice. */
-  var MODULE_ROUTES = ['more', 'practices', 'practice', 'journal', 'journal-entry', 'give', 'admin'];
+  var MODULE_ROUTES = ['more', 'worship', 'practices', 'practice', 'journal',
+                       'journal-entry', 'give', 'admin'];
 
   var TITLES = {
     home: 'Home',
@@ -90,6 +102,7 @@
     group: 'Group',
     connect: 'Connect',
     more: 'More',
+    worship: 'Worship',
     practices: 'Practices',
     // Replaced with the practice's own name once its file has loaded, see
     // emitViewChange below. This is what the bar carries until then.
@@ -1591,6 +1604,40 @@
       c.openExternal(el.getAttribute('data-url'));
     },
 
+    /* The chevrons either side of the week header on Worship.
+
+       They move the rail and nothing else: the scroll they cause is the same
+       scroll a thumb causes, so the delegated listener above paints the dots
+       and tells the screen which week it landed on, exactly as it would have.
+       Redrawing the list from here as well would be the same work done twice
+       and a chance for the two answers to differ.
+
+       Measured off the slide rather than multiplied by an index, for the same
+       reason showingSlide() measures: it stays right whatever the slides are
+       sized at and whichever way the writing runs. */
+    'worship-week': function (el) {
+      var head = el.closest('.hc-worship__head');
+      var rail = head ? head.querySelector('[data-worship-rail]') : null;
+      var track = rail ? rail.firstElementChild : null;
+      if (!track) return;
+
+      var step = parseInt(el.getAttribute('data-step'), 10) || 0;
+      var slides = track.children;
+      var here = -1;
+      var bestGap = Infinity;
+      for (var i = 0; i < slides.length; i++) {
+        var gap = Math.abs(slides[i].offsetLeft - rail.scrollLeft);
+        if (gap < bestGap) { bestGap = gap; here = i; }
+      }
+
+      var next = slides[here + step];
+      if (!next) return;
+      rail.scrollTo({
+        left: next.offsetLeft,
+        behavior: prefersReducedMotion() ? 'auto' : 'smooth'
+      });
+    },
+
     'date-rail-jump': function (el) {
       HC.dateRail.jump(parseInt(el.getAttribute('data-index'), 10));
     },
@@ -2967,6 +3014,13 @@
         if (rail.hasAttribute('data-guide-rail') && HC.screens.groupHelpers) {
           HC.screens.groupHelpers.selectGuide(rail, index);
         }
+
+        /* And a third: the week header on Worship, which changes the setlist
+           under it the way the series rail changes the episode list. Same
+           arrangement, same reason it is here rather than in the screen. */
+        if (rail.hasAttribute('data-worship-rail') && HC.screens.worshipHelpers) {
+          HC.screens.worshipHelpers.selectWeek(rail, index);
+        }
       });
     }, true);
 
@@ -3286,6 +3340,7 @@
         group: HC.screens.group,
         connect: HC.screens.connect,
         more: HC.screens.more,
+        worship: HC.screens.worship,
         practices: HC.screens.practices,
         practice: HC.screens.practice,
         journal: HC.screens.journal,

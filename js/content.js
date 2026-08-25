@@ -32,7 +32,7 @@
 
   var cfg = HC.config || {};
   var CACHE_KEY = 'content';
-  var CACHE_VERSION = 12;     // bump when a mapping below changes shape
+  var CACHE_VERSION = 13;     // bump when a mapping below changes shape
   var TIMEOUT_MS = 12000;
 
   // The tables we pull, and the HC.data key each one fills. Adding another
@@ -55,6 +55,13 @@
     { table: 'announcements', target: 'announcements', map: mapAnnouncement,
       order: 'created_at.desc' },
     { table: 'reading_plans', target: 'readingPlan',   map: mapReadingPlan, single: true },
+
+    /* What the band played, newest Sunday first. The order is the order the
+       week carousel runs in, so the current week is the slide the screen opens
+       on. js/data.js sorts it again anyway, because a payload cached before
+       this line existed arrives in no order at all. */
+    { table: 'worship_sets',  target: 'worshipSets',   map: mapWorshipSet,
+      order: 'served_on.desc' },
     // `order` matters here and nowhere else so far: Connect shows the first
     // group as "your group", and PostgREST returns rows in no guaranteed
     // order, so without this which group that is could change between fetches.
@@ -407,6 +414,59 @@
       mediaType: str(r.media_type) || 'IMAGE',
       caption: str(r.caption),
       postedAt: r.posted_at || null
+    };
+  }
+
+  /* One song in a set. Total in the same way every mapper here is, and more
+     carefully than most, because this is the one shape in the schema that
+     arrives as free JSON rather than as columns: a row hand written into the
+     SQL editor can hold anything at all, and what it must never do is put the
+     word "undefined" under a piece of album art.
+
+     Only the title survives being missing. A song with no title is not a
+     smaller row, it is a blank space where a song should be, so
+     mapWorshipSet below drops it.
+
+     `links` is filtered down to the platforms that are actually strings. The
+     screen reads it by name, so a null under `spotify` and a missing
+     `spotify` have to mean the same thing, which is no Spotify button. */
+  function songLinks(v) {
+    var out = {};
+    if (!v || typeof v !== 'object') return out;
+    Object.keys(v).forEach(function (k) {
+      if (typeof v[k] === 'string' && v[k].trim()) out[k] = v[k].trim();
+    });
+    return out;
+  }
+
+  function mapSong(s) {
+    if (!s || typeof s !== 'object') return { title: '' };
+    return {
+      title: str(s.title),
+      artist: str(s.artist),
+      // '' rather than null on both: the screen asks whether they are truthy
+      // and draws the house cover, or no Lyrics link, when they are not.
+      artUrl: str(s.artUrl || s.art_url),
+      lyricsUrl: str(s.lyricsUrl || s.lyrics_url),
+      links: songLinks(s.links)
+    };
+  }
+
+  /* One Sunday's setlist.
+
+     NO TITLE FIELD, and there is no missing line here. The name of that
+     morning's message is written in podcasts.title and nowhere else, and
+     HC.data.worshipTitle() resolves it through sermonId, or through the date
+     when the episode has not posted yet. Adding a title to this mapper would
+     be adding the second copy the whole arrangement exists to prevent. */
+  function mapWorshipSet(r) {
+    return {
+      id: r.id,
+      servedOn: r.served_on || null,
+      // Null is meaningful: the set was published before the episode was, and
+      // the screen matches on the date until /new-podcast fills this in.
+      sermonId: r.sermon_id || null,
+      songs: arr(r.songs).map(mapSong).filter(function (s) { return s.title; })
     };
   }
 

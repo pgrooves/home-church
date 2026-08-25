@@ -99,6 +99,28 @@ Media stays on the external host. Nothing is uploaded to Supabase storage,
 that was a cost decision and the podcast host already handles bandwidth,
 transcoding, and the directories for free.
 
+## Linking the setlist to the episode
+
+The worship set for that Sunday was almost certainly published before this
+episode existed, so its `sermon_id` is null and the Worship screen has been
+finding the message by date. Fill the id in now that there is one:
+
+```bash
+python3 scripts/hc_supabase.py select worship_sets --eq served_on=2026-08-23 \
+  --columns id,sermon_id
+```
+
+One row with a null `sermon_id`, set it to this episode's id. No row, nothing
+to do, plenty of Sundays never get a setlist. A row that already names a
+different sermon, leave it and say so: that is a two message Sunday and
+somebody chose.
+
+This is exactness rather than repair. The screen already shows the right name
+by date, and this is what keeps it right on a Sunday with two messages on it.
+
+**The setlist never gets the title.** It has no column for one, and the rename
+below is the reason.
+
 ## The rename, in the database too
 
 `podcasts.title` is the only place a message's name is written. The guide
@@ -115,4 +137,7 @@ people's phones keyed by the guide id.
 Published  Who's In Your Corner?
 Stephen, August 9 2026
 Renamed from Unsung Heroes, linked to guide-unsung-heroes
+Setlist for that Sunday now points at it
 ```
+
+Drop the last line when there was no setlist for that Sunday.

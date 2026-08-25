@@ -155,6 +155,32 @@ matches its title is fine and nobody sees it.
 
 -----
 
+## Sunday's setlist
+
+**Worship**, the first module behind •••, is what the band played, a week at
+a time. The date and the message sit at the top as a carousel you swipe
+between Sundays, and under it the songs in the order they were played, each
+one its album art, its name, who sings it, and a way into it on YouTube,
+Spotify or Apple Music, plus the lyrics. The current week is the slide it
+opens on and older weeks are to the right, which is the direction the archive
+runs everywhere else in this app.
+
+Publish one with **`/new-worship`** and a list of the songs, however it was
+typed. It reads the artists off the line, finds each song's art and links,
+reuses whatever a previous week already resolved, and asks rather than
+guessing when a song names two possible recordings.
+
+**The setlist does not carry the sermon's title.** `worship_sets` has no
+column for one. The header resolves it through `podcasts.title` every time it
+draws, so the Monday rename in the section above reaches this screen too, with
+nothing to keep in step. A set published on the Sunday afternoon has no
+`sermon_id` yet either, and the screen finds the message by date until
+`/new-podcast` fills the id in. On the rare Sunday with two messages preached
+on it, a date has two answers, so the screen shows none and the id is what
+settles it.
+
+-----
+
 ## The Practices
 
 Nine practices behind the ••• menu: Sabbath, Prayer, Fasting, Solitude,
@@ -220,22 +246,23 @@ without waiting on a review. Full documentation is in
 **`supabase/README.md`**, kept there rather than duplicated here so the two
 cannot drift.
 
-The short version. Thirteen tables, publicly readable with the anon key:
+The short version. Fourteen tables, publicly readable with the anon key:
 `series`, `guides`, `podcasts`, `events`, `announcements`, `reading_plans`,
-`groups`, `serve_teams`, `next_steps`, `church_profile`, `podcast_show`,
-`content_pages`, and `app_settings`. Between them they hold everything the app
-renders, so no content change needs a build.
+`worship_sets`, `groups`, `serve_teams`, `next_steps`, `church_profile`,
+`podcast_show`, `content_pages`, and `app_settings`. Between them they hold
+everything the app renders, so no content change needs a build.
 
-Ten of them are writable only with the service role key. **Three are not:
+Eleven of them are writable only with the service role key. **Three are not:
 `announcements`, `content_pages` and `app_settings` can also be written by a
 signed in admin, from inside the app**, which is what the Admin dashboard is.
-See "The admin dashboard" below. Six slash commands drive the rest:
+See "The admin dashboard" below. Seven slash commands drive the rest:
 
 | Command | Does |
 |---|---|
 | `/new-guide` | Sermon PDF to a full guide, written to `guides` and `podcasts` |
 | `/new-event` | Asks for what is missing, confirms, writes to `events` |
-| `/new-podcast` | Episode to `podcasts`, links its guide, puts the real title on the message |
+| `/new-podcast` | Episode to `podcasts`, links its guide and that Sunday's setlist, puts the real title on the message |
+| `/new-worship` | Sunday's songs to `worship_sets`, with their art, their links and their lyrics |
 | `/new-announcement` | The announcement card on Home, dated so it retires itself |
 | `/edit-content` | Plain language fix to any row, current versus proposed, writes after you confirm |
 | `/new-content-type` | Scaffolds another content type, table and command |

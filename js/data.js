@@ -2430,6 +2430,46 @@
      Nothing in js/screens/home.js changes when that happens. */
   var homeMedia = [];
 
+  /* -------------------------------------------------------------- worship sets
+
+     What the band played on Sunday, newest first, for the Worship screen
+     behind •••. One entry per Sunday, and the songs inside it are in the order
+     they were played, which is the order the screen draws them.
+
+       { id: 'worship-2026-08-23',   // permanent, derived from the date
+         servedOn: '2026-08-23',     // the Sunday
+         sermonId: 'sermon-...',     // or null until the episode is published
+         songs: [ { title, artist, artUrl, lyricsUrl, links: {...} } ] }
+
+     NO SERMON TITLE IN HERE, and that is the point of the shape. The header
+     on the screen reads through to the podcast row for the name, so
+     /new-podcast renaming Sunday's message renames it here too and there is
+     never a second copy to go stale. See migration 0034.
+
+     Only `title` is load bearing on a song. Art, links and lyrics are each
+     optional and a missing one draws nothing rather than a gap, which is what
+     lets a set be published on the Sunday afternoon and filled in later.
+
+     The seed, like everything above it. Supabase is where these are really
+     published, by /new-worship. */
+  var worshipSets = [
+    {
+      id: 'worship-2026-08-23',
+      servedOn: '2026-08-23',
+      sermonId: 'sermon-last-words',
+      songs: [
+        { title: 'So Much', artist: 'Life.Church Worship',
+          artUrl: '', lyricsUrl: '', links: {} },
+        { title: 'Holy Spirit', artist: 'Jesus Culture',
+          artUrl: '', lyricsUrl: '', links: {} },
+        { title: 'Lean Back', artist: 'Maverick City Music',
+          artUrl: '', lyricsUrl: '', links: {} },
+        { title: 'No Body', artist: 'Elevation Worship',
+          artUrl: '', lyricsUrl: '', links: {} }
+      ]
+    }
+  ];
+
   /* ------------------------------------------------------------------ export */
 
   HC.data = {
@@ -2446,6 +2486,7 @@
     announcements: announcements,
     instagramPosts: instagramPosts,
     homeMedia: homeMedia,
+    worshipSets: worshipSets,
     contentPages: contentPages,
     appSettings: appSettings,
     textOverrides: textOverrides,
@@ -2586,6 +2627,86 @@
 
     currentSeries: function () {
       return series.filter(function (s) { return s.current; })[0] || series[0];
+    },
+
+    /* ----------------------------------------------------------- worship
+
+       The setlists, newest Sunday first. That order is the order the week
+       carousel runs in, so the current week is the slide you land on and
+       older weeks are to the right of it, which is the same direction the
+       archive runs everywhere else in this app.
+
+       Sorted here rather than trusted from the table, for the same reason
+       announcements are: a cached payload written before the `order` on that
+       table existed is not in any order at all. */
+    worshipSetsByDate: function () {
+      return worshipSets.slice().sort(function (a, b) {
+        if (a.servedOn === b.servedOn) return 0;
+        return a.servedOn < b.servedOn ? 1 : -1;
+      });
+    },
+
+    getWorshipSet: function (id) {
+      return worshipSets.filter(function (w) { return w.id === id; })[0] || null;
+    },
+
+    /* The message that was preached the morning a set was played, or null.
+
+       TWO WAYS TO ASK, and the order matters. The id is exact and is what a
+       set has once /new-podcast has run. Until then it is null, because the
+       setlist goes up on the Sunday afternoon and the episode does not post
+       until Monday, and the date is what answers meanwhile.
+
+       Null is a real answer and the screen draws for it: a set published on
+       Sunday shows its date and its songs, and grows the message's name when
+       the episode lands, without anybody editing the set. */
+    sermonForWorship: function (set) {
+      if (!set) return null;
+      if (set.sermonId) {
+        var byId = this.getSermon(set.sermonId);
+        if (byId) return byId;
+      }
+      /* By date, and only when it is unambiguous. The catalogue already has
+         two messages preached on one Sunday, so a date with two answers has
+         no answer: naming one of them would be a coin toss printed under a
+         setlist, and the guide below still carries the week. */
+      var sameDay = sermons.filter(function (s) {
+        return s.preachedOn === set.servedOn;
+      });
+      return sameDay.length === 1 ? sameDay[0] : null;
+    },
+
+    /* The guide for that morning. Through the message when there is one, so a
+       Sunday with two messages still finds nothing rather than guessing, and
+       straight off the date when the episode has not landed yet. A guide is
+       usually written days before the episode posts, so this is often the
+       only thing on the header with a name on it. */
+    guideForWorship: function (set) {
+      if (!set) return null;
+      var sermon = this.sermonForWorship(set);
+      if (sermon) {
+        var viaSermon = this.guideForSermon(sermon.id);
+        if (viaSermon) return viaSermon;
+      }
+      var sameDay = guides.filter(function (g) {
+        return g.preachedOn === set.servedOn;
+      });
+      return sameDay.length === 1 ? sameDay[0] : null;
+    },
+
+    /* What the header calls that Sunday. The message's own title, then the
+       guide's, then nothing at all, which the screen draws as the date on its
+       own rather than as an empty line.
+
+       NEVER READ FROM THE WORSHIP ROW, which does not carry a title and must
+       not grow one. This is the whole reason /new-podcast's rename reaches
+       this screen for free. */
+    worshipTitle: function (set) {
+      var sermon = this.sermonForWorship(set);
+      if (sermon && sermon.title) return sermon.title;
+      var guide = this.guideForWorship(set);
+      if (guide) return this.guideTitle(guide);
+      return '';
     },
 
     // Where the Listen tab sends you. The episode when we have its link,

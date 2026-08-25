@@ -2358,3 +2358,149 @@
   height: 100%;
   object-fit: cover;
 }
+
+/* --------------------------------------------------------------------------
+   Worship
+   What the band played on Sunday. A week header you can swipe, then the songs
+   under it as records: art first, then the name, then who sings it.
+
+   THE LIST IS CENTERED AND THE REST OF THE APP IS NOT. Every other screen
+   here is a left aligned column, because every other screen is mostly words
+   and words are read down an edge. This one is four album covers, and a
+   square has no edge to hang a column on: ranged left, the art and the two
+   lines under it stop being one object and become a picture with a caption
+   beside it. Centered, each song is a record sleeve with its title under it,
+   which is the thing being described.
+   -------------------------------------------------------------------------- */
+
+.hc-worship__head {
+  position: relative;
+  margin-top: var(--hc-space-md);
+}
+
+/* The header is what you drag, so it is what carries the week. The block is
+   centered and given room to breathe on both sides, which is also what keeps
+   the chevrons off the words at the widest date this app can print. */
+.hc-worship-week {
+  text-align: center;
+  padding: 0 var(--hc-space-xl);
+}
+
+.hc-worship-week__date { display: block; color: var(--hc-accent-deep); }
+.hc-worship-week__title { margin-top: 6px; }
+
+/* The two chevrons, laid over the ends of the header rather than beside it,
+   so the slide keeps the full width for a long sermon title and the arrows
+   sit in the air the padding above already reserved for them. */
+.hc-worship__arrow {
+  position: absolute;
+  top: 0;
+  bottom: var(--hc-space-lg);   /* clear of the dots under the rail */
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--hc-tap-min);
+  color: var(--hc-accent-deep);
+  transition: opacity var(--hc-dur-fast) var(--hc-ease);
+}
+
+.hc-worship__arrow--prev { left: calc(var(--hc-space-sm) * -1); }
+.hc-worship__arrow--next { right: calc(var(--hc-space-sm) * -1); }
+
+.hc-worship__arrow svg { width: 20px; height: 20px; }
+
+/* At the ends the arrow stays where it is and stops being a target, so the
+   header does not change shape on the first and last week. */
+.hc-worship__arrow[disabled] {
+  opacity: 0.18;
+  pointer-events: none;
+}
+
+.hc-worship__links {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.hc-worship__links:empty { display: none; }
+
+.hc-worship__songs { margin-top: var(--hc-space-lg); }
+
+/* ---- the songs ---- */
+
+.hc-song-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--hc-space-xxl);
+}
+
+.hc-song { text-align: center; }
+
+/* The art is the biggest thing on the screen, which is the whole design of
+   this page, and it is capped so that it stays a record sleeve on a tablet
+   rather than growing into a poster. */
+.hc-song__art {
+  position: relative;
+  width: 100%;
+  max-width: 320px;
+  margin: 0 auto;
+  border-radius: var(--hc-radius-lg);
+  overflow: hidden;
+}
+
+.hc-song__art .hc-cover { width: 100%; }
+
+.hc-song__img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Art that never arrived. The drawn cover underneath is already there, so
+   taking the photograph away is the whole fix. Same move as a series slide. */
+.hc-song__art[data-failed="true"] .hc-song__img { display: none; }
+
+.hc-song__title { margin-top: var(--hc-space-base); }
+.hc-song__artist { margin-top: 2px; }
+
+/* One row of marks, centered under the words, sized and spaced the way the
+   church's own social row is, because they are the same object doing the same
+   job: a short row of somebody else's logos, each one a way out of the app. */
+.hc-song__links {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: var(--hc-space-sm);
+  margin-top: var(--hc-space-md);
+}
+
+.hc-song__link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--hc-tap-min);
+  height: var(--hc-tap-min);
+  color: var(--hc-ink);
+}
+
+.hc-song__brand { width: 22px; height: 22px; }
+
+/* Lyrics is words, not a mark, and it is set as the app's own link rather
+   than as a button: it is the one thing in this row that is read rather than
+   listened to, and a fourth disc would say it was a fourth platform. */
+.hc-song__lyrics {
+  min-height: var(--hc-tap-min);
+  padding: 0 var(--hc-space-sm);
+  color: var(--hc-accent-deep);
+  font-family: var(--hc-sans);
+  font-weight: 600;
+  font-size: var(--hc-caption);
+}

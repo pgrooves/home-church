@@ -286,12 +286,30 @@ const podcast_show = [{
   published: true
 }];
 
+/* The setlists. Straight through, because the seed already stores them in the
+   shape the table wants: the songs are one jsonb array either way, and the
+   only translation is camelCase to snake_case on three keys.
+
+   No title anywhere in here, and there must never be one. The name of that
+   morning's message lives in podcasts.title and the app resolves it, which is
+   what makes /new-podcast's rename reach the Worship screen for free. See
+   migration 0034. */
+const worship_sets = (D.worshipSets || []).map(w => ({
+  id: w.id,
+  served_on: w.servedOn,
+  // A set published before its episode has no sermon to point at yet, and
+  // null is the row the app is built for rather than a gap to fill in.
+  sermon_id: w.sermonId || null,
+  songs: w.songs || [],
+  published: true
+}));
+
 /* ---------------------------------------------------------------- write --- */
 
 fs.mkdirSync(OUT_DIR, { recursive: true });
 
 for (const [name, rows] of Object.entries({ series, guides, podcasts, events, announcements, reading_plans,
-                                  groups, serve_teams, next_steps, church_profile, podcast_show })) {
+                                  worship_sets, groups, serve_teams, next_steps, church_profile, podcast_show })) {
   const file = path.join(OUT_DIR, name + '.json');
   fs.writeFileSync(file, JSON.stringify(rows, null, 2) + '\n', 'utf8');
   console.log('wrote  %s  %d rows', path.relative(ROOT, file), rows.length);
@@ -299,5 +317,5 @@ for (const [name, rows] of Object.entries({ series, guides, podcasts, events, an
 
 const linked = podcasts.filter(p => p.guide_id).length;
 console.log('\n%d of %d messages have a guide attached.', linked, podcasts.length);
-console.log('Upsert in this order: series, guides, podcasts, events, then the rest, which have no foreign keys.');
-console.log('Series before guides before podcasts, the foreign keys point that way.');
+console.log('Upsert in this order: series, guides, podcasts, worship_sets, events, then the rest, which have no foreign keys.');
+console.log('Series before guides before podcasts, the foreign keys point that way, and worship_sets points at podcasts.');

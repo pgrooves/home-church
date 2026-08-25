@@ -193,6 +193,33 @@ and the summary doesn't replace it.
 
 -----
 
+## Step 4b: Point that Sunday's setlist at the episode
+
+The worship set for that morning went up hours after the service and this
+episode did not exist yet, so its `sermon_id` is null and the Worship screen
+has been finding the message by date. Now that there is an id, fill it in:
+
+```bash
+python3 scripts/hc_supabase.py select worship_sets --eq served_on=2026-08-23 \
+  --columns id,sermon_id
+```
+
+- One row with a null `sermon_id`: set it to this episode's id.
+- No row at all: nothing to do. Plenty of Sundays never get a setlist.
+- A row already naming a different sermon: leave it and say so. That is a
+  Sunday with two messages on it and somebody already chose.
+
+**This is exactness, not repair.** The screen is already showing the right
+name, because it matches on the date when the id is missing. What the id buys
+is the Sunday with two messages preached on it, where a date has two answers
+and the screen would rather show none than pick one.
+
+**The setlist never gets the title.** `worship_sets` has no column for one, on
+purpose, and the rename in Step 3a is why: the Worship screen reads
+`podcasts.title` through to the header every time it draws, so renaming a
+message renames it there with nothing to keep in step. A title copied into the
+setlist would be the second copy this whole arrangement exists to prevent.
+
 ## Step 5: Verify
 
 Serve the app (`python3 -m http.server` from the repo root) and check:
@@ -204,6 +231,9 @@ Serve the app (`python3 -m http.server` from the repo root) and check:
   show. Compare the href against what you were given.
 - The Download guide button still produces a PDF with the new title in the
   footer of every page.
+- Worship, behind •••, shows the new title over that Sunday's setlist. It
+  reads through to `podcasts.title`, so a stale name here means something
+  wrote a title into `worship_sets`, which has no column for one.
 - No console errors, no horizontal scroll at 320px or 390px.
 
 If Playwright is available, drive those headlessly, it's faster and
