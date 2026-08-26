@@ -351,6 +351,35 @@ async function wireTests() {
     ok('so does a 407', /could not reach/.test(message), true);
   }
 
+  console.log('\n--- when a service that used to be open closes ---');
+  {
+    /* The same 401 as the test below, and the opposite meaning, and the only
+       thing that tells them apart is whether we sent a key. Odesli retired
+       its free public tier and now answers 401 to a request that carries no
+       credentials, which is not a bad token and not a blocked gateway.
+
+       What matters here is that the iTunes half survives it. That half is
+       already fetched and it is the half with the art on it, so throwing
+       would trade four covers for nothing. The song keeps its art and its
+       Apple link, loses only the platforms Odesli would have added, and the
+       note says so. */
+    globalThis.fetch = (url) => {
+      if (String(url).includes('itunes')) {
+        return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(ITUNES_ANSWER) });
+      }
+      return Promise.resolve({ ok: false, status: 401 });
+    };
+    const { song, note } = await R.resolveSong(
+      { title: 'So Much', artist: 'Life.Church Worship', alternates: [] }, {});
+
+    ok('the song keeps the art iTunes gave it', !!song.artUrl, true);
+    ok('and keeps its Apple link', /music\.apple\.com/.test(song.links.apple || ''), true);
+    ok('and gained no other platform', Object.keys(song.links), ['apple']);
+    ok('and the note says Odesli did not answer', !!note.odesli, true);
+    ok('and nothing was invented for the missing platforms',
+      Object.values(song.links).every(u => /^https:\/\//.test(u)), true);
+  }
+
   console.log('\n--- when the lyrics token is wrong ---');
   {
     /* The same status, opposite meaning, and the difference is whether we

@@ -21,13 +21,18 @@
  * A script fails with an exit code, matches the same way every week, and can
  * be tested without a network, which the prose could not.
  *
- * THE TWO SERVICES, and neither needs a key or an account:
+ * THE TWO SERVICES, one of which now needs a key it does not have:
  *
  *   iTunes Search   the canonical title and artist, the album art, and the
  *                   Apple Music link. Public, unauthenticated, generous.
  *   Odesli          every other platform from that one link, in one call.
- *                   Free tier, roughly ten requests a minute, which is why
- *                   there is a sleep between songs.
+ *                   This one HAS CHANGED. The free public tier is gone and
+ *                   the endpoint now answers 401 PUBLIC_API_ACCESS_DEPRECATED
+ *                   to any request without a key. There is no key here, so
+ *                   the call is made, the refusal is reported once, and the
+ *                   set publishes with its Apple links and its art and
+ *                   without the other platforms. The sleep below is kept for
+ *                   the day a key exists.
  *
  * Lyrics are not guessed. Genius is used when GENIUS_TOKEN is in .env and
  * left empty when it is not, because a Lyrics link that lands on a search
@@ -252,6 +257,16 @@ function readEnv() {
 
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
+/* One line per host, however many songs are in the set. A four song Sunday
+   would otherwise print the same warning four times and bury the summary
+   underneath it. */
+const warned = new Set();
+function warnOnce(message) {
+  if (warned.has(message)) return;
+  warned.add(message);
+  process.stderr.write('resolve_songs: ' + message + '\n');
+}
+
 /* The one failure that must never be mistaken for "this song has no art".
    Nothing was resolved, so nothing should be published, and the message says
    where to run it instead. */
@@ -303,6 +318,31 @@ async function getJson(url, opts) {
        and reads nothing like "run this somewhere else". */
     if ((res.status === 403 || res.status === 407) && !opts.headers) {
       throw blocked(url, 'the gateway answered ' + res.status);
+    }
+
+    /* A 401 on a request that carried no credentials is a third thing again,
+       and it is neither of the two above: not a bad key, because we sent no
+       key, and not a gateway, because the tunnel opened and the service
+       itself answered. It is an API that used to be open and is not any more.
+
+       Odesli retired its free public tier and answers exactly this
+       (PUBLIC_API_ACCESS_DEPRECATED), and there is no key anywhere in this
+       repo to satisfy it with. Throwing would abandon the iTunes half of the
+       song, which is real, already fetched, and the half that carries the
+       art. So this reads as "no answer" the way a 404 does: the song keeps
+       its art, its canonical title and its Apple link, and `summarize`
+       prints the link count so a one-link song is visible as one.
+
+       Note this does NOT trip the exit 2 path: a song with art and an Apple
+       link is not "thin" by the definition in main, which asks for no art or
+       no links at all. Exit stays 0 and the missing platforms show up as
+       "1 links" in the summary and in the warning above. Nothing is
+       invented to fill the hole. */
+    if (res.status === 401 && !opts.headers) {
+      warnOnce(new URL(url).host + ' answered 401: its public API now requires ' +
+        'a key, and this request carried none. Continuing with what the other ' +
+        'services returned. No link has been guessed.');
+      return null;
     }
 
     // A refusal on a request that did carry a key is the key's fault.
