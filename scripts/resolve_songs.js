@@ -50,6 +50,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const { execFile } = require('child_process');
 
 const REPO_ROOT = path.dirname(__dirname);
 const ENV_PATH = path.join(REPO_ROOT, '.env');
@@ -140,6 +141,12 @@ function normalize(s) {
 // church wrote whichever one it wrote.
 function baseTitle(s) {
   return normalize(String(s || '').replace(/\s*[([].*$/, ''));
+}
+
+/* The same trim without the normalising, because a search query goes to a
+   service that wants readable words rather than our comparison form. */
+function baseTitleRaw(s) {
+  return String(s || '').replace(/\s*[([].*$/, '').trim();
 }
 
 /* A recording nobody asked for. Karaoke and tribute records are the ones that
@@ -241,6 +248,238 @@ function linksFromOdesli(body) {
     out.all = body.pageUrl.trim();
   }
   return out;
+}
+
+/* ------------------------------------------------------- the other sources ---
+
+   Odesli's API used to answer this whole section in one call. It is gone, so
+   the same four facts now come from four places, and every one of them is
+   checked against the recording iTunes already matched rather than trusted
+   on its name. The check is the track's length.
+
+   WHY LENGTH. A worship title is not unique. "Holy Spirit" by Jesus Culture
+   alone has four Spotify releases, "So Much" has a radio edit and a
+   MultiTracks session, and searching by name lands on whichever the service
+   ranks first. Length is the one field every service publishes that is
+   specific to a master: the four songs on this Sunday's set matched their
+   Spotify entries to within a single millisecond, while the radio edit of
+   "So Much" was out by 198 seconds. So nothing here is accepted on a title
+   match. It is accepted because it is the same length as the recording
+   Apple already gave us, or it is not accepted at all. */
+
+const SONGLINK_PAGE = 'https://song.link/i/';
+const DEEZER_SEARCH = 'https://api.deezer.com/search';
+const DEEZER_TRACK = 'https://api.deezer.com/track/';
+const YOUTUBE_SEARCH = 'https://www.youtube.com/results';
+const SPOTIFY_EMBED = 'https://open.spotify.com/embed/track/';
+
+/* Deezer publishes whole seconds and iTunes publishes milliseconds, so a
+   correct match is routinely a few hundred ms apart and occasionally a
+   second. Four is wide enough for that rounding and nowhere near wide enough
+   to admit a radio edit, which is minutes out, not seconds. */
+const DURATION_TOLERANCE_MS = 4000;
+
+/* Node's fetch cannot be used for these four. Deezer, YouTube, song.link and
+   Spotify's embed host all sit behind bot protection that fingerprints the
+   client, and undici's TLS and header signature is not curl's: every one of
+   them answers 403 to fetch and 200 to curl, with identical headers and from
+   this same machine. This is not a style preference. It was measured, and
+   curl is the only one of the two clients these services will talk to.
+
+   iTunes is unaffected and keeps using fetch above, which also keeps the
+   existing tests, which stub globalThis.fetch, driving the path they were
+   written for. */
+const BROWSER_UA =
+  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 ' +
+  '(KHTML, like Gecko) Chrome/128.0 Safari/537.36';
+
+function curlText(url) {
+  return new Promise((resolve) => {
+    execFile('curl', ['-sSL', '--max-time', '25', '-H', 'User-Agent: ' + BROWSER_UA, url],
+      { maxBuffer: 24 * 1024 * 1024 },
+      (err, stdout) => resolve(err ? '' : String(stdout || '')));
+  });
+}
+
+/* Swapped by tests, which drive every parser below with saved payloads
+   rather than over the network. The shape these services answer with is not
+   something to discover on a Sunday morning. */
+let httpText = curlText;
+function setHttpText(fn) { httpText = fn || curlText; }
+
+async function httpJson(url) {
+  const body = await httpText(url);
+  if (!body) return null;
+  try { return JSON.parse(body); } catch (err) { return null; }
+}
+
+/* Odesli's API is gone but its public pages are not, and they are explicitly
+   excluded from the API's retirement. The page carries the same matching in
+   a __NEXT_DATA__ blob. Spotify, YouTube and YouTube Music come back empty
+   from it on every song tried, so those two are not read from here. */
+function linksFromSonglinkPage(html) {
+  const out = {};
+  const m = /<script id="__NEXT_DATA__" type="application\/json">([\s\S]*?)<\/script>/.exec(html || '');
+  if (!m) return out;
+  let data;
+  try { data = JSON.parse(m[1]); } catch (err) { return out; }
+  const sections =
+    (((data.props || {}).pageProps || {}).pageData || {}).sections || [];
+  const WANT = { tidal: 'tidal', amazonMusic: 'amazon', deezer: 'deezer', pandora: 'pandora' };
+  for (const section of sections) {
+    for (const link of (section.links || [])) {
+      const ours = WANT[link.platform];
+      if (ours && typeof link.url === 'string' && link.url.trim()) out[ours] = link.url.trim();
+    }
+  }
+  return out;
+}
+
+async function songlinkFor(itunesTrackId) {
+  if (!itunesTrackId) return {};
+  return linksFromSonglinkPage(await httpText(SONGLINK_PAGE + encodeURIComponent(itunesTrackId)));
+}
+
+/* The ISRC, which is the recording's global id. Nothing on the screen uses
+   it; it is stored so a later run can re-resolve this exact master instead
+   of searching for its name again. Deezer is the only reachable service that
+   hands one out without a key. */
+function pickByDuration(candidates, wantMs, durationOf) {
+  let best = null;
+  for (const cand of candidates || []) {
+    const ms = durationOf(cand);
+    if (!ms) continue;
+    const delta = Math.abs(ms - wantMs);
+    if (!best || delta < best.delta) best = { cand: cand, delta: delta };
+  }
+  return (best && best.delta <= DURATION_TOLERANCE_MS) ? best : null;
+}
+
+/* "Maverick City Music & Chandler Moore" is how Apple bills the recording
+   and not how Deezer indexes it, so the full credit finds nothing while the
+   first name alone finds it immediately. Both are tried, widest last, and
+   the length check is what decides either way. */
+function primaryArtist(name) {
+  return String(name || '').split(/\s*(?:&|feat\.?|featuring|,|with)\s+/i)[0].trim();
+}
+
+async function deezerFor(song, wantMs) {
+  if (!wantMs) return {};
+  const title = baseTitleRaw(song.title);
+  const artists = [song.artist, primaryArtist(song.artist)]
+    .map(a => String(a || '').trim())
+    .filter((a, i, all) => a && all.indexOf(a) === i);
+
+  let hit = null;
+  for (const artist of artists) {
+    const q = 'artist:"' + artist + '" track:"' + title + '"';
+    const body = await httpJson(DEEZER_SEARCH + '?limit=25&q=' + encodeURIComponent(q));
+    hit = pickByDuration((body && body.data) || [], wantMs, t => (t.duration || 0) * 1000);
+    if (hit) break;
+  }
+  if (!hit) return {};
+  const detail = await httpJson(DEEZER_TRACK + encodeURIComponent(hit.cand.id));
+  return {
+    isrc: (detail && detail.isrc) || '',
+    link: hit.cand.link || '',
+    delta: hit.delta
+  };
+}
+
+/* YouTube, from the search page's ytInitialData. Two checks, and both are
+   needed: the length has to match, and the channel has to be the artist's.
+
+   Neither alone is enough, and "Lean Back" is why. Its official upload runs
+   15:48 against Apple's 15:45, and a reposted lyric video sits at 15:49,
+   one second CLOSER. Length alone picks the repost. The channel is what
+   separates them. */
+function youtubeCandidates(html) {
+  const m = /var ytInitialData = (\{[\s\S]*?\});<\/script>/.exec(html || '');
+  if (!m) return [];
+  let data;
+  try { data = JSON.parse(m[1]); } catch (err) { return []; }
+  const out = [];
+  (function walk(node) {
+    if (Array.isArray(node)) { node.forEach(walk); return; }
+    if (!node || typeof node !== 'object') return;
+    const v = node.videoRenderer;
+    if (v && v.videoId) {
+      const text = (o) => ((o && o.runs) || []).map(r => r.text || '').join('');
+      const label = (v.lengthText && v.lengthText.simpleText) || '';
+      let ms = 0;
+      if (/^\d+(:\d+)+$/.test(label)) {
+        ms = label.split(':').reduce((acc, part) => acc * 60 + parseInt(part, 10), 0) * 1000;
+      }
+      out.push({
+        id: v.videoId,
+        title: text(v.title),
+        channel: text(v.ownerText) || text(v.longBylineText),
+        durationMs: ms
+      });
+    }
+    for (const key of Object.keys(node)) walk(node[key]);
+  })(data);
+  return out;
+}
+
+/* The channel is the artist's when either name contains the other, which is
+   how "Elevation Worship" matches its own channel. It deliberately does not
+   try to know that TRIBL is Maverick City's label: a table of which channel
+   belongs to which artist would be wrong the first week somebody signs
+   elsewhere. An official upload on a label channel is left unmatched and
+   named in the summary, so it can be confirmed once by a person. */
+function pickYoutube(candidates, want, wantMs) {
+  const artist = normalize(want.artist);
+  if (!artist || !wantMs) return null;
+  const sameArtist = (candidates || []).filter(c => {
+    const channel = normalize(c.channel);
+    return channel && (channel.includes(artist) || artist.includes(channel));
+  });
+  const hit = pickByDuration(sameArtist, wantMs, c => c.durationMs);
+  return hit ? hit.cand : null;
+}
+
+async function youtubeFor(want, wantMs) {
+  if (!wantMs || !want.artist) return null;
+  const q = primaryArtist(want.artist) + ' ' + baseTitleRaw(want.title);
+  const html = await httpText(YOUTUBE_SEARCH + '?search_query=' + encodeURIComponent(q));
+  const candidates = youtubeCandidates(html);
+  /* The channel check runs against both spellings for the same reason the
+     Deezer query does: a channel is named for the act, not for the credit
+     on one recording. */
+  return pickYoutube(candidates, want, wantMs) ||
+         pickYoutube(candidates, { artist: primaryArtist(want.artist) }, wantMs);
+}
+
+/* Spotify is the one service here that cannot be searched. Its search page
+   renders in the browser and carries no results in the HTML, its API needs a
+   token, and the endpoint that mints an anonymous one is blocked. So this
+   VERIFIES rather than finds: given candidate track ids, it keeps the one
+   whose length matches and discards the rest.
+
+   The embed page is what makes that possible. It is server rendered, needs
+   no key, and carries the exact duration in milliseconds. On this Sunday's
+   set it agreed with Apple to within one millisecond on all four songs, and
+   it is what threw out the radio edit and the MultiTracks session of
+   "So Much" that a title search returns first.
+
+   Where the candidates come from is /new-worship's job, not this file's. */
+function durationFromSpotifyEmbed(html) {
+  const m = /"duration":(\d+)/.exec(html || '');
+  return m ? parseInt(m[1], 10) : 0;
+}
+
+async function spotifyVerify(candidateIds, wantMs) {
+  if (!wantMs) return null;
+  for (const raw of (candidateIds || [])) {
+    const id = String(raw || '').trim().replace(/^.*\/track\//, '').replace(/\?.*$/, '');
+    if (!/^[A-Za-z0-9]{22}$/.test(id)) continue;
+    const ms = durationFromSpotifyEmbed(await httpText(SPOTIFY_EMBED + id));
+    if (ms && Math.abs(ms - wantMs) <= DURATION_TOLERANCE_MS) {
+      return { id: id, url: 'https://open.spotify.com/track/' + id, delta: Math.abs(ms - wantMs) };
+    }
+  }
+  return null;
 }
 
 /* ---------------------------------------------------------------- the wire */
@@ -457,6 +696,7 @@ async function resolveSong(want, opts) {
     artist: want.artist,
     artUrl: '',
     lyricsUrl: '',
+    isrc: '',
     links: {}
   };
 
@@ -476,6 +716,12 @@ async function resolveSong(want, opts) {
   song.artist = best.match.artistName;
   song.artUrl = bigArt(best.match.artworkUrl100);
 
+  /* Apple's length for the recording it just matched. Every other service
+     below is checked against this number, so if it is missing the checks
+     cannot run and the other sources are skipped rather than guessed at. */
+  const wantMs = best.match.trackTimeMillis || 0;
+  if (!wantMs) note.noDuration = true;
+
   note.source = 'iTunes';
   note.matched = best.match.trackName + ' / ' + best.match.artistName;
   note.confidence = best.confidence;
@@ -483,11 +729,46 @@ async function resolveSong(want, opts) {
   if (best.runnerUp) note.runnerUp = best.runnerUp.trackName + ' / ' + best.runnerUp.artistName;
 
   const appleUrl = best.match.trackViewUrl;
-  if (appleUrl) {
-    song.links.apple = appleUrl;
+  if (appleUrl) song.links.apple = appleUrl;
+
+  /* Odesli's API, still first when a key exists, because one call that
+     matches on the recording's own identity beats four that infer it from a
+     length. Everything after this is the fallback for not having one. */
+  if (appleUrl && opts.odesliKey) {
     const odesli = await odesliFor(appleUrl, opts.odesliKey);
     if (odesli) Object.assign(song.links, linksFromOdesli(odesli));
-    else note.odesli = 'no answer, Apple link only';
+    else note.odesli = 'no answer';
+  }
+
+  if (wantMs) {
+    /* Tidal, Amazon and Deezer, off Odesli's public page, which its API's
+       retirement explicitly does not cover. */
+    const page = await songlinkFor(best.match.trackId);
+    for (const [k, v] of Object.entries(page)) if (!song.links[k]) song.links[k] = v;
+
+    const deezer = await deezerFor(song, wantMs);
+    if (deezer.isrc) song.isrc = deezer.isrc;
+    if (deezer.link && !song.links.deezer) song.links.deezer = deezer.link;
+
+    if (!song.links.youtube) {
+      const video = await youtubeFor(song, wantMs);
+      if (video) {
+        song.links.youtube = 'https://www.youtube.com/watch?v=' + video.id;
+        song.links.youtubeMusic = 'https://music.youtube.com/watch?v=' + video.id;
+        note.youtube = video.channel;
+      } else {
+        /* Not a failure. An official upload that lives on a label's channel
+           rather than the artist's is the common shape of this, and it wants
+           one look from a person instead of a guess. */
+        note.youtubeUnmatched = true;
+      }
+    }
+
+    if (!song.links.spotify) {
+      const hit = await spotifyVerify(opts.spotifyIds && opts.spotifyIds[baseTitle(song.title)], wantMs);
+      if (hit) { song.links.spotify = hit.url; note.spotify = 'verified +/-' + hit.delta + 'ms'; }
+      else note.spotifyUnverified = true;
+    }
   }
 
   song.lyricsUrl = await lyricsFor(song, opts.geniusToken);
@@ -531,6 +812,14 @@ function summarize(row, notes) {
     if (n.confidence === 'low' || n.confidence === 'none') {
       lines.push('   ! check this one' + (n.runnerUp ? ', runner up was ' + n.runnerUp : ''));
     }
+    if (n.youtubeUnmatched) {
+      lines.push('   ! no YouTube upload on this artist\'s own channel. Often means the');
+      lines.push('     official one sits on a label channel. Check and pass it in.');
+    }
+    if (n.spotifyUnverified) {
+      lines.push('   ! no Spotify link. Search for the track, then rerun with');
+      lines.push('     --spotify "' + song.title + '=<track id>". It is checked before it is used.');
+    }
     if (n.alternates && n.alternates.length > 1) {
       lines.push('   ! the line named two artists: ' + n.alternates.join(' / ') +
                  '. Used the first. Ask before writing.');
@@ -551,6 +840,7 @@ function parseArgs(argv) {
     else if (a === '--sermon') args.sermon = argv[++i];
     else if (a === '--known') args.known = argv[++i];
     else if (a === '--songs') args.songs = argv[++i];
+    else if (a === '--spotify') args.spotify = argv[++i];
     else if (a === '--out') args.out = argv[++i];
     else if (a === '--sleep') args.sleep = parseInt(argv[++i], 10) || 0;
     else if (a === '--help' || a === '-h') args.help = true;
@@ -568,6 +858,10 @@ Home Church, worship setlist resolver.
   --sermon    sermon-id    that morning's message. Omit when the episode is
                            not published yet, which is the normal case.
   --songs     "a\\nb"       the list, instead of stdin.
+  --spotify   "T=id;T=id"  candidate Spotify track ids per title. Each is
+                           checked against Apple's length and dropped if it
+                           disagrees, so a wrong id costs a missing link
+                           rather than a wrong one.
   --known     file.json    songs resolved on earlier Sundays, reused when a
                            title and artist both match.
   --out       file.json    write the row here as well as to stdout.
@@ -617,6 +911,20 @@ async function main() {
       : [];
   }
 
+  /* Candidate Spotify ids, as "Song Title = id" per line or separated by
+     semicolons. They are candidates and not answers: each one is checked
+     against Apple's length for that recording and dropped if it disagrees,
+     so passing the wrong id costs a missing link rather than a wrong one. */
+  const spotifyIds = {};
+  for (const entry of String(args.spotify || '').split(/[;\n]/)) {
+    const at = entry.indexOf('=');
+    if (at < 1) continue;
+    const key = baseTitle(entry.slice(0, at));
+    const id = entry.slice(at + 1).trim();
+    if (!key || !id) continue;
+    (spotifyIds[key] = spotifyIds[key] || []).push(id);
+  }
+
   const env = readEnv();
   const geniusToken = env.GENIUS_TOKEN || process.env.GENIUS_TOKEN || '';
   const odesliKey = env.ODESLI_API_KEY || process.env.ODESLI_API_KEY || '';
@@ -626,7 +934,8 @@ async function main() {
   for (let i = 0; i < wants.length; i++) {
     if (i > 0 && args.sleep) await sleep(args.sleep);
     const { song, note } = await resolveSong(wants[i],
-      { known: known, geniusToken: geniusToken, odesliKey: odesliKey });
+      { known: known, geniusToken: geniusToken, odesliKey: odesliKey,
+        spotifyIds: spotifyIds });
     songs.push(song);
     notes.push(note);
   }
@@ -654,6 +963,8 @@ async function main() {
 module.exports = {
   parseLine, parseList, normalize, baseTitle, scoreCandidate, pickBest,
   bigArt, linksFromOdesli, findKnown, missingOdesliLinks, buildRow, summarize,
+  baseTitleRaw, linksFromSonglinkPage, youtubeCandidates, pickYoutube,
+  durationFromSpotifyEmbed, spotifyVerify, pickByDuration, setHttpText, primaryArtist,
   /* The whole path for one song, exported so a test can drive it with a
      stubbed global fetch. Reading the two services correctly matters as much
      as scoring them, and the shape of what they answer with is not something

@@ -267,8 +267,11 @@ async function wireTests() {
       ['itunes.apple.com', ITUNES_ANSWER],
       ['api.song.link', ODESLI_ANSWER]
     ]);
+    /* With a key, because that is now the only way Odesli is asked at all.
+       An unkeyed call can only ever 401, so the resolver stopped making one. */
     const { song, note } = await R.resolveSong(
-      { title: 'So Much', artist: 'Life.Church Worship', alternates: [] }, {});
+      { title: 'So Much', artist: 'Life.Church Worship', alternates: [] },
+      { odesliKey: 'sk-test' });
 
     ok('the catalogue\'s own spelling wins over the one typed on a Sunday',
       [song.title, song.artist], ['So Much', 'Life.Church Worship']);
@@ -290,11 +293,12 @@ async function wireTests() {
   {
     stubFetch([['itunes.apple.com', ITUNES_ANSWER], ['api.song.link', 404]]);
     const { song, note } = await R.resolveSong(
-      { title: 'So Much', artist: 'Life.Church Worship', alternates: [] }, {});
+      { title: 'So Much', artist: 'Life.Church Worship', alternates: [] },
+      { odesliKey: 'sk-test' });
     ok('the song keeps its art and its Apple link',
       [!!song.artUrl, song.links.apple], [true, 'https://music.apple.com/us/album/so-much/1']);
     ok('and the gap is named rather than passed over',
-      note.odesli, 'no answer, Apple link only');
+      note.odesli, 'no answer');
   }
 
   console.log('\n--- when the catalogue knows nothing ---');
@@ -351,7 +355,7 @@ async function wireTests() {
     ok('so does a 407', /could not reach/.test(message), true);
   }
 
-  console.log('\n--- when a service that used to be open closes ---');
+  console.log('\n--- with no Odesli key at all ---');
   {
     /* The same 401 as the test below, and the opposite meaning, and the only
        thing that tells them apart is whether we sent a key. Odesli retired
@@ -363,19 +367,24 @@ async function wireTests() {
        would trade four covers for nothing. The song keeps its art and its
        Apple link, loses only the platforms Odesli would have added, and the
        note says so. */
+    const asked = [];
     globalThis.fetch = (url) => {
+      asked.push(String(url));
       if (String(url).includes('itunes')) {
         return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(ITUNES_ANSWER) });
       }
       return Promise.resolve({ ok: false, status: 401 });
     };
-    const { song, note } = await R.resolveSong(
+    const { song } = await R.resolveSong(
       { title: 'So Much', artist: 'Life.Church Worship', alternates: [] }, {});
 
     ok('the song keeps the art iTunes gave it', !!song.artUrl, true);
     ok('and keeps its Apple link', /music\.apple\.com/.test(song.links.apple || ''), true);
     ok('and gained no other platform', Object.keys(song.links), ['apple']);
-    ok('and the note says Odesli did not answer', !!note.odesli, true);
+    /* The point of the change: with no key there is nothing to send, and a
+       401 is the only reply available, so the request is not made at all. */
+    ok('and Odesli is not called at all without a key',
+      asked.some(u => u.includes('song.link')), false);
     ok('and nothing was invented for the missing platforms',
       Object.values(song.links).every(u => /^https:\/\//.test(u)), true);
   }
@@ -476,6 +485,118 @@ async function wireTests() {
     ok('a complete cache entry is reused even with a key',
       reused.note.source, 'a previous Sunday');
     ok('and costs nothing', odesliCalls, 0);
+  }
+
+  console.log('\n--- reading Odesli\'s public page ---');
+  {
+    /* The API is retired; the page is not, and it is explicitly excluded
+       from the retirement. Spotify, YouTube and YouTube Music come back
+       present-but-empty on every song tried, so the parser has to drop an
+       empty url rather than store it: a key whose value is '' would draw a
+       dead button on the screen. */
+    const page = '<script id="__NEXT_DATA__" type="application/json">' + JSON.stringify({
+      props: { pageProps: { pageData: { sections: [
+        { links: [
+          { platform: 'appleMusic', url: 'https://geo.music.apple.com/x' },
+          { platform: 'spotify', url: '' },
+          { platform: 'youtube', url: '' },
+          { platform: 'tidal', url: 'https://listen.tidal.com/track/222867632' },
+          { platform: 'deezer', url: 'https://www.deezer.com/track/96932266' },
+          { platform: 'amazonMusic', url: 'https://music.amazon.com/albums/B00VG33ZF2' },
+          { platform: 'pandora', url: 'https://www.pandora.com/TR:2293235' }
+        ] }
+      ] } } }
+    }) + '</script>';
+    const got = R.linksFromSonglinkPage(page);
+    ok('tidal, amazon, deezer and pandora are read',
+      Object.keys(got).sort(), ['amazon', 'deezer', 'pandora', 'tidal']);
+    ok('an empty spotify url is not stored as a link', 'spotify' in got, false);
+    ok('nor an empty youtube one', 'youtube' in got, false);
+    ok('a page with no data blob yields nothing, rather than throwing',
+      Object.keys(R.linksFromSonglinkPage('<html>nope</html>')).length, 0);
+  }
+
+  console.log('\n--- picking a YouTube upload ---');
+  {
+    /* The real "Lean Back" search, which is why the channel is checked at
+       all. The official upload runs 15:48 against Apple's 15:45; a reposted
+       lyric video sits at 15:49, one second CLOSER. Duration alone picks the
+       repost. */
+    const vids = [
+      { id: 'ixknfMJt21w', title: 'Lean Back', channel: 'TRIBL',       durationMs: 948000 },
+      { id: 'PVDO9jHXxwo', title: 'Lean Back', channel: 'Shop Easier', durationMs: 949000 },
+      { id: 'yG6wOHH2Kdg', title: 'Lean Back', channel: 'Worship Life', durationMs: 934000 }
+    ];
+    const want = { artist: 'Maverick City Music' };
+    ok('a closer duration on a stranger\'s channel is refused',
+      R.pickYoutube(vids, want, 945000), null);
+
+    /* And the shape that does match: the artist\'s own channel, close enough. */
+    const own = [
+      { id: 'right', title: 'No Body', channel: 'Elevation Worship', durationMs: 363000 },
+      { id: 'wrong', title: 'No Body', channel: 'OfficialChristianRadioHD', durationMs: 361200 }
+    ];
+    const hit = R.pickYoutube(own, { artist: 'Elevation Worship' }, 361965);
+    ok('the artist\'s own channel wins even when another is closer',
+      hit && hit.id, 'right');
+
+    /* A radio edit on the right channel is still refused: minutes out is
+       nowhere near the tolerance. */
+    ok('a radio edit on the right channel is still refused',
+      R.pickYoutube([{ id: 'radio', channel: 'Elevation Worship', durationMs: 254000 }],
+        { artist: 'Elevation Worship' }, 361965), null);
+  }
+
+  console.log('\n--- verifying a Spotify candidate ---');
+  {
+    /* Spotify cannot be searched, so this checks rather than finds. The
+       three ids below are the real ones a search for "So Much" returns: the
+       album cut, a MultiTracks session and a radio version, in that order of
+       plausibility and nowhere near each other in length. */
+    const EMBEDS = {
+      '6uqYWwJnvxaea90fGpnD5K': '{"name":"So Much","duration":406712}',
+      '5WeGtzWzGwdMIIGL3n50Pg': '{"name":"So Much - MultiTracks Session","duration":327180}',
+      '7CkgEinnbawU6SEtjIwdbp': '{"name":"So Much - Radio Version","duration":208380}'
+    };
+    R.setHttpText(async (url) => {
+      const id = url.split('/').pop();
+      return EMBEDS[id] || '';
+    });
+
+    ok('the duration is read out of the embed page',
+      R.durationFromSpotifyEmbed(EMBEDS['6uqYWwJnvxaea90fGpnD5K']), 406712);
+
+    let hit = await R.spotifyVerify(['6uqYWwJnvxaea90fGpnD5K'], 406713);
+    ok('a one millisecond difference is the same recording', !!hit, true);
+    ok('and it is returned as a track url',
+      hit.url, 'https://open.spotify.com/track/6uqYWwJnvxaea90fGpnD5K');
+
+    hit = await R.spotifyVerify(['5WeGtzWzGwdMIIGL3n50Pg'], 406713);
+    ok('a MultiTracks session is refused', hit, null);
+    hit = await R.spotifyVerify(['7CkgEinnbawU6SEtjIwdbp'], 406713);
+    ok('so is a radio version', hit, null);
+
+    /* Given the wrong one first and the right one second, it keeps looking
+       rather than taking the first thing it is handed. */
+    hit = await R.spotifyVerify(['7CkgEinnbawU6SEtjIwdbp', '6uqYWwJnvxaea90fGpnD5K'], 406713);
+    ok('a bad candidate does not stop it finding a good one',
+      hit && hit.id, '6uqYWwJnvxaea90fGpnD5K');
+
+    ok('a malformed id is skipped rather than fetched',
+      await R.spotifyVerify(['not-an-id'], 406713), null);
+    ok('and no candidates means no link, not a guess',
+      await R.spotifyVerify([], 406713), null);
+    R.setHttpText(null);
+  }
+
+  console.log('\n--- the artist name a service will actually match ---');
+  {
+    ok('a billed credit reduces to the act',
+      R.primaryArtist('Maverick City Music & Chandler Moore'), 'Maverick City Music');
+    ok('so does a featuring credit',
+      R.primaryArtist('Elevation Worship feat. Jonsal Barrientes'), 'Elevation Worship');
+    ok('a plain name is left alone',
+      R.primaryArtist('Jesus Culture'), 'Jesus Culture');
   }
 
   console.log('\n--- when the lyrics token is wrong ---');

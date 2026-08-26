@@ -168,13 +168,21 @@ runs everywhere else in this app.
 Publish one with **`/new-worship`** and a list of the songs, however it was
 typed. It reads the artists off the line and then runs
 `scripts/resolve_songs.js`, which searches iTunes for each song, takes the
-album art and the Apple Music link off the best match, and asks Odesli for
-every other platform in one call. iTunes needs no key. Odesli does now, since
-it retired its free public tier in 2026: set `ODESLI_API_KEY` in `.env` for
-Spotify, YouTube, YouTube Music, Amazon and Tidal, and without it a set still
-publishes with real art, canonical titles and Apple Music links rather than
-guessing the rest. Lyrics come from Genius when `GENIUS_TOKEN` is in `.env`
-and are left empty when it is not.
+album art and the Apple Music link off the best match, and then assembles
+the other platforms from Odesli's public pages, the Deezer API and YouTube
+search. None of those needs a key.
+
+**Every link is checked against the length of the recording iTunes matched.**
+A worship title is not unique enough to search on: "Holy Spirit" by Jesus
+Culture has four Spotify releases and "So Much" has a radio edit, and the
+right one is the one the band actually played. Correct matches agree with
+Apple to within a millisecond; a radio edit is minutes out. Nothing goes in
+the row on the strength of its title.
+
+Spotify is the exception: it cannot be searched without a token, so
+`/new-worship` finds candidate ids and the resolver verifies them, dropping
+any whose length disagrees. Lyrics come from Genius when `GENIUS_TOKEN` is in
+`.env` and are left empty when it is not.
 
 **The resolver is a script rather than instructions, and that is the point.**
 The first setlist went up with four titles and no art, because the pipeline

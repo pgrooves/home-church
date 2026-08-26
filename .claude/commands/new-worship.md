@@ -140,48 +140,83 @@ command on a machine with open network access, or ask for the links and pass
 them in by hand. This exact failure is how the first setlist went up with four
 titles and nothing else.
 
-### When a song has art but only one link
+### Where the links actually come from
 
-The summary says `art, 1 links` and stderr carries one line:
+Odesli used to answer this in one call. Its API is retired, so the resolver
+now assembles the same row from four sources, and **every one of them is
+checked against the length of the recording iTunes already matched**:
 
+| Source | Gives | Key needed |
+|---|---|---|
+| iTunes Search | title, artist, art, Apple link, **duration** | no |
+| song.link page | Tidal, Amazon, Deezer, Pandora | no |
+| Deezer API | **ISRC**, Deezer link | no |
+| YouTube search | YouTube, YouTube Music | no |
+| Spotify embed | **verifies** a Spotify id | no |
+
+**Length is the whole trick.** A worship title is not unique: "Holy Spirit"
+by Jesus Culture has four Spotify releases, "So Much" has a radio edit and a
+MultiTracks session, and a title search lands on whichever one the service
+ranks first. On the 8/23 set every correct match agreed with Apple to within
+**one millisecond**, while the radio edit of "So Much" was out by 198
+seconds. So nothing is accepted on its name. It matches the length, or it
+does not go in the row.
+
+### Spotify has to be handed in
+
+Spotify is the one service that cannot be searched: its search page renders
+in the browser and carries no results in the HTML, its API needs a token,
+and the endpoint that mints an anonymous one is blocked. The resolver
+therefore **verifies rather than finds**.
+
+So: search the web for each song's Spotify track, and pass the ids in.
+
+```bash
+node scripts/resolve_songs.js --served-on 2026-08-23 \
+  --spotify "So Much=6uqYWwJnvxaea90fGpnD5K;Holy Spirit=5Xjcst6Rle74VteHx0zczO" \
+  < /tmp/songs.txt
 ```
-resolve_songs: api.song.link answered 401: its public API now requires a key
-```
 
-**This is not a failure and not a blocked proxy.** Odesli retired its free
-public tier in 2026. The endpoint still serves Spotify, YouTube, YouTube
-Music, Amazon and Tidal, it just wants a key now. Without one the set still
-publishes with real art, canonical titles and Apple Music links, and the
-Worship screen draws one button per song instead of six.
+Pass every plausible candidate; they are cheap. Each one is fetched from
+Spotify's embed page, which is server rendered and carries the exact
+duration, and any id whose length disagrees with Apple's is dropped. **A
+wrong id costs a missing link, never a wrong one**, so there is no need to be
+certain before passing one in. A song with no verified id gets a `!` line
+telling you so.
 
-Put `ODESLI_API_KEY` in `.env` and rerun. Nothing else changes.
+When several ids all match the same length, they are re-releases of one
+recording. Prefer the one whose release date matches the album iTunes
+matched: for 8/23 that put Holy Spirit on the 2012 *Live From New York* cut
+rather than the 2020, 2021 or 2023 re-issues.
 
-**Getting a key is no longer straightforward, and this matters before anyone
-builds on it.** Odesli has stopped issuing API keys; access is by allowlist
-request only. The whole `v1-alpha.1` namespace was also scheduled for
-retirement on 2026-07-31, after which it returns `410 Gone`. As of
-2026-08-26 it answers `401`, not `410`, so it is gated rather than gone,
-but it is on its way out either way. Treat any key as temporary and do not
-design a permanent weekly workflow around this endpoint without a plan for
-what replaces it.
+### YouTube, and the channel check
 
-Note also that Odesli's own docs still carry pre-deprecation text saying
-"You do not need any special authentication or authorization for our API."
-That paragraph is stale. The banner at the top of the same page is what is
-true now.
+A YouTube upload is taken only from **the artist's own channel**, at a
+matching length. Both checks are needed and "Lean Back" is why: the official
+upload runs 15:48 against Apple's 15:45, and a reposted lyric video sits at
+15:49 — one second *closer*. Length alone picks the repost.
 
-**If a key is obtained, the app owes attribution.** Odesli's terms ask that
-products using the API show that they are powered by Songlink. The Worship
-screen's platform row in `js/screens/worship.js` is where that line belongs,
-and it should go in with the same change that turns the key on.
+The cost is that an official upload on a **label** channel goes unmatched.
+TRIBL carries Maverick City, and the resolver does not know that, deliberately:
+a table of which channel belongs to which label would be wrong the first week
+somebody signs elsewhere. You get `! no YouTube upload on this artist's own
+channel`. Check it once, and if it is right, it is a real link to add.
 
-**Do not fill the gap by hand, and do not search the web for the links.** A
-worship title is not unique enough to search on: "Holy Spirit" by Jesus
-Culture alone has five different Spotify recordings across live, radio and
-re-release, and the one that belongs on the screen is the one the band
-actually played. Odesli matches on the recording's identity rather than its
-name, which is the whole reason it is worth a key. A plausible link to the
-wrong cut is the one mistake nobody catches by looking at the screen.
+### Why not just search the web for all of them
+
+Because the web will happily give you five plausible links and no way to tell
+which is the recording the band played. That is the mistake this whole file
+exists to prevent, and it is not hypothetical: a search for "Holy Spirit
+Jesus Culture" returns four different Spotify ids and a fan-made lyric video
+above the official upload. Search is fine for *finding candidates*. The
+length check is what decides.
+
+### If Odesli ever comes back
+
+`ODESLI_API_KEY` in `.env` still works and still runs first, because one call
+that matches on the recording's own identity beats four that infer it from a
+length. Without a key Odesli is not called at all — an unkeyed request can
+only answer 401, so the resolver stopped making one.
 
 ### The two things it will not decide for you
 
@@ -248,9 +283,10 @@ Message     sermon-last-words
 Write it?
 ```
 
-With no `ODESLI_API_KEY` every line reads `art, 1 links` instead. Say so in
-the confirmation rather than letting it pass as normal, so nobody discovers
-it on a phone on Sunday morning.
+A resolved song reads `art, 8 links`: Apple, Spotify, YouTube, YouTube Music,
+Deezer, Tidal, Amazon and Pandora. Fewer than that is not a failure, but say
+which ones are short and why in the confirmation, rather than letting it pass
+as normal, so nobody discovers it on a phone on Sunday morning.
 
 **Every `!` line is a question, not a footnote.** Do not write a set with one
 still unanswered. Rerun Step 3 with the answer rather than editing the row by
