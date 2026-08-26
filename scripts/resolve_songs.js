@@ -316,7 +316,9 @@ async function getJson(url, opts) {
        actually answers, and before it existed that answer arrived as
        "itunes.apple.com answered 403", which reads like Apple turned us away
        and reads nothing like "run this somewhere else". */
-    if ((res.status === 403 || res.status === 407) && !opts.headers) {
+    const sentCredentials = !!opts.headers || !!opts.keyed;
+
+    if ((res.status === 403 || res.status === 407) && !sentCredentials) {
       throw blocked(url, 'the gateway answered ' + res.status);
     }
 
@@ -338,17 +340,22 @@ async function getJson(url, opts) {
        no links at all. Exit stays 0 and the missing platforms show up as
        "1 links" in the summary and in the warning above. Nothing is
        invented to fill the hole. */
-    if (res.status === 401 && !opts.headers) {
+    if (res.status === 401 && !sentCredentials) {
       warnOnce(new URL(url).host + ' answered 401: its public API now requires ' +
-        'a key, and this request carried none. Continuing with what the other ' +
-        'services returned. No link has been guessed.');
+        'a key and this request carried none, so this set publishes with its ' +
+        'art and its Apple links only. Put ODESLI_API_KEY in .env to get ' +
+        'Spotify, YouTube, YouTube Music, Amazon and Tidal back. ' +
+        'No link has been guessed.');
       return null;
     }
 
     // A refusal on a request that did carry a key is the key's fault.
     if (res.status === 401 || res.status === 403) {
-      throw new Error(new URL(url).host + ' refused the token (' + res.status + '). ' +
-        'Check GENIUS_TOKEN in .env, or unset it to publish without lyrics.');
+      const host = new URL(url).host;
+      const which = opts.keyed
+        ? 'Check ODESLI_API_KEY in .env, or unset it to publish with Apple links only.'
+        : 'Check GENIUS_TOKEN in .env, or unset it to publish without lyrics.';
+      throw new Error(host + ' refused the token (' + res.status + '). ' + which);
     }
 
     if (!res.ok) {
@@ -368,9 +375,19 @@ async function searchItunes(want) {
   return (body && Array.isArray(body.results)) ? body.results : [];
 }
 
-async function odesliFor(appleUrl) {
-  const url = ODESLI + '?' + new URLSearchParams({ url: appleUrl, userCountry: 'US' });
-  return getJson(url);
+/* The key is a query parameter, which is Odesli's own design and not ours.
+   It never reaches a log or an error message: everything below reports
+   `new URL(url).host`, never the URL itself, so a key cannot leak into a
+   terminal somebody pastes into chat. */
+async function odesliFor(appleUrl, key) {
+  const params = { url: appleUrl, userCountry: 'US' };
+  if (key) params.key = key;
+  const url = ODESLI + '?' + new URLSearchParams(params);
+  /* `keyed` rather than sniffing opts.headers: the key rides in the query
+     string, so getJson cannot otherwise tell an authenticated call from an
+     anonymous one, and that distinction is the whole point of the 401
+     branches. */
+  return getJson(url, { keyed: !!key });
 }
 
 /* Genius, only when there is a token for it. Checked against the song that
@@ -446,7 +463,7 @@ async function resolveSong(want, opts) {
   const appleUrl = best.match.trackViewUrl;
   if (appleUrl) {
     song.links.apple = appleUrl;
-    const odesli = await odesliFor(appleUrl);
+    const odesli = await odesliFor(appleUrl, opts.odesliKey);
     if (odesli) Object.assign(song.links, linksFromOdesli(odesli));
     else note.odesli = 'no answer, Apple link only';
   }
@@ -578,13 +595,16 @@ async function main() {
       : [];
   }
 
-  const geniusToken = readEnv().GENIUS_TOKEN || process.env.GENIUS_TOKEN || '';
+  const env = readEnv();
+  const geniusToken = env.GENIUS_TOKEN || process.env.GENIUS_TOKEN || '';
+  const odesliKey = env.ODESLI_API_KEY || process.env.ODESLI_API_KEY || '';
 
   const songs = [];
   const notes = [];
   for (let i = 0; i < wants.length; i++) {
     if (i > 0 && args.sleep) await sleep(args.sleep);
-    const { song, note } = await resolveSong(wants[i], { known: known, geniusToken: geniusToken });
+    const { song, note } = await resolveSong(wants[i],
+      { known: known, geniusToken: geniusToken, odesliKey: odesliKey });
     songs.push(song);
     notes.push(note);
   }

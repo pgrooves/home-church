@@ -380,6 +380,49 @@ async function wireTests() {
       Object.values(song.links).every(u => /^https:\/\//.test(u)), true);
   }
 
+  console.log('\n--- with an Odesli key ---');
+  {
+    /* The key rides in the query string rather than a header, which is
+       Odesli's design. That is easy to get subtly wrong in two ways, so both
+       are pinned here: the key has to actually be sent, and a refusal of a
+       keyed call has to blame the key rather than tell somebody their
+       network is blocked. */
+    let odesliUrl = '';
+    globalThis.fetch = (url) => {
+      const u = String(url);
+      if (u.includes('itunes')) {
+        return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(ITUNES_ANSWER) });
+      }
+      odesliUrl = u;
+      return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(ODESLI_ANSWER) });
+    };
+    const { song } = await R.resolveSong(
+      { title: 'So Much', artist: 'Life.Church Worship', alternates: [] },
+      { odesliKey: 'sk-test' });
+
+    ok('the key is sent to Odesli', /[?&]key=sk-test\b/.test(odesliUrl), true);
+    ok('and the other platforms come back', Object.keys(song.links).includes('spotify'), true);
+
+    /* A keyed call that gets refused is the key's fault, and saying
+       "the gateway answered 401, run this somewhere else" would send the
+       pastor to reconfigure a network that is working fine. */
+    globalThis.fetch = (url) => {
+      if (String(url).includes('itunes')) {
+        return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(ITUNES_ANSWER) });
+      }
+      return Promise.resolve({ ok: false, status: 401 });
+    };
+    let message = '';
+    try {
+      await R.resolveSong({ title: 'So Much', artist: 'Life.Church Worship', alternates: [] },
+        { odesliKey: 'stale' });
+    } catch (err) { message = err.message; }
+    ok('a refused Odesli key names ODESLI_API_KEY, not the network',
+      /refused the token/.test(message) && /ODESLI_API_KEY/.test(message), true);
+    ok('and does not tell anybody to move machines',
+      /could not reach/.test(message), false);
+  }
+
   console.log('\n--- when the lyrics token is wrong ---');
   {
     /* The same status, opposite meaning, and the difference is whether we
