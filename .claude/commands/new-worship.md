@@ -91,17 +91,30 @@ here too. Migration `0034_worship_sets.sql` is the long version.
 
 **One command. Do not hand roll this with curl, and do not fill in a link from
 memory.** `scripts/resolve_songs.js` reads the list, searches iTunes for each
-song, takes the album art and the Apple Music link off the best match, asks
-Odesli for every other platform, and writes the finished row:
+song, takes the album art and the Apple Music link off the best match, then
+assembles the other platforms from Odesli's public pages, the Deezer API and
+YouTube search, checking each one against the length of the recording iTunes
+matched.
+
+**Before running it, search the web for each song's Spotify track and collect
+the ids.** Spotify is the one platform the script cannot search for itself,
+so it has to be handed them. [Spotify has to be handed
+in](#spotify-has-to-be-handed-in) below is the detail; the short version is
+that omitting `--spotify` exits 3.
 
 ```bash
 node scripts/resolve_songs.js --served-on 2026-08-23 \
   --sermon sermon-last-words \
+  --spotify "So Much=6uqYWwJnvxaea90fGpnD5K;Holy Spirit=5Xjcst6Rle74VteHx0zczO" \
   --out /tmp/worship-2026-08-23.json < /tmp/songs.txt
 ```
 
 The row goes to stdout and to `--out`. A summary for a human goes to stderr,
 and that summary is what Step 5 shows.
+
+Add `--youtube "Title=<video id>"` for any song the summary flags with `! no
+YouTube upload on this artist's own channel`, which is usually an official
+upload sitting on a label's channel.
 
 **Reuse what earlier Sundays already resolved.** A song the church played in
 June keeps its art and its links, which saves the lookups and keeps the same
@@ -110,7 +123,8 @@ recording on screen two months running:
 ```bash
 python3 scripts/hc_supabase.py select worship_sets --order served_on.desc \
   --limit 12 --columns songs > /tmp/known.json
-node scripts/resolve_songs.js --served-on 2026-08-23 --known /tmp/known.json ... 
+node scripts/resolve_songs.js --served-on 2026-08-23 --known /tmp/known.json \
+  --spotify "..." --out /tmp/worship-2026-08-23.json < /tmp/songs.txt
 ```
 
 A song cached during the keyless window has art and an Apple link and nothing
