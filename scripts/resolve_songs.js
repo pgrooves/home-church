@@ -125,6 +125,22 @@ function parseList(text) {
   return String(text || '').split(/\r?\n/).map(parseLine).filter(Boolean);
 }
 
+/* "Title = id" per line or separated by semicolons, for the two platforms
+   that cannot be searched from here. Several ids for one title are fine and
+   are tried in turn: they are candidates, and each is checked before use. */
+function parseIdMap(text) {
+  const out = {};
+  for (const entry of String(text || '').split(/[;\n]/)) {
+    const at = entry.indexOf('=');
+    if (at < 1) continue;
+    const key = baseTitle(entry.slice(0, at));
+    const id = entry.slice(at + 1).trim();
+    if (!key || !id) continue;
+    (out[key] = out[key] || []).push(id);
+  }
+  return out;
+}
+
 /* ------------------------------------------------------------- the matching */
 
 function normalize(s) {
@@ -451,6 +467,41 @@ async function youtubeFor(want, wantMs) {
          pickYoutube(candidates, { artist: primaryArtist(want.artist) }, wantMs);
 }
 
+/* A video id handed in by a person, because the automatic pick above only
+   takes the artist's own channel and an official upload on a label's channel
+   is left for somebody to confirm.
+
+   It is still checked, because the thing that goes wrong with a hand-copied
+   id is a typo, and a typo resolves to somebody else's video rather than to
+   nothing. YouTube no longer publishes a duration anywhere in the watch page
+   that can be read without the player, so the check here is oEmbed's title
+   and channel: the id has to resolve at all, and either the artist has to be
+   the uploader or the song's name has to be in the video's title. That
+   catches a wrong id without second-guessing the person who looked at the
+   video and decided it was the right one. */
+const YOUTUBE_OEMBED = 'https://www.youtube.com/oembed';
+
+async function youtubeVerify(videoIds, want) {
+  for (const raw of (videoIds || [])) {
+    const id = String(raw || '').trim()
+      .replace(/^.*[?&]v=/, '').replace(/^.*youtu\.be\//, '').replace(/[?&].*$/, '');
+    if (!/^[A-Za-z0-9_-]{11}$/.test(id)) continue;
+    const body = await httpJson(
+      YOUTUBE_OEMBED + '?format=json&url=' +
+      encodeURIComponent('https://www.youtube.com/watch?v=' + id));
+    if (!body || !body.title) continue;
+    const channel = normalize(body.author_name || '');
+    const artist = normalize(want.artist || '');
+    const titleHit = baseTitle(want.title) &&
+      normalize(body.title).includes(baseTitle(want.title));
+    const channelHit = artist && channel && (channel.includes(artist) || artist.includes(channel));
+    if (titleHit || channelHit) {
+      return { id: id, channel: body.author_name || '', title: body.title };
+    }
+  }
+  return null;
+}
+
 /* Spotify is the one service here that cannot be searched. Its search page
    renders in the browser and carries no results in the HTML, its API needs a
    token, and the endpoint that mints an anonymous one is blocked. So this
@@ -751,11 +802,15 @@ async function resolveSong(want, opts) {
     if (deezer.link && !song.links.deezer) song.links.deezer = deezer.link;
 
     if (!song.links.youtube) {
-      const video = await youtubeFor(song, wantMs);
+      /* A id handed in wins over the search, because it is the answer to
+         the question the search could not decide. */
+      const given = await youtubeVerify(
+        opts.youtubeIds && opts.youtubeIds[baseTitle(song.title)], song);
+      const video = given || await youtubeFor(song, wantMs);
       if (video) {
         song.links.youtube = 'https://www.youtube.com/watch?v=' + video.id;
         song.links.youtubeMusic = 'https://music.youtube.com/watch?v=' + video.id;
-        note.youtube = video.channel;
+        note.youtube = video.channel + (given ? ' (given)' : '');
       } else {
         /* Not a failure. An official upload that lives on a label's channel
            rather than the artist's is the common shape of this, and it wants
@@ -765,9 +820,17 @@ async function resolveSong(want, opts) {
     }
 
     if (!song.links.spotify) {
-      const hit = await spotifyVerify(opts.spotifyIds && opts.spotifyIds[baseTitle(song.title)], wantMs);
+      const candidates = opts.spotifyIds && opts.spotifyIds[baseTitle(song.title)];
+      const hit = await spotifyVerify(candidates, wantMs);
       if (hit) { song.links.spotify = hit.url; note.spotify = 'verified +/-' + hit.delta + 'ms'; }
-      else note.spotifyUnverified = true;
+      /* Two different failures, and only one of them is the song's fault.
+         Candidates that all disagreed with Apple's length means the search
+         happened and found the wrong recordings. No candidates at all means
+         nobody searched, which is a step of /new-worship being skipped
+         rather than a song without a Spotify release, and it is the one that
+         has to be loud: every song has a Spotify release. */
+      else if (candidates && candidates.length) note.spotifyUnverified = true;
+      else note.spotifySkipped = true;
     }
   }
 
@@ -817,8 +880,13 @@ function summarize(row, notes) {
       lines.push('     official one sits on a label channel. Check and pass it in.');
     }
     if (n.spotifyUnverified) {
-      lines.push('   ! no Spotify link. Search for the track, then rerun with');
-      lines.push('     --spotify "' + song.title + '=<track id>". It is checked before it is used.');
+      lines.push('   ! no Spotify link: every id given was a different length to Apple\'s');
+      lines.push('     recording, so none was used. Find the right one and pass it again.');
+    }
+    if (n.spotifySkipped) {
+      lines.push('   ! THE SPOTIFY SEARCH WAS NOT DONE for this song. No ids were passed');
+      lines.push('     in, so none could be checked. Search for the track, then rerun with');
+      lines.push('     --spotify "' + song.title + '=<track id>".');
     }
     if (n.alternates && n.alternates.length > 1) {
       lines.push('   ! the line named two artists: ' + n.alternates.join(' / ') +
@@ -841,6 +909,7 @@ function parseArgs(argv) {
     else if (a === '--known') args.known = argv[++i];
     else if (a === '--songs') args.songs = argv[++i];
     else if (a === '--spotify') args.spotify = argv[++i];
+    else if (a === '--youtube') args.youtube = argv[++i];
     else if (a === '--out') args.out = argv[++i];
     else if (a === '--sleep') args.sleep = parseInt(argv[++i], 10) || 0;
     else if (a === '--help' || a === '-h') args.help = true;
@@ -861,7 +930,12 @@ Home Church, worship setlist resolver.
   --spotify   "T=id;T=id"  candidate Spotify track ids per title. Each is
                            checked against Apple's length and dropped if it
                            disagrees, so a wrong id costs a missing link
-                           rather than a wrong one.
+                           rather than a wrong one. Required: omitting it
+                           for a song exits 3.
+  --youtube   "T=id;T=id"  a YouTube video id for a song the search could not
+                           place, which is usually an official upload on a
+                           label's channel rather than the artist's. Checked
+                           against oEmbed before it is used.
   --known     file.json    songs resolved on earlier Sundays, reused when a
                            title and artist both match.
   --out       file.json    write the row here as well as to stdout.
@@ -874,7 +948,8 @@ The row goes to stdout, a summary for a human goes to stderr:
   python3 scripts/hc_supabase.py upsert worship_sets /tmp/worship-2026-08-23.json
 
 Exit 0 every song resolved, 2 at least one came back without art or links,
-1 something went wrong and nothing was written.
+3 the Spotify search was skipped for at least one song, 1 something went
+wrong and nothing was written.
 `;
 
 function readStdin() {
@@ -915,15 +990,8 @@ async function main() {
      semicolons. They are candidates and not answers: each one is checked
      against Apple's length for that recording and dropped if it disagrees,
      so passing the wrong id costs a missing link rather than a wrong one. */
-  const spotifyIds = {};
-  for (const entry of String(args.spotify || '').split(/[;\n]/)) {
-    const at = entry.indexOf('=');
-    if (at < 1) continue;
-    const key = baseTitle(entry.slice(0, at));
-    const id = entry.slice(at + 1).trim();
-    if (!key || !id) continue;
-    (spotifyIds[key] = spotifyIds[key] || []).push(id);
-  }
+  const spotifyIds = parseIdMap(args.spotify);
+  const youtubeIds = parseIdMap(args.youtube);
 
   const env = readEnv();
   const geniusToken = env.GENIUS_TOKEN || process.env.GENIUS_TOKEN || '';
@@ -935,7 +1003,7 @@ async function main() {
     if (i > 0 && args.sleep) await sleep(args.sleep);
     const { song, note } = await resolveSong(wants[i],
       { known: known, geniusToken: geniusToken, odesliKey: odesliKey,
-        spotifyIds: spotifyIds });
+        spotifyIds: spotifyIds, youtubeIds: youtubeIds });
     songs.push(song);
     notes.push(note);
   }
@@ -953,6 +1021,22 @@ async function main() {
       'Some songs came back without art or links. They are still real rows and\n' +
       'the screen draws them, but say so before publishing.\n\n');
   }
+
+  /* The one gap that is a skipped step rather than a fact about the music.
+     Spotify cannot be searched from here, so a song with no candidates was
+     never looked up by anybody, and publishing that quietly is how a set
+     goes up missing the platform most of the congregation uses. It is worth
+     its own exit code so a caller cannot mistake it for an ordinary gap. */
+  const skipped = notes.filter(n => n.spotifySkipped).length;
+  if (skipped) {
+    process.stderr.write(
+      'THE SPOTIFY STEP WAS SKIPPED for ' + skipped + ' of ' + songs.length + ' songs.\n' +
+      'Spotify is the one platform this script cannot search for itself, so a\n' +
+      'song with no candidate ids passed in gets no Spotify link at all. This is\n' +
+      'not the music missing, it is the lookup not having been done.\n' +
+      'Do the search, then rerun with --spotify "Title=<track id>".\n\n');
+    return 3;
+  }
   return thin ? 2 : 0;
 }
 
@@ -961,10 +1045,11 @@ async function main() {
    part that decides whether a congregation sees the right recording, and it
    should not need a working connection to check. */
 module.exports = {
-  parseLine, parseList, normalize, baseTitle, scoreCandidate, pickBest,
+  parseLine, parseList, normalize, baseTitle, parseIdMap, scoreCandidate, pickBest,
   bigArt, linksFromOdesli, findKnown, missingOdesliLinks, buildRow, summarize,
   baseTitleRaw, linksFromSonglinkPage, youtubeCandidates, pickYoutube,
-  durationFromSpotifyEmbed, spotifyVerify, pickByDuration, setHttpText, primaryArtist,
+  durationFromSpotifyEmbed, spotifyVerify, youtubeVerify, pickByDuration,
+  setHttpText, primaryArtist,
   /* The whole path for one song, exported so a test can drive it with a
      stubbed global fetch. Reading the two services correctly matters as much
      as scoring them, and the shape of what they answer with is not something

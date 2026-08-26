@@ -124,7 +124,13 @@ song that already has its platforms is never refetched.
 |---|---|---|
 | 0 | Every song came back with art and *at least one* link | Go to Step 5 |
 | 2 | At least one song has no art or no links at all | Go to Step 5 and **say which ones** |
+| 3 | **The Spotify search was skipped** for at least one song | Do the search, rerun. Do not publish |
 | 1 | Something went wrong, nothing was written | Read the message, do not publish |
+
+**Exit 3 is not a gap in the music, it is a step of this command not having
+been done.** Spotify is the one platform the script cannot search for
+itself, so a song with no candidate ids gets no Spotify link at all. Do the
+search and rerun rather than publishing and coming back to it.
 
 **Exit 0 does not mean every platform.** It means no song came back empty. A
 set with art and an Apple link and nothing else exits 0, which is correct and
@@ -170,6 +176,8 @@ and the endpoint that mints an anonymous one is blocked. The resolver
 therefore **verifies rather than finds**.
 
 So: search the web for each song's Spotify track, and pass the ids in.
+**This is a required step, not an optional extra.** Omit it and the script
+exits 3 and tells you which songs it skipped.
 
 ```bash
 node scripts/resolve_songs.js --served-on 2026-08-23 \
@@ -200,7 +208,38 @@ The cost is that an official upload on a **label** channel goes unmatched.
 TRIBL carries Maverick City, and the resolver does not know that, deliberately:
 a table of which channel belongs to which label would be wrong the first week
 somebody signs elsewhere. You get `! no YouTube upload on this artist's own
-channel`. Check it once, and if it is right, it is a real link to add.
+channel`.
+
+Look at the video, and if it is the right one, hand it in:
+
+```bash
+node scripts/resolve_songs.js --served-on 2026-08-23 \
+  --youtube "Lean Back=ixknfMJt21w" \
+  --spotify "Lean Back=4EtKV9VxLbL6wgeQjiPm4r" < /tmp/songs.txt
+```
+
+A handed-in id beats the search, because it is the answer to the question the
+search could not decide. It is still checked against YouTube's oEmbed first:
+the id has to resolve, and either the artist has to be the uploader or the
+song's name has to be in the video's title. That catches the way a copied id
+actually goes wrong, which is a typo landing on somebody else's video rather
+than on nothing. A full `watch?v=` url works as well as a bare id.
+
+### The command, whole
+
+What a finished Sunday actually looks like, using 8/23:
+
+```bash
+node scripts/resolve_songs.js --served-on 2026-08-23 --sermon sermon-last-words \
+  --spotify "So Much=6uqYWwJnvxaea90fGpnD5K;Holy Spirit=5Xjcst6Rle74VteHx0zczO;\
+Lean Back=4EtKV9VxLbL6wgeQjiPm4r;No Body=2djkGKuduO9pea7gt8wPIz" \
+  --youtube "Lean Back=ixknfMJt21w" \
+  --out /tmp/worship-2026-08-23.json < /tmp/songs.txt
+```
+
+That exits 0 with `art, 8 links` on all four: Apple, Spotify, YouTube,
+YouTube Music, Deezer, Tidal, Amazon and Pandora. The two flags carry the
+two things the script cannot decide alone, and both are checked before use.
 
 ### Why not just search the web for all of them
 

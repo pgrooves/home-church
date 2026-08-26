@@ -599,6 +599,79 @@ async function wireTests() {
       R.primaryArtist('Jesus Culture'), 'Jesus Culture');
   }
 
+  console.log('\n--- ids handed in for the two that cannot be searched ---');
+  {
+    ok('a title and id parse into candidates',
+      R.parseIdMap('So Much=abc;Holy Spirit=def'),
+      { 'so much': ['abc'], 'holy spirit': ['def'] });
+    ok('several ids for one title are all kept, to be tried in turn',
+      R.parseIdMap('So Much=one\nSo Much=two')['so much'], ['one', 'two']);
+    ok('a parenthetical in the title still matches the song it names',
+      Object.keys(R.parseIdMap('Lean Back (feat. Amanda)=abc')), ['lean back']);
+    ok('junk is ignored rather than becoming a key',
+      R.parseIdMap('no equals sign here'), {});
+  }
+
+  console.log('\n--- a YouTube id handed in ---');
+  {
+    /* The automatic pick only takes the artist's own channel, so an official
+       upload on a label's stays unmatched and a person passes it in. It is
+       still checked, because a hand-copied id goes wrong by landing on
+       somebody else's video rather than on nothing. */
+    R.setHttpText(async (url) => {
+      if (url.includes('ixknfMJt21w')) {
+        return JSON.stringify({ title: 'Lean Back (feat. Amanda Lindsey Cook & Chandler Moore)',
+                                author_name: 'TRIBL' });
+      }
+      if (url.includes('dQw4w9WgXcQ')) {
+        return JSON.stringify({ title: 'Never Gonna Give You Up', author_name: 'Rick Astley' });
+      }
+      return '';
+    });
+    const want = { title: 'Lean Back (feat. Amanda Lindsey Cook)', artist: 'Maverick City Music' };
+
+    const hit = await R.youtubeVerify(['ixknfMJt21w'], want);
+    ok('a label channel is accepted when the title is the song', hit && hit.id, 'ixknfMJt21w');
+    ok('and the channel it actually came from is reported', hit.channel, 'TRIBL');
+
+    ok('an unrelated video is refused even though it was handed in',
+      await R.youtubeVerify(['dQw4w9WgXcQ'], want), null);
+    ok('an id that resolves to nothing is refused',
+      await R.youtubeVerify(['aaaaaaaaaaa'], want), null);
+    ok('a malformed id is not even fetched',
+      await R.youtubeVerify(['nope'], want), null);
+    ok('a full watch url is accepted, not just a bare id',
+      (await R.youtubeVerify(['https://www.youtube.com/watch?v=ixknfMJt21w'], want) || {}).id,
+      'ixknfMJt21w');
+    R.setHttpText(null);
+  }
+
+  console.log('\n--- a skipped Spotify search is not a song without a release ---');
+  {
+    /* Two gaps that look identical on the screen and are completely
+       different problems. Candidates that all disagreed with Apple's length
+       means somebody searched and found the wrong recordings. No candidates
+       at all means the search never happened, which is a step of
+       /new-worship being skipped, and every song has a Spotify release. */
+    const row = R.buildRow('2026-08-23', null, [
+      { title: 'So Much', artist: 'Life.Church Worship', artUrl: 'https://a',
+        lyricsUrl: '', links: { apple: 'https://x' } }
+    ]);
+    const skipped = R.summarize(row, [{ title: 'So Much', confidence: 'high',
+      source: 'iTunes', spotifySkipped: true }]);
+    ok('the skipped case says the search was not done',
+      /THE SPOTIFY SEARCH WAS NOT DONE/.test(skipped), true);
+    ok('and tells you the flag to rerun with',
+      /--spotify "So Much=<track id>"/.test(skipped), true);
+
+    const unverified = R.summarize(row, [{ title: 'So Much', confidence: 'high',
+      source: 'iTunes', spotifyUnverified: true }]);
+    ok('the unverified case blames the ids, not the operator',
+      /every id given was a different length/.test(unverified), true);
+    ok('and does not claim the search was skipped',
+      /WAS NOT DONE/.test(unverified), false);
+  }
+
   console.log('\n--- when the lyrics token is wrong ---');
   {
     /* The same status, opposite meaning, and the difference is whether we
