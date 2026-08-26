@@ -101,7 +101,10 @@
       '</button>';
     }
 
-    return html ? '<div class="hc-worship-week__links">' + html + '</div>' : '';
+    /* No wrapper: the buttons are returned bare so they land as direct
+       children of .hc-worship__links, which stacks and centres them. A div
+       in between would let the two inline-flex links sit on one line. */
+    return html;
   }
 
   /* --------------------------------------------------------------- the songs */
