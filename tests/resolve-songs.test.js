@@ -423,6 +423,56 @@ async function wireTests() {
       /could not reach/.test(message), false);
   }
 
+  console.log('\n--- the key arrives after a set was already published ---');
+  {
+    /* The trap this pair exists to catch. Four songs went up during the
+       Odesli outage with art and an Apple link and nothing else. When the
+       key finally arrives, `--known` would hand those straight back: the
+       cache has art, it has a link, it looks complete, and the other five
+       platforms would never be fetched for any Sunday already published.
+       The outage would quietly become permanent. */
+    const cached = [{ title: 'So Much', artist: 'Life.Church Worship',
+      artUrl: 'https://art', lyricsUrl: '', links: { apple: 'https://music.apple.com/x' } }];
+
+    let odesliCalls = 0;
+    globalThis.fetch = (url) => {
+      if (String(url).includes('itunes')) {
+        return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(ITUNES_ANSWER) });
+      }
+      odesliCalls++;
+      return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(ODESLI_ANSWER) });
+    };
+
+    const withKey = await R.resolveSong(
+      { title: 'So Much', artist: 'Life.Church Worship', alternates: [] },
+      { known: cached, odesliKey: 'sk-live' });
+    ok('an Apple-only cache entry is refetched once a key exists', odesliCalls, 1);
+    ok('and the song gains the other platforms',
+      Object.keys(withKey.song.links).includes('spotify'), true);
+
+    /* And the other half: with no key, refetching an Apple-only entry would
+       just produce the same Apple-only row, so the cache is still honoured
+       and no pointless call is made. */
+    odesliCalls = 0;
+    const noKey = await R.resolveSong(
+      { title: 'So Much', artist: 'Life.Church Worship', alternates: [] },
+      { known: cached });
+    ok('but with no key the cache is still trusted', noKey.note.source, 'a previous Sunday');
+    ok('and no call is wasted', odesliCalls, 0);
+
+    /* A fully resolved song is never refetched, key or no key: that is the
+       whole point of --known and a backfill would be pointless without it. */
+    const whole = [{ title: 'So Much', artist: 'Life.Church Worship', artUrl: 'https://art',
+      lyricsUrl: '', links: { apple: 'https://a', spotify: 'https://s', all: 'https://all' } }];
+    odesliCalls = 0;
+    const reused = await R.resolveSong(
+      { title: 'So Much', artist: 'Life.Church Worship', alternates: [] },
+      { known: whole, odesliKey: 'sk-live' });
+    ok('a complete cache entry is reused even with a key',
+      reused.note.source, 'a previous Sunday');
+    ok('and costs nothing', odesliCalls, 0);
+  }
+
   console.log('\n--- when the lyrics token is wrong ---');
   {
     /* The same status, opposite meaning, and the difference is whether we

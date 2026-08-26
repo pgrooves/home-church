@@ -420,11 +420,28 @@ function findKnown(want, known) {
     (!want.artist || overlap(want.artist, k.artist) >= 0.6)) || null;
 }
 
+/* A song resolved while Odesli was unreachable has its art and its Apple
+   link and nothing else. Left alone, that is how an outage outlives itself:
+   the key finally arrives, every Sunday already published keeps its single
+   button, and nothing ever goes back for the other five platforms, because
+   the cache looks complete enough to reuse.
+
+   So a key on the table makes an Apple-only entry stale by definition. It
+   costs one extra iTunes lookup on the first run after the key lands and
+   nothing on any run after that. Without a key this returns false and the
+   cache behaves exactly as it always did, because re-fetching would only
+   produce the same Apple-only row again. */
+function missingOdesliLinks(links) {
+  const keys = Object.keys(links || {});
+  return keys.length > 0 && keys.every(k => k === 'apple');
+}
+
 async function resolveSong(want, opts) {
   const note = { title: want.title, artist: want.artist, alternates: want.alternates || [] };
 
   const known = findKnown(want, opts.known);
-  if (known && known.artUrl && known.links && Object.keys(known.links).length) {
+  const staleFromOutage = !!opts.odesliKey && !!known && missingOdesliLinks(known.links);
+  if (known && known.artUrl && known.links && Object.keys(known.links).length && !staleFromOutage) {
     note.source = 'a previous Sunday';
     note.confidence = 'high';
     return { song: Object.assign({}, known), note: note };
@@ -631,7 +648,7 @@ async function main() {
    should not need a working connection to check. */
 module.exports = {
   parseLine, parseList, normalize, baseTitle, scoreCandidate, pickBest,
-  bigArt, linksFromOdesli, findKnown, buildRow, summarize,
+  bigArt, linksFromOdesli, findKnown, missingOdesliLinks, buildRow, summarize,
   /* The whole path for one song, exported so a test can drive it with a
      stubbed global fetch. Reading the two services correctly matters as much
      as scoring them, and the shape of what they answer with is not something

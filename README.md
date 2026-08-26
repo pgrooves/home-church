@@ -169,9 +169,12 @@ Publish one with **`/new-worship`** and a list of the songs, however it was
 typed. It reads the artists off the line and then runs
 `scripts/resolve_songs.js`, which searches iTunes for each song, takes the
 album art and the Apple Music link off the best match, and asks Odesli for
-every other platform in one call. Neither service needs a key. Lyrics come
-from Genius when `GENIUS_TOKEN` is in `.env` and are left empty when it is
-not.
+every other platform in one call. iTunes needs no key. Odesli does now, since
+it retired its free public tier in 2026: set `ODESLI_API_KEY` in `.env` for
+Spotify, YouTube, YouTube Music, Amazon and Tidal, and without it a set still
+publishes with real art, canonical titles and Apple Music links rather than
+guessing the rest. Lyrics come from Genius when `GENIUS_TOKEN` is in `.env`
+and are left empty when it is not.
 
 **The resolver is a script rather than instructions, and that is the point.**
 The first setlist went up with four titles and no art, because the pipeline

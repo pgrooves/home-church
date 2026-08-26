@@ -113,13 +113,24 @@ python3 scripts/hc_supabase.py select worship_sets --order served_on.desc \
 node scripts/resolve_songs.js --served-on 2026-08-23 --known /tmp/known.json ... 
 ```
 
+A song cached during the keyless window has art and an Apple link and nothing
+else. Once `ODESLI_API_KEY` exists, those entries are looked up again rather
+than reused, so the first run after the key lands is what backfills them. A
+song that already has its platforms is never refetched.
+
 ### What its exit code means
 
 | Code | Meaning | What to do |
 |---|---|---|
-| 0 | Every song came back with art and links | Go to Step 5 |
-| 2 | At least one song came back thin | Go to Step 5 and **say which ones** |
+| 0 | Every song came back with art and *at least one* link | Go to Step 5 |
+| 2 | At least one song has no art or no links at all | Go to Step 5 and **say which ones** |
 | 1 | Something went wrong, nothing was written | Read the message, do not publish |
+
+**Exit 0 does not mean every platform.** It means no song came back empty. A
+set with art and an Apple link and nothing else exits 0, which is correct and
+is also exactly what a missing `ODESLI_API_KEY` produces. Read the link counts
+in the summary rather than the exit code when you want to know whether the
+platforms are there.
 
 The message on exit 1 that matters most is `could not reach
 itunes.apple.com`. **That is a blocked egress proxy, not a song without art**,
@@ -128,6 +139,30 @@ was resolved at all". Do not publish a set on the back of it. Either run the
 command on a machine with open network access, or ask for the links and pass
 them in by hand. This exact failure is how the first setlist went up with four
 titles and nothing else.
+
+### When a song has art but only one link
+
+The summary says `art, 1 links` and stderr carries one line:
+
+```
+resolve_songs: api.song.link answered 401: its public API now requires a key
+```
+
+**This is not a failure and not a blocked proxy.** Odesli retired its free
+public tier in 2026. The endpoint still serves Spotify, YouTube, YouTube
+Music, Amazon and Tidal, it just wants a key now. Without one the set still
+publishes with real art, canonical titles and Apple Music links, and the
+Worship screen draws one button per song instead of six.
+
+Put `ODESLI_API_KEY` in `.env` and rerun. Nothing else changes.
+
+**Do not fill the gap by hand, and do not search the web for the links.** A
+worship title is not unique enough to search on: "Holy Spirit" by Jesus
+Culture alone has five different Spotify recordings across live, radio and
+re-release, and the one that belongs on the screen is the one the band
+actually played. Odesli matches on the recording's identity rather than its
+name, which is the whole reason it is worth a key. A plausible link to the
+wrong cut is the one mistake nobody catches by looking at the screen.
 
 ### The two things it will not decide for you
 
@@ -178,21 +213,25 @@ Sunday      2026-08-23
 Message     sermon-last-words
 
 1. So Much  /  Life.Church Worship
-   art, 5 links, lyrics   [high, via iTunes]
+   art, 6 links, lyrics   [high, via iTunes]
 
 2. Holy Spirit  /  Jesus Culture
-   art, 5 links, lyrics   [high, via iTunes]
+   art, 6 links, lyrics   [high, via iTunes]
    ! the line named two artists: Jesus Culture / Bryan & Katie Torwalt.
      Used the first. Ask before writing.
 
 3. Lean Back (feat. Amanda Lindsey Cook & Chandler Moore)  /  Maverick City Music
-   art, 5 links, no lyrics   [medium, via iTunes]
+   art, 6 links, no lyrics   [medium, via iTunes]
 
 4. No Body  /  Elevation Worship
-   art, 5 links, lyrics   [high, via iTunes]
+   art, 6 links, lyrics   [high, via iTunes]
 
 Write it?
 ```
+
+With no `ODESLI_API_KEY` every line reads `art, 1 links` instead. Say so in
+the confirmation rather than letting it pass as normal, so nobody discovers
+it on a phone on Sunday morning.
 
 **Every `!` line is a question, not a footnote.** Do not write a set with one
 still unanswered. Rerun Step 3 with the answer rather than editing the row by
