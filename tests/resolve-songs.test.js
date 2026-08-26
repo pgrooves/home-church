@@ -401,6 +401,11 @@ async function wireTests() {
       { odesliKey: 'sk-test' });
 
     ok('the key is sent to Odesli', /[?&]key=sk-test\b/.test(odesliUrl), true);
+    /* Odesli matches the album wrapper rather than the recording without
+       this, and a worship single's album links can point at a different
+       master than the one the band actually played. */
+    ok('and songIfSingle, which Odesli recommends for exactly our case',
+      /[?&]songIfSingle=true\b/.test(odesliUrl), true);
     ok('and the other platforms come back', Object.keys(song.links).includes('spotify'), true);
 
     /* A keyed call that gets refused is the key's fault, and saying

@@ -380,7 +380,12 @@ async function searchItunes(want) {
    `new URL(url).host`, never the URL itself, so a key cannot leak into a
    terminal somebody pastes into chat. */
 async function odesliFor(appleUrl, key) {
-  const params = { url: appleUrl, userCountry: 'US' };
+  /* songIfSingle is Odesli's own recommendation and it bears directly on the
+     failure this file exists to prevent. Handed a single, Odesli otherwise
+     matches the album wrapper rather than the recording inside it, and the
+     album's links can point at a different master than the one the band
+     played. Worship releases are singles far more often than not. */
+  const params = { url: appleUrl, userCountry: 'US', songIfSingle: 'true' };
   if (key) params.key = key;
   const url = ODESLI + '?' + new URLSearchParams(params);
   /* `keyed` rather than sniffing opts.headers: the key rides in the query

@@ -156,6 +156,25 @@ Worship screen draws one button per song instead of six.
 
 Put `ODESLI_API_KEY` in `.env` and rerun. Nothing else changes.
 
+**Getting a key is no longer straightforward, and this matters before anyone
+builds on it.** Odesli has stopped issuing API keys; access is by allowlist
+request only. The whole `v1-alpha.1` namespace was also scheduled for
+retirement on 2026-07-31, after which it returns `410 Gone`. As of
+2026-08-26 it answers `401`, not `410`, so it is gated rather than gone,
+but it is on its way out either way. Treat any key as temporary and do not
+design a permanent weekly workflow around this endpoint without a plan for
+what replaces it.
+
+Note also that Odesli's own docs still carry pre-deprecation text saying
+"You do not need any special authentication or authorization for our API."
+That paragraph is stale. The banner at the top of the same page is what is
+true now.
+
+**If a key is obtained, the app owes attribution.** Odesli's terms ask that
+products using the API show that they are powered by Songlink. The Worship
+screen's platform row in `js/screens/worship.js` is where that line belongs,
+and it should go in with the same change that turns the key on.
+
 **Do not fill the gap by hand, and do not search the web for the links.** A
 worship title is not unique enough to search on: "Holy Spirit" by Jesus
 Culture alone has five different Spotify recordings across live, radio and
