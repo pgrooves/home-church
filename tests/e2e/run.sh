@@ -57,6 +57,10 @@ node -e "require.resolve('playwright-core')" 2>/dev/null || {
 # up, so it runs first and its failures are read before anything slower.
 node "$(dirname "$0")/editable-content.js" || exit 1
 
+# The Alpha screen's own behaviour, same terms: the bundled seed, no database.
+# Runs up here with the other cheap one rather than down with the stack.
+node "$(dirname "$0")/alpha.js" || exit 1
+
 # The database, built the same way the migration tests build it. Doing it
 # through that script rather than by hand means this can never run against a
 # schema the migration tests have not also seen.

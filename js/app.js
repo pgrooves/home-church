@@ -62,6 +62,17 @@
       title: 'Practices',
       sub: 'Nine practices of Jesus, a few sessions each.'
     },
+    /* Straight after Practices, and next to it rather than next to Give,
+       because these two are the same kind of thing: somebody else's course,
+       gathered here so our people can walk through it together. Practices is
+       for somebody already walking. Alpha is for somebody at the start of it,
+       or not sure they are on the road at all. */
+    {
+      route: 'alpha',
+      icon: 'alpha',
+      title: 'Alpha',
+      sub: 'Dinner, a short film, and any question you want to ask.'
+    },
     {
       route: 'journal',
       icon: 'journal',
@@ -92,8 +103,8 @@
      more reach that route than they can reach the tile. Its four sections
      share the route name, so the tile stays lit down inside Manage users the
      way it stays lit inside a practice. */
-  var MODULE_ROUTES = ['more', 'worship', 'practices', 'practice', 'journal',
-                       'journal-entry', 'give', 'admin'];
+  var MODULE_ROUTES = ['more', 'worship', 'practices', 'practice', 'alpha',
+                       'journal', 'journal-entry', 'give', 'admin'];
 
   var TITLES = {
     home: 'Home',
@@ -107,6 +118,7 @@
     // Replaced with the practice's own name once its file has loaded, see
     // emitViewChange below. This is what the bar carries until then.
     practice: 'Practice',
+    alpha: 'Alpha',
     give: 'Give',
     journal: 'Journal',
     'journal-entry': 'Your entry',
@@ -3343,6 +3355,7 @@
         worship: HC.screens.worship,
         practices: HC.screens.practices,
         practice: HC.screens.practice,
+        alpha: HC.screens.alpha,
         journal: HC.screens.journal,
         'journal-entry': HC.screens.journalEntry,
         give: HC.screens.give,

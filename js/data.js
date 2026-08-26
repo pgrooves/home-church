@@ -83,7 +83,23 @@
     // which is deliberate: they are still placeholders with invented hosts.
     // Replace them with the real groups before flipping this back to true.
     groupsInSeason: false,
-    groupsOffSeasonNote: 'Home groups are between seasons right now. When the next one starts this is where you will find it, and we will make sure you hear about it before it fills up.'
+    groupsOffSeasonNote: 'Home groups are between seasons right now. When the next one starts this is where you will find it, and we will make sure you hear about it before it fills up.',
+
+    /* Alpha, behind •••, and the same switch groups have one line up. True
+       here because there is a live registration to point at on the day this
+       shipped, which is the honest default: a church running Alpha wants the
+       button, and a church between seasons flips one boolean rather than
+       taking a screen apart.
+
+       THE URL IS A ONE SEASON URL. That number is a specific Church Center
+       registration and it closes when this run of Alpha does. The row in
+       church_profile is the real answer and this is only what a phone draws
+       before it has ever reached Supabase, so turning the switch off is what
+       matters when the season ends, not editing this line. See
+       js/screens/alpha.js. */
+    alphaInSeason: true,
+    alphaSignupUrl: 'https://homechurchnola.churchcenter.com/registrations/events/3798127',
+    alphaOffSeasonNote: 'Alpha is between seasons right now. When the next one opens this is where you will find it, and we will make sure you hear about it before it fills up.'
   };
 
   /* ----------------------------------------------------------------- podcast

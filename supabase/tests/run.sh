@@ -28,7 +28,7 @@
 # ===========================================================================
 set -e
 
-MIGS=${*:-"0016_group_rooms 0017_group_rooms_grants 0018_group_rooms_anon 0019_group_reports_resolve 0020_group_word_filter 0021_group_answer_index 0022_group_retention_schedule 0023_journal 0025_admin_role 0026_admin_content 0027_announcement_push 0028_announcement_pin 0029_group_room_set_guide 0030_text_overrides 0031_editable_columns 0032_reading_plan_weeks 0033_announcement_media"}
+MIGS=${*:-"0016_group_rooms 0017_group_rooms_grants 0018_group_rooms_anon 0019_group_reports_resolve 0020_group_word_filter 0021_group_answer_index 0022_group_retention_schedule 0023_journal 0025_admin_role 0026_admin_content 0027_announcement_push 0028_announcement_pin 0029_group_room_set_guide 0030_text_overrides 0031_editable_columns 0032_reading_plan_weeks 0033_announcement_media 0035_alpha"}
 HERE=$(cd "$(dirname "$0")" && pwd)
 ROOT=$(cd "$HERE/../.." && pwd)
 WORK=${HC_TEST_DIR:-/var/tmp/hc-migration-tests}

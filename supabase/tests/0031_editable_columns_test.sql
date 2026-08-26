@@ -96,7 +96,11 @@ select t_columns('guides',         'subtitle');
 -- against 0031 alone is the one way to see this fail honestly.
 select t_columns('reading_plans',  'subtitle,this_week,weeks');
 select t_columns('podcast_show',   'blurb');
-select t_columns('church_profile', 'groups_off_season_note,serve_signup_blurb,tagline');
+-- alpha_off_season_note is granted by 0035, not here, for the same reason
+-- reading_plans.weeks is granted by 0032: this file asserts the schema as
+-- production has it rather than as it was halfway through.
+select t_columns('church_profile',
+  'alpha_off_season_note,groups_off_season_note,serve_signup_blurb,tagline');
 
 
 -- ------------------------------------------------------------- as an admin ---

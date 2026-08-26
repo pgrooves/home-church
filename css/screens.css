@@ -1736,9 +1736,17 @@
    Whose work the practices are. Sits under the header on the grid and on all
    nine practice pages. Set on the sunk paper with the signature left edge
    rather than in a card, because it is not one more thing to read on the way
-   down, it is the frame around everything below it. */
+   down, it is the frame around everything below it.
 
-.hc-ptw {
+   ALPHA BORROWS IT, and shares the selector rather than copying the rules.
+   That screen makes the same admission in the same place about somebody
+   else's course, and two blocks that say the same thing in two stylesheets
+   are two blocks that stop looking alike the first time one is adjusted.
+   Different class name because it is a different credit to different people;
+   same rules because it is the same moment on the page. */
+
+.hc-ptw,
+.hc-alpha-credit {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
@@ -1750,7 +1758,8 @@
   border-radius: 0 var(--hc-radius-lg) var(--hc-radius-lg) 0;
 }
 
-.hc-ptw__text {
+.hc-ptw__text,
+.hc-alpha-credit__text {
   font-family: var(--hc-sans);
   font-size: calc(var(--hc-caption) * var(--hc-text-scale));
   line-height: 1.55;
@@ -1758,7 +1767,8 @@
 }
 
 /* The one name on this screen that has to be read rather than skimmed. */
-.hc-ptw__text strong {
+.hc-ptw__text strong,
+.hc-alpha-credit__text strong {
   font-weight: 600;
   color: var(--hc-ink);
 }
@@ -1767,9 +1777,14 @@
 
    Under the grid, centered. The button keeps its own width rather than
    stretching the full column, so it reads as one thing to tap rather than a
-   tenth tile in the grid above it. */
+   tenth tile in the grid above it.
 
-.hc-practice-signup {
+   Alpha's signup is the same block at the foot of its own page, sharing the
+   selector for the same reason the credit above does: one rule, so the two
+   ways into a course the church runs cannot drift apart. */
+
+.hc-practice-signup,
+.hc-alpha-signup {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1780,16 +1795,19 @@
   border-top: var(--hc-hairline) solid var(--hc-rule);
 }
 
-.hc-practice-signup__lead {
+.hc-practice-signup__lead,
+.hc-alpha-signup__lead {
   font-family: var(--hc-serif);
   font-size: calc(var(--hc-question) * var(--hc-text-scale));
   line-height: var(--hc-question-line);
   max-width: 28ch;
 }
 
-.hc-practice-signup .hc-btn { width: auto; }
+.hc-practice-signup .hc-btn,
+.hc-alpha-signup .hc-btn { width: auto; }
 
-.hc-practice-signup__note { color: var(--hc-mid); }
+.hc-practice-signup__note,
+.hc-alpha-signup__note { color: var(--hc-mid); }
 
 /* Three by three, fixed. Not auto-fit: nine things in a three by three grid
    is the shape people are being shown, and letting a wide phone reflow it to
@@ -1855,7 +1873,10 @@
   margin-top: var(--hc-space-base);
 }
 
-.hc-practice__source {
+/* Whose words and whose videos, last on the page. Alpha closes the same way
+   with the same rule, for the same reason. */
+.hc-practice__source,
+.hc-alpha__source {
   margin-top: var(--hc-space-xl);
   padding-top: var(--hc-space-base);
   border-top: var(--hc-hairline) solid var(--hc-rule);
@@ -1893,18 +1914,24 @@
    the signature left edge rather than in a card, because it is the one line
    on the page a person is meant to carry out of the app with them, and a card
    would file it alongside the teaching instead of after it. */
-.hc-practice-step {
+/* Alpha's day away is set the same way and shares the selector: it is the one
+   thing on that page which is not an evening in the numbered run above it, and
+   the left edge is how this app has always said "this one is apart". */
+.hc-practice-step,
+.hc-alpha-away {
   margin-top: var(--hc-space-lg);
   padding: var(--hc-space-md) 0 var(--hc-space-md) var(--hc-space-base);
   border-left: var(--hc-edge-rule) solid var(--hc-accent);
 }
 
-.hc-practice-step__label {
+.hc-practice-step__label,
+.hc-alpha-away__label {
   display: block;
   color: var(--hc-accent-deep);
 }
 
-.hc-practice-step__text {
+.hc-practice-step__text,
+.hc-alpha-away__text {
   margin-top: var(--hc-space-sm);
   font-family: var(--hc-serif);
   font-size: calc(var(--hc-question) * var(--hc-text-scale));
@@ -2033,6 +2060,99 @@
 }
 
 .hc-practice-resource__p { margin: 0; }
+/* --------------------------------------------------------------------------
+   Alpha. One page behind •••, and almost all of it is borrowed: the credit
+   block, the signup foot, the left edge, the video poster and the numbered
+   question row are all shared selectors defined above and in components.css.
+   What is left here is the four things this screen has that no other screen
+   does. See js/screens/alpha.js.
+   -------------------------------------------------------------------------- */
+
+.hc-alpha__lede {
+  margin-top: var(--hc-space-lg);
+  color: var(--hc-mid);
+}
+
+.hc-alpha__p { margin-top: var(--hc-space-base); }
+
+.hc-alpha__off-season { color: var(--hc-ink); }
+
+/* --- The three parts of a night ------------------------------------------
+
+   Not a card each and not a numbered list. Three of anything on a phone wants
+   to be either a row of tiles, which these are far too wordy for, or a stack,
+   and a stack is what this is: hairline between, title in sans, sentence in
+   the reading serif under it. The hairline is the same one the numbered
+   question rows below use, so the two blocks read as one page rather than as
+   two designers. */
+
+.hc-alpha-night { margin-top: var(--hc-space-lg); }
+
+.hc-alpha-part {
+  padding-top: var(--hc-space-base);
+  border-top: var(--hc-hairline) solid var(--hc-rule);
+}
+
+.hc-alpha-part + .hc-alpha-part { margin-top: var(--hc-space-base); }
+
+.hc-alpha-part__title {
+  font-family: var(--hc-sans);
+  font-weight: 600;
+  font-size: calc(var(--hc-caption) * var(--hc-text-scale));
+  line-height: 1.3;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--hc-accent-deep);
+}
+
+.hc-alpha-part__body {
+  margin-top: var(--hc-space-sm);
+  font-family: var(--hc-serif);
+  font-size: calc(var(--hc-question) * var(--hc-text-scale));
+  line-height: var(--hc-question-line);
+}
+
+/* --- The eleven questions ------------------------------------------------
+
+   hc-numbered, straight out of components.css, which is the component carried
+   from the printed guides and the one the design system says should survive
+   intact. Eleven weeks of Alpha is a numbered list of questions, so it is
+   drawn with the app's numbered list of questions rather than with something
+   invented for this screen. Nothing to style here but the space above it. */
+
+.hc-alpha-questions { margin-top: var(--hc-space-lg); }
+
+/* --- What people ask -----------------------------------------------------
+
+   Question and answer, stacked, no chevron and nothing to tap. These are four
+   short answers and hiding them behind a disclosure would cost four taps to
+   read what fits on one screen, which is the opposite of what somebody
+   deciding whether to come needs. */
+
+.hc-alpha-asked { margin-top: var(--hc-space-lg); }
+
+.hc-alpha-ask {
+  padding-top: var(--hc-space-base);
+  border-top: var(--hc-hairline) solid var(--hc-rule);
+}
+
+.hc-alpha-ask + .hc-alpha-ask { margin-top: var(--hc-space-base); }
+
+.hc-alpha-ask__q {
+  font-family: var(--hc-serif);
+  font-size: calc(var(--hc-question) * var(--hc-text-scale));
+  line-height: var(--hc-question-line);
+  color: var(--hc-ink);
+}
+
+.hc-alpha-ask__a {
+  margin-top: var(--hc-space-xs);
+  font-family: var(--hc-sans);
+  font-size: calc(var(--hc-caption) * var(--hc-text-scale));
+  line-height: 1.55;
+  color: var(--hc-mid);
+}
+
 /* --------------------------------------------------------------------------
    Admin
 

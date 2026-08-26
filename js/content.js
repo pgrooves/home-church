@@ -507,7 +507,16 @@
       // that has not set this yet almost certainly has groups running, and
       // hiding them by default would be the worse of the two mistakes.
       groupsInSeason: r.groups_in_season !== false,
-      groupsOffSeasonNote: str(r.groups_off_season_note)
+      groupsOffSeasonNote: str(r.groups_off_season_note),
+
+      /* Alpha runs in seasons too, and the same reading of a missing column
+         for the same reason. The url is the registration for whichever run is
+         open: empty is a real answer and the screen falls back to the one in
+         its own source rather than drawing a button with nothing behind it.
+         See js/screens/alpha.js. */
+      alphaInSeason: r.alpha_in_season !== false,
+      alphaSignupUrl: str(r.alpha_signup_url),
+      alphaOffSeasonNote: str(r.alpha_off_season_note)
     };
   }
 

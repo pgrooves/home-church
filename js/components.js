@@ -322,6 +322,26 @@
     journal: '<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/>' +
              '<path d="M14 3v5h5"/><path d="M8.5 13h7M8.5 16.5h4.5"/>',
 
+    /* Alpha, the module behind ••• where a first look at the Christian faith
+       lives. Alpha's own mark is a question mark, and this is that mark
+       redrawn in this app's hand: 24 grid, 1.5 stroke, rounded caps, like
+       everything above it. It is not their logo and it is not trying to be.
+
+       NO BOX AROUND IT, which is the thing that was tried first, because
+       Alpha sets its question mark inside a rounded square. At 24px in the
+       sheet's grid the frame takes the outside and leaves the question mark
+       about five pixels of room, and a 1.5 stroke hook that small is the
+       same mush this file already refused for `more` and for `worship`. The
+       question mark alone fills the grid, and a question mark is the whole
+       idea anyway: this is the screen for the person with questions.
+
+       The dot is a filled disc rather than a stroked ring, for exactly the
+       reason those two are filled, and it opts out of `svg { fill: none }`
+       on itself rather than through hc-icon--solid, so the hook and the stem
+       above it stay strokes. */
+    alpha: '<path d="M8.55 9.75a3.6 3.6 0 1 1 3.45 2.65v2.9"/>' +
+           '<circle cx="12" cy="18.4" r="1.25" fill="currentColor" stroke="none"/>',
+
     /* The nine practices, for the grid behind •••. Same 24 grid, same 1.5
        stroke, same rounded caps as everything above, because they sit in the
        same app and a second visual language for one screen is how a design

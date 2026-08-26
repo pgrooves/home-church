@@ -75,7 +75,7 @@ const ok = (label, good, detail) => {
 };
 
 const TABS = ['home', 'listen', 'connect', 'give', 'more', 'journal', 'profile',
-              'guide', 'practices', 'leader'];
+              'guide', 'practices', 'alpha', 'leader'];
 
 const HOSTILE = [
   { name: 'emptied', value: '' },
@@ -102,6 +102,11 @@ const SLOTS = [
   'practices.lede', 'practices.signup-lead', 'practices.signup-note',
   'practices.credit-grid', 'practices.credit-page', 'practices.load-failed',
   'practices.not-added',
+  'alpha.lede', 'alpha.credit', 'alpha.invite-note', 'alpha.night-lede',
+  'alpha.questions-lede', 'alpha.day-away', 'alpha.watch-note',
+  'alpha.asked-cost', 'alpha.asked-talk', 'alpha.asked-believe',
+  'alpha.asked-miss', 'alpha.signup-lead', 'alpha.signup-note',
+  'alpha.signup-button',
   'profile.notify-guide', 'profile.notify-sunday', 'profile.notify-news',
   'profile.leader-copy', 'profile.leader-sub'
 ];
@@ -180,6 +185,14 @@ function serve() {
       // The finder draws its chips only in season, and the chips are what the
       // last assertion in this file is about.
       D.church.groupsInSeason = true;
+      /* Alpha in season, which is the state the loop below draws: the signup
+         button, pointed at whatever this round is passing off as a URL. The
+         other state is drawn separately further down, because the two never
+         coexist on screen and the one that is not on screen is exactly the one
+         that goes unchecked otherwise. */
+      D.church.alphaInSeason = true;
+      D.church.alphaSignupUrl = v;
+      D.church.alphaOffSeasonNote = v;
       D.podcast.blurb = v;
       if (D.readingPlan) {
         D.readingPlan.subtitle = v;
@@ -213,6 +226,31 @@ function serve() {
       ok(round.name + ', ' + tab + ' renders the words rather than running them',
         !seen.pwned && !seen.script);
     }
+
+    /* Alpha's other half. Between seasons the signup button comes off and a
+       paragraph takes its place, and that paragraph is editable, so it needs
+       the same five rounds through it as everything the loop above drew. */
+    await page.evaluate(() => {
+      window.HC.data.church.alphaInSeason = false;
+      window.HC.router.go({ name: 'alpha' }, { force: true });
+    });
+    await page.waitForTimeout(160);
+    const offSeason = await page.evaluate(() => ({
+      painted: !!document.querySelector('#app .hc-screen'),
+      sideways: document.documentElement.scrollWidth > window.innerWidth,
+      pwned: !!window.__pwned,
+      script: !!document.querySelector('#app script'),
+      // The whole point of the switch: no signup button while it is off.
+      noButton: !document.querySelector('.hc-alpha-signup')
+    }));
+
+    ok(round.name + ', Alpha between seasons still draws', offSeason.painted);
+    ok(round.name + ', Alpha between seasons does not push the screen sideways',
+      !offSeason.sideways);
+    ok(round.name + ', Alpha between seasons renders the words rather than running them',
+      !offSeason.pwned && !offSeason.script);
+    ok(round.name + ', Alpha between seasons offers nothing to sign up for',
+      offSeason.noButton);
 
     await page.evaluate(() => window.HC.router.go({ name: 'connect' }, { force: true }));
     await page.waitForTimeout(200);

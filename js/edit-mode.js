@@ -239,6 +239,17 @@
        church_profile.*                  Address, service times, giving URL,
                                          the SMS number and keyword: facts and
                                          destinations, not sentences.
+       church_profile.alpha_in_season,
+       church_profile.alpha_signup_url   The same line, drawn twice more. One
+                                         is a switch and a switch is a
+                                         decision; the other is where the only
+                                         button on the Alpha screen lands, and
+                                         a URL typed into a textarea over a
+                                         paragraph is how a button ends up
+                                         pointing somewhere nobody checked.
+                                         The paragraph beside them, the
+                                         between seasons note, is a sentence
+                                         and is allowed.
        every *_title, every heading      Answer to "where does the line sit":
                                          screen titles and section headings are
                                          how somebody navigates, and the index
@@ -254,7 +265,8 @@
   var ALLOWED = {
     announcements:  ['eyebrow', 'body'],
     content_pages:  ['eyebrow', 'blurb', 'sections'],
-    church_profile: ['tagline', 'serve_signup_blurb', 'groups_off_season_note'],
+    church_profile: ['tagline', 'serve_signup_blurb', 'groups_off_season_note',
+                     'alpha_off_season_note'],
     serve_teams:    ['blurb', 'commitment', 'requirement'],
     next_steps:     ['blurb', 'cta_label'],
     events:         ['description'],
