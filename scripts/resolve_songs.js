@@ -21,18 +21,30 @@
  * A script fails with an exit code, matches the same way every week, and can
  * be tested without a network, which the prose could not.
  *
- * THE TWO SERVICES, and neither needs a key or an account:
+ * THE SERVICES. iTunes Search needs no key and is the backbone: the canonical
+ * title and artist, the album art, and the Apple Music link. Everything else
+ * needs one free credential each in .env, and is left out of the row rather
+ * than guessed at when there is none. See .env.example.
  *
- *   iTunes Search   the canonical title and artist, the album art, and the
- *                   Apple Music link. Public, unauthenticated, generous.
- *   Odesli          every other platform from that one link, in one call.
- *                   Free tier, roughly ten requests a minute, which is why
- *                   there is a sleep between songs.
+ *   iTunes      art, title, artist, Apple link.   no key
+ *   Spotify     SPOTIFY_CLIENT_ID + _SECRET
+ *   YouTube     YOUTUBE_API_KEY
+ *   Odesli      ODESLI_API_KEY, and then it answers for all of them at once
+ *   Genius      GENIUS_TOKEN, for the lyrics
  *
- * Lyrics are not guessed. Genius is used when GENIUS_TOKEN is in .env and
- * left empty when it is not, because a Lyrics link that lands on a search
- * page or on somebody else's song is worse than no Lyrics link, and the
- * screen draws nothing at all for an empty one.
+ * THIS USED TO BE TWO SERVICES AND ONE OF THEM WENT AWAY. Odesli answered for
+ * every platform in a single unauthenticated call, which was the whole reason
+ * the design was tidy, and it has since retired public access to that
+ * endpoint: it returns 401 PUBLIC_API_ACCESS_DEPRECATED to anybody without a
+ * key. Left as it was, every set would have published with art and an Apple
+ * link and nothing else, and the summary would have said "1 link" as though
+ * the song were simply not on Spotify. So each platform is asked for itself,
+ * Odesli is skipped rather than attempted without a key, and "not set up" and
+ * "found nothing" are different lines in the summary.
+ *
+ * Lyrics are not guessed either. A Lyrics link that lands on a search page or
+ * on somebody else's song is worse than none, and the screen draws nothing at
+ * all for an empty one.
  *
  * NOTHING IS EVER INVENTED. Every URL here came back from a service. A song
  * that cannot be matched keeps its title and its artist and loses everything
@@ -45,6 +57,9 @@
 
 const fs = require('fs');
 const path = require('path');
+const http = require('http');
+const https = require('https');
+const tls = require('tls');
 
 const REPO_ROOT = path.dirname(__dirname);
 const ENV_PATH = path.join(REPO_ROOT, '.env');
@@ -52,6 +67,9 @@ const ENV_PATH = path.join(REPO_ROOT, '.env');
 const ITUNES = 'https://itunes.apple.com/search';
 const ODESLI = 'https://api.song.link/v1-alpha.1/links';
 const GENIUS = 'https://api.genius.com/search';
+const SPOTIFY_TOKEN = 'https://accounts.spotify.com/api/token';
+const SPOTIFY_SEARCH = 'https://api.spotify.com/v1/search';
+const YOUTUBE_SEARCH = 'https://www.googleapis.com/youtube/v3/search';
 
 const TIMEOUT_MS = 15000;
 
@@ -264,28 +282,156 @@ function blocked(url, why) {
     '       Nothing has been guessed and nothing has been written.');
 }
 
-/* One request, with the two failures that actually happen told apart.
+/* --------------------------------------------------------------- transport
 
-   A blocked egress proxy and a song that does not exist look identical from
-   inside a try/catch, and they need opposite responses: one is "run this
-   somewhere else", the other is "this song has no art". So a transport
-   failure throws with the host on it and a 404 comes back as no result. */
+   WHY THIS IS NOT `fetch`. Node's global fetch ignores HTTPS_PROXY. Every
+   other tool on a machine behind a proxy honours it, curl and git and
+   `hc_supabase.py` included, so on such a machine fetch is the one thing that
+   cannot reach anything, and it does not say why: the gateway answers with a
+   plain text refusal and fetch hands that back as "unexpected token H in
+   JSON". That reads like a broken catalogue and is actually a proxy.
+
+   NODE_USE_ENV_PROXY fixes it on new enough Node and is still experimental,
+   and undici's ProxyAgent is not importable without a dependency. So this
+   opens the tunnel itself, with the standard library, the same way
+   `hc_supabase.py` gets through with urllib. Certificates are Node's own
+   store plus NODE_EXTRA_CA_CERTS, which is what a proxy that inspects TLS
+   sets, so nothing here has to weaken verification and nothing here does. */
+
+function proxyFor(url) {
+  const bypass = (process.env.NO_PROXY || process.env.no_proxy || '')
+    .split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
+  const host = url.hostname.toLowerCase();
+  for (const rule of bypass) {
+    if (rule === '*') return null;
+    const bare = rule.replace(/^\./, '');
+    if (host === bare || host.endsWith('.' + bare)) return null;
+  }
+  const proxy = process.env.HTTPS_PROXY || process.env.https_proxy ||
+                process.env.ALL_PROXY || process.env.all_proxy || '';
+  return proxy ? new URL(proxy) : null;
+}
+
+/* One request, straight or through a CONNECT tunnel, resolving to the status
+   and the body. Nothing here parses: the caller decides what a status means,
+   because the same 401 means "the network said no" from one service and "your
+   token expired" from another.
+
+   GET and POST both, because Spotify's token endpoint is a POST and it used
+   to have its own copy of the tunnelling below. Two copies of a CONNECT
+   handshake is two places for a proxy bug to hide, and the copy was the one
+   the tests could not reach. */
+function httpRequest(urlStr, opts) {
+  opts = opts || {};
+  const method = opts.method || 'GET';
+  const body = opts.body || null;
+  const url = new URL(urlStr);
+  const proxy = proxyFor(url);
+
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      cleanup();
+      reject(blocked(urlStr, 'timed out after ' + TIMEOUT_MS + 'ms'));
+    }, TIMEOUT_MS);
+
+    let socket = null;
+    function cleanup() {
+      clearTimeout(timer);
+      if (socket && !socket.destroyed) socket.destroy();
+    }
+
+    function send(tunnel) {
+      const req = https.request({
+        host: url.hostname,
+        port: url.port || 443,
+        path: url.pathname + url.search,
+        method: method,
+        headers: Object.assign({
+          Accept: 'application/json',
+          // iTunes answers 403 to a request with no user agent often enough
+          // that it is worth being somebody.
+          'User-Agent': 'home-church-setlist/1 (+https://github.com/pgrooves/home-church)'
+        }, body ? { 'Content-Length': Buffer.byteLength(body) } : {}, opts.headers || {}),
+        // A tunnelled request brings its own already connected socket. A
+        // direct one lets Node do the connecting.
+        createConnection: tunnel
+          ? () => {
+              const secure = tls.connect({ socket: tunnel, servername: url.hostname });
+              // Same reason as the raw socket above: a reset during the TLS
+              // teardown must not become an uncaught error event.
+              secure.on('error', () => {});
+              return secure;
+            }
+          : undefined,
+        agent: tunnel ? false : undefined
+      }, (res) => {
+        let body = '';
+        res.setEncoding('utf8');
+        res.on('data', (chunk) => { body += chunk; });
+        res.on('end', () => { clearTimeout(timer); resolve({ status: res.statusCode, body: body }); });
+      });
+      req.on('error', (err) => { cleanup(); reject(blocked(urlStr, err.message)); });
+      if (body) req.write(body);
+      req.end();
+    }
+
+    if (!proxy) return send(null);
+
+    const connect = http.request({
+      host: proxy.hostname,
+      port: proxy.port || 80,
+      method: 'CONNECT',
+      path: url.hostname + ':' + (url.port || 443),
+      headers: Object.assign({ Host: url.hostname + ':' + (url.port || 443) },
+        proxy.username
+          ? { 'Proxy-Authorization': 'Basic ' + Buffer.from(
+              decodeURIComponent(proxy.username) + ':' + decodeURIComponent(proxy.password || '')
+            ).toString('base64') }
+          : {})
+    });
+
+    connect.on('connect', (res, sock) => {
+      socket = sock;
+      /* A tunnel socket that is torn down mid request emits 'error', and an
+         'error' with no listener on it is not an exception somewhere, it is
+         the whole process going down. Which is what a policy denial looks
+         like: the gateway answers 403 and resets the connection a moment
+         later, so the run would report the refusal correctly and then crash
+         on the way out, burying it. Attached the moment the socket exists,
+         before anything can go wrong with it. */
+      sock.on('error', () => { /* reported by whichever request owns it */ });
+      if (res.statusCode !== 200) {
+        cleanup();
+        // The proxy refusing the tunnel outright, which is a policy denial and
+        // never the catalogue's doing.
+        return reject(blocked(urlStr, 'the proxy refused CONNECT with ' + res.statusCode));
+      }
+      send(sock);
+    });
+    connect.on('error', (err) => { cleanup(); reject(blocked(urlStr, err.message)); });
+    connect.end();
+  });
+}
+
+/* The seam the tests reach through. getJson goes via this rather than calling
+   httpGet directly, so a test can answer for the two services without a
+   network and without the transport itself having a test-only branch in it.
+   Swapped in tests/resolve-songs.test.js and nowhere else. */
+const transport = { request: httpRequest };
+
+/* One request, with the failures that actually happen told apart.
+
+   `opts.authed` rather than sniffing for headers: whether we sent credentials
+   is what decides who a 401 belongs to, and only the caller knows. */
 async function getJson(url, opts) {
   opts = opts || {};
   let attempt = 0;
   for (;;) {
     attempt++;
-    let res;
-    try {
-      res = await fetch(url, {
-        headers: Object.assign({ Accept: 'application/json' }, opts.headers || {}),
-        signal: AbortSignal.timeout(TIMEOUT_MS)
-      });
-    } catch (err) {
-      throw blocked(url, err && err.message ? err.message : 'network error');
-    }
+    const res = await transport.request(url, { headers: opts.headers });
+    const host = new URL(url).host;
 
-    // Rate limited. Odesli does this on a backfill and the answer is to wait.
+    // Rate limited. The answer is to wait, not to give up on the song.
     if (res.status === 429 && attempt <= 4) {
       await sleep(2000 * attempt);
       continue;
@@ -293,31 +439,68 @@ async function getJson(url, opts) {
     if (res.status === 404) return null;
 
     /* A refusal on a request that carried no credentials is not this song's
-       fault and not this catalogue's. iTunes and Odesli are open, so nothing
-       we sent could be unauthorised: somebody in the middle said no, which is
-       what an egress proxy does, and 407 is one saying so in as many words.
+       fault and not this catalogue's. Nothing we sent could be unauthorised,
+       so somebody in the middle said no, which is what an egress proxy does,
+       and 407 is one saying so in as many words.
 
        This branch is not hypothetical. It is what the proxy in a web session
        actually answers, and before it existed that answer arrived as
        "itunes.apple.com answered 403", which reads like Apple turned us away
        and reads nothing like "run this somewhere else". */
-    if ((res.status === 403 || res.status === 407) && !opts.headers) {
+    if (!opts.authed && (res.status === 401 || res.status === 403 || res.status === 407)) {
+      /* Except when the service says in as many words that it is the one
+         refusing. Odesli retired its free public API and answers exactly
+         this, and calling that a blocked proxy would send somebody to a
+         different machine to watch it fail again. */
+      if (/API_ACCESS_DEPRECATED|API_KEY|UNAUTHORIZED/i.test(res.body || '')) {
+        throw new Error(host + ' refused the request: ' + (res.body || '').slice(0, 200));
+      }
       throw blocked(url, 'the gateway answered ' + res.status);
     }
 
     // A refusal on a request that did carry a key is the key's fault.
-    if (res.status === 401 || res.status === 403) {
-      throw new Error(new URL(url).host + ' refused the token (' + res.status + '). ' +
-        'Check GENIUS_TOKEN in .env, or unset it to publish without lyrics.');
+    if (opts.authed && (res.status === 401 || res.status === 403)) {
+      throw new Error(host + ' refused the credentials (' + res.status + '). ' +
+        (opts.credentialHint || 'Check the matching entry in .env.'));
     }
 
-    if (!res.ok) {
+    if (res.status >= 400) {
       if (attempt <= 2 && res.status >= 500) { await sleep(1000 * attempt); continue; }
-      throw new Error(new URL(url).host + ' answered ' + res.status);
+      throw new Error(host + ' answered ' + res.status);
     }
-    return res.json();
+
+    try {
+      return JSON.parse(res.body);
+    } catch (err) {
+      /* A body that is not JSON from a service that only speaks JSON is a
+         gateway's error page wearing a 200, which some proxies do. */
+      throw blocked(url, 'answered with something that is not JSON');
+    }
   }
 }
+
+/* ------------------------------------------------------------ the services
+
+   ONE SERVICE PER PLATFORM, and that is a change forced by reality rather
+   than a preference. This started as iTunes for the art and Odesli for every
+   other platform in a single call, which was the whole reason the design was
+   tidy. Odesli then retired public access to that endpoint: it answers 401
+   with PUBLIC_API_ACCESS_DEPRECATED to anybody without a key, so the tidy
+   version now resolves nothing at all for a church that has not signed up.
+
+   So each platform is asked for itself, and each one is optional:
+
+     iTunes      the art, the canonical title and artist, the Apple link.
+                 No key, no account, and the backbone of every row.
+     Spotify     needs a free client id and secret in .env.
+     YouTube     needs a free API key in .env.
+     Odesli      still works with ODESLI_API_KEY, and when there is one it
+                 fills in everything the two above do not.
+     Genius      the lyrics, with a token.
+
+   A platform with no credentials is absent from the row rather than guessed
+   at, and the summary says which ones were skipped, so "we have no Spotify
+   links" and "Spotify is not set up" never look the same. */
 
 async function searchItunes(want) {
   const term = [want.title, want.artist].filter(Boolean).join(' ');
@@ -328,9 +511,84 @@ async function searchItunes(want) {
   return (body && Array.isArray(body.results)) ? body.results : [];
 }
 
-async function odesliFor(appleUrl) {
-  const url = ODESLI + '?' + new URLSearchParams({ url: appleUrl, userCountry: 'US' });
-  return getJson(url);
+/* Odesli, for whoever has a key. Everything in one call, which is what this
+   was always for, and skipped entirely without one rather than failing. */
+async function odesliFor(appleUrl, key) {
+  if (!key) return null;
+  const url = ODESLI + '?' + new URLSearchParams({
+    url: appleUrl, userCountry: 'US', key: key
+  });
+  return getJson(url, { authed: true, credentialHint: 'Check ODESLI_API_KEY in .env.' });
+}
+
+/* Spotify's client credentials flow: an id and a secret become a token that
+   lasts an hour, which is long enough for any setlist. Fetched once and kept
+   for the run rather than once per song. */
+let spotifyToken = null;
+async function spotifyAuth(id, secret) {
+  if (spotifyToken) return spotifyToken;
+  const res = await transport.request(SPOTIFY_TOKEN, {
+    method: 'POST',
+    body: 'grant_type=client_credentials',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+      Authorization: 'Basic ' + Buffer.from(id + ':' + secret).toString('base64')
+    }
+  });
+  if (res.status === 400 || res.status === 401) {
+    throw new Error('Spotify refused the credentials (' + res.status + '). ' +
+      'Check SPOTIFY_CLIENT_ID and SPOTIFY_CLIENT_SECRET in .env.');
+  }
+  if (res.status >= 400) throw new Error('Spotify answered ' + res.status + ' for a token.');
+  spotifyToken = JSON.parse(res.body).access_token;
+  return spotifyToken;
+}
+
+async function spotifyFor(song, env) {
+  const id = env.SPOTIFY_CLIENT_ID, secret = env.SPOTIFY_CLIENT_SECRET;
+  if (!id || !secret) return '';
+  const token = await spotifyAuth(id, secret);
+  const q = 'track:"' + song.title.replace(/"/g, '') + '" artist:"' + song.artist.replace(/"/g, '') + '"';
+  const url = SPOTIFY_SEARCH + '?' + new URLSearchParams({ q: q, type: 'track', limit: '5', market: 'US' });
+  const body = await getJson(url, {
+    headers: { Authorization: 'Bearer ' + token }, authed: true,
+    credentialHint: 'Check SPOTIFY_CLIENT_ID and SPOTIFY_CLIENT_SECRET in .env.'
+  });
+  const items = (body && body.tracks && body.tracks.items) || [];
+  // Checked against the song iTunes matched, not the line that was typed, so
+  // a same titled song by somebody else cannot slip in on this leg.
+  for (const t of items) {
+    if (!t || !t.external_urls || !t.external_urls.spotify) continue;
+    const artists = (t.artists || []).map(a => a.name).join(' ');
+    if (baseTitle(t.name) === baseTitle(song.title) && overlap(song.artist, artists) >= 0.5) {
+      return t.external_urls.spotify;
+    }
+  }
+  return '';
+}
+
+async function youtubeFor(song, env) {
+  const key = env.YOUTUBE_API_KEY;
+  if (!key) return '';
+  const url = YOUTUBE_SEARCH + '?' + new URLSearchParams({
+    part: 'snippet', q: song.title + ' ' + song.artist, type: 'video',
+    maxResults: '5', key: key
+  });
+  const body = await getJson(url, { authed: true, credentialHint: 'Check YOUTUBE_API_KEY in .env.' });
+  const items = (body && body.items) || [];
+  for (const it of items) {
+    const id = it && it.id && it.id.videoId;
+    const sn = (it && it.snippet) || {};
+    if (!id) continue;
+    // The channel is the artist, or the title names them. Anything looser and
+    // this becomes a link to whoever covered it in their bedroom.
+    const byArtist = overlap(song.artist, sn.channelTitle || '') >= 0.5 ||
+                     overlap(song.artist, sn.title || '') >= 0.5;
+    if (baseTitle(sn.title || '').includes(baseTitle(song.title)) && byArtist) {
+      return 'https://www.youtube.com/watch?v=' + id;
+    }
+  }
+  return '';
 }
 
 /* Genius, only when there is a token for it. Checked against the song that
@@ -339,7 +597,10 @@ async function odesliFor(appleUrl) {
 async function lyricsFor(song, token) {
   if (!token) return '';
   const url = GENIUS + '?' + new URLSearchParams({ q: song.title + ' ' + song.artist });
-  const body = await getJson(url, { headers: { Authorization: 'Bearer ' + token } });
+  const body = await getJson(url, {
+    headers: { Authorization: 'Bearer ' + token }, authed: true,
+    credentialHint: 'Check GENIUS_TOKEN in .env, or unset it to publish without lyrics.'
+  });
   const hits = (body && body.response && body.response.hits) || [];
   for (const hit of hits) {
     const r = hit && hit.result;
@@ -403,15 +664,56 @@ async function resolveSong(want, opts) {
   note.score = Math.round(best.score * 10) / 10;
   if (best.runnerUp) note.runnerUp = best.runnerUp.trackName + ' / ' + best.runnerUp.artistName;
 
+  const env = opts.env || {};
   const appleUrl = best.match.trackViewUrl;
-  if (appleUrl) {
-    song.links.apple = appleUrl;
-    const odesli = await odesliFor(appleUrl);
+  if (appleUrl) song.links.apple = appleUrl;
+
+  /* Odesli first when there is a key, because one call answers for every
+     platform at once and the two below are then only filling gaps. Without a
+     key it is skipped rather than attempted: its public endpoint is retired
+     and calling it would spend a request to be told so. */
+  if (appleUrl && env.ODESLI_API_KEY) {
+    const odesli = await odesliFor(appleUrl, env.ODESLI_API_KEY);
     if (odesli) Object.assign(song.links, linksFromOdesli(odesli));
-    else note.odesli = 'no answer, Apple link only';
   }
 
-  song.lyricsUrl = await lyricsFor(song, opts.geniusToken);
+  /* Then each platform for itself, and only for what is still missing, so a
+     key that answered for everything is not asked again. Each one is its own
+     failure: Spotify being misconfigured must not cost the song its YouTube
+     link, and neither must cost it the art that is already in hand. */
+  const skipped = [];
+
+  if (!song.links.spotify) {
+    if (!env.SPOTIFY_CLIENT_ID || !env.SPOTIFY_CLIENT_SECRET) skipped.push('Spotify');
+    else {
+      try { song.links.spotify = await spotifyFor(song, env) || undefined; }
+      catch (err) { note.spotifyError = err.message; }
+    }
+  }
+
+  if (!song.links.youtube) {
+    if (!env.YOUTUBE_API_KEY) skipped.push('YouTube');
+    else {
+      try { song.links.youtube = await youtubeFor(song, env) || undefined; }
+      catch (err) { note.youtubeError = err.message; }
+    }
+  }
+
+  if (!env.GENIUS_TOKEN) skipped.push('lyrics');
+  else {
+    try { song.lyricsUrl = await lyricsFor(song, env.GENIUS_TOKEN); }
+    catch (err) { note.lyricsError = err.message; }
+  }
+
+  // undefined is not a link, and a key set to it would survive JSON.stringify
+  // as a missing key on some paths and an explicit null on others.
+  Object.keys(song.links).forEach(k => { if (!song.links[k]) delete song.links[k]; });
+
+  /* "Not set up" and "looked and found nothing" are different facts about a
+     row and the summary has to be able to tell them apart, or a church with
+     no Spotify credentials spends a month believing their songs are not on
+     Spotify. */
+  if (skipped.length) note.skipped = skipped;
 
   return { song: song, note: note };
 }
@@ -456,8 +758,30 @@ function summarize(row, notes) {
       lines.push('   ! the line named two artists: ' + n.alternates.join(' / ') +
                  '. Used the first. Ask before writing.');
     }
+    /* Not the same fact as a missing link, and the difference matters: one is
+       "this song is not on Spotify", the other is "nobody has put the Spotify
+       credentials in .env yet", and a church told the first when the second
+       is true will go looking for the wrong problem for a month. */
+    if (n.skipped && n.skipped.length) {
+      lines.push('   - not set up, so not looked for: ' + n.skipped.join(', '));
+    }
+    ['spotifyError', 'youtubeError', 'lyricsError'].forEach(k => {
+      if (n[k]) lines.push('   ! ' + n[k]);
+    });
     lines.push('');
   });
+
+  /* Said once at the end rather than under every song, because a church with
+     no keys would otherwise read the same two lines four times and stop
+     seeing them. */
+  const missing = new Set();
+  notes.forEach(n => (n.skipped || []).forEach(x => missing.add(x)));
+  if (missing.size) {
+    lines.push('Not configured: ' + [...missing].join(', ') + '.');
+    lines.push('See .env.example. Album art and Apple Music need no keys and are');
+    lines.push('already in; the rest are free to set up and fill in from the next run.');
+    lines.push('');
+  }
 
   return lines.join('\n');
 }
@@ -538,13 +862,21 @@ async function main() {
       : [];
   }
 
-  const geniusToken = readEnv().GENIUS_TOKEN || process.env.GENIUS_TOKEN || '';
+  /* .env first, then the real environment, so a machine that exports these
+     works and a repo checkout with a .env works, and neither has to know
+     about the other. */
+  const fileEnv = readEnv();
+  const env = {};
+  for (const k of ['ODESLI_API_KEY', 'SPOTIFY_CLIENT_ID', 'SPOTIFY_CLIENT_SECRET',
+                   'YOUTUBE_API_KEY', 'GENIUS_TOKEN']) {
+    env[k] = fileEnv[k] || process.env[k] || '';
+  }
 
   const songs = [];
   const notes = [];
   for (let i = 0; i < wants.length; i++) {
     if (i > 0 && args.sleep) await sleep(args.sleep);
-    const { song, note } = await resolveSong(wants[i], { known: known, geniusToken: geniusToken });
+    const { song, note } = await resolveSong(wants[i], { known: known, env: env });
     songs.push(song);
     notes.push(note);
   }
@@ -572,6 +904,9 @@ async function main() {
 module.exports = {
   parseLine, parseList, normalize, baseTitle, scoreCandidate, pickBest,
   bigArt, linksFromOdesli, findKnown, buildRow, summarize,
+  /* The transport, so a test can answer for the services without a network.
+     Replace `transport.request`; see the note above its definition. */
+  transport,
   /* The whole path for one song, exported so a test can drive it with a
      stubbed global fetch. Reading the two services correctly matters as much
      as scoring them, and the shape of what they answer with is not something

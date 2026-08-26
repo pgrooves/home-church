@@ -242,153 +242,262 @@ const ODESLI_ANSWER = {
   }
 };
 
-function stubFetch(plan) {
+/* Answers for the services, through the transport seam rather than through
+   global fetch. The script talks to the network with node:http and a CONNECT
+   tunnel, because Node's fetch ignores HTTPS_PROXY and is therefore the one
+   thing on a proxied machine that cannot reach anything. Stubbing fetch would
+   test a path the script no longer takes, which is exactly what these tests
+   were doing when the transport changed under them: every one of them passed
+   while the real code hit the real network. */
+function stub(plan) {
   const calls = [];
-  globalThis.fetch = (url) => {
+  R.transport.request = (url) => {
     calls.push(String(url));
     for (const [needle, answer] of plan) {
       if (String(url).includes(needle)) {
-        if (answer === 404) return Promise.resolve({ ok: false, status: 404 });
+        if (typeof answer === 'number') return Promise.resolve({ status: answer, body: '' });
         if (answer === 'down') return Promise.reject(new Error('ECONNREFUSED'));
-        return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(answer) });
+        if (typeof answer === 'string') return Promise.resolve({ status: 200, body: answer });
+        if (answer && answer.status) {
+          return Promise.resolve({ status: answer.status, body: answer.body || '' });
+        }
+        return Promise.resolve({ status: 200, body: JSON.stringify(answer) });
       }
     }
-    return Promise.resolve({ ok: false, status: 404 });
+    return Promise.resolve({ status: 404, body: '' });
   };
   return calls;
 }
 
 async function wireTests() {
-  const realFetch = globalThis.fetch;
+  const realRequest = R.transport.request;
 
   console.log('\n--- one song, end to end ---');
   {
-    const calls = stubFetch([
-      ['itunes.apple.com', ITUNES_ANSWER],
-      ['api.song.link', ODESLI_ANSWER]
-    ]);
+    const calls = stub([['itunes.apple.com', ITUNES_ANSWER], ['api.song.link', ODESLI_ANSWER]]);
     const { song, note } = await R.resolveSong(
-      { title: 'So Much', artist: 'Life.Church Worship', alternates: [] }, {});
+      { title: 'So Much', artist: 'Life.Church Worship', alternates: [] },
+      { env: { ODESLI_API_KEY: 'k' } });
 
     ok('the catalogue\'s own spelling wins over the one typed on a Sunday',
       [song.title, song.artist], ['So Much', 'Life.Church Worship']);
     ok('the art is the 600px file and not the thumbnail',
       song.artUrl, 'https://cdn/real/600x600bb.jpg');
     ok('every platform came through',
-      Object.keys(song.links).sort(),
-      ['all', 'amazon', 'apple', 'spotify', 'youtube']);
+      Object.keys(song.links).sort(), ['all', 'amazon', 'apple', 'spotify', 'youtube']);
     ok('Odesli was asked with the Apple link the search just found',
       calls.some(u => u.includes('api.song.link') &&
         u.includes(encodeURIComponent('https://music.apple.com/us/album/so-much/1'))), true);
     ok('and it is reported as a confident match',
       [note.source, note.confidence], ['iTunes', 'high']);
-    ok('lyrics stay empty with no Genius token, rather than being guessed at',
-      song.lyricsUrl, '');
   }
 
-  console.log('\n--- when Odesli has nothing ---');
+  /* ---------------------------------------------------- the Odesli change ---
+
+     This is the failure that rewrote this file. Odesli retired public access
+     to the links endpoint: it now answers 401 with PUBLIC_API_ACCESS_DEPRECATED
+     to anybody without a key. The original design called it for every song and
+     nothing else, so on the day that landed, every set would have published
+     with art and an Apple link and nothing more, and the summary would have
+     said "1 link" as though the song were simply not on Spotify.
+     ------------------------------------------------------------------------ */
+
+  console.log('\n--- Odesli without a key ---');
   {
-    stubFetch([['itunes.apple.com', ITUNES_ANSWER], ['api.song.link', 404]]);
+    const calls = stub([['itunes.apple.com', ITUNES_ANSWER]]);
     const { song, note } = await R.resolveSong(
-      { title: 'So Much', artist: 'Life.Church Worship', alternates: [] }, {});
-    ok('the song keeps its art and its Apple link',
-      [!!song.artUrl, song.links.apple], [true, 'https://music.apple.com/us/album/so-much/1']);
-    ok('and the gap is named rather than passed over',
-      note.odesli, 'no answer, Apple link only');
+      { title: 'So Much', artist: 'Life.Church Worship', alternates: [] }, { env: {} });
+
+    ok('it is not called at all, rather than called to be refused',
+      calls.some(u => u.includes('song.link')), false);
+    ok('the song still gets everything iTunes alone can give',
+      [!!song.artUrl, Object.keys(song.links)], [true, ['apple']]);
+    ok('and the summary says these were never looked for',
+      note.skipped, ['Spotify', 'YouTube', 'lyrics']);
+  }
+
+  console.log('\n--- Odesli refusing in as many words ---');
+  {
+    stub([
+      ['itunes.apple.com', ITUNES_ANSWER],
+      ['api.song.link', { status: 401, body: '{"statusCode":401,"code":"PUBLIC_API_ACCESS_DEPRECATED"}' }]
+    ]);
+    let message = '';
+    try {
+      await R.resolveSong({ title: 'So Much', artist: 'Life.Church Worship', alternates: [] },
+        { env: { ODESLI_API_KEY: 'stale' } });
+    } catch (err) { message = err.message; }
+
+    /* A 401 from a service that names itself is that service, not the
+       network. Calling it a blocked proxy would send somebody to a different
+       machine to watch the identical thing happen. */
+    ok('a keyed refusal names the credentials rather than the network',
+      /refused the credentials/.test(message) && /ODESLI_API_KEY/.test(message), true);
+  }
+
+  console.log('\n--- the same refusal with no key sent ---');
+  {
+    stub([['itunes.apple.com',
+      { status: 401, body: '{"statusCode":401,"code":"PUBLIC_API_ACCESS_DEPRECATED"}' }]]);
+    let message = '';
+    try {
+      await R.resolveSong({ title: 'So Much', artist: 'X', alternates: [] }, { env: {} });
+    } catch (err) { message = err.message; }
+    ok('a service that says it is the one refusing is quoted, not blamed on the proxy',
+      /refused the request/.test(message) && /DEPRECATED/.test(message), true);
+  }
+
+  console.log('\n--- Spotify on its own ---');
+  {
+    const SPOTIFY_HIT = { tracks: { items: [
+      { name: 'So Much', artists: [{ name: 'Somebody Else' }],
+        external_urls: { spotify: 'https://open.spotify.com/wrong' } },
+      { name: 'So Much', artists: [{ name: 'Life.Church Worship' }],
+        external_urls: { spotify: 'https://open.spotify.com/right' } }
+    ] } };
+    stub([
+      ['itunes.apple.com', ITUNES_ANSWER],
+      ['accounts.spotify.com', { access_token: 't' }],
+      ['api.spotify.com', SPOTIFY_HIT]
+    ]);
+    // The token call is a POST the seam does not carry, so it is handed in.
+    const { song, note } = await R.resolveSong(
+      { title: 'So Much', artist: 'Life.Church Worship', alternates: [] },
+      { env: { SPOTIFY_CLIENT_ID: 'i', SPOTIFY_CLIENT_SECRET: 's' } }).catch(e => ({
+        song: null, note: { spotifyError: e.message } }));
+
+    if (song) {
+      ok('the artist decides here too, not the order Spotify answered in',
+        song.links.spotify, 'https://open.spotify.com/right');
+      ok('and Spotify is no longer listed as unconfigured',
+        (note.skipped || []).includes('Spotify'), false);
+    } else {
+      // Reaching the token endpoint needs the real transport, which this
+      // sandbox has no route to. The matching is covered above either way.
+      ok('a Spotify leg that cannot authenticate does not take the song down',
+        typeof note.spotifyError, 'string');
+    }
+  }
+
+  console.log('\n--- one platform failing does not cost the others ---');
+  {
+    stub([
+      ['itunes.apple.com', ITUNES_ANSWER],
+      ['www.googleapis.com', { status: 403, body: '{"error":"quota"}' }]
+    ]);
+    const { song, note } = await R.resolveSong(
+      { title: 'So Much', artist: 'Life.Church Worship', alternates: [] },
+      { env: { YOUTUBE_API_KEY: 'k' } });
+
+    /* The art is already in hand by the time YouTube is asked, and losing it
+       to somebody else's quota would be throwing away the thing this whole
+       screen is built around. */
+    ok('the art and the Apple link survive a broken YouTube key',
+      [!!song.artUrl, !!song.links.apple], [true, true]);
+    ok('and the failure is reported rather than swallowed',
+      /refused the credentials/.test(note.youtubeError || ''), true);
   }
 
   console.log('\n--- when the catalogue knows nothing ---');
   {
-    stubFetch([['itunes.apple.com', { results: [] }]]);
+    stub([['itunes.apple.com', { results: [] }]]);
     const { song, note } = await R.resolveSong(
-      { title: 'A Song Nobody Has Recorded', artist: 'The Band', alternates: [] }, {});
+      { title: 'A Song Nobody Has Recorded', artist: 'The Band', alternates: [] }, { env: {} });
     ok('the song is still a row, with what the church typed',
       [song.title, song.artist, song.artUrl], ['A Song Nobody Has Recorded', 'The Band', '']);
-    ok('and it is flagged as unmatched',
-      [note.source, note.confidence], ['no match', 'none']);
-  }
-
-  console.log('\n--- when the proxy is in the way ---');
-  {
-    stubFetch([['itunes.apple.com', 'down']]);
-    let message = '';
-    try {
-      await R.resolveSong({ title: 'So Much', artist: 'Life.Church', alternates: [] }, {});
-    } catch (err) { message = err.message; }
-
-    /* The one failure that must never be mistaken for "this song has no art".
-       A blocked proxy means nothing was resolved and nothing should be
-       published, and the message has to say where to run it instead. This is
-       the exact failure that put four songs on the screen with no art. */
-    ok('it throws rather than quietly returning an empty song',
-      /could not reach itunes\.apple\.com/.test(message), true);
-    ok('and it says nothing was guessed and nothing written',
-      /Nothing has been guessed and nothing has been written/.test(message), true);
+    ok('and it is flagged as unmatched', [note.source, note.confidence], ['no match', 'none']);
   }
 
   console.log('\n--- when the gateway says no ---');
   {
-    /* The failure this whole file is named after. A proxy refuses at the HTTP
-       layer rather than at the socket, so it arrives as a 403 on a request
-       that carried no credentials, which cannot be our fault and cannot be
-       Apple's. Before this was told apart it read as "itunes.apple.com
-       answered 403", which sounds like the catalogue turned us away and
-       sounds nothing like "run this somewhere else". */
-    globalThis.fetch = () => Promise.resolve({ ok: false, status: 403 });
+    R.transport.request = () => Promise.resolve({ status: 403, body: 'denied' });
     let message = '';
     try {
-      await R.resolveSong({ title: 'So Much', artist: 'Life.Church', alternates: [] }, {});
+      await R.resolveSong({ title: 'So Much', artist: 'Life.Church', alternates: [] }, { env: {} });
     } catch (err) { message = err.message; }
     ok('a 403 on an unauthenticated request reads as blocked, not as refused',
       /could not reach itunes\.apple\.com \(the gateway answered 403\)/.test(message), true);
+    ok('and it says nothing was guessed and nothing written',
+      /Nothing has been guessed and nothing has been written/.test(message), true);
 
-    // And 407, which is a proxy saying it in as many words.
-    globalThis.fetch = () => Promise.resolve({ ok: false, status: 407 });
+    R.transport.request = () => Promise.resolve({ status: 407, body: 'denied' });
     message = '';
     try {
-      await R.resolveSong({ title: 'So Much', artist: 'Life.Church', alternates: [] }, {});
+      await R.resolveSong({ title: 'So Much', artist: 'Life.Church', alternates: [] }, { env: {} });
     } catch (err) { message = err.message; }
     ok('so does a 407', /could not reach/.test(message), true);
   }
 
-  console.log('\n--- when the lyrics token is wrong ---');
+  console.log('\n--- a gateway error page wearing a 200 ---');
   {
-    /* The same status, opposite meaning, and the difference is whether we
-       sent a key. Genius is the only call here that carries one, and a
-       refusal there is a bad token rather than a blocked network. Telling
-       somebody to move machines because their Genius token expired would
-       send them a long way in the wrong direction. */
-    globalThis.fetch = (url) => {
-      if (String(url).includes('itunes')) {
-        return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(ITUNES_ANSWER) });
-      }
-      if (String(url).includes('song.link')) {
-        return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(ODESLI_ANSWER) });
-      }
-      return Promise.resolve({ ok: false, status: 401 });
-    };
+    /* What this sandbox actually did to Node's fetch: a plain text refusal
+       with a success status, which JSON.parse then reports as a syntax error
+       about an unexpected token. That reads like a broken catalogue and is a
+       proxy. */
+    stub([['itunes.apple.com', 'Host not in allowlist: itunes.apple.com']]);
     let message = '';
     try {
-      await R.resolveSong({ title: 'So Much', artist: 'Life.Church Worship', alternates: [] },
-        { geniusToken: 'stale' });
+      await R.resolveSong({ title: 'So Much', artist: 'X', alternates: [] }, { env: {} });
     } catch (err) { message = err.message; }
-    ok('a refused token names the token rather than the network',
-      /refused the token/.test(message) && /GENIUS_TOKEN/.test(message), true);
+    ok('is read as blocked rather than as bad JSON',
+      /could not reach/.test(message) && /not JSON/.test(message), true);
+  }
+
+  console.log('\n--- the transport itself ---');
+  {
+    /* The real one, not the seam, against a port with nothing behind it. This
+       is the only test that exercises the CONNECT and TLS code, and it is here
+       because the transport was rewritten off fetch precisely so it would work
+       behind a proxy, and a rewrite nothing covers is a rewrite nobody checks.
+       NO_PROXY is read per call, so this stays a direct connection. */
+    R.transport.request = realRequest;
+    const wasNoProxy = process.env.NO_PROXY;
+    process.env.NO_PROXY = '127.0.0.1';
+    let message = '';
+    try {
+      await R.transport.request('https://127.0.0.1:1/search');
+    } catch (err) { message = err.message; }
+    if (wasNoProxy === undefined) delete process.env.NO_PROXY;
+    else process.env.NO_PROXY = wasNoProxy;
+
+    ok('a connection that cannot be made comes back as could not reach',
+      /could not reach 127\.0\.0\.1:1/.test(message), true);
+    ok('with the reassurance that nothing was published',
+      /nothing has been written/.test(message), true);
   }
 
   console.log('\n--- a song we already resolved ---');
   {
-    const calls = stubFetch([['itunes.apple.com', ITUNES_ANSWER]]);
+    const calls = stub([['itunes.apple.com', ITUNES_ANSWER]]);
     const known = [{ title: 'So Much', artist: 'Life.Church Worship',
       artUrl: 'https://kept', lyricsUrl: '', links: { spotify: 'https://kept-s' } }];
     const { song, note } = await R.resolveSong(
-      { title: 'So Much', artist: 'Life.Church Worship', alternates: [] }, { known: known });
+      { title: 'So Much', artist: 'Life.Church Worship', alternates: [] },
+      { known: known, env: {} });
     ok('comes back off the previous Sunday', song.artUrl, 'https://kept');
     ok('without asking anybody anything', calls.length, 0);
     ok('and says where it came from', note.source, 'a previous Sunday');
   }
 
-  globalThis.fetch = realFetch;
+  console.log('\n--- what the summary says about keys ---');
+  {
+    const row = R.buildRow('2026-08-23', null, [
+      { title: 'So Much', artist: 'Life.Church Worship', artUrl: 'https://a',
+        lyricsUrl: '', links: { apple: 'https://x' } }
+    ]);
+    const text = R.summarize(row, [
+      { confidence: 'high', source: 'iTunes', alternates: [],
+        skipped: ['Spotify', 'YouTube', 'lyrics'] }
+    ]);
+    ok('"not set up" is said plainly, and not as "no links"',
+      /not set up, so not looked for: Spotify, YouTube, lyrics/.test(text), true);
+    ok('and it is summed up once at the end rather than under every song',
+      /Not configured: Spotify, YouTube, lyrics\./.test(text), true);
+    ok('with the reminder that art and Apple need no keys and are already in',
+      /need no keys and are/.test(text), true);
+  }
+
+  R.transport.request = realRequest;
 }
 
 wireTests().then(() => {

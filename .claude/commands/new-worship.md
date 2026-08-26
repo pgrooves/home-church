@@ -142,15 +142,36 @@ titles and nothing else.
   match out in Step 5 and let somebody confirm it. A wrong recording under the
   right title is the one mistake nobody catches by looking at the screen.
 
-### Lyrics
+### Which platforms you get
 
-Filled in automatically when `GENIUS_TOKEN` is in `.env`, checked against the
-song that was actually matched rather than the line that was typed. Left empty
-when there is no token, and an empty one draws no Lyrics link at all.
+iTunes Search needs no key, so **album art and the Apple Music link always
+work**. Everything else needs one free credential each, in `.env`:
 
-**Never invent a lyrics URL and never publish a search query as a link.** A
-Lyrics button that lands on a results page or on somebody else's song is worse
-than no button.
+| In the row | Needs | Without it |
+|---|---|---|
+| Album art, Apple Music | nothing | always there |
+| Spotify | `SPOTIFY_CLIENT_ID` + `SPOTIFY_CLIENT_SECRET` | left out, reported |
+| YouTube | `YOUTUBE_API_KEY` | left out, reported |
+| Everything at once | `ODESLI_API_KEY` | the three above still work |
+| Lyrics | `GENIUS_TOKEN` | no Lyrics link drawn |
+
+`.env.example` says where each one comes from. All free.
+
+**Odesli is no longer the whole pipeline.** It used to answer for every
+platform in one unauthenticated call, and it retired public access to that
+endpoint: it now returns 401 `PUBLIC_API_ACCESS_DEPRECATED` to anybody without
+a key. So each platform is asked for itself, and the script skips Odesli
+entirely unless `ODESLI_API_KEY` is set rather than spending a request to be
+refused.
+
+**"Not set up" and "found nothing" are different facts, and the summary tells
+them apart.** A platform with no credentials prints `- not set up, so not
+looked for`. Say that out loud in Step 5 rather than letting somebody read it
+as "this song is not on Spotify."
+
+**Never invent a link, and never publish a search query as one.** A button
+that lands on a results page or on somebody else's recording is worse than no
+button, and the screen draws nothing at all for an empty one.
 
 ## Step 4. Pick an id
 

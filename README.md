@@ -167,11 +167,20 @@ runs everywhere else in this app.
 
 Publish one with **`/new-worship`** and a list of the songs, however it was
 typed. It reads the artists off the line and then runs
-`scripts/resolve_songs.js`, which searches iTunes for each song, takes the
-album art and the Apple Music link off the best match, and asks Odesli for
-every other platform in one call. Neither service needs a key. Lyrics come
-from Genius when `GENIUS_TOKEN` is in `.env` and are left empty when it is
-not.
+`scripts/resolve_songs.js`, which searches iTunes for each song and takes the
+album art and the Apple Music link off the best match. That much needs no key
+and no account. Spotify, YouTube and the lyrics each need one free credential
+in `.env`, listed in `.env.example`, and a platform without one is left out of
+the row rather than guessed at.
+
+**One call used to do all of it.** Odesli answered for every platform at once,
+unauthenticated, and then retired public access to that endpoint: it returns
+401 `PUBLIC_API_ACCESS_DEPRECATED` to anybody without a key now. Had the
+resolver kept leaning on it, every set would have quietly published with art
+and an Apple link and nothing else, and the summary would have said "1 link"
+as though the songs simply were not on Spotify. So each platform is asked for
+itself, Odesli is used only when there is a key for it, and the summary says
+"not set up" rather than "no links" so the two never look the same.
 
 **The resolver is a script rather than instructions, and that is the point.**
 The first setlist went up with four titles and no art, because the pipeline
