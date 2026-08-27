@@ -1,7 +1,7 @@
 /* ==========================================================================
    Home Church, Alpha
    One page. What Alpha is, what a night looks like, the questions it works
-   through, two videos, and a way in at the bottom.
+   through, one video, and a way in at the bottom.
 
    WHY ONE PAGE AND NOT ELEVEN. Alpha publishes a great deal, a film for every
    session, a leader's handbook, a training course, a weekend away. None of
@@ -16,8 +16,8 @@
 
    WHOSE WORK THIS IS. Alpha's, and the credit block says so under the header
    the way the Practicing the Way one does, in the same place, for the same
-   reason. Two videos play on this screen and both are Alpha's, from their
-   YouTube channel, and the church wrote none of the course.
+   reason. The video that plays on this screen is Alpha's, from their YouTube
+   channel, and the church wrote none of the course.
 
    THE SENTENCES ARE OURS. The framing copy on this page is Home Church's own
    voice about somebody else's course, which is exactly the kind of writing
@@ -28,9 +28,9 @@
 
    VIDEO. It plays here, in the app, on the same poster and the same play
    badge every other video in the app uses. There is no link out to YouTube
-   on this screen. Both ids were checked against YouTube's oEmbed before they
-   were written down, which is how a video whose owner has disabled embedding
-   gets caught before it ships as a poster that does nothing.
+   on this screen. The id was checked against YouTube's oEmbed before it was
+   written down, which is how a video whose owner has disabled embedding gets
+   caught before it ships as a poster that does nothing.
    ========================================================================== */
 
 (function (HC) {
@@ -80,9 +80,6 @@
     'afterwards: who the Holy Spirit is, what the Spirit does, and how you ' +
     'can be filled with the Spirit.';
 
-  var WATCH_NOTE = 'The first session, in full, so you know what you are ' +
-    'walking into before you walk into it.';
-
   var INVITE_NOTE = 'A short film from Alpha, on what a night actually ' +
     'looks like.';
 
@@ -96,15 +93,15 @@
     'opens this is where you will find it, and we will make sure you hear ' +
     'about it before it fills up.';
 
-  /* ------------------------------------------------------------- the videos
+  /* -------------------------------------------------------------- the video
 
-     Both from Alpha's own YouTube channel. The invite goes at the top because
-     it is short and answers the question somebody arrived with; the first
-     session goes further down because it is a real half hour, and asking for
-     that before anybody knows what Alpha is would be asking too early. */
+     From Alpha's own YouTube channel, and near the top because it is short and
+     answers the question somebody arrived with. A full session film used to
+     sit further down the page and does not any more: half an hour of the
+     course is more than somebody deciding whether to come needs, and this
+     screen is for the deciding. */
 
   var INVITE = { videoId: 'n_-76aOBMPY', title: 'So, this is Alpha?' };
-  var SESSION_ONE = { videoId: 'hBMMD5C0k-s', title: 'Is There More to Life Than This?' };
 
   /* --------------------------------------------------------- what a night is
 
@@ -413,25 +410,19 @@
     /* 4. The eleven questions. */
     html += questions();
 
-    /* 5. The first session, in full, for somebody who wants to try it before
-          they commit to a room full of strangers. */
-    html += c.sectionHeader('Try one', 'Watch the first session');
-    html += video(SESSION_ONE, WATCH_NOTE, 'alpha.watch-note',
-      'the line under the first session video');
-
-    /* 6. The four questions people ask before they sign up. */
+    /* 5. The four questions people ask before they sign up. */
     html += asked();
 
-    /* 7. The way in. Last, and the only primary button on the page. */
+    /* 6. The way in. Last, and the only primary button on the page. */
     html += signup();
 
-    /* 8. Where it came from. Last on the page for the same reason it is last
-          on a practice page: these are somebody else's words and videos, and
+    /* 7. Where it came from. Last on the page for the same reason it is last
+          on a practice page: these are somebody else's words and video, and
           the app should say so without being asked. */
     html += '<p class="hc-caption hc-alpha__source">' +
       'The course, the session films, and the questions on this page are the ' +
       'work of Alpha, at ' + c.esc(ALPHA.replace(/^https?:\/\//, '')) + '. ' +
-      'The videos are theirs too, played here from their YouTube channel.</p>';
+      'The video is theirs too, played here from their YouTube channel.</p>';
 
     return c.el(html + '</div>');
   }

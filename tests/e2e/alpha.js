@@ -148,15 +148,19 @@ function serve() {
   ok('the screen draws', await page.evaluate(() => !!document.querySelector('.hc-alpha')));
 
   /* ------------------------------------------------------------- video ---
-     Two of them, and the one thing that matters about both is that the poster
-     turns into a player in place. See the note at the top of this file, and
-     the same promise made at the top of js/screens/practices.js. */
+     One of them, the short invite, and the one thing that matters about it is
+     that the poster turns into a player in place. See the note at the top of
+     this file, and the same promise made at the top of js/screens/practices.js.
+
+     The count is asserted rather than left open because the full session film
+     that used to sit under "Try one" came off this page deliberately: half an
+     hour of the course is more than somebody still deciding needs. */
 
   const posters = await page.$$('.hc-alpha .hc-video__poster');
-  ok('two videos, both of them Alpha’s', posters.length === 2,
+  ok('one video, and it is Alpha’s', posters.length === 1,
     'got ' + posters.length);
 
-  ok('and neither is a link out of the app', await page.evaluate(() =>
+  ok('and it is not a link out of the app', await page.evaluate(() =>
     Array.prototype.every.call(
       document.querySelectorAll('.hc-alpha .hc-video__poster'),
       el => el.getAttribute('data-action') === 'play-video')));
@@ -169,7 +173,7 @@ function serve() {
     return f ? f.getAttribute('src') : null;
   });
 
-  ok('tapping one swaps the poster for a player rather than leaving',
+  ok('tapping it swaps the poster for a player rather than leaving',
     !!src && src.indexOf('https://www.youtube.com/embed/') === 0, String(src));
   /* playsinline is the parameter that stops iOS taking the video full screen
      the instant it starts, which is the same experience as leaving the app
@@ -200,7 +204,7 @@ function serve() {
       url: btn ? btn.getAttribute('data-url') : null,
       note: note ? note.textContent.trim() : '',
       // One primary button on the page. The credit block's is secondary and
-      // the videos are posters, so a second primary here would mean two
+      // the video is a poster, so a second primary here would mean two
       // things competing to be the thing you do next.
       primaries: document.querySelectorAll('.hc-alpha .hc-btn--primary').length
     };

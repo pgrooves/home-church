@@ -103,7 +103,7 @@ const SLOTS = [
   'practices.credit-grid', 'practices.credit-page', 'practices.load-failed',
   'practices.not-added',
   'alpha.lede', 'alpha.credit', 'alpha.invite-note', 'alpha.night-lede',
-  'alpha.questions-lede', 'alpha.day-away', 'alpha.watch-note',
+  'alpha.questions-lede', 'alpha.day-away',
   'alpha.asked-cost', 'alpha.asked-talk', 'alpha.asked-believe',
   'alpha.asked-miss', 'alpha.signup-lead', 'alpha.signup-note',
   'alpha.signup-button',
