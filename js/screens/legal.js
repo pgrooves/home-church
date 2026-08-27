@@ -23,7 +23,7 @@
 
   // Update this whenever the text below changes in a way that matters, and
   // confirm it before submitting to the App Store.
-  var EFFECTIVE = 'August 19, 2026';
+  var EFFECTIVE = 'October 1, 2026';
 
   /* ---------------------------------------------------------- small parts */
 
