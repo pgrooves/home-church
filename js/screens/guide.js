@@ -281,7 +281,9 @@
     }
 
     var series = HC.data.getSeries(guide.seriesId);
-    var leader = HC.store.getProfile().leaderMode;
+    // Leaders and admins, which is what the church granted rather than what
+    // this phone chose. See HC.store.isLeader() and migration 0036.
+    var leader = HC.store.isLeader();
 
     var html = '<div class="hc-screen hc-reader" data-guide="' + c.esc(guide.id) + '">';
 

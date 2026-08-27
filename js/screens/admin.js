@@ -616,6 +616,14 @@
     return name || u.email || 'Somebody';
   }
 
+  /* What somebody is, in one word, for the line above their name. Admin wins
+     over Leader when both are true, which is the order they are granted in and
+     the order they matter in: an admin can do everything a leader can. */
+  function personStanding(u) {
+    if (u.role === 'admin') return 'Admin';
+    return u.is_leader ? 'Leader' : 'Member';
+  }
+
   function usersSection() {
     var html = '<div class="hc-screen hc-admin">';
     html += c.sectionHeader('For the church', 'Users', { flush: true, tag: 'h1' });
@@ -628,7 +636,8 @@
     }
 
     html += '<p class="hc-body-serif hc-admin__intro">An admin can write announcements, ' +
-      'edit content, and change what everybody else can do. Everyone else is a member.</p>';
+      'edit content, and change what everybody else can do. A leader gets the leader ' +
+      'tools and can host a group room. Everyone else is a member.</p>';
 
     rows.forEach(function (u) {
       var self = HC.admin.isSelf(u.id);
@@ -636,12 +645,40 @@
 
       html += '<div class="hc-admin__item">' +
         '<div class="hc-admin__item-head">' +
-          '<p class="hc-eyebrow">' + c.esc(isAdminRow ? 'Admin' : 'Member') +
+          '<p class="hc-eyebrow">' + c.esc(personStanding(u)) +
             (self ? ' · You' : '') + '</p>' +
           '<p class="hc-row__title">' + c.esc(personName(u)) + '</p>' +
           '<p class="hc-caption">' + c.esc(u.email || 'No email on file') + '</p>' +
-        '</div>' +
-        '<div class="hc-admin__item-actions">';
+        '</div>';
+
+      /* Leader mode, on the row rather than behind a second screen, because
+         this is the thing an admin comes here to do most often: somebody has
+         started leading a group and needs to be able to open a room on
+         Thursday.
+
+         Drawn for an admin's row too, and saying there what it does not
+         change. An admin hosts either way (migration 0036), so hiding the
+         switch would hide a flag that is still set and still true the day
+         they go back to being a member. What is not drawn is the switch on
+         your own row, below: it would be a switch you could tap that changed
+         nothing you could see. */
+      if (!self) {
+        html += switchRow({
+          title: 'Leader mode',
+          sub: u.is_leader
+            ? (isAdminRow
+                ? 'On. They also host as an admin, so this stays true if they become a member.'
+                : 'On. Leader tools, and they can open a group room.')
+            : (isAdminRow
+                ? 'Off, and an admin can host a room without it.'
+                : 'Off. Turn it on for somebody who leads a group.'),
+          action: 'admin-leader',
+          id: u.id,
+          on: !!u.is_leader
+        });
+      }
+
+      html += '<div class="hc-admin__item-actions">';
 
       /* The safety guard, drawn rather than merely enforced. A disabled button
          with a reason under it is a better answer than a button that works
@@ -650,7 +687,9 @@
          trigger underneath it. */
       if (self) {
         html += '<p class="hc-caption hc-admin__self">You cannot change your own role or ' +
-          'remove your own account here. Deleting your account is under Your data.</p>';
+          'remove your own account here. Deleting your account is under Your data. ' +
+          'Leader mode is not offered on your own row either: you can host a room ' +
+          'as an admin already.</p>';
       } else {
         html += c.button(isAdminRow ? 'Make a member' : 'Make an admin', {
           action: 'admin-role',

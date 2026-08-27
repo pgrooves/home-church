@@ -450,13 +450,19 @@ CHURCH_TZ = "America/Chicago"
 
 
 def cmd_host(args):
-    """Grant or take away can_host, by email rather than by uuid.
+    """Turn Leader mode on or off, by email rather than by uuid.
 
-    can_host is deliberately not self service, see migration 0016: it lets
-    somebody open and close a group room, take down anything anybody wrote in
-    it, and edit the questions the whole group sees. The church sets it. This
-    is the one step that does, so the person running the account does not
-    have to find a uuid or write SQL to do it.
+    THE ORDINARY WAY IS THE APP. An admin flips this from Admin -> Manage
+    users on their phone, and migration 0036 is what made that possible. This
+    stays because the app cannot help when nobody is an admin yet, and because
+    a script that only needs an email address is a better answer at 11pm than
+    finding somebody's uuid.
+
+    can_host is the column Leader mode lives in, and it is deliberately not
+    self service, see migrations 0016 and 0036: it lets somebody open and
+    close a group room, take down anything anybody wrote in it, and edit the
+    questions the whole group sees. The church grants it. Admins host without
+    it, so there is nothing here to do for one.
 
     auth.users is not a public schema table, so it is not reachable through
     the ordinary /rest/v1 select this script otherwise uses. The email lookup
@@ -481,9 +487,9 @@ def cmd_host(args):
     users = [u for u in candidates if (u.get("email") or "").strip().lower() == email]
     if not users:
         die("No account signed in yet with %s.\n\n"
-            "can_host is set on the profile row a sign-in creates, so the "
-            "person has to open the app and sign in once, with this exact "
-            "email, before you can grant it." % email)
+            "Leader mode is a column on the profile row a sign-in creates, "
+            "so the person has to open the app and sign in once, with this "
+            "exact email, before you can grant it." % email)
     if len(users) > 1:
         die("More than one account matches %s exactly. Not touching anything." % email)
 
@@ -509,7 +515,8 @@ def cmd_host(args):
     if status not in (200, 204) or not updated:
         die("Update failed (%s):\n%s" % (status, json.dumps(updated, indent=2)))
 
-    verb = "can now host group rooms" if turn_on else "can no longer host group rooms"
+    verb = ("is in Leader mode now, and can host group rooms" if turn_on
+            else "is out of Leader mode, and can no longer host group rooms")
     print("%s (%s) %s.%s" % (
         name, email, verb,
         "" if was == turn_on else "  (was %s)" % ("on" if was else "off"),
@@ -572,7 +579,7 @@ def main():
     p_update.add_argument("id")
     p_update.add_argument("patch", help="path to a .json file, a JSON string, or -")
 
-    p_host = sub.add_parser("host", help="let somebody host a group room, or take that away")
+    p_host = sub.add_parser("host", help="turn Leader mode on or off for somebody")
     p_host.add_argument("email")
     p_host.add_argument("state", choices=["on", "off"])
 

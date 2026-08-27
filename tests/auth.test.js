@@ -104,6 +104,39 @@ function stubSignIn({ responses }, remoteProfileRow) {
        t.profile.canHost, false);
   }
 
+  /* ---- a row with no can_host on it at all, which is a project that has not
+     run 0016 yet, or a select that came back thin. Leader mode has to read as
+     off rather than as whatever this phone last held: the alternative is a
+     phone that keeps drawing the leader tools after the church took them
+     away, which is precisely what an admin turning the switch off means to
+     do. Same rule as role, tested directly below. */
+  {
+    const t = freshSandbox();
+    t.profile.canHost = true;
+    t.profile.role = 'admin';
+    stubSignIn(t, { id: 'u1', first_name: 'Trey' });
+    await t.auth.verifyCode('trey@example.com', '123456');
+    ok('a row with no can_host column leaves nobody a leader',
+       t.profile.canHost, false);
+    ok('and nobody an admin either', t.profile.role, 'member');
+  }
+
+  /* ---- signing out. Leader mode and the admin role describe a relationship
+     to the church rather than something about this handset, so neither may
+     survive into whoever picks the phone up next. */
+  {
+    const t = freshSandbox();
+    stubSignIn(t, { id: 'u1', first_name: 'Trey', can_host: true, role: 'admin' });
+    await t.auth.verifyCode('trey@example.com', '123456');
+    ok('signed in as a leader', t.profile.canHost, true);
+
+    t.responses['/auth/v1/logout'] = () => ({ status: 204, body: null });
+    await t.auth.signOut();
+    ok('signing out turns Leader mode off on this phone', t.profile.canHost, false);
+    ok('and takes the admin role with it', t.profile.role, 'member');
+    ok('but leaves what the phone itself knows alone', t.profile.firstName, 'Trey');
+  }
+
   // ---- the security property the comments promise: never pushed back up
   //
   // can_host must never ride along in an ordinary profile save, or a phone

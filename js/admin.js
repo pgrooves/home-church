@@ -399,6 +399,22 @@
       .then(function () { invalidate('users'); });
   }
 
+  /* Leader mode, which until migration 0036 was a switch anybody could flip
+     in Your account. It is granted here now, because what it turns on is no
+     longer only a private roster: a leader opens a group room, rewrites the
+     questions the whole group sees, and can take down anything anybody wrote
+     in it.
+
+     No self guard, unlike setRole above. An admin can host a room without the
+     flag at all, so setting it on their own row would change nothing they can
+     see, which is why the screen does not offer it rather than why the call
+     refuses it. Migration 0036 section 6 says the same thing from the
+     database's side. */
+  function setLeader(id, on) {
+    return HC.auth.rpc('hc_admin_set_leader', { p_user: id, p_on: !!on })
+      .then(function () { invalidate('users'); });
+  }
+
   function removeUser(id) {
     if (isSelf(id)) {
       return Promise.reject(new Error(
@@ -553,6 +569,7 @@
     users: function () { return list('users'); },
     loadUsers: loadUsers,
     setRole: setRole,
+    setLeader: setLeader,
     removeUser: removeUser,
 
     pages: function () { return list('pages'); },

@@ -18,9 +18,18 @@
   var NOTIFY_GUIDE = 'Monday morning, once a week';
   var NOTIFY_SUNDAY = 'Saturday evening, service times and address';
   var NOTIFY_NEWS = 'When the church posts something on purpose';
-  var LEADER_COPY = 'If you lead a group, turn this on. You get presentation mode ' +
-    'inside every guide, a roster, and somewhere to keep prayer requests.';
-  var LEADER_SUB = 'Adds leader tools, changes nothing else';
+  /* Two of them, because the question a leader has on this screen and the
+     question everybody else has are different questions. One person wants to
+     know where their tools are; the other wants to know why the switch that
+     used to be here is gone and how to get it back. Both go through the same
+     editable slot, profile.leader-copy, so a church that overrides it is
+     overriding the sentence either person reads. */
+  var LEADER_ON = 'Leader mode is on for your account. You get presentation mode ' +
+    'inside every guide, a roster, somewhere to keep prayer requests, and you can ' +
+    'open a group room on Sunday’s guide.';
+  var LEADER_OFF = 'Leader mode is for the people who run a group. An admin turns it ' +
+    'on for you, because it lets you host a room and edit the questions everybody in ' +
+    'it answers. If you lead a group and it is off, ask the church.';
 
   // Standard now means 110%, the app's default reading size, not 100%.
   var TEXT_SIZES = [
@@ -314,9 +323,27 @@
       on: isDark
     }) + '</div>';
 
-    // Leader mode
+    /* Leader mode, and it is no longer a switch.
+
+       IT WAS ONE UNTIL MIGRATION 0036, and the reason it stopped is worth
+       keeping here where somebody will come looking for it. What Leader mode
+       turned on when it shipped was a presentation button and a roster that
+       never left the phone, and a preference is the right shape for that.
+       What it turns on now includes opening a group room: rewriting the
+       questions the whole group answers, and taking down anything anybody
+       wrote in one. That is authority over other people's words, so the
+       church grants it, from Admin -> Manage users, and this screen only
+       reports it.
+
+       THE SECTION IS DRAWN EITHER WAY, unlike the Admin row below, and that
+       is deliberate rather than an oversight. Everybody who had the switch
+       will come back here looking for it, and a setting that has silently
+       vanished is a bug report. The paragraph is the same editable slot it
+       always was, so the church can reword the sentence people find. */
     html += c.sectionHeader('For leaders', 'Leader mode');
-    var leaderCopy = HC.data.copy('profile.leader-copy', LEADER_COPY);
+    var isLeader = HC.store.isLeader();
+    var leaderCopy = HC.data.copy('profile.leader-copy',
+      isLeader ? LEADER_ON : LEADER_OFF);
     html += HC.edit.wrap(
       leaderCopy
         ? '<p class="hc-body-serif hc-profile__leader-copy">' + c.esc(leaderCopy) + '</p>'
@@ -324,16 +351,8 @@
       { slot: 'profile.leader-copy', value: leaderCopy,
         label: 'what leader mode is for', rows: 5 }
     );
-    html += HC.edit.mark(switchRow({
-      title: 'Leader mode',
-      sub: HC.data.copy('profile.leader-sub', LEADER_SUB),
-      action: 'toggle-leader',
-      on: p.leaderMode
-    }), { slot: 'profile.leader-sub',
-      value: HC.data.copy('profile.leader-sub', LEADER_SUB),
-      label: 'the line under the Leader mode switch', rows: 2 });
 
-    if (p.leaderMode) {
+    if (isLeader) {
       html += '<div class="hc-mt-lg">' +
         c.button('Open leader tools', { action: 'go-leader', variant: 'secondary', icon: 'connect' }) +
       '</div>';
@@ -343,11 +362,12 @@
        js/auth.js mirrors onto this phone on every sign in and every session
        refresh, and clears on sign out.
 
-       NOT A SWITCH, unlike Leader mode directly above it, and the difference
-       is worth reading. Leader mode is a preference: anybody can turn it on,
-       because all it does is change what this phone shows its owner. This is
-       a permission the church granted, it cannot be turned on from here, and
-       the row is either there or it is not.
+       The same kind of thing as Leader mode directly above it, since 0036:
+       both are permissions the church granted, neither can be turned on from
+       here, and the difference between them is only how loud they are about
+       it. Leader mode says where it comes from, because people used to turn
+       it on themselves and will look. Admin says nothing to anybody who does
+       not have it, because nobody was ever offered it.
 
        Hiding it is presentation and nothing more. Every button behind it is
        checked by the database, in the policies from migration 0026 and the

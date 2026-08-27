@@ -62,10 +62,13 @@
   }
 
   function canHost() {
-    // The church sets can_host on the profile row. The app never writes it,
-    // and hc_room_open checks the column rather than trusting this, so the
-    // worst a tampered client can do is show a button that then refuses.
-    return !!profile().canHost;
+    /* Leaders and admins, which is the same question Leader mode asks
+       everywhere else in the app, so it is asked in the same place: an admin
+       sets can_host on the profile row from Manage users, the app never
+       writes it, and hc_room_open asks hc_is_leader() rather than trusting
+       any of this. The worst a tampered client can do is draw a button that
+       then comes back refused. See migration 0036. */
+    return HC.store.isLeader();
   }
 
   function spaced(code) {

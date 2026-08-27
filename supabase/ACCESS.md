@@ -120,19 +120,29 @@ back as `2026-12-24 23:00+00`, an hour different from the same clock time in
 August, which is exactly the mistake that puts a Christmas Eve service on the
 wrong day.
 
-### Let somebody host a group room
+### Turn Leader mode on for somebody
+
+**An admin does this from their phone**, which is the point of it: Admin →
+Manage users → the Leader mode switch on their row. Everything below is the
+way in when nobody is an admin yet, or when the app is not the thing that is
+working.
 
 ```bash
 python3 scripts/hc_supabase.py host someone@example.com on
 python3 scripts/hc_supabase.py host someone@example.com off
 ```
 
-This is the one thing in the app that is deliberately not self service, see
-migration 0016: hosting a room is real authority over other people's writing,
-so the church grants it rather than a switch in Profile. The command looks
-the person up by the email they signed in with and flips
-`public.profiles.can_host`. They need to have signed in at least once already,
-because that is what creates the profile row.
+Leader mode is deliberately not self service, see migrations 0016 and 0036: a
+leader hosts a room, edits the questions their whole group answers, and can
+take down anything anybody wrote in one, which is real authority over other
+people's writing. It was a switch in Profile once and is not any more. The
+command looks the person up by the email they signed in with and flips
+`public.profiles.can_host`, the column Leader mode is kept in. They need to
+have signed in at least once already, because that is what creates the profile
+row.
+
+Admins host without it. `hc_is_leader()` is `can_host or role = 'admin'`, so
+there is nothing to grant an admin.
 
 No script or MCP access? Ask them their `id` and use `mcp__Supabase__execute_sql`:
 

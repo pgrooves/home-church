@@ -106,12 +106,21 @@
     },
     textScale: 1.1,    // 110%, the app's default reading size
     theme: 'system',   // system | light | dark
-    leaderMode: false,
+    /* Leader mode, mirrored from profiles.can_host by js/auth.js on every sign
+       in and session refresh. It was a switch on this screen until migration
+       0036: anybody could turn it on, because for a while all it did was
+       change what this phone showed its owner. It now decides whether
+       somebody can open a group room, edit the questions the whole group sees
+       and take down what other people wrote there, so an admin grants it from
+       Manage users and this side only ever reads it. Same one way rule as
+       role below, cleared on sign out for the same reason. */
+    canHost: false,
     /* member or admin, mirrored from profiles.role by js/auth.js on every
        sign in and session refresh. Read only on this side: nothing in the app
        writes it, the database refuses the write anyway (migration 0025), and
-       it is cleared on sign out. It decides one thing, whether Your account
-       draws the Admin row. */
+       it is cleared on sign out. It decides two things: whether Your account
+       draws the Admin row, and, with the column above, whether this phone is
+       in Leader mode. See isLeader(). */
     role: 'member',
     // Face ID in front of the Journal. Off by default, and only offered on a
     // phone that can actually do it. See js/native.js and js/journal.js.
@@ -165,10 +174,42 @@
     storage.set('profile', state.profile);
   }
 
+  /* Leader mode was a switch until migration 0036, so a phone that has had
+     this app for a while has `leaderMode: true` sitting in its stored profile
+     with nothing left that reads it. Taken out once, rather than left to look
+     like state the app is still keeping: what decides Leader mode now is the
+     profiles row, and the phone should not be holding a second answer to the
+     same question. Anybody who was using it and leads a group gets it back
+     from an admin, in two taps, and it follows their account rather than
+     their handset from then on. */
+  if ('leaderMode' in state.profile) {
+    delete state.profile.leaderMode;
+    storage.set('profile', state.profile);
+  }
+
   /* -------------------------------------------------------------- profile */
 
   function getProfile() {
     return state.profile;
+  }
+
+  /* Is this phone in Leader mode? The one question the guide reader, the More
+     sheet, Your account and the Group tab all ask, so that they cannot answer
+     it differently from one another.
+
+     Leaders, and admins whether or not anybody marked them one. That second
+     half is migration 0036's: an admin can grant themselves the column from
+     Manage users in two taps, so making them do it first would be ceremony,
+     and the church's own account being unable to open a room on a Thursday
+     night is a worse failure than the one it would prevent.
+
+     Presentation only, like isAdmin() in js/admin.js. hc_room_open asks
+     hc_is_leader() before it opens anything, so the worst a tampered phone
+     gets is a roster nobody else can see and a button that comes back
+     refused. */
+  function isLeader() {
+    var p = state.profile;
+    return !!p.canHost || p.role === 'admin';
   }
 
   function updateProfile(patch) {
@@ -429,6 +470,7 @@
     getProfile: getProfile,
     updateProfile: updateProfile,
     firstName: firstName,
+    isLeader: isLeader,
 
     isChecked: isChecked,
     toggleChecked: toggleChecked,

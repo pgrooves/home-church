@@ -61,10 +61,12 @@
     html += '</div>';
 
     /* Leader mode is not in the list above, because it is not a module you
-       open, it is a switch that changes what the guides and the Group tab
-       show you. The row is here anyway for the people who have it on, since
-       otherwise the only way back to the roster is through Your account. */
-    if (HC.store.getProfile().leaderMode) {
+       open, it is something the church granted that changes what the guides
+       and the Group tab show you. The row is here anyway for the people who
+       have it, since otherwise the only way back to the roster is through
+       Your account. Asked of HC.store.isLeader() rather than of a local
+       switch, since migration 0036. */
+    if (HC.store.isLeader()) {
       html += c.sectionHeader('Leader mode', 'Your group');
       html += '<div class="hc-module-list">' +
         c.row({

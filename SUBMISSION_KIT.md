@@ -93,8 +93,14 @@ blanks in it and a reviewer with no way to check the Guideline 1.2 controls.
       Use addresses that read as what they are, `applereview.host@` and
       `applereview.member@` on the church domain.
 - [ ] Sign in once as each so the `profiles` row exists.
-- [ ] Mark the host: `update public.profiles set can_host = true where id =
+- [ ] Turn Leader mode on for the host account. From an admin's phone that is
+      Admin → Manage users → the Leader mode switch on their row, which is how
+      the church does it. By hand it is still one column:
+      `update public.profiles set can_host = true where id =
       (select id from auth.users where email = '…');`
+      This is what the reviewer's Leader mode walkthrough in section 7 needs,
+      not only the moderation queue: since migration 0036 the leader tools and
+      the presentation view belong to the account rather than to the phone.
 - [ ] Fill both addresses and both codes into the review notes in section 7.
 - [ ] Walk the seven steps in section 7 yourself, on a device, exactly as
       written. If any step does not do what it says, fix the step or fix the
@@ -177,10 +183,10 @@ the reflection questions. All of it stays on your phone.
 
 FOR PEOPLE WHO LEAD GROUPS
 
-Turn on Leader mode and the guide gains a presentation view: one question at
-a time, large type, readable across a living room without anybody hunching
-over a screen. Keep a roster, mark who came, and write down what people asked
-you to pray for.
+Ask your church to turn on Leader mode and the guide gains a presentation
+view: one question at a time, large type, readable across a living room
+without anybody hunching over a screen. Keep a roster, mark who came, and
+write down what people asked you to pray for.
 
 Your roster, your attendance marks, and the notes you keep beside a name stay
 on your phone. Not to us, not to anyone. A group leader holds things people
@@ -457,17 +463,20 @@ Thanks for reviewing. Home Church is the app for a single church in Metairie,
 Louisiana. A few notes to save you time.
 
 ALMOST NOTHING NEEDS AN ACCOUNT
-Every screen is available on first launch without signing in, including all
-of Leader mode, the whole guide catalogue, and every sermon. The one
-exception is writing in a group room, described below, because what a person
-writes there is shown to their group under their first name and that should
-not be anonymous.
+Every screen is available on first launch without signing in, including the
+whole guide catalogue and every sermon. Two things are not. Writing in a
+group room needs an account, described below, because what a person writes
+there is shown to their group under their first name and that should not be
+anonymous. And Leader mode belongs to a person rather than to a phone: it
+lets somebody host a room and edit the questions their whole group answers,
+so the church grants it to the people who lead a group instead of leaving it
+as a switch anybody can turn on. We have supplied an account below that has
+it, so everything in it is one sign-in away.
 
 Signing in has no password. We send a six digit code to an email address and
 the account is created on first use, so you can sign in with any address you
-control. We have also supplied a demo account below, because one part of the
-group room feature, the host's moderation queue, can only be seen from an
-account the church has marked as a group leader.
+control. The two demo accounts below are configured so the codes never change
+and no email is sent.
 
 DELETING AN ACCOUNT, GUIDELINE 5.1.1(v)
 Once signed in, account deletion is available in two places, both inside the
@@ -484,15 +493,22 @@ separate "Erase everything on this phone" button on that same screen clears
 local device data and is deliberately not the same control.
 
 HOW TO SEE LEADER MODE, WHICH IS THE HEART OF THE APP
-This is not obvious and we would rather point you straight at it:
+This is not obvious and we would rather point you straight at it. Use the
+Host account at the bottom of these notes: Leader mode is already on for it,
+because the church turns it on for the people who lead a group.
 
   1. Tap the circle in the top right corner of any screen. This opens
      Your account.
-  2. Scroll to "Leader mode" and turn the switch on.
-  3. Tap "Open leader tools" to see the roster and prayer capture.
+  2. Sign in with the Host email and code from the bottom of these notes.
+  3. Scroll to "Leader mode" and tap "Open leader tools" to see the roster
+     and prayer capture.
   4. Then tap the Guide tab, open any guide, and tap "Start presentation
      mode" at the top. That is the one question at a time view group
      leaders use while running a meeting.
+
+  (Signed in as the Member account, or signed out, that section says Leader
+  mode is off and who turns it on. That is the feature working, not an
+  error: it is what everybody who is not leading a group sees.)
 
 THE GROUP TAB, AND GUIDELINE 1.2
 One part of this app shows what a person writes to other people, and we want

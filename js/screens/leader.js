@@ -50,6 +50,23 @@
   }
 
   function render() {
+    /* Somebody who has arrived here without Leader mode: an old history
+       entry, a phone that had the switch this screen used to be reached by,
+       or an admin turning it off while the screen was open. Not an error
+       page, the same way the Admin screen answers a member who lands on it:
+       the app simply does not have this screen for them. Nothing behind it
+       would leak either, since the roster and the prayer requests on it never
+       leave this phone, but drawing somebody's group notes on a screen the
+       church has said is not theirs is the wrong answer whatever the
+       mechanism says. */
+    if (!HC.store.isLeader()) {
+      return c.el('<div class="hc-screen hc-leader">' +
+        c.sectionHeader('Leader mode', 'Your group', { flush: true, tag: 'h1' }) +
+        c.emptyState('Leader mode is off for this account. An admin at the church ' +
+          'turns it on for the people who lead a group.') +
+      '</div>');
+    }
+
     var roster = HC.store.getRoster();
     var prayers = HC.store.getPrayers();
     var guide = HC.data.latestGuide();

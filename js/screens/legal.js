@@ -85,7 +85,7 @@
       'Which questions you have checked off in a guide.',
       'Your group roster, who was there, and any private notes you keep about the people in it.',
       'Prayer requests you write down in Leader mode.',
-      'Dark mode, text size, and whether Leader mode is on.',
+      'Dark mode and text size.',
       'Your journal, for as long as you are not signed in.'
     ]);
 
@@ -288,7 +288,7 @@
       'Your journal, and your checkmarks on every guide you have opened.',
       'Your group roster, attendance, and private notes.',
       'Prayer requests saved in Leader mode.',
-      'Dark mode, text size, and Leader mode.',
+      'Dark mode and text size.',
       'A saved copy of this week’s sermons and guides, so the app works with no signal.'
     ]);
 

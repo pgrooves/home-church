@@ -205,12 +205,15 @@
     return done.then(function () {
       setSession(null);
       /* The rest of the profile survives signing out on purpose, because it
-         is also what an account-less phone keeps. role does not: it describes
-         a relationship to the church rather than something about this device,
-         and leaving it behind would draw the Admin row for whoever signs in
-         on this phone next. Every button behind that row would still be
-         refused by the database, and it should not be drawn at all. */
-      HC.store.updateProfile({ role: 'member' });
+         is also what an account-less phone keeps. These two do not: they
+         describe a relationship to the church rather than something about
+         this device, and leaving them behind would draw the Admin row, and
+         the leader tools, for whoever signs in on this phone next. Every
+         button behind either is still refused by the database; neither should
+         be drawn at all. canHost joined this line with migration 0036, when
+         Leader mode stopped being a switch and became something the church
+         grants. */
+      HC.store.updateProfile({ role: 'member', canHost: false });
     });
   }
 
@@ -371,16 +374,20 @@
       var patch = toLocal(remote || {});
       patch.email = user.email || '';
       patch.phone = user.phone || '';
-      // Deliberately not in FIELD_MAP, the same reason termsAcceptedAt is
-      // not: FIELD_MAP is also what toRemote() reads to decide what a local
-      // edit is allowed to push back up, and can_host must never be one of
-      // those. It only ever flows this one direction, server to phone, which
-      // is what makes "the church sets it, the app never writes it" true
-      // rather than just a comment. remote.can_host is always present and
-      // always a boolean (not null default false in migration 0016), so this
-      // also correctly turns Leader mode back off on the phone if the church
-      // ever revokes it.
-      if (remote && typeof remote.can_host === 'boolean') patch.canHost = remote.can_host;
+      /* Leader mode. Deliberately not in FIELD_MAP, the same reason
+         termsAcceptedAt is not: FIELD_MAP is also what toRemote() reads to
+         decide what a local edit is allowed to push back up, and can_host must
+         never be one of those. It only ever flows this one direction, server
+         to phone, which is what makes "an admin sets it, the app never writes
+         it" true rather than just a comment. The database says the same thing
+         from its side, in the trigger from migration 0036.
+
+         Written on every sync rather than only when the column says yes, so
+         Leader mode goes off on this phone the moment an admin takes it away,
+         and a project that has not run 0016 yet reads as a church of members
+         rather than leaving whatever this phone last held. Same defaulting as
+         role directly below, for the same reason. */
+      patch.canHost = !!(remote && remote.can_host === true);
       /* Same one-way rule as can_host above, and it matters more here. role is
          not in FIELD_MAP, so toRemote() cannot carry it back up: a local edit
          to it is unsendable by construction rather than merely unintended.

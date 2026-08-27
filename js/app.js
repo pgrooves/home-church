@@ -1211,6 +1211,33 @@
         }));
     },
 
+    /* Leader mode, granted from here since migration 0036. Not confirmed,
+       unlike the role button above it: this is a switch, the way back is the
+       same tap, and what it grants is authority inside one group's room
+       rather than over the whole app. Turning it off is not destructive
+       either, and does not touch the rooms somebody already hosted.
+
+       Moved on screen first and saved after, the same as the settings
+       switches: the repaint at the end of adminRun puts it back if the write
+       is refused, which is what a member who forged this screen would get. */
+    'admin-leader': function (el) {
+      var id = el.getAttribute('data-id');
+      var person = HC.admin.users().filter(function (u) { return u.id === id; })[0];
+      if (!person) return;
+
+      var on = !person.is_leader;
+      setSwitch(el, on);
+      HC.native.tap('Light');
+
+      adminRun('leader:' + id, HC.admin.setLeader(id, on).then(function () {
+        var name = [person.first_name, person.last_name].filter(Boolean).join(' ') ||
+          person.email || 'They';
+        HC.components.toast(on
+          ? name + ' can host a group room now.'
+          : 'Leader mode is off for ' + name + '.');
+      }));
+    },
+
     'admin-user-remove': function (el) {
       var id = el.getAttribute('data-id');
       var person = HC.admin.users().filter(function (u) { return u.id === id; })[0];
@@ -2007,13 +2034,14 @@
       setSwitch(el, !dark);
     },
 
-    'toggle-leader': function (el) {
-      var on = !HC.store.getProfile().leaderMode;
-      HC.store.updateProfile({ leaderMode: on });
-      setSwitch(el, on);
-      HC.router.go({ name: 'profile' }, { force: true });
-      c.toast(on ? 'Leader tools are on. Look for them in every guide.' : 'Leader tools are off.');
-    },
+    /* There is no 'toggle-leader' here any more, and there should not be one
+       again. Leader mode was a switch on this screen until migration 0036,
+       when it became the thing that decides whether somebody can open a group
+       room and edit the questions the whole group sees. An admin grants it
+       under Admin -> Manage users, js/auth.js mirrors it onto the phone on
+       every sign in, and hc_room_open checks the database rather than this
+       side. A switch here would be a phone granting itself something only the
+       church can grant. */
 
     'text-size': function (el) {
       var value = parseFloat(el.getAttribute('data-value'));

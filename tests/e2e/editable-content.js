@@ -107,8 +107,11 @@ const SLOTS = [
   'alpha.asked-cost', 'alpha.asked-talk', 'alpha.asked-believe',
   'alpha.asked-miss', 'alpha.signup-lead', 'alpha.signup-note',
   'alpha.signup-button',
+  /* profile.leader-sub went with the Leader mode switch in migration 0036.
+     The paragraph above it stayed: it is what somebody reads when they come
+     looking for the switch, so it is still the church's to reword. */
   'profile.notify-guide', 'profile.notify-sunday', 'profile.notify-news',
-  'profile.leader-copy', 'profile.leader-sub'
+  'profile.leader-copy'
 ];
 
 function serve() {
