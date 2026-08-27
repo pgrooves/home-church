@@ -39,10 +39,12 @@
 -- means is set out there and in section 1.
 --
 -- WHO CAN HOST NOW, which is the second half of the change: leaders and
--- admins. An admin can already grant themselves the column in two taps, so a
--- check that made them do it first would be ceremony rather than a boundary,
--- and an admin locked out of the room they are meant to be helping with is a
--- worse outcome than the one being defended against. Section 3.
+-- admins. An admin is a leader by role rather than by the column, and cannot
+-- set the column on themselves any more than anybody else can (section 2).
+-- Making them find a second admin to mark them before they could open a room
+-- would be ceremony rather than a boundary, and an admin shut out of the room
+-- they are meant to be helping with is a worse outcome than the one it would
+-- defend against. Section 3.
 --
 -- HOW TO RUN IT
 --   Supabase dashboard -> SQL Editor -> New query -> paste -> Run,
