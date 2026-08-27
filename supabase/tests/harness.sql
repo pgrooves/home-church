@@ -109,6 +109,23 @@ alter table public.announcements enable row level security;
 grant select on public.announcements to anon, authenticated;
 
 -- From 0010 and 0012, which 0027 alters rather than creates.
+/* ---------------------------------------------------------------------------
+   device_tokens, as 0010, 0012 and 0027 actually leave it.
+
+   THIS STUB USED TO BE SEVEN COLUMNS AND NOTHING ELSE, and that omission is
+   the reason a bug lived in this table for the whole life of the feature. The
+   real table has row level security on, has SELECT and DELETE revoked from
+   anon, and has only INSERT and UPDATE granted back. The stub had no RLS and
+   carried the harness's blanket `grant all to anon` from the default
+   privileges block above, so anon could do anything to it here and almost
+   nothing to it in production. A test written against the old stub would have
+   confirmed a registration path that has never once worked.
+
+   So the security half is copied from 0010 verbatim rather than approximated.
+   If this and the real project drift again, the tests go back to being
+   theatre, which is the warning at the top of this file and this is what it
+   looks like when it comes true.
+   --------------------------------------------------------------------------- */
 create table public.device_tokens (
   token       text primary key,
   platform    text not null default 'ios',
@@ -116,9 +133,35 @@ create table public.device_tokens (
   wants_new_guide       boolean not null default true,
   wants_sunday_reminder boolean not null default true,
   wants_group_day       boolean not null default false,
+  -- 0027. The fourth switch.
+  wants_announcements   boolean not null default true,
+  -- 0012. The sender's bookkeeping, which 0037 clears on a re-register.
+  last_push_at  timestamptz,
+  failure_count integer not null default 0,
+  last_error    text,
   created_at  timestamptz not null default now(),
-  updated_at  timestamptz not null default now()
+  updated_at  timestamptz not null default now(),
+
+  constraint device_tokens_platform_known check (platform in ('ios', 'android', 'web'))
 );
+
+alter table public.device_tokens enable row level security;
+
+create policy "a phone can register itself"
+  on public.device_tokens for insert
+  to anon, authenticated
+  with check (true);
+
+create policy "a phone can update its own row"
+  on public.device_tokens for update
+  to anon, authenticated
+  using (true)
+  with check (true);
+
+-- No SELECT policy and no DELETE policy, deliberately. 0010 says why.
+revoke all on public.device_tokens from anon, authenticated;
+grant insert, update on public.device_tokens to anon, authenticated;
+grant all on public.device_tokens to service_role;
 
 create table public.push_log (
   id         bigint generated always as identity primary key,
