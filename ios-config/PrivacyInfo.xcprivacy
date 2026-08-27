@@ -28,6 +28,15 @@
   domain list is empty, and it is worth keeping that way: every one of those
   additions would need its own signed manifest and its own line on the
   App Store privacy label.
+
+  KEEP THIS FILE AND SUBMISSION_KIT.md SECTION 5 SAYING THE SAME THING. Xcode
+  builds the privacy report from this manifest, and the App Store privacy
+  label is typed by hand into App Store Connect. They are two copies of one
+  answer, and a reviewer comparing them is comparing a report Apple generated
+  against a label we claimed. `npm run preflight` fails when the two lists
+  disagree, because this file went stale once already: it was written for an
+  app with no accounts and still said so long after sign in went live and
+  began syncing a home address to our server.
 -->
 <plist version="1.0">
 <dict>
@@ -45,7 +54,12 @@
   <array>
 
     <!-- The APNs device token, so the church can say a new guide is posted.
-         Not tied to a name or an email, because version 1 has no accounts. -->
+         Not linked, and that word is doing real work now that accounts exist:
+         `device_tokens` is keyed on the token itself and carries no account
+         column, so a token cannot be walked back to a person. Migration 0010
+         is what holds it there, and 0012 added only per-topic switches beside
+         it. If a future migration puts a user id on that table, this entry
+         becomes Linked and so does the App Store label. -->
     <dict>
       <key>NSPrivacyCollectedDataType</key>
       <string>NSPrivacyCollectedDataTypeDeviceID</string>
@@ -59,14 +73,28 @@
       </array>
     </dict>
 
-    <!-- Name, email, and phone, only when somebody chooses to fill in a
-         Connect form. Those forms open in the system browser and post to
-         Church Center, Group Vitals, Flodesk, or a Google form, so the app
-         never handles the values itself. Declared anyway. Apple offers an
-         optional disclosure exemption for data a person volunteers in a
-         customer service context, and these plausibly qualify, but
+    <!-- Everything from here down to Other User Content has two sources, and
+         only the first one existed when this file was written.
+
+         SIGNING IN, which is the substantial one. Your information syncs to
+         `public.profiles` through FIELD_MAP in js/auth.js the moment somebody
+         signs in: first and last name, email, birthday, gender, campus,
+         marital status, and a street address. Filling any of it in is
+         optional and the app works without, but the fields are there and the
+         sync is real, so all of it is declared.
+
+         THE CONNECT FORMS, which is the older and smaller one. Those open in
+         the system browser and post to Church Center, Group Vitals, Flodesk,
+         or a Google form, so the app never handles the values itself. Apple
+         offers an optional disclosure exemption for data a person volunteers
+         in a customer service context and these plausibly qualify, but
          over-declaring costs nothing and under-declaring is a metadata
-         rejection. -->
+         rejection.
+
+         `photo_url` is in FIELD_MAP and is deliberately NOT declared as
+         Photos or Videos. Nothing in the app writes it and no screen shows
+         it: it is a column with no path to it. Build one and this manifest
+         gains an entry. -->
     <dict>
       <key>NSPrivacyCollectedDataType</key>
       <string>NSPrivacyCollectedDataTypeName</string>
@@ -80,6 +108,61 @@
       </array>
     </dict>
 
+    <!-- The street, unit, city, state, and zip under Your information. Five
+         columns on `profiles`, optional, and the reason the attorney review
+         in LAUNCH_TODO.md stopped being theoretical: a church app collects
+         home addresses from a congregation that includes minors. -->
+    <dict>
+      <key>NSPrivacyCollectedDataType</key>
+      <string>NSPrivacyCollectedDataTypePhysicalAddress</string>
+      <key>NSPrivacyCollectedDataTypeLinked</key>
+      <true/>
+      <key>NSPrivacyCollectedDataTypeTracking</key>
+      <false/>
+      <key>NSPrivacyCollectedDataTypePurposes</key>
+      <array>
+        <string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+      </array>
+    </dict>
+
+    <!-- Birthday, gender, campus, and marital status. Apple's Sensitive Info
+         category is a fixed list (race, sexual orientation, pregnancy,
+         disability, religious or philosophical belief, union membership,
+         political opinion, genetic, biometric) and none of these four are on
+         it, so Other Data is where they belong. Religious belief is not
+         collected from anybody: this is a church's app, which says something
+         about the publisher and nothing about a field in it. -->
+    <dict>
+      <key>NSPrivacyCollectedDataType</key>
+      <string>NSPrivacyCollectedDataTypeOtherDataTypes</string>
+      <key>NSPrivacyCollectedDataTypeLinked</key>
+      <true/>
+      <key>NSPrivacyCollectedDataTypeTracking</key>
+      <false/>
+      <key>NSPrivacyCollectedDataTypePurposes</key>
+      <array>
+        <string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+      </array>
+    </dict>
+
+    <!-- The Supabase auth uuid. It is the primary key of the profile row and
+         the value every row level security policy compares against, so it is
+         unambiguously collected and unambiguously linked. -->
+    <dict>
+      <key>NSPrivacyCollectedDataType</key>
+      <string>NSPrivacyCollectedDataTypeUserID</string>
+      <key>NSPrivacyCollectedDataTypeLinked</key>
+      <true/>
+      <key>NSPrivacyCollectedDataTypeTracking</key>
+      <false/>
+      <key>NSPrivacyCollectedDataTypePurposes</key>
+      <array>
+        <string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+      </array>
+    </dict>
+
+    <!-- What sign in is built on, so it is the one field here that is not
+         optional. -->
     <dict>
       <key>NSPrivacyCollectedDataType</key>
       <string>NSPrivacyCollectedDataTypeEmailAddress</string>
@@ -93,6 +176,10 @@
       </array>
     </dict>
 
+    <!-- Declared because classify() in js/auth.js still accepts a phone
+         number and would create a phone account on it. No SMS provider is
+         connected, so that path fails today. The code path exists, so the
+         declaration does. -->
     <dict>
       <key>NSPrivacyCollectedDataType</key>
       <string>NSPrivacyCollectedDataTypePhoneNumber</string>
@@ -106,8 +193,26 @@
       </array>
     </dict>
 
-    <!-- The free text somebody types into a Connect form. Same handoff, same
-         reasoning as above. -->
+    <!-- This one grew, and the part that grew is the substantial one.
+
+         WHAT PEOPLE WRITE IN A GROUP ROOM. Answers to discussion questions
+         and prayer requests are stored on our server under the author's first
+         name and shown to the other people in that room. It is the only place
+         in the app where something a person typed is shown to another person,
+         which is also why the age rating answers User Generated Content with
+         Yes. Deleted with the account, and swept ninety days after the room
+         was opened.
+
+         A JOURNAL ENTRY, once signed in. Private to its author and enforced
+         by row level security rather than by a screen, but it is on our
+         server, so it is collected.
+
+         THE CONNECT FORMS, the original reason this entry existed.
+
+         Guide notes, question checkmarks, the leader's roster, attendance
+         marks, and locally saved prayer requests are NOT part of this answer.
+         They never leave the device, and Apple does not ask you to declare
+         what does not leave. -->
     <dict>
       <key>NSPrivacyCollectedDataType</key>
       <string>NSPrivacyCollectedDataTypeOtherUserContent</string>

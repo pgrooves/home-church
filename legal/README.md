@@ -19,10 +19,19 @@ in the **Privacy Policy URL** field in App Store Connect. Apple requires the
 policy both in the app and as a public link, and a 404 or a link to a generic
 homepage is a Guideline 5.1.1 rejection.
 
-`terms.html` is not required by Apple, since the app has no user generated
-content and uses Apple's standard EULA. Publish it anyway if there is
-somewhere sensible to put it.
+`terms.html` **is** required now, and the sentence that used to sit here said
+it was not. That was written when nothing one person typed was ever shown to
+another person. The Group tab does exactly that, so Guideline 1.2 applies, and
+1.2 wants terms that forbid objectionable content and that people agree to
+before they post. The app enforces the agreement itself, at the first attempt
+to write in a room and again on the server, but the terms it asks people to
+agree to have to be readable somewhere public.
+
+`support.html` goes in the **Support URL** field, which is also required.
+A homepage is thin and reviewers do check.
 
 ## Before publishing
 
-Both are drafts and neither has been read by a lawyer. See `LAUNCH_TODO.md`.
+All three are drafts and none has been read by a lawyer. See
+`LAUNCH_TODO.md`. Run `npm run preflight` after regenerating: it is what
+catches these three files going stale against the app screens again.

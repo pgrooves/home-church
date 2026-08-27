@@ -13,6 +13,26 @@ for why each decision was made, `LAUNCH_TODO.md` for what only you can do.
 Each block depends on the one above it. Working out of order mostly wastes
 time, except where noted, where it costs weeks.
 
+### Run this first, and again the morning you submit
+
+```bash
+npm run preflight
+```
+
+Everything on this page that a machine can check, checked in a second, with no
+browser, no network, and no Mac: the public legal pages against the app's own
+screens, the privacy manifest against section 5 below, the icons against
+ITMS-90717, the screenshots against the 6.9 inch spec, and the bundle list
+against what `index.html` actually loads. It runs inside `npm test` too, so it
+cannot be forgotten, only overruled.
+
+**It exists because one of these had already gone wrong.** The public privacy
+policy and terms at the URL Apple checks most reliably had been sitting on
+`main` for weeks describing an app with no group rooms, no journal leaving the
+phone, and no reporting or blocking, while the app on the phone had all three.
+The generator was there. Nothing failed when nobody ran it. Now something
+fails.
+
 ### Blocked on nothing, start immediately
 
 - [ ] **Apple Developer Program enrollment.** Organization enrollment needs a
@@ -52,6 +72,24 @@ time, except where noted, where it costs weeks.
 - [x] Dynamic Type respected.
 - [x] Partial cache overwrite fixed.
 - [x] Cache stamps automated.
+- [x] **The public legal pages regenerated against the app's own screens.**
+      `legal/privacy.html` and `legal/terms.html` were stale by two features.
+      The privacy policy did not mention group rooms, a journal that syncs, or
+      the ninety day sweep; the terms did not carry the objectionable content
+      rules, the reporting and blocking paragraph, or the note about the sheet
+      a host sends at the end of the night. The in-app screens said all of it.
+      Since the public policy is a Guideline 5.1.1 field and the terms are
+      what Guideline 1.2 wants people agreeing to, the two files Apple can
+      reach were the two that were wrong. Both regenerated and both now
+      checked by `npm run preflight`.
+- [x] **`ios-config/PrivacyInfo.xcprivacy` brought back in line with section
+      5.** It declared five data types and section 5 declares eight. Physical
+      Address, Other Data, and User ID were all missing, all three arriving
+      when sign in went live and Your information started syncing to
+      `profiles`. Xcode builds the privacy report from that manifest and the
+      App Store label is typed from section 5, so a reviewer comparing them
+      was comparing a report that under-declared against a label that did
+      not. Preflight now fails when the two lists disagree.
 
 ### Xcode, once enrolled
 
@@ -369,6 +407,12 @@ History, no Usage Data, no Diagnostics, no Purchases.
   Guide notes, question checkmarks, the leader's roster, attendance marks, and
   locally saved prayer requests are **not** part of this answer. They never
   leave the device and Apple does not ask you to declare what does not leave.
+
+**This table is also the privacy manifest.** The eight rows above are the same
+eight entries in `ios-config/PrivacyInfo.xcprivacy`, including which ones are
+Linked, and `npm run preflight` fails if they stop matching. Change one and
+change all three: the table, the manifest, and the `DECLARED` list in
+`scripts/preflight.js` that holds them together.
 
 **Sensitive Info: No.** Worth stating because it gets asked. Apple's Sensitive
 Info category means racial or ethnic data, sexual orientation, pregnancy,

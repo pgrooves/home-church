@@ -23,8 +23,20 @@
  *   npx http-server -p 8770 -s &
  *   node scripts/make_legal_pages.js
  *
- * Writes legal/privacy.html and legal/terms.html.
+ * Writes legal/privacy.html, legal/terms.html and legal/support.html.
  * Re-run whenever js/screens/legal.js changes.
+ *
+ * FORGETTING TO RE-RUN IT IS THE FAILURE THIS SCRIPT EXISTS TO PREVENT, AND
+ * IT HAPPENED. The three pages sat on `main` for weeks describing an app with
+ * no group rooms, no journal that leaves the phone, and no reporting or
+ * blocking, while the app on the phone had all of it. The public privacy
+ * policy is the one URL App Review checks most reliably, so that is a
+ * Guideline 5.1.1 problem sitting at the exact address we hand Apple.
+ *
+ * `npm run preflight` now fails when the pages drift, without needing a
+ * browser or a server: it reads the section headings out of
+ * js/screens/legal.js and checks each one is present in the page it belongs
+ * to. Run that before you submit. This script is still what fixes it.
  */
 
 'use strict';
@@ -103,6 +115,24 @@ function read(...parts) {
   return fs.readFileSync(path.join(ROOT, ...parts), 'utf8');
 }
 
+/* Same resolver the end to end tests use, for the same reason: playwright-core
+   ships no browser, so somebody has to find one. */
+function bundledChrome() {
+  if (process.env.HC_E2E_CHROME) return process.env.HC_E2E_CHROME;
+  const root = process.env.PLAYWRIGHT_BROWSERS_PATH || '/opt/pw-browsers';
+  try {
+    const dirs = fs.readdirSync(root).filter((d) => /^chromium-\d+$/.test(d)).sort();
+    for (let i = dirs.length - 1; i >= 0; i--) {
+      const exe = path.join(root, dirs[i], 'chrome-linux', 'chrome');
+      if (fs.existsSync(exe)) return exe;
+      const mac = path.join(root, dirs[i], 'chrome-mac', 'Chromium.app',
+        'Contents', 'MacOS', 'Chromium');
+      if (fs.existsSync(mac)) return mac;
+    }
+  } catch (err) { /* no browsers directory, fall through */ }
+  return null;
+}
+
 function embeddedFonts() {
   return FONTS.map(function (f) {
     const b64 = fs.readFileSync(path.join(ROOT, 'assets', 'fonts', f.file)).toString('base64');
@@ -139,14 +169,26 @@ ${body}
 }
 
 async function main() {
-  let chromium;
+  /* playwright-core is what this repo ships, and it deliberately carries no
+     browser of its own. The tests under tests/e2e/ resolve one the same way,
+     so a machine that can run `npm test` can run this. Full `playwright` is
+     accepted too, for whoever already has it. */
+  let chromium, launch = {};
   try {
-    ({ chromium } = require('playwright'));
+    ({ chromium } = require('playwright-core'));
+    const exe = bundledChrome();
+    if (!exe) {
+      console.error('playwright-core is installed but no chromium was found.\n' +
+        'Set HC_E2E_CHROME to a chromium binary, or PLAYWRIGHT_BROWSERS_PATH to\n' +
+        'the directory holding one, or `npm i -D playwright` for a bundled browser.');
+      process.exit(1);
+    }
+    launch = { executablePath: exe };
   } catch (err) {
     try {
-      ({ chromium } = require('/opt/node22/lib/node_modules/playwright'));
+      ({ chromium } = require('playwright'));
     } catch (err2) {
-      console.error('Playwright not found. npm i -D playwright');
+      console.error('Neither playwright-core nor playwright is installed. npm install');
       process.exit(1);
     }
   }
@@ -178,7 +220,7 @@ body { background: var(--hc-paper); }
 `
   ].join('\n');
 
-  const browser = await chromium.launch();
+  const browser = await chromium.launch(launch);
 
   for (const page of PAGES) {
     const p = await browser.newPage();
@@ -246,13 +288,22 @@ in the **Privacy Policy URL** field in App Store Connect. Apple requires the
 policy both in the app and as a public link, and a 404 or a link to a generic
 homepage is a Guideline 5.1.1 rejection.
 
-\`terms.html\` is not required by Apple, since the app has no user generated
-content and uses Apple's standard EULA. Publish it anyway if there is
-somewhere sensible to put it.
+\`terms.html\` **is** required now, and the sentence that used to sit here said
+it was not. That was written when nothing one person typed was ever shown to
+another person. The Group tab does exactly that, so Guideline 1.2 applies, and
+1.2 wants terms that forbid objectionable content and that people agree to
+before they post. The app enforces the agreement itself, at the first attempt
+to write in a room and again on the server, but the terms it asks people to
+agree to have to be readable somewhere public.
+
+\`support.html\` goes in the **Support URL** field, which is also required.
+A homepage is thin and reviewers do check.
 
 ## Before publishing
 
-Both are drafts and neither has been read by a lawyer. See \`LAUNCH_TODO.md\`.
+All three are drafts and none has been read by a lawyer. See
+\`LAUNCH_TODO.md\`. Run \`npm run preflight\` after regenerating: it is what
+catches these three files going stale against the app screens again.
 `);
 
   console.log('\nlegal/README.md written. privacy.html is the one that goes in App Store Connect.');
