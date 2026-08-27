@@ -140,8 +140,26 @@ neither is a defect:
       `https://pgrooves.github.io/home-church/legal/support.html`. Nothing left
       but to open it once and confirm it renders.
 
-- [ ] **Open both pages once and confirm they render.** They are on `main`
-      now, so GitHub Pages should be serving them:
+- [ ] **Open both pages once and confirm they render.**
+
+      **Read this before you do, because what is being served changed.** Both
+      pages were stale and are now regenerated. The copies sitting at those
+      two URLs described an app with no group rooms, no journal that leaves
+      the phone, and no reporting or blocking, months after all three shipped.
+      The privacy policy is the field App Review checks most reliably and the
+      terms are what Guideline 1.2 wants people agreeing to before they post,
+      so those were the worst two files in the repo to have drifted.
+
+      Nothing was wrong with the generator. Nobody re-ran it, because nothing
+      failed when they didn't. `npm run preflight` now fails when the pages
+      and the app screens disagree, and it runs inside `npm test`.
+
+      So confirm two things when you open them, not one: that they render, and
+      that the privacy policy has a "Group rooms, where writing is the point"
+      section in it. If it does not, GitHub Pages is still serving the old
+      build and has not caught up.
+
+      They are on `main`, so GitHub Pages should be serving them:
 
           https://pgrooves.github.io/home-church/legal/privacy.html
           https://pgrooves.github.io/home-church/legal/support.html
@@ -352,6 +370,16 @@ neither is a defect:
       draft manifest come from Apple Developer Forums rather than first hand
       from the docs. Xcode reports the codes it expects. Do not take my draft
       on faith.
+
+      **The collected data list in it was wrong and is now fixed**, which is
+      worth knowing separately from the reason codes above. It declared five
+      types when SUBMISSION_KIT section 5 declares eight: Physical Address,
+      Other Data, and User ID were missing, all three of them arriving the day
+      sign in went live and Your information began syncing to `profiles`.
+      Xcode generates the privacy report from that file and you type the App
+      Store label from section 5 by hand, so the two were a reviewer's
+      comparison apart. `npm run preflight` now fails when they disagree.
+      The reason codes are still yours to check in Xcode.
 
 - [ ] **Answer the age rating questionnaire.** Apple overhauled it in 2025.
       Tiers are now 4+, 9+, 13+, 16+, 18+, with new required sections on in-app

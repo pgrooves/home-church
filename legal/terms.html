@@ -119,8 +119,73 @@
 
   /* --- Chrome ----------------------------------------------------------- */
   --hc-header-h: 52px;
-  --hc-tabbar-h: 56px;
+  --hc-tabbar-h: 56px;    /* the row of tabs, not the bar around it */
   --hc-tap-min:  44px;    /* minimum touch target, never go below this */
+
+  /* The tab bar floats: a plinth inset from three edges rather than a band
+     welded to the bottom of the screen. Two measurements describe it, and
+     --hc-tabbar-space is what the rest of the app should reserve, because
+     the bar's footprint is now taller than the row inside it. */
+  --hc-tabbar-inset: 12px;  /* gap between the plinth and the screen edge */
+  --hc-tabbar-pad:    6px;  /* frame between the plinth and the tab row */
+  --hc-tabbar-space: calc(var(--hc-tabbar-h)
+                          + (var(--hc-tabbar-pad) * 2)
+                          + (var(--hc-tabbar-inset) * 2));
+
+  /* Plinth skin. Two backgrounds because the blurred version has to be far
+     more transparent to read as glass, and the opaque one has to be dense
+     enough to stay legible where backdrop-filter is unsupported.
+     In light mode this is frosted paper, not grey glass: the tint stays in
+     the warm family so the bar looks like the app rather than the OS. */
+  --hc-tabbar-skin:      linear-gradient(178deg, rgba(255,253,250,0.94), rgba(238,233,225,0.92));
+  --hc-tabbar-skin-lens: linear-gradient(178deg, rgba(255,253,250,0.72), rgba(238,233,225,0.62));
+  --hc-tabbar-edge:      rgba(122,110,95,0.28);
+  --hc-tabbar-shadow:    0 14px 34px rgba(26,25,24,0.18),
+                         0 2px 8px rgba(26,25,24,0.08),
+                         inset 0 1px 0 rgba(255,255,255,0.70),
+                         inset 0 -1px 0 rgba(26,25,24,0.05);
+  --hc-tabbar-sheen:     linear-gradient(112deg,
+                           rgba(255,255,255,0.55) 0%,
+                           rgba(255,255,255,0.18) 26%,
+                           rgba(255,255,255,0) 52%);
+
+  /* The active tab is a tile raised out of the plinth. On glass there is no
+     solid ground to rise from, so the rise is drawn with light: a lighter
+     face, a hairline, a bright lip on top and a dark one underneath. */
+  --hc-tabbar-tile:        linear-gradient(180deg, rgba(255,255,255,0.96), rgba(247,244,239,0.86));
+  --hc-tabbar-tile-edge:   rgba(122,110,95,0.18);
+  --hc-tabbar-tile-shadow: inset 0 1px 0 rgba(255,255,255,0.90),
+                           inset 0 -1px 0 rgba(26,25,24,0.06),
+                           0 3px 9px rgba(26,25,24,0.12);
+
+  /* The brand gold, sampled from assets/icons/mark.png rather than guessed.
+     It is a mark colour everywhere else in this app, see README; the back to
+     top disc is the one interface element that borrows it, deliberately,
+     because being the only gold thing on the screen is what makes it findable
+     without a label.
+
+     Two skins, same reasoning as the tab bar: --hc-gold-skin-lens is the real
+     glass and needs to be thin enough that what scrolls underneath shows
+     through, --hc-gold-skin stands in where the browser cannot blur and has to
+     be dense enough to read on its own. The arrow flips with the theme rather
+     than staying dark in both, because at this thinness the disc composites
+     towards whatever it is over, and a fixed arrow colour fails contrast on
+     one side or the other. The halo is what keeps it legible on the one
+     surface that can be any colour at all, a photograph. */
+  --hc-gold:        #D7BA85;
+  --hc-gold-ink:    #1A1918;
+  --hc-gold-halo:   rgba(255,252,246,0.55);
+  --hc-gold-skin:      linear-gradient(178deg, rgba(233,208,158,0.86), rgba(206,177,122,0.82));
+  --hc-gold-skin-lens: linear-gradient(178deg, rgba(233,208,158,0.34), rgba(206,177,122,0.28));
+  --hc-gold-edge:      rgba(122,96,48,0.34);
+  --hc-gold-shadow:    0 10px 24px rgba(26,25,24,0.16),
+                       0 2px 6px rgba(26,25,24,0.08),
+                       inset 0 1px 0 rgba(255,255,255,0.40),
+                       inset 0 -1px 0 rgba(26,25,24,0.07);
+  --hc-gold-sheen:     linear-gradient(112deg,
+                         rgba(255,255,255,0.30) 0%,
+                         rgba(255,255,255,0.09) 26%,
+                         rgba(255,255,255,0) 54%);
 
   color-scheme: light;
 }
@@ -150,6 +215,43 @@
 
   --hc-shadow-sheet: 0 -2px 24px rgba(0,0,0,0.40);
   --hc-shadow-modal: 0 8px 32px rgba(0,0,0,0.48);
+
+  /* The plinth in the dark. The shadow does the work of making it float,
+     the sheen is one soft diagonal pass, and the tile is a denser pane set
+     into the glass rather than a hole cut through it. */
+  --hc-tabbar-skin:      linear-gradient(178deg, rgba(58,54,51,0.88), rgba(26,25,24,0.86));
+  --hc-tabbar-skin-lens: linear-gradient(178deg, rgba(58,54,51,0.52), rgba(26,25,24,0.42));
+  --hc-tabbar-edge:      rgba(196,181,162,0.20);
+  --hc-tabbar-shadow:    0 16px 36px rgba(0,0,0,0.52),
+                         inset 0 1px 0 rgba(242,238,231,0.10),
+                         inset 0 -1px 0 rgba(0,0,0,0.30);
+  --hc-tabbar-sheen:     linear-gradient(112deg,
+                           rgba(247,244,239,0.15) 0%,
+                           rgba(247,244,239,0.05) 26%,
+                           rgba(247,244,239,0) 52%);
+
+  --hc-tabbar-tile:        linear-gradient(180deg, rgba(247,244,239,0.15), rgba(247,244,239,0.055));
+  --hc-tabbar-tile-edge:   rgba(207,193,174,0.30);
+  --hc-tabbar-tile-shadow: inset 0 1px 0 rgba(255,252,247,0.24),
+                           inset 0 -1px 0 rgba(0,0,0,0.16),
+                           0 4px 12px rgba(0,0,0,0.30);
+
+  /* The disc in the dark. The gold deepens so it glows against charcoal
+     instead of glaring, and the arrow inverts to paper for the same reason
+     the light theme's is ink. */
+  --hc-gold:        #CBAC74;
+  --hc-gold-ink:    #F4EFE6;
+  --hc-gold-halo:   rgba(12,11,10,0.55);
+  --hc-gold-skin:      linear-gradient(178deg, rgba(226,197,141,0.86), rgba(190,158,100,0.80));
+  --hc-gold-skin-lens: linear-gradient(178deg, rgba(226,197,141,0.42), rgba(190,158,100,0.34));
+  --hc-gold-edge:      rgba(247,231,196,0.30);
+  --hc-gold-shadow:    0 14px 28px rgba(0,0,0,0.46),
+                       inset 0 1px 0 rgba(255,246,224,0.24),
+                       inset 0 -1px 0 rgba(0,0,0,0.20);
+  --hc-gold-sheen:     linear-gradient(112deg,
+                         rgba(255,250,236,0.24) 0%,
+                         rgba(255,250,236,0.07) 26%,
+                         rgba(255,250,236,0) 54%);
 
   color-scheme: dark;
 }
@@ -270,14 +372,32 @@ button, .hc-tab, .hc-eyebrow, .hc-numeral, .hc-section__toggle, .hc-tabbar {
   /* No smooth default. A new view must land at the top instantly, and the one
      place that wants easing asks for it per call. */
   scroll-behavior: auto;
+
+  /* The scrollbar is chrome this design does not use. On a phone it is not
+     drawn at all, and on the desktop build it was a grey bar down the side of
+     a warm page. What replaces it is the index rail on the right edge, which
+     says more than a scrollbar did: see js/index-rail.js. Hidden rather than
+     styled, and only the drawing goes — wheel, trackpad, thumb and momentum
+     are all untouched. */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
+
+.hc-scroll::-webkit-scrollbar { width: 0; height: 0; display: none; }
 
 .hc-screen {
   padding-left: var(--hc-screen-pad);
   padding-right: var(--hc-screen-pad);
-  /* Clear the fixed header, plus the tab bar and home indicator at the end. */
-  padding-top: calc(var(--hc-header-h) + env(safe-area-inset-top) + var(--hc-space-sm));
-  padding-bottom: calc(var(--hc-tabbar-h) + env(safe-area-inset-bottom) + var(--hc-space-xxl));
+  /* Clear the fixed header, plus the tab bar and home indicator at the end.
+
+     --hc-pin-h is the pinned announcement strip under the header, and it is
+     0px on every screen of every week nobody has pinned anything: js/app.js
+     publishes the strip's measured height onto #app when it draws one and
+     zeroes it when it does not. Measured rather than a constant because the
+     strip is a title, and a long one wraps to two lines on a small phone. */
+  padding-top: calc(var(--hc-header-h) + var(--hc-pin-h, 0px)
+                    + env(safe-area-inset-top) + var(--hc-space-sm));
+  padding-bottom: calc(var(--hc-tabbar-space) + env(safe-area-inset-bottom) + var(--hc-space-xxl));
   max-width: 720px;
   margin: 0 auto;
   width: 100%;
@@ -401,6 +521,7 @@ button, .hc-tab, .hc-eyebrow, .hc-numeral, .hc-section__toggle, .hc-tabbar {
 .hc-stack-lg > * + * { margin-top: var(--hc-space-lg); }
 
 .hc-center { text-align: center; }
+.hc-mt-md { margin-top: var(--hc-space-md); }
 .hc-mt-lg { margin-top: var(--hc-space-lg); }
 .hc-mt-xl { margin-top: var(--hc-space-xl); }
 .hc-mb-md { margin-bottom: var(--hc-space-md); }
@@ -454,6 +575,10 @@ button, .hc-tab, .hc-eyebrow, .hc-numeral, .hc-section__toggle, .hc-tabbar {
 
 /* Once the screen scrolls, the bar earns its hairline and shows the title. */
 .hc-topbar[data-scrolled="true"] { border-bottom-color: var(--hc-rule); }
+
+/* With the date rail out, the rail is the bottom of the chrome and carries
+   the hairline. Two of them stacked read as a seam. */
+.hc-topbar[data-rail="true"] { border-bottom-color: transparent; }
 
 /* The logo and the screen title share one slot. At rest on a tab the logo
    shows, past the scroll threshold (or on any pushed view, which forces
@@ -570,20 +695,196 @@ button, .hc-tab, .hc-eyebrow, .hc-numeral, .hc-section__toggle, .hc-tabbar {
 .hc-avatar:active .hc-avatar__disc { background: var(--hc-paper-sunk); }
 
 /* --------------------------------------------------------------------------
-   Tab bar. Flat, hairline on top, no pills, no badges.
+   Date rail. A second strip of chrome, directly under the top bar and only on
+   the Listen archive: the month each message was preached, running in the
+   order the page draws them, with the one you are reading filled in.
+
+   Hidden it is not just moved but made invisible, which takes the chips out of
+   the tab order and out of the accessibility tree without needing the
+   attribute plumbing that would fight the slide.
+   -------------------------------------------------------------------------- */
+
+.hc-date-rail {
+  position: fixed;
+  z-index: 39;   /* under the top bar it slides out from */
+  /* Below the pinned strip when there is one, which is what --hc-pin-h is:
+     0px unless js/app.js has drawn one. See .hc-pinbar further down. */
+  top: calc(var(--hc-header-h) + var(--hc-pin-h, 0px) + env(safe-area-inset-top));
+  left: 0; right: 0;
+  height: 42px;
+  background: var(--hc-paper);
+  border-bottom: var(--hc-hairline) solid var(--hc-rule);
+  transform: translateY(-100%);
+  opacity: 0;
+  visibility: hidden;
+  transition: transform var(--hc-dur-base) var(--hc-ease),
+              opacity var(--hc-dur-fast) var(--hc-ease),
+              visibility 0s linear var(--hc-dur-base);
+}
+
+.hc-date-rail[data-show="true"] {
+  transform: translateY(0);
+  opacity: 1;
+  visibility: visible;
+  transition: transform var(--hc-dur-base) var(--hc-ease),
+              opacity var(--hc-dur-fast) var(--hc-ease),
+              visibility 0s;
+}
+
+/* The paper behind it is solid, so the blur is doing tone rather than
+   legibility: the list reads as passing under the rail instead of ending at
+   it. Where it is unsupported the opaque paper above stands in. */
+@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+  .hc-date-rail {
+    background: color-mix(in srgb, var(--hc-paper) 88%, transparent);
+    -webkit-backdrop-filter: blur(18px) saturate(150%);
+    backdrop-filter: blur(18px) saturate(150%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hc-date-rail,
+  .hc-date-rail[data-show="true"] { transform: none; }
+}
+
+/* Centered on the same column the screen uses, so on a tablet the first month
+   starts where the episode titles start. */
+.hc-date-rail__track {
+  display: flex;
+  align-items: center;
+  gap: var(--hc-space-xs);
+  height: 100%;
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 0 var(--hc-screen-pad);
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+}
+
+.hc-date-rail__track::-webkit-scrollbar { display: none; }
+
+/* Tablet gives the column more air, and the months move with it. */
+@media (min-width: 768px) {
+  .hc-date-rail__track { padding: 0 var(--hc-space-xl); }
+}
+
+.hc-date-rail__chip {
+  flex: 0 0 auto;
+  /* The chip is 30px of ink in a 42px strip. The rail is the target, not the
+     pill, which is why the padding is vertical as well as horizontal. */
+  padding: 6px var(--hc-space-md);
+  border-radius: var(--hc-radius-pill);
+  font-family: var(--hc-sans);
+  font-weight: 600;
+  font-size: var(--hc-caption);
+  line-height: var(--hc-caption-line);
+  letter-spacing: 0.01em;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  color: var(--hc-mid);
+  transition: background var(--hc-dur-fast) var(--hc-ease),
+              color var(--hc-dur-fast) var(--hc-ease);
+}
+
+.hc-date-rail__chip[aria-current="true"] {
+  background: var(--hc-accent-deep);
+  color: var(--hc-on-dark);
+  font-weight: 700;
+}
+
+.hc-date-rail__chip:focus-visible { outline-offset: 1px; }
+
+/* --------------------------------------------------------------------------
+   Tab bar. A glass plinth floating clear of the screen edges, with the
+   active tab raised out of it as a tile.
+
+   Two pseudo elements carry the whole treatment, so the markup stays five
+   buttons and nothing else:
+     ::before  the tile, one element that slides between tabs. JS sets
+               --hc-tab-index; the tile does the travelling.
+     ::after   the sheen, one soft diagonal pass across the top-left.
+   The tile sits under the buttons and the sheen sits over everything,
+   which is the order light actually arrives in.
    -------------------------------------------------------------------------- */
 
 .hc-tabbar {
   position: fixed;
-  bottom: 0; left: 0; right: 0;
+  left: var(--hc-tabbar-inset);
+  right: var(--hc-tabbar-inset);
+  bottom: calc(var(--hc-tabbar-inset) + env(safe-area-inset-bottom));
   z-index: 40;
   display: flex;
-  background: var(--hc-paper);
-  border-top: var(--hc-hairline) solid var(--hc-rule);
-  padding-bottom: env(safe-area-inset-bottom);
+  padding: var(--hc-tabbar-pad);
+  /* Concentric with the tile: 26 outside, 6 of frame, 20 inside. Corners
+     stay parallel, which is the difference between this looking made and
+     looking assembled. */
+  border-radius: 26px;
+  background: var(--hc-tabbar-skin);
+  border: var(--hc-hairline) solid var(--hc-tabbar-edge);
+  box-shadow: var(--hc-tabbar-shadow);
+  isolation: isolate;
+}
+
+/* Glass only where the browser can actually blur. Everywhere else the
+   opaque skin above stands in, and the bar simply reads as a solid plinth. */
+@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+  .hc-tabbar {
+    background: var(--hc-tabbar-skin-lens);
+    -webkit-backdrop-filter: blur(22px) saturate(150%);
+    backdrop-filter: blur(22px) saturate(150%);
+  }
+}
+
+/* The raised tile. Width is a fifth of the frame, driven by --hc-tab-count
+   so adding a sixth tab needs no CSS. It hides on pushed views, where no
+   tab is current, and keeps its place for the return. */
+.hc-tabbar::before {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  top: var(--hc-tabbar-pad);
+  bottom: var(--hc-tabbar-pad);
+  left: var(--hc-tabbar-pad);
+  width: calc((100% - (var(--hc-tabbar-pad) * 2)) / var(--hc-tab-count, 5));
+  border-radius: 20px;
+  background: var(--hc-tabbar-tile);
+  border: var(--hc-hairline) solid var(--hc-tabbar-tile-edge);
+  box-shadow: var(--hc-tabbar-tile-shadow);
+  opacity: var(--hc-tab-tile, 1);
+  transform: translateX(calc(var(--hc-tab-index, 0) * 100%));
+  /* --hc-tab-tween is the swipe settling: the tile is given the same duration
+     as the screens so it arrives with them rather than on its own schedule.
+     Unset the rest of the time, which is the ordinary tap. */
+  transition: transform var(--hc-tab-tween, var(--hc-dur-base)) var(--hc-ease),
+              opacity var(--hc-dur-fast) var(--hc-ease);
+}
+
+/* Mid drag the tile is not travelling toward anything, it is being placed
+   every frame at a fraction of a tab, so it must not also be easing. */
+.hc-tabbar[data-swiping="true"]::before {
+  transition: opacity var(--hc-dur-fast) var(--hc-ease);
+}
+
+.hc-tabbar::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  border-radius: inherit;
+  background: var(--hc-tabbar-sheen);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hc-tabbar::before { transition: opacity var(--hc-dur-fast) var(--hc-ease); }
 }
 
 .hc-tab {
+  position: relative;
+  z-index: 1;
   flex: 1 1 0;
   min-width: 0;
   display: flex;
@@ -616,8 +917,209 @@ button, .hc-tab, .hc-eyebrow, .hc-numeral, .hc-section__toggle, .hc-tabbar {
   letter-spacing: 0.01em;
 }
 
+/* The tile lightens the ground under the active tab, so its label lifts a
+   step past ink to hold the same separation it had on paper. */
 .hc-tab[aria-current="page"] { color: var(--hc-ink); }
 .hc-tab[aria-current="page"] .hc-tab__icon { color: var(--hc-accent-deep); }
+
+/* The focus ring has to stay inside the plinth, or it draws a rectangle
+   across the rounded corner. */
+.hc-tab:focus-visible {
+  outline-offset: -4px;
+  border-radius: 20px;
+}
+
+/* --------------------------------------------------------------------------
+   The overflow sheet. What ••• lifts.
+
+   It is the plinth again, and that is the whole design: the same skin, the
+   same hairline, the same sheen, the same 26px corner, the same 12px inset on
+   both edges, so it is exactly as wide as the bar and its edges line up with
+   the bar's rather than nearly lining up. One 8px gap between them is what
+   keeps it reading as a second object instead of the bar having grown a lump.
+
+   The modules sit on the glass the way the five tabs sit on it, and the
+   raised tile is spent on the one you are in. The bar already has a rule
+   about what a tile means and it means you are here; the sheet keeps it
+   rather than inventing a second one.
+   -------------------------------------------------------------------------- */
+
+.hc-oversheet {
+  position: fixed;
+  left: var(--hc-tabbar-inset);
+  right: var(--hc-tabbar-inset);
+  /* The bar's own height, its frame, its two hairlines and the inset it
+     floats on, and then the gap. Written out rather than measured, so moving
+     any one of those tokens moves this with it. */
+  bottom: calc(var(--hc-tabbar-h)
+               + (var(--hc-tabbar-pad) * 2)
+               + (var(--hc-hairline) * 2)
+               + var(--hc-tabbar-inset)
+               + env(safe-area-inset-bottom)
+               + 8px);
+  z-index: 46;                  /* over the discs at 45, under the toast at 60 */
+  padding: 8px var(--hc-tabbar-pad) var(--hc-tabbar-pad);
+  border-radius: 26px;
+  background: var(--hc-tabbar-skin);
+  border: var(--hc-hairline) solid var(--hc-tabbar-edge);
+  box-shadow: var(--hc-tabbar-shadow);
+  isolation: isolate;
+
+  /* Parked below the screen edge, far enough down that the shadow clears too. */
+  transform: translateY(calc(100% + 120px));
+  opacity: 1;
+  transition: transform var(--hc-dur-sheet) var(--hc-ease-enter);
+}
+
+@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+  .hc-oversheet {
+    background: var(--hc-tabbar-skin-lens);
+    -webkit-backdrop-filter: blur(22px) saturate(150%);
+    backdrop-filter: blur(22px) saturate(150%);
+  }
+}
+
+.hc-oversheet::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  border-radius: inherit;
+  background: var(--hc-tabbar-sheen);
+}
+
+.hc-oversheet[data-state="open"],
+.hc-oversheet[data-state="peek"] { transform: translateY(0); }
+
+/* The peek leaves on a fade rather than the slide it arrived on. Sliding back
+   down is what a dismissal looks like, and nobody opened this one. */
+.hc-oversheet[data-state="fade"] {
+  transform: translateY(0);
+  opacity: 0;
+  transition: opacity 320ms var(--hc-ease);
+}
+
+/* Mid drag it is under a finger, not travelling anywhere, so it must not also
+   be easing. And putting it back to parked once it is invisible must not be
+   animated at all, or it travels down through the screen on the way. */
+.hc-oversheet[data-dragging="true"],
+.hc-oversheet[data-reset="true"] { transition: none; }
+
+/* The handle. A grab rail with a real target around it: the drag has to start
+   somewhere a thumb can hit without aiming, and the modules below are buttons,
+   so it cannot be the whole panel. */
+.hc-oversheet__grab {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 22px;
+  margin-bottom: 2px;
+  padding: 0;
+  cursor: pointer;
+  touch-action: none;
+}
+
+.hc-oversheet__handle {
+  width: 38px;
+  height: 4px;
+  border-radius: var(--hc-radius-pill);
+  background: var(--hc-rule);
+}
+
+.hc-oversheet__grab:focus-visible { outline-offset: -2px; border-radius: 12px; }
+
+/* Slots only for what is there. Two modules is one row of two, filling the
+   width the way the bar fills the screen, and nothing is reserved for a third.
+   --hc-mod-count is set in js/app.js and capped at four, so a fifth module
+   starts a second row rather than a fifth narrower column. */
+.hc-oversheet__grid {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: repeat(var(--hc-mod-count, 2), minmax(0, 1fr));
+  gap: 4px;
+}
+
+.hc-oversheet__mod {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-height: 72px;
+  padding: 10px 4px;
+  border-radius: 20px;
+  border: var(--hc-hairline) solid transparent;
+  color: var(--hc-ink);
+  transition: transform var(--hc-dur-fast) var(--hc-ease);
+}
+
+.hc-oversheet__mod:active { transform: scale(0.96); }
+
+.hc-oversheet__icon {
+  width: 24px;
+  height: 24px;
+  color: var(--hc-accent-deep);
+  stroke: currentColor;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  fill: none;
+}
+
+.hc-oversheet__label {
+  font-family: var(--hc-sans);
+  font-weight: 500;
+  font-size: var(--hc-tab);
+  line-height: var(--hc-tab-line);
+  letter-spacing: 0.01em;
+}
+
+/* The one you are in, raised out of the glass exactly as the active tab is. */
+.hc-oversheet__mod[aria-current="page"] {
+  background: var(--hc-tabbar-tile);
+  border-color: var(--hc-tabbar-tile-edge);
+  box-shadow: var(--hc-tabbar-tile-shadow);
+}
+
+.hc-oversheet__mod:focus-visible { outline-offset: -3px; }
+
+/* The paper behind it. It stops at the tab bar rather than covering it, so
+   the bar stays lit and usable with the sheet up. */
+.hc-oversheet__scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  width: 100%;
+  padding: 0;
+  background: var(--hc-overlay);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--hc-dur-base) var(--hc-ease);
+}
+
+#app[data-oversheet="open"] .hc-oversheet__scrim {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* Both discs sit exactly where the sheet lands. They go down with it up, and
+   come back when it goes, rather than floating over a scrim or poking out
+   beside a panel. */
+#app[data-oversheet="open"] .hc-disc,
+#app[data-oversheet="peek"] .hc-disc,
+#app[data-oversheet="fade"] .hc-disc {
+  opacity: 0;
+  transform: translateY(10px) scale(0.86);
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hc-oversheet,
+  .hc-oversheet[data-state="fade"],
+  .hc-oversheet__scrim { transition: none; }
+}
 
 /* --------------------------------------------------------------------------
    Section header. The signature pattern: eyebrow, serif title, short rule.
@@ -629,8 +1131,7 @@ button, .hc-tab, .hc-eyebrow, .hc-numeral, .hc-section__toggle, .hc-tabbar {
 .hc-section-header__eyebrow { display: block; }
 
 .hc-section-header__title {
-  margin-top: 8px;
-  /* The one deliberate departure from the reading serif: a heavy geometric
+  margin-top: 8px;  /* The one deliberate departure from the reading serif: a heavy geometric
      sans, so a section break reads instantly while scrolling fast. */
   font-family: var(--hc-sans-display);
   font-weight: 800;
@@ -639,6 +1140,10 @@ button, .hc-tab, .hc-eyebrow, .hc-numeral, .hc-section__toggle, .hc-tabbar {
   letter-spacing: -0.01em;
   color: var(--hc-ink);
 }
+
+/* An eyebrow-less header, which is how Home names its blocks. Nothing above
+   the title means nothing for it to sit under. */
+.hc-section-header__title:first-child { margin-top: 0; }
 
 .hc-section-header__rule {
   margin-top: 12px;
@@ -954,6 +1459,22 @@ a.hc-card:active { background: var(--hc-paper-sunk); }
 }
 
 .hc-btn--tertiary:active { opacity: 0.7; }
+
+/* A button that sits in a row of other buttons rather than alone under a
+   card. Narrower and shorter, but never below --hc-tap-min, which is the one
+   number in this file that is not a matter of taste. */
+.hc-btn--small {
+  width: auto;
+  min-height: var(--hc-tap-min);
+  padding: var(--hc-space-sm) var(--hc-space-md);
+  font-size: 14px;
+}
+
+/* Tertiary and small together is the Group tab's Report and Block, sitting
+   under somebody's answer. Tertiary alone has no padding at all, which is
+   right for a lone link and wrong here: two of them side by side ran together
+   and read as one control called "Report Block". */
+.hc-btn--tertiary.hc-btn--small { padding: var(--hc-space-xs) var(--hc-space-sm); }
 
 .hc-btn[disabled] {
   opacity: 0.5;
@@ -1361,7 +1882,61 @@ a.hc-card:active { background: var(--hc-paper-sunk); }
   padding: var(--hc-space-base) var(--hc-space-base) var(--hc-space-base) var(--hc-card-pad);
 }
 
-.hc-banner__body { flex: 1 1 auto; min-width: 0; }
+/* The card is a door. Everything but the x is inside one button, which is
+   what makes the whole surface open the announcement's own page, and the x is
+   its sibling rather than its child because a button inside a button is
+   invalid markup and an ambiguous tap. See announcementCard() in
+   js/screens/home.js. */
+.hc-banner__open {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: none;
+  color: inherit;
+}
+
+/* No `> * + *` stack here on purpose: the title and the picture frame already
+   carry their own margins from before the card became a button, and a second
+   rule on top of them would double every gap. */
+.hc-banner__label,
+.hc-banner__snippet { display: block; }
+
+/* Three lines of the announcement and then it stops, the same rule an
+   Instagram caption is held to on Connect and for the same reason: the front
+   door shows enough to decide with, and the whole of it is one tap away on a
+   screen where it reads properly. */
+.hc-banner__snippet {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  color: var(--hc-mid);
+}
+
+/* What else is behind the card, and the chevron that says there is a behind.
+   Same shape as the cue on the guide card above it, so two tappable cards on
+   one screen say "there is more of this" the same way. */
+.hc-banner__cue {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: var(--hc-space-md);
+  color: var(--hc-accent-deep);
+}
+
+.hc-banner__chev {
+  width: 14px; height: 14px;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  fill: none;
+}
+
+.hc-banner__open:active { opacity: 0.85; }
 
 .hc-banner__dismiss {
   flex: 0 0 auto;
@@ -1381,6 +1956,116 @@ a.hc-card:active { background: var(--hc-paper-sunk); }
   stroke-linecap: round;
 }
 
+
+/* --------------------------------------------------------------------------
+   The discs. Two of them, one material, one set of rules.
+
+   --top   sits on the right and turns up once the screen has been scrolled
+           past a screenful. One tap and you are back at the start of it.
+   --back  sits on the left, and is there for the whole time you are on a
+           screen that is not a tab. The tab bar cannot take you back out of a
+           pushed view and the header's arrow is a stretch away from a thumb,
+           so this is the way back that is always under the hand.
+
+   They are the same material as the plinth below them, drawn the same way: a
+   thin skin over a blur, a hairline edge, one diagonal sheen. Concentric with
+   the bar too, sharing its 12px inset on both edges so the three line up on
+   the same edges rather than nearly lining up.
+
+   ON THE HEIGHT. --hc-tabbar-space is the bar's whole footprint plus one
+   inset, so these land exactly one inset above the plinth and the gap above
+   the bar matches the gap beside it.
+
+   ON THE SIZE. 44px is --hc-tap-min, not a number picked for looks. A disc
+   cannot get smaller without the target getting smaller with it; if one ever
+   needs to look smaller, keep this box and shrink what is painted inside it.
+   -------------------------------------------------------------------------- */
+
+.hc-disc {
+  position: fixed;
+  bottom: calc(var(--hc-tabbar-space) + env(safe-area-inset-bottom));
+  z-index: 45;                    /* over the content, under the toast */
+  width: var(--hc-tap-min);
+  height: var(--hc-tap-min);
+  padding: 0;
+  border-radius: var(--hc-radius-pill);
+  border: var(--hc-hairline) solid var(--hc-gold-edge);
+  background: var(--hc-gold-skin);
+  box-shadow: var(--hc-gold-shadow);
+  color: var(--hc-gold-ink);
+  display: grid;
+  place-items: center;
+  isolation: isolate;
+
+  /* Down by default. Everything that puts one up is in the state below, so
+     there is one place to look when it is in the wrong one. */
+  opacity: 0;
+  transform: translateY(10px) scale(0.86);
+  pointer-events: none;
+  transition: opacity var(--hc-dur-fast) var(--hc-ease),
+              transform var(--hc-dur-fast) var(--hc-ease-enter);
+}
+
+.hc-disc--top  { right: var(--hc-tabbar-inset); }
+.hc-disc--back { left: var(--hc-tabbar-inset); }
+
+/* Glass only where the browser can actually blur, exactly as the tab bar
+   does it. Everywhere else the denser skin above stands in. */
+@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+  .hc-disc {
+    background: var(--hc-gold-skin-lens);
+    backdrop-filter: blur(20px) saturate(1.7);
+    -webkit-backdrop-filter: blur(20px) saturate(1.7);
+  }
+}
+
+.hc-disc::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--hc-gold-sheen);
+  pointer-events: none;
+}
+
+.hc-disc__icon {
+  position: relative;
+  z-index: 1;
+  width: 19px;
+  height: 19px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  /* A disc is thin enough to sit over a photograph, where neither an ink
+     arrow nor a paper one is safe on its own. The halo is what carries it. */
+  filter: drop-shadow(0 0 2px var(--hc-gold-halo))
+          drop-shadow(0 1px 1px var(--hc-gold-halo));
+}
+
+.hc-disc[data-show="true"] {
+  opacity: 1;
+  transform: none;
+  pointer-events: auto;
+}
+
+.hc-disc:active { transform: scale(0.93); }
+
+.hc-disc:focus-visible {
+  outline: 2px solid var(--hc-ink);
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hc-disc {
+    transform: none;
+    transition: opacity 1ms linear;
+  }
+  .hc-disc[data-show="true"] { transform: none; }
+  .hc-disc:active { transform: none; }
+}
+
 /* --------------------------------------------------------------------------
    Toast. Quiet confirmation, bottom of the screen, fades out.
    -------------------------------------------------------------------------- */
@@ -1388,7 +2073,7 @@ a.hc-card:active { background: var(--hc-paper-sunk); }
 .hc-toast {
   position: fixed;
   left: 50%;
-  bottom: calc(var(--hc-tabbar-h) + env(safe-area-inset-bottom) + var(--hc-space-base));
+  bottom: calc(var(--hc-tabbar-space) + env(safe-area-inset-bottom) + var(--hc-space-base));
   transform: translate(-50%, 8px);
   z-index: 60;
   max-width: calc(100% - 40px);
@@ -1427,6 +2112,1223 @@ a.hc-card:active { background: var(--hc-paper-sunk); }
 @keyframes hc-fade-in {
   from { opacity: 0; transform: translateY(6px); }
   to   { opacity: 1; transform: none; }
+}
+
+/* --------------------------------------------------------------------------
+   Swiping between tabs. The layer the incoming screen rides in on, see
+   js/swipe.js.
+
+   It is fixed and full screen rather than sitting inside .hc-scroll, because
+   the screen coming in has to be a whole screen: its own top padding under the
+   header, its own bottom padding above the tab bar, clipped at the edges and
+   scrolled nowhere. z-index puts it over the content it is arriving beside and
+   under every piece of chrome, so the header, the date rail, the disc, and the
+   tab bar hold still while the pages move underneath them.
+
+   The screen on its way out is not in here. It stays in the mount and is moved
+   by a transform, which .hc-scroll clips, so its scroll position is untouched
+   and a cancelled gesture costs nothing at all.
+   -------------------------------------------------------------------------- */
+
+.hc-swipe {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  overflow: hidden;
+  /* Passing through: the finger that is dragging this belongs to the screen
+     underneath, and nothing in here is tappable until it has landed. */
+  pointer-events: none;
+}
+
+.hc-swipe__pane {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  /* Opaque, or the outgoing screen reads through the incoming one. */
+  background: var(--hc-paper);
+  /* The leading edge of a sheet of paper sliding over another one. Soft and
+     narrow, so it is the seam that shows rather than a drop shadow. */
+  box-shadow: 0 0 22px rgba(28, 24, 20, 0.10);
+  will-change: transform;
+}
+
+/* The mount only carries this while a finger is on it. A permanent
+   will-change on the one element every screen mounts into would keep a layer
+   alive for the whole life of the app to serve a gesture lasting a second. */
+.hc-view-dragging {
+  will-change: transform;
+}
+
+/* --------------------------------------------------------------------------
+   The rail. A horizontal strip of square photographs, used by the Instagram
+   section at the top of Connect.
+
+   FULL BLEED ON PURPOSE. .hc-screen carries 20px of side padding, and a rail
+   that stopped at that padding would look like a list that had been cut off
+   at both ends. The negative margins pull it out to the screen edges and the
+   scroll padding puts the inset back on the content, so the first tile lines
+   up with the text above it and the last one runs off the edge. That overrun
+   is the affordance: it is what tells a thumb there is more to the right
+   without needing an arrow or a row of dots.
+
+   .hc-screen is capped at 720px and centered, so on a wide window the rail
+   bleeds to the edges of the column rather than the edges of the display,
+   which is the right answer for both.
+   -------------------------------------------------------------------------- */
+
+.hc-rail {
+  margin-left: calc(var(--hc-screen-pad) * -1);
+  margin-right: calc(var(--hc-screen-pad) * -1);
+  overflow-x: auto;
+  overflow-y: hidden;
+  /* Momentum scrolling inside the Capacitor web view. */
+  -webkit-overflow-scrolling: touch;
+  scroll-snap-type: x mandatory;
+  scroll-padding-left: var(--hc-screen-pad);
+  /* The scrollbar is chrome this design does not use, and on a phone it is
+     not drawn at all. Hidden rather than styled. */
+  scrollbar-width: none;
+}
+
+.hc-rail::-webkit-scrollbar { display: none; }
+
+.hc-rail__track {
+  display: flex;
+  gap: var(--hc-card-gap);
+  list-style: none;
+  margin: 0;
+  /* The trailing pad has to be padding and not a margin on the last child, or
+     iOS drops it at the end of an overflow scroll and the last tile sits hard
+     against the edge. */
+  padding: 0 var(--hc-screen-pad);
+}
+
+.hc-rail__item {
+  flex: 0 0 auto;
+  scroll-snap-align: start;
+}
+
+/* --- A single post -------------------------------------------------------- */
+
+.hc-post {
+  position: relative;
+  display: block;
+  width: 148px;
+  aspect-ratio: 1 / 1;
+  padding: 0;
+  border: none;
+  /* Showing through while the photograph loads, and the whole tile if it
+     never does. Same cream as every other piece of missing art in the app. */
+  background: var(--hc-cream);
+  border-radius: var(--hc-radius-lg);
+  overflow: hidden;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.hc-post__img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  /* A photograph that fades in reads as arriving. One that snaps in reads as
+     a flash, which is what nine of them landing at once looks like. */
+  animation: hc-fade-in var(--hc-dur-base) var(--hc-ease-enter) both;
+}
+
+/* Set by the image error listener in app.js. The tile keeps its cream block
+   rather than drawing a broken image glyph. */
+.hc-post[data-failed="true"] .hc-post__img { display: none; }
+
+.hc-post:active { opacity: 0.85; }
+
+/* --- The way out, last tile in the rail ----------------------------------- */
+
+.hc-post--more {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--hc-space-sm);
+  background: var(--hc-paper-sunk);
+  color: var(--hc-accent-deep);
+}
+
+.hc-post__more-icon {
+  width: 22px;
+  height: 22px;
+}
+
+.hc-post__more-label {
+  font-family: var(--hc-sans);
+  font-weight: 600;
+  font-size: var(--hc-caption);
+  line-height: var(--hc-caption-line);
+}
+
+/* A rail is a horizontal scroll, which is a gesture, and a person who has
+   asked for less motion still has to be able to reach the ninth tile. So the
+   snapping goes and the scrolling stays. */
+@media (prefers-reduced-motion: reduce) {
+  .hc-rail { scroll-snap-type: none; }
+  .hc-post__img { animation: none; }
+}
+
+/* --------------------------------------------------------------------------
+   Social links, a centered row. Used on Home under the latest post.
+
+   The glyphs are --hc-ink, which is near black on paper and near white in
+   dark mode, so one token carries the whole inversion and these follow the
+   theme exactly the way body text does. No disc behind them: a filled circle
+   would have needed its own light and dark pair kept in step with this one,
+   and five solid discs under a photograph read as a toolbar rather than as a
+   quiet row of links.
+
+   The button is 44 square while the glyph is 24. That gap is deliberate.
+   --hc-tap-min is 44 and nothing here goes under it, but a 44pt logo is a
+   billboard, so the target stays 44 and only the paint shrinks.
+   -------------------------------------------------------------------------- */
+
+/* Solid brand marks opt back out of the `svg { fill: none }` reset in
+   base.css, which exists for this app's own stroke drawn icons and wins over
+   a fill attribute. Set on the svg only: fill inherits, so children without
+   one of their own pick it up, while Instagram's rect and circle keep the
+   fill="none" they carry and stay an outline the way its real mark is. */
+.hc-brand { fill: currentColor; }
+
+/* The opt out of `svg { fill: none }` in base.css, for the app's own icons
+   rather than somebody else's brand mark. Only `more` needs it so far: three
+   dots drawn as 1.5 stroke rings are mostly hole at tab size. */
+.hc-icon--solid { fill: currentColor; }
+
+.hc-social-row {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: var(--hc-space-sm);
+  margin-bottom: var(--hc-space-lg);
+}
+
+.hc-social {
+  width: var(--hc-tap-min);
+  height: var(--hc-tap-min);
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--hc-ink);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.hc-social__icon {
+  width: 24px;
+  height: 24px;
+  display: block;
+  transition: transform var(--hc-dur-fast) var(--hc-ease),
+              opacity var(--hc-dur-fast) var(--hc-ease);
+}
+
+.hc-social:active .hc-social__icon {
+  opacity: 0.6;
+  transform: scale(0.92);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hc-social__icon { transition: none; }
+  .hc-social:active .hc-social__icon { transform: none; }
+}
+
+/* --------------------------------------------------------------------------
+   The editor
+   A contenteditable with five buttons over it. See js/editor.js.
+   -------------------------------------------------------------------------- */
+
+.hc-editor { margin-top: var(--hc-space-base); }
+
+.hc-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--hc-space-xs);
+  padding: var(--hc-space-xs);
+  border: var(--hc-hairline) solid var(--hc-rule);
+  border-bottom: 0;
+  border-radius: var(--hc-radius-sm) var(--hc-radius-sm) 0 0;
+  background: var(--hc-paper-sunk);
+}
+
+.hc-tool {
+  min-width: var(--hc-tap-min);
+  min-height: var(--hc-tap-min);
+  padding: 0 var(--hc-space-sm);
+  border-radius: var(--hc-radius-sm);
+  background: transparent;
+  color: var(--hc-mid);
+  font-family: var(--hc-sans);
+  font-size: calc(15px * var(--hc-text-scale));
+  line-height: 1;
+}
+
+/* The three letters are the thing they do. Nobody needs a legend for a bold
+   B, and an icon set for this would be five more glyphs to draw and keep. */
+.hc-tool--b { font-weight: 700; }
+.hc-tool--i { font-style: italic; font-family: var(--hc-serif); }
+.hc-tool--u { text-decoration: underline; }
+
+.hc-tool:active { background: var(--hc-cream); color: var(--hc-ink); }
+
+/* No margin-left:auto pushing this to the right. At 375 across it does not
+   fit on the same line as the five format buttons, and at a larger text scale
+   it fits even less, so it wraps to a second line either way. Flowing left
+   under the B reads as a deliberate second row; pinned right it reads as a
+   button that fell off the end. */
+.hc-tool--wide {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--hc-space-xs);
+  padding: 0 var(--hc-space-md);
+  font-size: var(--hc-caption);
+  font-weight: 500;
+  color: var(--hc-accent-deep);
+}
+
+.hc-tool__icon { width: 14px; height: 14px; }
+
+.hc-rt {
+  min-height: 34vh;
+  padding: var(--hc-space-base);
+  border: var(--hc-hairline) solid var(--hc-rule);
+  border-radius: 0 0 var(--hc-radius-sm) var(--hc-radius-sm);
+  background: var(--hc-paper-sunk);
+  color: var(--hc-ink);
+  font-family: var(--hc-sans);
+  font-size: calc(var(--hc-body-sans) * var(--hc-text-scale));
+  line-height: 1.6;
+  /* Long words and pasted URLs must not push the screen sideways. */
+  overflow-wrap: break-word;
+}
+
+.hc-rt:focus { outline: none; border-color: var(--hc-accent-deep); }
+
+/* A contenteditable has no placeholder attribute. :empty is not enough on its
+   own, because a browser that has ever had a caret in the box leaves a <br>
+   behind, so this also matches a box whose only child is that break. */
+.hc-rt:empty::before,
+.hc-rt:has(> br:only-child)::before {
+  content: attr(data-placeholder);
+  color: var(--hc-mid);
+  pointer-events: none;
+}
+
+.hc-rt p { margin: 0 0 var(--hc-space-md); }
+.hc-rt p:last-child { margin-bottom: 0; }
+.hc-rt ul, .hc-rt ol { margin: 0 0 var(--hc-space-md); padding-left: 1.4em; }
+.hc-rt ul { list-style: disc; }
+.hc-rt ol { list-style: decimal; }
+.hc-rt li { margin-bottom: var(--hc-space-xs); }
+
+/* A scripture reference inside somebody's writing. Not blue, not underlined:
+   it is set in the serif the guides use for scripture, in the accent, so it
+   reads as a citation rather than as a web link dropped into a paragraph. */
+.hc-rt a,
+.hc-jbody a {
+  font-family: var(--hc-serif);
+  color: var(--hc-accent-deep);
+  text-decoration: none;
+  border-bottom: var(--hc-hairline) solid var(--hc-accent);
+}
+
+/* --------------------------------------------------------------------------
+   The sheet
+   One overlay, from the bottom, used by the scripture picker. The app's only
+   modal, and it stays that way unless something else genuinely cannot be a
+   pushed view.
+   -------------------------------------------------------------------------- */
+
+.hc-sheet {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: flex-end;
+}
+
+.hc-sheet__scrim {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  background: rgba(26, 25, 24, 0.4);
+  border: 0;
+  animation: hc-fade-in var(--hc-dur-fast) var(--hc-ease);
+}
+
+.hc-sheet__panel {
+  position: relative;
+  width: 100%;
+  max-height: 86vh;
+  overflow-y: auto;
+  padding: var(--hc-space-lg) var(--hc-space-base)
+           calc(var(--hc-space-lg) + env(safe-area-inset-bottom));
+  border-radius: var(--hc-radius-lg) var(--hc-radius-lg) 0 0;
+  background: var(--hc-paper);
+  border-top: var(--hc-hairline) solid var(--hc-rule);
+  box-shadow: 0 -8px 32px rgba(26, 25, 24, 0.18);
+  animation: hc-sheet-up var(--hc-dur-base) var(--hc-ease);
+}
+
+@keyframes hc-fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes hc-sheet-up { from { transform: translateY(12%); } to { transform: none; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .hc-sheet__panel, .hc-sheet__scrim { animation: none; }
+}
+
+.hc-sheet__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--hc-space-base);
+}
+
+.hc-sheet__close {
+  width: var(--hc-tap-min);
+  height: var(--hc-tap-min);
+  margin: calc(var(--hc-space-sm) * -1) calc(var(--hc-space-sm) * -1) 0 0;
+  color: var(--hc-mid);
+}
+
+.hc-sheet__close svg { width: 18px; height: 18px; margin: 0 auto; }
+
+/* Verse and Through side by side. They are two halves of one answer. */
+.hc-sheet__verses {
+  display: flex;
+  gap: var(--hc-space-md);
+  margin-top: var(--hc-space-md);
+}
+
+.hc-sheet__verses .hc-field { flex: 1 1 0; min-width: 0; }
+
+.hc-sheet__foot { margin-top: var(--hc-space-lg); }
+
+.hc-sheet__preview {
+  margin-bottom: var(--hc-space-md);
+  font-family: var(--hc-serif);
+  font-size: calc(21px * var(--hc-text-scale));
+  color: var(--hc-ink);
+}
+
+.hc-sheet__note { margin-top: var(--hc-space-md); }
+
+/* --------------------------------------------------------------------------
+   Highlighting
+   A wash under the words, not a stripe over them. One treatment, plus a
+   heavier one for the ones that carry a note, because a rack of highlighter
+   colours would be the loudest thing in a calm two-palette app.
+   -------------------------------------------------------------------------- */
+
+.hc-hl {
+  background: linear-gradient(to top,
+    color-mix(in srgb, var(--hc-accent) 42%, transparent) 0.55em,
+    transparent 0.55em);
+  color: inherit;
+  border-radius: 2px;
+  cursor: pointer;
+  /* The words are the tap target. No padding, or the wash starts creeping
+     out past the sentence it belongs to. */
+  padding: 0;
+}
+
+/* One that has been written about. Same hue, more of it, and a dog-ear so it
+   is still distinguishable with no colour vision at all. */
+.hc-hl--noted {
+  background: color-mix(in srgb, var(--hc-accent) 34%, transparent);
+  box-shadow: inset 2px 0 0 var(--hc-accent-deep);
+}
+
+.hc-hl:focus-visible {
+  outline: 2px solid var(--hc-accent-deep);
+  outline-offset: 2px;
+}
+
+@supports not (color: color-mix(in srgb, red 50%, transparent)) {
+  .hc-hl { background: var(--hc-cream); }
+  .hc-hl--noted { background: var(--hc-cream); box-shadow: inset 2px 0 0 var(--hc-accent-deep); }
+}
+
+/* The bar for a selection. Docked in the band above the tab bar rather than
+   floated over the words, because that band is the one place iOS never draws
+   its own Copy / Look Up callout. The reasoning is at the top of
+   js/highlight.js; all this file does is centre a pill down there.
+
+   Centred by margin between two insets, not by translate, because the entry
+   animation owns transform. */
+.hc-hlbar {
+  position: fixed;
+  left: var(--hc-tabbar-inset);
+  right: var(--hc-tabbar-inset);
+  bottom: calc(var(--hc-tabbar-space) + env(safe-area-inset-bottom));
+  z-index: 55;
+  width: -webkit-fit-content;
+  width: fit-content;
+  max-width: calc(100% - (var(--hc-tabbar-inset) * 2));
+  margin: 0 auto;
+  display: flex;
+  align-items: stretch;
+  padding: 0 var(--hc-space-xs);
+  border-radius: var(--hc-radius-pill);
+  background: var(--hc-ink);
+  box-shadow: 0 6px 20px rgba(26, 25, 24, 0.28);
+  animation: hc-hlbar-in var(--hc-dur-fast) var(--hc-ease);
+}
+
+/* The discs stand down while it is up. The band is 44px tall and holds one
+   thing: a back arrow the guide is not going anywhere without, and a way to
+   the top that a scroll will offer again, both of which can wait for the
+   answer to a question the person is being asked right now. */
+#app[data-hlbar="true"] .hc-disc {
+  opacity: 0;
+  transform: translateY(10px) scale(0.86);
+  pointer-events: none;
+}
+
+@keyframes hc-hlbar-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) { .hc-hlbar { animation: none; } }
+
+.hc-hlbar__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--hc-space-xs);
+  min-height: var(--hc-tap-min);
+  padding: 0 var(--hc-space-base);
+  background: transparent;
+  color: var(--hc-paper);
+  font-family: var(--hc-sans);
+  font-weight: 500;
+  font-size: var(--hc-caption);
+  white-space: nowrap;
+}
+
+.hc-hlbar__icon { width: 14px; height: 14px; }
+
+.hc-hlbar__rule {
+  width: var(--hc-hairline);
+  margin: var(--hc-space-sm) 0;
+  background: var(--hc-paper);
+  opacity: 0.3;
+}
+
+/* The note sheet. The quotation on top, the writing surface under it. */
+.hc-hlsheet__quote {
+  margin: 0 0 var(--hc-space-base);
+  padding-left: var(--hc-space-base);
+  border-left: var(--hc-edge-rule) solid var(--hc-accent);
+  font-size: calc(18px * var(--hc-text-scale));
+  line-height: 1.45;
+}
+
+/* Inside a sheet the writing surface has a keyboard under it, so it gives up
+   the third of a screen it takes on the entry screen. */
+.hc-sheet .hc-rt { min-height: 22vh; }
+
+.hc-hlsheet__foot { display: flex; flex-direction: column; gap: var(--hc-space-sm); }
+
+/* ==========================================================================
+   The screen before Home
+
+   Study A out of demo-splash, at the sizes it was drawn at. The greeting
+   borrows the Home tab's own face and size exactly, so handing off reads as
+   the words changing rather than the screen changing. See js/splash.js for
+   how long it stays and what takes it away.
+   ========================================================================== */
+
+.hc-splash {
+  position: fixed;
+  inset: 0;
+  /* Over everything, including the toast at 60 and the sheets at 55. Nothing
+     in the app is meant to be reachable while this is up. */
+  z-index: 95;
+  background: var(--hc-paper);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.hc-splash--out {
+  opacity: 0;
+  transition: opacity 420ms ease-in;
+  pointer-events: none;
+}
+
+.hc-splash__markwrap {
+  position: relative;
+  width: 92px;
+  margin-bottom: var(--hc-space-lg);
+}
+
+.hc-splash__mark { display: block; width: 92px; height: auto; }
+
+/* The glimmer. The mark's own silhouette is used as a mask, so a band of warm
+   white with slightly deeper gold on either side of it slides across and is
+   clipped to the house. The light never touches the paper around it, there is
+   no second asset to draw, and nothing here has to be redone if the logo is.
+
+   The dark shoulders are not decoration. White on gold on an off-white ground
+   is very nearly nothing on its own, and the darker edges are what give the
+   highlight something to be brighter than. */
+.hc-splash__gleam {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  -webkit-mask: url('../assets/icons/mark.png') center / contain no-repeat;
+          mask: url('../assets/icons/mark.png') center / contain no-repeat;
+  background-image: linear-gradient(105deg,
+    rgba(138, 104, 44, 0) 24%,
+    rgba(138, 104, 44, 0.32) 39%,
+    rgba(255, 251, 242, 0.95) 50%,
+    rgba(138, 104, 44, 0.32) 61%,
+    rgba(138, 104, 44, 0) 76%);
+  background-repeat: no-repeat;
+  background-size: 300% 100%;
+  background-position: 100% 0;
+  opacity: 0;
+}
+
+.hc-splash__greeting {
+  margin: 0;
+  padding: 0 var(--hc-space-xl);
+  text-align: center;
+  /* Identical to .hc-home__greeting, deliberately. If that one ever moves,
+     this one moves with it. */
+  font-family: var(--hc-sans-display);
+  font-weight: 800;
+  font-size: calc(28px * var(--hc-text-scale));
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+  color: var(--hc-ink);
+}
+
+.hc-splash__loading {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: calc(var(--hc-space-lg) + env(safe-area-inset-bottom));
+  margin: 0;
+  text-align: center;
+  font-family: var(--hc-sans);
+  font-size: var(--hc-caption);
+  line-height: var(--hc-caption-line);
+  color: var(--hc-mid);
+}
+
+/* The entrance. The house settles, the welcome follows a beat behind, the
+   loading line arrives last and breathes, and the light crosses the mark at
+   1.9s, still going as the layer starts to leave.
+
+   base.css collapses all of this under Reduce Motion, which leaves the three
+   pieces on screen at once and no light. That is the intended still version,
+   and js/splash.js shortens the hold to match. */
+.hc-splash__mark,
+.hc-splash__greeting,
+.hc-splash__loading { opacity: 0; }
+
+.hc-splash__mark {
+  animation: hc-splash-rise 900ms cubic-bezier(0.16, 0.84, 0.44, 1) 140ms forwards,
+             hc-splash-bloom 1000ms ease-in-out 1900ms;
+}
+
+.hc-splash__greeting {
+  animation: hc-splash-rise 900ms cubic-bezier(0.16, 0.84, 0.44, 1) 460ms forwards;
+}
+
+.hc-splash__loading {
+  animation: hc-splash-fade 700ms ease 1000ms forwards,
+             hc-splash-breathe 2800ms ease-in-out 1800ms infinite;
+}
+
+.hc-splash__gleam {
+  animation: hc-splash-sweep 1000ms cubic-bezier(0.4, 0, 0.3, 1) 1900ms forwards;
+}
+
+@keyframes hc-splash-rise {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes hc-splash-fade { to { opacity: 1; } }
+
+@keyframes hc-splash-breathe {
+  0%, 100% { opacity: 0.45; }
+  50%      { opacity: 0.9; }
+}
+
+/* 100% to 0% and not the other way round. At 100% the gradient sits far
+   enough left that the highlight is off the left edge of the house, so
+   winding it down to 0 walks the light across to the right. */
+@keyframes hc-splash-sweep {
+  0%   { opacity: 0; background-position: 100% 0; }
+  12%  { opacity: 1; }
+  88%  { opacity: 1; }
+  100% { opacity: 0; background-position: 0% 0; }
+}
+
+@keyframes hc-splash-bloom {
+  0%, 100% { filter: none; }
+  50%      { filter: drop-shadow(0 0 7px rgba(215, 186, 133, 0.34)); }
+}
+
+/* --------------------------------------------------------------------------
+   The index rail. The right edge, in place of a scrollbar this design does
+   not draw. See js/index-rail.js for what moves and why.
+
+   Three layers and a veil, all of them absolutely placed against #app so a
+   screen never has to know they exist: the notches, which are always on the
+   glass; the page's headings written out, which are not; the card behind the
+   focused one; and the paper that comes back over the page underneath the
+   whole thing.
+
+   NOTHING HERE TRANSITIONS. Every value that moves is written frame by frame
+   from one gaussian in the JavaScript, and a transition on top of that is a
+   second opinion about the same number. The one exception is the state below,
+   which only takes the reading out of the tree once the swell is spent.
+   -------------------------------------------------------------------------- */
+
+.hc-index {
+  position: fixed;
+  z-index: 46;                    /* over the page, beside the discs */
+  right: 0;
+  top: calc(var(--hc-header-h) + var(--hc-pin-h, 0px) + env(safe-area-inset-top));
+  /* Clear of the back to top disc rather than merely behind it. The disc is
+     44px of gold in that corner and it wins the tap either way, but a track
+     that runs under it is a track with a dead end in it. */
+  bottom: calc(var(--hc-tabbar-space) + var(--hc-tap-min) + 8px
+               + env(safe-area-inset-bottom));
+  width: 34px;
+
+  /* The notches are drawn, never touched. The gesture is read off .hc-scroll,
+     which is what leaves the right edge available to the tab swipe as well.
+     See the note at the top of js/index-rail.js.
+
+     So this width is how wide the ruler looks, not how far in a thumb has to
+     land to work it. That is HOT_DRAG in js/index-rail.js, and it is wider
+     than this on purpose: few people scrub the actual glass edge. Widening
+     this instead would only draw longer marks. */
+  pointer-events: none;
+}
+
+/* Listen's month strip is a second band of chrome under the header, and the
+   track starts below it while it is out. 42px is that strip's own height; it
+   is written here rather than shared because the two are only ever equal by
+   agreement, and a rail that quietly resized this one would be worse than a
+   number that has to be changed twice. */
+.hc-date-rail[data-show="true"] ~ .hc-index {
+  top: calc(var(--hc-header-h) + var(--hc-pin-h, 0px) + 42px + env(safe-area-inset-top));
+}
+
+.hc-index[hidden] { display: none !important; }
+
+/* The written column, the card and the veil come and go together. */
+.hc-index[data-state="off"] ~ .hc-index__titles,
+.hc-index[data-state="off"] ~ .hc-index__card,
+.hc-index[data-state="off"] ~ .hc-index__veil { visibility: hidden; }
+
+.hc-index__track { position: absolute; inset: 0; }
+
+.hc-index__notch {
+  position: absolute;
+  right: 0;
+  width: 34px;
+  display: block;
+  /* A notch is reachable with a keyboard and drawn for a thumb. The thumb
+     never lands on it: the whole strip is the target, and the strip is the
+     scroller underneath. */
+  pointer-events: none;
+}
+
+.hc-index__notch:focus-visible {
+  outline: 2px solid var(--hc-accent-deep);
+  outline-offset: -2px;
+  border-radius: var(--hc-radius-sm);
+  pointer-events: auto;
+}
+
+/* What is actually drawn: one hairline, pinned right, growing leftward.
+   Length is scaleX off a fixed maximum rather than a width, so no frame of
+   the swell touches layout. Every second one rests shorter than its
+   neighbour, which is the whole claim the edge makes before anybody has
+   touched it: a run of even ticks is a thing you slide along. */
+.hc-index__mark {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  width: 30px;
+  height: 2px;
+  margin-top: -1px;
+  border-radius: 1px;
+  background: var(--hc-ink);
+  transform-origin: 100% 50%;
+  transform: scaleX(0.3);
+  opacity: 0.2;
+  will-change: transform, opacity;
+}
+
+/* Paper drawn back over the right of the screen while the column is up. The
+   headings behind it are the same words in the same face as the ones in the
+   rail, and without this the two sets sit on top of each other and neither
+   reads. A gradient with no edge to it, so nothing about it is a panel. */
+.hc-index__veil {
+  position: fixed;
+  inset: 0;
+  z-index: 38;                    /* over the page, under every piece of chrome */
+  pointer-events: none;
+  background: linear-gradient(to left, var(--hc-paper) 30%, rgba(247, 244, 239, 0) 96%);
+  opacity: 0;
+  will-change: opacity;
+}
+
+:root[data-theme="dark"] .hc-index__veil {
+  background: linear-gradient(to left, var(--hc-paper) 30%, rgba(26, 25, 24, 0) 96%);
+}
+
+/* The page's whole contents, held out to the left of the hand. Every heading
+   at its own notch's height; the one under the finger at full size and full
+   ink on the card below, the rest small and faint behind it, which is the
+   point of them: you can see what else there is without letting go. */
+.hc-index__titles {
+  position: fixed;
+  inset: 0;
+  z-index: 47;
+  pointer-events: none;
+}
+
+.hc-index__title {
+  position: absolute;
+  right: 46px;                    /* inside the screen, outside the thumb */
+  top: 0;
+  height: 22px;
+  margin-top: -11px;
+  max-width: 66%;
+  font-family: var(--hc-sans-display);
+  font-weight: 800;
+  font-size: 17px;
+  line-height: 22px;
+  letter-spacing: -0.01em;
+  color: var(--hc-ink);
+  text-align: right;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transform-origin: 100% 50%;
+  opacity: 0;
+  will-change: transform, opacity;
+}
+
+/* The card behind the one you are on. The tab bar's glass at the tab bar's
+   radius, sized to that heading in JavaScript and moved with it, so the
+   focused heading stays legible over a photograph and the faint ones behind
+   it are free to be faint. */
+.hc-index__card {
+  position: fixed;
+  right: 32px;
+  top: 0;
+  z-index: 46;
+  height: 34px;
+  margin-top: -17px;
+  border-radius: var(--hc-radius-pill);
+  background: var(--hc-tabbar-skin);
+  border: var(--hc-hairline) solid var(--hc-tabbar-edge);
+  box-shadow: var(--hc-tabbar-shadow);
+  pointer-events: none;
+  opacity: 0;
+  transform-origin: 100% 50%;
+  will-change: transform, opacity;
+}
+
+@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+  .hc-index__card {
+    background: var(--hc-tabbar-skin-lens);
+    backdrop-filter: blur(24px) saturate(1.6);
+    -webkit-backdrop-filter: blur(24px) saturate(1.6);
+  }
+}
+
+/* Printing a guide prints the guide. */
+@media print {
+  .hc-index,
+  .hc-index__titles,
+  .hc-index__card,
+  .hc-index__veil { display: none !important; }
+}
+
+/* --------------------------------------------------------------------------
+   Announcements, continued
+
+   The banner used to be one card at a time. It is a list now, written from
+   Settings -> Admin, and each card is a door into the announcement's own
+   page. See the long note in js/screens/home.js about why the one-card rule
+   went, and the one above announcementCard() about why the card became a
+   button.
+   -------------------------------------------------------------------------- */
+
+.hc-banner + .hc-banner { margin-top: var(--hc-space-md); }
+
+/* The picture sits under the words rather than beside them. A photograph
+   next to two lines of text on a 375pt screen is a thumbnail, and a
+   thumbnail of a serve day is not worth the row it costs. */
+.hc-banner__frame {
+  display: block;
+  margin-top: var(--hc-space-md);
+  border-radius: var(--hc-radius-sm);
+}
+
+/* The video used to be a Watch button on the card, opening YouTube in the
+   phone's browser. It plays in the app now, on the announcement's own page,
+   so there is no button here any more. See video() in
+   js/screens/announcement.js. */
+
+/* --------------------------------------------------------------------------
+   The pinned line
+
+   Above the greeting, and the only thing in the app that outranks somebody's
+   own name. Not dismissible on purpose: an announcement is news and a person
+   is allowed to be done with it, and this is the building being shut.
+
+   role="status" rather than role="alert", so a screen reader reads it when it
+   reaches it instead of interrupting whatever is being read.
+   -------------------------------------------------------------------------- */
+
+.hc-pinned {
+  background: var(--hc-accent-deep);
+  border-radius: var(--hc-radius-sm);
+  padding: var(--hc-space-md) var(--hc-space-base);
+  margin-bottom: var(--hc-space-lg);
+}
+
+/* --------------------------------------------------------------------------
+   The pinned strip
+
+   The other pinned thing, and the difference is worth keeping straight. The
+   block above is a sentence typed into App settings, it lives on Home, and it
+   cannot be put away. This is an announcement an admin pinned: it is shell
+   chrome, so it carries across every tab, it opens the announcement when it
+   is tapped, and the x on the right takes it down on that phone for good.
+
+   Same fill as the block above on purpose. Two pinned things in two different
+   colours would read as two systems, and they are one idea at two volumes.
+
+   FIXED, UNDER THE HEADER, and the screens below clear it by adding
+   --hc-pin-h into their padding rather than by knowing anything about it.
+   js/app.js measures the strip and publishes that number on #app.
+   -------------------------------------------------------------------------- */
+
+.hc-pinbar {
+  position: fixed;
+  z-index: 39;                 /* with the date rail, under the top bar */
+  top: calc(var(--hc-header-h) + env(safe-area-inset-top));
+  left: 0; right: 0;
+  display: flex;
+  align-items: stretch;
+  gap: var(--hc-space-xs);
+  padding: 0 var(--hc-screen-pad);
+  background: var(--hc-accent-deep);
+}
+
+.hc-pinbar[hidden] { display: none; }
+
+/* The tap. Everything but the x, so a thumb landing anywhere along the strip
+   opens the announcement rather than having to find the title. */
+.hc-pinbar__open {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--hc-space-sm);
+  /* The 44pt minimum is the floor, not the height: a title that wraps to two
+     lines makes the strip taller and the screens below follow it. */
+  min-height: var(--hc-tap-min);
+  padding: var(--hc-space-sm) 0;
+  text-align: left;
+  color: var(--hc-on-dark);
+}
+
+.hc-pinbar__pin {
+  flex: 0 0 auto;
+  width: 15px; height: 15px;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  opacity: 0.85;
+}
+
+.hc-pinbar__title {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-family: var(--hc-sans);
+  font-weight: 600;
+  /* Not scaled by --hc-text-scale, like the rest of the chrome. This has to
+     stay one or two lines at every reading size, or the strip starts eating
+     the screen it is announcing something above. */
+  font-size: 14px;
+  line-height: 1.35;
+  color: var(--hc-on-dark);
+}
+
+.hc-pinbar__chev {
+  flex: 0 0 auto;
+  width: 15px; height: 15px;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  opacity: 0.7;
+}
+
+.hc-pinbar__open:active { opacity: 0.72; }
+
+/* The way out. Its own button, beside the tap rather than inside it, and a
+   full tap target of its own so putting the strip away never opens the
+   announcement by accident. */
+.hc-pinbar__dismiss {
+  flex: 0 0 auto;
+  width: var(--hc-tap-min);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: -10px;
+  color: var(--hc-on-dark);
+}
+
+.hc-pinbar__dismiss svg {
+  width: 16px; height: 16px;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  opacity: 0.85;
+}
+
+.hc-pinbar__dismiss:active svg { opacity: 0.5; }
+
+/* The strip used to land on Home and flash the card gold, which was how a
+   person told which of three cards it had meant. It opens the announcement's
+   own page now, so there is nothing left to point at and the gold has gone
+   with the scroll that needed it. See openPinned() in js/app.js. */
+
+.hc-pinned__text {
+  font-family: var(--hc-sans);
+  font-weight: 600;
+  font-size: 14px;
+  line-height: 1.45;
+  /* --hc-on-dark and not --hc-ink. The pair above is the same one the primary
+     button uses, and it is the only pair in the palette that inverts together:
+     --hc-accent-deep is a dark taupe in light mode and a pale one in dark, so
+     text on it has to flip with it. Hardcoding either half is how this ends up
+     as pale text on a pale ground for everybody who reads at night. */
+  color: var(--hc-on-dark);
+}
+
+/* ==========================================================================
+   Edit mode
+   The half hour in which an admin can fix a sentence where it is written.
+   See js/edit-mode.js, which decides what is outlined, and migration 0030,
+   which decides what may be written.
+
+   THE OUTLINE HAS TO BE OBVIOUS AND HAS TO NOT MOVE ANYTHING. It is drawn
+   with an inset box-shadow rather than a border, so turning edit mode on does
+   not reflow every screen it touches by two pixels: text that shifts when the
+   switch is flipped is text somebody misreads as already edited. The padding
+   is negative-margined back out for the same reason.
+   ========================================================================== */
+
+.hc-editable {
+  position: relative;
+  display: block;
+  margin: 0 calc(var(--hc-space-sm) * -1);
+  padding: var(--hc-space-sm);
+  padding-right: calc(var(--hc-space-base) + var(--hc-space-lg));
+  border-radius: var(--hc-radius-sm);
+  box-shadow: inset 0 0 0 1.5px var(--hc-accent);
+  background: color-mix(in srgb, var(--hc-accent) 8%, transparent);
+  cursor: pointer;
+  text-align: left;
+  transition: box-shadow var(--hc-dur-fast) var(--hc-ease),
+              background var(--hc-dur-fast) var(--hc-ease);
+}
+
+/* Hover is a desktop nicety, the active state is the one that matters: it is
+   what a thumb gets in the moment between the tap and the box appearing. */
+.hc-editable:hover,
+.hc-editable:active {
+  box-shadow: inset 0 0 0 1.5px var(--hc-accent-deep);
+  background: color-mix(in srgb, var(--hc-accent) 16%, transparent);
+}
+
+.hc-editable:focus-visible {
+  outline: 2px solid var(--hc-accent-deep);
+  outline-offset: 2px;
+}
+
+/* The pencil, top right of whatever is outlined. Absolute so it never joins
+   the text flow, and aria-hidden in the markup because the wrapper already
+   announces itself as "Edit the line under the Give button". */
+.hc-editable__mark {
+  position: absolute;
+  top: var(--hc-space-xs);
+  right: var(--hc-space-xs);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: var(--hc-radius-pill);
+  background: var(--hc-accent-deep);
+  color: var(--hc-on-dark);
+}
+
+.hc-editable__icon {
+  width: 13px;
+  height: 13px;
+}
+
+/* A sentence the church has cleared. Only ever drawn while edit mode is on,
+   because the whole point of clearing it is that everybody else sees nothing.
+   Italic so it cannot be mistaken for the church's own words. */
+.hc-editable__empty {
+  font-style: italic;
+  opacity: 0.75;
+}
+
+/* ------------------------------------------------------------- the editor */
+
+.hc-edit {
+  display: block;
+  margin: 0 calc(var(--hc-space-sm) * -1);
+  padding: var(--hc-space-md);
+  border-radius: var(--hc-radius-lg);
+  box-shadow: inset 0 0 0 1.5px var(--hc-accent-deep);
+  background: var(--hc-paper-sunk);
+}
+
+.hc-edit__label {
+  display: block;
+  margin-bottom: var(--hc-space-xs);
+  font-family: var(--hc-sans);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--hc-mid);
+}
+
+.hc-edit__box {
+  width: 100%;
+  /* 16px or iOS zooms the whole screen on focus, which on a screen that has
+     just repainted under a thumb reads as the app losing its place. */
+  font-size: 16px;
+}
+
+.hc-edit__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--hc-space-sm);
+  margin-top: var(--hc-space-sm);
+}
+
+.hc-edit__note {
+  margin-top: var(--hc-space-sm);
+}
+
+/* ---------------------------------------------------------------- the pill
+
+   Edit mode can end on its own, after thirty minutes, so something has to say
+   it is on, and it has to be somewhere no screen redraws. js/edit-mode.js
+   appends this to the body once and takes it away again, which is also why it
+   carries its own safe-area padding rather than inheriting a screen's. */
+
+.hc-edit-pill {
+  position: fixed;
+  /* Over the tab bar and the page, under the toast at 60, and sitting a
+     toast's height clear of it: this thing is on screen for half an hour and
+     the toast that says "Saved" arrives right where it is standing. */
+  z-index: 50;
+  left: var(--hc-screen-pad);
+  right: var(--hc-screen-pad);
+  bottom: calc(var(--hc-tabbar-space) + env(safe-area-inset-bottom) +
+               var(--hc-space-base) + 52px);
+  display: flex;
+  align-items: center;
+  gap: var(--hc-space-sm);
+  padding: var(--hc-space-sm) var(--hc-space-sm) var(--hc-space-sm) var(--hc-space-base);
+  border-radius: var(--hc-radius-pill);
+  background: var(--hc-accent-deep);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.18);
+}
+
+.hc-edit-pill__text {
+  flex: 1 1 auto;
+  font-family: var(--hc-sans);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.35;
+  /* The same inverting pair the pinned strip uses. See the note there. */
+  color: var(--hc-on-dark);
+}
+
+.hc-edit-pill__done {
+  flex: 0 0 auto;
+  min-height: 34px;
+  padding: 0 var(--hc-space-base);
+  border: none;
+  border-radius: var(--hc-radius-pill);
+  background: var(--hc-on-dark);
+  color: var(--hc-accent-deep);
+  font-family: var(--hc-sans);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* Edit mode's second shape: the element drawn exactly as it always is, with a
+   pencil beside it. Used where the text is already inside a tap target, which
+   a button's label is.
+
+   The wrapper is a block with the chip positioned off it rather than a flex
+   row, so it changes nothing about how the element inside lays out: every
+   place this is used sits in a plain block container, and a button that is
+   inline-flex keeps its own width inside it. */
+.hc-edit-inline {
+  position: relative;
+  display: block;
+}
+
+.hc-edit-chip {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: none;
+  border-radius: var(--hc-radius-pill);
+  background: var(--hc-accent-deep);
+  color: var(--hc-on-dark);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+}
+
+.hc-edit-chip__icon {
+  width: 14px;
+  height: 14px;
+}
+
+.hc-edit-chip:focus-visible {
+  outline: 2px solid var(--hc-accent-deep);
+  outline-offset: 2px;
 }
 
 /* ==========================================================================
@@ -1511,9 +3413,15 @@ a.hc-card:active { background: var(--hc-paper-sunk); }
   stroke-linejoin: round;
 }
 
-.hc-home__announcement { margin-top: var(--hc-space-xl); }
+/* No top margin of its own any more. Every block on Home now sits under a
+   section header, and `.hc-section-header + *` in components.css owns the gap
+   down to what the header names. A second margin here, on top of that one,
+   would read as a break in the column rather than a heading and its block. */
 
-.hc-banner__title { margin-top: 6px; margin-bottom: 4px; }
+/* A <span> now rather than a <p>, because the card is a button and a
+   paragraph inside one is invalid markup. The margins stay the same and
+   display:block is what a span needs to keep them. */
+.hc-banner__title { display: block; margin-top: 6px; margin-bottom: 4px; }
 
 .hc-plan {
   display: block;
@@ -1553,11 +3461,54 @@ a.hc-card:active { background: var(--hc-paper-sunk); }
 .hc-latest__desc { margin-top: var(--hc-space-md); }
 .hc-latest__action { margin-top: var(--hc-space-base); }
 
-.hc-series-hero { margin-top: var(--hc-space-base); }
-.hc-series-hero__sub { margin-top: var(--hc-space-md); }
+/* --- The series picker -----------------------------------------------------
+   The rail is the carousel from Home, unchanged, so everything here is about
+   what sits under it: the caption that names whichever series you have landed
+   on, and that series' messages below it. The carousel's own bottom margin is
+   dropped, because the caption belongs to the tile above it and a screenful of
+   air between them would say they were two separate blocks.
+   -------------------------------------------------------------------------- */
+
+.hc-series-picker { margin-top: var(--hc-space-base); }
+.hc-series-picker .hc-carousel { margin-bottom: 0; }
+
+/* The tiles are artwork and nothing else. What names them is the caption, so
+   the slide's only child that takes space is the cover itself. Real series art
+   sits on top of that cover rather than replacing it, which is what makes a
+   photograph that never arrives fall back to the drawn tile underneath. */
+.hc-series-slide { position: relative; }
+.hc-series-slide .hc-cover { width: 100%; }
+
+.hc-series-slide__img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: var(--hc-radius-lg);
+}
+
+.hc-series-slide[data-failed="true"] .hc-series-slide__img { display: none; }
+
+.hc-series-meta { margin-top: var(--hc-space-md); }
+.hc-series-meta__kicker { display: block; }
+.hc-series-meta__title { margin-top: 4px; }
+.hc-series-meta__sub { margin-top: var(--hc-space-sm); }
+.hc-series-meta__count { margin-top: 6px; }
+
+.hc-series-list { margin-top: var(--hc-space-base); }
+
+/* The episode list closes on a hairline of its own and the Archive opens with
+   one. Two rules a thumb's width apart read as a seam rather than as the break
+   between two blocks, so the one underneath goes. */
+.hc-series-picker + .hc-section { border-top: 0; }
 
 .hc-archive-group { margin-top: var(--hc-space-lg); }
 .hc-archive-group__label { display: block; margin-bottom: var(--hc-space-sm); }
+
+/* The archive lives inside a collapsible panel, and the panel already opens a
+   gap of its own above the first thing in it. */
+.hc-section__panel > div > .hc-archive-group:first-child { margin-top: 0; }
 
 .hc-sermon {
   padding: var(--hc-space-base) 0;
@@ -2195,6 +4146,1818 @@ a.hc-card:active { background: var(--hc-paper-sunk); }
   .hc-present__question { font-size: calc(36px * var(--hc-text-scale)); }
 }
 
+/* --- The latest Instagram post, between the greeting and the gathering card.
+   4:3 rather than the square Instagram itself uses. A full width 1:1 is around
+   350pt tall on a phone, which pushes the gathering card and its service times
+   clean off the first screen, and this file's own rule for Home is three
+   things above the fold. 4:3 keeps the photograph a hero and keeps Sunday
+   visible under it. The stored images are square, so this crops 12.5% off the
+   top and bottom, which their compositions survive; 16:9 would not, it cuts
+   faces on at least two of them.
+   -------------------------------------------------------------------------- */
+
+.hc-latest {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: none;
+  background: none;
+  text-align: left;
+  color: var(--hc-ink);
+  margin-bottom: var(--hc-space-lg);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* A slide that is not a link: a video plays where it sits, and a photo with
+   no URL behind it has nowhere to go. Neither one should offer a finger the
+   feedback of something that can be pressed. */
+.hc-latest--static { cursor: default; }
+.hc-latest--static:active { opacity: 1; }
+
+.hc-latest__label {
+  display: block;
+  margin-bottom: var(--hc-space-sm);
+}
+
+.hc-latest__frame {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  /* Showing while the photograph loads, and the whole frame if it never
+     arrives. Same cream as every other piece of missing art in the app. */
+  background: var(--hc-cream);
+  border-radius: var(--hc-radius-lg);
+  overflow: hidden;
+}
+
+/* The frame is 4:3 by default, which is the crop the photographs above were
+   written for. A video picks its own shape instead, because it is shown whole
+   rather than cropped: 9x16 for a phone held upright, which is how a two
+   minute word from the pastor gets filmed, and the rest for the times it is
+   not. The tall ones are capped so a single slide cannot take the whole
+   screen and push Sunday off the bottom of it; at that cap the video letter
+   boxes against the cream rather than losing anybody's head to a crop. */
+.hc-latest__frame--1x1  { aspect-ratio: 1 / 1; }
+.hc-latest__frame--16x9 { aspect-ratio: 16 / 9; }
+.hc-latest__frame--4x5  { aspect-ratio: 4 / 5; max-height: 62vh; }
+.hc-latest__frame--9x16 { aspect-ratio: 9 / 16; max-height: 62vh; }
+
+.hc-latest__img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  animation: hc-fade-in var(--hc-dur-base) var(--hc-ease-enter) both;
+}
+
+/* Set by the image error listener in app.js, same as the rail's tiles. */
+.hc-latest[data-failed="true"] .hc-latest__img { display: none; }
+
+.hc-latest:active { opacity: 0.9; }
+
+.hc-latest__meta {
+  display: block;
+  margin-top: var(--hc-space-md);
+}
+
+/* Three lines, then it stops. An Instagram caption runs to paragraphs and
+   trails off into hashtags, and none of that belongs on the front door. The
+   whole caption is one tap away on Instagram, which is where it reads
+   properly anyway. */
+.hc-latest__caption {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  color: var(--hc-ink);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hc-latest__img { animation: none; }
+}
+
+/* --- The carousel these slides live in ------------------------------------
+   One slide wide, snapping, with the dots underneath. Same machinery as the
+   rail on Connect and for the same reason: an overflowing scroller is a
+   gesture every phone already knows, and swipe.js hands the drag to any
+   scroller under the finger that still has somewhere to go, so a swipe inside
+   this block moves the block and a swipe past its last slide changes tabs.
+
+   Not full bleed, unlike the rail. The rail's overrun is what says there is
+   more to the right; here every slide fills the column, and a slide that ran
+   off both edges would say the photograph had been cropped rather than that
+   there is another one behind it. The dots say it instead.
+
+   With one slide there is no overflow, so there is nothing to scroll, no dots
+   are drawn, and this is the single photograph it has always been.
+   -------------------------------------------------------------------------- */
+
+.hc-carousel { margin-bottom: var(--hc-space-lg); }
+
+.hc-carousel__viewport {
+  overflow-x: auto;
+  overflow-y: hidden;
+  /* Momentum scrolling inside the Capacitor web view. */
+  -webkit-overflow-scrolling: touch;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+}
+
+.hc-carousel__viewport::-webkit-scrollbar { display: none; }
+
+.hc-carousel__track {
+  display: flex;
+  gap: var(--hc-card-gap);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+/* Every slide is as tall as the tallest one, because they all sit in one
+   scroller and a scroller has one height. A phone video is 9:16 and an
+   Instagram photograph is 4:3, so that difference is real and has to go
+   somewhere: centered, it becomes even air above and below the shorter slide
+   and reads as framing. Left at the top, it is a hole under the caption. */
+.hc-carousel__slide {
+  flex: 0 0 100%;
+  scroll-snap-align: start;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+/* The slide inside carries no margins of its own: the carousel owns the space
+   under the whole block, and a margin on the slide would put a gap inside the
+   scroller that the snapping would then have to account for. */
+.hc-carousel .hc-latest { margin-top: 0; margin-bottom: 0; }
+
+/* contain, not cover. A photograph can lose 12.5% off its top and bottom and
+   survive it; a face two feet from a phone camera cannot. Whatever the frame
+   does not fill stays cream, the same as every other piece of missing art
+   here, so a video that is not quite the shape of its frame reads as a video
+   rather than as a mistake. */
+.hc-latest__video {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+.hc-carousel__dots {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  margin: var(--hc-space-md) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.hc-carousel__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--hc-ink);
+  opacity: 0.2;
+  transition: opacity var(--hc-dur-base) var(--hc-ease);
+}
+
+.hc-carousel__dot[data-on="true"] { opacity: 0.7; }
+
+/* Same answer as the rail: somebody who asked for less motion still has to be
+   able to reach the second slide, so the snapping goes and the scrolling
+   stays. */
+@media (prefers-reduced-motion: reduce) {
+  .hc-carousel__viewport { scroll-snap-type: none; }
+  .hc-carousel__dot { transition: none; }
+}
+
+/* ==========================================================================
+   Group
+   The sixth tab. Drawn from demo-group-room, with every value coming from
+   tokens.css rather than the mockup's copies of them.
+   ========================================================================== */
+
+.hc-group__join { display: flex; flex-direction: column; gap: var(--hc-space-md); }
+.hc-group__intro { margin: 0 0 var(--hc-space-base); }
+.hc-group__hint  { margin: var(--hc-space-md) 0 0; }
+.hc-group__carry { margin: var(--hc-space-sm) 0 0; }
+
+/* The same line, on a slide where taking it would cost the group something.
+   Warning coloured rather than danger coloured, for the reason the report
+   queue is: nothing is wrong, and this is a thing to read before tapping. */
+.hc-group__carry--warn { color: var(--hc-warning); }
+.hc-group__error { margin: var(--hc-space-sm) 0 0; font-size: var(--hc-caption); color: var(--hc-error); }
+
+.hc-group__actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--hc-space-sm);
+  margin-top: var(--hc-space-md);
+}
+
+/* --- the guide rails -------------------------------------------------------
+   Two of them, one on the way into a room and one inside it, and both are the
+   carousel from Home with a card in the slide instead of a photograph. So
+   there is nothing here about the gesture, the snapping, or the dots: that is
+   all .hc-carousel, unchanged.
+
+   THE SLIDES ARE AS TALL AS THE TALLEST. One scroller has one height, and the
+   slide a host can act on carries a sentence and a button the one they are
+   already running does not. The carousel centres a short slide in that
+   height, which is right for a photograph and wrong for a card: it leaves the
+   card floating with air above and below it. These sit at the top instead, so
+   every card starts on the same line however tall it is, and they keep their
+   own height rather than stretching into a box with a hole in it.
+   -------------------------------------------------------------------------- */
+
+.hc-guide-picker .hc-carousel { margin-bottom: 0; }
+.hc-guide-picker__hint { margin: var(--hc-space-md) 0 0; text-align: center; }
+
+.hc-guide-slide { justify-content: flex-start; }
+.hc-guide-slide__card { width: 100%; }
+
+/* The Sunday the room is actually running, marked by darkening the edge rule
+   every card here already carries rather than by adding anything. The word
+   "Tonight" above it is what says it; this is only so the right slide is
+   recognisable from half a swipe away. */
+.hc-guide-slide__card--now { border-left-color: var(--hc-accent-deep); }
+
+.hc-group__offline {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--hc-space-sm);
+  margin-top: var(--hc-space-lg);
+  padding: var(--hc-space-md);
+  border-radius: var(--hc-radius-sm);
+  background: var(--hc-paper-sunk);
+  border: var(--hc-hairline) solid var(--hc-rule);
+}
+.hc-group__offline-icon { width: 16px; height: 16px; flex: 0 0 auto; margin-top: 1px; }
+
+/* The code, typed. One field with the digits spread out, not six boxes. */
+.hc-code-input {
+  font-family: var(--hc-sans-display);
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  padding: var(--hc-space-md);
+}
+
+/* --- in the room -------------------------------------------------------- */
+
+.hc-room-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--hc-space-sm);
+  padding-bottom: var(--hc-space-md);
+  margin-bottom: var(--hc-space-base);
+  border-bottom: var(--hc-hairline) solid var(--hc-rule);
+}
+.hc-room-bar__code { letter-spacing: 0.14em; }
+.hc-room-bar__live {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--hc-space-xs);
+  font-size: var(--hc-caption);
+  color: var(--hc-mid);
+}
+.hc-room-bar__live::before {
+  content: "";
+  width: 7px; height: 7px;
+  border-radius: var(--hc-radius-pill);
+  background: var(--hc-success);
+}
+/* Behind, and saying so. The warning hue earns its keep exactly here: nothing
+   is wrong, something is pending. */
+.hc-room-bar__live--stale { color: var(--hc-warning); }
+.hc-room-bar__live--stale::before { background: var(--hc-warning); }
+
+.hc-room-guide { margin-bottom: var(--hc-space-lg); }
+.hc-room-guide__title,
+.hc-room-questions__title {
+  margin: var(--hc-space-xs) 0 var(--hc-space-xs);
+  font-family: var(--hc-serif);
+  font-size: calc(23px * var(--hc-text-scale));
+  line-height: 1.2;
+}
+
+/* The questions are named the same way the sermon above them is, so the two
+   read as one page. Only the breathing room differs: this one opens a part of
+   the room rather than closing a card. */
+.hc-room-questions__title { margin: var(--hc-space-lg) 0 0; }
+
+/* What the list is, under its name. Four sentences is a lot for a caption and
+   it earns the room: it is the only place the app tells a leader that these
+   are a starting point, that editing them is allowed, that what gets typed
+   below is not private to the phone it was typed on, and that the night can
+   be carried out at the end. */
+.hc-room-questions__note { margin: var(--hc-space-sm) 0 0; }
+
+/* --- the host's report queue --------------------------------------------- */
+/* Warning coloured, not danger coloured. A report is something to look at,
+   and most of them will turn out to be nothing; drawing it in red would make
+   a host feel they have to delete to make it go away. It sits above the
+   questions because a flag you have to scroll for is a flag nobody reads. */
+.hc-queue {
+  margin-bottom: var(--hc-space-base);
+  padding: var(--hc-card-pad);
+  border-radius: var(--hc-radius-lg);
+  background: var(--hc-paper-sunk);
+  border: var(--hc-hairline) solid var(--hc-warning);
+}
+.hc-queue__eyebrow { display: flex; align-items: center; gap: 6px; color: var(--hc-warning); }
+.hc-queue__icon { width: 13px; height: 13px; flex: 0 0 auto; }
+.hc-queue__title {
+  margin: var(--hc-space-xs) 0 var(--hc-space-xs);
+  font-family: var(--hc-serif);
+  font-size: calc(21px * var(--hc-text-scale));
+  line-height: 1.2;
+}
+.hc-queue__item {
+  margin-top: var(--hc-space-md);
+  padding-top: var(--hc-space-md);
+  border-top: var(--hc-hairline) solid var(--hc-rule);
+}
+.hc-queue__who {
+  margin: 0;
+  font-size: var(--hc-caption);
+  font-weight: 600;
+  line-height: 18px;
+}
+.hc-queue__reason {
+  margin: var(--hc-space-xs) 0 0;
+  font-family: var(--hc-serif);
+  font-style: italic;
+  font-size: var(--hc-caption);
+  line-height: 19px;
+  color: var(--hc-mid);
+}
+.hc-queue__text {
+  margin: var(--hc-space-sm) 0 0;
+  padding-left: var(--hc-space-md);
+  border-left: 2px solid var(--hc-rule);
+  font-size: var(--hc-body-sans);
+  line-height: 1.5;
+}
+.hc-queue__text--gone { font-style: italic; color: var(--hc-mid); font-size: var(--hc-caption); }
+.hc-queue__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--hc-space-sm);
+  margin: var(--hc-space-md) calc(var(--hc-space-sm) * -1) 0;
+}
+/* The tertiary here is a real choice, not a leftover. Pull it back onto the
+   grid the way .hc-note__tools does, so the pair reads as two buttons. */
+.hc-queue__row .hc-btn--secondary { margin-left: var(--hc-space-sm); }
+
+/* --- the way back from a block ------------------------------------------- */
+/* Quiet on purpose. Nobody needs this until they need it, and then it has to
+   be somewhere findable, because a blocked person's writing does not arrive
+   and so the feed cannot be where you undo it. */
+.hc-blocked {
+  margin-top: var(--hc-space-lg);
+  padding: var(--hc-space-md);
+  border-radius: var(--hc-radius-sm);
+  background: var(--hc-paper-sunk);
+  border: var(--hc-hairline) solid var(--hc-rule);
+}
+.hc-blocked__label { margin: 0; }
+.hc-blocked__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--hc-space-sm);
+  margin-top: var(--hc-space-xs);
+}
+.hc-blocked__name { font-size: var(--hc-body-sans); }
+
+.hc-reveal-all {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--hc-space-sm);
+  margin-bottom: var(--hc-space-base);
+  padding: var(--hc-space-md);
+  border-radius: var(--hc-radius-sm);
+  background: var(--hc-paper-sunk);
+  border: var(--hc-hairline) solid var(--hc-rule);
+}
+
+.hc-room-q { padding: var(--hc-space-base) 0; border-top: var(--hc-hairline) solid var(--hc-rule); }
+.hc-room-q:first-of-type { border-top: 0; }
+.hc-room-q__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--hc-space-sm);
+}
+.hc-room-q__num {
+  font-family: var(--hc-sans-display);
+  font-size: var(--hc-eyebrow);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--hc-accent-deep);
+}
+.hc-room-q__text { margin: var(--hc-space-sm) 0 0; }
+.hc-room-q__tag {
+  display: inline-block;
+  margin-top: var(--hc-space-sm);
+  padding: 3px 8px;
+  border-radius: var(--hc-radius-pill);
+  background: var(--hc-paper-sunk);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--hc-accent-deep);
+}
+.hc-room-q__empty { margin: var(--hc-space-md) 0 0; }
+.hc-room-q__mine { margin-top: var(--hc-space-md); }
+.hc-room-q__post { margin-top: var(--hc-space-sm); }
+.hc-room-q__editrow { display: flex; flex-wrap: wrap; gap: var(--hc-space-sm); margin-top: var(--hc-space-sm); }
+.hc-room-q--add { border-top: var(--hc-hairline) solid var(--hc-rule); }
+
+/* --- what people wrote --------------------------------------------------- */
+
+.hc-notes { display: flex; flex-direction: column; gap: var(--hc-space-sm); margin-top: var(--hc-space-md); }
+
+.hc-note {
+  padding: var(--hc-space-md);
+  border-radius: var(--hc-radius-sm);
+  background: var(--hc-cream);
+  border-left: var(--hc-edge-rule) solid var(--hc-accent);
+}
+.hc-note--mine { background: var(--hc-paper-sunk); border-left-color: var(--hc-accent-deep); }
+/* In, but not out. */
+.hc-note--waiting { border-left-color: var(--hc-warning); }
+
+.hc-note__who {
+  margin: 0;
+  font-family: var(--hc-sans-display);
+  font-size: var(--hc-eyebrow);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--hc-accent-deep);
+}
+.hc-note__you {
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--hc-mid);
+}
+.hc-note__text {
+  margin: var(--hc-space-xs) 0 0;
+  font-family: var(--hc-serif);
+  font-size: calc(var(--hc-body-serif) * var(--hc-text-scale));
+  line-height: 1.5;
+}
+.hc-note__flag {
+  display: flex;
+  align-items: center;
+  gap: var(--hc-space-xs);
+  margin: var(--hc-space-sm) 0 0;
+  font-size: 11.5px;
+  color: var(--hc-mid);
+}
+.hc-note__lock { width: 12px; height: 12px; flex: 0 0 auto; }
+/* Negative inline margin so the first button's own padding does not indent
+   the row away from the text above it. */
+.hc-note__tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--hc-space-sm);
+  margin: var(--hc-space-xs) calc(var(--hc-space-sm) * -1) 0;
+}
+
+/* Waiting on the leader. Dashed, because the answers exist and are simply
+   not out yet, which is a different thing from an empty state. */
+.hc-locked {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--hc-space-sm);
+  padding: var(--hc-space-md);
+  border-radius: var(--hc-radius-sm);
+  background: var(--hc-paper-sunk);
+  border: 1px dashed var(--hc-rule);
+  font-size: var(--hc-caption);
+  line-height: 18px;
+  color: var(--hc-mid);
+}
+.hc-locked svg { width: 14px; height: 14px; flex: 0 0 auto; margin-top: 1px; }
+
+/* --- the reveal desk, host only ------------------------------------------ */
+
+.hc-desk {
+  margin-top: var(--hc-space-md);
+  padding: var(--hc-space-md);
+  border-radius: var(--hc-radius-sm);
+  background: var(--hc-paper-sunk);
+  border: var(--hc-hairline) solid var(--hc-rule);
+}
+.hc-desk__label { margin: 0 0 var(--hc-space-sm); font-size: 11.5px; color: var(--hc-mid); }
+.hc-desk__names { display: flex; flex-wrap: wrap; gap: var(--hc-space-xs); }
+
+.hc-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 32px;
+  padding: 6px 11px;
+  border-radius: var(--hc-radius-pill);
+  background: var(--hc-paper);
+  border: 1px solid var(--hc-rule);
+  color: var(--hc-mid);
+  font-family: var(--hc-sans);
+  font-size: var(--hc-caption);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--hc-dur-fast) var(--hc-ease),
+              color var(--hc-dur-fast) var(--hc-ease),
+              border-color var(--hc-dur-fast) var(--hc-ease);
+}
+.hc-chip__icon { width: 13px; height: 13px; flex: 0 0 auto; }
+.hc-chip[aria-pressed="true"] {
+  background: var(--hc-dark);
+  border-color: transparent;
+  color: var(--hc-on-dark);
+}
+.hc-chip--act { border-style: dashed; color: var(--hc-accent-deep); }
+
+/* --- the last box, and the end of the night ------------------------------ */
+
+.hc-prayers {
+  margin-top: var(--hc-space-lg);
+  padding: var(--hc-card-pad);
+  border-radius: var(--hc-radius-lg);
+  background: var(--hc-cream);
+  border: var(--hc-hairline) solid var(--hc-rule);
+  border-left: var(--hc-edge-rule) solid var(--hc-accent-deep);
+}
+.hc-prayers__title {
+  margin: var(--hc-space-xs) 0 var(--hc-space-xs);
+  font-family: var(--hc-serif);
+  font-size: calc(23px * var(--hc-text-scale));
+  line-height: 1.2;
+}
+.hc-prayers .hc-note { background: var(--hc-paper); border-left-color: var(--hc-accent-deep); }
+
+.hc-room-code { margin-top: var(--hc-space-lg); text-align: center; }
+/* Read out at the door rather than found at the end of the night. */
+.hc-room-code--top { margin-top: 0; margin-bottom: var(--hc-space-lg); }
+.hc-room-code__digits {
+  margin: var(--hc-space-sm) 0 0;
+  font-family: var(--hc-sans-display);
+  font-size: 40px;
+  font-weight: 800;
+  letter-spacing: 0.10em;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.hc-wrap {
+  margin-top: var(--hc-space-lg);
+  padding: var(--hc-card-pad);
+  border-radius: var(--hc-radius-lg);
+  background: var(--hc-paper-sunk);
+  border: var(--hc-hairline) solid var(--hc-rule);
+}
+.hc-wrap__title {
+  margin: var(--hc-space-xs) 0 var(--hc-space-xs);
+  font-family: var(--hc-serif);
+  font-size: calc(23px * var(--hc-text-scale));
+  line-height: 1.2;
+}
+/* Stacked rather than side by side. At 375 across, two buttons in a row put
+   "Print everything to PDF" on three lines, and a three line button reads as
+   a mistake. Full width also gives the pair a primary and a second. */
+.hc-wrap__row { display: flex; flex-direction: column; gap: var(--hc-space-sm); margin-top: var(--hc-space-md); }
+
+/* No markers, so no indent either. base.css strips list-style app wide and a
+   left padding with nothing in it just pushes the text off the grid. */
+.hc-terms-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--hc-space-md);
+}
+.hc-terms-list li { font-size: var(--hc-body-sans); line-height: 1.55; color: var(--hc-mid); }
+
+/* ==========================================================================
+   More
+   What is behind the ••• tile. A short list of modules, drawn heavier than an
+   hc-row because this screen is nothing but the list: at row weight it read
+   as a settings page rather than as somewhere to go.
+   ========================================================================== */
+
+.hc-module-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--hc-space-sm);
+  margin-top: var(--hc-space-base);
+}
+
+.hc-module {
+  display: flex;
+  align-items: center;
+  gap: var(--hc-space-base);
+  width: 100%;
+  text-align: left;
+  min-height: var(--hc-tap-min);
+  padding: var(--hc-space-base);
+  border-radius: var(--hc-radius-lg);
+  background: var(--hc-paper-sunk);
+  border: var(--hc-hairline) solid var(--hc-rule);
+  color: var(--hc-ink);
+}
+
+/* The disc keeps the glyph off the text's baseline grid and gives the row a
+   fixed left edge, so titles of different lengths still line up. */
+.hc-module__disc {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--hc-radius-pill);
+  background: var(--hc-paper);
+  border: var(--hc-hairline) solid var(--hc-rule);
+}
+
+.hc-module__icon { width: 20px; height: 20px; color: var(--hc-accent-deep); }
+
+.hc-module__body { flex: 1 1 auto; min-width: 0; display: block; }
+
+.hc-module__title {
+  display: block;
+  font-family: var(--hc-serif);
+  font-weight: 400;
+  font-size: calc(19px * var(--hc-text-scale));
+  line-height: 1.3;
+  margin-bottom: 2px;
+}
+
+.hc-more__note { margin-top: var(--hc-space-xl); }
+
+/* Giving, at the bottom of Home. See givingRow() in js/screens/home.js. */
+/* Same as the announcement: the "Give" header carries the space now, so this
+   keeps no margin of its own. The scripture under the row keeps the blank
+   line it is written with, which is a real newline inside one escaped string
+   rather than a second paragraph. */
+.hc-home__give .hc-caption { white-space: pre-line; }
+
+/* ==========================================================================
+   Journal
+   The list of everything somebody has written, and the screen for one entry.
+   Cards rather than rows, because an entry has a shape: an eyebrow saying
+   where it came from, sometimes a quotation, then their own words.
+   ========================================================================== */
+
+.hc-journal__intro { margin-top: var(--hc-space-md); color: var(--hc-mid); }
+
+.hc-journal__new { margin-top: var(--hc-space-lg); }
+
+.hc-journal__search { margin-top: var(--hc-space-lg); }
+
+.hc-journal__filters { margin-top: var(--hc-space-md); }
+
+.hc-jlist {
+  display: flex;
+  flex-direction: column;
+  gap: var(--hc-space-sm);
+  margin-top: var(--hc-space-base);
+}
+
+.hc-jcard {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: var(--hc-space-base);
+  border-radius: var(--hc-radius-lg);
+  background: var(--hc-paper-sunk);
+  border: var(--hc-hairline) solid var(--hc-rule);
+  color: var(--hc-ink);
+}
+
+.hc-jcard__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--hc-space-sm);
+}
+
+.hc-jcard__pin-icon { width: 14px; height: 14px; color: var(--hc-accent-deep); }
+
+/* The quotation carries the signature left edge the guides use for anchors,
+   so a highlight reads as something lifted out of a guide rather than as
+   something the person wrote. */
+.hc-jcard__quote {
+  display: block;
+  margin-top: var(--hc-space-sm);
+  padding-left: var(--hc-space-md);
+  border-left: var(--hc-edge-rule) solid var(--hc-accent);
+  font-family: var(--hc-serif);
+  font-size: calc(16px * var(--hc-text-scale));
+  line-height: 1.45;
+  color: var(--hc-ink);
+}
+
+.hc-jcard__body {
+  display: block;
+  margin-top: var(--hc-space-sm);
+  font-family: var(--hc-sans);
+  font-size: calc(var(--hc-body-sans) * var(--hc-text-scale));
+  line-height: 1.5;
+  color: var(--hc-mid);
+}
+
+.hc-jcard__body--empty { font-style: italic; }
+
+.hc-jcard__foot {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--hc-space-sm);
+  margin-top: var(--hc-space-md);
+}
+
+.hc-jcard__refs { color: var(--hc-accent-deep); text-align: right; }
+
+/* Where it is saved, said under every box that saves. Icon and text on one
+   line, the way the offline note on the Guide index is drawn. */
+.hc-journal__where {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--hc-space-sm);
+  margin-top: var(--hc-space-xl);
+  color: var(--hc-mid);
+}
+
+.hc-journal__where-icon {
+  flex: 0 0 auto;
+  width: 16px;
+  height: 16px;
+  margin-top: 2px;
+  color: var(--hc-accent-deep);
+}
+
+/* ------------------------------------------------------------- one entry */
+
+.hc-entry__quote {
+  margin: 0 0 var(--hc-space-lg);
+  padding-left: var(--hc-space-base);
+  border-left: var(--hc-edge-rule) solid var(--hc-accent);
+}
+
+.hc-entry__quote .hc-caption { margin-top: var(--hc-space-sm); }
+
+
+
+.hc-entry__guide { margin-top: var(--hc-space-lg); }
+
+.hc-entry__tag { margin-top: var(--hc-space-md); color: var(--hc-accent-deep); }
+
+.hc-entry__tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--hc-space-sm);
+  margin-top: var(--hc-space-lg);
+}
+
+/* What you already wrote about tonight's guide, above the answer box in a
+   room. See fromJournal() in js/screens/group.js. */
+
+.hc-fromj { margin-top: var(--hc-space-base); }
+
+.hc-fromj__toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--hc-space-sm);
+  width: 100%;
+  min-height: var(--hc-tap-min);
+  padding: 0 var(--hc-space-md);
+  border-radius: var(--hc-radius-sm);
+  border: var(--hc-hairline) dashed var(--hc-rule);
+  background: transparent;
+  color: var(--hc-accent-deep);
+  font-family: var(--hc-sans);
+  font-weight: 500;
+  font-size: var(--hc-caption);
+  text-align: left;
+}
+
+.hc-fromj__icon { width: 15px; height: 15px; flex: 0 0 auto; }
+
+.hc-fromj__count {
+  margin-left: auto;
+  padding: 0 var(--hc-space-sm);
+  border-radius: var(--hc-radius-pill);
+  background: var(--hc-cream);
+  color: var(--hc-mid);
+}
+
+.hc-fromj__chevron {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+  transition: transform var(--hc-dur-fast) var(--hc-ease);
+}
+
+.hc-fromj__toggle[aria-expanded="true"] .hc-fromj__chevron { transform: rotate(180deg); }
+
+.hc-fromj__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--hc-space-sm);
+  margin-top: var(--hc-space-sm);
+}
+
+.hc-fromj__item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: var(--hc-space-md);
+  border-radius: var(--hc-radius-sm);
+  background: var(--hc-paper-sunk);
+  border: var(--hc-hairline) solid var(--hc-rule);
+  color: var(--hc-ink);
+}
+
+.hc-fromj__quote {
+  display: block;
+  margin-bottom: var(--hc-space-xs);
+  font-family: var(--hc-serif);
+  font-size: calc(15px * var(--hc-text-scale));
+  color: var(--hc-accent-deep);
+}
+
+.hc-fromj__body {
+  display: block;
+  font-family: var(--hc-sans);
+  font-size: calc(var(--hc-body-sans) * var(--hc-text-scale));
+  line-height: 1.5;
+}
+
+.hc-fromj__note { margin-top: var(--hc-space-xs); }
+
+/* Keeping your own half of a group night. See keepRow() in
+   js/screens/group.js and keepTonight() in js/app.js. */
+.hc-keep {
+  margin-top: var(--hc-space-lg);
+  padding-top: var(--hc-space-base);
+  border-top: var(--hc-hairline) solid var(--hc-rule);
+}
+
+.hc-keep .hc-caption { margin-top: var(--hc-space-sm); }
+
+/* Your own copy of your own journal, under the note about where it lives. */
+.hc-journal__export { margin-top: var(--hc-space-lg); }
+
+.hc-journal__export .hc-caption { margin-top: var(--hc-space-sm); }
+
+/* The Journal lock. The row only exists on a phone that can do it, see
+   paintLockRow() in js/app.js. */
+.hc-lockrow { margin-top: var(--hc-space-lg); }
+
+.hc-lockrow__note { margin-top: var(--hc-space-sm); }
+
+/* What the Journal is instead of itself while it is locked. Nothing of the
+   list is built behind this, so there is nothing to reach by scrolling. */
+.hc-lockwall {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: var(--hc-space-xxl) var(--hc-space-base);
+}
+
+.hc-lockwall__icon {
+  width: 30px;
+  height: 30px;
+  color: var(--hc-accent-deep);
+}
+
+.hc-lockwall__text {
+  margin-top: var(--hc-space-base);
+  font-family: var(--hc-serif);
+  font-size: calc(19px * var(--hc-text-scale));
+  color: var(--hc-mid);
+}
+
+.hc-lockwall__action { margin-top: var(--hc-space-lg); }
+
+/* --------------------------------------------------------------------------
+   Practices. The grid of nine, and the page every one of the nine is drawn
+   with. See js/screens/practices.js.
+   -------------------------------------------------------------------------- */
+
+.hc-practices__lede {
+  margin-top: var(--hc-space-base);
+  color: var(--hc-mid);
+}
+
+/* ------------------------------------------------------------------ credit
+
+   Whose work the practices are. Sits under the header on the grid and on all
+   nine practice pages. Set on the sunk paper with the signature left edge
+   rather than in a card, because it is not one more thing to read on the way
+   down, it is the frame around everything below it.
+
+   ALPHA BORROWS IT, and shares the selector rather than copying the rules.
+   That screen makes the same admission in the same place about somebody
+   else's course, and two blocks that say the same thing in two stylesheets
+   are two blocks that stop looking alike the first time one is adjusted.
+   Different class name because it is a different credit to different people;
+   same rules because it is the same moment on the page. */
+
+.hc-ptw,
+.hc-alpha-credit {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--hc-space-md);
+  margin-top: var(--hc-space-lg);
+  padding: var(--hc-space-base);
+  border-left: var(--hc-edge-rule) solid var(--hc-accent);
+  background: var(--hc-paper-sunk);
+  border-radius: 0 var(--hc-radius-lg) var(--hc-radius-lg) 0;
+}
+
+.hc-ptw__text,
+.hc-alpha-credit__text {
+  font-family: var(--hc-sans);
+  font-size: calc(var(--hc-caption) * var(--hc-text-scale));
+  line-height: 1.55;
+  color: var(--hc-mid);
+}
+
+/* The one name on this screen that has to be read rather than skimmed. */
+.hc-ptw__text strong,
+.hc-alpha-credit__text strong {
+  font-weight: 600;
+  color: var(--hc-ink);
+}
+
+/* ----------------------------------------------------------- signing up
+
+   Under the grid, centered. The button keeps its own width rather than
+   stretching the full column, so it reads as one thing to tap rather than a
+   tenth tile in the grid above it.
+
+   Alpha's signup is the same block at the foot of its own page, sharing the
+   selector for the same reason the credit above does: one rule, so the two
+   ways into a course the church runs cannot drift apart. */
+
+.hc-practice-signup,
+.hc-alpha-signup {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: var(--hc-space-md);
+  margin-top: var(--hc-space-xxl);
+  padding-top: var(--hc-space-lg);
+  border-top: var(--hc-hairline) solid var(--hc-rule);
+}
+
+.hc-practice-signup__lead,
+.hc-alpha-signup__lead {
+  font-family: var(--hc-serif);
+  font-size: calc(var(--hc-question) * var(--hc-text-scale));
+  line-height: var(--hc-question-line);
+  max-width: 28ch;
+}
+
+.hc-practice-signup .hc-btn,
+.hc-alpha-signup .hc-btn { width: auto; }
+
+.hc-practice-signup__note,
+.hc-alpha-signup__note { color: var(--hc-mid); }
+
+/* Three by three, fixed. Not auto-fit: nine things in a three by three grid
+   is the shape people are being shown, and letting a wide phone reflow it to
+   four across and then two would make the same screen a different screen
+   depending on the handset. The tiles get wider, the arrangement does not. */
+.hc-practice-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--hc-space-lg) var(--hc-space-sm);
+  margin-top: var(--hc-space-lg);
+}
+
+.hc-practice-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--hc-space-sm);
+  padding: var(--hc-space-xs) 0;
+  color: var(--hc-ink);
+  text-align: center;
+  transition: transform var(--hc-dur-fast) var(--hc-ease);
+}
+
+.hc-practice-tile:active { transform: scale(0.96); }
+
+/* The same disc the More rows use, larger. Paper on sunk paper rather than a
+   filled circle, so nine of them in a grid read as nine quiet marks instead
+   of nine buttons shouting at once. */
+.hc-practice-tile__disc {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  max-width: 76px;
+  aspect-ratio: 1 / 1;
+  border-radius: var(--hc-radius-pill);
+  background: var(--hc-paper-sunk);
+  border: var(--hc-hairline) solid var(--hc-rule);
+}
+
+.hc-practice-tile__icon {
+  width: 30px;
+  height: 30px;
+  color: var(--hc-accent-deep);
+}
+
+.hc-practice-tile__label {
+  font-family: var(--hc-sans);
+  font-weight: 500;
+  font-size: calc(13px * var(--hc-text-scale));
+  line-height: 1.25;
+}
+
+/* Long labels get one more line rather than a smaller tile. Generosity is the
+   widest of the nine and it is what this was measured against. */
+@media (max-width: 340px) {
+  .hc-practice-tile__label { font-size: calc(12px * var(--hc-text-scale)); }
+}
+
+/* ----------------------------------------------------------- one practice */
+
+.hc-practice__p {
+  margin-top: var(--hc-space-base);
+}
+
+/* Whose words and whose videos, last on the page. Alpha closes the same way
+   with the same rule, for the same reason. */
+.hc-practice__source,
+.hc-alpha__source {
+  margin-top: var(--hc-space-xl);
+  padding-top: var(--hc-space-base);
+  border-top: var(--hc-hairline) solid var(--hc-rule);
+  color: var(--hc-mid);
+}
+
+.hc-practice-session {
+  margin-top: var(--hc-section-top);
+}
+
+.hc-practice-session__title {
+  display: block;
+  margin-top: var(--hc-space-sm);
+  font-family: var(--hc-serif);
+  font-weight: 400;
+  font-size: calc(var(--hc-display-m) * var(--hc-text-scale));
+  line-height: var(--hc-display-m-line);
+}
+
+/* Same rule under a session heading as under every other heading in the app.
+   A session is a section, and it should not look like a new kind of thing. */
+.hc-practice-session__rule {
+  margin-top: 12px;
+  width: 22%;
+  min-width: 56px;
+  height: 0.75px;
+  background: var(--hc-accent);
+}
+
+.hc-practice-session__head + * { margin-top: var(--hc-space-base); }
+
+.hc-practice-session__p { margin-top: var(--hc-space-base); }
+
+/* The thing the session actually asks you to go and do. It is set apart with
+   the signature left edge rather than in a card, because it is the one line
+   on the page a person is meant to carry out of the app with them, and a card
+   would file it alongside the teaching instead of after it. */
+/* Alpha's day away is set the same way and shares the selector: it is the one
+   thing on that page which is not an evening in the numbered run above it, and
+   the left edge is how this app has always said "this one is apart". */
+.hc-practice-step,
+.hc-alpha-away {
+  margin-top: var(--hc-space-lg);
+  padding: var(--hc-space-md) 0 var(--hc-space-md) var(--hc-space-base);
+  border-left: var(--hc-edge-rule) solid var(--hc-accent);
+}
+
+.hc-practice-step__label,
+.hc-alpha-away__label {
+  display: block;
+  color: var(--hc-accent-deep);
+}
+
+.hc-practice-step__text,
+.hc-alpha-away__text {
+  margin-top: var(--hc-space-sm);
+  font-family: var(--hc-serif);
+  font-size: calc(var(--hc-question) * var(--hc-text-scale));
+  line-height: var(--hc-question-line);
+}
+
+/* ------------------------------------------------------------------ video
+
+   A poster until it is tapped, then a real player in the same box. The two
+   share the aspect ratio so nothing on the page moves when the swap happens,
+   which matters more than it sounds on a page with six of them: a video that
+   grows on tap pushes everything below it down and takes the thing somebody
+   was reading with it. */
+
+.hc-video { margin-top: var(--hc-space-base); }
+
+.hc-video__poster,
+.hc-video__frame {
+  position: relative;
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: var(--hc-radius-lg);
+  overflow: hidden;
+  background: var(--hc-cream);
+}
+
+.hc-video__thumb {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.hc-video__iframe {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+.hc-video__meta {
+  margin-top: var(--hc-space-sm);
+  color: var(--hc-mid);
+}
+
+/* ------------------------------------------------------- the rest of the
+   playlist. Trailers, Q&A, whatever else is in there, under their own
+   heading so nothing above them is something the sessions never taught. */
+
+.hc-practice-extras {
+  display: flex;
+  flex-direction: column;
+  gap: var(--hc-space-lg);
+  margin-top: var(--hc-space-base);
+}
+
+.hc-practice-extra__title {
+  margin-top: var(--hc-space-sm);
+  font-family: var(--hc-serif);
+  font-size: calc(19px * var(--hc-text-scale));
+  line-height: 1.3;
+}
+
+/* A thumbnail that did not arrive. The cream block and the play badge stay,
+   which is how missing art behaves everywhere else in this app. */
+.hc-video__poster[data-failed="true"] .hc-video__thumb { display: none; }
+
+/* The hero line off the practice's own page, under the title. */
+.hc-practice__subtitle {
+  margin-top: var(--hc-space-md);
+  font-family: var(--hc-serif);
+  font-style: italic;
+  font-size: calc(var(--hc-quote) * var(--hc-text-scale));
+  line-height: var(--hc-quote-line);
+  color: var(--hc-accent-deep);
+}
+
+/* ---------------------------------------------------------------- resources
+
+   What a practice closes with. Stacked blocks rather than cards, because they
+   are read once on the way out rather than scanned, and a row of cards here
+   would compete with the sessions above them for the same attention. */
+
+.hc-practice-resources {
+  display: flex;
+  flex-direction: column;
+  gap: var(--hc-space-xl);
+  margin-top: var(--hc-space-base);
+}
+
+.hc-practice-resource {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--hc-space-md);
+}
+
+/* Their artwork, on their CDN. Sized rather than full bleed: these are book
+   covers and podcast art, and stretching one to the column width makes a
+   product shot out of something that is really an illustration. */
+.hc-practice-resource__art {
+  width: 128px;
+  border-radius: var(--hc-radius-lg);
+  overflow: hidden;
+  background: var(--hc-cream);
+}
+
+.hc-practice-resource__img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+/* The one thing on these screens that needs a network. Without it the block
+   still reads, so the empty frame goes rather than sitting there. */
+.hc-practice-resource__art[data-failed="true"] { display: none; }
+
+.hc-practice-resource__title {
+  font-family: var(--hc-serif);
+  font-weight: 400;
+  font-size: calc(22px * var(--hc-text-scale));
+  line-height: 1.25;
+}
+
+.hc-practice-resource__p { margin: 0; }
+/* --------------------------------------------------------------------------
+   Alpha. One page behind •••, and almost all of it is borrowed: the credit
+   block, the signup foot, the left edge, the video poster and the numbered
+   question row are all shared selectors defined above and in components.css.
+   What is left here is the four things this screen has that no other screen
+   does. See js/screens/alpha.js.
+   -------------------------------------------------------------------------- */
+
+.hc-alpha__lede {
+  margin-top: var(--hc-space-lg);
+  color: var(--hc-mid);
+}
+
+.hc-alpha__p { margin-top: var(--hc-space-base); }
+
+.hc-alpha__off-season { color: var(--hc-ink); }
+
+/* --- The three parts of a night ------------------------------------------
+
+   Not a card each and not a numbered list. Three of anything on a phone wants
+   to be either a row of tiles, which these are far too wordy for, or a stack,
+   and a stack is what this is: hairline between, title in sans, sentence in
+   the reading serif under it. The hairline is the same one the numbered
+   question rows below use, so the two blocks read as one page rather than as
+   two designers. */
+
+.hc-alpha-night { margin-top: var(--hc-space-lg); }
+
+.hc-alpha-part {
+  padding-top: var(--hc-space-base);
+  border-top: var(--hc-hairline) solid var(--hc-rule);
+}
+
+.hc-alpha-part + .hc-alpha-part { margin-top: var(--hc-space-base); }
+
+.hc-alpha-part__title {
+  font-family: var(--hc-sans);
+  font-weight: 600;
+  font-size: calc(var(--hc-caption) * var(--hc-text-scale));
+  line-height: 1.3;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--hc-accent-deep);
+}
+
+.hc-alpha-part__body {
+  margin-top: var(--hc-space-sm);
+  font-family: var(--hc-serif);
+  font-size: calc(var(--hc-question) * var(--hc-text-scale));
+  line-height: var(--hc-question-line);
+}
+
+/* --- The eleven questions ------------------------------------------------
+
+   hc-numbered, straight out of components.css, which is the component carried
+   from the printed guides and the one the design system says should survive
+   intact. Eleven weeks of Alpha is a numbered list of questions, so it is
+   drawn with the app's numbered list of questions rather than with something
+   invented for this screen. Nothing to style here but the space above it. */
+
+.hc-alpha-questions { margin-top: var(--hc-space-lg); }
+
+/* --- What people ask -----------------------------------------------------
+
+   Question and answer, stacked, no chevron and nothing to tap. These are four
+   short answers and hiding them behind a disclosure would cost four taps to
+   read what fits on one screen, which is the opposite of what somebody
+   deciding whether to come needs. */
+
+.hc-alpha-asked { margin-top: var(--hc-space-lg); }
+
+.hc-alpha-ask {
+  padding-top: var(--hc-space-base);
+  border-top: var(--hc-hairline) solid var(--hc-rule);
+}
+
+.hc-alpha-ask + .hc-alpha-ask { margin-top: var(--hc-space-base); }
+
+.hc-alpha-ask__q {
+  font-family: var(--hc-serif);
+  font-size: calc(var(--hc-question) * var(--hc-text-scale));
+  line-height: var(--hc-question-line);
+  color: var(--hc-ink);
+}
+
+.hc-alpha-ask__a {
+  margin-top: var(--hc-space-xs);
+  font-family: var(--hc-sans);
+  font-size: calc(var(--hc-caption) * var(--hc-text-scale));
+  line-height: 1.55;
+  color: var(--hc-mid);
+}
+
+/* --------------------------------------------------------------------------
+   Admin
+
+   Settings -> Admin, drawn only for somebody whose profiles.role is 'admin'.
+   Nothing here is a new visual language: the item card is the banner's cream
+   surface without the accent edge, the fields are the profile form's fields,
+   and the switches are the same switches. An admin screen that looked like an
+   admin screen would be the one part of this app that felt like software.
+   -------------------------------------------------------------------------- */
+
+.hc-admin__intro {
+  margin-top: var(--hc-space-md);
+  margin-bottom: var(--hc-space-lg);
+  color: var(--hc-mid);
+}
+
+.hc-admin__new { margin: var(--hc-space-lg) 0; }
+
+.hc-admin__form > * + * { margin-top: var(--hc-space-lg); }
+
+/* One announcement, page, person or setting in a list. */
+.hc-admin__item {
+  background: var(--hc-cream);
+  border-radius: var(--hc-radius-lg);
+  padding: var(--hc-space-base);
+  margin-top: var(--hc-space-md);
+}
+
+.hc-admin__item-head > * + * { margin-top: 4px; }
+
+/* Buttons wrap rather than shrink. Three small buttons and a long name is a
+   real row on a narrow phone, and a squeezed tap target is worse than a
+   second line. */
+.hc-admin__item-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--hc-space-sm);
+  margin-top: var(--hc-space-md);
+}
+
+.hc-admin__item-actions .hc-btn { margin-top: 0; }
+
+.hc-admin__loading,
+.hc-admin__self {
+  color: var(--hc-mid);
+  margin-top: var(--hc-space-sm);
+}
+
+.hc-admin__warn {
+  color: var(--hc-accent-deep);
+  margin-top: var(--hc-space-sm);
+}
+
+/* The picture block on the announcement form, and the link block under it.
+   Both are lists of things with previews, so they share the preview. */
+.hc-admin__image > * + *,
+.hc-admin__link > * + * { margin-top: var(--hc-space-md); }
+
+/* One picture in the list: its preview, and the box holding its address. */
+.hc-admin__image-row + .hc-admin__image-row { margin-top: var(--hc-space-lg); }
+.hc-admin__image-row > * + * { margin-top: var(--hc-space-sm); }
+
+/* A preview with its own remove in its own top right corner. Every thumbnail
+   on this form carries one, the pictures and the link's alike, so "take this
+   one off" is the same gesture wherever somebody meets it. */
+.hc-admin__thumb {
+  position: relative;
+  display: block;
+  width: 100%;
+  max-width: 260px;
+}
+
+.hc-admin__thumb img {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  border-radius: var(--hc-radius-sm);
+  background: var(--hc-paper-sunk);
+  display: block;
+}
+
+/* Set by the image error listener in app.js. A link somebody mistyped shows
+   the cream block rather than the web view's broken image glyph. */
+.hc-admin__thumb[data-failed="true"] img { display: none; }
+
+/* On the picture rather than beside it, because the picture is what it takes
+   away. The disc is the app's paper at full opacity so the x reads over a
+   photograph of anything, including a white wall. */
+.hc-admin__thumb-x {
+  position: absolute;
+  top: var(--hc-space-sm);
+  right: var(--hc-space-sm);
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--hc-paper);
+  color: var(--hc-ink);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.18);
+}
+
+.hc-admin__thumb-x svg {
+  width: 15px; height: 15px;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+}
+
+.hc-admin__thumb-x:active { opacity: 0.6; }
+
+/* The two ways to add a picture, side by side, wrapping on a narrow phone
+   rather than shrinking into two half buttons. */
+.hc-admin__image-add {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--hc-space-sm);
+}
+
+.hc-admin__image-add > * { flex: 1 1 10rem; }
+.hc-admin__image-add .hc-btn { margin-top: 0; width: 100%; }
+
+/* A file input cannot be styled, so the real one is hidden and its <label>
+   carries the button. Clicking a label opens the picker natively, which is
+   why this is a label and not a button with a click handler on it. */
+.hc-admin__file { display: block; }
+.hc-admin__file .hc-btn { width: 100%; }
+
+/* The writing surface on the announcement form. Shorter than the Journal's,
+   which owns a whole screen: this one has a dozen fields under it and a box
+   that fills a third of the phone puts the Save button two scrolls away. */
+.hc-rt--admin { min-height: 20vh; }
+
+/* The caption under a field, explaining what leaving it empty does. */
+.hc-field__help {
+  display: block;
+  margin-top: 6px;
+  color: var(--hc-mid);
+}
+
+/* --------------------------------------------------------------------------
+   A content page
+
+   One screen for every row in content_pages. Nothing but prose, so the only
+   thing to say is how far apart the paragraphs sit.
+   -------------------------------------------------------------------------- */
+
+.hc-page__lede + .hc-page__lede,
+.hc-page__text + .hc-page__text { margin-top: var(--hc-space-base); }
+
+.hc-page__lede { margin-top: var(--hc-space-md); }
+.hc-page__text { margin-top: var(--hc-space-md); }
+
+
+/* --------------------------------------------------------------------------
+   One announcement
+
+   The page behind a card on Home. See js/screens/announcement.js.
+
+   Nothing here is a new visual language either. The words are the serif every
+   other piece of prose in this app is set in, the pictures are the same 4:3
+   frame the Instagram rail and the card use, and the video is the same poster
+   and play badge as a practice's. What is new is the link card, and it is the
+   row from Connect with a photograph on the front.
+   -------------------------------------------------------------------------- */
+
+.hc-announce__note {
+  margin-top: var(--hc-space-md);
+  color: var(--hc-accent-deep);
+}
+
+.hc-announce__text + .hc-announce__text { margin-top: var(--hc-space-base); }
+.hc-announce__text { margin-top: var(--hc-space-md); }
+
+/* Markup somebody typed, after the sanitizer. Only seven tags can be in here
+   and every one of them is given a size, because a paragraph with no rule is
+   a paragraph at whatever the browser's default happens to be.
+
+   Set in the serif rather than the sans. This is the church writing to the
+   church at length, which is what the serif is for everywhere else in this
+   app, and it is the one thing that keeps a formatted announcement from
+   reading like a form. */
+.hc-rich {
+  margin-top: var(--hc-space-base);
+  font-family: var(--hc-serif);
+  font-size: calc(var(--hc-body-serif) * var(--hc-text-scale));
+  line-height: 1.6;
+  color: var(--hc-ink);
+  /* Long words and pasted URLs must not push the screen sideways. */
+  overflow-wrap: break-word;
+}
+
+.hc-rich p { margin: 0 0 var(--hc-space-base); }
+.hc-rich p:last-child { margin-bottom: 0; }
+.hc-rich ul, .hc-rich ol { margin: 0 0 var(--hc-space-base); padding-left: 1.4em; }
+.hc-rich ul { list-style: disc; }
+.hc-rich ol { list-style: decimal; }
+.hc-rich li { margin-bottom: var(--hc-space-xs); }
+.hc-rich strong { font-weight: 600; }
+
+/* A link in an announcement, which unlike a scripture reference in a journal
+   entry is a destination somebody is meant to notice. Underlined in the
+   accent, and it opens in the phone's own browser: every <a> in this app goes
+   through openExternal(), see the click listener in js/app.js. */
+.hc-rich a {
+  color: var(--hc-accent-deep);
+  text-decoration: none;
+  border-bottom: var(--hc-hairline) solid var(--hc-accent);
+}
+
+/* Stacked, not a carousel. Two pictures of a serve day are two things to see
+   and not a gesture to discover. */
+.hc-announce__gallery {
+  display: flex;
+  flex-direction: column;
+  gap: var(--hc-space-md);
+  margin-top: var(--hc-space-base);
+}
+
+/* --- the link card ------------------------------------------------------- */
+
+.hc-linkcard {
+  display: flex;
+  align-items: center;
+  gap: var(--hc-space-md);
+  width: 100%;
+  margin-top: var(--hc-space-base);
+  padding: var(--hc-space-md);
+  text-align: left;
+  background: var(--hc-cream);
+  border-radius: var(--hc-radius-lg);
+  color: inherit;
+}
+
+.hc-linkcard:active { opacity: 0.85; }
+
+/* Square and small, because the thumbnail is a hint about where the tap goes
+   and not the picture on the announcement. The pictures above are that. */
+.hc-linkcard__frame {
+  flex: 0 0 auto;
+  width: 64px;
+  height: 64px;
+  border-radius: var(--hc-radius-sm);
+  overflow: hidden;
+  background: var(--hc-paper-sunk);
+}
+
+.hc-linkcard__img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.hc-linkcard__frame[data-failed="true"] .hc-linkcard__img { display: none; }
+
+.hc-linkcard__body { flex: 1 1 auto; min-width: 0; }
+
+.hc-linkcard__title {
+  display: block;
+  font-family: var(--hc-serif);
+  font-size: calc(17px * var(--hc-text-scale));
+  line-height: 1.35;
+}
+
+/* The host, and it is always drawn even when the title above it is the same
+   words: a link card that does not say where it goes is a link card asking
+   somebody to trust it. One line, ellipsised, never wrapped. */
+.hc-linkcard__host {
+  display: block;
+  margin-top: 2px;
+  color: var(--hc-mid);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.hc-linkcard__icon {
+  flex: 0 0 auto;
+  width: 18px; height: 18px;
+  stroke: var(--hc-mid);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  fill: none;
+}
+
+/* The looping band of film at the head of a practice page. Sized like a wide
+   strip rather than a 16:9 block, because it is a header and not something
+   anybody is meant to sit and watch. Pointer events off: there is nothing to
+   tap and a stray tap that did nothing would feel broken. */
+.hc-practice-hero {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 21 / 9;
+  margin-top: var(--hc-space-base);
+  border-radius: var(--hc-radius-lg);
+  overflow: hidden;
+  background: var(--hc-cream);
+  pointer-events: none;
+}
+
+.hc-practice-hero__frame {
+  position: absolute;
+  /* A background Vimeo embed letterboxes itself to its own aspect ratio, so
+     the frame is oversized and centred and the strip crops it, rather than
+     the strip showing two black bars. */
+  top: 50%;
+  left: 50%;
+  width: 178%;
+  height: 178%;
+  transform: translate(-50%, -50%);
+  border: 0;
+}
+
+/* A hero served as a plain file needs none of the iframe's letterbox
+   correction: it is the video itself and it covers the strip directly. */
+.hc-practice-hero__video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* --------------------------------------------------------------------------
+   Worship
+   What the band played on Sunday. A week header you can swipe, then the songs
+   under it as records: art first, then the name, then who sings it.
+
+   THE LIST IS CENTERED AND THE REST OF THE APP IS NOT. Every other screen
+   here is a left aligned column, because every other screen is mostly words
+   and words are read down an edge. This one is four album covers, and a
+   square has no edge to hang a column on: ranged left, the art and the two
+   lines under it stop being one object and become a picture with a caption
+   beside it. Centered, each song is a record sleeve with its title under it,
+   which is the thing being described.
+   -------------------------------------------------------------------------- */
+
+.hc-worship__head {
+  position: relative;
+  margin-top: var(--hc-space-md);
+}
+
+/* The header is what you drag, so it is what carries the week. The block is
+   centered and given room to breathe on both sides, which is also what keeps
+   the chevrons off the words at the widest date this app can print. */
+.hc-worship-week {
+  text-align: center;
+  padding: 0 var(--hc-space-xl);
+}
+
+.hc-worship-week__date { display: block; color: var(--hc-accent-deep); }
+.hc-worship-week__title { margin-top: 6px; }
+
+/* The two chevrons, laid over the ends of the header rather than beside it,
+   so the slide keeps the full width for a long sermon title and the arrows
+   sit in the air the padding above already reserved for them. */
+.hc-worship__arrow {
+  position: absolute;
+  top: 0;
+  bottom: var(--hc-space-lg);   /* clear of the dots under the rail */
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--hc-tap-min);
+  color: var(--hc-accent-deep);
+  transition: opacity var(--hc-dur-fast) var(--hc-ease);
+}
+
+.hc-worship__arrow--prev { left: calc(var(--hc-space-sm) * -1); }
+.hc-worship__arrow--next { right: calc(var(--hc-space-sm) * -1); }
+
+.hc-worship__arrow svg { width: 20px; height: 20px; }
+
+/* At the ends the arrow stays where it is and stops being a target, so the
+   header does not change shape on the first and last week. */
+.hc-worship__arrow[disabled] {
+  opacity: 0.18;
+  pointer-events: none;
+}
+
+.hc-worship__links {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.hc-worship__links:empty { display: none; }
+
+.hc-worship__songs { margin-top: var(--hc-space-lg); }
+
+/* ---- the songs ---- */
+
+.hc-song-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--hc-space-xxl);
+}
+
+.hc-song { text-align: center; }
+
+/* The art is the biggest thing on the screen, which is the whole design of
+   this page, and it is capped so that it stays a record sleeve on a tablet
+   rather than growing into a poster. */
+.hc-song__art {
+  position: relative;
+  width: 100%;
+  max-width: 320px;
+  margin: 0 auto;
+  border-radius: var(--hc-radius-lg);
+  overflow: hidden;
+}
+
+.hc-song__art .hc-cover { width: 100%; }
+
+.hc-song__img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Art that never arrived. The drawn cover underneath is already there, so
+   taking the photograph away is the whole fix. Same move as a series slide. */
+.hc-song__art[data-failed="true"] .hc-song__img { display: none; }
+
+.hc-song__title { margin-top: var(--hc-space-base); }
+.hc-song__artist { margin-top: 2px; }
+
+/* One row of marks, centered under the words, sized and spaced the way the
+   church's own social row is, because they are the same object doing the same
+   job: a short row of somebody else's logos, each one a way out of the app. */
+.hc-song__links {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: var(--hc-space-sm);
+  margin-top: var(--hc-space-md);
+}
+
+.hc-song__link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--hc-tap-min);
+  height: var(--hc-tap-min);
+  color: var(--hc-ink);
+}
+
+.hc-song__brand { width: 22px; height: 22px; }
+
+/* Lyrics is words, not a mark, and it is set as the app's own link rather
+   than as a button: it is the one thing in this row that is read rather than
+   listened to, and a fourth disc would say it was a fourth platform. */
+.hc-song__lyrics {
+  min-height: var(--hc-tap-min);
+  padding: 0 var(--hc-space-sm);
+  color: var(--hc-accent-deep);
+  font-family: var(--hc-sans);
+  font-weight: 600;
+  font-size: var(--hc-caption);
+}
+
 
 /* --- standalone page overrides ------------------------------------------ */
 html, body { position: static; overflow: visible; height: auto; }
@@ -2213,7 +5976,7 @@ body { background: var(--hc-paper); }
 </head>
 <body>
 <main class="hc-page">
-<div class="hc-screen hc-legal hc-view-enter"><header class="hc-section-header hc-section-header--flush"><span class="hc-eyebrow hc-section-header__eyebrow">The fine print</span><h1 class="hc-section-header__title">Terms of use</h1><div class="hc-section-header__rule" aria-hidden="true"></div></header><p class="hc-caption hc-legal__date">Effective August 11, 2026</p><section class="hc-legal__block"><h2 class="hc-legal__heading">The short version</h2><p class="hc-body-serif hc-legal__p">Use the app. Be decent with it. We built it for our church and we are not claiming it is perfect.</p></section><section class="hc-legal__block"><h2 class="hc-legal__heading">What this is</h2><p class="hc-body-serif hc-legal__p">Home Church makes this app for our congregation and for anyone else who wants it. Sermons, small group guides, what is coming up, and a way to find us on a Sunday.</p></section><section class="hc-legal__block"><h2 class="hc-legal__heading">Using it</h2><p class="hc-body-serif hc-legal__p">Do not use the app to break the law, and do not try to break the app. Do not take the guides and sell them.</p><p class="hc-body-serif hc-legal__p">Short of that, use them. Print one, hand it around your group, read a line out loud, quote it somewhere. That is what they were written for, and you do not need to ask.</p></section><section class="hc-legal__block"><h2 class="hc-legal__heading">What you write is yours</h2><p class="hc-body-serif hc-legal__p">Your notes, your journal entries, your group’s roster and prayer requests. They are yours, they stay on your phone, and we do not have them. We claim nothing over anything you write here.</p></section><section class="hc-legal__block"><h2 class="hc-legal__heading">What we can do</h2><p class="hc-body-serif hc-legal__p">We can change the app, add to it, or stop offering it. If we ever stop, we will tell you rather than let it go quiet.</p></section><section class="hc-legal__block"><h2 class="hc-legal__heading">No promises</h2><p class="hc-body-serif hc-legal__p">The app is offered as it is. We do not promise it will always work, that it will be free of mistakes, or that it will always be available. To the fullest extent Louisiana law allows, Home Church is not liable for any loss or damage arising from your use of the app, or from not being able to use it.</p></section><section class="hc-legal__block"><h2 class="hc-legal__heading">Louisiana</h2><p class="hc-body-serif hc-legal__p">These terms are governed by the laws of the State of Louisiana, without regard to its conflict of law rules.</p></section><section class="hc-legal__block"><h2 class="hc-legal__heading">If this changes</h2><p class="hc-body-serif hc-legal__p">New date at the top, and we will tell you if the change is one that matters.</p></section><section class="hc-legal__block"><h2 class="hc-legal__heading">Reaching us</h2><p class="hc-body-serif hc-legal__p">Home Church<br>216 Giuffrias Ave<br>Metairie, LA 70001</p><a class="hc-btn hc-btn--secondary" href="mailto:hello@homechurchnola.com"><span>Email the church</span></a></section></div>
+<div class="hc-screen hc-legal hc-view-enter"><header class="hc-section-header hc-section-header--flush"><span class="hc-eyebrow hc-section-header__eyebrow">The fine print</span><h1 class="hc-section-header__title">Terms of use</h1><div class="hc-section-header__rule" aria-hidden="true"></div></header><p class="hc-caption hc-legal__date">Effective August 19, 2026</p><section class="hc-legal__block"><h2 class="hc-legal__heading">The short version</h2><p class="hc-body-serif hc-legal__p">Use the app. Be decent with it. We built it for our church and we are not claiming it is perfect.</p></section><section class="hc-legal__block"><h2 class="hc-legal__heading">What this is</h2><p class="hc-body-serif hc-legal__p">Home Church makes this app for our congregation and for anyone else who wants it. Sermons, small group guides, what is coming up, and a way to find us on a Sunday.</p></section><section class="hc-legal__block"><h2 class="hc-legal__heading">Using it</h2><p class="hc-body-serif hc-legal__p">Do not use the app to break the law, and do not try to break the app. Do not take the guides and sell them.</p><p class="hc-body-serif hc-legal__p">Short of that, use them. Print one, hand it around your group, read a line out loud, quote it somewhere. That is what they were written for, and you do not need to ask.</p></section><section class="hc-legal__block"><h2 class="hc-legal__heading">What you write is yours</h2><p class="hc-body-serif hc-legal__p">Your journal, your notes on a guide, your group’s roster and the prayer requests you keep in Leader mode. They are yours. We claim nothing over anything you write here, we do not read it, and we do not use it to train anything. Signed out it never leaves your phone; signed in, your journal is copied to your account so it follows you, and the privacy policy says exactly what that does and does not mean.</p><p class="hc-body-serif hc-legal__p">A group room is the one place that works differently, because the whole point of it is that other people read what you wrote. It still belongs to you. You can edit it or delete it whenever you like. But once you post it, the people in that room have seen it, and the next section is about what that asks of everybody.</p></section><section class="hc-legal__block"><h2 class="hc-legal__heading">In a group room</h2><p class="hc-body-serif hc-legal__p">A room is your small group, on a Thursday night, writing down what they would say out loud. Write like that. Nothing hateful, nothing obscene, nothing aimed at somebody, nothing that is not yours to post. If you would not say it with the room looking at you, it does not go in the box.</p><p class="hc-body-serif hc-legal__p">What other people write in a room stays in the room. It is not yours to forward, screenshot, or repeat somewhere they did not choose.</p><p class="hc-body-serif hc-legal__p">Every note has a Report button and you can block anybody, which stops their writing reaching you. Whoever hosts the room can take anything down for everybody. We look at reports and act on them within one day, and acting on one can mean removing what was written, removing somebody from a room, or closing their account.</p><p class="hc-body-serif hc-legal__p">If the problem is the person hosting your room, or you would rather not go through them, write to us at hello@homechurchnola.com and it comes straight to the church.</p></section><section class="hc-legal__block"><h2 class="hc-legal__heading">The sheet at the end of the night</h2><p class="hc-body-serif hc-legal__p">Whoever hosts a room can turn the evening into one document and send it to the group. Everything the room wrote goes on it, including answers the group never got round to opening, and the prayer requests. That is what the button says before you tap it.</p><p class="hc-body-serif hc-legal__p">Once that document leaves the app it is a file on somebody’s phone and we cannot reach it. Deleting what you wrote afterwards does not take it off a sheet that has already gone out. Worth knowing before you write, and worth a leader thinking about before they send.</p></section><section class="hc-legal__block"><h2 class="hc-legal__heading">What we can do</h2><p class="hc-body-serif hc-legal__p">We can change the app, add to it, or stop offering it. If we ever stop, we will tell you rather than let it go quiet.</p></section><section class="hc-legal__block"><h2 class="hc-legal__heading">No promises</h2><p class="hc-body-serif hc-legal__p">The app is offered as it is. We do not promise it will always work, that it will be free of mistakes, or that it will always be available. To the fullest extent Louisiana law allows, Home Church is not liable for any loss or damage arising from your use of the app, or from not being able to use it.</p></section><section class="hc-legal__block"><h2 class="hc-legal__heading">Louisiana</h2><p class="hc-body-serif hc-legal__p">These terms are governed by the laws of the State of Louisiana, without regard to its conflict of law rules.</p></section><section class="hc-legal__block"><h2 class="hc-legal__heading">If this changes</h2><p class="hc-body-serif hc-legal__p">New date at the top, and we will tell you if the change is one that matters.</p></section><section class="hc-legal__block"><h2 class="hc-legal__heading">Reaching us</h2><p class="hc-body-serif hc-legal__p">Home Church<br>216 Giuffrias Ave<br>Metairie, LA 70001</p><a class="hc-btn hc-btn--secondary" href="mailto:hello@homechurchnola.com"><span>Email the church</span></a></section></div>
 </main>
 </body>
 </html>
