@@ -656,22 +656,26 @@
          started leading a group and needs to be able to open a room on
          Thursday.
 
-         Drawn for an admin's row too, and saying there what it does not
-         change. An admin hosts either way (migration 0036), so hiding the
-         switch would hide a flag that is still set and still true the day
-         they go back to being a member. What is not drawn is the switch on
-         your own row, below: it would be a switch you could tap that changed
-         nothing you could see. */
-      if (!self) {
+         MEMBERS ONLY, AND THAT IS THE WHOLE RULE. An admin already has
+         everything Leader mode grants and hosts a room without it (migration
+         0036), so a switch on an admin's row is one that changes nothing
+         anybody can see, whether it is your own row or somebody else's. The
+         line below says so instead. Demote an admin and the switch comes back
+         on their row, still holding whatever it held: the value is never
+         thrown away, it is only hidden while it cannot matter. */
+      if (isAdminRow) {
+        /* Your own row says this once, in the line under the buttons, rather
+           than twice in two stacked captions. */
+        if (!self) {
+          html += '<p class="hc-caption hc-admin__self">An admin has the leader tools ' +
+            'and can host a group room already. There is no Leader mode to turn on.</p>';
+        }
+      } else {
         html += switchRow({
           title: 'Leader mode',
           sub: u.is_leader
-            ? (isAdminRow
-                ? 'On. They also host as an admin, so this stays true if they become a member.'
-                : 'On. Leader tools, and they can open a group room.')
-            : (isAdminRow
-                ? 'Off, and an admin can host a room without it.'
-                : 'Off. Turn it on for somebody who leads a group.'),
+            ? 'On. Leader tools, and they can open a group room.'
+            : 'Off. Turn it on for somebody who leads a group.',
           action: 'admin-leader',
           id: u.id,
           on: !!u.is_leader
@@ -687,9 +691,8 @@
          trigger underneath it. */
       if (self) {
         html += '<p class="hc-caption hc-admin__self">You cannot change your own role or ' +
-          'remove your own account here. Deleting your account is under Your data. ' +
-          'Leader mode is not offered on your own row either: you can host a room ' +
-          'as an admin already.</p>';
+          'remove your own account here, and an admin has the leader tools already. ' +
+          'Deleting your account is under Your data.</p>';
       } else {
         html += c.button(isAdminRow ? 'Make a member' : 'Make an admin', {
           action: 'admin-role',

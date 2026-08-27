@@ -351,9 +351,12 @@ comment on function public.hc_admin_list_users() is
 --
 -- No self check, unlike hc_admin_set_role. Section 2 says why: an admin is
 -- already a leader by role, so this cannot take anything away from them and
--- cannot lock anybody out. The screen does not draw the switch on your own
--- row all the same, because a switch that changes nothing you can see is a
--- switch somebody will tap twice wondering what is broken.
+-- cannot lock anybody out. The screen does not draw the switch on any admin's
+-- row all the same, their own included, because a switch that changes nothing
+-- anybody can see is a switch somebody will tap twice wondering what is
+-- broken. The column keeps whatever it held while it is hidden, so demoting
+-- an admin brings their row's switch back showing the truth rather than a
+-- default.
 --
 -- The row has to exist. A person who has never opened the app has no profile
 -- row to mark, and saying so is better than an update that matches nothing
