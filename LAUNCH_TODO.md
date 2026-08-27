@@ -299,16 +299,32 @@ neither is a defect:
       `0037_register_device_token_test.sql` asserts both halves: that anon can
       register twice, and that it still cannot read the phone list.
 
-      Migration 0012 and the function are already applied and deployed, and
-      both were verified against the live project: the six new `device_tokens`
-      columns, `push_log`, `pg_cron`, `pg_net`, both `hc_` functions, the vault
-      secret, and the `hc-push-tick` job on `0 * * * *` and active. A dry run
-      of `hc_send_push('test', true)` reached the function and came back
-      `Not configured.`, which is the whole chain working and stopping at the
-      first secret you have not set yet. So step 1 below is done. Everything
-      from step 2 on is still yours, and still needs Apple.
+      **The rest of the chain is live, and this note used to say otherwise.**
+      Re-verified against the project while fixing the above, and steps 1 to 3
+      below are all done now:
 
-      Once you are enrolled, in this order:
+      - `pg_net`, `pg_cron`, the vault secret, all twelve `device_tokens`
+        columns, `push_log`, and `hc-push-tick` on `0 * * * *`, active.
+      - `HC_PUSH_CRON_SECRET` **is set on the function.** A dry run of
+        `hc_send_push('test', true)` came back `200` with the composed
+        notification, where it used to come back `Not configured.` That is
+        pg_cron → `hc_push_tick` → `hc_send_push` → pg_net → the Edge
+        Function, authenticating end to end.
+      - **All four `APNS_*` secrets are set, and Apple accepts them.** A real
+        send with one deliberately fake token in the table came back
+        `400 BadDeviceToken` from Apple. That is the useful answer: the `.p8`
+        parsed, the ES256 provider token signed, and Apple accepted the
+        credentials and rejected only the made-up device token. A bad key
+        gives `403 InvalidProviderToken` and a missing one never reaches
+        Apple at all. The probe row was retired by the sender exactly as
+        designed, then deleted.
+
+      So the only thing that was ever missing on the sending side is the thing
+      fixed above: phones to send to. `device_tokens` is still empty, which is
+      now correct rather than a symptom, because no real phone has registered
+      since the fix shipped.
+
+      What is left is on the phone, not the server, and is steps 4 to 6:
 
       1. ~~**Deploy the function**~~ — already done, with `verify_jwt` off.
          Redeploy only if you change `send-push/index.ts`, and keep the flag:
@@ -332,18 +348,10 @@ neither is a defect:
       3. **Set five secrets** on the function, under Edge Functions →
          send-push → Secrets.
 
-         **Confirmed still outstanding as of the admin dashboard work.** A
-         dry run through `hc_send_push` came back
-         `500 {"error":"Not configured."}`, which is the function's own first
-         check: `HC_PUSH_CRON_SECRET` is not set on it. So push has never
-         fired on this project, and that includes the Monday guide notice and
-         the Saturday reminder, not just announcements. The vault secret from
-         0012 exists; it has simply never been copied onto the function.
-
-         Nothing in the app is wrong and nothing here needs rewriting. Until
-         these are set, posting an announcement saves the card and the Notify
-         step reports that the notification did not send, which is the right
-         way round.
+         ~~**Confirmed still outstanding as of the admin dashboard work.**~~
+         **Done.** All five are set, and Apple answers on the credentials.
+         Verified as described above. The table below is kept for the day one
+         of them has to be rotated.
 
          | Secret | Value |
          |---|---|
@@ -363,6 +371,20 @@ neither is a defect:
          set `APNS_HOST` to `api.sandbox.push.apple.com`, and **delete that
          secret before you submit.**
 
+      **`APNS_HOST` IS THE ONE STILL WORTH CHECKING BEFORE YOU TEST.** It is
+      the only push secret whose current value cannot be read back from
+      outside, and it is the one that decides whether your own phone hears
+      anything. A build run from Xcode onto a device plugged into your Mac is
+      a *development* build: its token is a sandbox token and only
+      `api.sandbox.push.apple.com` will accept it. TestFlight and the App
+      Store are production. Get this backwards and every send fails with
+      `BadDeviceToken`, which is indistinguishable at a glance from the fake
+      token used in the verification above, and looks exactly like a bug in
+      the code. It is not.
+
+      So: **set `APNS_HOST` to `api.sandbox.push.apple.com` while testing from
+      Xcode, and delete that secret before you submit.**
+
       4. **Prove the targeting without sending anything.** In the SQL editor:
 
              select public.hc_send_push('test', true);
@@ -374,7 +396,18 @@ neither is a defect:
              select * from net._http_response order by id desc limit 1;
 
       5. **Send yourself a real one**, from a device with the app installed
-         and a switch turned on:
+         and a switch turned on. Confirm the phone actually registered first,
+         which is the step that never used to work:
+
+             select token, active, wants_new_guide, wants_announcements,
+                    created_at
+               from public.device_tokens order by created_at desc;
+
+         A row here means the whole registration path worked. No row, after
+         turning a switch on with the app on a real phone, means either the
+         Push Notifications capability is missing from the build (XCODE.md
+         step 8) or the registration was refused. Both now say so in the Web
+         Inspector console rather than failing silently. Then:
 
              select public.hc_send_push('test');
 

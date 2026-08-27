@@ -286,11 +286,28 @@
       headers: restHeaders({ Prefer: 'return=minimal' }),
       body: JSON.stringify(args)
     }).then(function (res) {
-      if (!res.ok) return false;
+      if (!res.ok) {
+        /* SAY SOMETHING. The bug 0037 fixed was invisible for exactly one
+           reason: this branch returned false and told nobody, so a permission
+           error that happened on every phone every time looked identical to
+           being offline. There is no person to show this to, the switch is
+           already on and a toast about a REST status would mean nothing to
+           anybody, but there is a Web Inspector attached to a phone plugged
+           into a Mac, and that is who this line is for. */
+        res.text().then(function (detail) {
+          console.error('push: the server refused this registration.',
+                        res.status, detail);
+        }, function () {
+          console.error('push: the server refused this registration.', res.status);
+        });
+        return false;
+      }
       HC.store.storage.set(TOKEN_KEY, token);
       return true;
-    }).catch(function () {
-      return false;   // offline. The switch stays on and this retries next launch.
+    }).catch(function (err) {
+      // Offline. The switch stays on and this retries next launch.
+      console.warn('push: could not reach the server to register.', err);
+      return false;
     });
   }
 
@@ -323,9 +340,17 @@
     p.PushNotifications.addListener('registration', function (t) {
       saveToken(t && t.value);
     });
-    p.PushNotifications.addListener('registrationError', function () {
-      // Nothing useful to tell a person here. The switch reflects their
-      // intent, and registration retries on the next launch.
+    p.PushNotifications.addListener('registrationError', function (err) {
+      /* Nothing useful to tell a person here: the switch reflects their intent
+         and registration retries on the next launch. But this is where a
+         missing Push Notifications capability lands, which is step 8 of
+         XCODE.md and is invisible from inside the app in every other way. A
+         build without the entitlement gets no token, no error on screen, and
+         no row in device_tokens, which looks exactly like the bug 0037 fixed
+         and is not it. Log it so the two are told apart in one glance. */
+      console.error('push: iOS refused to register this device. If this is a ' +
+                    'fresh build, check the Push Notifications capability in ' +
+                    'Xcode (XCODE.md step 8).', err);
     });
   }
 
