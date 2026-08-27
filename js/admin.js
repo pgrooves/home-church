@@ -405,12 +405,15 @@
      questions the whole group sees, and can take down anything anybody wrote
      in it.
 
-     No self guard, unlike setRole above, and nothing here about admins. An
-     admin already has everything Leader mode grants, so the switch is simply
-     not drawn on an admin's row, their own included: this is a call the
-     screen never makes for one rather than a call that refuses. Migration
-     0036 section 6 says the same thing from the database's side. */
+     The same self guard setRole has, because it is the same rule: three
+     tiers, and nobody sets their own. The screen never draws the switch on an
+     admin's row anyway, and your own row is always an admin's, so this is the
+     message rather than the mechanism. hc_admin_set_leader and the trigger
+     under it refuse it too. */
   function setLeader(id, on) {
+    if (isSelf(id)) {
+      return Promise.reject(new Error('You cannot change your own tier.'));
+    }
     return HC.auth.rpc('hc_admin_set_leader', { p_user: id, p_on: !!on })
       .then(function () { invalidate('users'); });
   }

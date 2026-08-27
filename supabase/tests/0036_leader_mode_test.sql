@@ -143,6 +143,21 @@ begin;
         '00000000-0000-0000-0000-0000000000ff', true)$$,
     null);
 
+  /* Three tiers and one rule over all of them. An admin has no lockout to
+     fear here, since being an admin is what makes them a leader, and it is
+     still refused: a rule with a carve-out in it is a rule somebody has to
+     check before they can trust it. Both halves, the named call and the
+     direct write underneath it. */
+  select t_raises('an admin cannot set Leader mode on themselves',
+    $$select public.hc_admin_set_leader(
+        'cc000000-0000-0000-0000-000000000001', true)$$,
+    '42501');
+
+  select t_raises('nor by writing their own column',
+    $$update public.profiles set can_host = true
+       where id = 'cc000000-0000-0000-0000-000000000001'$$,
+    '42501');
+
   -- Admins host too, which is the second half of migration 0036.
   select t_check('an admin can open a room',
     (select code is not null from public.hc_room_open(

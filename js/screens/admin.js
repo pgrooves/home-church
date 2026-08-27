@@ -635,9 +635,11 @@
       return html;
     }
 
-    html += '<p class="hc-body-serif hc-admin__intro">An admin can write announcements, ' +
-      'edit content, and change what everybody else can do. A leader gets the leader ' +
-      'tools and can host a group room. Everyone else is a member.</p>';
+    html += '<p class="hc-body-serif hc-admin__intro">Everybody here is one of three. ' +
+      'A member reads, writes in their own journal, and joins a group room. A leader ' +
+      'also gets the leader tools and can host one. An admin can do all of that, and ' +
+      'write announcements, edit content, and set what everybody else is. Nobody can ' +
+      'change their own.</p>';
 
     rows.forEach(function (u) {
       var self = HC.admin.isSelf(u.id);

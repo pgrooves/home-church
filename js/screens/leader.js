@@ -1,6 +1,7 @@
 /* ==========================================================================
    Home Church, Leader tools
-   A sixth view, not a sixth tab. Reached from Profile when leader mode is on.
+   A sixth view, not a sixth tab. Reached from the More sheet by anybody an
+   admin has made a leader, and by an admin, who is one by definition.
 
    Roster and prayer capture are local only in v1. The point is the shape:
    most church apps serve attenders, almost none serve the person who has to

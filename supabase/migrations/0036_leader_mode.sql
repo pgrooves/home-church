@@ -1,5 +1,12 @@
 -- ===========================================================================
--- Home Church, Leader mode becomes something the church grants
+-- Home Church, Leader mode becomes a tier the church grants
+--
+-- THREE TIERS AND ONE RULE, which is the whole of this file read from a
+-- distance. A person is a member, a leader, or an admin, in that order. A
+-- leader gets the leader tools and can host a group room. An admin can do
+-- that and everything else. An admin sets which tier somebody is in, from
+-- Admin -> Manage users, and nobody sets their own, admins included: `role`
+-- has refused that since 0025 and `can_host` refuses it here.
 --
 -- WHAT CHANGED AND WHY. Leader mode shipped as a switch in Your account that
 -- anybody could flip for themselves. That was honest when all it did was put
@@ -77,8 +84,10 @@ comment on column public.profiles.can_host is
 -- Each one guards one column and says so in its name, and re-applying 0025
 -- (which every migration here invites) cannot silently take this one away.
 --
--- THE THREE CASES, in the order the trigger takes them, and they are 0025's
--- three minus one:
+-- THE THREE CASES, in the order the trigger takes them. They are 0025's
+-- three, said about a different column, because there are three tiers and one
+-- rule over all of them: a member, a leader, an admin, and nobody sets their
+-- own.
 --
 --   auth.uid() is null    The service role, the SQL editor, a migration,
 --                         scripts/hc_supabase.py host. Allowed, and this is
@@ -88,13 +97,14 @@ comment on column public.profiles.can_host is
 --   not hc_is_admin()     Anybody signed in who is not an admin, including
 --                         a leader trying to keep themselves one. Refused.
 --
---   an admin              Allowed, on anybody's row including their own.
---                         0025 refuses an admin their own `role` because an
---                         app whose only admin demotes themselves at 11pm has
---                         no way back in. Nothing like that is true here:
---                         an admin can host without the column (section 3),
---                         so setting it on themselves changes nothing they
---                         could not already do, and any admin can put it back.
+--   new.id = auth.uid()   An admin on their own row. Refused, and the reason
+--                         is not 0025's: there is no lockout to prevent here,
+--                         since an admin is a leader by role either way
+--                         (section 3) and this column cannot take that away.
+--                         It is refused because "nobody changes their own
+--                         tier" is worth being true without exceptions to
+--                         explain. A rule with one carve-out in it is a rule
+--                         somebody has to check before they can trust it.
 -- ---------------------------------------------------------------------------
 
 create or replace function public.hc_guard_leader_change()
@@ -117,6 +127,11 @@ begin
       using errcode = 'insufficient_privilege';
   end if;
 
+  if new.id = auth.uid() then
+    raise exception 'Nobody sets their own tier, admins included.'
+      using errcode = 'insufficient_privilege';
+  end if;
+
   return new;
 end;
 $$;
@@ -124,7 +139,7 @@ $$;
 revoke all on function public.hc_guard_leader_change() from public, anon, authenticated;
 
 comment on function public.hc_guard_leader_change() is
-  'Refuses any change to profiles.can_host that did not come from an admin or from a session-less caller holding the service role. The app half of the same rule is hc_admin_set_leader. See migration 0036 section 2.';
+  'Refuses any change to profiles.can_host that did not come from an admin acting on somebody else, or from a session-less caller holding the service role. The twin of hc_guard_role_change from 0025: three tiers, and nobody sets their own. See migration 0036 section 2.';
 
 drop trigger if exists profiles_guard_leader_change on public.profiles;
 
@@ -349,14 +364,16 @@ comment on function public.hc_admin_list_users() is
 -- thing that turns a refusal into a sentence and keeps the app's whole
 -- leader-writing surface at one named call.
 --
--- No self check, unlike hc_admin_set_role. Section 2 says why: an admin is
--- already a leader by role, so this cannot take anything away from them and
--- cannot lock anybody out. The screen does not draw the switch on any admin's
--- row all the same, their own included, because a switch that changes nothing
--- anybody can see is a switch somebody will tap twice wondering what is
--- broken. The column keeps whatever it held while it is hidden, so demoting
--- an admin brings their row's switch back showing the truth rather than a
--- default.
+-- The self check is here as well as in the trigger, exactly as
+-- hc_admin_set_role has it, and for the reason 0025 gives: a duplicated guard
+-- on the tier somebody holds is worth its cost, and this is the copy that can
+-- say why in the app's own voice.
+--
+-- The screen does not draw the switch on any admin's row in any case, their
+-- own included: an admin already has everything Leader mode grants, so it
+-- would be a switch that changes nothing anybody can see. The column keeps
+-- whatever it held while it is hidden, so demoting an admin brings their
+-- row's switch back showing the truth rather than a default.
 --
 -- The row has to exist. A person who has never opened the app has no profile
 -- row to mark, and saying so is better than an update that matches nothing
@@ -378,6 +395,11 @@ begin
     raise exception 'On or off, not neither.' using errcode = '22023';
   end if;
 
+  if p_user = auth.uid() then
+    raise exception 'You cannot change your own tier.'
+      using errcode = 'insufficient_privilege';
+  end if;
+
   update public.profiles set can_host = p_on where id = p_user;
 
   if not found then
@@ -390,7 +412,7 @@ revoke all on function public.hc_admin_set_leader(uuid, boolean) from public, an
 grant execute on function public.hc_admin_set_leader(uuid, boolean) to authenticated;
 
 comment on function public.hc_admin_set_leader(uuid, boolean) is
-  'Turn Leader mode on or off for somebody. Admins only. The trigger in 0036 section 2 enforces the same rule against a direct PATCH.';
+  'Turn Leader mode on or off for somebody. Admins only, and never yourself. The trigger in 0036 section 2 enforces both rules against a direct PATCH.';
 
 
 -- ---------------------------------------------------------------------------
