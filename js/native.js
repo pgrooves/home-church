@@ -255,12 +255,36 @@
        everything off and later changed their mind, because the upsert only
        updates the columns it actually sends. Re-registering on every launch
        costs one request and repairs both. */
-    var row = Object.assign({ token: token, platform: 'ios' }, prefsBody());
 
-    return fetch(cfg.SUPABASE_URL + '/rest/v1/device_tokens', {
+    /* WHY THIS IS AN RPC AND NOT A POST TO THE TABLE, which is what it was
+       until migration 0037 and is the reason nothing was ever registered.
+
+       Posting the row with `Prefer: resolution=merge-duplicates` asks
+       PostgREST for `insert ... on conflict (token) do update`, and that
+       statement needs SELECT on device_tokens as well as INSERT and UPDATE,
+       because Postgres has to read the conflicting row to resolve the
+       conflict. Migration 0010 revoked SELECT from anon deliberately: a
+       readable token table is a downloadable list of every phone with this app
+       installed. So every registration came back 403 and the `if (!res.ok)`
+       below turned it into a silent false, on a path with no error surface,
+       for every phone, forever.
+
+       0037 moves the upsert into a SECURITY DEFINER function that anon may
+       call and nothing else. The table keeps the grants it had. */
+    var prefs = prefsBody();
+    var args = {
+      p_token: token,
+      p_platform: 'ios',
+      p_new_guide: prefs.wants_new_guide,
+      p_sunday_reminder: prefs.wants_sunday_reminder,
+      p_group_day: prefs.wants_group_day,
+      p_announcements: prefs.wants_announcements
+    };
+
+    return fetch(cfg.SUPABASE_URL + '/rest/v1/rpc/hc_register_device_token', {
       method: 'POST',
-      headers: restHeaders({ Prefer: 'resolution=merge-duplicates,return=minimal' }),
-      body: JSON.stringify(row)
+      headers: restHeaders({ Prefer: 'return=minimal' }),
+      body: JSON.stringify(args)
     }).then(function (res) {
       if (!res.ok) return false;
       HC.store.storage.set(TOKEN_KEY, token);

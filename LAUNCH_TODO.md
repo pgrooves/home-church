@@ -266,6 +266,39 @@ neither is a defect:
       needs an Apple Developer account, which needs the D-U-N-S number at the
       top of this page. That is the real dependency, not the code.
 
+      **The registration half was broken the whole time, and is fixed now.**
+      `device_tokens` had never held a single row. Every part of the chain
+      above was real; the request that puts a token in the table was refused
+      by Postgres every time and the app said nothing. `js/native.js` upserted
+      by posting with `Prefer: resolution=merge-duplicates`, which PostgREST
+      turns into `insert ... on conflict do update`, and that statement needs
+      `SELECT` on `device_tokens` on top of `INSERT` and `UPDATE`, because the
+      conflicting row has to be read to resolve the conflict. Migration 0010
+      revoked `SELECT` from anon on purpose, so it came back `42501`, which is
+      a 403, which `if (!res.ok) return false` swallowed on a path with no
+      error surface. Turning the switches off and deregistering are plain
+      `PATCH`es and never needed `SELECT`; they only looked broken because they
+      run off a token the app never got to store.
+
+      Migration 0037 fixes it without taking Postgres's advice to grant anon
+      `SELECT`, which is exactly what 0010 spent a page refusing: a readable
+      token table is a downloadable list of every phone with the app on it.
+      The upsert moved into `hc_register_device_token`, a SECURITY DEFINER
+      function that anon may call and nothing else, and the table keeps the
+      grants it had. **0037 is applied to the live project and verified there:
+      a first registration, a second one taking the CONFLICT branch, and a
+      reactivation, all as `anon`, with `anon` confirmed still unable to
+      `SELECT` or `DELETE`. The probe rows were removed afterwards, so the
+      table is empty again — correctly this time, since no real phone has
+      registered yet.**
+
+      The harness stub of `device_tokens` in `supabase/tests/harness.sql` had
+      no RLS and no revoke, so a test written against it would have passed
+      while production failed. That is why nothing caught this. The stub now
+      copies 0010's security half verbatim, and
+      `0037_register_device_token_test.sql` asserts both halves: that anon can
+      register twice, and that it still cannot read the phone list.
+
       Migration 0012 and the function are already applied and deployed, and
       both were verified against the live project: the six new `device_tokens`
       columns, `push_log`, `pg_cron`, `pg_net`, both `hc_` functions, the vault

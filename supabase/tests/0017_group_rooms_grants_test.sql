@@ -195,7 +195,16 @@ select t_check('but service_role can, because something has to run it',
 -- One saved draft would have taken announcements off Home for every signed out
 -- phone. It leaks nothing: with no session auth.uid() is null, so it can only
 -- ever answer false.
-select t_check('anon can execute exactly the three policy helpers it needs',
+--
+-- hc_register_device_token, from 0037, is the fourth and is the odd one out:
+-- it is not a policy helper, it writes. It is on this list because registering
+-- a phone for push happens with the publishable key and no session, and the
+-- upsert it performs needs SELECT on device_tokens, which anon must never have
+-- for the reason 0010 gives. A SECURITY DEFINER function anon may call is what
+-- lets the table keep that revoke. What it can do is smaller than the anon
+-- INSERT policy 0010 already grants: one row, keyed by a value the caller
+-- passes in, returning void, reading nothing back.
+select t_check('anon can execute exactly the four functions it needs',
   (select coalesce(string_agg(p.proname, ', ' order by p.proname), 'none')
      from pg_proc p
      join pg_type t on t.oid = p.prorettype
@@ -203,14 +212,14 @@ select t_check('anon can execute exactly the three policy helpers it needs',
       and p.proname like 'hc\_%'
       and t.typname <> 'trigger'
       and has_function_privilege('anon', p.oid, 'EXECUTE')),
-  'hc_is_admin, hc_room_is_live, hc_room_is_member');
+  'hc_is_admin, hc_register_device_token, hc_room_is_live, hc_room_is_member');
 
 -- The standing guard, and the reason migration 0017 does not try to solve this
 -- with ALTER DEFAULT PRIVILEGES. Postgres hands PUBLIC an EXECUTE grant on
 -- every new function and there is no way to switch that off ahead of time, so
 -- the next person to add an hc_ function to this schema has to revoke it from
 -- public by name. This is what tells them they forgot: it lists anything anon
--- can reach that is not one of the two helpers above. Trigger functions are
+-- can reach that is not one of the four named above. Trigger functions are
 -- exempt, PostgREST does not expose them.
 select t_check('and nothing else in the schema is reachable by a signed out client',
   (select coalesce(string_agg(p.proname, ', ' order by p.proname), 'none')
@@ -219,6 +228,7 @@ select t_check('and nothing else in the schema is reachable by a signed out clie
     where p.pronamespace = 'public'::regnamespace
       and p.proname like 'hc\_%'
       and t.typname <> 'trigger'
-      and p.proname not in ('hc_room_is_live', 'hc_room_is_member', 'hc_is_admin')
+      and p.proname not in ('hc_room_is_live', 'hc_room_is_member', 'hc_is_admin',
+                            'hc_register_device_token')
       and has_function_privilege('anon', p.oid, 'EXECUTE')),
   'none');
