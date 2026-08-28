@@ -376,12 +376,51 @@ function shipping() {
   }
 }
 
+/* ==================================================== 2b. push entitlement
+   The one key that grants an app the right to register for push, and the one
+   whose absence is completely silent. Without `aps-environment` iOS does not
+   refuse the registration and does not raise an error, it simply never calls
+   back: permission reads granted, register() resolves, and no token ever
+   arrives. Every other layer looks healthy while nothing works.
+
+   That is exactly what happened here, for the whole life of the feature, and
+   it was found by hand rather than by anything that could have told us. This
+   check is the thing that would have told us. It cannot see inside ios/,
+   which is generated and gitignored, so it guards the copy in ios-config/
+   that XCODE.md step 8 says to install.
+   ===================================================================== */
+
+function pushEntitlement() {
+  const file = path.join(ROOT, 'ios-config', 'App.entitlements');
+  if (!ok('ios-config/App.entitlements exists', fs.existsSync(file),
+    'Without aps-environment the app can never receive a push token, and\n' +
+    '      fails silently when it tries. See XCODE.md step 8.')) return;
+
+  const xml = fs.readFileSync(file, 'utf8');
+
+  const value = (xml.match(/<key>aps-environment<\/key>\s*<string>(\w+)<\/string>/) || [])[1];
+
+  ok('and declares aps-environment', !!value,
+    'The file is there but the key is not, which is the same as not having it.');
+
+  /* `development` is correct here even for a build you ship. Distribution
+     signing rewrites it to `production` from the provisioning profile, so a
+     file that says production is either hand edited or copied from somewhere
+     it should not have been, and on a development build it is the version
+     that quietly fails against the sandbox gateway. */
+  ok('with the development value Xcode manages', value === 'development',
+    'Found "' + value + '". Leave it as development: archiving rewrites it to\n' +
+    '      production from the distribution profile. The sandbox and production\n' +
+    '      gateways are chosen by the APNS_HOST secret instead, per LAUNCH_TODO.md.');
+}
+
 /* ------------------------------------------------------------------ run it */
 
 console.log('Preflight, everything in SUBMISSION_KIT.md a machine can check.\n');
 
 legal();
 manifest();
+pushEntitlement();
 icons();
 screenshots();
 bundle();

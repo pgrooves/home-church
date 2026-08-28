@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Home Church, the app's entitlements.
+
+  WHAT THIS IS AND WHY IT IS IN THE REPO. One key, `aps-environment`, which is
+  what actually grants an app the right to register for push notifications.
+  Without it iOS does not refuse the registration and does not raise an error.
+  It simply never calls back. Permission says granted, `register()` resolves,
+  and no token ever arrives, which is the single most misleading failure in
+  this whole feature: everything looks like it worked.
+
+  This file was missing for the entire life of the project and cost an evening
+  to find. Adding the Push Notifications capability in Xcode is supposed to
+  create it, and the capability can end up listed in Signing & Capabilities
+  while the file itself was never written or never linked. Nothing else in the
+  app can tell, so nothing else could report it.
+
+  WHY IT LIVES HERE rather than in ios/. Same reason as PrivacyInfo.xcprivacy
+  next to it: ios/ is generated and gitignored, so a hand written file inside
+  it is destroyed the first time somebody runs `npx cap add ios` again. Kept
+  here, it survives, and scripts/preflight.js checks it is still here.
+
+  WHERE IT GOES. Once ios/ exists:
+
+      cp ios-config/App.entitlements ios/App/App/
+
+  Then in Xcode, App target -> Build Settings -> search "entitlements" ->
+  set Code Signing Entitlements to `App/App.entitlements`. XCODE.md step 8
+  spells this out with where to click.
+
+  WHY THE VALUE SAYS development AND THAT IS CORRECT FOR THE APP STORE TOO.
+  A build Xcode puts on a device plugged into your Mac is a development build
+  and registers against Apple's sandbox push gateway. When you archive for
+  distribution, the signing process rewrites this entitlement to `production`
+  from the distribution provisioning profile. So this file says development
+  and a shipped build still gets production, and you do not edit it before
+  submitting. The thing you DO have to change for the two gateways is the
+  APNS_HOST secret on the send-push Edge Function, which is a separate switch
+  and is written up in LAUNCH_TODO.md under "Push notifications".
+-->
+<plist version="1.0">
+<dict>
+	<key>aps-environment</key>
+	<string>development</string>
+</dict>
+</plist>

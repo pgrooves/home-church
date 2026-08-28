@@ -167,6 +167,40 @@ Still on **Signing & Capabilities**:
 1. Click **+ Capability**, top left of that tab.
 2. Type `push` and double click **Push Notifications**.
 
+**Now check that it actually took, because this step can lie to you.** Adding
+the capability is supposed to create a file called `App.entitlements`, and it
+does not always do it. The capability sits there in the list looking correct
+while the file was never written or never linked, and there is no warning
+anywhere.
+
+That distinction is invisible from inside the app and it is the difference
+between push working and push doing nothing. Without the `aps-environment`
+key that file carries, iOS does not refuse the registration and does not
+report an error. It just never answers. Permission reads granted, the app
+asks for a token, and no token ever comes. Everything looks fine.
+
+So look for it. In the Project Navigator (Cmd+1), inside the **App** folder,
+there should now be **App.entitlements**.
+
+**If it is not there**, install the copy this repo keeps. In Terminal:
+
+```bash
+cp ios-config/App.entitlements ios/App/App/
+```
+
+Then in Xcode:
+
+1. Drag `App.entitlements` from Finder into the **App** folder in the
+   Project Navigator, ticking **Copy items if needed** and the **App** target.
+2. Go to **Build Settings**, search for `entitlements`, and set
+   **Code Signing Entitlements** to `App/App.entitlements`.
+3. Build and run again.
+
+`npm run preflight` checks that `ios-config/App.entitlements` still exists and
+still says `development`, so the repo half cannot go missing quietly. It
+cannot see inside `ios/`, which is generated and gitignored, so the copy above
+is yours to keep true.
+
 That is the Xcode half. The other half is in Apple's developer portal, and you
 only ever do it once:
 
