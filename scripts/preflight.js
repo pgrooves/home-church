@@ -414,6 +414,49 @@ function pushEntitlement() {
     '      gateways are chosen by the APNS_HOST secret instead, per LAUNCH_TODO.md.');
 }
 
+/* ================================================ 2c. the AppDelegate hooks
+   The last of the three ways this app could fail to receive a push token
+   while reporting perfect health, and the only one invisible from inside the
+   web layer.
+
+   Capacitor never sees APNs directly. iOS hands the token to the app
+   delegate, and @capacitor/push-notifications is listening for a
+   NotificationCenter post that only two AppDelegate methods make. The
+   plugin's README says to add them; `npx cap add ios` does not. Without them
+   the token arrives and is dropped one layer below any JavaScript, so
+   register() resolves, no listener fires, and nothing errors.
+
+   ios/ is generated and gitignored, so this can only check a machine that has
+   actually run `npx cap add ios`. Where there is no ios/ the check is skipped
+   rather than failed, which keeps this honest on a fresh clone and in CI.
+   ===================================================================== */
+
+function appDelegateHooks() {
+  const fragment = path.join(ROOT, 'ios-config', 'AppDelegate-push.swift');
+  ok('ios-config/AppDelegate-push.swift exists', fs.existsSync(fragment),
+    'It is the paste-in for AppDelegate.swift that makes push tokens reach the\n' +
+    '      plugin at all. See XCODE.md step 8.');
+
+  const delegate = path.join(ROOT, 'ios', 'App', 'App', 'AppDelegate.swift');
+  if (!fs.existsSync(delegate)) {
+    console.log('SKIP  ios/ is not generated here, so AppDelegate cannot be checked');
+    return;
+  }
+
+  const swift = fs.readFileSync(delegate, 'utf8');
+
+  ok('AppDelegate.swift forwards the registered token to Capacitor',
+    swift.indexOf('capacitorDidRegisterForRemoteNotifications') > -1,
+    'Without it iOS hands over the token and the app drops it, silently.\n' +
+    '      Paste both methods from ios-config/AppDelegate-push.swift into\n' +
+    '      ios/App/App/AppDelegate.swift. XCODE.md step 8 says where.');
+
+  ok('and forwards the failure too',
+    swift.indexOf('capacitorDidFailToRegisterForRemoteNotifications') > -1,
+    'Without it a refused registration is silent, which is how the missing\n' +
+    '      entitlement stayed hidden. Paste the second method too.');
+}
+
 /* ------------------------------------------------------------------ run it */
 
 console.log('Preflight, everything in SUBMISSION_KIT.md a machine can check.\n');
@@ -421,6 +464,7 @@ console.log('Preflight, everything in SUBMISSION_KIT.md a machine can check.\n')
 legal();
 manifest();
 pushEntitlement();
+appDelegateHooks();
 icons();
 screenshots();
 bundle();

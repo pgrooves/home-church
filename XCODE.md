@@ -201,6 +201,44 @@ still says `development`, so the repo half cannot go missing quietly. It
 cannot see inside `ios/`, which is generated and gitignored, so the copy above
 is yours to keep true.
 
+## 8b. Teach AppDelegate to hand the token over
+
+**Do not skip this. Everything above can be perfect and push will still do
+nothing without it**, which is exactly what happened on the first build of
+this app.
+
+Capacitor never talks to Apple's push service directly. iOS delivers the
+device token to `AppDelegate`, and the push plugin sits waiting for a message
+that only two AppDelegate methods send. The plugin's own README says to add
+them, and `npx cap add ios` does not, so every new project starts without
+them.
+
+With them missing there is no error anywhere. iOS registers, hands over the
+token, and the app drops it one layer below any JavaScript. Permission reads
+granted, `register()` succeeds, no listener fires, nothing is logged, and
+`device_tokens` stays empty forever.
+
+In Xcode, open **AppDelegate.swift** in the App folder. Find the last `}` in
+the file, and paste these two methods just **above** it, so they sit inside
+`class AppDelegate`:
+
+```swift
+func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
+    NotificationCenter.default.post(name: .capacitorDidRegisterForRemoteNotifications, object: deviceToken)
+}
+
+func application(_ application: UIApplication, didFailToRegisterForRemoteNotificationsWithError error: Error) {
+    NotificationCenter.default.post(name: .capacitorDidFailToRegisterForRemoteNotifications, object: error)
+}
+```
+
+The same text is in `ios-config/AppDelegate-push.swift` if you would rather
+copy it from a file. `npm run preflight` checks `AppDelegate.swift` for both
+methods whenever `ios/` exists on the machine, so this cannot go missing again
+without something saying so.
+
+-----
+
 That is the Xcode half. The other half is in Apple's developer portal, and you
 only ever do it once:
 
