@@ -1170,6 +1170,42 @@
       }));
     },
 
+    /* ------------------------------------------- the newsletter review queue
+
+       Two taps and no dialog in front of either, which is the whole point of
+       the queue: an admin with four parsed drafts on a Monday should be able
+       to clear them with four taps and not twelve.
+
+       NEITHER OF THESE IS IRREVERSIBLE, which is what earns them the missing
+       confirm. Approve puts a card on Home that Edit and Delete can still
+       reach; Discard moves the row into the Posted list below as a draft and
+       deletes nothing. The one destructive button in this section, Delete,
+       keeps the confirm it has always had. See js/admin.js. */
+
+    'admin-review-approve': function (el) {
+      var id = el.getAttribute('data-id');
+      var row = announcementById(id);
+      if (!row) return;
+
+      adminRun('approve:' + id, HC.admin.approveAnnouncement(id).then(function () {
+        // Says where it went rather than that it worked. "Approved" is a state
+        // and "It is on Home" is the thing somebody actually wanted to know.
+        HC.components.toast('“' + row.title + '” is on Home.');
+      }));
+    },
+
+    'admin-review-discard': function (el) {
+      var id = el.getAttribute('data-id');
+      var row = announcementById(id);
+      if (!row) return;
+
+      adminRun('discard:' + id, HC.admin.discardAnnouncement(id).then(function () {
+        // Names the way back, because a tap with no confirm in front of it
+        // should say what it did and where the thing went.
+        HC.components.toast('Discarded. It is still below as a draft.');
+      }));
+    },
+
     'admin-announcement-delete': function (el) {
       var id = el.getAttribute('data-id');
       var row = announcementById(id);

@@ -8,6 +8,20 @@ do $$ begin
   if not exists (select 1 from pg_roles where rolname = 'authenticated') then create role authenticated nologin; end if;
   if not exists (select 1 from pg_roles where rolname = 'service_role') then create role service_role nologin; end if;
 end $$;
+
+/* service_role bypasses RLS on a real project, and until 0038 nothing here
+   noticed. That is the same class of drift the block below this one was
+   written to close: every migration in this project since 0001 has argued that
+   a missing write policy IS the mechanism, precisely because the service role
+   does not consult policies. A harness whose service_role is an ordinary role
+   cannot check that claim, and a test that tried would fail against a table
+   production writes to happily.
+
+   Verified against the project rather than remembered:
+     select rolname, rolbypassrls from pg_roles;
+   returns true for service_role and postgres, false for anon and
+   authenticated. */
+alter role service_role bypassrls;
 grant anon, authenticated, service_role to postgres;
 
 -- ---------------------------------------------------------------------------

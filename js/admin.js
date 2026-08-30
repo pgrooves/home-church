@@ -29,7 +29,15 @@
   /* Which announcements, pages and settings exist, as far as this screen
      knows. `null` means nobody has asked yet, `[]` means the table answered
      and is empty, and the screens tell those two apart. */
-  var cache = { announcements: null, users: null, pages: null, settings: null };
+  var cache = {
+    announcements: null, users: null, pages: null, settings: null,
+    // The newsletter intake's own heartbeat, read for the notice at the top of
+    // the announcements section. A slot of its own rather than a field on the
+    // announcements load, because it is a different table with a different
+    // failure mode: the drafts can arrive perfectly while the last poll failed,
+    // and the screen has to be able to say both.
+    newsletter: null
+  };
   var inflight = {};
   var lastError = {};
 
@@ -125,6 +133,83 @@
   function loadAnnouncements() {
     load('announcements', function () {
       return HC.auth.restFetch('/announcements?select=*&order=created_at.desc');
+    });
+  }
+
+  /* ------------------------------------------------- the newsletter intake
+
+     The pipeline in migration 0038 and supabase/functions/newsletter-intake.
+     Everything below reads its two log tables or moves a parsed draft out of
+     the review queue. The parsing itself happens on a schedule and nothing in
+     the app can start it, which is deliberate: the only thing a person does
+     here is decide.
+
+     WHY THE REVIEW QUEUE IS NOT A THIRD FETCH. A pending draft is an
+     announcements row with review_state = 'pending', and this screen already
+     holds every announcements row: 0026's select policy hands an admin the
+     drafts along with everything else, which is what loadAnnouncements()
+     already relies on to draw "Draft" in the list. So the queue is a filter
+     over a list we have, not a query. One list means the review cards and the
+     Posted list underneath them can never disagree about what exists. */
+
+  function loadNewsletter() {
+    load('newsletter', function () {
+      // Only the newest matters. The screen says "checked 12 minutes ago" or
+      // it says what went wrong, and both are answered by one row.
+      return HC.auth.restFetch('/newsletter_runs?select=*&order=ran_at.desc&limit=1');
+    });
+  }
+
+  /* The last poll, or null when nobody has asked yet or the table is empty. An
+     empty table is a real state and it is the one the day this ships: the cron
+     job has not run yet, and the screen says so rather than implying a
+     failure. */
+  function lastRun() {
+    var rows = list('newsletter');
+    return rows.length ? rows[0] : null;
+  }
+
+  function pending() {
+    return list('announcements').filter(function (row) {
+      return row.review_state === 'pending';
+    });
+  }
+
+  /* Approve. One PATCH, and it is the only place in this feature that sets
+     published to true.
+
+     `published` and `review_state` are written together and never apart. Two
+     PATCHes would leave a window in which a row is live but still in the
+     queue, and the failure of the second one would leave it there permanently.
+     Nothing else on the row is touched, so whatever the parse produced is what
+     goes up, which is the point of having reviewed it. */
+  function approveAnnouncement(id) {
+    return HC.auth.restFetch('/announcements?id=eq.' + encodeURIComponent(id), {
+      method: 'PATCH',
+      headers: { Prefer: 'return=minimal' },
+      body: { published: true, review_state: 'approved' }
+    }).then(function () {
+      invalidate('announcements');
+      HC.content.refresh();
+    });
+  }
+
+  /* Discard, and note what it does not do: it does not delete.
+
+     The row leaves the review queue and lands in the Posted list below it as an
+     ordinary draft, where the Delete button that has been there since 0026 can
+     remove it for good. That is what lets Discard be a single tap with no
+     confirmation dialog in front of it: the tap is reversible, and the
+     irreversible thing is still behind the same confirm it has always been
+     behind. A one-tap delete on a card somebody is reading for the first time
+     is how a good announcement disappears on a mis-tap. */
+  function discardAnnouncement(id) {
+    return HC.auth.restFetch('/announcements?id=eq.' + encodeURIComponent(id), {
+      method: 'PATCH',
+      headers: { Prefer: 'return=minimal' },
+      body: { published: false, review_state: 'discarded' }
+    }).then(function () {
+      invalidate('announcements');
     });
   }
 
@@ -228,7 +313,25 @@
       // saves that turn it off: `!!` rather than `|| null`, because the
       // column is not null and "unpin this" has to be a value the PATCH
       // actually carries. See migration 0028.
-      pinned:    !!row.pinned
+      pinned:    !!row.pinned,
+
+      /* What editing a parsed draft means, which is the one place the review
+         queue touches the ordinary form.
+
+         Null for everything a person wrote, now and forever: `reviewState` is
+         only ever set by editorFor() off a row that has it, so an announcement
+         written by hand keeps a null here through every save.
+
+         For a parsed one, saving it published IS approving it. Somebody who
+         opened the draft, fixed the date and pressed Save changed their mind
+         about nothing except the words, and making them then go back and find
+         the card in the queue to approve it separately would be a second
+         decision about a thing they have already decided. Saving it still
+         unpublished leaves it pending, because that is somebody halfway
+         through and not somebody finished. See migration 0038 section 4. */
+      review_state: row.reviewState
+        ? (row.published !== false ? 'approved' : 'pending')
+        : null
     };
 
     var done = row.id
@@ -566,6 +669,13 @@
     saveAnnouncement: saveAnnouncement,
     deleteAnnouncement: deleteAnnouncement,
     notifyAnnouncement: notifyAnnouncement,
+
+    pending: pending,
+    approveAnnouncement: approveAnnouncement,
+    discardAnnouncement: discardAnnouncement,
+    loadNewsletter: loadNewsletter,
+    lastRun: lastRun,
+
     uploadImage: uploadImage,
     suggestLinkImage: suggestLinkImage,
 

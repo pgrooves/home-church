@@ -190,6 +190,9 @@
       // thing in the app, and a default that puts one there is a default that
       // puts one there on a week nobody meant to.
       pinned: false,
+      // Null on anything written here, always. Only a row parsed out of the
+      // newsletter carries a review state, and this form never creates one.
+      reviewState: null,
       notify: HC.data.setting('announcement_push_default', true)
     };
   }
@@ -243,6 +246,10 @@
       // you save, so opening an announcement that is pinned has to show it
       // pinned, or saving a typo fix would quietly take the strip down.
       pinned: !!row.pinned,
+      // Carried through the form so saving knows whether this is a parsed
+      // draft being approved or an ordinary announcement being edited. See
+      // saveAnnouncement() in js/admin.js.
+      reviewState: row.review_state || null,
       // Never on by default when editing. The notification is for the moment
       // an announcement goes up, and fixing a typo an hour later should not
       // buzz four hundred phones a second time.
@@ -558,6 +565,118 @@
     return pin + 'On Home';
   }
 
+  /* ------------------------------------------------ the newsletter intake
+
+     Two things: whether the poll is working, and what it has found that
+     nobody has looked at yet. Both are drawn at the top of this section
+     because both are what somebody opening it on a Monday morning came to
+     see. See migration 0038 and supabase/functions/newsletter-intake.
+     ------------------------------------------------------------------- */
+
+  /* "12 minutes ago". Deliberately coarse: the difference between 12 and 13
+     minutes is not information, and the only thing this line has to answer is
+     whether the job is running at all. */
+  function agoText(iso) {
+    var then = Date.parse(iso);
+    if (!then) return '';
+    var mins = Math.round((Date.now() - then) / 60000);
+    if (mins < 1) return 'just now';
+    if (mins === 1) return 'a minute ago';
+    if (mins < 60) return mins + ' minutes ago';
+    var hours = Math.round(mins / 60);
+    if (hours === 1) return 'an hour ago';
+    if (hours < 24) return hours + ' hours ago';
+    var days = Math.round(hours / 24);
+    return days === 1 ? 'yesterday' : days + ' days ago';
+  }
+
+  /* One line, always in the same place, so where to look never changes. It is
+     a warning when the last poll failed and a caption when it did not, which
+     is the difference between "you need to do something" and "this is fine".
+
+     THE `note` ON A SUCCESSFUL RUN IS DRAWN TOO, and that is not redundant.
+     The intake defers an email rather than failing it when Gemini is busy, so
+     a run can be perfectly ok and still have found nothing to show for itself
+     for two days running. Without this branch that case is indistinguishable
+     from a week in which no newsletter was sent, which is exactly the silent
+     failure this notice exists to prevent. */
+  function newsletterNotice() {
+    // Nothing at all until the answer is in hand. A line that says "loading"
+    // and then says "fine" is two redraws to tell somebody nothing.
+    if (!HC.admin.ready('newsletter')) return '';
+
+    var err = HC.admin.failed('newsletter');
+    if (err) {
+      return '<p class="hc-caption hc-admin__warn">Could not check on the newsletter ' +
+        'reader just now. The drafts below are still whatever it last found.</p>';
+    }
+
+    var run = HC.admin.lastRun();
+    if (!run) {
+      return '<p class="hc-caption hc-admin__loading">The newsletter reader has not run yet. ' +
+        'It checks the inbox every twenty minutes.</p>';
+    }
+
+    var when = agoText(run.ran_at);
+
+    if (run.ok === false) {
+      return '<p class="hc-caption hc-admin__warn">The newsletter reader failed ' +
+        c.esc(when) + '. ' + c.esc(run.note || 'No reason was recorded.') + '</p>';
+    }
+
+    if (run.note) {
+      return '<p class="hc-caption hc-admin__warn">Newsletter checked ' + c.esc(when) +
+        '. ' + c.esc(run.note) + '</p>';
+    }
+
+    return '<p class="hc-caption hc-admin__loading">Newsletter checked ' + c.esc(when) + '.</p>';
+  }
+
+  /* What a parsed draft says about itself above the buttons. The dates matter
+     more here than anywhere else on this screen: they are the field the model
+     is most likely to have got wrong, and they are the reason somebody would
+     open Edit rather than tapping Approve. */
+  function reviewDates(row) {
+    if (!row.starts_on && !row.ends_on) return 'No dates. It would stay up until you take it down.';
+    if (row.starts_on && row.ends_on) {
+      return 'On Home ' + c.formatDateShort(row.starts_on) + ' to ' + c.formatDateShort(row.ends_on) + '.';
+    }
+    if (row.starts_on) return 'Goes up ' + c.formatDateShort(row.starts_on) + ', with no end date.';
+    return 'Comes down ' + c.formatDateShort(row.ends_on) + '.';
+  }
+
+  function reviewSection(rows) {
+    var html = c.sectionHeader('', 'Needs review');
+    html += '<p class="hc-caption hc-admin__intro-note">Parsed out of the newsletter ' +
+      'and not on Home. Approve puts one up as it is written; Edit opens it in the ' +
+      'form first; Discard takes it out of this list and leaves it below as a draft.</p>';
+
+    rows.forEach(function (row) {
+      var from = row.created_at
+        ? 'From the newsletter · ' + c.formatDateShort(String(row.created_at).slice(0, 10))
+        : 'From the newsletter';
+
+      html += '<div class="hc-admin__item hc-admin__item--review">' +
+        '<div class="hc-admin__item-head">' +
+          '<p class="hc-eyebrow">' + c.esc(from) + '</p>' +
+          '<p class="hc-row__title">' + c.esc(row.title) + '</p>' +
+          (row.body ? '<p class="hc-caption">' + c.esc(row.body) + '</p>' : '') +
+          '<p class="hc-caption hc-admin__review-dates">' + c.esc(reviewDates(row)) + '</p>' +
+        '</div>' +
+        '<div class="hc-admin__item-actions">' +
+          c.button('Approve', { action: 'admin-review-approve', id: row.id,
+            small: true, busy: busy === 'approve:' + row.id }) +
+          c.button('Edit', { action: 'admin-announcement-edit', id: row.id,
+            variant: 'secondary', small: true }) +
+          c.button('Discard', { action: 'admin-review-discard', id: row.id,
+            variant: 'tertiary', small: true, busy: busy === 'discard:' + row.id }) +
+        '</div>' +
+      '</div>';
+    });
+
+    return html;
+  }
+
   function announcementsSection() {
     var html = '<div class="hc-screen hc-admin">';
     html += c.sectionHeader('For the church', 'Announcements', { flush: true, tag: 'h1' });
@@ -568,6 +687,8 @@
       return html;
     }
 
+    html += newsletterNotice();
+
     html += '<div class="hc-admin__new">' +
       c.button('Write an announcement', { action: 'admin-announcement-new', icon: 'plus' }) +
     '</div>';
@@ -575,6 +696,18 @@
     var rows = HC.admin.announcements();
     if (!rows.length) {
       html += pending('announcements', 'Nothing posted yet. The first one goes at the top of Home.');
+      html += '</div>';
+      return html;
+    }
+
+    /* The queue first, and the rows in it are taken out of the list below.
+       One announcement drawn twice on one screen, with a different set of
+       buttons each time, is two things as far as a thumb is concerned. */
+    var waiting = HC.admin.pending();
+    if (waiting.length) html += reviewSection(waiting);
+
+    rows = rows.filter(function (row) { return row.review_state !== 'pending'; });
+    if (!rows.length) {
       html += '</div>';
       return html;
     }
@@ -952,6 +1085,9 @@
     // Asked for on the way in rather than at boot, because a member never
     // needs any of it and an admin opens this screen a few times a week.
     if (id === 'announcements') HC.admin.loadAnnouncements();
+    // The intake's heartbeat, alongside the rows themselves. Two tables, two
+    // fetches, and the section can draw before either has landed.
+    if (id === 'announcements') HC.admin.loadNewsletter();
     if (id === 'users') HC.admin.loadUsers();
     if (id === 'content') HC.admin.loadPages();
     if (id === 'settings') HC.admin.loadSettings();

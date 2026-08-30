@@ -2201,6 +2201,28 @@
   margin-top: var(--hc-space-sm);
 }
 
+/* An announcement the newsletter reader parsed and nobody has looked at yet.
+   The accent edge is the only thing separating it from the posted rows
+   underneath, which is the right amount of difference: it is the same card
+   holding the same kind of thing, and the stripe says "this one is waiting on
+   you" without inventing a second style of list. Same edge the pinned banner
+   uses, for the same reason. See migration 0038. */
+.hc-admin__item--review {
+  border-left: 3px solid var(--hc-accent);
+  border-top-left-radius: var(--hc-radius-sm);
+  border-bottom-left-radius: var(--hc-radius-sm);
+}
+
+/* The dates the model guessed. Set apart from the body above it because it is
+   the line most likely to be wrong and so the line most worth reading twice. */
+.hc-admin__review-dates { color: var(--hc-mid); }
+
+.hc-admin__intro-note {
+  color: var(--hc-mid);
+  margin-top: var(--hc-space-sm);
+  margin-bottom: var(--hc-space-md);
+}
+
 .hc-admin__warn {
   color: var(--hc-accent-deep);
   margin-top: var(--hc-space-sm);
