@@ -787,6 +787,24 @@ because a room lives on our server and is still there when you sign back in.
 If you would rather we walk through it live, or you want a second device set
 up, we are at hello@homechurchnola.com and will answer within the hour.
 
+WHAT LOOKS UNFINISHED AND IS NOT
+Three screens say a version of "not yet". All three are the app working
+rather than content we forgot, and we would rather say so here than have you
+find them cold.
+
+  * Home groups and Alpha both run in seasons, and both are between seasons
+    at the moment. Those screens say so, and say that the next one will
+    appear there when it opens. We would rather a person read one honest
+    sentence than tap into four groups nobody can join.
+  * A sermon whose podcast episode has not posted yet says "Audio coming
+    soon" rather than showing a player that goes nowhere. Episodes usually
+    post a few days after the message is preached.
+  * One notification switch, for group reminders, is not shown this season.
+    It needs group membership the app does not yet model, so it is hidden
+    rather than displayed doing nothing.
+
+Every other screen is live and every button has a destination.
+
 ABOUT THE GIVE TAB
 Home Church is a church and the Give tab is how people donate. It takes no
 payment inside the app. Tapping the button opens our giving provider,
