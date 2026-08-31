@@ -98,6 +98,11 @@ two halves use two different tools, and both are already available:
 | Spotify link, YouTube link | **your own `WebSearch` tool**, see 3b | **no** |
 | Lyrics | WebSearch, or `GENIUS_TOKEN` if one is set | no |
 
+**The album art and the Apple Music link have always worked, and the matching
+has always been right. The one real gap in a published set is the Spotify and
+YouTube links, and 3b is the whole of how you close it.** Spend the session
+there, not on re-checking what 3a already got right.
+
 If you find yourself about to ask for a Spotify client secret or a YouTube API
 key, stop: that is the optional accelerator in 3c, not the process. The church
 does not have those keys and does not need them.
@@ -122,11 +127,11 @@ python3 scripts/hc_supabase.py select worship_sets --order served_on.desc \
 node scripts/resolve_songs.js --served-on 2026-08-23 --known /tmp/known.json ...
 ```
 
-**Do not take the first search result yourself and skip the script.** Its
-scoring is the whole point: a plain "first non-karaoke result" search for this
-church's own setlist returned *No One* by Elevation Worship for the song *No
-Body*, and the MultiTracks Session in place of the album cut. The script gets
-both right.
+**Matching has not been the problem, so do not spend the session on it.** The
+script has picked the right recording on every song of every setlist so far,
+and the Apple Music link always works. Run it, read the summary, and move on
+to 3b. The only reason 3a is a step at all is that it hands you the canonical
+title and artist, which is what 3b searches with.
 
 Exit codes: `0` everything resolved, `2` at least one song came back thin so
 say which, `1` nothing was written so do not publish. On `1`, the message

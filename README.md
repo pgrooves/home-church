@@ -220,7 +220,12 @@ and no account. Spotify, YouTube and the lyrics each need one free credential
 in `.env`, listed in `.env.example`, and a platform without one is left out of
 the row rather than guessed at.
 
-**Spotify and YouTube come from a web search, not an API.** The command runs
+**The gap was only ever Spotify and YouTube.** Album art, the Apple Music
+link and the canonical title and artist come from iTunes Search, which needs no
+key and has picked the right recording every week. Those two links were the one
+thing a published set was missing.
+
+**They come from a web search, not an API.** The command runs
 `WebSearch` scoped to one domain at a time and checks each result against
 rules written down in `/new-worship` Step 3b: the URL has to be a `/track/` or
 a `/watch?v=`, and on Spotify the artist has to match the half of the result
