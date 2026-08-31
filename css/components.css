@@ -54,11 +54,23 @@
 /* At rest on a tab, the logo sits where the title will later appear. */
 .hc-topbar[data-is-tab="true"] .hc-topbar__logo { opacity: 1; }
 
-/* Once the screen scrolls, the title claims the left edge, so the logo
-   slides to the header's center instead of disappearing. */
+/* Once the screen scrolls, the title claims the left edge and the lockup
+   stands down.
+
+   IT USED TO SLIDE TO THE MIDDLE rather than fade, and the note here said
+   that was better than disappearing. It was, while the right end of the bar
+   was one avatar. It is not any more: light-or-dark and search sit beside the
+   initials now, and three targets plus the screen's name leave no middle for
+   a 127pt lockup to move to. Measured, on the narrowest phone this ships to
+   and on a 390pt one: slid to center it lands on top of the word "Home".
+
+   Nothing is lost that was doing work. The logo is still there at rest at the
+   top of every tab, which is where it says whose app this is; past the scroll
+   threshold the question a person has is which screen they are on, and the
+   title answers it in the same place the logo was standing. */
 .hc-topbar[data-is-tab="true"][data-scrolled="true"] .hc-topbar__logo {
-  left: 50%;
-  transform: translate(-50%, -50%);
+  opacity: 0;
+  pointer-events: none;
 }
 
 /* A pushed view has no logo at all, the back arrow and title fill that role. */
@@ -110,6 +122,46 @@
 }
 
 .hc-topbar__spacer { flex: 1 1 auto; }
+
+/* The three circles at the right end of the bar: light or dark, search, you.
+
+   One flex child of the header rather than three, so the header still has
+   exactly two things to space at --hc-space-md and the logo keeps its room.
+   The gap inside is zero: each button is a 44pt tap target with a smaller
+   circle drawn inside it, so the discs already sit apart by the padding
+   around them and a gap on top of that pushes the row into the logo. */
+.hc-topbar__actions {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 0;
+}
+
+/* The two icon buttons. A 44pt target, a 36pt circle, matching the avatar
+   beside them at one step down: the initials are who you are and outrank a
+   pair of controls, so they stay the largest of the three. */
+.hc-topbar__disc {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--hc-tap-min);
+  height: var(--hc-tap-min);
+  padding: 0;
+  color: var(--hc-ink);
+}
+
+.hc-topbar__disc-icon {
+  width: 36px;
+  height: 36px;
+  padding: 7px;
+  border-radius: var(--hc-radius-pill);
+  background: var(--hc-cream);
+  border: var(--hc-hairline) solid var(--hc-rule);
+  transition: background var(--hc-dur-fast) var(--hc-ease);
+}
+
+.hc-topbar__disc:active .hc-topbar__disc-icon { background: var(--hc-paper-sunk); }
 
 /* Avatar button, the only way into Profile. No bell, no chat. */
 .hc-avatar {

@@ -75,6 +75,7 @@ js/
   content.js          fills HC.data from Supabase, cache first, never blocks
   native.js           share sheet, calendar, haptics, notifications
   print-guide.js      the printable guide, and the standalone file for sharing
+  search.js           the index behind the magnifying glass in the top bar
   router.js           pushState routing, query string, no hash
   date-rail.js        the month strip under the header on Listen
   swipe.js            drag sideways to move between the five tabs
@@ -113,6 +114,52 @@ device.** Nothing a person writes in this app is transmitted anywhere, which
 is what keeps Guideline 1.2, the user generated content rule, entirely out of
 scope, and it is a property worth defending. `store.eraseEverything()` wipes
 the lot, and the Your data screen is where somebody does that themselves.
+
+-----
+
+## Search, and the two circles in the top bar
+
+The right end of the header carries three circles now: light or dark, search,
+and your initials, in that order.
+
+**Light or dark** is the same preference as the Dark mode switch on Your
+account and writes to the same place, so the two are always in step. The icon
+says which mode you are in, a sun or a moon, rather than which one the tap
+will give you; the button's label says the action in words, for VoiceOver and
+for anybody who stops to think about it. A phone that has never chosen either
+follows the system, and the disc follows it too.
+
+**Search** opens one box that looks through the whole app. Two halves,
+indexed two different ways, and `js/search.js` says so at length at the top of
+the file:
+
+- **What the church has published**, read straight out of `HC.data`: every
+  message, every guide and every question inside it, announcements, events,
+  groups, serve teams, next steps, setlists, content pages, the reading plan,
+  the nine practices, and the church's own details, down to the service times.
+  The records are walked generically rather than field by field, so a new
+  column or a new key inside a JSON blob is searchable the day it lands and
+  nobody has to remember this file.
+- **What the screens say**, which is the ledes, the notes and the empty states
+  that live as strings in `js/screens/*.js` rather than as rows. Nothing
+  exports them, so the index draws each screen and reads its text. That
+  happens inside a `<template>`, whose content is inert, which is what stops
+  it pulling down every photograph in the app to count words nobody will read.
+  The Group tab and Admin are deliberately not drawn: a room is a private
+  conversation, and Admin fetches.
+
+Your own journal is on the index because it is yours and it never leaves the
+phone, and it comes straight back off the moment the journal lock is on. A
+group room is not on it at all.
+
+Nothing here reaches the internet. The index is built the first time somebody
+searches, costs a few milliseconds, and is thrown away whenever the content
+under it moves. Results are ranked with the thing itself above the screen it
+is listed on, the matched words are marked in a line of the text they were
+found in, and tapping a row opens exactly what it names.
+
+Tests: `tests/search.test.js` for everything answerable without a page, and
+`tests/e2e/search.js` for the rest, which is layout and traffic.
 
 -----
 

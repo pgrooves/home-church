@@ -254,6 +254,23 @@
     book: '<path d="M4 5.5A1.5 1.5 0 0 1 5.5 4H11v16H5.5A1.5 1.5 0 0 1 4 18.5z"/><path d="M20 5.5A1.5 1.5 0 0 0 18.5 4H13v16h5.5a1.5 1.5 0 0 0 1.5-1.5z"/>',
     plus: '<path d="M12 5v14M5 12h14"/>',
 
+    /* The two new discs in the top bar, left of the initials.
+
+       `search` is drawn small in its circle on purpose. At the 44pt tap size
+       a magnifier whose lens fills the grid reads as a bubble with a stick on
+       it; r="6.5" with the handle running out to 20 keeps the silhouette
+       unmistakable next to the sun and the initials beside it.
+
+       `sun` and `moon` say which mode you are in rather than which one the
+       tap will give you, and the button's aria-label says the other half.
+       Eight rays rather than twelve: at 24px on a 1.5 stroke, twelve turn
+       into a grey ring. See paintThemeToggle() in js/app.js. */
+    search: '<circle cx="11" cy="11" r="6.5"/><path d="m16 16 4.2 4.2"/>',
+    sun: '<circle cx="12" cy="12" r="4.2"/>' +
+         '<path d="M12 2.9v2.2M12 18.9v2.2M4.6 4.6l1.6 1.6M17.8 17.8l1.6 1.6' +
+         'M2.9 12h2.2M18.9 12h2.2M4.6 19.4l1.6-1.6M17.8 6.2l1.6-1.6"/>',
+    moon: '<path d="M20.4 14.6A8.6 8.6 0 0 1 9.4 3.6a8.7 8.7 0 1 0 11 11z"/>',
+
     /* The Group tab and the reveal. `group` is the tab's own mark: a room
        with people in it, drawn as a rounded frame rather than the two figures
        Connect already uses, because at 11px two person glyphs one tab apart
