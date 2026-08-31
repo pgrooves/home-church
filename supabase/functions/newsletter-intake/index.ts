@@ -526,6 +526,37 @@ function extractLinks(html: string): Array<{ url: string; text: string }> {
     if (seen.has(url)) continue;
     seen.add(url);
     out.push({ url, text: htmlToText(m[2]).slice(0, 120) });
+    if (out.length >= 80) break;
+  }
+  return out;
+}
+
+/* Bare URLs sitting in the text, merged in behind the anchors.
+
+   Two cases this covers, both of which would otherwise silently lose a link.
+   A newsletter sent as plain text only has no anchors to find at all, so
+   extractLinks returns nothing and the model is handed "CANDIDATE LINKS: none"
+   — and since it may only choose from that list, every link in the email is
+   unreachable. The second is a sender who prints the URL next to the button
+   rather than only wrapping it.
+
+   Appended rather than prepended, and de-duplicated against what the anchors
+   already found, so a link that has real button text keeps that text: the
+   label is what tells the model a Join a group button apart from a footer. */
+const BARE_URL = /https?:\/\/[^\s<>"')\]]+/gi;
+
+function extractTextLinks(
+  text: string,
+  already: Array<{ url: string; text: string }>,
+): Array<{ url: string; text: string }> {
+  const seen = new Set(already.map((l) => l.url));
+  const out: Array<{ url: string; text: string }> = [];
+  for (const raw of text.match(BARE_URL) ?? []) {
+    // Trailing sentence punctuation is not part of the URL.
+    const url = raw.replace(/[.,;:!?]+$/, '');
+    if (seen.has(url)) continue;
+    seen.add(url);
+    out.push({ url, text: '' });
     if (out.length >= 40) break;
   }
   return out;
@@ -561,13 +592,36 @@ function extractImages(html: string): string[] {
    Gemini
    ===================================================================== */
 
+/* THE SHAPE CHANGED ONCE ALREADY, and why is worth keeping. The first version
+   asked for a single `body` string and told the model to write "one or two
+   warm sentences". It produced lovely prose and quietly dropped a Join a group
+   button off the bottom of the first real newsletter it read.
+
+   That was not the model failing. A church announcement is not a paragraph, it
+   is a paragraph plus a pile of specifics: a deadline, a price, an age range,
+   what to bring, who to talk to, and one or more things to tap. Asking for
+   prose asks the model to choose what to throw away, and the things it throws
+   away are exactly the things somebody needs in order to act.
+
+   So the shape now matches what an announcement actually is. Three fields
+   rather than one, and the composition below turns them into markup the
+   announcement screen already knows how to draw: js/richtext.js allows ul, li
+   and a with links: 'web', so bullets and real hyperlinks survive the
+   sanitizer on both the way in and the way out. */
+
+interface ParsedLink {
+  label?: string;
+  url: string;
+}
+
 interface Parsed {
   title: string;
   eyebrow?: string;
-  body: string;
+  summary: string;
+  details?: string[];
+  links?: ParsedLink[];
   starts_on?: string;
   ends_on?: string;
-  link_url?: string;
   image_url?: string;
 }
 
@@ -581,13 +635,24 @@ const SCHEMA = {
         properties: {
           title: { type: 'string' },
           eyebrow: { type: 'string' },
-          body: { type: 'string' },
+          summary: { type: 'string' },
+          details: { type: 'array', items: { type: 'string' } },
+          links: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                label: { type: 'string' },
+                url: { type: 'string' },
+              },
+              required: ['url'],
+            },
+          },
           starts_on: { type: 'string' },
           ends_on: { type: 'string' },
-          link_url: { type: 'string' },
           image_url: { type: 'string' },
         },
-        required: ['title', 'body'],
+        required: ['title', 'summary'],
       },
     },
   },
@@ -602,8 +667,18 @@ function prompt(
 ): string {
   return [
     'You are preparing draft announcements for a church app from the church\'s own',
-    'weekly newsletter email. A person reviews and approves every draft before it is',
-    'published, so it is much better to be accurate and sparse than complete and wrong.',
+    'weekly newsletter email. A person reviews and approves every draft before anything',
+    'is published.',
+    '',
+    'YOUR FIRST DUTY IS COMPLETENESS. Somebody reading the finished card must be able to',
+    'act on it without ever opening the original email. Every concrete fact that would',
+    'change what a person does — a deadline, a cost, an age range, a location, a time, a',
+    'thing to bring, a person to contact, a form to fill in, a button to tap — must be',
+    'carried across. Dropping a sign-up link because the summary read nicely without it',
+    'is the worst mistake you can make here. Do not summarise detail away.',
+    '',
+    'Accuracy still outranks completeness: never invent a fact, a date or a URL that is',
+    'not in the email. But when something IS in the email, carry it over.',
     '',
     `The newsletter was sent on ${emailDate}. Resolve every relative date ("this Sunday",`,
     '"next Wednesday", "tonight") against that date, in the America/Chicago timezone.',
@@ -613,25 +688,39 @@ function prompt(
     '   meeting, a baptism sign-up, a schedule change. Return each one as its own',
     '   announcement. Do not merge distinct events into a single entry, and do not',
     '   split one event into several.',
-    '2. Skip anything that is not an announcement: greetings, a pastor\'s letter,',
-    '   scripture of the week, unsubscribe footers, "forward this to a friend",',
-    '   social media links, and the newsletter\'s own masthead.',
+    '2. Skip only what is genuinely not an announcement: greetings, a pastor\'s letter,',
+    '   scripture of the week, unsubscribe and "view this in your browser" footers,',
+    '   "forward this to a friend", plain social media follow links, and the',
+    '   newsletter\'s own masthead. When in doubt, keep it.',
     '3. title: short and specific, the way it would read on a card. Include the date',
     '   if the thing has one, e.g. "City Serve Day, September 12". No trailing period.',
-    '4. body: one or two warm, plain sentences. Do not invent detail that is not in',
-    '   the email. Do not repeat the title verbatim.',
-    '5. eyebrow: a two or three word label if one is obvious ("This Sunday", "Serve",',
+    '4. summary: one or two warm, plain sentences saying what the thing is. This is the',
+    '   opening line, NOT the whole announcement — the specifics go in details.',
+    '5. details: an array of short strings, one per concrete fact, drawn only from the',
+    '   email. Include every one that applies: date and time, location or address,',
+    '   registration or RSVP deadline, cost or price ("$15 a person", "free"), who it is',
+    '   for (ages, members only, families), what to bring, who to contact and how, and',
+    '   any requirement or condition. If the email lists things as bullets, keep them as',
+    '   separate bullets. Empty array only if the email genuinely gives no specifics.',
+    '6. links: EVERY link belonging to this announcement, not just the main one. A',
+    '   "Sign up", "Register", "Join a group", "RSVP", "Give", "Learn more" or',
+    '   "Directions" button is part of the announcement and must appear here. Give each',
+    '   one a short `label` taken from the button or link text as it appeared in the',
+    '   email, and the `url` copied EXACTLY from the candidate list below. Never write a',
+    '   URL that is not in that list. If an announcement has no link, use an empty array.',
+    '7. eyebrow: a two or three word label if one is obvious ("This Sunday", "Serve",',
     '   "Kids"). Leave it out entirely if nothing fits. Never invent a category.',
-    '6. starts_on / ends_on: strict YYYY-MM-DD, or leave out. starts_on is the day the',
+    '8. starts_on / ends_on: strict YYYY-MM-DD, or leave out. starts_on is the day the',
     '   card should appear, which for a dated event is usually today, not the event',
-    '   date. ends_on is the day after the thing happens, so the card retires itself.',
+    '   date. ends_on is the day the card DISAPPEARS, so it must be the day AFTER the',
+    '   event, never the event date itself — an event on 2026-09-12 takes ends_on',
+    '   2026-09-13, or the card vanishes on the morning of the thing it is announcing.',
     '   Leave both out when the announcement has no date at all.',
-    '7. link_url and image_url: choose ONLY from the candidate lists below, copied',
-    '   exactly. If nothing in the lists belongs to this announcement, leave the field',
-    '   out. Never write a URL that is not in the lists.',
-    '8. If the email contains no real announcements, return an empty array.',
+    '9. image_url: choose ONLY from the candidate images below, copied exactly, or leave',
+    '   it out.',
+    '10. If the email contains no real announcements, return an empty array.',
     '',
-    'CANDIDATE LINKS',
+    'CANDIDATE LINKS (copy urls exactly; the link text is what the reader saw)',
     links.length
       ? links.map((l) => `- ${l.url}${l.text ? `  (link text: ${l.text})` : ''}`).join('\n')
       : '- none',
@@ -772,6 +861,53 @@ function textToHtml(text: string): string {
     .filter(Boolean)
     .map((p) => `<p>${escapeHtml(p).replace(/\n/g, '<br>')}</p>`)
     .join('');
+}
+
+/* The announcement's words, as markup: a paragraph, then the specifics as a
+   list, then every link as its own tappable line.
+
+   ONLY TAGS js/richtext.js ALLOWS, which is the constraint that shapes this.
+   `p`, `ul`, `li` and `a` are all in that file's allowlist under links: 'web',
+   so what this writes survives the sanitizer twice over — once here on the way
+   into the table and once in js/screens/announcement.js on the way onto the
+   screen. Anything outside the allowlist would be silently unwrapped at render
+   and the detail would vanish between the review card and Home, which is the
+   quietest possible way to lose the thing this whole change is about.
+
+   Links are one per line rather than run together in a sentence because they
+   are tap targets on a phone, and two hyperlinks sharing a line is two ways to
+   hit the wrong one. */
+function announcementHtml(
+  summary: string,
+  details: string[],
+  links: Array<{ label?: string; url: string }>,
+): string {
+  let html = '';
+  if (summary) html += `<p>${escapeHtml(summary).replace(/\n/g, '<br>')}</p>`;
+
+  if (details.length) {
+    html += '<ul>' + details.map((d) => `<li>${escapeHtml(d)}</li>`).join('') + '</ul>';
+  }
+
+  for (const link of links) {
+    // The label is what the reader saw on the button. Falling back to the URL
+    // is ugly but honest, and only happens if the model omits a label.
+    const label = String(link.label ?? '').trim() || link.url;
+    html += `<p><a href="${escapeHtml(link.url)}">${escapeHtml(label)}</a></p>`;
+  }
+
+  return html;
+}
+
+/* The plain text mirror, per migration 0033. Three things read this and none
+   can read markup: the push notification, the Admin list, and the snippet on
+   Home, which lives inside a button and so can hold no anchor.
+
+   The details go in and the URLs do not. firstSentence() in send-push takes
+   the opening sentence for the lock screen, so the summary still leads, and a
+   raw https:// in a snippet under a card title is noise nobody can tap. */
+function announcementText(summary: string, details: string[]): string {
+  return [summary, ...details].filter(Boolean).join('\n').trim();
 }
 
 function slugify(text: string): string {
@@ -992,7 +1128,11 @@ Deno.serve(async (req: Request) => {
         const fromHtml = html ? htmlToText(html) : '';
         const text = (plain.trim().length > fromHtml.length ? plain : fromHtml).trim().slice(0, 60000);
 
-        const links = html ? extractLinks(html) : [];
+        const htmlLinks = html ? extractLinks(html) : [];
+        // The anchors first, then anything written out as bare text. See
+        // extractTextLinks: a plain-text-only newsletter has no anchors at all,
+        // and the model may only choose from this list.
+        const links = [...htmlLinks, ...extractTextLinks(text, htmlLinks)];
         const images = html ? extractImages(html) : [];
 
         if (text.length < 40) {
@@ -1009,21 +1149,48 @@ Deno.serve(async (req: Request) => {
             const title = String(item.title ?? '').trim().slice(0, 200);
             if (!title) return null;
 
-            const bodyText = String(item.body ?? '').trim().slice(0, 4000);
+            const summary = String(item.summary ?? '').trim().slice(0, 2000);
             const image = cleanChoice(item.image_url, images);
             const eyebrow = String(item.eyebrow ?? '').trim().slice(0, 40);
+
+            const details = (Array.isArray(item.details) ? item.details : [])
+              .map((d) => String(d ?? '').trim())
+              .filter(Boolean)
+              .slice(0, 20);
+
+            /* Every link the model returned, filtered to the ones the email
+               actually contained. The allowlist stays exactly as strict as it
+               was when this carried one link: completeness is the goal, but a
+               plausible invented URL on a card the congregation taps is still
+               the worst thing this function could produce. */
+            const keptLinks = (Array.isArray(item.links) ? item.links : [])
+              .map((l) => ({
+                label: String(l?.label ?? '').trim().slice(0, 80),
+                url: cleanChoice(l?.url, allowedLinks),
+              }))
+              .filter((l): l is { label: string; url: string } => !!l.url)
+              .slice(0, 10);
+
+            const bodyText = announcementText(summary, details).slice(0, 4000);
 
             return {
               id: uniqueId(title, taken),
               eyebrow: eyebrow || null,
               title,
               body: bodyText || null,
-              body_html: bodyText ? textToHtml(bodyText) : null,
+              body_html: (summary || details.length || keptLinks.length)
+                ? announcementHtml(summary, details, keptLinks)
+                : null,
               image_url: image,
               image_urls: image ? [image] : [],
               video_url: null,
-              link_url: cleanChoice(item.link_url, allowedLinks),
-              link_title: null,
+              /* The first link also becomes the link card at the bottom of the
+                 announcement, which is the one with a thumbnail and a host
+                 under it. All of them, this one included, are already in
+                 body_html as tappable lines, so nothing is lost if there is
+                 more than one. */
+              link_url: keptLinks[0]?.url ?? null,
+              link_title: keptLinks[0]?.label || null,
               link_image_url: null,
               starts_on: cleanDate(item.starts_on),
               ends_on: cleanDate(item.ends_on),
