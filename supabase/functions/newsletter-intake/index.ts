@@ -620,7 +620,6 @@ interface Parsed {
   summary: string;
   details?: string[];
   links?: ParsedLink[];
-  starts_on?: string;
   ends_on?: string;
   image_url?: string;
 }
@@ -648,7 +647,6 @@ const SCHEMA = {
               required: ['url'],
             },
           },
-          starts_on: { type: 'string' },
           ends_on: { type: 'string' },
           image_url: { type: 'string' },
         },
@@ -710,12 +708,12 @@ function prompt(
     '   URL that is not in that list. If an announcement has no link, use an empty array.',
     '7. eyebrow: a two or three word label if one is obvious ("This Sunday", "Serve",',
     '   "Kids"). Leave it out entirely if nothing fits. Never invent a category.',
-    '8. starts_on / ends_on: strict YYYY-MM-DD, or leave out. starts_on is the day the',
-    '   card should appear, which for a dated event is usually today, not the event',
-    '   date. ends_on is the day the card DISAPPEARS, so it must be the day AFTER the',
-    '   event, never the event date itself — an event on 2026-09-12 takes ends_on',
-    '   2026-09-13, or the card vanishes on the morning of the thing it is announcing.',
-    '   Leave both out when the announcement has no date at all.',
+    '8. ends_on: strict YYYY-MM-DD, the day the card should DISAPPEAR from the app.',
+    '   That is the day AFTER the event, never the event date itself — an event on',
+    '   2026-09-12 takes ends_on 2026-09-13, or the card vanishes on the morning of the',
+    '   thing it is announcing. Leave it out for anything with no end: an ongoing need',
+    '   for volunteers, a standing invitation, a change that is simply true from now on.',
+    '   Do not guess an end date for something that has none.',
     '9. image_url: choose ONLY from the candidate images below, copied exactly, or leave',
     '   it out.',
     '10. If the email contains no real announcements, return an empty array.',
@@ -831,6 +829,24 @@ function cleanDate(value: unknown): string | null {
   const d = new Date(`${text}T00:00:00Z`);
   if (Number.isNaN(d.getTime())) return null;
   return d.toISOString().slice(0, 10) === text ? text : null;
+}
+
+/* Today, where the church is. Not UTC: an announcement retires at midnight in
+   Metairie, which is the same reason hc_admin_send_announcement reads
+   America/Chicago rather than now()::date. At 8pm on the 12th in Louisiana it
+   is already the 13th in Greenwich, and a UTC comparison would quietly file
+   away an announcement that still has an evening to run. */
+function todayInChicago(): string {
+  // en-CA formats as YYYY-MM-DD, which is the format the date columns want.
+  return new Date().toLocaleDateString('en-CA', { timeZone: 'America/Chicago' });
+}
+
+/* An end date, but only if it has not already passed. Null for anything today
+   or earlier, because Home hides a row the moment `today >= ends_on` and a row
+   that is published and hidden is the hardest kind of wrong to notice. */
+function futureDate(value: string | null): string | null {
+  if (!value) return null;
+  return value > todayInChicago() ? value : null;
 }
 
 /* A URL is kept only if the email actually contained it. This is the guard
@@ -1192,8 +1208,30 @@ Deno.serve(async (req: Request) => {
               link_url: keptLinks[0]?.url ?? null,
               link_title: keptLinks[0]?.label || null,
               link_image_url: null,
-              starts_on: cleanDate(item.starts_on),
-              ends_on: cleanDate(item.ends_on),
+              /* NO starts_on, EVER, and that is a fix rather than an omission.
+
+                 It used to be set to the newsletter's own date, which bought
+                 nothing — a draft is invisible until somebody approves it, so
+                 the day it was parsed is not a day anything happens — and cost
+                 the one thing this feature promises. The model reads "the day
+                 the card should appear" and sometimes answers with the event
+                 date, which is in the future, and a future starts_on means the
+                 admin taps Approve and Home does not change. Approve has to
+                 mean "on Home now", so the window it starts with is open.
+
+                 An admin who wants one held until December can still set it on
+                 the form. That is a decision a person makes, and it is not one
+                 worth guessing wrong on every announcement to support. */
+              starts_on: null,
+
+              /* An end date only if it is still ahead of us. A parse that
+                 returns a date already gone produces a row that is published,
+                 correct, and invisible — the worst of the three, because
+                 nothing on screen says why. Better to leave the window open
+                 and let somebody take it down than to file it away on the day
+                 it arrives. See liveAnnouncements() in js/data.js, which is
+                 the filter this is respecting. */
+              ends_on: futureDate(cleanDate(item.ends_on)),
               priority: 0,
               // The two that make this whole feature safe. Never anything else.
               published: false,

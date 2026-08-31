@@ -645,6 +645,33 @@
     return 'Comes down ' + c.formatDateShort(row.ends_on) + '.';
   }
 
+  /* Why approving this would change nothing, or '' when it would work.
+
+     THE FAILURE THIS EXISTS FOR. Home applies the date window on top of
+     `published`, in liveAnnouncements() in js/data.js, so an announcement can
+     be approved, correct, and still absent from Home because its window has
+     closed or has not opened. Nothing said so: the button reported success,
+     because the write did succeed, and Home simply did not change. That is the
+     hardest kind of wrong to find, and somebody hit it before this line
+     existed.
+
+     The intake no longer writes a window that would do this. But a row parsed
+     before that fix, or one an admin has since edited by hand, still can, so
+     the warning stays: it costs one line and it is the only thing standing
+     between a person and a silent no-op. */
+  function whyNotLive(row) {
+    var today = todayLocal();
+    if (row.starts_on && today < row.starts_on) {
+      return 'Approving this will not put it on Home yet. It is dated to appear ' +
+        c.formatDateShort(row.starts_on) + '. Edit the dates to show it now.';
+    }
+    if (row.ends_on && today >= row.ends_on) {
+      return 'These dates have already passed, so approving this would not show it ' +
+        'on Home at all. Edit the dates first.';
+    }
+    return '';
+  }
+
   function reviewSection(rows) {
     var html = c.sectionHeader('', 'Needs review');
     html += '<p class="hc-caption hc-admin__intro-note">Parsed out of the newsletter ' +
@@ -662,6 +689,9 @@
           '<p class="hc-row__title">' + c.esc(row.title) + '</p>' +
           (row.body ? '<p class="hc-caption">' + c.esc(row.body) + '</p>' : '') +
           '<p class="hc-caption hc-admin__review-dates">' + c.esc(reviewDates(row)) + '</p>' +
+          (whyNotLive(row)
+            ? '<p class="hc-caption hc-admin__warn">' + c.esc(whyNotLive(row)) + '</p>'
+            : '') +
         '</div>' +
         '<div class="hc-admin__item-actions">' +
           c.button('Approve', { action: 'admin-review-approve', id: row.id,
