@@ -228,7 +228,9 @@ Serve the app (`python3 -m http.server` from the repo root) and check:
   Home card, in the guide index, and at the top of the guide reader. If
   those three disagree, something set `themeTitle` and it shouldn't have.
 - The archive row opens and "Listen on Spotify" goes to the episode, not the
-  show. Compare the href against what you were given.
+  show. Compare the href against what you were given. Before this step that
+  button read "Audio coming soon!" and pointed at the show; if it still says
+  that, `episode_url` did not land on the row.
 - The Download guide button still produces a PDF with the new title in the
   footer of every page.
 - Worship, behind •••, shows the new title over that Sunday's setlist. It

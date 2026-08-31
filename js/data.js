@@ -2731,6 +2731,38 @@
       return (sermon && sermon.episodeUrl) || podcast.showUrl;
     },
 
+    /* Whether this message's own audio has posted. A different question from
+       episodeUrl, which always answers with somewhere to go, and the two get
+       confused because for a few days a week they disagree: the guide is
+       published on the Thursday and the episode does not land until the
+       Monday, so the row exists, the guide opens off it, and there is no
+       audio behind it yet. /new-podcast filling in episode_url is what flips
+       this, and nothing else needs touching when it does. */
+    hasEpisode: function (sermon) {
+      return !!(sermon && sermon.episodeUrl);
+    },
+
+    /* What the link to a message's audio calls itself.
+
+       ONE ANSWER, because Listen and Worship both draw that link, and a
+       Sunday where one screen offers the message and the other says it is
+       coming is the app disagreeing with itself about the same episode.
+
+       Before the episode posts the tap still goes somewhere useful, the show
+       on Spotify, which is exactly where you would wait for it. What it must
+       not do is promise a message that is not there, so the words change and
+       the destination does not. After it posts the label follows the URL
+       rather than assuming: the back catalogue links each episode on the
+       podcast host and the newer ones link straight into Spotify, and a
+       button naming the wrong app is a button that lies about where the tap
+       lands. */
+    episodeLabel: function (sermon) {
+      if (!this.hasEpisode(sermon)) return 'Audio coming soon!';
+      return sermon.episodeUrl.indexOf('spotify.com') !== -1
+        ? 'Listen on ' + podcast.platform
+        : 'Listen to this message';
+    },
+
     // The episode notes, as an array of paragraphs. Falls back to the one
     // line description so every message reads as something, never as blank.
     episodeSummary: function (sermon) {

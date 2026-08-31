@@ -22,15 +22,14 @@
   }
 
   // The one action every episode carries. Named for where it lands, because
-  // the tap leaves the app and the label should say so before it does. The
-  // catalogue currently links each episode on its podcast host, and the show
-  // itself on Spotify, so the label follows the URL rather than assuming.
+  // the tap leaves the app and the label should say so before it does, and a
+  // message whose audio has not posted yet says that instead of naming a
+  // destination it cannot deliver. HC.data.episodeLabel is the wording and
+  // the Worship header reads the same one.
   function listenButton(sermon, variant) {
-    var url = HC.data.episodeUrl(sermon);
-    var onSpotify = url.indexOf('spotify.com') !== -1;
-    return c.button(onSpotify ? 'Listen on ' + HC.data.podcast.platform : 'Listen to this message', {
+    return c.button(HC.data.episodeLabel(sermon), {
       action: 'open-url',
-      url: url,
+      url: HC.data.episodeUrl(sermon),
       variant: variant || 'secondary',
       icon: 'listen'
     });
@@ -71,9 +70,15 @@
     var series = HC.data.getSeries(sermon.seriesId);
     return '' +
       '<div class="hc-latest">' +
+        /* The artwork is the same tap as the button underneath it, so it says
+           the same thing out loud: a screen reader hearing "listen to" while
+           the button below reads "audio coming soon" is one link describing
+           itself two ways. */
         '<button type="button" class="hc-latest__media" data-action="open-url" ' +
           'data-url="' + c.esc(HC.data.episodeUrl(sermon)) + '" ' +
-          'aria-label="Listen to ' + c.esc(sermon.title) + ' on ' + c.esc(HC.data.podcast.platform) + '">' +
+          'aria-label="' + c.esc(HC.data.hasEpisode(sermon)
+            ? 'Listen to ' + sermon.title + ' on ' + HC.data.podcast.platform
+            : sermon.title + ', audio coming soon. Opens ' + HC.data.podcast.platform) + '">' +
           c.cover(HC.data.podcast.name, '16x9', { play: true }) +
         '</button>' +
         '<p class="hc-eyebrow hc-latest__eyebrow">' + c.esc(series ? series.title : 'Latest') + '</p>' +

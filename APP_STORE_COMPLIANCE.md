@@ -774,7 +774,7 @@ trigger one, which needs thinking through in Phase 5.
 |---|---|---|---|
 | **Accurate metadata (2.3)** | Not written | High | Phase 7. Description must not claim anything from the 2.7 table above until it is true. |
 | **Hidden or dormant features (2.3.1)** | **Fails today** | **Blocker** | Same fix as 2.7. Dormant features presented as live ones is exactly what this clause names. |
-| **Beta or trial framing** | Clean | None | No "beta", "coming soon", or "trial" copy anywhere. Verified by grep. |
+| **Beta or trial framing** | Clean | None | No "beta" or "trial" copy anywhere, and nothing in the app is described as not built yet. Verified by grep. The one "coming soon" is "Audio coming soon!", the label on a message whose episode posts on the Monday. That is this week's content not being up, which is the same class of thing as an empty archive, not a feature of the app being unfinished. |
 | **Encryption export compliance** | Not declared | **Blocker** | Set `ITSAppUsesNonExemptEncryption` to **`false`** in `Info.plist`. The app uses only standard HTTPS, which is exempt. Setting it in the plist avoids being asked on every single upload. |
 | **Background modes** | None used | None | Declare none. If background audio is ever added, that changes. |
 | **Required device capabilities** | Not set | Medium | Leave at the default. Nothing here needs a specific capability, and over-declaring shrinks the eligible device list for no reason. |

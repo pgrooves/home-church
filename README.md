@@ -874,12 +874,20 @@ it is not part of the UI palette and no interface element should adopt it.
 
 These are marked in the code where they appear:
 
-1. The per-episode Spotify links. Every message currently links to its own
-   episode page on the podcast host, which works, and `podcast.showUrl` points
-   at the show on Spotify. Swapping `episodeUrl` to the matching
+1. The per-episode Spotify links. The back catalogue links each message to its
+   own episode page on the podcast host, which works, and `podcast.showUrl`
+   points at the show on Spotify. Swapping `episodeUrl` to the matching
    `open.spotify.com/episode/...` link is a per-row change, and the Listen
    button relabels itself to "Listen on Spotify" automatically when it sees a
-   Spotify URL.
+   Spotify URL. The newer episodes are already published that way.
+
+   A row with no `episodeUrl` at all is a different state and reads as one:
+   the guide is published days before the audio posts, so from the Thursday
+   to the Monday that message's link says "Audio coming soon!" and still
+   opens the show, which is where the episode will appear. `/new-podcast`
+   filling in `episode_url` is the only thing that changes it. One answer,
+   `HC.data.episodeLabel`, read by both Listen and the Worship header, and
+   the seam is covered in `tests/listen.test.js`.
 2. The 28 messages with no preacher recorded and the 43 with no passage, both
    because the episode notes do not state them. They render cleanly without,
    the byline just gets shorter. Fill them in as you know them.
