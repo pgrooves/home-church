@@ -124,12 +124,28 @@ signing in, and the host's moderation queue needs an account the church has
 marked as a group leader. Set this up before you submit, or section 7 has two
 blanks in it and a reviewer with no way to check the Guideline 1.2 controls.
 
-- [ ] In Supabase, **Authentication → Sign In / Providers → Email**, add two
-      **test OTPs**: one address for the host, one for the member, each with
-      a fixed six digit code. A test OTP means the code always works and no
-      email is sent, so a reviewer is never waiting on an inbox we control.
-      Use addresses that read as what they are, `applereview.host@` and
-      `applereview.member@` on the church domain.
+- [ ] **Give the reviewer two accounts on an inbox they can read themselves.**
+      Sign in is a one time code mailed to an address, so a demo account is
+      only as good as the reviewer's ability to read that mail. A code you
+      paste into the review form is single use and expired days before anybody
+      opens it.
+
+      **This document used to say to add test OTPs under Authentication → Sign
+      In / Providers → Email. That box does not exist.** Test OTPs are a
+      *phone* provider feature in Supabase, and phone auth will not turn on
+      without a paid SMS provider behind it. There is no fixed code for email
+      at any price. Checked against the Supabase docs on 2026-08-31, after
+      sending somebody looking for a box that was never there.
+
+      So use a public inbox service, `mailinator.com` or similar, and pick two
+      names nobody guesses, because anybody holding the address can read that
+      mail:
+
+          hc-nola-rvw-____@mailinator.com     the host
+          hc-nola-rvw-____@mailinator.com     the member
+
+      Read either at `https://www.mailinator.com/v4/public/inboxes.jsp?to=`
+      plus the name. Confirm the page loads before you build anything on it.
 - [ ] Sign in once as each so the `profiles` row exists.
 - [ ] Turn Leader mode on for the host account. From an admin's phone that is
       Admin → Manage users → the Leader mode switch on their row, which is how
@@ -350,10 +366,9 @@ SIGNING IN
 There are no passwords anywhere in this app. You type an email address, we
 send a six digit code, and the account is made the first time you use it.
 
-If you were handed an account along with these notes, that one is different:
-its code never changes and no email is ever sent to it. The app will still say
-"Code sent. Check your email." Nothing will arrive, and nothing is wrong. Type
-the six digit code you were given.
+If you were handed an account along with these notes, its mail is readable in
+a browser with no password. Enter the address, tap send, then open the link
+given with it. The code is there within a few seconds and lasts an hour.
 
 WHAT IS DELIBERATELY OFF
 
@@ -370,7 +385,7 @@ what you expected instead. Either beats a text that says it is broken.
 Anything you would rather send a person: hello@homechurchnola.com.
 ```
 
-(2517) Update the seasons paragraph if a season opens before you build, since
+(2474) Update the seasons paragraph if a season opens before you build, since
 a tester reporting a bug that is a boolean wastes both of you.
 
 **What to Test**, 4000 characters, attached to a build rather than to the app,
@@ -421,17 +436,16 @@ not a bug. That is worth more than the seven steps above.
       the two section 7 gets, so give it the **host**: Leader mode is the half
       a reviewer cannot reach otherwise, and the member account only exists
       for the report and block walkthrough, which is a full App Review
-      concern. **User Name** is the host address. **Password** is its fixed
-      test OTP, the six digits you set in Supabase, never a code that arrived
-      in an inbox. A mailed code is single use and expired long before anybody
-      opens the form.
-- [ ] **Say that no email arrives.** The app is two-step: address, then code,
-      with a toast in between reading "Code sent. Check your email." A test
-      OTP sends nothing, and the toast says it anyway, so a reviewer holding
-      only a Password field goes looking in a Gmail account they cannot open
-      and calls sign in broken. That warning is in the Beta App Description
-      above, under SIGNING IN, because this form has no notes field to put it
-      in. If yours does, put it in both.
+      concern. **User Name** is the host address from section 1. **Password**
+      is that inbox's URL, because a form built for passwords has nowhere else
+      to put the one thing a reviewer actually needs. Never paste a code into
+      it: a mailed code is single use and expires within the hour, long before
+      anybody opens the form.
+- [ ] **Say where the code comes from.** The app is two-step, address then
+      code, and a reviewer holding a User Name and no inbox has no way through
+      the second step. The Beta App Description above carries that under
+      SIGNING IN, because this form has no notes field. If yours has one, put
+      it in both.
 - [ ] **`APNS_HOST`.** TestFlight is the **production** gateway. If you have
       been testing from Xcode you will have set that secret to
       `api.sandbox.push.apple.com`, and every push to a TestFlight build will
@@ -662,11 +676,10 @@ it, so everything in it is one sign-in away.
 
 Signing in has no password. We send a six digit code to an email address and
 the account is created on first use, so you can sign in with any address you
-control. The two demo accounts below are configured so the codes never change
-and no email is sent. The app will still say "Code sent. Check your email"
-after you enter the address, because it cannot tell the difference. Nothing
-will arrive for these two accounts and nothing is wrong: type the code printed
-beside the address below.
+control. The two demo accounts below use inboxes you can open yourself, in a
+browser, with no password. Enter the address, tap send, then open the inbox
+link beside it. The code arrives in a few seconds and is good for an hour, so
+please request a fresh one rather than reusing an old message.
 
 DELETING AN ACCOUNT, GUIDELINE 5.1.1(v)
 Once signed in, account deletion is available in two places, both inside the
@@ -743,9 +756,11 @@ the codes never change and no email is actually sent. One device is enough,
 because a room lives on our server and is still there when you sign back in.
 
   Host account (marked as a group leader)
-    Email: __________________     Code: __________
+    Email: __________________
+    Read its mail at: __________________________________
   Member account
-    Email: __________________     Code: __________
+    Email: __________________
+    Read its mail at: __________________________________
 
   1. Tap the circle in the top right and sign in as the HOST.
   2. Tap the Group tab, then "Open a room" under Leader mode. The app mints
