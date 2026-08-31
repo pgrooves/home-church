@@ -300,6 +300,124 @@ competitor names, which is a 2.3.7 rejection.
 2026 Home Church
 ```
 
+### TestFlight, the tester facing fields
+
+Same place in App Store Connect, different audience. The store description is
+written for a stranger deciding whether to install. These are written for
+somebody from your own church who has already agreed to help, and their job is
+to say what is real, what is deliberately missing, and what to do when
+something breaks. Both fields are editable without a new build.
+
+**Beta App Description**, 4000 characters, shown in the TestFlight app before
+a tester taps Install. It is also what the beta reviewer reads if you open an
+external group, so it has to stand on its own.
+
+```
+This is Home Church's app, before it reaches the App Store. A small number of
+people are seeing it early, and anything you find now is something a stranger
+never has to.
+
+WHAT IS IN IT
+
+Every message we have preached since November 2024, and the small group guide
+for each one. A guide has six parts, always in the same order: an overview, a
+fuller summary of where the message went, discussion questions for your group,
+self reflection questions to take home, the lines worth repeating, and every
+passage referenced from the stage. Check questions off as your group covers
+them and write your own notes beside them. Service times, directions, what is
+coming up, serve teams, and a way to give.
+
+Guides, sermons, and your notes are saved on your phone, so the app opens to
+this week's material whether or not you have signal. Try it in airplane mode.
+
+IF YOU LEAD A GROUP
+
+Ask us to turn Leader mode on for your account and the guide gains a
+presentation view: one question at a time, large type, readable across a
+living room. You also get a roster, attendance, and somewhere to write down
+what people asked you to pray for. That part stays on your phone.
+
+THE GROUP TAB
+
+A room needs an account, because your first name goes on what you write. Open
+one, send your group the six digit code, and everybody answers on their own
+phone. Answers stay hidden until you open them, one at a time, so nobody reads
+ahead. The last section is prayer requests, and one button at the end puts the
+evening on a single sheet you can send to everyone.
+
+WHAT IS DELIBERATELY OFF
+
+Home groups and Alpha are between seasons and say so rather than showing empty
+pages. That is the app working, not a bug.
+
+WHEN SOMETHING IS WRONG
+
+Take a screenshot, then tap Share and Send Beta Feedback, and TestFlight sends
+it to us with whatever note you add. Or open TestFlight, find Home Church, and
+tap Send Beta Feedback. Tell us what you tapped just before it happened and
+what you expected instead. Either beats a text that says it is broken.
+
+Anything you would rather send a person: hello@homechurchnola.com.
+```
+
+(2084) Update the seasons paragraph if a season opens before you build, since
+a tester reporting a bug that is a boolean wastes both of you.
+
+**What to Test**, 4000 characters, attached to a build rather than to the app,
+so rewrite it every upload. Ask for the paths you changed and the paths a
+tester would otherwise never take. For the first build:
+
+```
+Roughly twenty minutes, in this order.
+
+1. Open the app cold, before anything else. It should land on this week's
+   guide, not on a spinner.
+2. Read a guide all the way down. Check questions off, write a note beside a
+   reflection question, leave the app, come back. Is it all still there?
+3. Turn on airplane mode and open a guide you have already read, then one you
+   have not. Tell us which parts go missing.
+4. Share a sermon. Add an event to your calendar. Both should open the normal
+   iPhone sheets.
+5. Turn a notification switch on in Your account. We will send one this week.
+   Tell us if it never arrives, and roughly when you turned it on.
+6. If we have turned Leader mode on for you: open a guide, start presentation
+   mode, and run it on a TV or across a room. Is the type big enough from a
+   sofa?
+7. If you lead a group: open a room, give someone else the code, and answer a
+   question from each phone. Then reveal them and send yourself the sheet at
+   the end.
+
+Then tell us the one thing that felt slow, confusing, or wrong, even if it is
+not a bug. That is worth more than the seven steps above.
+```
+
+(1122)
+
+**Three settings and one trap.**
+
+- [ ] In App Store Connect, TestFlight, turn on **both feedback types**,
+      screenshot and email. Screenshot feedback off is the most common reason
+      a tester's report never arrives, and the description above tells them to
+      use it.
+- [ ] Set the **feedback email** to an address a person reads, not the
+      church's general inbox if nobody is watching it that week.
+- [ ] **Internal testers** (up to 100 App Store Connect users) need no review
+      and can install within minutes of processing. **External testers** need
+      a **Beta App Review**, which is a real review, usually a day or two.
+      Give it the same two demo accounts from section 1 and the same notes
+      from section 7. It is not the full App Review, so passing it is not a
+      prediction of section 9.
+- [ ] **`APNS_HOST`.** TestFlight is the **production** gateway. If you have
+      been testing from Xcode you will have set that secret to
+      `api.sandbox.push.apple.com`, and every push to a TestFlight build will
+      fail with `BadDeviceToken` while looking exactly like a bug in the app.
+      Delete the secret before you upload. `XCODE.md` says this too, and it is
+      still the thing most likely to waste an afternoon.
+
+Builds expire after **90 days**. A tester who reports something that has been
+fixed for a month is usually a tester on an expired build who never got the
+prompt.
+
 -----
 
 ## 4. Screenshot plan
