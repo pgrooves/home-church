@@ -393,30 +393,34 @@ so rewrite it every upload. Ask for the paths you changed and the paths a
 tester would otherwise never take. For the first build:
 
 ```
-Roughly twenty minutes, in this order.
+About twenty minutes, in this order. Tell us anything that surprises you.
 
-1. Open the app cold, before anything else. It should land on this week's
-   guide, not on a spinner.
-2. Read a guide all the way down. Check questions off, write a note beside a
-   reflection question, leave the app, come back. Is it all still there?
+1. Open it cold, before anything else. It should land on this week's guide,
+   not a spinner.
+2. Read a guide all the way down. Tick questions off, write a note beside a
+   reflection question, leave the app, come back. Still there?
 3. Turn on airplane mode and open a guide you have already read, then one you
-   have not. Tell us which parts go missing.
-4. Share a sermon. Add an event to your calendar. Both should open the normal
-   iPhone sheets.
-5. Turn a notification switch on in Your account. We will send one this week.
-   Tell us if it never arrives, and roughly when you turned it on.
-6. If we have turned Leader mode on for you: open a guide, start presentation
-   mode, and run it on a TV or across a room. Is the type big enough from a
-   sofa?
-7. If you lead a group: open a room, give someone else the code, and answer a
-   question from each phone. Then reveal them and send yourself the sheet at
-   the end.
+   have not. Tell us what goes missing.
+4. Tap the search box at the top right and look for a message by a word you
+   remember from it. Then flip the light switch beside it, light to dark and
+   back, on a few different screens. Both are new this week.
+5. Open a sermon and try Listen. Spotify and YouTube should both open. Some
+   older messages say "Audio coming soon" instead, which is correct.
+6. Share a sermon, and add an event to your calendar. Both should open the
+   normal iPhone sheets.
+7. Turn a notification switch on in Your account. This is the first build
+   where one can actually reach a phone, so tell us if nothing arrives.
+8. If we have turned Leader mode on for you: open a guide, start presentation
+   mode, and read it from across a room. Then open a room, give somebody the
+   code, and answer a question from both phones.
 
 Then tell us the one thing that felt slow, confusing, or wrong, even if it is
-not a bug. That is worth more than the seven steps above.
+not a bug. That is worth more than the eight steps above.
 ```
 
-(1122)
+(1371) Steps 4 and 5 are there because that code is the newest in the build.
+Cut step 7 if the APNs key is not uploaded yet: a tester reporting silence
+when nothing could have been sent costs a round trip and some goodwill.
 
 **Three settings and one trap.**
 
