@@ -220,14 +220,22 @@ and no account. Spotify, YouTube and the lyrics each need one free credential
 in `.env`, listed in `.env.example`, and a platform without one is left out of
 the row rather than guessed at.
 
+**Spotify and YouTube come from a web search, not an API.** The command runs
+`WebSearch` scoped to one domain at a time and checks each result against
+rules written down in `/new-worship` Step 3b: the URL has to be a `/track/` or
+a `/watch?v=`, and on Spotify the artist has to match the half of the result
+title that comes after "song and lyrics by", because `Holy Spirit (Jesus
+Culture Cover)` and `Holy Spirit ... by Jesus Co.` are both real results for
+this church's own setlist and both are the wrong record. No key, no account,
+and nothing published that was not checked.
+
 **One call used to do all of it.** Odesli answered for every platform at once,
 unauthenticated, and then retired public access to that endpoint: it returns
 401 `PUBLIC_API_ACCESS_DEPRECATED` to anybody without a key now. Had the
 resolver kept leaning on it, every set would have quietly published with art
 and an Apple link and nothing else, and the summary would have said "1 link"
-as though the songs simply were not on Spotify. So each platform is asked for
-itself, Odesli is used only when there is a key for it, and the summary says
-"not set up" rather than "no links" so the two never look the same.
+as though the songs simply were not on Spotify. Keys are optional accelerators
+now, listed in `.env.example`, and the church needs none of them.
 
 **The resolver is a script rather than instructions, and that is the point.**
 The first setlist went up with four titles and no art, because the pipeline

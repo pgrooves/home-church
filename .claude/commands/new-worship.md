@@ -1,5 +1,5 @@
 ---
-description: Publish Sunday's worship setlist. Reads a loose list of songs, finds the art and the links, confirms, then writes.
+description: Publish Sunday's worship setlist. Reads a loose list of songs, finds the art and the streaming links with no API keys, confirms, then writes.
 ---
 
 # /new-worship
@@ -89,10 +89,20 @@ here too. Migration `0034_worship_sets.sql` is the long version.
 
 ## Step 3. Resolve the art and the links
 
-**One command. Do not hand roll this with curl, and do not fill in a link from
-memory.** `scripts/resolve_songs.js` reads the list, searches iTunes for each
-song, takes the album art and the Apple Music link off the best match, asks
-Odesli for every other platform, and writes the finished row:
+**No API keys are needed for any of this, and none should be asked for.** The
+two halves use two different tools, and both are already available:
+
+| What | How | Needs a key |
+|---|---|---|
+| Album art, Apple Music link, canonical title and artist | `scripts/resolve_songs.js` (iTunes Search) | **no** |
+| Spotify link, YouTube link | **your own `WebSearch` tool**, see 3b | **no** |
+| Lyrics | WebSearch, or `GENIUS_TOKEN` if one is set | no |
+
+If you find yourself about to ask for a Spotify client secret or a YouTube API
+key, stop: that is the optional accelerator in 3c, not the process. The church
+does not have those keys and does not need them.
+
+### 3a. Art and the Apple link, from the script
 
 ```bash
 node scripts/resolve_songs.js --served-on 2026-08-23 \
@@ -100,36 +110,106 @@ node scripts/resolve_songs.js --served-on 2026-08-23 \
   --out /tmp/worship-2026-08-23.json < /tmp/songs.txt
 ```
 
-The row goes to stdout and to `--out`. A summary for a human goes to stderr,
-and that summary is what Step 5 shows.
+The row goes to stdout and to `--out`; a summary for a human goes to stderr.
+It will report Spotify, YouTube and lyrics as `not set up, so not looked for`.
+**That is expected, and 3b is what fills them in.**
 
-**Reuse what earlier Sundays already resolved.** A song the church played in
-June keeps its art and its links, which saves the lookups and keeps the same
-recording on screen two months running:
+Reuse what earlier Sundays resolved, so a song played in June keeps its links:
 
 ```bash
 python3 scripts/hc_supabase.py select worship_sets --order served_on.desc \
   --limit 12 --columns songs > /tmp/known.json
-node scripts/resolve_songs.js --served-on 2026-08-23 --known /tmp/known.json ... 
+node scripts/resolve_songs.js --served-on 2026-08-23 --known /tmp/known.json ...
 ```
 
-### What its exit code means
+**Do not take the first search result yourself and skip the script.** Its
+scoring is the whole point: a plain "first non-karaoke result" search for this
+church's own setlist returned *No One* by Elevation Worship for the song *No
+Body*, and the MultiTracks Session in place of the album cut. The script gets
+both right.
 
-| Code | Meaning | What to do |
-|---|---|---|
-| 0 | Every song came back with art and links | Go to Step 5 |
-| 2 | At least one song came back thin | Go to Step 5 and **say which ones** |
-| 1 | Something went wrong, nothing was written | Read the message, do not publish |
+Exit codes: `0` everything resolved, `2` at least one song came back thin so
+say which, `1` nothing was written so do not publish. On `1`, the message
+`could not reach itunes.apple.com` means the network, not a song without art.
 
-The message on exit 1 that matters most is `could not reach
-itunes.apple.com`. **That is a blocked egress proxy, not a song without art**,
-and it is the difference between "these four songs have no art" and "nothing
-was resolved at all". Do not publish a set on the back of it. Either run the
-command on a machine with open network access, or ask for the links and pass
-them in by hand. This exact failure is how the first setlist went up with four
-titles and nothing else.
+### 3b. Spotify and YouTube, with WebSearch
 
-### The two things it will not decide for you
+**This is you, not a script.** For each song, run `WebSearch` twice, scoped to
+one domain each. Use the title and artist the script settled on in 3a, not the
+line that was typed.
+
+```
+WebSearch  query: "So Much" Life.Church Worship song
+           allowed_domains: ["open.spotify.com"]
+
+WebSearch  query: "So Much" Life.Church Worship official
+           allowed_domains: ["youtube.com"]
+```
+
+Spotify result titles have a rigid shape, and that shape is what makes this
+checkable rather than a guess:
+
+```
+So Much - song and lyrics by Life.Church Worship | Spotify
+└─ track ─┘                  └─ artist ─┘
+```
+
+**Spotify rules, in order:**
+
+1. **URL must be `open.spotify.com/track/…`.** Reject `/artist/`, `/album/`,
+   `/playlist/`, `/show/`, `/embed/`. Strip a locale segment: `/intl-pt/track/…`
+   becomes `/track/…`.
+2. **Split the title on the literal `" - song and lyrics by "`.** The artist is
+   on the right. The requested artist must match the **right** side.
+3. **Never accept an artist found only on the left.** `Holy Spirit (Jesus
+   Culture Cover) [feat. Jay Bisaga]` has "Jesus Culture" in the track name and
+   somebody else as the artist. That is the trap, and it is a real result for
+   this church's own setlist.
+4. **Match the artist properly, not by prefix.** `Holy Spirit - Live - song and
+   lyrics by Jesus Co.` is a different artist from Jesus Culture, and it is
+   also a real result for this setlist.
+5. **Reject** a left side containing cover, karaoke, tribute, instrumental,
+   remix, sped up, slowed, made popular by.
+6. **Prefer the plain one.** Between `So Much` and `So Much - Radio Version` or
+   `- MultiTracks Session` or `- Live`, take the one with no qualifier, unless
+   the church's line asked for that version.
+
+**YouTube rules:**
+
+1. **URL must be `youtube.com/watch?v=…`.** Reject `/@handle`, `/playlist`,
+   `/channel`, and `music.youtube.com`.
+2. The title must contain **both** the song and the artist.
+3. **Prefer the official upload**: "Official Lyric Video", "Official Music
+   Video", "Official Video", or the artist's own channel.
+4. **Reject** cover, karaoke, instrumental, tutorial, reaction, drum cam, and
+   fan lyric re-uploads when an official one is in the results.
+
+Then edit the two keys into the row `--out` wrote, and nothing else:
+
+```jsonc
+"links": {
+  "apple":   "https://music.apple.com/...",   // from 3a, leave alone
+  "spotify": "https://open.spotify.com/track/6uqYWwJnvxaea90fGpnD5K",
+  "youtube": "https://www.youtube.com/watch?v=xOyWfN-nftk"
+}
+```
+
+**If no result passes the rules, leave the platform out.** The screen draws
+nothing for a missing link, and that is the correct outcome. A button that
+opens the wrong recording is worse than no button, and nobody catches it by
+looking at the screen.
+
+### 3c. Optional, only if the church later gets keys
+
+`.env.example` lists `SPOTIFY_CLIENT_ID` / `SPOTIFY_CLIENT_SECRET`,
+`YOUTUBE_API_KEY`, `ODESLI_API_KEY` and `GENIUS_TOKEN`. With any of them set,
+`resolve_songs.js` fills that platform in itself and 3b has less to do. **Do
+not go looking for these, do not ask for them, and do not treat their absence
+as a blocker.** Odesli in particular retired its free public endpoint and
+answers 401 `PUBLIC_API_ACCESS_DEPRECATED` without a key, which is why the
+script skips it rather than trying.
+
+### The two things nothing will decide for you
 
 - **A line naming two artists.** `Holy Spirit: Jesus Culture or Bryan & Katie
   Torwalt` is two recordings of one song. The script uses the first so the run
@@ -142,36 +222,7 @@ titles and nothing else.
   match out in Step 5 and let somebody confirm it. A wrong recording under the
   right title is the one mistake nobody catches by looking at the screen.
 
-### Which platforms you get
-
-iTunes Search needs no key, so **album art and the Apple Music link always
-work**. Everything else needs one free credential each, in `.env`:
-
-| In the row | Needs | Without it |
-|---|---|---|
-| Album art, Apple Music | nothing | always there |
-| Spotify | `SPOTIFY_CLIENT_ID` + `SPOTIFY_CLIENT_SECRET` | left out, reported |
-| YouTube | `YOUTUBE_API_KEY` | left out, reported |
-| Everything at once | `ODESLI_API_KEY` | the three above still work |
-| Lyrics | `GENIUS_TOKEN` | no Lyrics link drawn |
-
-`.env.example` says where each one comes from. All free.
-
-**Odesli is no longer the whole pipeline.** It used to answer for every
-platform in one unauthenticated call, and it retired public access to that
-endpoint: it now returns 401 `PUBLIC_API_ACCESS_DEPRECATED` to anybody without
-a key. So each platform is asked for itself, and the script skips Odesli
-entirely unless `ODESLI_API_KEY` is set rather than spending a request to be
-refused.
-
-**"Not set up" and "found nothing" are different facts, and the summary tells
-them apart.** A platform with no credentials prints `- not set up, so not
-looked for`. Say that out loud in Step 5 rather than letting somebody read it
-as "this song is not on Spotify."
-
-**Never invent a link, and never publish a search query as one.** A button
-that lands on a results page or on somebody else's recording is worse than no
-button, and the screen draws nothing at all for an empty one.
+**Never invent a link, and never publish a search query as one.**
 
 ## Step 4. Pick an id
 
@@ -191,26 +242,29 @@ changes, and upsert over it.
 **Always show the finished set and wait for a yes.** This is a required step,
 not a courtesy.
 
-The summary Step 3 printed to stderr is already the right shape, so show that
-rather than rewriting it, and add the message and the question:
+Start from the summary 3a printed to stderr, add what 3b found, and add the
+message and the question. Name the platforms rather than counting them: "5
+links" tells nobody which five, and the whole reason 3b exists is that Spotify
+and YouTube are the two people actually tap.
 
 ```
 Sunday      2026-08-23
 Message     sermon-last-words
 
 1. So Much  /  Life.Church Worship
-   art, 5 links, lyrics   [high, via iTunes]
+   art, Apple + Spotify + YouTube   [high, via iTunes]
 
 2. Holy Spirit  /  Jesus Culture
-   art, 5 links, lyrics   [high, via iTunes]
+   art, Apple + Spotify + YouTube   [high, via iTunes]
    ! the line named two artists: Jesus Culture / Bryan & Katie Torwalt.
      Used the first. Ask before writing.
 
-3. Lean Back (feat. Amanda Lindsey Cook & Chandler Moore)  /  Maverick City Music
-   art, 5 links, no lyrics   [medium, via iTunes]
+3. Lean Back (feat. Amanda Lindsey Cook)  /  Maverick City Music & Chandler Moore
+   art, Apple + Spotify   [medium, via iTunes]
+   ! no YouTube result passed the rules, so the song has no YouTube button
 
-4. No Body  /  Elevation Worship
-   art, 5 links, lyrics   [high, via iTunes]
+4. No Body (feat. Jonsal Barrientes)  /  Elevation Worship
+   art, Apple + Spotify + YouTube   [high, via iTunes]
 
 Write it?
 ```
@@ -225,9 +279,11 @@ hand, so what gets published is what the resolver actually found.
 python3 scripts/hc_supabase.py upsert worship_sets /tmp/worship-2026-08-23.json
 ```
 
-That file is what Step 3 wrote. **Do not retype it and do not edit the links
-in it by hand**: every URL in there came back from a service, and one typed
-from memory is a dead button in front of a congregation.
+That file is what Step 3 wrote, plus the two keys 3b added to it. **Every URL
+in it came from iTunes or from a search result you checked against the rules
+in 3b.** Do not retype one from memory and do not adjust one to look tidier: a
+link typed from memory is a dead button in front of a congregation, and it
+looks exactly like a working one until somebody taps it.
 
 The shape, for reading rather than for writing:
 

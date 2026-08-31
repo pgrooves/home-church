@@ -466,6 +466,21 @@ async function wireTests() {
       /nothing has been written/.test(message), true);
   }
 
+  console.log('\n--- telling the gateway apart from the service ---');
+  {
+    /* The fallback to curl hangs off this one question, and getting it wrong
+       either way is bad: too eager and a real "this song is not here" gets
+       retried pointlessly, too shy and the run dies in a web session where
+       curl could have answered. */
+    ok('a 403 is the gateway', R.gatewayRefused({ status: 403, body: '' }), true);
+    ok('and so is a 407', R.gatewayRefused({ status: 407, body: '' }), true);
+    ok('and so is the plain text refusal it serves with a 200 in front of it',
+      R.gatewayRefused({ status: 200, body: 'Host not in allowlist: itunes.apple.com.' }), true);
+    ok('a real answer is not', R.gatewayRefused({ status: 200, body: '{"resultCount":0}' }), false);
+    ok('and neither is a 404 from the service itself',
+      R.gatewayRefused({ status: 404, body: 'not found' }), false);
+  }
+
   console.log('\n--- a song we already resolved ---');
   {
     const calls = stub([['itunes.apple.com', ITUNES_ANSWER]]);
