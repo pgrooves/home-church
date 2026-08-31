@@ -345,6 +345,16 @@ phone. Answers stay hidden until you open them, one at a time, so nobody reads
 ahead. The last section is prayer requests, and one button at the end puts the
 evening on a single sheet you can send to everyone.
 
+SIGNING IN
+
+There are no passwords anywhere in this app. You type an email address, we
+send a six digit code, and the account is made the first time you use it.
+
+If you were handed an account along with these notes, that one is different:
+its code never changes and no email is ever sent to it. The app will still say
+"Code sent. Check your email." Nothing will arrive, and nothing is wrong. Type
+the six digit code you were given.
+
 WHAT IS DELIBERATELY OFF
 
 Home groups and Alpha are between seasons and say so rather than showing empty
@@ -360,7 +370,7 @@ what you expected instead. Either beats a text that says it is broken.
 Anything you would rather send a person: hello@homechurchnola.com.
 ```
 
-(2084) Update the seasons paragraph if a season opens before you build, since
+(2517) Update the seasons paragraph if a season opens before you build, since
 a tester reporting a bug that is a boolean wastes both of you.
 
 **What to Test**, 4000 characters, attached to a build rather than to the app,
@@ -403,10 +413,25 @@ not a bug. That is worth more than the seven steps above.
       church's general inbox if nobody is watching it that week.
 - [ ] **Internal testers** (up to 100 App Store Connect users) need no review
       and can install within minutes of processing. **External testers** need
-      a **Beta App Review**, which is a real review, usually a day or two.
-      Give it the same two demo accounts from section 1 and the same notes
-      from section 7. It is not the full App Review, so passing it is not a
-      prediction of section 9.
+      a **Beta App Review**, which is a real review, usually a day or two. It
+      is not the full App Review, so passing it is not a prediction of
+      section 9.
+- [ ] **Sign-In Information, on that same beta review form.** Tick "Sign-in
+      required", because the Group tab is. The form takes **one** account, not
+      the two section 7 gets, so give it the **host**: Leader mode is the half
+      a reviewer cannot reach otherwise, and the member account only exists
+      for the report and block walkthrough, which is a full App Review
+      concern. **User Name** is the host address. **Password** is its fixed
+      test OTP, the six digits you set in Supabase, never a code that arrived
+      in an inbox. A mailed code is single use and expired long before anybody
+      opens the form.
+- [ ] **Say that no email arrives.** The app is two-step: address, then code,
+      with a toast in between reading "Code sent. Check your email." A test
+      OTP sends nothing, and the toast says it anyway, so a reviewer holding
+      only a Password field goes looking in a Gmail account they cannot open
+      and calls sign in broken. That warning is in the Beta App Description
+      above, under SIGNING IN, because this form has no notes field to put it
+      in. If yours does, put it in both.
 - [ ] **`APNS_HOST`.** TestFlight is the **production** gateway. If you have
       been testing from Xcode you will have set that secret to
       `api.sandbox.push.apple.com`, and every push to a TestFlight build will
@@ -638,7 +663,10 @@ it, so everything in it is one sign-in away.
 Signing in has no password. We send a six digit code to an email address and
 the account is created on first use, so you can sign in with any address you
 control. The two demo accounts below are configured so the codes never change
-and no email is sent.
+and no email is sent. The app will still say "Code sent. Check your email"
+after you enter the address, because it cannot tell the difference. Nothing
+will arrive for these two accounts and nothing is wrong: type the code printed
+beside the address below.
 
 DELETING AN ACCOUNT, GUIDELINE 5.1.1(v)
 Once signed in, account deletion is available in two places, both inside the
