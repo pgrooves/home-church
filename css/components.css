@@ -46,31 +46,47 @@
   height: 20px;
   width: auto;
   opacity: 0;
+  /* Height is in here with the rest so the lockup shrinks on the way across
+     rather than snapping a size the moment the scroll threshold is passed.
+     See the note on the scrolled rule below for why it shrinks at all. */
   transition: left var(--hc-dur-fast) var(--hc-ease),
               transform var(--hc-dur-fast) var(--hc-ease),
+              height var(--hc-dur-fast) var(--hc-ease),
               opacity var(--hc-dur-fast) var(--hc-ease);
 }
 
 /* At rest on a tab, the logo sits where the title will later appear. */
 .hc-topbar[data-is-tab="true"] .hc-topbar__logo { opacity: 1; }
 
-/* Once the screen scrolls, the title claims the left edge and the lockup
-   stands down.
+/* Once the screen scrolls, the title claims the left edge, so the logo gets
+   out of its way rather than disappearing.
 
-   IT USED TO SLIDE TO THE MIDDLE rather than fade, and the note here said
-   that was better than disappearing. It was, while the right end of the bar
-   was one avatar. It is not any more: light-or-dark and search sit beside the
-   initials now, and three targets plus the screen's name leave no middle for
-   a 127pt lockup to move to. Measured, on the narrowest phone this ships to
-   and on a 390pt one: slid to center it lands on top of the word "Home".
+   IT GOES TO THE FAR END OF THE SLOT RATHER THAN TO THE MIDDLE OF IT, and
+   the difference is the two discs to the right of it. The middle was the
+   right destination while the bar ended in one avatar: with light-or-dark and
+   search beside the initials the slot is 201pt wide on the narrowest phone
+   this design targets, and a 127pt lockup centred in it starts at 94, which
+   is under the tail of a title like "Practices" that runs to 102. Ending at
+   the slot's right edge instead is the same gesture doing the same job, and
+   it is measured rather than eyeballed: it is exactly as far out of the
+   title's way as the header allows.
 
-   Nothing is lost that was doing work. The logo is still there at rest at the
-   top of every tab, which is where it says whose app this is; past the scroll
-   threshold the question a person has is which screen they are on, and the
-   title answers it in the same place the logo was standing. */
+   AND IT STEPS DOWN THREE PIXELS ON THE WAY. At 20px the lockup is 127 wide
+   and right-aligned it still starts at 94; at 17px it is about 108 and starts
+   at 113, which clears the longest tab title by 11pt on a 375pt phone and by
+   26 on a 390. Three pixels of height is what buys that, and a lockup that is
+   a size smaller once it is no longer the thing being read is right anyway.
+   Nothing here is a compromise on the discs: all three stay a full 44pt tap
+   target.
+
+   left and transform are both percentages, of the slot and of the lockup's
+   own width, which is what makes this animate the way the old centring rule
+   did rather than jumping. The arithmetic above is asserted on a real page,
+   at three widths and against every tab title, in tests/e2e/search.js. */
 .hc-topbar[data-is-tab="true"][data-scrolled="true"] .hc-topbar__logo {
-  opacity: 0;
-  pointer-events: none;
+  left: 100%;
+  transform: translate(-100%, -50%);
+  height: 17px;
 }
 
 /* A pushed view has no logo at all, the back arrow and title fill that role. */

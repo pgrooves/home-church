@@ -808,10 +808,15 @@ agree with the wallpaper. `index.html` names the same file for both
 appearances so nothing has to be inferred from the artwork. Regenerate with
 `npm run icons`, then `npm run stamp` so the URL moves with the picture.
 
-The lockup lives top-left in the header on every tab, sliding to center once
-the screen scrolls and the screen title takes the left edge. Pushed views
-(Guide reader, Profile, Leader) show no logo, back arrow and title fill that
-role instead. That gold, sampled from the source file, is a mark color only,
+The lockup lives top-left in the header on every tab, sliding out of the way
+once the screen scrolls and the screen title takes the left edge. It used to
+slide to the centre of its slot; since light-or-dark and search joined the
+initials it goes to the far end of the slot instead, and steps down from 20px
+to 17px on the way, which is what keeps it clear of the longest tab title
+("Practices") on the narrowest phone this design targets. The arithmetic is
+asserted at three widths against every tab title in `tests/e2e/search.js`
+rather than left to be eyeballed. Pushed views (Guide reader, Profile, Leader)
+show no logo, back arrow and title fill that role instead. That gold, sampled from the source file, is a mark color only,
 it is not part of the UI palette and no interface element should adopt it.
 
 -----

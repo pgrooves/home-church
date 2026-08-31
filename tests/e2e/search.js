@@ -187,30 +187,79 @@ async function type(page, text) {
     bar.logo && bar.logo.right <= bar.theme.x,
     JSON.stringify({ logo: bar.logo, theme: bar.theme }));
 
-  /* Scrolled, the title takes the left edge and the lockup stands down. The
-     assertion that matters is the second one: this is the arrangement that
-     put a 127pt logo on top of the word "Home" when it slid to center. */
+  /* Scrolled, the title takes the left edge and the lockup slides out of its
+     way rather than disappearing. This is the arrangement that broke when the
+     two discs arrived: centred in its slot the lockup lands under the tail of
+     a title like "Practices", so it goes to the far end of the slot instead
+     and steps down three pixels on the way. None of that can be eyeballed, so
+     it is measured here, and measured against every tab title rather than
+     against the one this page happens to be on: the header is the same width
+     whatever screen is under it, and "Practices" is 30pt longer than "Home".
+
+     Only the tabs and the modules are asked. A pushed view draws no logo at
+     all, which is a different rule with its own reason. */
   await page.evaluate(() => document.getElementById('hc-scroll').scrollTo(0, 500));
   await page.waitForTimeout(500);
 
   const scrolled = await page.evaluate(() => {
-    const r = (sel) => {
-      const el = document.querySelector(sel);
-      const box = el.getBoundingClientRect();
-      return { x: Math.round(box.x), right: Math.round(box.right),
-               shown: getComputedStyle(el).opacity !== '0' };
+    const el = (sel) => document.querySelector(sel);
+    const box = (sel) => {
+      const b = el(sel).getBoundingClientRect();
+      return { x: Math.round(b.x), right: Math.round(b.right),
+               w: Math.round(b.width), shown: getComputedStyle(el(sel)).opacity !== '0' };
     };
-    return { title: r('.hc-topbar__title'), logo: r('.hc-topbar__logo--light'),
-             theme: r('#hc-theme-disc'),
-             text: document.querySelector('.hc-topbar__title').textContent };
+
+    /* Every name the bar can carry while the logo is on screen, measured with
+       the real face at the real weight by borrowing the title element. */
+    const titleEl = el('.hc-topbar__title');
+    const was = titleEl.textContent;
+    let widest = 0, widestName = '';
+    ['Home', 'Listen', 'Guides', 'Group', 'Connect'].concat(
+      (window.HC.modules || []).map(m => window.HC.titles[m.route] || m.route)
+    ).forEach(name => {
+      titleEl.textContent = name;
+      const w = titleEl.getBoundingClientRect().width;
+      if (w > widest) { widest = w; widestName = name; }
+    });
+    titleEl.textContent = was;
+
+    return {
+      text: was,
+      title: box('.hc-topbar__title'),
+      logo: box('.hc-topbar__logo--light'),
+      theme: box('#hc-theme-disc'),
+      slot: box('.hc-topbar__center'),
+      widest: Math.round(widest),
+      widestName: widestName,
+      scrolled: el('.hc-topbar').getAttribute('data-scrolled')
+    };
   });
 
-  ok('past the scroll threshold the screen names itself', scrolled.text === 'Home',
-    scrolled.text);
-  ok('and the lockup is out of the way rather than under the title',
-    !scrolled.logo.shown, JSON.stringify(scrolled));
-  ok('so the title never reaches the controls',
-    scrolled.title.right < scrolled.theme.x, JSON.stringify(scrolled));
+  ok('past the scroll threshold the screen names itself',
+    scrolled.scrolled === 'true' && scrolled.text === 'Home',
+    JSON.stringify({ scrolled: scrolled.scrolled, text: scrolled.text }));
+
+  ok('the lockup is still on the glass rather than gone',
+    scrolled.logo.shown, JSON.stringify(scrolled.logo));
+
+  ok('it has slid right, to the far end of its slot',
+    scrolled.logo.right >= scrolled.slot.right - 1 &&
+    scrolled.logo.x > scrolled.slot.x,
+    JSON.stringify({ logo: scrolled.logo, slot: scrolled.slot }));
+
+  ok('and stepped down on the way, which is what buys the room',
+    scrolled.logo.w < 120, JSON.stringify(scrolled.logo));
+
+  /* The one that would have caught the regression. Measured against the
+     longest name the bar can carry, not against the short one on screen. */
+  ok('it clears even the longest tab title, with room to spare',
+    scrolled.title.x + scrolled.widest + 8 <= scrolled.logo.x,
+    JSON.stringify({ titleX: scrolled.title.x, widest: scrolled.widest,
+                     widestName: scrolled.widestName, logoX: scrolled.logo.x,
+                     gap: scrolled.logo.x - (scrolled.title.x + scrolled.widest) }));
+
+  ok('and it never reaches the controls either',
+    scrolled.logo.right <= scrolled.theme.x, JSON.stringify(scrolled));
 
   /* -------------------------------------------------------- light or dark ---
      The disc, the switch on Your account, and the phone all saying the same
