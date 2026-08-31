@@ -108,7 +108,7 @@
       '<p class="hc-body-serif hc-account__copy">Sign in and your information follows you to any phone. Everything else on this screen already works without it.</p>' +
       '<form class="hc-form" data-auth-form="request" novalidate>' +
         '<label class="hc-field">' +
-          '<span class="hc-field__label">Email or phone number</span>' +
+          '<span class="hc-field__label">Enter email below:</span>' +
           '<input class="hc-input" type="text" inputmode="email" autocomplete="email" ' +
             'name="identifier" placeholder="you@example.com" value="' + c.esc(authIdentifier) + '">' +
         '</label>' +
