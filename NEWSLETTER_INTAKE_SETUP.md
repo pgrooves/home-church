@@ -69,7 +69,12 @@ on.
 
 ## Step 4. Set the secrets
 
-Supabase dashboard → **Edge Functions** → **newsletter-intake** → **Secrets**.
+Supabase dashboard → **Project Settings** → **Edge Functions** → **Secrets**.
+
+These are project-wide, not per-function: the same page already holds
+`HC_PUSH_CRON_SECRET` and the four `APNS_*` values that send-push reads. Every
+function in the project sees every secret, so the names are prefixed to say
+which job owns them.
 
 | Secret | Value |
 |---|---|

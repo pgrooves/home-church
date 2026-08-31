@@ -36,8 +36,11 @@
  * take a library for it, and this is the same trade: about two hundred lines
  * we can read against a dependency we cannot.
  *
- * SECRETS, set under Edge Functions -> newsletter-intake -> Secrets. The whole
- * list and where each one comes from is in NEWSLETTER_INTAKE_SETUP.md.
+ * SECRETS, set under Project Settings -> Edge Functions -> Secrets. They are
+ * project wide rather than per function, which is why these are named for the
+ * job that owns them: the same page holds send-push's HC_PUSH_CRON_SECRET and
+ * its four APNS_ values, and every function sees all of them. The whole list
+ * and where each one comes from is in NEWSLETTER_INTAKE_SETUP.md.
  *
  *   HC_NEWSLETTER_CRON_SECRET   must equal the vault secret 0038 generated
  *   NEWSLETTER_IMAP_HOST        imap.gmail.com
