@@ -689,6 +689,26 @@
 
     html += newsletterNotice();
 
+    /* Check the mailbox now. Above Write an announcement and aligned right,
+       which is the order the two are reached for: the newsletter is the thing
+       that fills this screen most weeks, and writing one by hand is the
+       exception.
+
+       Secondary and small on purpose. Write an announcement is the primary
+       action on this screen and stays the only full width button; this one is
+       a convenience over something that already happens on its own every
+       twenty minutes, and a second primary button would make the two look like
+       a choice somebody has to make. */
+    html += '<div class="hc-admin__fetch">' +
+      c.button('Fetch Announcements', {
+        action: 'admin-newsletter-fetch',
+        icon: 'plus',
+        variant: 'secondary',
+        small: true,
+        busy: busy === 'fetch'
+      }) +
+    '</div>';
+
     html += '<div class="hc-admin__new">' +
       c.button('Write an announcement', { action: 'admin-announcement-new', icon: 'plus' }) +
     '</div>';

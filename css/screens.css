@@ -2171,6 +2171,19 @@
 
 .hc-admin__new { margin: var(--hc-space-lg) 0; }
 
+/* Fetch Announcements, above Write an announcement and pushed to the right.
+   Right aligned so it reads as a utility over the section rather than as the
+   first of two things to choose between: the eye goes to the full width
+   primary button underneath it, which is the one somebody came here to press
+   on the weeks the newsletter has nothing in it. */
+.hc-admin__fetch {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: var(--hc-space-lg);
+}
+
+.hc-admin__fetch .hc-btn { margin-top: 0; }
+
 .hc-admin__form > * + * { margin-top: var(--hc-space-lg); }
 
 /* One announcement, page, person or setting in a list. */

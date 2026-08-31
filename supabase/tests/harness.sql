@@ -237,6 +237,24 @@ create table vault.decrypted_secrets (
 );
 create schema if not exists net;
 
+/* pg_net's sender, near enough for 0039 to run. The real one queues an HTTP
+   request in a background worker and hands back the id it will file the
+   response under; this returns an id and sends nothing at all, which is
+   exactly what a test wants. What 0039 asserts is who may ask for a mailbox
+   check and how often they may ask, and both of those are settled before any
+   request would leave the database.
+
+   The argument list is pg_net's own, in its own order, because
+   hc_newsletter_tick calls it with named arguments and a stub that renamed or
+   reordered them would fail to resolve and take the test with it. */
+create or replace function net.http_post(
+  url                  text,
+  body                 jsonb   default '{}'::jsonb,
+  params               jsonb   default '{}'::jsonb,
+  headers              jsonb   default '{}'::jsonb,
+  timeout_milliseconds integer default 5000
+) returns bigint language sql as $$ select 1::bigint $$;
+
 /* ---------------------------------------------------------------------------
    The content tables 0030 opens to an admin, from 0001, 0006 and 0007.
 

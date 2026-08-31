@@ -161,18 +161,22 @@ begin;
     $$select public.hc_admin_send_announcement('push-test-missing')$$,
     'No announcement with that id');
 
-  /* The row that should be allowed. It gets past every check above and then
-     dies reaching for net.http_post, which this harness does not have. That
-     is the assertion: the failure is the network call and not a refusal, so
-     nothing before it stood in the way.
+  /* The row that should be allowed. It gets past every check above and
+     reaches the sender, which is the assertion: no refusal stood in the way.
 
-     Matching on the missing schema rather than on success is the honest test
-     available here. Whether APNs actually delivers is a question about the
-     real project and a real phone, and LAUNCH_TODO.md is where that is
-     checked off. */
-  select t_raises_like('but a live one gets all the way to the sender',
-    $$select public.hc_admin_send_announcement('push-test-live')$$,
-    'net.http_post');
+     THIS USED TO ASSERT A CRASH. Until 0039 the harness had no net.http_post
+     at all, so the honest test available was that the call died reaching for
+     it — the failure being the network call rather than a refusal was what
+     proved the guards had all passed. 0039 needed a stub of that function to
+     test its own cooldown, and with one present this call now completes, so
+     the assertion says so directly instead of inferring it from a hole.
+
+     That is a straightforwardly better test: it proves the call arrives rather
+     than proving it fell over somewhere past the last guard. Whether APNs
+     actually delivers is still a question about the real project and a real
+     phone, and LAUNCH_TODO.md is still where that is checked off. */
+  select t_check('but a live one gets all the way to the sender',
+    (select public.hc_admin_send_announcement('push-test-live')) is not null, true);
 commit;
 
 -- ----------------------------------------------------------------- tidy ---

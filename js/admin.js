@@ -175,6 +175,40 @@
     });
   }
 
+  /* Check the mailbox now rather than at the next twenty minute tick.
+
+     Through a named function for the reason migration 0039 gives: the Edge
+     Function proves its caller with a secret that lives in the vault and must
+     never reach a phone, so the app cannot call the intake directly and should
+     not be able to. hc_admin_fetch_newsletter is the whole of what an admin
+     can reach, it takes no arguments, and it checks hc_is_admin() before it
+     does anything. */
+  function fetchNewsletter() {
+    return HC.auth.rpc('hc_admin_fetch_newsletter');
+  }
+
+  /* The newest run, asked of the network rather than of the cache.
+
+     This is the one read in the file that deliberately bypasses the cache, and
+     it has to: the whole point of it is watching for a row that does not exist
+     yet. `load()` above would answer instantly with what it already has, which
+     is exactly the stale answer the poll is trying to see past. */
+  function latestRun() {
+    return HC.auth.restFetch('/newsletter_runs?select=*&order=ran_at.desc&limit=1')
+      .then(function (rows) {
+        return Array.isArray(rows) && rows.length ? rows[0] : null;
+      });
+  }
+
+  /* Both slots, after a check has finished. The run log for the notice at the
+     top, and the announcements for the drafts underneath it, because a
+     successful check changes both and refreshing one without the other shows
+     somebody a "3 new drafts" line above a list that has none. */
+  function refreshNewsletter() {
+    invalidate('announcements');
+    invalidate('newsletter');
+  }
+
   /* Approve. One PATCH, and it is the only place in this feature that sets
      published to true.
 
@@ -675,6 +709,9 @@
     discardAnnouncement: discardAnnouncement,
     loadNewsletter: loadNewsletter,
     lastRun: lastRun,
+    fetchNewsletter: fetchNewsletter,
+    latestRun: latestRun,
+    refreshNewsletter: refreshNewsletter,
 
     uploadImage: uploadImage,
     suggestLinkImage: suggestLinkImage,

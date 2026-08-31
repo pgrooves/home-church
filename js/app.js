@@ -1182,6 +1182,60 @@
        deletes nothing. The one destructive button in this section, Delete,
        keeps the confirm it has always had. See js/admin.js. */
 
+    /* Check the mailbox now.
+
+       Not written with adminRun, which every other admin action uses, and the
+       difference is the waiting. adminRun starts a call, reports it, and
+       clears the busy flag; this has to hold the flag across a request that
+       finishes immediately and an outcome that arrives half a minute later.
+       Holding the button disabled for that whole time is the point: it is what
+       stops six taps becoming six mailbox reads, and it is the honest picture
+       of what is happening.
+
+       The starting id is read from the network rather than from the cache. The
+       cache can be empty on a screen that has just been opened, and a zero
+       there would make the first poll return whatever run happened twenty
+       minutes ago and report last cycle's result as this tap's. */
+    'admin-newsletter-fetch': function () {
+      var h = adminHelpers();
+      h.setBusy('fetch');
+      repaintAdmin();
+
+      HC.admin.latestRun().then(function (previous) {
+        var sinceId = previous ? previous.id : null;
+
+        return HC.admin.fetchNewsletter().then(function () {
+          HC.components.toast('Checking the mailbox…');
+          return pollForRun(sinceId, 20);      // 20 x 3s, a minute of patience
+        });
+      }).then(function (run) {
+        HC.admin.refreshNewsletter();
+
+        if (!run) {
+          HC.components.toast('Still checking. It will appear here when it is done.');
+          return;
+        }
+        if (run.ok === false) {
+          HC.components.toast(run.note || 'The check did not work.');
+          return;
+        }
+        if (run.drafts > 0) {
+          HC.components.toast(run.drafts === 1
+            ? 'One new announcement to review.'
+            : run.drafts + ' new announcements to review.');
+          return;
+        }
+        // Reached the mailbox and there was nothing new in it, which is the
+        // answer six days out of seven and is not a failure.
+        HC.components.toast('Nothing new in the mailbox.');
+      }).catch(function (err) {
+        HC.components.toast(err.message || 'Could not check the mailbox.');
+      }).then(function () {
+        h.setBusy('');
+        repaintAdmin();
+      });
+    },
+
     'admin-review-approve': function (el) {
       var id = el.getAttribute('data-id');
       var row = announcementById(id);
@@ -2981,6 +3035,39 @@
       h.setBusy('');
       repaintAdmin();
     });
+  }
+
+  /* Waiting for a newsletter check to finish.
+
+     WHY THIS POLLS AT ALL, rather than the button simply reporting success.
+     hc_admin_fetch_newsletter returns the moment pg_net accepts the request,
+     because pg_net is fire and forget: the response goes nowhere and the
+     Edge Function is only starting. What follows is an IMAP round trip and a
+     language model, which together take twenty to forty seconds. A button that
+     said "done" at that point would be lying, and the drafts would appear
+     under a screen somebody had already stopped looking at.
+
+     So the run log is the completion signal. The intake writes exactly one row
+     there whichever way it goes, success or failure, which makes "a row newer
+     than the one we started with" a reliable answer to "has it finished".
+
+     Resolves null on timeout rather than rejecting, because a check that is
+     still running is not a check that failed. The caller says so and the
+     twenty minute tick carries on regardless. */
+  function pollForRun(sinceId, tries) {
+    if (tries <= 0) return Promise.resolve(null);
+
+    return new Promise(function (resolve) { window.setTimeout(resolve, 3000); })
+      .then(function () { return HC.admin.latestRun(); })
+      .then(function (run) {
+        if (run && run.id !== sinceId) return run;
+        return pollForRun(sinceId, tries - 1);
+      })
+      .catch(function () {
+        // One failed poll on a phone in a building with concrete walls is not
+        // the check failing. Keep waiting.
+        return pollForRun(sinceId, tries - 1);
+      });
   }
 
   function announcementById(id) {
