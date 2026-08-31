@@ -845,8 +845,23 @@ Deno.serve(async (req: Request) => {
     return json({ ok, ...counts, note }, status);
   };
 
-  const host = Deno.env.get('NEWSLETTER_IMAP_HOST') ?? 'imap.gmail.com';
-  const port = parseInt(Deno.env.get('NEWSLETTER_IMAP_PORT') ?? '993', 10);
+  /* Trimmed, and stripped of the angle brackets somebody pastes when they read
+     <the secret> in the setup doc as a style rather than as a placeholder. It
+     is the same call as stripping spaces out of the app password below, and it
+     is worth more here because the failure is so much worse: an app password
+     with spaces in it comes back "the mailbox refused the sign in", which
+     points at the password. A host of "<imap.gmail.com>" fails DNS instead, and
+     the run is logged as "failed to lookup address information", which reads
+     like the network is down and names nothing. Normalising is safe because
+     the bracketed form has exactly one possible meaning. */
+  const host = (Deno.env.get('NEWSLETTER_IMAP_HOST') ?? 'imap.gmail.com')
+    .trim().replace(/^<|>$/g, '').trim() || 'imap.gmail.com';
+
+  // A port that is not a number is a typo, not an instruction. NaN would reach
+  // Deno.connectTls and fail with something about an invalid argument.
+  const parsedPort = parseInt(
+    (Deno.env.get('NEWSLETTER_IMAP_PORT') ?? '993').trim().replace(/^<|>$/g, ''), 10);
+  const port = Number.isFinite(parsedPort) && parsedPort > 0 ? parsedPort : 993;
   const user = Deno.env.get('NEWSLETTER_IMAP_USER');
   // Gmail shows an App Password as four groups of four. People paste it with
   // the spaces in, every time, and the server refuses it. Stripping them here
