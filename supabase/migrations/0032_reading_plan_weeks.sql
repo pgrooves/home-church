@@ -30,9 +30,33 @@
 -- that list is the ALLOWLIST at the top of js/edit-mode.js, and
 -- supabase/tests/0031_editable_columns_test.sql asserts the two match.
 --
+-- APPLIED, August 31 2026, as 20260831_reading_plan_weeks. It was written and
+-- merged in August and never run, which is a failure mode worth naming because
+-- it is invisible from the repo: every test in tests/reading-plan.test.js
+-- passed, js/content.js mapped a column that was not there to an empty array,
+-- and Home did exactly what this file says it should do with an empty
+-- schedule, which is fall back to `this_week`. So the card kept advancing its
+-- week number over a fixed sentence, and the fix for that was sitting in the
+-- migrations folder looking done. The check that would have caught it is the
+-- one at the bottom of this note: ask the project for the column, not the repo
+-- for the file.
+--
+-- WHAT IT LANDED ON. `plan-david`, starts_on 2026-05-03, was on derived week
+-- 18 of 20 with `this_week` still reading "2 Samuel 13", the week 9 line
+-- somebody last typed in June. Week 18 of the schedule below is "Psalms 27, 30
+-- and 31", and that is what Home draws now. The jump is the four months the
+-- reading sat still, not a fault in the schedule: weeks 8 and 9 are the
+-- church's own anchors, the line 0004 seeded and the line the row carried.
+--
 -- HOW TO RUN IT
 --   Supabase dashboard -> SQL Editor -> New query -> paste -> Run.
 --   Needs 0004 and 0031. Safe to run twice.
+--
+--   Then prove it landed, because a merged migration proves nothing:
+--     select jsonb_array_length(weeks), weeks ->> (floor((current_date -
+--            starts_on) / 7)::int) from public.reading_plans where is_current;
+--   A length matching total_weeks, and a reading that is not the one in
+--   this_week, is the whole test.
 -- ===========================================================================
 
 

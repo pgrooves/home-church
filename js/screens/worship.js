@@ -93,11 +93,16 @@
       '</button>';
     }
 
+    /* The link to the message is drawn as soon as the row exists, which is
+       usually before its audio does. It keeps its destination, the show, and
+       loses the promise: HC.data.episodeLabel says "coming soon" until
+       /new-podcast fills the episode in, and Listen says the same words on
+       the same Sunday because it reads the same function. */
     if (sermon) {
       html += '<button type="button" class="hc-inline-link" data-action="open-url" ' +
         'data-url="' + c.esc(HC.data.episodeUrl(sermon)) + '">' +
         c.icon('listen', 'hc-share__icon') +
-        '<span>Listen to this message</span>' +
+        '<span>' + c.esc(HC.data.episodeLabel(sermon)) + '</span>' +
       '</button>';
     }
 

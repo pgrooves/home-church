@@ -235,8 +235,10 @@ to go straight through.
 2. Serve the app locally (`python3 -m http.server` from the repo root, or
    just open `index.html`) and check:
    - The new sermon appears on Listen, newest first if it's the most recent.
-   - Its archive row opens to the episode notes, and "Listen on Spotify"
-     points at `episodeUrl` when you set one, at the show when you didn't.
+   - Its archive row opens to the episode notes, and the listen button
+     points at `episodeUrl` when you set one, naming where it lands. With
+     no `episodeUrl` yet, which is the normal state for a guide published
+     before Monday, it reads "Audio coming soon!" and still opens the show.
    - It shows the "Open the group guide" link.
    - The Guide index lists it under the right series.
    - The guide reader opens, all six sections render, Short Summary is

@@ -75,6 +75,7 @@ js/
   content.js          fills HC.data from Supabase, cache first, never blocks
   native.js           share sheet, calendar, haptics, notifications
   print-guide.js      the printable guide, and the standalone file for sharing
+  search.js           the index behind the magnifying glass in the top bar
   router.js           pushState routing, query string, no hash
   date-rail.js        the month strip under the header on Listen
   swipe.js            drag sideways to move between the five tabs
@@ -113,6 +114,52 @@ device.** Nothing a person writes in this app is transmitted anywhere, which
 is what keeps Guideline 1.2, the user generated content rule, entirely out of
 scope, and it is a property worth defending. `store.eraseEverything()` wipes
 the lot, and the Your data screen is where somebody does that themselves.
+
+-----
+
+## Search, and the two circles in the top bar
+
+The right end of the header carries three circles now: light or dark, search,
+and your initials, in that order.
+
+**Light or dark** is the same preference as the Dark mode switch on Your
+account and writes to the same place, so the two are always in step. The icon
+says which mode you are in, a sun or a moon, rather than which one the tap
+will give you; the button's label says the action in words, for VoiceOver and
+for anybody who stops to think about it. A phone that has never chosen either
+follows the system, and the disc follows it too.
+
+**Search** opens one box that looks through the whole app. Two halves,
+indexed two different ways, and `js/search.js` says so at length at the top of
+the file:
+
+- **What the church has published**, read straight out of `HC.data`: every
+  message, every guide and every question inside it, announcements, events,
+  groups, serve teams, next steps, setlists, content pages, the reading plan,
+  the nine practices, and the church's own details, down to the service times.
+  The records are walked generically rather than field by field, so a new
+  column or a new key inside a JSON blob is searchable the day it lands and
+  nobody has to remember this file.
+- **What the screens say**, which is the ledes, the notes and the empty states
+  that live as strings in `js/screens/*.js` rather than as rows. Nothing
+  exports them, so the index draws each screen and reads its text. That
+  happens inside a `<template>`, whose content is inert, which is what stops
+  it pulling down every photograph in the app to count words nobody will read.
+  The Group tab and Admin are deliberately not drawn: a room is a private
+  conversation, and Admin fetches.
+
+Your own journal is on the index because it is yours and it never leaves the
+phone, and it comes straight back off the moment the journal lock is on. A
+group room is not on it at all.
+
+Nothing here reaches the internet. The index is built the first time somebody
+searches, costs a few milliseconds, and is thrown away whenever the content
+under it moves. Results are ranked with the thing itself above the screen it
+is listed on, the matched words are marked in a line of the text they were
+found in, and tapping a row opens exactly what it names.
+
+Tests: `tests/search.test.js` for everything answerable without a page, and
+`tests/e2e/search.js` for the rest, which is layout and traffic.
 
 -----
 
@@ -173,14 +220,27 @@ and no account. Spotify, YouTube and the lyrics each need one free credential
 in `.env`, listed in `.env.example`, and a platform without one is left out of
 the row rather than guessed at.
 
+**The gap was only ever Spotify and YouTube.** Album art, the Apple Music
+link and the canonical title and artist come from iTunes Search, which needs no
+key and has picked the right recording every week. Those two links were the one
+thing a published set was missing.
+
+**They come from a web search, not an API.** The command runs
+`WebSearch` scoped to one domain at a time and checks each result against
+rules written down in `/new-worship` Step 3b: the URL has to be a `/track/` or
+a `/watch?v=`, and on Spotify the artist has to match the half of the result
+title that comes after "song and lyrics by", because `Holy Spirit (Jesus
+Culture Cover)` and `Holy Spirit ... by Jesus Co.` are both real results for
+this church's own setlist and both are the wrong record. No key, no account,
+and nothing published that was not checked.
+
 **One call used to do all of it.** Odesli answered for every platform at once,
 unauthenticated, and then retired public access to that endpoint: it returns
 401 `PUBLIC_API_ACCESS_DEPRECATED` to anybody without a key now. Had the
 resolver kept leaning on it, every set would have quietly published with art
 and an Apple link and nothing else, and the summary would have said "1 link"
-as though the songs simply were not on Spotify. So each platform is asked for
-itself, Odesli is used only when there is a key for it, and the summary says
-"not set up" rather than "no links" so the two never look the same.
+as though the songs simply were not on Spotify. Keys are optional accelerators
+now, listed in `.env.example`, and the church needs none of them.
 
 **The resolver is a script rather than instructions, and that is the point.**
 The first setlist went up with four titles and no art, because the pipeline
@@ -761,10 +821,15 @@ agree with the wallpaper. `index.html` names the same file for both
 appearances so nothing has to be inferred from the artwork. Regenerate with
 `npm run icons`, then `npm run stamp` so the URL moves with the picture.
 
-The lockup lives top-left in the header on every tab, sliding to center once
-the screen scrolls and the screen title takes the left edge. Pushed views
-(Guide reader, Profile, Leader) show no logo, back arrow and title fill that
-role instead. That gold, sampled from the source file, is a mark color only,
+The lockup lives top-left in the header on every tab, sliding out of the way
+once the screen scrolls and the screen title takes the left edge. It used to
+slide to the centre of its slot; since light-or-dark and search joined the
+initials it goes to the far end of the slot instead, and steps down from 20px
+to 17px on the way, which is what keeps it clear of the longest tab title
+("Practices") on the narrowest phone this design targets. The arithmetic is
+asserted at three widths against every tab title in `tests/e2e/search.js`
+rather than left to be eyeballed. Pushed views (Guide reader, Profile, Leader)
+show no logo, back arrow and title fill that role instead. That gold, sampled from the source file, is a mark color only,
 it is not part of the UI palette and no interface element should adopt it.
 
 -----
@@ -809,12 +874,20 @@ it is not part of the UI palette and no interface element should adopt it.
 
 These are marked in the code where they appear:
 
-1. The per-episode Spotify links. Every message currently links to its own
-   episode page on the podcast host, which works, and `podcast.showUrl` points
-   at the show on Spotify. Swapping `episodeUrl` to the matching
+1. The per-episode Spotify links. The back catalogue links each message to its
+   own episode page on the podcast host, which works, and `podcast.showUrl`
+   points at the show on Spotify. Swapping `episodeUrl` to the matching
    `open.spotify.com/episode/...` link is a per-row change, and the Listen
    button relabels itself to "Listen on Spotify" automatically when it sees a
-   Spotify URL.
+   Spotify URL. The newer episodes are already published that way.
+
+   A row with no `episodeUrl` at all is a different state and reads as one:
+   the guide is published days before the audio posts, so from the Thursday
+   to the Monday that message's link says "Audio coming soon!" and still
+   opens the show, which is where the episode will appear. `/new-podcast`
+   filling in `episode_url` is the only thing that changes it. One answer,
+   `HC.data.episodeLabel`, read by both Listen and the Worship header, and
+   the seam is covered in `tests/listen.test.js`.
 2. The 28 messages with no preacher recorded and the 43 with no passage, both
    because the episode notes do not state them. They render cleanly without,
    the byline just gets shorter. Fill them in as you know them.

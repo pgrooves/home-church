@@ -2674,3 +2674,149 @@
   font-weight: 600;
   font-size: var(--hc-caption);
 }
+
+/* --------------------------------------------------------------------------
+   Search. The box under the heading, then the list.
+
+   A pushed view, so it clears the header the way every screen does and
+   nothing else on it is chrome: no filters, no tabs, no rail. What somebody
+   types is the only control on the page.
+   -------------------------------------------------------------------------- */
+
+.hc-search__field { margin-top: var(--hc-space-lg); }
+
+/* The magnifier sits inside the field rather than beside it, so the field is
+   still the full width of the screen and still one tap target. Absolute over
+   the input with the input padded to clear it, which keeps the 16px font size
+   the input needs to stop iOS zooming the page on focus. */
+.hc-search__box {
+  position: relative;
+  display: block;
+}
+
+.hc-search__icon {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 20px;
+  height: 20px;
+  color: var(--hc-mid);
+  pointer-events: none;
+}
+
+.hc-search__input { padding-left: 44px; }
+
+/* Safari draws its own clear button on type="search" and it is the right
+   control in the right place, so it is left alone. What is taken away is the
+   decoration around it, which does not match anything else in this app. */
+.hc-search__input::-webkit-search-decoration,
+.hc-search__input::-webkit-search-results-button,
+.hc-search__input::-webkit-search-results-decoration {
+  -webkit-appearance: none;
+}
+
+.hc-search__results { margin-top: var(--hc-space-lg); }
+
+.hc-search__hint {
+  color: var(--hc-mid);
+  font-size: calc(var(--hc-body-serif) * var(--hc-text-scale));
+  line-height: var(--hc-body-serif-line);
+}
+
+.hc-search__count {
+  color: var(--hc-mid);
+  margin-bottom: var(--hc-space-sm);
+}
+
+/* --------------------------------------------------------------- one result
+
+   A row, not a card. There can be sixty of them and a column of sixty cards
+   is a wall: the hairline between rows is enough separation for a list you
+   are scanning rather than reading. */
+.hc-results {
+  display: flex;
+  flex-direction: column;
+}
+
+.hc-result {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--hc-space-base);
+  width: 100%;
+  padding: var(--hc-space-base) 0;
+  text-align: left;
+  border-bottom: var(--hc-hairline) solid var(--hc-rule);
+}
+
+.hc-result:first-child { border-top: var(--hc-hairline) solid var(--hc-rule); }
+
+.hc-result:active { background: var(--hc-paper-sunk); }
+
+.hc-result__body {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* What kind of thing this is, above the name of it. The list mixes messages,
+   guides, events and screens, and without this line a result is a sentence
+   with no idea what tapping it will open. */
+.hc-result__kind {
+  display: block;
+  color: var(--hc-accent-deep);
+}
+
+.hc-result__title {
+  display: block;
+  margin-top: 4px;
+  font-family: var(--hc-sans-display);
+  font-weight: 800;
+  font-size: calc(17px * var(--hc-text-scale));
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+  color: var(--hc-ink);
+}
+
+.hc-result__sub {
+  display: block;
+  margin-top: 2px;
+}
+
+/* The words, where they were found. Two lines and then it stops: a snippet
+   is there to prove the match, not to be read instead of the page. */
+.hc-result__snippet {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  margin-top: 6px;
+  font-family: var(--hc-serif);
+  font-size: calc(14px * var(--hc-text-scale));
+  line-height: 1.45;
+  color: var(--hc-mid);
+}
+
+/* The matched words. The same wash a kept sentence in a guide gets, because
+   it is the same gesture: these are the words, in this text, that somebody
+   asked about. A <mark> comes out of the browser bright yellow, which would
+   be the loudest thing in a two-palette app, so the background is replaced
+   rather than tinted. The ink goes back to full strength inside the mark, so
+   the match reads out of the grey line around it. */
+.hc-search__hit {
+  background: color-mix(in srgb, var(--hc-accent) 34%, transparent);
+  color: var(--hc-ink);
+  border-radius: 2px;
+  padding: 0;
+}
+
+@supports not (color: color-mix(in srgb, red 50%, transparent)) {
+  .hc-search__hit { background: var(--hc-cream); }
+}
+
+.hc-result__chevron {
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+  margin-top: 18px;
+  color: var(--hc-mid);
+}

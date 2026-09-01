@@ -130,6 +130,9 @@
     // journal entry: the arrow and this word in the bar, the back disc by the
     // thumb, and no sideways drag. The card on Home is what opens it.
     announcement: 'Announcement',
+    // The box in the top bar. A pushed view like Your account: the arrow and
+    // this word in the bar, and no sideways drag out of it.
+    search: 'Search',
     profile: 'Your account',
     leader: 'Leader mode',
     'guide-reader': 'Guide',
@@ -138,6 +141,13 @@
     terms: 'Terms of use',
     data: 'Your data'
   };
+
+  /* What every route is called, published, so nothing has to write the list
+     out a second time. js/search.js is the reader: a search result naming a
+     screen says "Worship" because this says so, and a module renamed here is
+     renamed in the search results on the same commit. Read at search time
+     rather than at load, so the order of the script tags does not matter. */
+  HC.titles = TITLES;
 
   function isModule(name) {
     return MODULE_ROUTES.indexOf(name) !== -1;
@@ -161,9 +171,31 @@
           '<img class="hc-topbar__logo hc-topbar__logo--dark" src="assets/img/logo-lockup.png" alt="Home Church">' +
           '<span class="hc-topbar__title" id="hc-topbar-title"></span>' +
         '</span>' +
-        '<button type="button" class="hc-avatar" data-action="go-profile" aria-label="Your account">' +
-          '<span class="hc-avatar__disc" id="hc-avatar-disc" aria-hidden="true"></span>' +
-        '</button>' +
+        /* Three circles at the right end of the bar, in one flex box of their
+           own rather than as three more children of the header.
+
+           THE WRAPPER IS NOT DECORATION. The header lays its children out
+           with a gap of --hc-space-md, which is right between the logo and
+           the buttons and much too wide between the buttons themselves: on a
+           375pt phone three 44pt targets plus two of those gaps leave the
+           logo about a centimetre. Grouped, the three sit shoulder to
+           shoulder and the header still has exactly two things to space, the
+           way it did when there was only the avatar.
+
+           The order is the order they were asked for: the way you change how
+           the app looks, then the way you find something in it, then you. */
+        '<div class="hc-topbar__actions">' +
+          '<button type="button" class="hc-topbar__disc" id="hc-theme-disc" ' +
+              'data-action="toggle-theme" aria-pressed="false" ' +
+              'aria-label="Switch to dark mode"></button>' +
+          '<button type="button" class="hc-topbar__disc" id="hc-search-disc" ' +
+              'data-action="go-search" aria-label="Search">' +
+            c.icon('search', 'hc-topbar__disc-icon') +
+          '</button>' +
+          '<button type="button" class="hc-avatar" data-action="go-profile" aria-label="Your account">' +
+            '<span class="hc-avatar__disc" id="hc-avatar-disc" aria-hidden="true"></span>' +
+          '</button>' +
+        '</div>' +
       '</header>' +
 
       /* The pinned announcement, when the church has pinned one.
@@ -302,6 +334,30 @@
     } else {
       disc.innerHTML = c.icon('home', 'hc-avatar__icon');
     }
+  }
+
+  /* The sun in the top bar, and the moon it becomes.
+
+     THE ICON IS THE STATE, NOT THE ACTION. A sun means the app is light right
+     now, a moon means it is dark. The other convention, drawing what the tap
+     will give you, is just as common and reads backwards the moment somebody
+     stops to think about it: a moon on a screen that is already dark looks
+     like a moon that did not work. The label is where the action is said, and
+     it is said in words, so VoiceOver reads "Switch to dark mode" rather than
+     leaving somebody to infer it from a picture they cannot see. aria-pressed
+     carries the same state the icon does, for a screen reader that announces
+     toggle buttons by their pressed state.
+
+     Repainted from three places, which is every way the theme can move: this
+     button, the switch on Your account, and the system changing underneath a
+     phone that has not chosen either. */
+  function paintThemeToggle() {
+    var btn = document.getElementById('hc-theme-disc');
+    if (!btn) return;
+    var dark = document.documentElement.getAttribute('data-theme') === 'dark';
+    btn.innerHTML = c.icon(dark ? 'moon' : 'sun', 'hc-topbar__disc-icon');
+    btn.setAttribute('aria-pressed', dark ? 'true' : 'false');
+    btn.setAttribute('aria-label', dark ? 'Switch to light mode' : 'Switch to dark mode');
   }
 
   /* ------------------------------------------------------- the pinned strip
@@ -1801,6 +1857,7 @@
       var ok = HC.store.eraseEverything();
       HC.store.applyPreferences();   // theme and text size went back to default
       paintAvatar();
+      paintThemeToggle();
       HC.router.go({ name: 'home' });
       c.toast(ok
         ? 'Erased. This phone is back to a fresh start.'
@@ -2117,11 +2174,53 @@
       });
     },
 
-    'toggle-theme': function (el) {
+    /* One handler for two controls: the switch on Your account and the disc
+       in the top bar. Whichever was tapped, both are put back in step
+       afterwards, because on Your account they are on screen together and a
+       switch that stayed off while the app went dark under it is the kind of
+       small lie that makes people stop trusting a settings screen.
+
+       setSwitch is applied by asking for the switch rather than by trusting
+       the element that was tapped: the disc has no aria-checked and no knob
+       inside it, and calling setSwitch on it would put a checked state on a
+       button that is not a switch. */
+    'toggle-theme': function () {
       var dark = document.documentElement.getAttribute('data-theme') === 'dark';
       HC.store.updateProfile({ theme: dark ? 'light' : 'dark' });
       HC.store.applyPreferences();
-      setSwitch(el, !dark);
+      HC.native.tap('Light');
+
+      paintThemeToggle();
+      var row = document.querySelector('[data-action="toggle-theme"][role="switch"]');
+      if (row) setSwitch(row, !dark);
+    },
+
+    /* --------------------------------------------------------------- search */
+
+    /* The magnifying glass. Tapping it while already on Search puts the
+       keyboard back rather than doing nothing, which is what the router would
+       otherwise make of navigating to the view you are already on. */
+    'go-search': function () {
+      var route = HC.router.current();
+      if (route && route.name === 'search') {
+        var box = document.querySelector('[data-search-box]');
+        if (box) box.focus();
+        return;
+      }
+      HC.native.tap('Light');
+      HC.router.go({ name: 'search' });
+    },
+
+    /* A result. One handler for every kind of thing on the list, because a
+       result already carries the whole address: js/search.js decided where a
+       guide, an announcement, a practice or a screen goes when it built the
+       index, and this only has to follow it. */
+    'search-open': function (el) {
+      var name = el.getAttribute('data-route');
+      if (!name) return;
+      var id = el.getAttribute('data-id');
+      HC.native.tap('Light');
+      HC.router.go(id ? { name: name, id: id } : { name: name });
     },
 
     /* There is no 'toggle-leader' here any more, and there should not be one
@@ -3338,6 +3437,18 @@
         return;
       }
 
+      /* The search box. Debounced like the Journal's, and unlike the
+         Journal's it does not refocus afterwards, because nothing it does
+         touches the field: js/screens/search.js writes the list under the box
+         and leaves the box, the caret and the keyboard exactly where they
+         are. */
+      if (el.getAttribute && el.getAttribute('data-search-box') !== null) {
+        debounce('search', function () {
+          HC.screens.searchHelpers.setQuery(el.value);
+        });
+        return;
+      }
+
       if (el.getAttribute && el.getAttribute('data-journal-search') !== null) {
         debounce('journal-search', function () {
           HC.screens.journalHelpers.setSearch(el.value);
@@ -3431,7 +3542,11 @@
     if (window.matchMedia) {
       var mq = window.matchMedia('(prefers-color-scheme: dark)');
       var onChange = function () {
-        if (HC.store.getProfile().theme === 'system') HC.store.applyPreferences();
+        if (HC.store.getProfile().theme !== 'system') return;
+        HC.store.applyPreferences();
+        // The phone went dark under a person who never chose either, so the
+        // sun in the bar has to become a moon without anybody tapping it.
+        paintThemeToggle();
       };
       if (mq.addEventListener) mq.addEventListener('change', onChange);
       else if (mq.addListener) mq.addListener(onChange);
@@ -3452,6 +3567,10 @@
     HC.content.primeFromCache();
 
     renderShell();
+    // The disc is drawn empty in the shell markup above and filled here,
+    // once, because which of the two icons it holds is a question about the
+    // theme applyPreferences() has just settled.
+    paintThemeToggle();
     wireEvents();
     wireSheet();
     watchScroll();
@@ -3510,6 +3629,7 @@
         journal: HC.screens.journal,
         'journal-entry': HC.screens.journalEntry,
         give: HC.screens.give,
+        search: HC.screens.search,
         profile: HC.screens.profile,
         admin: HC.screens.admin,
         announcement: HC.screens.announcement,
