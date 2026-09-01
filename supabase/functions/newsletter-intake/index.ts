@@ -59,6 +59,12 @@
  *                       \Seen, no ledger rows. Returns the drafts it would
  *                       have written, so a bad parse can be looked at before
  *                       it becomes rows.
+ *   {"backfill": true}  ignores the mailbox entirely and gives announcements
+ *                       that already exist the event they would have got if
+ *                       0040 had existed when they were parsed. One model call
+ *                       for the batch; `limit` caps how many it looks at,
+ *                       default 25. Safe to run more than once: it only
+ *                       considers announcements with no event yet.
  *
  * DEPLOY
  *   supabase functions deploy newsletter-intake --no-verify-jwt
@@ -621,10 +627,29 @@ interface ParsedLink {
    at 8am on the 12th, and those are two different dates doing two different
    jobs. Conflating them is how you get a calendar entry on the day the poster
    comes down. */
+/* THE TIME IS TWO INTEGERS AND NOT "HH:MM", which looks like fussiness and is
+   the fix for a real and spectacular failure.
+
+   With `time` typed as a string the model would, perhaps one run in three,
+   emit `"time": "18:00` and then fall into a degenerate loop of zeros —
+
+     "time": "18:00000000000000000000000000000000000000000…
+
+   — until it hit the output ceiling, which truncated the JSON mid-string and
+   failed the whole batch. Twenty-five thousand tokens and seventy seconds to
+   produce nothing. A free-form string invites that; an integer cannot run
+   away, because the type has nowhere to go.
+
+   Swapping the two fields made the backfill deterministic across repeated
+   runs, took it from seventy seconds to seven, and as a side effect fixed the
+   location field, which had been quietly going missing while the model was
+   busy losing its place. */
 interface ParsedEvent {
   date: string;         // YYYY-MM-DD, the day the thing happens
-  time?: string;        // HH:MM, 24 hour, local to the church
-  end_time?: string;
+  hour?: number;        // 0-23, church local
+  minute?: number;      // 0-59
+  end_hour?: number;
+  end_minute?: number;
   location?: string;
 }
 
@@ -668,8 +693,10 @@ const SCHEMA = {
             type: 'object',
             properties: {
               date: { type: 'string' },
-              time: { type: 'string' },
-              end_time: { type: 'string' },
+              hour: { type: 'integer' },
+              minute: { type: 'integer' },
+              end_hour: { type: 'integer' },
+              end_minute: { type: 'integer' },
               location: { type: 'string' },
             },
             required: ['date'],
@@ -748,9 +775,11 @@ function prompt(
     '   or a link to a form is NOT an event, and guessing one puts a wrong date in',
     '   somebody\'s phone. When in doubt, leave it out.',
     '     date      strict YYYY-MM-DD, the day it happens. Required.',
-    '     time      HH:MM on a 24 hour clock, church local time, only if the email says',
-    '               one. "8am" is 08:00, "7pm" is 19:00. Leave out if no time is given.',
-    '     end_time  same format, only if the email gives an end.',
+    '     hour      0-23, the start hour, church local. "8am" is 8, "7pm" is 19. Omit',
+    '               entirely when the email gives no time. A date with no time is still',
+    '               a real event; do not invent an hour for it.',
+    '     minute    0-59, only alongside hour. Omit when the time is on the hour.',
+    '     end_hour / end_minute   same, only if the email gives an end time.',
     '     location  the address or room, whenever the email gives one. Fill this in',
     '               even when the same address also appears in details: details are',
     '               read on the card, and this is what goes into the calendar entry on',
@@ -923,15 +952,27 @@ function churchOffset(isoDate: string): string {
   }
 }
 
-const CLOCK = /^([01]?\d|2[0-3]):([0-5]\d)$/;
-
-function churchInstant(isoDate: string | null, clock: unknown): string | null {
+/* Range checked here as well as typed in the schema. `integer` stops the model
+   writing "eighteen o'clock"; it does not stop it writing 47, and an hour of 47
+   would either throw at the database or, worse, roll the event into the next
+   day. Out of range is treated as no time given, which degrades to the same
+   place a missing time does. */
+function churchInstant(
+  isoDate: string | null,
+  hour: unknown,
+  minute: unknown,
+): string | null {
   if (!isoDate) return null;
-  const text = String(clock ?? '').trim();
-  const m = CLOCK.exec(text);
-  if (!m) return null;
-  const hh = m[1].padStart(2, '0');
-  return `${isoDate}T${hh}:${m[2]}:00${churchOffset(isoDate)}`;
+
+  const h = Number(hour);
+  if (!Number.isInteger(h) || h < 0 || h > 23) return null;
+
+  const rawM = Number(minute);
+  const m = Number.isInteger(rawM) && rawM >= 0 && rawM <= 59 ? rawM : 0;
+
+  const hh = String(h).padStart(2, '0');
+  const mm = String(m).padStart(2, '0');
+  return `${isoDate}T${hh}:${mm}:00${churchOffset(isoDate)}`;
 }
 
 /* A URL is kept only if the email actually contained it. This is the guard
@@ -1033,6 +1074,213 @@ function uniqueId(title: string, taken: Set<string>, prefix = 'announcement'): s
 }
 
 /* ========================================================================
+   Backfill
+
+   Events for announcements that already exist. The intake started writing
+   events at 0040; everything parsed before that has its dates sitting in its
+   words with nothing in the calendar, and re-reading the mailbox will not fix
+   them because the ledger has already seen those emails.
+
+   ONE MODEL CALL FOR THE WHOLE BATCH, not one per announcement. Twenty-five
+   separate calls would be twenty-five chances to hit the free tier's rate
+   limit on a job that is meant to be run once, and the model has no trouble
+   holding a list. The announcements go in with their ids and come back keyed
+   on the same ids, and anything it does not mention simply has no date.
+
+   THE EVENT INHERITS THE ANNOUNCEMENT'S published, which is the rule that
+   keeps the promise intact in both directions. A backfilled event for an
+   announcement already on Home is published, so it appears in the calendar
+   immediately, which is the point of running this. One for a draft still in
+   the review queue stays unpublished and goes live when somebody approves it,
+   exactly as if the intake had written it in the first place.
+   ===================================================================== */
+
+/* ONE ROW BACK FOR EVERY ROW IN, flagged rather than filtered.
+
+   The first version asked for "an entry for each announcement that has a date"
+   and got a third of them: City Serve Day, September 12 — the date sitting in
+   its own title — came back with nothing at all. Sparse output is a filtering
+   task and the model was cautious with it. A complete mapping with an explicit
+   has_event is a labelling task, which it does not miss, and it is checkable:
+   the caller knows how many rows it sent. */
+const BACKFILL_SCHEMA = {
+  type: 'object',
+  properties: {
+    results: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          id: { type: 'string' },
+          has_event: { type: 'boolean' },
+          date: { type: 'string' },
+          hour: { type: 'integer' },
+          minute: { type: 'integer' },
+          end_hour: { type: 'integer' },
+          end_minute: { type: 'integer' },
+          location: { type: 'string' },
+        },
+        required: ['id', 'has_event'],
+      },
+    },
+  },
+  required: ['results'],
+};
+
+interface BackfillRow {
+  id: string;
+  title: string;
+  body: string | null;
+  published: boolean;
+  written: string;
+}
+
+function backfillPrompt(rows: BackfillRow[]): string {
+  return [
+    'Below are announcements already published in a church app. Each one may or may',
+    'not be about something that happens on a particular day.',
+    '',
+    'Return one entry for EVERY announcement below, in the same order, with its id.',
+    'Set has_event true and give the date when it is about a dated thing — a gathering,',
+    'a service, a serve day, a meeting, a class, a party. If a reader could sensibly',
+    'put it in their calendar, has_event is true. The date is very often in the TITLE',
+    '("City Serve Day, September 12") as well as in the text — read both.',
+    '',
+    'Work the date out however it is written: "Friday, October 23", "Oct 4", "10/12",',
+    '"this Wednesday", "next Sunday", "the last Saturday in October", "Christmas Eve".',
+    'Each announcement carries the date it was written; resolve anything relative',
+    'against THAT date, not against today.',
+    '',
+    'A DATE WITH NO TIME IS STILL AN EVENT. Give the date and leave time out.',
+    'For a range ("Sept 8-10") use the first day. For something recurring ("every',
+    'Tuesday") use the first occurrence.',
+    '',
+    'Set has_event false, with no date, for an announcement with genuinely no day',
+    'attached: an ongoing need for volunteers, a standing invitation, a policy change.',
+    'Never invent a date that is not there. But when a date IS there, always give it.',
+    '',
+    '  date      strict YYYY-MM-DD. Required when has_event is true.',
+    '  hour      0-23, the start hour. 8am is 8, 7pm is 19. Omit when no time is given.',
+    '  minute    0-59, only alongside hour. Omit when the time is on the hour.',
+    '  end_hour / end_minute   same, only if the text gives an end time.',
+    '  location  the address or room, only if the text gives one.',
+    '',
+    'ANNOUNCEMENTS',
+    ...rows.map((r) => [
+      `--- id: ${r.id}`,
+      `written: ${r.written}`,
+      `title: ${r.title}`,
+      `text: ${(r.body ?? '').slice(0, 1500)}`,
+    ].join('\n')),
+  ].join('\n');
+}
+
+async function runBackfill(
+  admin: ReturnType<typeof createClient>,
+  apiKey: string,
+  model: string,
+  limit: number,
+): Promise<Record<string, unknown>> {
+  const { data, error } = await admin
+    .from('announcements')
+    .select('id, title, body, published, created_at, review_state')
+    .is('event_id', null)
+    .neq('review_state', 'discarded')
+    .order('created_at', { ascending: false })
+    .limit(limit);
+
+  if (error) throw new Error(`Could not read the announcements: ${error.message}`);
+
+  const rows: BackfillRow[] = (data ?? []).map((r) => ({
+    id: r.id as string,
+    title: String(r.title ?? ''),
+    body: (r.body as string | null) ?? null,
+    published: r.published === true,
+    written: String(r.created_at ?? '').slice(0, 10),
+  }));
+
+  if (!rows.length) return { ok: true, backfill: true, looked_at: 0, events: 0 };
+
+  const res = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ role: 'user', parts: [{ text: backfillPrompt(rows) }] }],
+        generationConfig: {
+          temperature: 0.2,
+          maxOutputTokens: 8192,
+          responseMimeType: 'application/json',
+          responseSchema: BACKFILL_SCHEMA,
+        },
+      }),
+    },
+  );
+
+  if (!res.ok) {
+    if (res.status === 429 || res.status >= 500) {
+      throw new TransientError(`Gemini is busy (${res.status}). Run the backfill again in a minute.`);
+    }
+    throw new Error(`Gemini returned ${res.status}`);
+  }
+
+  const payload = await res.json();
+  const parts = payload?.candidates?.[0]?.content?.parts ?? [];
+  const raw = parts.map((p: { text?: string }) => p?.text ?? '').join('').trim();
+  if (!raw) throw new Error('Gemini returned nothing to parse.');
+
+  const parsed = JSON.parse(raw)?.results ?? [];
+  const found = (parsed as Array<Record<string, unknown>>)
+    .filter((r) => r?.has_event === true);
+  const byId = new Map(rows.map((r) => [r.id, r]));
+
+  const { data: existingEvents } = await admin.from('events').select('id');
+  const takenEvents = new Set((existingEvents ?? []).map((r) => r.id as string));
+
+  let made = 0;
+  const madeFor: string[] = [];
+
+  for (const item of found) {
+    const row = byId.get(String(item.id ?? ''));
+    const date = cleanDate(item.date);
+    if (!row || !date) continue;
+
+    const eventId = uniqueId(row.title, takenEvents, 'event');
+    const at = churchInstant(date, item.hour, item.minute);
+
+    const { error: eventError } = await admin.from('events').insert({
+      id: eventId,
+      title: row.title,
+      description: row.body ? String(row.body).split('\n')[0].slice(0, 500) : null,
+      starts_at: at ?? `${date}T09:00:00${churchOffset(date)}`,
+      ends_at: churchInstant(date, item.end_hour, item.end_minute),
+      time_label: at ? null : 'Time to be announced',
+      location: String(item.location ?? '').trim().slice(0, 200) || null,
+      category: 'gathering',
+      // The rule that keeps the promise: an event is exactly as visible as the
+      // announcement it belongs to, no more.
+      published: row.published,
+    });
+    if (eventError) continue;
+
+    const { error: linkError } = await admin.from('announcements')
+      .update({ event_id: eventId }).eq('id', row.id);
+
+    if (linkError) {
+      // Nothing points at it, and an unpublished orphan is on no screen.
+      await admin.from('events').delete().eq('id', eventId);
+      continue;
+    }
+
+    made += 1;
+    madeFor.push(row.title);
+  }
+
+  return { ok: true, backfill: true, looked_at: rows.length, events: made, titles: madeFor };
+}
+
+/* ========================================================================
    main
    ===================================================================== */
 
@@ -1048,10 +1296,11 @@ Deno.serve(async (req: Request) => {
     return json({ error: 'No.' }, 401);
   }
 
-  let body: { probe?: boolean; dry_run?: boolean } = {};
+  let body: { probe?: boolean; dry_run?: boolean; backfill?: boolean; limit?: number } = {};
   try { body = await req.json(); } catch { /* an empty body is a normal tick */ }
   const probe = body.probe === true;
   const dryRun = body.dry_run === true;
+  const backfill = body.backfill === true;
 
   const url = Deno.env.get('SUPABASE_URL');
   const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
@@ -1115,6 +1364,21 @@ Deno.serve(async (req: Request) => {
 
   if (missing) {
     return await finish(false, {}, `Not set up yet: ${missing} is missing from this function's secrets.`, 200);
+  }
+
+  /* Backfill exits here, before the mailbox is opened. It has nothing to do
+     with email: it reads announcements that are already in the table and gives
+     the dated ones the event they would have got had 0040 existed when they
+     were parsed. Writes no run row either, because it is not a run — a person
+     triggered it once and is reading the response. */
+  if (backfill) {
+    try {
+      const limit = Math.min(Math.max(parseInt(String(body.limit ?? 25), 10) || 25, 1), 50);
+      return json(await runBackfill(admin, geminiKey!, model, limit));
+    } catch (err) {
+      console.error('newsletter-intake backfill failed:', err);
+      return json({ ok: false, backfill: true, error: String((err as Error).message ?? err) }, 200);
+    }
   }
 
   const imap = new Imap();
@@ -1309,10 +1573,10 @@ Deno.serve(async (req: Request) => {
                 id: uniqueId(title, takenEvents, 'event'),
                 title,
                 description: summary || null,
-                starts_at: churchInstant(eventDate, item.event?.time)
+                starts_at: churchInstant(eventDate, item.event?.hour, item.event?.minute)
                   ?? `${eventDate}T09:00:00${churchOffset(eventDate)}`,
-                ends_at: churchInstant(eventDate, item.event?.end_time),
-                time_label: churchInstant(eventDate, item.event?.time)
+                ends_at: churchInstant(eventDate, item.event?.end_hour, item.event?.end_minute),
+                time_label: churchInstant(eventDate, item.event?.hour, item.event?.minute)
                   ? null
                   : 'Time to be announced',
                 location: String(item.event?.location ?? '').trim().slice(0, 200) || null,
