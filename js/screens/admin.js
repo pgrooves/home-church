@@ -693,9 +693,13 @@
              announcement that carries an event changes two screens, and a
              button that quietly writes to the Connect tab as well as Home is
              a button that does more than it says. */
+          /* Says where the date went, and does not claim this button puts it
+             there. Since 0041 the event is approved on its own card below, so
+             an admin who approves only the announcement should not be left
+             wondering why the calendar did not change. */
           (row.event_id
-            ? '<p class="hc-caption hc-admin__review-dates">Approving this also puts ' +
-              'it on the Connect calendar, with an Add to calendar button.</p>'
+            ? '<p class="hc-caption hc-admin__review-dates">This one has a date. ' +
+              'It is waiting separately under Dates to review.</p>'
             : '') +
           (whyNotLive(row)
             ? '<p class="hc-caption hc-admin__warn">' + c.esc(whyNotLive(row)) + '</p>'
@@ -708,6 +712,65 @@
             variant: 'secondary', small: true }) +
           c.button('Discard', { action: 'admin-review-discard', id: row.id,
             variant: 'tertiary', small: true, busy: busy === 'discard:' + row.id }) +
+        '</div>' +
+      '</div>';
+    });
+
+    return html;
+  }
+
+  /* ------------------------------------------------ the events queue
+
+     Dates parsed out of the newsletter, waiting on somebody. A second queue
+     under the announcements one, because since 0041 they are two decisions:
+     approving the words on a card is not vouching for a date that will land in
+     the church's calendar and then in people's phones.
+
+     WHY THE DATE IS THE BIGGEST THING ON THE CARD. It is the only field here
+     that can be wrong in a way nobody catches. A misworded announcement is
+     visible on Home and fixable; a date that is a week out is correct-looking
+     everywhere and wrong in four hundred calendars, and the app cannot reach
+     in and take it back. So the card leads with when, not with what. */
+  function eventWhen(row) {
+    if (!row.starts_at) return 'No date';
+
+    var d = new Date(row.starts_at);
+    if (isNaN(d.getTime())) return 'No date';
+
+    var day = c.formatDate(d.getFullYear() + '-' +
+      ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2));
+
+    // time_label is what the intake writes when the email gave no hour, so it
+    // says "Time to be announced" rather than a nine o'clock nobody chose.
+    if (row.time_label) return day + ', ' + row.time_label;
+
+    var hour = d.getHours();
+    var mins = ('0' + d.getMinutes()).slice(-2);
+    var ampm = hour >= 12 ? 'PM' : 'AM';
+    var shown = hour % 12 === 0 ? 12 : hour % 12;
+    return day + ', ' + shown + ':' + mins + ' ' + ampm;
+  }
+
+  function eventsSection(rows) {
+    var html = c.sectionHeader('', 'Dates to review');
+    html += '<p class="hc-caption hc-admin__intro-note">Parsed out of the newsletter ' +
+      'and not on the Connect calendar yet. Approving one puts it there with an ' +
+      'Add to calendar button, on the announcement as well.</p>';
+
+    rows.forEach(function (row) {
+      html += '<div class="hc-admin__item hc-admin__item--review">' +
+        '<div class="hc-admin__item-head">' +
+          '<p class="hc-eyebrow">' + c.esc(eventWhen(row)) + '</p>' +
+          '<p class="hc-row__title">' + c.esc(row.title) + '</p>' +
+          (row.location
+            ? '<p class="hc-caption">' + c.esc(row.location) + '</p>'
+            : '<p class="hc-caption hc-admin__review-dates">No location given.</p>') +
+        '</div>' +
+        '<div class="hc-admin__item-actions">' +
+          c.button('Approve', { action: 'admin-event-approve', id: row.id,
+            small: true, busy: busy === 'event-approve:' + row.id }) +
+          c.button('Discard', { action: 'admin-event-discard', id: row.id,
+            variant: 'tertiary', small: true, busy: busy === 'event-discard:' + row.id }) +
         '</div>' +
       '</div>';
     });
@@ -763,6 +826,11 @@
        buttons each time, is two things as far as a thumb is concerned. */
     var waiting = HC.admin.pending();
     if (waiting.length) html += reviewSection(waiting);
+
+    // The dates queue, under the announcements one. Two decisions, two
+    // queues, in the order they are made: the words, then the date.
+    var dates = HC.admin.pendingEvents();
+    if (dates.length) html += eventsSection(dates);
 
     rows = rows.filter(function (row) { return row.review_state !== 'pending'; });
     if (!rows.length) {
@@ -1146,6 +1214,7 @@
     // The intake's heartbeat, alongside the rows themselves. Two tables, two
     // fetches, and the section can draw before either has landed.
     if (id === 'announcements') HC.admin.loadNewsletter();
+    if (id === 'announcements') HC.admin.loadPendingEvents();
     if (id === 'users') HC.admin.loadUsers();
     if (id === 'content') HC.admin.loadPages();
     if (id === 'settings') HC.admin.loadSettings();

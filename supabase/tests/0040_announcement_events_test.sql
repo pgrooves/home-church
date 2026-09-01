@@ -153,16 +153,33 @@ reset role;
 select t_check('the announcement is on Home',
   (select published from public.announcements where id = 'evt-test-announce'), true);
 
-select t_check('and the event went with it, in the same breath',
-  (select published from public.events where id = 'evt-test-homecoming'), true);
+/* AND THE EVENT DOES NOT GO WITH IT, which is the opposite of what this file
+   asserted when it was written. 0040 published the pair in one transaction;
+   0041 split them, because approving the words on a card is not the same act
+   as vouching for a date that lands in four hundred calendars. The link
+   between the two rows is what 0040 is still responsible for and is still
+   checked below; who publishes what is 0041's, and its own test file covers
+   that ground properly. */
+select t_check('and the event does NOT go with it, since 0041',
+  (select published from public.events where id = 'evt-test-homecoming'), false);
 
 select t_check('and it left the review queue',
   (select review_state from public.announcements where id = 'evt-test-announce'), 'approved');
 
--- Now a signed out phone can see both, which is the whole point of approving.
+-- The date needs its own approval before anybody can see it.
+do $$
+begin
+  set local role authenticated;
+  set local request.jwt.claims = '{"sub":"ff000000-0000-0000-0000-000000000001"}';
+  perform public.hc_admin_approve_event('evt-test-homecoming');
+end
+$$;
+
+reset role;
+
 begin;
   set local role anon;
-  select t_check('a signed out phone now gets the calendar entry',
+  select t_check('a signed out phone gets the calendar entry once the date is approved too',
     (select count(*)::int from public.events where id = 'evt-test-homecoming'), 1);
 commit;
 

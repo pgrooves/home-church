@@ -1292,6 +1292,44 @@
       });
     },
 
+    /* ------------------------------------------------- the dates queue
+
+       The same two taps as the announcements queue, on the other half of a
+       parsed newsletter item. Approve puts the date on the Connect calendar
+       and gives the announcement its Add to calendar button.
+
+       DISCARD CONFIRMS HERE, WHERE THE ANNOUNCEMENT ONE DOES NOT, and the
+       asymmetry is deliberate rather than an oversight. Discarding an
+       announcement moves it into the Posted list as a draft and nothing is
+       lost. Discarding a date deletes it, per 0041 — an unpublished event is
+       on no screen in this app, so a marked one could never be found again —
+       and a one tap delete on a card somebody is reading for the first time is
+       how a real date disappears on a mis-tap. */
+
+    'admin-event-approve': function (el) {
+      var id = el.getAttribute('data-id');
+      var row = HC.admin.pendingEvents().filter(function (e) { return e.id === id; })[0];
+      if (!row) return;
+
+      adminRun('event-approve:' + id, HC.admin.approveEvent(id).then(function () {
+        HC.components.toast('“' + row.title + '” is on the calendar.');
+      }));
+    },
+
+    'admin-event-discard': function (el) {
+      var id = el.getAttribute('data-id');
+      var row = HC.admin.pendingEvents().filter(function (e) { return e.id === id; })[0];
+      if (!row) return;
+
+      if (!window.confirm('Throw away the date for “' + row.title + '”? ' +
+                          'The announcement stays, without an Add to calendar button. ' +
+                          'There is no undo.')) return;
+
+      adminRun('event-discard:' + id, HC.admin.discardEvent(id).then(function () {
+        HC.components.toast('Date discarded.');
+      }));
+    },
+
     'admin-review-approve': function (el) {
       var id = el.getAttribute('data-id');
       var row = announcementById(id);

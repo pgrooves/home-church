@@ -36,7 +36,10 @@
     // announcements load, because it is a different table with a different
     // failure mode: the drafts can arrive perfectly while the last poll failed,
     // and the screen has to be able to say both.
-    newsletter: null
+    newsletter: null,
+    // Events waiting to be approved. A table of its own rather than a filter,
+    // see the events queue section below.
+    events: null
   };
   var inflight = {};
   var lastError = {};
@@ -173,6 +176,51 @@
     return list('announcements').filter(function (row) {
       return row.review_state === 'pending';
     });
+  }
+
+  /* ------------------------------------------------- the events queue
+
+     Events parsed out of the newsletter and not yet approved. A second queue
+     beside the announcements one, because since 0041 they are two decisions:
+     approving the words on a card is not the same as vouching for a date that
+     will land in the church's calendar and then in people's phones.
+
+     Its own cache slot and its own fetch, unlike the announcements queue,
+     which is a filter over a list this screen already holds. Events are a
+     different table and this screen has never had a reason to read it before,
+     so there is nothing to filter. The policy from 0040 is what lets an admin
+     see an unpublished one at all. */
+
+  function loadPendingEvents() {
+    load('events', function () {
+      return HC.auth.restFetch(
+        '/events?select=*&review_state=eq.pending&order=starts_at.asc');
+    });
+  }
+
+  function pendingEvents() {
+    return list('events');
+  }
+
+  function approveEvent(id) {
+    return HC.auth.rpc('hc_admin_approve_event', { p_id: id })
+      .then(function () {
+        invalidate('events');
+        // The Connect tab draws from the synced copy, so it has to be told.
+        HC.content.refresh();
+      });
+  }
+
+  /* Deletes rather than marks, per 0041. The announcement it belonged to keeps
+     everything else and simply stops offering an Add to calendar button, so
+     the announcements list has to be dropped too. */
+  function discardEvent(id) {
+    return HC.auth.rpc('hc_admin_discard_event', { p_id: id })
+      .then(function () {
+        invalidate('events');
+        invalidate('announcements');
+        HC.content.refresh();
+      });
   }
 
   /* Check the mailbox now rather than at the next twenty minute tick.
@@ -702,6 +750,10 @@
     notifyAnnouncement: notifyAnnouncement,
 
     pending: pending,
+    pendingEvents: pendingEvents,
+    loadPendingEvents: loadPendingEvents,
+    approveEvent: approveEvent,
+    discardEvent: discardEvent,
     approveAnnouncement: approveAnnouncement,
     discardAnnouncement: discardAnnouncement,
     loadNewsletter: loadNewsletter,

@@ -1258,9 +1258,13 @@ async function runBackfill(
       time_label: at ? null : 'Time to be announced',
       location: String(item.location ?? '').trim().slice(0, 200) || null,
       category: 'gathering',
-      // The rule that keeps the promise: an event is exactly as visible as the
-      // announcement it belongs to, no more.
-      published: row.published,
+      /* Pending regardless of whether its announcement is already live. The
+         announcement being approved says somebody vouched for the words; it
+         says nothing about a date a model has just now worked out of them, and
+         backfilled dates are the ones most worth a second look because nobody
+         has ever seen them. They appear in the events queue for approval. */
+      published: false,
+      review_state: 'pending',
     });
     if (eventError) continue;
 
@@ -1582,7 +1586,12 @@ Deno.serve(async (req: Request) => {
                 location: String(item.event?.location ?? '').trim().slice(0, 200) || null,
                 signup_url: keptLinks[0]?.url ?? null,
                 category: 'gathering',
+                // Pending, and published only when somebody approves the event
+                // itself. Since 0041 that is a separate tap from approving the
+                // announcement: a date landing in the church's calendar is a
+                // different decision from the wording of a card.
                 published: false,
+                review_state: 'pending',
               }
               : null;
 
