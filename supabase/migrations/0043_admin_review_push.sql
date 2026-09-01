@@ -640,7 +640,7 @@ revoke all on function public.hc_admin_approve_announcement(text) from public, a
 grant execute on function public.hc_admin_approve_announcement(text) to authenticated;
 
 comment on function public.hc_admin_approve_announcement(text) is
-  'Puts one parsed announcement on Home and writes down who did it. Admins only, checked inside. Claims the row by its pending state, so two admins tapping at once settle rather than race. Does NOT publish its event: since 0041 an event is approved separately.';
+  'Puts one parsed announcement on Home and writes down who did it. Admins only, checked inside. Claims the row by refusing one already approved, so two admins tapping at once settle rather than race. Does NOT publish its event: since 0041 an event is approved separately.';
 
 
 create or replace function public.hc_admin_approve_event(p_id text)
@@ -690,7 +690,7 @@ revoke all on function public.hc_admin_approve_event(text) from public, anon;
 grant execute on function public.hc_admin_approve_event(text) to authenticated;
 
 comment on function public.hc_admin_approve_event(text) is
-  'Puts one parsed event on the Connect calendar and writes down who did it. Admins only, checked inside, and claims the row by its pending state so two admins tapping at once settle rather than race.';
+  'Puts one parsed event on the Connect calendar and writes down who did it. Admins only, checked inside, and claims the row by refusing one already approved, so two admins tapping at once settle rather than race.';
 
 
 -- ---------------------------------------------------------------------------
