@@ -77,7 +77,7 @@ SQL that lists the tables.
 | `series` | Sermon series, name, blurb, cover art, which one is current | Listen, Grow |
 | `guides` | Small group guides, the whole `Guide {}` model | Grow, guide reader, leader mode |
 | `podcasts` | Sunday messages as episodes, external media links | Listen |
-| `events` | The events calendar | Connect |
+| `events` | The events calendar | Cal |
 | `announcements` | The announcement cards at the top of Home, each with a date window, formatted words, any number of pictures, an optional YouTube video and an optional link | Home, Admin, the announcement's own page |
 | `reading_plans` | The Reading together plan, one row per plan | Home |
 | `worship_sets` | One Sunday's songs, in the order they were played, each with its album art and its links. No sermon title in here, deliberately: the screen reads that through to `podcasts` | Worship |

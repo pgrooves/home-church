@@ -1,11 +1,11 @@
 ---
-description: Add an event to the Connect tab calendar. Asks for whatever is missing, confirms, then writes.
+description: Add an event to the Cal tab calendar. Asks for whatever is missing, confirms, then writes.
 ---
 
 # /new-event
 
-Adds one row to the `events` table, which is what the Connect tab's calendar
-reads.
+Adds one row to the `events` table, which is what the Cal tab's calendar
+reads: the month grid at the top of that screen and the upcoming list under it.
 
 $ARGUMENTS
 
@@ -149,7 +149,7 @@ Two lines and stop.
 
 ---
 
-**This reaches phones on its own.** The Connect tab reads `HC.data.events`,
+**This reaches phones on its own.** The Cal tab reads `HC.data.events`,
 and `js/content.js` fills that from the `events` table on every app open. So
 an event written here shows up on the next open, with no matching edit in
 `js/data.js` and no `?v=N` bump in `index.html`. Do not add it to

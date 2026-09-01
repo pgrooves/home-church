@@ -2820,3 +2820,264 @@
   margin-top: 18px;
   color: var(--hc-mid);
 }
+
+/* --------------------------------------------------------------------------
+   Cal
+   The church's calendar: a month you can walk through, the day you opened
+   under it, and the upcoming events under that.
+
+   THE GRID IS SEVEN EQUAL COLUMNS AND NOTHING ELSE. No week numbers, no
+   greyed out days from the months either side. On a 375pt phone, inside the
+   screen's own 20pt padding, a column is 47.8pt wide, which is what makes a
+   44pt tap target fit with room around it: the day is the full width of its
+   column and 44 tall, so the highlight reads as a rounded tile rather than
+   as a circle squeezed into a gap. That measurement is why the day is not a
+   fixed size square. Nothing here goes under --hc-tap-min.
+
+   ONLY A DAY WITH SOMETHING ON IT IS A BUTTON. The rest are spans. A grid
+   where every cell answers a tap with "nothing here" is a grid that asked
+   for the tap.
+   -------------------------------------------------------------------------- */
+
+.hc-cal { margin-top: var(--hc-space-lg); }
+
+/* Months on the left, years on the right. Two steppers rather than one, so a
+   date eight months out is two taps rather than eight. */
+.hc-cal__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--hc-space-sm);
+}
+
+.hc-cal__stepper {
+  display: flex;
+  align-items: center;
+}
+
+.hc-cal__step {
+  width: var(--hc-tap-min);
+  height: var(--hc-tap-min);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  padding: 0;
+  background: none;
+  color: var(--hc-ink);
+  border-radius: var(--hc-radius-pill);
+  cursor: pointer;
+}
+
+.hc-cal__step:active { background: var(--hc-paper-sunk); }
+
+.hc-cal__step-icon {
+  width: 20px;
+  height: 20px;
+}
+
+/* The month name and the year, sized to the widest each can be. Without the
+   min-width the chevrons walk sideways between May and September, which
+   makes a thumb that is stepping through months miss the second tap. */
+.hc-cal__stepper-label {
+  font-family: var(--hc-sans-display);
+  font-size: calc(17px * var(--hc-text-scale));
+  font-weight: 600;
+  color: var(--hc-ink);
+  text-align: center;
+}
+
+.hc-cal__stepper:first-child .hc-cal__stepper-label { min-width: 5.6em; }
+.hc-cal__stepper + .hc-cal__stepper .hc-cal__stepper-label { min-width: 3em; }
+
+.hc-cal__grid { margin-top: var(--hc-space-sm); }
+
+.hc-cal__row {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+}
+
+.hc-cal__row--head { margin-bottom: var(--hc-space-xs); }
+
+.hc-cal__dow {
+  text-align: center;
+  font-size: var(--hc-eyebrow);
+  line-height: var(--hc-eyebrow-line);
+  letter-spacing: var(--hc-track-eyebrow);
+  text-transform: uppercase;
+  color: var(--hc-mid);
+}
+
+.hc-cal__cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.hc-cal__day {
+  position: relative;
+  width: 100%;
+  height: var(--hc-tap-min);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  padding: 0;
+  background: none;
+  border-radius: var(--hc-radius-md);
+  font-family: var(--hc-sans);
+  font-size: calc(15px * var(--hc-text-scale));
+  color: var(--hc-mid);
+}
+
+/* A day with nothing on it is a span, so this is the button's cursor only. */
+button.hc-cal__day { cursor: pointer; }
+
+/* Something is happening. Full strength ink and a dot under the number,
+   which is the highlight the screen promises: the days worth looking at are
+   the ones that stand out from the month around them. */
+.hc-cal__day--has {
+  color: var(--hc-ink);
+  font-weight: 600;
+  background: var(--hc-cream);
+}
+
+.hc-cal__dot {
+  position: absolute;
+  bottom: 6px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 4px;
+  height: 4px;
+  border-radius: var(--hc-radius-pill);
+  background: var(--hc-accent-deep);
+}
+
+/* Today, whether or not anything is on it. A ring rather than a fill, so it
+   never competes with the day somebody has actually opened. */
+.hc-cal__day--today {
+  box-shadow: inset 0 0 0 1.5px var(--hc-rule);
+  color: var(--hc-ink);
+}
+
+.hc-cal__day--open {
+  background: var(--hc-dark);
+  color: var(--hc-on-dark);
+  box-shadow: none;
+}
+
+.hc-cal__day--open .hc-cal__dot { background: var(--hc-on-dark); }
+
+.hc-cal__today {
+  margin-top: var(--hc-space-sm);
+  text-align: center;
+}
+
+/* The day somebody opened. A card rather than a list, because it is one day
+   lifted out of the grid above it and it has to read as an answer to the tap
+   that opened it. */
+.hc-cal__panel {
+  margin-top: var(--hc-space-base);
+  padding: var(--hc-card-pad);
+  background: var(--hc-cream);
+  border-radius: var(--hc-radius-lg);
+}
+
+.hc-cal__panel-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--hc-space-sm);
+}
+
+.hc-cal__panel-close {
+  flex: 0 0 auto;
+  width: var(--hc-tap-min);
+  height: var(--hc-tap-min);
+  margin: calc(var(--hc-space-md) * -1) calc(var(--hc-space-md) * -1) 0 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  padding: 0;
+  background: none;
+  color: var(--hc-mid);
+  border-radius: var(--hc-radius-pill);
+  cursor: pointer;
+}
+
+.hc-cal__panel-close-icon {
+  width: 18px;
+  height: 18px;
+}
+
+.hc-cal__panel-event { margin-top: var(--hc-space-md); }
+
+.hc-cal__panel-event + .hc-cal__panel-event {
+  margin-top: var(--hc-space-base);
+  padding-top: var(--hc-space-base);
+  border-top: var(--hc-hairline) solid var(--hc-rule);
+}
+
+/* An admin's two controls in the corner of an event: what this is, and
+   whether it should be here at all. Absolutely placed so they sit level with
+   the date, and the two lines beside them are given the room back, because a
+   title running under a delete button is a title you cannot read and a button
+   you press by accident. */
+.hc-event--managed { position: relative; }
+
+.hc-event--managed .hc-eyebrow,
+.hc-event--managed .hc-row__title {
+  padding-right: calc(var(--hc-tap-min) * 2);
+}
+
+.hc-event__admin {
+  position: absolute;
+  top: var(--hc-space-sm);
+  right: 0;
+  display: flex;
+}
+
+.hc-event__admin-btn {
+  width: var(--hc-tap-min);
+  height: var(--hc-tap-min);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  padding: 0;
+  background: none;
+  color: var(--hc-mid);
+  border-radius: var(--hc-radius-pill);
+  cursor: pointer;
+}
+
+.hc-event__admin-btn:active { background: var(--hc-paper-sunk); }
+.hc-event__admin-btn[disabled] { opacity: 0.5; }
+
+/* The x is the one destructive control on this screen, so it is the one
+   thing on it drawn in the error colour. */
+.hc-event__admin-btn--x { color: var(--hc-error); }
+
+.hc-event__admin-icon {
+  width: 18px;
+  height: 18px;
+}
+
+.hc-cal__add { margin-top: var(--hc-space-md); }
+
+.hc-cal__form { margin-top: var(--hc-space-base); }
+
+.hc-cal__form > .hc-eyebrow { margin-bottom: var(--hc-space-md); }
+
+.hc-cal__form-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--hc-space-sm);
+  margin-top: var(--hc-space-lg);
+}
+
+/* The row already carries the gap the form's own rule would add to each
+   button, and taking it twice puts Save and Cancel a long way below the last
+   field they belong to. */
+.hc-cal__form-actions .hc-btn { margin-top: 0; }

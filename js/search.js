@@ -357,7 +357,7 @@
      Admin is off it because it fetches. */
   var DEEP = {
     home: true, listen: true, guide: true, connect: true,
-    worship: true, practices: true, alpha: true, give: true,
+    worship: true, cal: true, practices: true, alpha: true, give: true,
     profile: true, privacy: true, terms: true, data: true
   };
 
@@ -447,12 +447,15 @@
       }));
     });
 
+    // Lands on Cal now rather than on Connect, because that is where an event
+    // is drawn. A result whose route is the screen it is no longer on is a
+    // search that finds the right thing and then hides it.
     (d.events || []).forEach(function (e) {
       out.push(entry({
         kind: 'Event',
         title: e.title || e.name,
         sub: e.location || '',
-        route: { name: 'connect' },
+        route: { name: 'cal' },
         text: pieces(e)
       }));
     });

@@ -223,6 +223,66 @@
       });
   }
 
+  /* ------------------------------------------- the calendar an admin keeps
+
+     What the Cal tab's + , pencil and x reach. Three calls, and none of them
+     touches the review queue above: an event a model parsed is still approved
+     through hc_admin_approve_event and nowhere else. This is the church's own
+     calendar, written by hand.
+
+     Both writes go through the functions migration 0042 adds rather than
+     through a PATCH, because events still has no write policy for any client
+     role. 0026 decided that, 0040 and 0041 restated it, and 0042 keeps it: a
+     named, admin-checked function is the whole surface. */
+
+  /* One event, as the table holds it, for the edit form.
+
+     Asked of the network rather than of HC.data, and js/screens/cal.js says at
+     length why: the app's own copy has time_label and the formatted clock time
+     flattened into one field, and a form that wrote that back would corrupt
+     one or the other. Not cached, because there is one caller and it is a
+     button somebody pressed to see this row right now. */
+  function event(id) {
+    return HC.auth.restFetch('/events?select=*&id=eq.' + encodeURIComponent(id))
+      .then(function (rows) {
+        return Array.isArray(rows) && rows.length ? rows[0] : null;
+      });
+  }
+
+  /* New when draft.id is null, that row when it is not. The function decides
+     which, so this cannot get it wrong on a slow connection and write two.
+
+     HC.content.refresh() rather than invalidate(): the Cal tab draws
+     HC.data.events, which is the synced copy every screen reads, not this
+     file's cache. The pending queue above is a different list and is untouched
+     by a hand written event. */
+  function saveEvent(draft) {
+    return HC.auth.rpc('hc_admin_save_event', {
+      p_id: draft.id || null,
+      p_title: draft.title,
+      p_starts_at: draft.startsAt,
+      p_time_label: draft.timeLabel || null,
+      p_location: draft.location || null,
+      p_description: draft.description || null
+    }).then(function (id) {
+      HC.content.refresh();
+      return id;
+    });
+  }
+
+  /* The x. Deletes for good, per 0042: there is no unpublished state worth
+     leaving a row in, because an unpublished event is on no screen in this
+     app and could never be found again. */
+  function deleteEvent(id) {
+    return HC.auth.rpc('hc_admin_delete_event', { p_id: id }).then(function () {
+      // An announcement can point at the event that just went, and the card
+      // it draws loses its Add to calendar button, so the admin list of
+      // announcements is stale from here too.
+      invalidate('announcements');
+      HC.content.refresh();
+    });
+  }
+
   /* Check the mailbox now rather than at the next twenty minute tick.
 
      Through a named function for the reason migration 0039 gives: the Edge
@@ -756,6 +816,12 @@
     discardEvent: discardEvent,
     approveAnnouncement: approveAnnouncement,
     discardAnnouncement: discardAnnouncement,
+
+    // The Cal tab's own three, which have nothing to do with the queue above.
+    event: event,
+    saveEvent: saveEvent,
+    deleteEvent: deleteEvent,
+
     loadNewsletter: loadNewsletter,
     lastRun: lastRun,
     fetchNewsletter: fetchNewsletter,

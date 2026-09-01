@@ -56,6 +56,16 @@
       title: 'Worship',
       sub: 'The songs from Sunday, and where to hear them again.'
     },
+    /* Second, next to Worship, because these two are the church's own week:
+       what happened on Sunday, and what is happening next. Cal is where the
+       events that used to be the fourth section of Connect live now, with a
+       month grid over them. */
+    {
+      route: 'cal',
+      icon: 'calendar',
+      title: 'Cal',
+      sub: 'Every date the church has, a month at a time.'
+    },
     {
       route: 'practices',
       icon: 'practiceSabbath',
@@ -103,7 +113,7 @@
      more reach that route than they can reach the tile. Its four sections
      share the route name, so the tile stays lit down inside Manage users the
      way it stays lit inside a practice. */
-  var MODULE_ROUTES = ['more', 'worship', 'practices', 'practice', 'alpha',
+  var MODULE_ROUTES = ['more', 'worship', 'cal', 'practices', 'practice', 'alpha',
                        'journal', 'journal-entry', 'give', 'admin'];
 
   var TITLES = {
@@ -114,6 +124,9 @@
     connect: 'Connect',
     more: 'More',
     worship: 'Worship',
+    // The month grid and the church's own dates under it. Named the way the
+    // sheet names it, because the bar and the sheet have to agree.
+    cal: 'Cal',
     practices: 'Practices',
     // Replaced with the practice's own name once its file has loaded, see
     // emitViewChange below. This is what the bar carries until then.
@@ -1552,6 +1565,145 @@
       HC.router.go({ name: el.getAttribute('data-id') });
     },
 
+    /* ------------------------------------------------------------ the Cal tab
+
+       The month grid, the day it opens, and the three things an admin can do
+       to an event. Everything here changes state js/screens/cal.js is holding
+       and repaints; nothing here knows how a calendar is drawn.
+
+       The four navigation handlers repaint through the router rather than by
+       reaching into the DOM, which is what keeps edit mode honest: a router
+       draw calls HC.edit.beginRender() and the registry describes what is
+       actually on the glass. See the note in js/screens/connect.js about the
+       group list, which is the same trap avoided the other way. */
+
+    'cal-step': function (el) {
+      var parts = String(el.getAttribute('data-id') || '').split(':');
+      calHelpers().step(parts[0], parseInt(parts[1], 10) || 0);
+      repaintCal();
+    },
+
+    'cal-today': function () {
+      calHelpers().today();
+      repaintCal();
+    },
+
+    'cal-day': function (el) {
+      calHelpers().selectDay(el.getAttribute('data-id'));
+      HC.native.tap('Light');
+      repaintCal();
+    },
+
+    'cal-day-close': function () {
+      calHelpers().closeDay();
+      repaintCal();
+    },
+
+    'cal-event-new': function () {
+      calHelpers().startDraft(null);
+      repaintCal();
+    },
+
+    /* Editing asks Supabase for the row rather than reading the copy on the
+       glass, and the reason is in draftFromRow(): the app's copy has the clock
+       time and the church's own phrase for it flattened into one field, and
+       writing that back would turn "All three services" into a time or a real
+       6:00 PM into a label. One round trip on a button an admin presses a few
+       times a month is the cheaper half of that trade. */
+    'cal-event-edit': function (el) {
+      var id = el.getAttribute('data-id');
+      HC.admin.event(id).then(function (row) {
+        if (!row) {
+          c.toast('That event is not there any more.');
+          return;
+        }
+        calHelpers().startDraft(row);
+        repaintCal();
+      }).catch(function (err) {
+        c.toast(err.message || 'Could not open that event.');
+      });
+    },
+
+    'cal-event-cancel': function () {
+      calHelpers().clearDraft();
+      repaintCal();
+    },
+
+    /* The three things the form insists on, and they are the three an event
+       cannot be read without: what it is called, the day, and when on that day.
+       The database checks the first two again in migration 0042, because a
+       form is a suggestion and the table is the rule. The third is this
+       screen's own: a row with neither a clock time nor a phrase is drawn as
+       nine in the morning, which is a guess printed as a fact. */
+    'cal-event-save': function () {
+      var h = calHelpers();
+      var d = h.getDraft();
+      if (!d) return;
+
+      if (!String(d.title || '').trim()) {
+        c.toast('An event needs a name.');
+        return;
+      }
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(String(d.date || ''))) {
+        c.toast('An event needs a date.');
+        return;
+      }
+      if (!String(d.time || '').trim() && !String(d.timeLabel || '').trim()) {
+        c.toast('Give it a time, or say what to call it, like “All three services”.');
+        return;
+      }
+
+      h.setBusy('save');
+      repaintCal();
+
+      HC.admin.saveEvent({
+        id: d.id,
+        title: String(d.title).trim(),
+        startsAt: h.startsAtIso(d),
+        timeLabel: String(d.timeLabel || '').trim(),
+        location: String(d.location || '').trim(),
+        description: String(d.blurb || '').trim()
+      }).then(function () {
+        h.clearDraft();
+        // The grid follows what was just written. A confirmation that says it
+        // is on the calendar, over a month the date is not in, is a
+        // confirmation somebody has to go and check.
+        h.showMonth(d.date);
+        c.toast(d.id ? 'Saved.' : 'It is on the calendar.');
+      }).catch(function (err) {
+        c.toast(err.message || 'That did not save. Try again in a moment.');
+      }).then(function () {
+        h.setBusy('');
+        repaintCal();
+      });
+    },
+
+    /* The x in the corner of an event. It deletes, so it asks first: there is
+       no draft state to fall back into and no Posted list to find it in
+       again, which is the same reason discarding a parsed date confirms and
+       discarding a parsed announcement does not. */
+    'cal-event-delete': function (el) {
+      var id = el.getAttribute('data-id');
+      var evt = (HC.data.events || []).filter(function (e) { return e.id === id; })[0];
+      if (!evt) return;
+
+      if (!window.confirm('Take “' + evt.title + '” off the calendar? ' +
+                          'There is no undo.')) return;
+
+      var h = calHelpers();
+      h.setBusy('delete:' + id);
+      repaintCal();
+
+      HC.admin.deleteEvent(id).then(function () {
+        c.toast('Taken off the calendar.');
+      }).catch(function (err) {
+        c.toast(err.message || 'That did not go through. Try again in a moment.');
+      }).then(function () {
+        h.setBusy('');
+        repaintCal();
+      });
+    },
+
     /* -------------------------------------------------------- the Journal
 
        Same shape as the Group tab's handlers: ask js/journal.js to do the
@@ -1816,7 +1968,7 @@
         title: evt.title,
         description: evt.blurb,
         location: evt.location,
-        start: HC.screens.connectHelpers.eventStart(evt)
+        start: HC.screens.calHelpers.eventStart(evt)
       }).then(function (ok) {
         if (ok) HC.native.tap('Light');
         else c.toast('Could not open your calendar from here.');
@@ -2981,6 +3133,21 @@
     });
   }
 
+  function calHelpers() {
+    return HC.screens.calHelpers;
+  }
+
+  /* The Cal tab, redrawn where it stands. Same shape as repaintAdmin below,
+     and for the same two reasons: the month, the open day and the draft all
+     live in the screen file, and restore:true keeps the scroll where the
+     thumb left it so stepping through months does not walk the page back to
+     the top each time. */
+  function repaintCal() {
+    var route = HC.router.current();
+    if (!route || route.name !== 'cal') return;
+    HC.router.go({ name: 'cal', restore: true }, { force: true });
+  }
+
   function repaintAdmin() {
     var route = HC.router.current();
     if (!route || route.name !== 'admin') return;
@@ -3522,6 +3689,17 @@
         return;
       }
 
+      /* The event form on the Cal tab. Same rule as the Admin form above it:
+         every keystroke goes into the draft the screen is holding and nothing
+         is redrawn, so a content refresh landing mid-sentence cannot take the
+         caret with it. Saved when the button is pressed and not before, which
+         is what makes Cancel mean something. */
+      var calField = el.getAttribute && el.getAttribute('data-cal-field');
+      if (calField) {
+        calHelpers().setField(calField, el.value);
+        return;
+      }
+
       var profileField = el.getAttribute && el.getAttribute('data-profile-field');
       if (profileField) {
         // Keyed per field, not shared, so editing first name and then last
@@ -3669,6 +3847,7 @@
         connect: HC.screens.connect,
         more: HC.screens.more,
         worship: HC.screens.worship,
+        cal: HC.screens.cal,
         practices: HC.screens.practices,
         practice: HC.screens.practice,
         alpha: HC.screens.alpha,

@@ -267,6 +267,53 @@ settles it.
 
 -----
 
+## The Cal tab
+
+Behind the ••• menu, next to Worship: a month you can walk through, the day
+you tapped underneath it, and the church's upcoming events under that.
+
+**It is where the events from the Connect tab went.** They were the fourth
+section of Connect, below the group finder and the serve teams, which is a
+long way down a screen about finding your people. Nothing about an event
+changed in the move: the same rows, the same editable description, the same
+Add to calendar button. What is new is the month above the list, because "what
+is on, and when" is a question a list answers badly.
+
+**Every date on it is one `events` row**, whether somebody typed it here, ran
+`/new-event`, or approved one the newsletter intake parsed out of an email.
+The screen never asks where a row came from, and the review queue in
+`0038`–`0041` is untouched by it: a parsed event still reaches this calendar
+through `hc_admin_approve_event` and nowhere else.
+
+**A day with something on it is the only kind you can tap.** It carries a dot
+and full strength ink; tapping it opens that day under the grid and tapping it
+again closes it. Today wears a ring instead of a fill, so it never competes
+with the day somebody actually opened. The list below the grid is upcoming
+only, today included: anything that has already happened is looked up in the
+month, which is a thing the old list could not do at all.
+
+**An admin gets three more things**, and they are the reason
+`0042_event_admin_writes.sql` exists: **Add an event**, a pencil in the corner
+of each one, and an x beside it. Until that migration the only ways to fix a
+wrong date were a laptop and the Supabase dashboard, neither of which is in
+the hand of the person who spots it on a Sunday morning. The x asks first and
+then deletes for good, because an unpublished event is on no screen in this
+app and hiding one would be losing it somewhere nobody can look.
+
+The pencil fetches the row rather than reading the copy on the glass, and that
+is not caution for its own sake: `js/content.js` flattens `time_label` and the
+formatted clock time into one field for drawing, so writing the app's own copy
+back would turn "All three services" into a time nobody can parse. The form
+writes six columns and leaves `signup_url`, `capacity` and `category` alone,
+so a typo fixed on a phone cannot blank the registration link on a serve day.
+
+`tests/calendar.test.js` holds the arithmetic still: a February that starts on
+a Sunday, a leap one four years later, a month with a lead and a tail, and the
+nine in the morning that an event with no clock time gets at both ends of the
+trip.
+
+-----
+
 ## The Practices
 
 Nine practices behind the ••• menu: Sabbath, Prayer, Fasting, Solitude,
@@ -384,15 +431,20 @@ The short version. Fourteen tables, publicly readable with the anon key:
 `podcast_show`, `content_pages`, and `app_settings`. Between them they hold
 everything the app renders, so no content change needs a build.
 
-Eleven of them are writable only with the service role key. **Three are not:
+Ten of them are writable only with the service role key. **Three are not:
 `announcements`, `content_pages` and `app_settings` can also be written by a
 signed in admin, from inside the app**, which is what the Admin dashboard is.
-See "The admin dashboard" below. Seven slash commands drive the rest:
+See "The admin dashboard" below. **`events` is the fourth and it is a different
+shape**: it still has no write policy for any client role, and an admin reaches
+it only through the named functions in `0042_event_admin_writes.sql`, which are
+what the + , the pencil and the x on the Cal tab call. Six columns, checked
+inside, and nothing else on the table can be touched from a phone. Seven slash
+commands drive the rest:
 
 | Command | Does |
 |---|---|
 | `/new-guide` | Sermon PDF to a full guide, written to `guides` and `podcasts` |
-| `/new-event` | Asks for what is missing, confirms, writes to `events` |
+| `/new-event` | Asks for what is missing, confirms, writes to `events`, which the Cal tab draws |
 | `/new-podcast` | Episode to `podcasts`, links its guide and that Sunday's setlist, puts the real title on the message |
 | `/new-worship` | Sunday's songs to `worship_sets`, with their art, their links and their lyrics |
 | `/new-announcement` | The announcement card on Home, dated so it retires itself |
@@ -584,7 +636,7 @@ actually reads the value:
 | Not editable | Because |
 |---|---|
 | `groups.day`, `groups.neighborhood` | the finder's filter chips are built from these values and compared against them |
-| `events.starts_at`, `time_label`, `location` | Connect parses them back into a real Date for Add to calendar, and all three land in the entry a person keeps |
+| `events.starts_at`, `time_label`, `location` | the Cal tab parses them back into a real Date for Add to calendar, and all three land in the entry a person keeps. They are edited as a whole event, in the form behind the pencil on that screen, where the date and the time are in view together |
 | `announcements.title` | the notification already said it on every lock screen |
 | `announcements.body_html` and its pictures, video and link | Edit mode is a textarea over one sentence, and a textarea over markup shows somebody their own `<strong>` tags. Edited on the Admin form, where the editor that made them is. An announcement still written in plain text is editable in place, which is what that feature is for |
 | church address, service times, giving URL, SMS number and keyword | facts and destinations, not sentences |

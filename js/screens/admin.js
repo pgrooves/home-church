@@ -130,7 +130,13 @@
   /* ==================================================================== menu */
 
   var SECTIONS = [
-    { id: 'announcements', icon: 'home',    title: 'Post an announcement',
+    /* "Manage Announcements" rather than "Post an announcement", because
+       posting is one of four things behind this row: the section also holds
+       the newsletter review queue, the list of everything already posted, and
+       Edit, Notify and Delete on each of them. The old name described the
+       button at the top and nothing under it. Nothing about the section
+       itself changed with the name. */
+    { id: 'announcements', icon: 'home',    title: 'Manage Announcements',
       sub: 'Write the card on Home, and tell everybody about it.' },
     { id: 'users',         icon: 'group',   title: 'Manage users',
       sub: 'Who is here, who can edit, and who should not be.' },

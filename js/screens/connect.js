@@ -1,6 +1,7 @@
 /* ==========================================================================
    Home Church, Connect
-   Groups in season, serve teams, events, and next steps.
+   Groups in season, serve teams, and next steps. The events that used to sit
+   under them are the Cal tab now, in js/screens/cal.js.
 
    THE RULE THIS SCREEN NOW KEEPS: nothing here tells a person that something
    will happen unless something actually happens. Before this pass, three
@@ -334,51 +335,15 @@
     return html + '</ul></div>';
   }
 
-  /* When an event actually starts, as a Date.
+  /* EVENTS ARE NOT ON THIS SCREEN ANY MORE. They were the fourth section, and
+     they are now the Cal tab, behind •••: a month you can walk through, with
+     the same upcoming list under it. Nothing about an event changed in the
+     move, including the Add to calendar button and the editable description,
+     and eventStart() went with them. See js/screens/cal.js.
 
-     evt.date is 'YYYY-MM-DD' and evt.time is whatever the church wrote, which
-     is a clock time on most events and something like 'All three services' on
-     the rest. A real time wins when there is one. When there is not, nine in
-     the morning is the least wrong guess for a church event and it beats
-     refusing to make a calendar entry at all. The person can drag it. */
-  function eventStart(evt) {
-    var parts = String(evt.date || '').split('-');
-    var d = new Date(+parts[0], (+parts[1]) - 1, +parts[2], 9, 0, 0, 0);
-
-    var m = /(\d{1,2}):(\d{2})\s*(AM|PM)/i.exec(evt.time || '');
-    if (m) {
-      var hour = parseInt(m[1], 10) % 12;
-      if (/PM/i.test(m[3])) hour += 12;
-      d.setHours(hour, parseInt(m[2], 10), 0, 0);
-    }
-    return d;
-  }
-
-  function eventRow(evt) {
-    return '' +
-      '<div class="hc-event">' +
-        '<p class="hc-eyebrow">' + c.esc(c.formatDate(evt.date)) + '</p>' +
-        '<p class="hc-row__title">' + c.esc(evt.title) + '</p>' +
-        '<p class="hc-caption">' + c.esc(evt.time) + ' &middot; ' + c.esc(evt.location) + '</p>' +
-        /* The paragraph, not the date, the time, the place or the title. An
-           event's when and where are what the Add to calendar button writes
-           into somebody's phone, and a description that has drifted is a much
-           smaller problem than a calendar entry that has. */
-        HC.edit.wrap(
-          evt.blurb ? '<p class="hc-body-serif hc-event__blurb">' + c.esc(evt.blurb) + '</p>' : '',
-          { table: 'events', id: evt.id, column: 'description',
-            target: evt, field: 'blurb',
-            value: evt.blurb, label: evt.title + ', the description', rows: 4 }
-        ) +
-        /* The button itself now lives in js/components.js, because the
-           announcement screen draws the same one. Moved rather than copied:
-           two copies is how "the same button in both places" stops being
-           true after the first edit to one of them. */
-        '<div class="hc-event__action">' +
-          c.addToCalendar(evt.id) +
-        '</div>' +
-      '</div>';
-  }
+     What stays here is the reason it moved. Connect answers "where do I fit",
+     which is groups, serve teams and next steps. "What is on, and when" is a
+     different question and it now has a screen shaped like the answer. */
 
   /* ---------------------------------------------------------- next steps
      Was a form that collected a name, a contact, and a note and then called
@@ -474,14 +439,6 @@
       html += serveSignup();
     }
 
-    var events = HC.data.events || [];
-    if (events.length) {
-      html += c.sectionHeader('On the calendar', 'Events', { eyebrowSlot: 'connect.events-eyebrow' });
-      html += '<div class="hc-event-list">';
-      events.forEach(function (e) { html += eventRow(e); });
-      html += '</div>';
-    }
-
     var nextSteps = HC.data.nextSteps || [];
     if (nextSteps.length) {
       html += c.sectionHeader('Start somewhere', 'Next steps', { eyebrowSlot: 'connect.steps-eyebrow' });
@@ -505,8 +462,7 @@
   HC.screens.connect = render;
   HC.screens.connectHelpers = {
     setFilter: setFilter,
-    repaintGroups: repaintGroups,
-    eventStart: eventStart
+    repaintGroups: repaintGroups
   };
 
 })(window.HC = window.HC || {});

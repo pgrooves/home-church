@@ -74,8 +74,8 @@ const ok = (label, good, detail) => {
   else { console.log('FAIL  ' + label + (detail ? '\n        ' + detail : '')); fail++; }
 };
 
-const TABS = ['home', 'listen', 'connect', 'give', 'more', 'journal', 'profile',
-              'guide', 'practices', 'alpha', 'leader'];
+const TABS = ['home', 'listen', 'connect', 'cal', 'give', 'more', 'journal',
+              'profile', 'guide', 'practices', 'alpha', 'leader'];
 
 const HOSTILE = [
   { name: 'emptied', value: '' },
@@ -95,6 +95,10 @@ const SLOTS = [
   'connect.eyebrow', 'connect.groups-eyebrow', 'connect.serve-eyebrow',
   'connect.events-eyebrow', 'connect.steps-eyebrow', 'connect.off-season-eyebrow',
   'connect.serve-signup-eyebrow', 'connect.instagram-eyebrow',
+  /* The Cal tab. connect.add-to-calendar above stays where it is and keeps
+     its name: the button moved screens, and renaming its slot would silently
+     drop an override the church had already written for it. */
+  'cal.eyebrow', 'cal.events-eyebrow', 'cal.events-empty',
   'more.note', 'more.practices-sub', 'more.journal-sub', 'more.give-sub',
   'journal.intro', 'journal.eyebrow', 'journal.export-note', 'journal.empty',
   'journal.no-matches', 'guide.empty', 'guide.missing',
@@ -265,7 +269,7 @@ function serve() {
       out.filter = !!group && chips.indexOf(group.day) > -1;
       const event = (window.HC.data.events || [])[0];
       out.calendar = !event ||
-        !isNaN(window.HC.screens.connectHelpers.eventStart(event).getTime());
+        !isNaN(window.HC.screens.calHelpers.eventStart(event).getTime());
       return out;
     });
 

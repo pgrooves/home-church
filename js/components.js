@@ -299,6 +299,21 @@
     message: '<path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9.5 9.5 0 0 1-2.9-.4L4 21l1.4-4.1A8.2 8.2 0 0 1 3.6 11.5 8.4 8.4 0 0 1 12 3.1a8.4 8.4 0 0 1 9 8.4z"/>',
     flag: '<path d="M5 21V4"/><path d="M5 5h11l-1.6 3.2L16 11.5H5z"/>',
     pencil: '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>',
+
+    /* The Cal tab, behind •••. A month block with its two rings and one day
+       marked, which is the drawing the whole screen is: a grid where the days
+       with something on them are the ones that stand out.
+
+       The band under the rings is what makes it a calendar rather than a note
+       with two pins in it, and it is a rule rather than a filled header, so
+       the glyph keeps the same weight as `guide` and `journal` beside it in
+       the sheet. The dot is a filled disc for the reason `more`, `worship` and
+       `alpha` fill theirs: a 1.5 stroke ring this small is mostly hole. It
+       opts out of `svg { fill: none }` on itself so the frame stays a stroke. */
+    calendar: '<rect x="3.5" y="5" width="17" height="15.5" rx="3"/>' +
+              '<path d="M3.5 9.6h17"/>' +
+              '<path d="M8 3.2v3.4M16 3.2v3.4"/>' +
+              '<circle cx="12" cy="14.8" r="1.3" fill="currentColor" stroke="none"/>',
     leaf: '<path d="M20 4C10 4 4 9 4 16v4"/><path d="M20 4c0 9-5 13-11 13H4"/>',
     download: '<path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/>',
 
@@ -891,6 +906,12 @@
     byline: byline,
     metaLine: metaLine,
     dayName: dayName,
+    /* The month and day names as lists, for the one screen that draws a grid
+       of them rather than a formatted date. Exported rather than copied into
+       js/screens/cal.js: two lists of month names is how a calendar ends up
+       heading a month "Sept" while every date under it says "September". */
+    monthNames: MONTHS,
+    dayNames: DAYS,
     nextSunday: nextSunday,
     greeting: greeting,
     pad2: pad2,
