@@ -62,7 +62,8 @@
   var NO_MATCH = 'No group matches that yet. Widen the filter, or tell us what you need and we will start one.';
   var STEP_NOTE = 'Opens in your browser.';
   var SMS_NOTE = 'Opens Messages with the number filled in.';
-  var ADD_TO_CALENDAR = 'Add to calendar';
+  // The Add to calendar fallback moved to js/components.js with the button, so
+  // that its two callers cannot drift to two different default labels.
 
   /* An information card, not a button. It was a button, and tapping it claimed
      a name would be passed to the host from a card with nowhere to type one.
@@ -369,17 +370,12 @@
             target: evt, field: 'blurb',
             value: evt.blurb, label: evt.title + ', the description', rows: 4 }
         ) +
+        /* The button itself now lives in js/components.js, because the
+           announcement screen draws the same one. Moved rather than copied:
+           two copies is how "the same button in both places" stops being
+           true after the first edit to one of them. */
         '<div class="hc-event__action">' +
-          HC.edit.mark(
-            '<button type="button" class="hc-inline-link" data-action="add-to-calendar" ' +
-              'data-id="' + c.esc(evt.id) + '">' +
-              c.icon('plus', 'hc-share__icon') +
-              '<span>' + c.esc(HC.data.copy('connect.add-to-calendar', ADD_TO_CALENDAR)) + '</span>' +
-            '</button>',
-            { slot: 'connect.add-to-calendar',
-              value: HC.data.copy('connect.add-to-calendar', ADD_TO_CALENDAR),
-              label: 'the Add to calendar link' }
-          ) +
+          c.addToCalendar(evt.id) +
         '</div>' +
       '</div>';
   }

@@ -245,6 +245,13 @@
       // an expired announcement disappear. null on either end means open.
       startsOn: r.starts_on || null,
       endsOn: r.ends_on || null,
+      /* The event this announcement is about, when it is about a dated thing.
+         An id and not the event itself: the events list is synced separately
+         and the announcement screen looks it up there, so there is one copy of
+         an event in this payload rather than one per announcement that
+         mentions it. Null for every announcement written before 0040 and for
+         every one that is not about a date. */
+      eventId: r.event_id || null,
       priority: r.priority == null ? 0 : r.priority,
       // null rather than '' on both, because Home tests them for truthiness
       // to decide whether to draw a frame or a button at all, and an empty

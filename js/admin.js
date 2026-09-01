@@ -218,14 +218,11 @@
      Nothing else on the row is touched, so whatever the parse produced is what
      goes up, which is the point of having reviewed it. */
   function approveAnnouncement(id) {
-    return HC.auth.restFetch('/announcements?id=eq.' + encodeURIComponent(id), {
-      method: 'PATCH',
-      headers: { Prefer: 'return=minimal' },
-      body: { published: true, review_state: 'approved' }
-    }).then(function () {
-      invalidate('announcements');
-      HC.content.refresh();
-    });
+    return HC.auth.rpc('hc_admin_approve_announcement', { p_id: id })
+      .then(function () {
+        invalidate('announcements');
+        HC.content.refresh();
+      });
   }
 
   /* Discard, and note what it does not do: it does not delete.
@@ -238,13 +235,13 @@
      behind. A one-tap delete on a card somebody is reading for the first time
      is how a good announcement disappears on a mis-tap. */
   function discardAnnouncement(id) {
-    return HC.auth.restFetch('/announcements?id=eq.' + encodeURIComponent(id), {
-      method: 'PATCH',
-      headers: { Prefer: 'return=minimal' },
-      body: { published: false, review_state: 'discarded' }
-    }).then(function () {
-      invalidate('announcements');
-    });
+    return HC.auth.rpc('hc_admin_discard_announcement', { p_id: id })
+      .then(function () {
+        invalidate('announcements');
+        // The event went with it, and the Connect tab is drawn from the synced
+        // copy, so that copy has to be told.
+        HC.content.refresh();
+      });
   }
 
   /* An id is permanent once written, per 0003: the app keys "I dismissed

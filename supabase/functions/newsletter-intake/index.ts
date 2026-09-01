@@ -614,6 +614,20 @@ interface ParsedLink {
   url: string;
 }
 
+/* The dated thing an announcement is about, when it is about one.
+
+   Separate from ends_on, which is about the card and not the event: a serve
+   day on the 12th wants a card that retires on the 13th AND a calendar entry
+   at 8am on the 12th, and those are two different dates doing two different
+   jobs. Conflating them is how you get a calendar entry on the day the poster
+   comes down. */
+interface ParsedEvent {
+  date: string;         // YYYY-MM-DD, the day the thing happens
+  time?: string;        // HH:MM, 24 hour, local to the church
+  end_time?: string;
+  location?: string;
+}
+
 interface Parsed {
   title: string;
   eyebrow?: string;
@@ -622,6 +636,7 @@ interface Parsed {
   links?: ParsedLink[];
   ends_on?: string;
   image_url?: string;
+  event?: ParsedEvent;
 }
 
 const SCHEMA = {
@@ -649,6 +664,16 @@ const SCHEMA = {
           },
           ends_on: { type: 'string' },
           image_url: { type: 'string' },
+          event: {
+            type: 'object',
+            properties: {
+              date: { type: 'string' },
+              time: { type: 'string' },
+              end_time: { type: 'string' },
+              location: { type: 'string' },
+            },
+            required: ['date'],
+          },
         },
         required: ['title', 'summary'],
       },
@@ -716,6 +741,20 @@ function prompt(
     '   Do not guess an end date for something that has none.',
     '9. image_url: choose ONLY from the candidate images below, copied exactly, or leave',
     '   it out.',
+    '10. event: include this ONLY when the announcement is about something that happens',
+    '   at a particular time in a particular place — a gathering, a service, a serve',
+    '   day, a meeting, a class. "Homecoming on Friday, October 23" is an event. An',
+    '   ongoing need for volunteers, a sign-up that is open for weeks, a policy change,',
+    '   or a link to a form is NOT an event, and guessing one puts a wrong date in',
+    '   somebody\'s phone. When in doubt, leave it out.',
+    '     date      strict YYYY-MM-DD, the day it happens. Required.',
+    '     time      HH:MM on a 24 hour clock, church local time, only if the email says',
+    '               one. "8am" is 08:00, "7pm" is 19:00. Leave out if no time is given.',
+    '     end_time  same format, only if the email gives an end.',
+    '     location  the address or room, whenever the email gives one. Fill this in',
+    '               even when the same address also appears in details: details are',
+    '               read on the card, and this is what goes into the calendar entry on',
+    '               somebody\'s phone, where it becomes the directions they tap.',
     '10. If the email contains no real announcements, return an empty array.',
     '',
     'CANDIDATE LINKS (copy urls exactly; the link text is what the reader saw)',
@@ -849,6 +888,52 @@ function futureDate(value: string | null): string | null {
   return value > todayInChicago() ? value : null;
 }
 
+/* A church-local wall clock time turned into a real instant.
+
+   WHY THIS IS NOT `new Date(date + 'T' + time)`. That parses as the server's
+   zone, and an Edge Function runs in UTC, so "Homecoming, 6pm" would land at
+   6pm UTC — which is midday in Metairie, and the calendar entry on somebody's
+   phone would say noon. The event has to be pinned to America/Chicago, and
+   America/Chicago is -05:00 for half the year and -06:00 for the other half.
+
+   So the offset is asked for rather than assumed, at the date in question:
+   longOffset gives "GMT-05:00" and the ISO string is built with it. Probed at
+   midday UTC so the answer cannot be dragged into the wrong day by the very
+   offset it is being asked about, which is the bug this would otherwise have
+   on exactly two nights a year.
+
+   Returns null rather than guessing when there is no time. A church event with
+   no stated hour is a real thing, and js/screens/connect.js already has an
+   answer for it: eventStart() puts it at nine in the morning and lets the
+   person drag it. That answer belongs in one place and this is not it. */
+const CHURCH_TZ = 'America/Chicago';
+
+function churchOffset(isoDate: string): string {
+  try {
+    const probe = new Date(`${isoDate}T12:00:00Z`);
+    const parts = new Intl.DateTimeFormat('en-US', {
+      timeZone: CHURCH_TZ,
+      timeZoneName: 'longOffset',
+    }).formatToParts(probe);
+    const name = parts.find((p) => p.type === 'timeZoneName')?.value ?? '';
+    const offset = name.replace(/^GMT/, '').trim();
+    return /^[+-]\d{2}:\d{2}$/.test(offset) ? offset : '-06:00';
+  } catch {
+    return '-06:00';   // standard time, the safer of the two to be wrong by
+  }
+}
+
+const CLOCK = /^([01]?\d|2[0-3]):([0-5]\d)$/;
+
+function churchInstant(isoDate: string | null, clock: unknown): string | null {
+  if (!isoDate) return null;
+  const text = String(clock ?? '').trim();
+  const m = CLOCK.exec(text);
+  if (!m) return null;
+  const hh = m[1].padStart(2, '0');
+  return `${isoDate}T${hh}:${m[2]}:00${churchOffset(isoDate)}`;
+}
+
 /* A URL is kept only if the email actually contained it. This is the guard
    against the one failure mode that would be genuinely bad: a plausible,
    hallucinated link on a card people tap. */
@@ -938,8 +1023,8 @@ function slugify(text: string): string {
 /* The same `-2`, `-3` suffix js/admin.js uses, for the same reason: ids are
    permanent because the app keys "I dismissed this" on them, and two Serve
    Days is a real thing that happens rather than a theoretical collision. */
-function uniqueId(title: string, taken: Set<string>): string {
-  const base = `announcement-${slugify(title) || 'untitled'}`;
+function uniqueId(title: string, taken: Set<string>, prefix = 'announcement'): string {
+  const base = `${prefix}-${slugify(title) || 'untitled'}`;
   let id = base;
   let n = 2;
   while (taken.has(id)) { id = `${base}-${n}`; n++; }
@@ -1106,6 +1191,12 @@ Deno.serve(async (req: Request) => {
     const { data: existing } = await admin.from('announcements').select('id');
     const taken = new Set((existing ?? []).map((r) => r.id as string));
 
+    // The same guard on the events side. Ids are permanent in this project and
+    // 'event-homecoming' is exactly the sort of slug two Octobers apart would
+    // both want.
+    const { data: existingEvents } = await admin.from('events').select('id');
+    const takenEvents = new Set((existingEvents ?? []).map((r) => r.id as string));
+
     const preview: unknown[] = [];
 
     for (const { uid, messageId } of fresh) {
@@ -1161,6 +1252,13 @@ Deno.serve(async (req: Request) => {
           );
 
           const allowedLinks = links.map((l) => l.url);
+
+          // The calendar entries this email produces, filled in as the
+          // announcements are built and written before them: announcements
+          // .event_id points at events, so the events have to exist first or
+          // the foreign key refuses the whole batch.
+          const events: Array<Record<string, unknown>> = [];
+
           const rows = items.slice(0, MAX_DRAFTS_PER_EMAIL).map((item) => {
             const title = String(item.title ?? '').trim().slice(0, 200);
             if (!title) return null;
@@ -1189,8 +1287,46 @@ Deno.serve(async (req: Request) => {
 
             const bodyText = announcementText(summary, details).slice(0, 4000);
 
+            /* The calendar entry, when this announcement is about a dated
+               thing. Built here rather than in a second pass so it can borrow
+               the title and summary that were just settled.
+
+               UNPUBLISHED, like the announcement beside it, and published by
+               hc_admin_approve_announcement in the same transaction when
+               somebody approves. See migration 0040.
+
+               TIME. A time the email actually gave is used as given. When it
+               gives none, the row still needs a starts_at because the column
+               is not null, so it takes nine in the morning — the same guess
+               eventStart() in js/screens/connect.js has always made for the
+               .ics — and time_label says plainly that the hour is not known.
+               Without that label the Connect card would print "9:00 AM" as
+               though the church had said so, which is a guess wearing the
+               clothes of a fact. */
+            const eventDate = item.event ? cleanDate(item.event.date) : null;
+            const eventRow = eventDate
+              ? {
+                id: uniqueId(title, takenEvents, 'event'),
+                title,
+                description: summary || null,
+                starts_at: churchInstant(eventDate, item.event?.time)
+                  ?? `${eventDate}T09:00:00${churchOffset(eventDate)}`,
+                ends_at: churchInstant(eventDate, item.event?.end_time),
+                time_label: churchInstant(eventDate, item.event?.time)
+                  ? null
+                  : 'Time to be announced',
+                location: String(item.event?.location ?? '').trim().slice(0, 200) || null,
+                signup_url: keptLinks[0]?.url ?? null,
+                category: 'gathering',
+                published: false,
+              }
+              : null;
+
+            if (eventRow) events.push(eventRow);
+
             return {
               id: uniqueId(title, taken),
+              event_id: eventRow ? eventRow.id : null,
               eyebrow: eyebrow || null,
               title,
               body: bodyText || null,
@@ -1262,6 +1398,22 @@ Deno.serve(async (req: Request) => {
               // read of the ledger and now. Nothing to do and nothing wrong.
               if (ledgerError.code === '23505') continue;
               throw new Error(`Could not write the ledger: ${ledgerError.message}`);
+            }
+
+            /* Events first, for the foreign key. An event landing with no
+               announcement pointing at it is the harmless direction to fail:
+               it is unpublished, so it is on no screen, and the next line
+               either claims it or it sits inert. The reverse would be an
+               announcement referring to an event that does not exist, which
+               the database refuses outright. */
+            if (events.length) {
+              const { error: eventError } = await admin.from('events').insert(events);
+              if (eventError) {
+                await admin.from('newsletter_emails')
+                  .update({ status: 'failed', drafts: 0, note: `Events would not save: ${eventError.message}`.slice(0, 500) })
+                  .eq('id', emailRow.id);
+                throw new Error(`Could not write the events: ${eventError.message}`);
+              }
             }
 
             const withSource = rows.map((r) => ({ ...r, source_email_id: emailRow.id }));

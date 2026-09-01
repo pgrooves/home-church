@@ -653,6 +653,43 @@
     return html;
   }
 
+  /* --------------------------------------------------- add to calendar
+
+     The Add to calendar control, in one place because it is now drawn in two:
+     under an event on Connect, and on the page of an announcement that carries
+     one. Lifted here out of js/screens/connect.js rather than copied, which is
+     the whole point — "the same button in the event as in the announcement" is
+     a promise about behaviour, and two copies of markup is how that promise
+     quietly stops being true.
+
+     One consequence worth knowing: the label is a single Edit mode slot, so
+     renaming it on Connect renames it on the announcement too. That is right.
+     They are the same button and they should not be able to disagree about
+     what they are called.
+
+     `eventId` is an events row id, and the 'add-to-calendar' handler in
+     js/app.js looks it up in HC.data.events. An announcement whose event is
+     not published is not in that list, so the caller checks before drawing
+     this rather than offering a button that would do nothing. */
+  function addToCalendar(eventId) {
+    var label = HC.data.copy('connect.add-to-calendar', 'Add to calendar');
+
+    var html = '<button type="button" class="hc-inline-link" ' +
+      'data-action="add-to-calendar" data-id="' + esc(eventId) + '">' +
+        icon('plus', 'hc-share__icon') +
+        '<span>' + esc(label) + '</span>' +
+      '</button>';
+
+    if (HC.edit && HC.edit.mark) {
+      return HC.edit.mark(html, {
+        slot: 'connect.add-to-calendar',
+        value: label,
+        label: 'the Add to calendar link'
+      });
+    }
+    return html;
+  }
+
   /* ------------------------------------------------------------------ card */
 
   function card(innerHtml, opts) {
@@ -853,6 +890,7 @@
     numberedRow: numberedRow,
     checkRow: checkRow,
     button: button,
+    addToCalendar: addToCalendar,
     card: card,
     row: row,
     collapsible: collapsible,

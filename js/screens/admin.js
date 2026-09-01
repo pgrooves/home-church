@@ -689,6 +689,14 @@
           '<p class="hc-row__title">' + c.esc(row.title) + '</p>' +
           (row.body ? '<p class="hc-caption">' + c.esc(row.body) + '</p>' : '') +
           '<p class="hc-caption hc-admin__review-dates">' + c.esc(reviewDates(row)) + '</p>' +
+          /* Said before the tap, not discovered after it. Approving an
+             announcement that carries an event changes two screens, and a
+             button that quietly writes to the Connect tab as well as Home is
+             a button that does more than it says. */
+          (row.event_id
+            ? '<p class="hc-caption hc-admin__review-dates">Approving this also puts ' +
+              'it on the Connect calendar, with an Add to calendar button.</p>'
+            : '') +
           (whyNotLive(row)
             ? '<p class="hc-caption hc-admin__warn">' + c.esc(whyNotLive(row)) + '</p>'
             : '') +

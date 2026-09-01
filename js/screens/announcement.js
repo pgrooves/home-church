@@ -209,6 +209,39 @@
       '</button>';
   }
 
+  /* ------------------------------------------------------- add to calendar
+
+     The same button the Connect tab draws under this event, from the same
+     helper in js/components.js, so the two cannot drift apart. An announcement
+     about a dated thing carries its event id, and the .ics comes out of the
+     events row rather than out of the announcement: the announcement knows
+     what it is called and the event knows when it starts.
+
+     DRAWN ONLY WHEN THE EVENT IS ACTUALLY THERE. HC.data.events holds
+     published events, so an announcement whose event has not been approved, or
+     whose event was deleted, finds nothing here and gets no button. That is the
+     honest outcome: the 'add-to-calendar' handler in js/app.js looks the id up
+     in the same list and returns silently when it misses, so drawing it anyway
+     would be a button that does nothing when tapped.
+
+     A row from before 0040 has no eventId at all and takes the same path. */
+  function calendar(a) {
+    if (!a.eventId) return '';
+
+    var evt = (HC.data.events || []).filter(function (e) {
+      return e.id === a.eventId;
+    })[0];
+    if (!evt) return '';
+
+    return '<div class="hc-announce__calendar">' +
+      c.addToCalendar(evt.id) +
+      '<p class="hc-caption">' + c.esc(c.formatDate(evt.date)) +
+        (evt.time ? ', ' + c.esc(evt.time) : '') +
+        (evt.location ? ' · ' + c.esc(evt.location) : '') +
+      '</p>' +
+    '</div>';
+  }
+
   /* ------------------------------------------------------------- the screen */
 
   function render(route) {
@@ -248,6 +281,10 @@
     if (note) html += '<p class="hc-caption hc-announce__note">' + c.esc(note) + '</p>';
 
     html += words(a);
+    // Directly under the words, above the video and the pictures. It is the
+    // one thing on this page a person acts on rather than reads, and burying
+    // it under a gallery is how it gets missed.
+    html += calendar(a);
     html += video(a);
     html += pictures(a);
     html += link(a);

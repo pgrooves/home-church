@@ -296,12 +296,20 @@ create table public.podcast_show (
   updated_at  timestamptz not null default now()
 );
 
+/* events gains the columns 0040 writes. Its security is set up further down,
+   in the loop over the content tables that already covered it: RLS on, public
+   read of published rows, no write policy, which is the property 0040 must not
+   break and 0040's test checks. */
 create table public.events (
   id          text primary key,
   title       text not null,
   description text,
   starts_at   timestamptz not null default now(),
+  ends_at     timestamptz,
+  time_label  text,
+  location    text,
   signup_url  text,
+  category    text default 'gathering',
   published   boolean not null default true,
   updated_at  timestamptz not null default now()
 );

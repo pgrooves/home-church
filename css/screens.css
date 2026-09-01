@@ -2363,6 +2363,21 @@
 .hc-announce__text + .hc-announce__text { margin-top: var(--hc-space-base); }
 .hc-announce__text { margin-top: var(--hc-space-md); }
 
+/* Add to calendar, and the when and where under it. The button is the same
+   hc-inline-link Connect draws, so it needs no rules of its own; this is the
+   block around it, set off from the words above so the one thing on the page
+   a person acts on does not read as another paragraph. */
+.hc-announce__calendar {
+  margin-top: var(--hc-space-lg);
+  padding-top: var(--hc-space-md);
+  border-top: var(--hc-hairline) solid var(--hc-rule);
+}
+
+.hc-announce__calendar .hc-caption {
+  margin-top: var(--hc-space-sm);
+  color: var(--hc-mid);
+}
+
 /* Markup somebody typed, after the sanitizer. Only seven tags can be in here
    and every one of them is given a size, because a paragraph with no rule is
    a paragraph at whatever the browser's default happens to be.
