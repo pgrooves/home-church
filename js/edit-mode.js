@@ -3,7 +3,8 @@
    The half hour in which an admin can fix a sentence where they are reading
    it, instead of remembering to fix it later on a form.
 
-   WHAT IT DOES. An admin turns it on from Settings -> Admin -> Content. Every
+   WHAT IT DOES. An admin turns it on from Settings -> Admin -> App settings,
+   where it is the first switch on the screen. Every
    sentence the app has marked editable outlines itself. Tapping one turns it
    into a text box with Save and Cancel under it. Saving writes to Supabase,
    and the next time any phone in the church syncs content, that is the
@@ -519,7 +520,7 @@
      own. Something has to say it is on, and it has to be somewhere no screen
      redraws, so it is appended to the body once and shown or hidden from
      here. It is also the fastest way out, which matters more than it sounds:
-     the alternative is walking back to Settings -> Admin -> Content to press
+     the alternative is walking back to Settings -> Admin -> App settings to press
      a switch you can no longer see the effect of. */
   function paintPill() {
     var node = document.getElementById('hc-edit-pill');

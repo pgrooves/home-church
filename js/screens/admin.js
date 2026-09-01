@@ -140,11 +140,22 @@
       sub: 'Write the card on Home, and tell everybody about it.' },
     { id: 'users',         icon: 'group',   title: 'Manage users',
       sub: 'Who is here, who can edit, and who should not be.' },
-    { id: 'content',       icon: 'guide',   title: 'Content',
+    /* HIDDEN, not deleted. The page editor behind this row is one paragraph on
+       Give and nothing else: Edit mode does the same job in the place the
+       words actually are, and this row was a second door to a form nobody
+       walked through. The section itself still builds, and taking `hidden`
+       off this line is the whole of putting it back. Edit mode's switch does
+       not come back with it — it moved to App settings, see
+       editModeSection(). */
+    { id: 'content',       icon: 'guide',   title: 'Content', hidden: true,
       sub: 'The church’s own words, edited here instead of in the code.' },
     { id: 'settings',      icon: 'connect', title: 'App settings',
       sub: 'Switches and short messages that change the whole app.' }
   ];
+
+  function isHidden(id) {
+    return SECTIONS.some(function (s) { return s.id === id && s.hidden; });
+  }
 
   function menu() {
     var html = '<div class="hc-screen hc-admin">';
@@ -155,6 +166,7 @@
 
     html += '<div class="hc-module-list">';
     SECTIONS.forEach(function (s) {
+      if (s.hidden) return;
       html += '<button type="button" class="hc-module" data-action="go-admin" data-id="' + c.esc(s.id) + '">' +
         '<span class="hc-module__disc" aria-hidden="true">' + c.icon(s.icon, 'hc-module__icon') + '</span>' +
         '<span class="hc-module__body">' +
@@ -1089,10 +1101,13 @@
   }
 
   /* The switch that turns the rest of the app into something you can type
-     into. It lives in Content rather than in App settings on purpose: this is
-     not a switch about how the app behaves for the church, it is a thing this
-     phone is doing for the next half hour, and App settings is a list of rows
-     in a table that are true for everybody.
+     into. It sits at the top of App settings, above the rows out of
+     app_settings, because Content is hidden and this was the only thing in
+     there anybody used. It is still not the same kind of switch as the ones
+     under it — those are rows in a table that are true for everybody, this is
+     a thing this phone is doing for the next half hour — which is why it is
+     drawn from HC.edit rather than from a setting, and why it is above the
+     list rather than inside it.
 
      THE THREE SENTENCES UNDER IT ARE THE FEATURE'S CONTRACT and they are
      worth keeping accurate if any of this changes. Somebody who turns this on
@@ -1132,8 +1147,6 @@
 
     html += '<p class="hc-body-serif hc-admin__intro">Pages of the church’s own writing. ' +
       'Edit one here and it changes in the app straight away, with no new version to ship.</p>';
-
-    html += editModeSection();
 
     var rows = HC.admin.pages();
     if (!rows.length) {
@@ -1193,7 +1206,18 @@
     var html = '<div class="hc-screen hc-admin">';
     html += c.sectionHeader('For the church', 'App settings', { flush: true, tag: 'h1' });
 
+    // Above the seeded rows, so the first switch on this screen is the one an
+    // admin came here to flip. It needs nothing fetched, which is also why it
+    // can draw while the rows below are still loading.
+    html += editModeSection();
+
     var rows = HC.admin.settings();
+
+    /* A header the screen did not need while the rows were the only thing on
+       it. With Edit mode above them they do: without it the pinned banner
+       reads as part of "Edit in place", which is the one switch on this
+       screen that is not true for everybody. */
+    html += c.sectionHeader('', 'Switches and messages');
 
     if (!rows.length) {
       html += pending('settings', 'No settings yet.');
@@ -1251,6 +1275,12 @@
         c.emptyState('This part of the app is for the church’s admins.') +
       '</div>');
     }
+
+    /* A section nobody can reach from the menu any more, arrived at by an old
+       history entry or by the back gesture walking into one. It draws the menu
+       instead of a screen with no way in, which is also what makes hiding a
+       section a one word change: nothing else has to know it is gone. */
+    if (id && isHidden(id)) id = '';
 
     // Asked for on the way in rather than at boot, because a member never
     // needs any of it and an admin opens this screen a few times a week.

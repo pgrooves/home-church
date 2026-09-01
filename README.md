@@ -498,14 +498,21 @@ other door into the same tables: **Your account → Admin**, drawn only for a
 signed in person whose `profiles.role` is `admin`. Nothing in it needs the
 Supabase dashboard, a slash command, or a build.
 
-Four sections.
+Three sections.
 
 | Section | Does |
 |---|---|
 | **Announcements** | Write, edit, delete the cards on Home. Title, the words in a rich text editor with bold, italic, underline, lists, hyperlinks and the scripture button, as many pictures as it needs, a YouTube link that plays inside the app, a link with a thumbnail, and the dates it goes up and comes down. Posting can send a push notification to everybody, and can pin the announcement as a banner. |
 | **Users** | Everybody who has signed in, with their name, email and role. Promote to admin, demote to member, remove an account entirely. |
-| **Content** | Pages of the church's own writing, edited in a form. The Give screen's paragraph is the first one. Also the switch for **Edit mode**, below. |
-| **App settings** | Switches and short messages that change the whole app, drawn as real toggles and text fields rather than as JSON. Ships with a pinned Home banner and its message, and a default for whether posting an announcement offers to notify. |
+| **App settings** | The switch for **Edit mode**, below, and then the switches and short messages that change the whole app, drawn as real toggles and text fields rather than as JSON. Ships with a pinned Home banner and its message, and a default for whether posting an announcement offers to notify. |
+
+**Content is hidden.** There was a fourth section, a form over `content_pages`
+holding one paragraph on Give, and Edit mode does that job in the place the
+words actually are. The section is still in `js/screens/admin.js` behind a
+`hidden` flag on its row in `SECTIONS`; taking the flag off puts it back, and
+the route draws the menu while it is on so an old history entry cannot land on
+a screen with no way in. Edit mode's switch does not go back with it — it lives
+in App settings now.
 
 **The first admin is made by hand and only once**, because until one exists
 there is nobody who can promote anybody:
@@ -627,7 +634,8 @@ reaches the page, and only four schemes survive: `http`, `https`, `mailto` and
 
 ### Edit mode
 
-**Admin → Content → Edit mode** turns the rest of the app into something an
+**Admin → App settings → Edit mode**, the first switch on that screen, turns
+the rest of the app into something an
 admin can type into. Every sentence the app is willing to have changed outlines
 itself with a pencil in the corner; tapping one turns it into a text box with
 Save, Cancel, and sometimes Reset to original. Saving is live for everybody on
