@@ -119,6 +119,25 @@
       var a = document.createElement('a');
       a.href = url;
       a.download = name;
+
+      /* THE CLICK MUST NOT REACH THE DELEGATED HANDLER, and this one line is
+         the difference between Add to calendar working and Add to calendar
+         navigating somewhere nobody asked for.
+
+         wireEvents() in js/app.js listens on document and intercepts every
+         a[href] on the way past: it calls preventDefault() and hands the href
+         to openExternal() instead, on the reasoning that the only anchors in
+         this app are ones a person wrote in their own words. This anchor is
+         not one of those. It is a download, and it is synthetic, and letting
+         that handler have it cancels the save and then asks the browser to go
+         and open a blob: URL — so the .ics never lands and the tap reads as
+         the button opening some unrelated page.
+
+         Stopped here rather than only in the handler because the anchor is
+         built here and the default behaviour we want is the one it already
+         has. */
+      a.addEventListener('click', function (e) { e.stopPropagation(); });
+
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);

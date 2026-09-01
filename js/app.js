@@ -3234,9 +3234,17 @@
          those, and the app is still behind it.
 
          Skipped inside a writing surface, where a tap is somebody putting the
-         caret in their own sentence and not asking to go anywhere. */
+         caret in their own sentence and not asking to go anywhere.
+
+         Skipped for a[download] as well, and that exception is load bearing.
+         The claim above — that every anchor here is one somebody wrote — stopped
+         being true when downloadInBrowser() in js/native.js started building
+         one to save a file with. A download is not a destination: sending its
+         href to openExternal() cancels the save and navigates instead, which
+         is what broke Add to calendar in the browser. */
       var link = evt.target.closest && evt.target.closest('a[href]');
-      if (link && !link.closest('[contenteditable="true"]')) {
+      if (link && !link.hasAttribute('download') &&
+          !link.closest('[contenteditable="true"]')) {
         evt.preventDefault();
         c.openExternal(link.getAttribute('href'));
         return;
