@@ -1,0 +1,1185 @@
+<title>First Launch Hint</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Poppins:wght@500;800&display=swap">
+
+<style>
+/* ==========================================================================
+   The first launch hint, three ways
+
+   The open question in HINTS.md §9 is whether the ring is enough on its own,
+   and that is the one judgment reading cannot settle. So it is drawn three
+   ways, side by side with the same phone, the same paper and the same
+   shipping tokens, and you look at them.
+
+   TWO TOKEN SETS, AND THEY MUST NOT BE CONFUSED. --pg-* is the page around
+   the phone and follows the reader's own appearance. --hc-* is the app inside
+   the phone, lifted from css/tokens.css unedited, and follows the phone's own
+   Light / Dark control. The phone's theme is carried on [data-hc] on .stage
+   rather than on :root, so the page it is sitting in cannot move it.
+
+   Everything inside .stage is drawn at real iPhone points, 393 x 852, then
+   scaled to fit. The numbers in here are the numbers from HINTS.md: 2500ms
+   after Home lands, 1400ms a ring, 6000ms held. Home itself is a sketch, and
+   the splash is abbreviated so a replay does not cost three seconds. Neither
+   is a redesign of anything.
+   ========================================================================== */
+
+:root {
+  --mark:        url("__MARK__");
+  --lockup-ink:  url("__LOCKUP_INK__");
+  --lockup-lite: url("__LOCKUP__");
+
+  --pg-paper: #F7F4EF;
+  --pg-card:  #FFFFFF;
+  --pg-ink:   #1A1918;
+  --pg-mid:   #6D6864;
+  --pg-rule:  #DAD2C4;
+  --pg-gold:  #8A682C;
+  --pg-sunk:  #EFEAE2;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --pg-paper: #171615;
+    --pg-card:  #201E1D;
+    --pg-ink:   #F2EEE7;
+    --pg-mid:   #9A938A;
+    --pg-rule:  #38342F;
+    --pg-gold:  #CBAC74;
+    --pg-sunk:  #1E1C1B;
+    color-scheme: dark;
+  }
+}
+
+:root[data-theme="dark"] {
+  --pg-paper: #171615;
+  --pg-card:  #201E1D;
+  --pg-ink:   #F2EEE7;
+  --pg-mid:   #9A938A;
+  --pg-rule:  #38342F;
+  --pg-gold:  #CBAC74;
+  --pg-sunk:  #1E1C1B;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  padding: 40px 24px 72px;
+  background: var(--pg-paper);
+  color: var(--pg-ink);
+  font-family: "Manrope", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-size: 15px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+.wrap { max-width: 1180px; margin: 0 auto; }
+
+h1 {
+  font-family: "Poppins", -apple-system, sans-serif;
+  font-weight: 800;
+  font-size: clamp(26px, 4vw, 34px);
+  line-height: 1.15;
+  letter-spacing: -0.015em;
+  margin: 0 0 10px;
+}
+
+.deck { color: var(--pg-mid); max-width: 60ch; margin: 0 0 8px; }
+.deck strong { color: var(--pg-ink); font-weight: 600; }
+
+.eyebrow {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--pg-gold);
+  margin: 0 0 6px;
+}
+
+hr { border: 0; border-top: 1px solid var(--pg-rule); margin: 32px 0; }
+
+/* ------------------------------------------------------------------ layout */
+
+.deskrow {
+  display: grid;
+  grid-template-columns: minmax(0, 420px) minmax(0, 1fr);
+  gap: 40px;
+  align-items: start;
+  margin-top: 28px;
+}
+
+@media (max-width: 900px) {
+  .deskrow { grid-template-columns: minmax(0, 1fr); gap: 28px; }
+}
+
+/* ------------------------------------------------------------------- phone */
+
+.frame {
+  position: relative;
+  width: 393px;
+  max-width: 100%;
+  aspect-ratio: 393 / 852;
+  margin: 0 auto;
+  border-radius: 54px;
+  padding: 11px;
+  background: linear-gradient(168deg, #4a4643, #22201f 42%, #131211);
+  box-shadow: 0 30px 60px rgba(26,25,24,0.28), 0 4px 12px rgba(26,25,24,0.18);
+}
+
+.screen {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  border-radius: 44px;
+  overflow: hidden;
+  background: #000;
+}
+
+/* Real points, then scaled to whatever the frame ended up being. The scale is
+   set from script on load and on resize, so every px below is a shipping px. */
+.stage {
+  position: absolute;
+  top: 0; left: 0;
+  width: 393px;
+  height: 852px;
+  transform-origin: 0 0;
+
+  /* ------ css/tokens.css, light, unedited ------ */
+  --hc-paper:       #F7F4EF;
+  --hc-paper-sunk:  #EFEAE2;
+  --hc-cream:       #EDE8DF;
+  --hc-ink:         #111111;
+  --hc-dark:        #1A1918;
+  --hc-mid:         #6D6864;
+  --hc-rule:        #C8C0B0;
+  --hc-accent:      #B5A898;
+  --hc-on-dark:     #F7F4EF;
+
+  --hc-serif: "Manrope", -apple-system, BlinkMacSystemFont, sans-serif;
+  --hc-sans:  -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --hc-sans-display: "Poppins", -apple-system, BlinkMacSystemFont, sans-serif;
+
+  --hc-caption: 13px;  --hc-caption-line: 18px;
+  --hc-eyebrow: 11px;
+  --hc-tab: 11px;
+
+  --hc-screen-pad: 20px;
+  --hc-card-pad:   20px;
+  --hc-radius-lg:  12px;
+  --hc-radius-pill: 999px;
+  --hc-hairline: 0.5px;
+
+  --hc-ease: cubic-bezier(0.4, 0, 0.2, 1);
+  --hc-ease-enter: cubic-bezier(0, 0, 0.2, 1);
+  --hc-dur-fast: 200ms;
+  --hc-dur-base: 300ms;
+
+  --hc-header-h: 52px;
+  --hc-tabbar-h: 56px;
+  --hc-tap-min:  44px;
+  --hc-tabbar-inset: 12px;
+  --hc-tabbar-pad: 6px;
+
+  --hc-tabbar-skin-lens: linear-gradient(178deg, rgba(255,253,250,0.72), rgba(238,233,225,0.62));
+  --hc-tabbar-edge:      rgba(122,110,95,0.28);
+  --hc-tabbar-shadow:    0 14px 34px rgba(26,25,24,0.18),
+                         0 2px 8px rgba(26,25,24,0.08),
+                         inset 0 1px 0 rgba(255,255,255,0.70),
+                         inset 0 -1px 0 rgba(26,25,24,0.05);
+  --hc-tabbar-sheen:     linear-gradient(112deg,
+                           rgba(255,255,255,0.55) 0%,
+                           rgba(255,255,255,0.18) 26%,
+                           rgba(255,255,255,0) 52%);
+  --hc-tabbar-tile:        linear-gradient(180deg, rgba(255,255,255,0.96), rgba(247,244,239,0.86));
+  --hc-tabbar-tile-edge:   rgba(122,110,95,0.18);
+  --hc-tabbar-tile-shadow: inset 0 1px 0 rgba(255,255,255,0.90),
+                           inset 0 -1px 0 rgba(26,25,24,0.06),
+                           0 3px 9px rgba(26,25,24,0.12);
+
+  --hc-gold:        #D7BA85;
+  --hc-gold-deep:   #B08D4B;
+
+  --safe-top: 44px;
+  --safe-bottom: 22px;
+
+  background: var(--hc-paper);
+  font-family: var(--hc-serif);
+  color: var(--hc-ink);
+}
+
+/* ------ css/tokens.css, dark, unedited ------ */
+.stage[data-hc="dark"] {
+  --hc-paper:       #1A1918;
+  --hc-paper-sunk:  #201E1D;
+  --hc-cream:       #232120;
+  --hc-ink:         #F2EEE7;
+  --hc-dark:        #F2EEE7;
+  --hc-mid:         #9A938A;
+  --hc-rule:        #3A3633;
+  --hc-accent:      #C4B5A2;
+  --hc-on-dark:     #1A1918;
+
+  --hc-tabbar-skin-lens: linear-gradient(178deg, rgba(58,54,51,0.52), rgba(26,25,24,0.42));
+  --hc-tabbar-edge:      rgba(196,181,162,0.20);
+  --hc-tabbar-shadow:    0 16px 36px rgba(0,0,0,0.52),
+                         inset 0 1px 0 rgba(242,238,231,0.10),
+                         inset 0 -1px 0 rgba(0,0,0,0.30);
+  --hc-tabbar-sheen:     linear-gradient(112deg,
+                           rgba(247,244,239,0.15) 0%,
+                           rgba(247,244,239,0.05) 26%,
+                           rgba(247,244,239,0) 52%);
+  --hc-tabbar-tile:        linear-gradient(180deg, rgba(247,244,239,0.15), rgba(247,244,239,0.055));
+  --hc-tabbar-tile-edge:   rgba(207,193,174,0.30);
+  --hc-tabbar-tile-shadow: inset 0 1px 0 rgba(255,252,247,0.24),
+                           inset 0 -1px 0 rgba(0,0,0,0.16),
+                           0 4px 12px rgba(0,0,0,0.30);
+
+  --hc-gold:        #CBAC74;
+  --hc-gold-deep:   #CBAC74;
+}
+
+/* ---------------------------------------------------------------- top bar */
+
+.topbar {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  z-index: 40;
+  height: calc(var(--hc-header-h) + var(--safe-top));
+  padding: var(--safe-top) var(--hc-screen-pad) 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--hc-paper);
+  border-bottom: var(--hc-hairline) solid transparent;
+}
+
+.lockup {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 20px;
+  background: var(--lockup-ink) left center / contain no-repeat;
+}
+.stage[data-hc="dark"] .lockup { background-image: var(--lockup-lite); }
+
+.acts { display: flex; align-items: center; flex: 0 0 auto; }
+
+.disc {
+  width: var(--hc-tap-min);
+  height: var(--hc-tap-min);
+  padding: 0;
+  border: 0;
+  background: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--hc-ink);
+  cursor: pointer;
+}
+.disc svg { width: 22px; height: 22px; fill: none; stroke: currentColor;
+            stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+
+.avatar { margin-right: -10px; }
+
+/* The disc the hint points at. 42px, the shipping size. */
+.avatar__disc {
+  position: relative;
+  width: 42px;
+  height: 42px;
+  border-radius: var(--hc-radius-pill);
+  background: var(--hc-cream);
+  border: var(--hc-hairline) solid var(--hc-rule);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--hc-mid);
+  transition: border-color 700ms var(--hc-ease);
+}
+.avatar__disc svg { width: 19px; height: 19px; }
+
+/* ---------------------------------------------------------------- THE RING
+
+   Two pseudo elements so the two breaths can overlap rather than queue, and
+   both on the disc rather than on the button, so neither can touch layout.
+   transform and opacity only, which is the discipline js/index-rail.js holds.
+
+   It grows out of the disc's own edge: starts at scale 1, exactly the border,
+   and opens to 1.62 while it fades. No overshoot, nothing springs. */
+.avatar__disc::before,
+.avatar__disc::after {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  border: 1.5px solid var(--hc-gold-deep);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.stage[data-ring="on"] .avatar__disc::before {
+  animation: ring 1400ms cubic-bezier(0.16, 0.84, 0.44, 1) 0ms 1 both;
+}
+.stage[data-ring="on"] .avatar__disc::after {
+  animation: ring 1400ms cubic-bezier(0.16, 0.84, 0.44, 1) 1700ms 1 both;
+}
+/* The disc's own hairline warms while the rings run, and cools back. This is
+   what stops two rings reading as a notification badge going off: the thing
+   itself is lit, the rings are the light leaving it. */
+.stage[data-ring="on"] .avatar__disc { border-color: var(--hc-gold); }
+
+@keyframes ring {
+  0%   { opacity: 0;    transform: scale(1); }
+  18%  { opacity: 0.62; }
+  100% { opacity: 0;    transform: scale(1.62); }
+}
+
+/* ------------------------------------------------------------- THE CAPTION
+
+   Fixed under the bar, right aligned to the 20px page gutter so its right
+   edge lands under the disc. No nub, no caret, no arrow: proximity plus the
+   ring does the work, and a nub is one more thing to get wrong against a
+   notch on a phone whose height nobody can predict.
+
+   z-index 48. Over every piece of chrome, under the sheets at 55 and the
+   toast at 60. */
+.hint {
+  position: absolute;
+  z-index: 48;
+  top: calc(var(--safe-top) + var(--hc-header-h) + 2px);
+  right: var(--hc-screen-pad);
+  margin: 0;
+  padding: 7px 12px;
+  border-radius: 8px;
+  background: var(--hc-paper);
+  color: var(--hc-mid);
+  font-family: var(--hc-sans);
+  font-size: var(--hc-caption);
+  line-height: var(--hc-caption-line);
+  white-space: nowrap;
+  opacity: 0;
+  transform: translateY(4px);
+  transition: opacity var(--hc-dur-base) var(--hc-ease-enter),
+              transform var(--hc-dur-base) var(--hc-ease-enter);
+
+  /* THE PROMISE. Not click-through forwarding. Actually none, on the layer
+     and every child, so there is no code path in which a tap lands on the
+     hint instead of on the app. See HINTS.md §3a. */
+  pointer-events: none;
+}
+.hint * { pointer-events: none; }
+
+.stage[data-caption="on"] .hint { opacity: 1; transform: translateY(0); }
+
+/* The caption's own footprint, drawn on demand. Not a shipping style. It is
+   here because "it does not take taps" is a claim about a rectangle you
+   cannot see, and the way to believe it is to see the rectangle and then tap
+   inside it. */
+.stage[data-box="on"] .hint {
+  outline: 1px dashed var(--hc-gold-deep);
+  outline-offset: 0;
+  background: color-mix(in srgb, var(--hc-gold) 16%, var(--hc-paper));
+}
+
+/* The still version. No ring, no travel, the caption simply present. It is
+   held longer because there is no movement to draw the eye. HINTS.md §4. */
+.stage[data-still="on"] .hint { transition: opacity 240ms linear; transform: none; }
+.stage[data-still="on"] .avatar__disc::before,
+.stage[data-still="on"] .avatar__disc::after { animation: none !important; }
+.stage[data-still="on"] .avatar__disc { transition: none; }
+
+/* ---------------------------------------------------------------- content */
+
+.scroll {
+  position: absolute;
+  inset: 0;
+  padding: calc(var(--safe-top) + var(--hc-header-h) + 8px) var(--hc-screen-pad)
+           calc(var(--hc-tabbar-h) + 40px + var(--safe-bottom));
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.greet {
+  font-family: var(--hc-sans-display);
+  font-weight: 800;
+  font-size: 29px;
+  line-height: 34px;
+  letter-spacing: -0.01em;
+  margin: 18px 0 20px;
+  color: var(--hc-ink);
+}
+
+.media {
+  height: 186px;
+  border-radius: var(--hc-radius-lg);
+  background:
+    linear-gradient(150deg, var(--hc-accent), var(--hc-rule) 58%, var(--hc-cream));
+  margin-bottom: 22px;
+  display: flex;
+  align-items: flex-end;
+  padding: 14px;
+  color: var(--hc-on-dark);
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.92;
+}
+
+.sect { margin-bottom: 10px; }
+.sect__eyebrow {
+  font-family: var(--hc-sans);
+  font-size: var(--hc-eyebrow);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--hc-mid);
+  margin: 0 0 4px;
+}
+.sect__title {
+  font-family: var(--hc-sans-display);
+  font-weight: 800;
+  font-size: 23px;
+  line-height: 28px;
+  margin: 0 0 10px;
+  color: var(--hc-ink);
+}
+.sect__rule { height: 0; border-top: var(--hc-hairline) solid var(--hc-rule); margin: 0 0 16px; }
+
+/* Tappable, and visibly so, because the whole point of the study is that a
+   tap through the caption still lands on what is under it. */
+.card {
+  display: block;
+  width: 100%;
+  text-align: left;
+  border: var(--hc-hairline) solid var(--hc-rule);
+  border-radius: var(--hc-radius-lg);
+  background: var(--hc-cream);
+  padding: var(--hc-card-pad);
+  margin-bottom: 12px;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  transition: transform 120ms var(--hc-ease), background 200ms var(--hc-ease);
+}
+.card:active { transform: scale(0.985); }
+.card.lit { background: var(--hc-paper-sunk); }
+.card h4 {
+  font-family: var(--hc-sans-display);
+  font-weight: 800;
+  font-size: 17px;
+  margin: 0 0 4px;
+}
+.card p { margin: 0; color: var(--hc-mid); font-size: 14px; line-height: 21px; }
+
+/* ---------------------------------------------------------------- tab bar */
+
+.tabbar {
+  position: absolute;
+  left: var(--hc-tabbar-inset);
+  right: var(--hc-tabbar-inset);
+  bottom: calc(var(--hc-tabbar-inset) + var(--safe-bottom));
+  z-index: 40;
+  display: flex;
+  padding: var(--hc-tabbar-pad);
+  border-radius: 26px;
+  background: var(--hc-tabbar-skin-lens);
+  -webkit-backdrop-filter: blur(22px) saturate(150%);
+          backdrop-filter: blur(22px) saturate(150%);
+  border: var(--hc-hairline) solid var(--hc-tabbar-edge);
+  box-shadow: var(--hc-tabbar-shadow);
+  isolation: isolate;
+}
+.tabbar::before {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  top: var(--hc-tabbar-pad);
+  bottom: var(--hc-tabbar-pad);
+  left: var(--hc-tabbar-pad);
+  width: calc((100% - (var(--hc-tabbar-pad) * 2)) / 5);
+  border-radius: 20px;
+  background: var(--hc-tabbar-tile);
+  border: var(--hc-hairline) solid var(--hc-tabbar-tile-edge);
+  box-shadow: var(--hc-tabbar-tile-shadow);
+  transform: translateX(calc(var(--tab-i, 0) * 100%));
+  transition: transform var(--hc-dur-base) var(--hc-ease);
+}
+.tabbar::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  border-radius: inherit;
+  background: var(--hc-tabbar-sheen);
+}
+.tab {
+  position: relative;
+  z-index: 1;
+  flex: 1 1 0;
+  min-width: 0;
+  height: var(--hc-tabbar-h);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  border: 0;
+  background: none;
+  color: var(--hc-mid);
+  cursor: pointer;
+  font-family: var(--hc-sans);
+  font-size: var(--hc-tab);
+  letter-spacing: 0.01em;
+}
+.tab[aria-current="true"] { color: var(--hc-ink); }
+.tab svg { width: 21px; height: 21px; fill: none; stroke: currentColor;
+           stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+
+/* ---------------------------------------------------------------- splash */
+
+.splash {
+  position: absolute;
+  inset: 0;
+  z-index: 95;
+  background: var(--hc-paper);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+  transition: opacity 420ms ease-in;
+}
+.splash[hidden] { display: none; }
+.splash.out { opacity: 0; }
+.splash__mark { width: 92px; height: 92px; background: var(--mark) center / contain no-repeat; }
+.splash__greet {
+  font-family: var(--hc-sans-display);
+  font-weight: 800;
+  font-size: 28px;
+  letter-spacing: -0.01em;
+  margin: 0;
+}
+.splash__load {
+  position: absolute;
+  bottom: calc(24px + var(--safe-bottom));
+  margin: 0;
+  font-family: var(--hc-sans);
+  font-size: var(--hc-caption);
+  color: var(--hc-mid);
+}
+
+/* --------------------------------------------------------- profile screen */
+
+.pushed {
+  position: absolute;
+  inset: 0;
+  z-index: 42;
+  background: var(--hc-paper);
+  padding: calc(var(--safe-top) + var(--hc-header-h) + 20px) var(--hc-screen-pad) 0;
+  transform: translateX(100%);
+  transition: transform var(--hc-dur-base) var(--hc-ease);
+}
+.pushed[data-on="true"] { transform: translateX(0); }
+.field {
+  border: var(--hc-hairline) solid var(--hc-rule);
+  border-radius: 8px;
+  background: var(--hc-paper-sunk);
+  padding: 12px 14px;
+  color: var(--hc-mid);
+  font-size: 15px;
+  margin-bottom: 12px;
+}
+.btn {
+  width: 100%;
+  border: 0;
+  border-radius: 10px;
+  background: var(--hc-dark);
+  color: var(--hc-on-dark);
+  font-family: var(--hc-sans);
+  font-size: 16px;
+  font-weight: 600;
+  padding: 14px;
+  cursor: pointer;
+}
+.backlink {
+  position: absolute;
+  top: calc(var(--safe-top) + 14px);
+  left: var(--hc-screen-pad);
+  border: 0; background: none; padding: 0;
+  color: var(--hc-ink); font-size: 15px; cursor: pointer;
+  font-family: var(--hc-sans);
+}
+
+/* ------------------------------------------------------------------ panel */
+
+.panel {
+  border: 1px solid var(--pg-rule);
+  border-radius: 14px;
+  background: var(--pg-card);
+  padding: 20px 22px;
+  margin-bottom: 18px;
+}
+.panel h3 {
+  font-family: "Poppins", sans-serif;
+  font-weight: 800;
+  font-size: 15px;
+  margin: 0 0 4px;
+}
+.panel h3 + p { margin: 0 0 14px; color: var(--pg-mid); font-size: 13.5px; line-height: 1.5; }
+
+.ctl { margin-bottom: 16px; }
+.ctl:last-child { margin-bottom: 0; }
+.ctl > span {
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--pg-mid);
+  margin-bottom: 7px;
+}
+
+.seg { display: flex; flex-wrap: wrap; gap: 6px; }
+.seg button {
+  border: 1px solid var(--pg-rule);
+  background: var(--pg-paper);
+  color: var(--pg-ink);
+  border-radius: 8px;
+  padding: 8px 13px;
+  font: inherit;
+  font-size: 13.5px;
+  cursor: pointer;
+  transition: background 150ms, border-color 150ms, color 150ms;
+}
+.seg button:hover { border-color: var(--pg-gold); }
+.seg button[aria-pressed="true"] {
+  background: var(--pg-ink);
+  border-color: var(--pg-ink);
+  color: var(--pg-paper);
+}
+
+.replay {
+  width: 100%;
+  border: 1px solid var(--pg-gold);
+  background: none;
+  color: var(--pg-gold);
+  border-radius: 9px;
+  padding: 11px;
+  font: inherit;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+}
+.replay:hover { background: var(--pg-sunk); }
+
+/* -------------------------------------------------------------------- log
+
+   The rules in HINTS.md §3 are all invisible when they work, which is exactly
+   why they are the ones that get quietly broken. So the phone says out loud
+   what ended the hint, and what the tap that ended it went on to do. */
+.log {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
+  line-height: 1.55;
+  max-height: 260px;
+  overflow-y: auto;
+}
+.log li {
+  padding: 6px 0;
+  border-bottom: 1px solid var(--pg-rule);
+  color: var(--pg-mid);
+  display: flex;
+  gap: 9px;
+}
+.log li:last-child { border-bottom: 0; }
+.log .t { color: var(--pg-gold); flex: 0 0 52px; }
+.log .m { color: var(--pg-ink); }
+.log .m em { color: var(--pg-mid); font-style: normal; }
+.log__empty { color: var(--pg-mid); font-size: 13px; margin: 0; }
+
+table { border-collapse: collapse; width: 100%; font-size: 13.5px; margin: 14px 0 0; }
+th, td { text-align: left; padding: 9px 12px 9px 0; border-bottom: 1px solid var(--pg-rule); vertical-align: top; }
+th { font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--pg-mid); font-weight: 700; }
+td code, .panel code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12.5px;
+  background: var(--pg-sunk);
+  padding: 1px 5px;
+  border-radius: 4px;
+}
+
+.note {
+  border-left: 2px solid var(--pg-gold);
+  padding: 2px 0 2px 16px;
+  margin: 20px 0;
+  color: var(--pg-mid);
+  font-size: 14px;
+  max-width: 66ch;
+}
+.note strong { color: var(--pg-ink); font-weight: 600; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+</style>
+
+<div class="wrap">
+
+  <p class="eyebrow">Home Church, demo-hint</p>
+  <h1>The first launch hint</h1>
+  <p class="deck">
+    The splash lifts, Home is on the glass, and nothing points at the one thing
+    worth doing first. Here is the pointer, three ways, on the shipping tokens.
+    <strong>Tap anywhere in the phone.</strong> The hint goes, and the tap still
+    lands on whatever was under it.
+  </p>
+
+  <div class="deskrow">
+
+    <div>
+      <div class="frame">
+        <div class="screen">
+          <div class="stage" id="stage" data-hc="light" data-study="both">
+
+            <!-- Home, a sketch. Not a redesign of anything. -->
+            <div class="scroll" id="scroll">
+              <h1 class="greet" data-name="the greeting">Welcome home.</h1>
+              <div class="media" data-name="the Sunday carousel">This Sunday</div>
+
+              <div class="sect">
+                <p class="sect__eyebrow">This week</p>
+                <h2 class="sect__title">Gathering</h2>
+              </div>
+              <div class="sect__rule"></div>
+
+              <button class="card" type="button" data-name="the Gathering card">
+                <h4>Sunday, 10:30</h4>
+                <p>3401 Metairie Road. Coffee from ten, and there is room at our table.</p>
+              </button>
+              <button class="card" type="button" data-name="the sermon card">
+                <h4>Last Sunday's message</h4>
+                <p>What we carry, and what we were never asked to.</p>
+              </button>
+              <button class="card" type="button" data-name="the groups card">
+                <h4>Find a group</h4>
+                <p>Thursdays, in living rooms across the city.</p>
+              </button>
+            </div>
+
+            <!-- The bar the hint points into. -->
+            <header class="topbar">
+              <span class="lockup"></span>
+              <span class="acts">
+                <button class="disc" type="button" data-name="the theme button">
+                  <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.4v2.2M12 19.4v2.2M4.2 12H2M22 12h-2.2M6.1 6.1 4.6 4.6M19.4 19.4l-1.5-1.5M17.9 6.1l1.5-1.5M4.6 19.4l1.5-1.5"/></svg>
+                </button>
+                <button class="disc" type="button" data-name="the search button">
+                  <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.4"/><path d="m20 20-4.4-4.4"/></svg>
+                </button>
+                <button class="disc avatar" type="button" id="avatar" data-name="the avatar">
+                  <span class="avatar__disc" id="avatarDisc">
+                    <svg viewBox="0 0 24 24"><path d="M4 10.6 12 4l8 6.6"/><path d="M6 9.6V20h12V9.6"/></svg>
+                  </span>
+                </button>
+              </span>
+            </header>
+
+            <!-- The caption. pointer-events: none, layer and children. -->
+            <p class="hint" id="hint" aria-hidden="true">Make it yours.</p>
+
+            <nav class="tabbar" id="tabbar" style="--tab-i:0">
+              <button class="tab" type="button" aria-current="true" data-name="the Home tab">
+                <svg viewBox="0 0 24 24"><path d="M4 10.6 12 4l8 6.6"/><path d="M6 9.6V20h12V9.6"/></svg>Home
+              </button>
+              <button class="tab" type="button" data-name="the Listen tab">
+                <svg viewBox="0 0 24 24"><path d="M4 14v-2a8 8 0 0 1 16 0v2"/><rect x="3" y="13.6" width="4" height="6.4" rx="2"/><rect x="17" y="13.6" width="4" height="6.4" rx="2"/></svg>Listen
+              </button>
+              <button class="tab" type="button" data-name="the Guide tab">
+                <svg viewBox="0 0 24 24"><path d="M4 5.2A2 2 0 0 1 6 4h5v16H6a2 2 0 0 0-2 1.2z"/><path d="M20 5.2A2 2 0 0 0 18 4h-5v16h5a2 2 0 0 1 2 1.2z"/></svg>Guide
+              </button>
+              <button class="tab" type="button" data-name="the Group tab">
+                <svg viewBox="0 0 24 24"><circle cx="9" cy="8.4" r="3.2"/><path d="M3.4 19.6a5.6 5.6 0 0 1 11.2 0"/><path d="M16 5.6a3.2 3.2 0 0 1 0 5.6M17.4 14.6a5.6 5.6 0 0 1 3.2 5"/></svg>Group
+              </button>
+              <button class="tab" type="button" data-name="the Connect tab">
+                <svg viewBox="0 0 24 24"><path d="M12 20s-7.2-4.4-7.2-9.2A4.1 4.1 0 0 1 12 8.2a4.1 4.1 0 0 1 7.2 2.6C19.2 15.6 12 20 12 20z"/></svg>Connect
+              </button>
+            </nav>
+
+            <!-- Where the avatar goes. Enough of Profile to show it arrived. -->
+            <section class="pushed" id="profile">
+              <button class="backlink" type="button" id="profileBack">&larr; Back</button>
+              <p class="sect__eyebrow">Keep this with you</p>
+              <h2 class="sect__title">Sign in</h2>
+              <div class="sect__rule"></div>
+              <p style="color:var(--hc-mid);font-size:15px;line-height:24px;margin:0 0 18px">
+                Sign in and your information follows you to any phone. Everything
+                else on this screen already works without it.
+              </p>
+              <div class="field">you@example.com</div>
+              <button class="btn" type="button">Send me a code</button>
+            </section>
+
+            <div class="splash" id="splash" hidden>
+              <div class="splash__mark"></div>
+              <p class="splash__greet">Welcome home.</p>
+              <p class="splash__load">Loading...</p>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="panel">
+        <h3>The three studies</h3>
+        <p>The open question in HINTS.md &sect;9, drawn rather than argued.</p>
+
+        <div class="ctl">
+          <span>Study</span>
+          <div class="seg" id="segStudy">
+            <button type="button" data-v="ring">A. Ring only</button>
+            <button type="button" data-v="both" aria-pressed="true">B. Ring and caption</button>
+            <button type="button" data-v="caption">C. Caption only</button>
+          </div>
+        </div>
+
+        <div class="ctl">
+          <span>The words</span>
+          <div class="seg" id="segCopy">
+            <button type="button" data-v="Make it yours." aria-pressed="true">Make it yours.</button>
+            <button type="button" data-v="Your account lives here.">Your account lives here.</button>
+            <button type="button" data-v="Start here.">Start here.</button>
+          </div>
+        </div>
+
+        <div class="ctl">
+          <span>The phone</span>
+          <div class="seg" id="segTheme">
+            <button type="button" data-v="light" aria-pressed="true">Light</button>
+            <button type="button" data-v="dark">Dark</button>
+          </div>
+        </div>
+
+        <div class="ctl">
+          <span>Motion</span>
+          <div class="seg" id="segStill">
+            <button type="button" data-v="off" aria-pressed="true">Full</button>
+            <button type="button" data-v="on">Reduce Motion</button>
+          </div>
+        </div>
+
+        <div class="ctl">
+          <span>The caption's footprint</span>
+          <div class="seg" id="segBox">
+            <button type="button" data-v="off" aria-pressed="true">Hidden</button>
+            <button type="button" data-v="on">Show the rectangle</button>
+          </div>
+        </div>
+
+        <div class="ctl">
+          <span>Open it</span>
+          <div class="seg" id="segSplash" style="margin-bottom:8px">
+            <button type="button" data-v="no" aria-pressed="true">Straight to Home</button>
+            <button type="button" data-v="yes">With the splash</button>
+          </div>
+          <button class="replay" type="button" id="replay">Replay the first launch</button>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h3>What ended it, and what the tap did</h3>
+        <p>
+          Every rule in &sect;3 is invisible when it works, which is why they are
+          the ones that get quietly broken. So the phone says it out loud.
+        </p>
+        <p class="log__empty" id="logEmpty">Waiting for the hint. Then tap something.</p>
+        <ol class="log" id="log"></ol>
+      </div>
+    </div>
+  </div>
+
+  <hr>
+
+  <h2 style="font-family:Poppins,sans-serif;font-weight:800;font-size:20px;margin:0 0 6px">
+    What to look for</h2>
+  <p class="deck" style="margin-bottom:18px">
+    Three things this drawing exists to settle, and one it cannot.
+  </p>
+
+  <table>
+    <tr><th style="width:210px">Look at</th><th>Because</th></tr>
+    <tr>
+      <td><strong>Study A on its own</strong></td>
+      <td>The ring is the more minimal answer and it may simply be too quiet to
+        mean anything to somebody who has never seen this app. Watch it once
+        without knowing where to look. If your eye does not go to the corner,
+        A is not the answer, however much nicer it is.</td>
+    </tr>
+    <tr>
+      <td><strong>The caption at 375pt</strong></td>
+      <td>Narrow the window until the phone is the width of an SE. "Your account
+        lives here." is the one that will wrap first, and a hint that wraps is a
+        hint that reads as a paragraph.</td>
+    </tr>
+    <tr>
+      <td><strong>Tapping a card <em>through</em> the caption</strong></td>
+      <td>The card presses, the hint leaves, and the log says both. That is
+        <code>pointer-events: none</code> doing the only job it has. This is the
+        line that should never be traded for a dismiss button.</td>
+    </tr>
+    <tr>
+      <td><strong>The rectangle, shown</strong></td>
+      <td>Turn on <em>Show the rectangle</em> and tap inside it. On Home the
+        caption lands in the gap between the bar and the greeting, so what goes
+        through is bare paper, which is a good sign about the placement and a
+        poor demonstration. The rule earns its keep one control up: the ring is
+        drawn on the avatar <em>button</em>, and tapping the disc mid ring still
+        opens Profile. That is the tap that would be swallowed if these
+        pseudo elements ever took a pointer.</td>
+    </tr>
+    <tr>
+      <td><strong>Dark, in a dark room</strong></td>
+      <td><code>--hc-gold</code> deepens to #CBAC74 on charcoal so it glows
+        rather than glares. The ring is the only gold thing on the screen either
+        way, which is what makes it findable.</td>
+    </tr>
+    <tr>
+      <td><strong>Reduce Motion</strong></td>
+      <td>No ring, no travel, the caption simply present and held longer. The
+        rail refuses outright under Reduce Motion because it is decoration. This
+        is information, so it degrades instead. Study A has nothing left to show
+        here, which is an argument against shipping A alone.</td>
+    </tr>
+  </table>
+
+  <div class="note">
+    <strong>What the drawing cannot settle.</strong> Whether 2500ms is the right
+    wait, and whether six seconds is the right hold. Both are opening guesses
+    and both feel different in a hand, at arm's length, in the sun, held by
+    somebody who has not seen the app before. Take it outside before deciding.
+  </div>
+
+  <div class="note">
+    <strong>What is faked here.</strong> The splash is abbreviated, Home is a
+    sketch, and the three launch counter of &sect;3d is not modelled at all: this
+    phone hints every time you ask it to, because a study you have to reinstall
+    to see twice is a study nobody looks at twice. Everything else, the tokens,
+    the 42px disc, the 20px gutter, the 52px bar, the durations and the death
+    list, is the shipping thing.
+  </div>
+
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  /* --- the numbers, from HINTS.md, in one place ------------------------- */
+
+  var DELAY   = 2500;   // after Home lands. §5, the account hint's `delay`
+  var HOLD    = 6000;   // before it fades on its own. §3c
+  var HOLD_STILL = 7500;
+  var FADE    = 300;
+  var SPLASH  = 1500;   // abbreviated. The shipping floor is 2750 + 420.
+
+  var stage   = document.getElementById('stage');
+  var hint    = document.getElementById('hint');
+  var splash  = document.getElementById('splash');
+  var profile = document.getElementById('profile');
+  var tabbar  = document.getElementById('tabbar');
+  var scroll  = document.getElementById('scroll');
+  var log     = document.getElementById('log');
+  var logEmpty = document.getElementById('logEmpty');
+
+  var study = 'both', still = false, withSplash = false;
+  var showing = false, holdTimer = 0, delayTimer = 0, shownAt = 0;
+
+  /* --- the phone is drawn at points, then scaled ------------------------ */
+
+  function fit() {
+    var screen = stage.parentNode;
+    stage.style.transform = 'scale(' + (screen.clientWidth / 393) + ')';
+  }
+  window.addEventListener('resize', fit);
+  fit();
+
+  /* --- the log ---------------------------------------------------------- */
+
+  function say(msg, sub) {
+    logEmpty.hidden = true;
+    var li = document.createElement('li');
+    var t = document.createElement('span');
+    t.className = 't';
+    t.textContent = shownAt ? '+' + ((Date.now() - shownAt) / 1000).toFixed(1) + 's' : '  --';
+    var m = document.createElement('span');
+    m.className = 'm';
+    m.textContent = msg;
+    if (sub) {
+      var em = document.createElement('em');
+      em.textContent = '  ' + sub;
+      m.appendChild(em);
+    }
+    li.appendChild(t); li.appendChild(m);
+    log.insertBefore(li, log.firstChild);
+    while (log.children.length > 14) log.removeChild(log.lastChild);
+  }
+
+  /* --- showing and ending ------------------------------------------------
+
+     The whole point of the split in §5: what and where is above, whether,
+     when and how it ends is here, and a hint cannot write any of it. */
+
+  function show() {
+    if (showing) return;
+    showing = true;
+    shownAt = Date.now();
+
+    if (study !== 'caption' && !still) stage.setAttribute('data-ring', 'on');
+    if (study !== 'ring') stage.setAttribute('data-caption', 'on');
+
+    say('hint shown', '"' + hint.textContent + '", study ' +
+        ({ ring: 'A', both: 'B', caption: 'C' }[study]));
+
+    holdTimer = window.setTimeout(function () {
+      end('its own timer, ' + (still ? HOLD_STILL : HOLD) + 'ms');
+    }, still ? HOLD_STILL : HOLD);
+  }
+
+  function end(why, landed) {
+    if (!showing) return;
+    showing = false;
+    window.clearTimeout(holdTimer);
+    stage.removeAttribute('data-ring');
+    stage.removeAttribute('data-caption');
+    say('hint ended: ' + why, landed ? 'the tap landed on ' + landed : '');
+    shownAt = 0;
+  }
+
+  /* THE DEATH LIST, §3c. Capture phase, passive, and it never calls
+     preventDefault or stopPropagation and never inspects the target to decide
+     whether the tap counted. Every pointerdown ends the hint. Every one of
+     them goes on to do whatever it was going to do. */
+  stage.addEventListener('pointerdown', function (evt) {
+    if (!showing) return;
+    var named = evt.target.closest ? evt.target.closest('[data-name]') : null;
+    /* Worth saying rather than hiding: on Home the caption's rectangle sits in
+       the gap between the bar and the greeting, and nothing tappable is under
+       it anyway. The rule still earns its keep on the ring, which is drawn on
+       a button, and on whatever screen the second hint lands on. */
+    end('pointerdown', named ? named.getAttribute('data-name')
+                             : 'bare paper, nothing tappable was under it');
+  }, true);
+
+  scroll.addEventListener('scroll', function () {
+    if (showing) end('scroll');
+  }, { passive: true });
+
+  stage.addEventListener('focusin', function () {
+    if (showing) end('focusin, a keyboard or VoiceOver is driving');
+  });
+
+  document.addEventListener('visibilitychange', function () {
+    if (document.hidden && showing) end('the app went to the background');
+  });
+
+  /* --- the things a tap lands on ---------------------------------------- */
+
+  document.querySelectorAll('.card').forEach(function (card) {
+    card.addEventListener('click', function () {
+      document.querySelectorAll('.card').forEach(function (o) { o.classList.remove('lit'); });
+      card.classList.add('lit');
+    });
+  });
+
+  document.getElementById('avatar').addEventListener('click', function () {
+    profile.setAttribute('data-on', 'true');
+    say('route changed to profile', 'the hint retires for good here');
+  });
+  document.getElementById('profileBack').addEventListener('click', function () {
+    profile.removeAttribute('data-on');
+  });
+
+  Array.prototype.forEach.call(tabbar.querySelectorAll('.tab'), function (tab, i) {
+    tab.addEventListener('click', function () {
+      Array.prototype.forEach.call(tabbar.querySelectorAll('.tab'), function (o) {
+        o.setAttribute('aria-current', 'false');
+      });
+      tab.setAttribute('aria-current', 'true');
+      tabbar.style.setProperty('--tab-i', i);
+    });
+  });
+
+  /* --- the launch -------------------------------------------------------- */
+
+  function launch() {
+    window.clearTimeout(delayTimer);
+    window.clearTimeout(holdTimer);
+    showing = false; shownAt = 0;
+    stage.removeAttribute('data-ring');
+    stage.removeAttribute('data-caption');
+    profile.removeAttribute('data-on');
+    scroll.scrollTop = 0;
+    document.querySelectorAll('.card').forEach(function (o) { o.classList.remove('lit'); });
+
+    /* The delay is counted from the moment Home is on the glass, not from
+       boot. That is what HC.splash.whenGone() means, and it is why the rail's
+       own two seconds is two seconds of Home. */
+    var afterHome = function () {
+      say('Home is on the glass', 'the hint waits ' + DELAY + 'ms');
+      delayTimer = window.setTimeout(show, DELAY);
+    };
+
+    if (withSplash) {
+      splash.hidden = false;
+      splash.classList.remove('out');
+      say('splash up', 'abbreviated to ' + SPLASH + 'ms for the study');
+      window.setTimeout(function () {
+        splash.classList.add('out');
+        window.setTimeout(function () { splash.hidden = true; afterHome(); }, 420);
+      }, SPLASH);
+    } else {
+      splash.hidden = true;
+      afterHome();
+    }
+  }
+
+  /* --- the controls ------------------------------------------------------ */
+
+  function seg(id, fn) {
+    var box = document.getElementById(id);
+    box.addEventListener('click', function (evt) {
+      var b = evt.target.closest('button');
+      if (!b) return;
+      Array.prototype.forEach.call(box.querySelectorAll('button'), function (o) {
+        o.setAttribute('aria-pressed', String(o === b));
+      });
+      fn(b.getAttribute('data-v'));
+    });
+  }
+
+  seg('segStudy', function (v) { study = v; stage.setAttribute('data-study', v); launch(); });
+  seg('segCopy',  function (v) { hint.textContent = v; });
+  seg('segTheme', function (v) { stage.setAttribute('data-hc', v); });
+  seg('segStill', function (v) {
+    still = v === 'on';
+    stage.setAttribute('data-still', still ? 'on' : 'off');
+    launch();
+  });
+  seg('segSplash', function (v) { withSplash = v === 'yes'; launch(); });
+  seg('segBox', function (v) { stage.setAttribute('data-box', v); });
+
+  document.getElementById('replay').addEventListener('click', launch);
+
+  launch();
+})();
+</script>

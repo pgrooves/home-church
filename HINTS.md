@@ -10,6 +10,10 @@ Read `Home Church app design system.md` §2b (voice), §3g (motion) and §7
 which already ships the only hint this app has, and `js/splash.js`, which
 already owns the moment a hint would go.
 
+`demo-hint/` draws it. Three studies, both appearances, the shipping tokens,
+and a log that says what ended the hint and what the tap that ended it went on
+to do. Build it with `cd demo-hint && node build.js`.
+
 ---
 
 ## 1. What we are actually solving
@@ -432,8 +436,17 @@ Listed so the registry is built with them in mind, not so they get built.
   that want a real phone.
 - Whether the ring is enough on its own without the caption. It is the more
   minimal answer and it may simply be too quiet to mean anything to somebody
-  who has never seen the app. Worth building both and looking at them, because
-  this is the one judgment in here that reading cannot settle.
+  who has never seen the app. This is the one judgment in here that reading
+  cannot settle, so `demo-hint/` draws all three and you look at them. What the
+  drawing already turned up: study A has nothing left to show under Reduce
+  Motion, which is an argument against shipping it on its own.
+
+- Where the caption actually lands. Building it showed that on Home the
+  rectangle sits in the gap between the bar and the greeting, with nothing
+  tappable under it. Good news for the placement, and it means `pointer-events:
+  none` earns its keep on the ring rather than on the caption: the rings are
+  pseudo elements on the avatar *button*, and that is the tap that would be
+  swallowed if they ever took a pointer.
 - Whether the index rail's own hint should move into the registry in phase 3.
   It works, it is delicate, and "it is now consistent" is not by itself a
   reason to open it.
