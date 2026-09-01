@@ -33,7 +33,17 @@ So the job is narrow. Point at the avatar once, early, quietly, and get out of
 the way. Not a tour. Not a wall. Not a welcome modal.
 
 **The hint's goal is to show them where, not to make them sign up.** That
-distinction settles most of the decisions below.
+distinction settles most of the decisions below: it is why there is no scrim,
+no wall, no button to press, and why every tap in the app ends it.
+
+It sits at an angle to §3d, which stops the hint on sign-in and on nothing
+else, and the angle is worth naming rather than smoothing over. The account is
+the stopping condition because it is the only *observable* one, not because
+signing up is the goal. What we actually want to stop on is "they know where
+it is", and no app can see that. An account is the one proxy the phone has,
+and a proxy is what it stays: the hint never asks, never blocks, and never
+counts. If it had a button, or a scrim, or a second sentence, this reading
+would collapse and the rule in §3d would have to go with it.
 
 ---
 
@@ -135,32 +145,60 @@ the wrong moment, short enough that it is gone before it becomes furniture.
 
 ### 3d. How many times, across how many launches
 
-The user's instinct, "if they tap away it should go away, not persist", is
-right about a session and leaves the launch question open. Two bad answers and
-one good one.
+**Every launch, until there is an account.** One showing per launch, on Home,
+a couple of seconds after the greeting lifts, for as long as the phone is
+signed out. Signing in is the only thing that ends it.
 
-**Bad: once, ever.** Somebody dismisses it on launch one because their thumb
-was already moving. That was their only chance and they never get told.
+That is a deliberate change from what this document proposed first, and the
+reasoning it replaces is worth keeping visible rather than deleting, because
+it is the argument somebody will make again in six months.
 
-**Bad: the rail's rule, every thirty seconds until used.** Right for a gesture
-nobody can discover on their own, wrong for a pointer at a visible button.
-Repeating it is nagging, and the design system already ruled: no guilt
-mechanics, no fake urgency.
+The original proposal was three launches, with any visit to Profile retiring
+the hint permanently: somebody who has opened the app three times and never
+touched the top right corner has decided, and a fourth showing is the app not
+listening. The counter-argument, which is the one that won: the hint exists to
+answer a question the app never otherwise answers, and a person who has not
+made an account still has that question. Retiring the pointer while the thing
+it points at is still undone is the app deciding on their behalf that they
+were not interested, on evidence no stronger than three launches.
 
-**Good: three strikes, and any visit to Profile retires it.**
+It is also the rule the app already uses next door. `js/index-rail.js` hints
+until the rail is used, then stops, and a new launch starts it over. This is
+the same shape with a longer clock: hint until the thing is done, and the
+thing here is an account rather than a scrub.
 
-- Launch 1, 2 and 3: shown once each, if still signed out.
-- Opening Profile at all, signed in or not, retires it permanently. They found
-  the door. Whether they walked through it is theirs to decide.
-- Signing in retires it.
-- After the third showing it retires itself.
+**What still ends it, and what no longer does.**
 
-Somebody who has opened this app three times and never once touched the top
-right corner has decided, and a fourth showing is the app not listening.
+| | |
+|---|---|
+| Signing in | Retires it permanently. The only terminal condition. |
+| Opening Profile without signing in | **No longer retires it.** It is shown again next launch. |
+| Three showings | No longer a limit. There is no limit. |
+| Tapping away, scrolling, the timer, all of §3c | Ends *this* showing, as before. Never the hint itself. |
 
-**The counter increments on show, not on dismiss.** Otherwise a launch that
-opened straight into a guide, where the hint was never eligible, burns a
-strike for a hint nobody saw.
+**The cost of this, stated plainly.** Somebody who reads sermons signed out for
+a year sees the same sentence a couple of hundred times. That is defensible
+only because of what §3a and §3c make true: it is one line for six seconds, it
+takes no taps, it is gone the moment they touch anything, and it never blocks
+a thing. If any of those three ever softens, this rule has to be revisited on
+the same commit. A hint that repeats forever and can be tapped is not a hint,
+it is a banner.
+
+**The one case still worth watching.** Somebody who opens Profile, reads the
+sign-in copy, and closes it has told us something a person who never went
+there has not. Pointing at that same door next launch is the closest this
+design comes to not listening. It is not enough to hold the feature up, and
+the answer if it ever grates is not to retire the hint but to quieten it:
+after a Profile visit, drop to the ring alone with no caption, which still
+answers "where" for somebody who forgot and says much less to somebody who
+remembers. That is a two line change to the registration in §5 and it is
+written down here so it does not have to be re-derived.
+
+**Nothing increments any more, so nothing can be miscounted.** The counter and
+the show-not-dismiss rule it needed both go away with the limit. The stored
+state is one flag, and it is derived rather than written: signed in or not.
+Which means there is no persisted hint state at all on the happy path, and
+`hc:hints` exists only if the quietening above is ever built.
 
 ### 3e. One hint per launch, whatever else is registered
 
@@ -176,6 +214,31 @@ takes the 2000ms slot after the splash lifts, and the account hint wants
 roughly the same moment. On a signed out first launch, the account hint should
 win and the rail should skip its opening swell. Its standing thirty second
 offer can stay, because by then the account hint is long gone.
+
+**What §3d does to this rule, which is the one thing that change costs.**
+While the account hint retired itself after three launches, the slot came free
+on launch four and any second hint inherited it. It does not any more: a
+signed out phone spends its one hint on the account, every launch, forever. So
+for as long as somebody stays signed out, **no other hint can ever run.**
+
+That is a real trade and not a theoretical one, though it costs nothing today
+because there is exactly one hint. It comes due the moment a second is
+registered, and there is no need to pick the answer now. The three that will
+be on the table, written down so the decision starts from here rather than
+from scratch:
+
+1. **Let it starve.** A signed out phone is a phone that has not started, and
+   the account is the only thing worth pointing at until it has. Honest, and
+   it means §7's list only ever reaches people with accounts.
+2. **The account hint stands aside every third launch.** Keeps "every launch"
+   in spirit, gives the registry a slot to breathe, and costs one line in the
+   scheduler.
+3. **Two slots on a launch, never two hints on a screen.** The most work and
+   the most ways to get wrong. Not without a reason.
+
+Whichever it is, `HC.hints` should keep deciding it. The moment a hint starts
+reasoning about whether another hint got its turn, §5's split is gone and
+every hint has to know about every other one.
 
 ---
 
@@ -271,11 +334,16 @@ default:
 HC.hints.register({
   id: 'account',                  // stable, and the persistence key
   order: 10,                      // lower goes first when several are eligible
-  limit: 3,                       // showings across launches
+  limit: 0,                       // 0 = no limit. `when` is the whole policy.
   delay: 2500,                    // ms after the splash lifts
   hold: 6000,                     // ms before it fades on its own
 
-  // Is this worth showing right now. Asked once, at the moment it would go.
+  /* Is this worth showing right now. Asked once, at the moment it would go.
+
+     This is the whole of §3d. There is no counter beside it and no stored
+     flag behind it: the hint runs while the phone is signed out and stops
+     when it is not, and !isSignedIn() is that sentence in code. A policy you
+     can read in one line is a policy that cannot drift from the document. */
   when: function () {
     return HC.auth.isConfigured() &&
            !HC.auth.isSignedIn() &&
@@ -300,53 +368,66 @@ write them.
 
 ### Where the counters live
 
-Straight into `js/store.js`, next to `dismissed` and `dismissedPins`, in the
-same shape and for the same reasons:
+Nowhere, which is the happiest consequence of §3d.
 
-```js
-// hc:hints
-{ account: { shown: 2, retired: false } }
-```
+The three launch limit needed a per hint record on the phone, a counter that
+had to increment on show rather than on dismiss, and a retirement flag that
+two different events could set. All of it existed to answer "has this hint had
+its turns yet", and §3d no longer asks. The question is now "is this phone
+signed out", `HC.auth.isSignedIn()` already answers it, and the answer is
+already correct across launches because the session is already persisted.
 
-Two functions on `HC.store`, `hintState(id)` and `noteHint(id, patch)`, so
-`js/hints.js` never touches `localStorage` itself and private browsing on iOS
-stays somebody else's problem, which is what the wrapper at the top of that
-file exists for.
+So there is no `hc:hints` key, no `hintState`, no `noteHint`, and no new lines
+in `js/store.js` at all. The failure mode that came with them, a counter that
+gets miscounted on a launch where the hint was never eligible, cannot happen
+in a design that does not count.
+
+If the quietening in §3d is ever built, that is the one thing that needs
+storage: a single flag saying Profile has been opened. Worth noticing that it
+would be the *only* reason to add persistence here, which is a good reason to
+be sure it is wanted before adding it.
 
 ### The one pure function, and the one test
 
 ```js
-function shouldShow(state, ctx) // -> true | false
+function shouldShow(ctx) // -> true | false
 ```
 
-`state` is the stored `{ shown, retired }`, `ctx` is
-`{ signedIn, configured, route, splashUp, sheetOpen, hidden, alreadyRanThisLaunch }`.
-No DOM, no clock, no globals.
+`ctx` is `{ signedIn, configured, route, splashUp, sheetOpen, hidden,
+alreadyRanThisLaunch }`. No stored state argument any more, because §3d left
+none. No DOM, no clock, no globals.
 
 Which means `tests/hints.test.js` can cover the entire policy the way
-`tests/announcements.test.js` covers its seams: node, `vm`, a faked
-`localStorage`, no jsdom, no browser. The table is small and the cases are
-exactly the ones a person would get wrong in six months:
+`tests/announcements.test.js` covers its seams: node, `vm`, no jsdom, no
+browser, and now no faked `localStorage` either. The cases are the ones a
+person would get wrong in six months:
 
-- retired stays retired, whatever else is true
-- signed in never shows
+- signed in never shows, which is the only terminal condition there is
 - unconfigured auth never shows, because pointing at a sign-in that is not
   wired up is worse than saying nothing
-- the fourth launch does not show
-- a launch where it was never eligible does not spend a strike
+- not on Home never shows
+- the splash still up never shows
 - two eligible hints in one launch yields one
+- **a hundredth launch, still signed out, still shows.** The test that stops
+  somebody adding a limit back as a kindness.
+
+That last one is the point of having a test here at all. The old draft of this
+section ended by saying that a hint which comes back forever is a bug nobody
+files. Under §3d it is not a bug, it is the feature, and the thing nobody would
+file is the opposite: a well meaning cap added later, by somebody who found the
+repetition and assumed it was an oversight. A test is how a deliberate decision
+survives contact with a reasonable person who was not in the room.
 
 The drawing is not tested and does not need to be. The policy is where the
-bugs that matter live, and they are quiet ones: a hint that comes back forever
-is a bug nobody files, they just stop opening the app.
+bugs that matter live.
 
 ### Files touched
 
 | File | What |
 |---|---|
 | `js/hints.js` | New. The registry, the scheduler, the layer, the death list. Perhaps 200 lines, most of it the rules. |
-| `js/store.js` | `hintState` / `noteHint`, next to the dismissals. |
-| `js/app.js` | One `HC.hints.arm()` after `HC.splash.ready()`, and the account hint's registration next to it. Retire on the `auth` subscriber it already has, and on a `view` change to `profile`. |
+| `js/store.js` | Nothing. §5 explains why the counters went away. |
+| `js/app.js` | One `HC.hints.arm()` after `HC.splash.ready()`, and the account hint's registration next to it. The existing `auth` subscriber already fires on sign-in, and ending the hint there is one line inside it. |
 | `js/index-rail.js` | Its opening swell asks `HC.hints.busy()` first. Four lines. |
 | `css/components.css` | `.hc-hint`, `.hc-hint__caption`, and the ring on `.hc-avatar__disc`. Under the sheets at 55 and the toast at 60, over every other piece of chrome. z-index 48 is free. |
 | `index.html` | One script tag with the shell chrome, after `js/index-rail.js`. Then `npm run stamp`. |
@@ -357,18 +438,20 @@ is a bug nobody files, they just stop opening the app.
 ## 6. Build order
 
 **Phase 0. The policy, with nothing drawn.**
-`shouldShow`, the store shape, and `tests/hints.test.js`. Green before a
-single pixel exists. This is the part that is actually hard to get right and
-the part that is cheapest to fix now.
+`shouldShow`, and `tests/hints.test.js` around it, including the hundredth
+launch case. Green before a single pixel exists. Smaller than it was: with no
+stored state there is no store work and no faked `localStorage`.
 
 **Phase 1. The layer and the account hint.**
-`js/hints.js`, the CSS, the registration, the rail's four line deference.
-Ship it and watch one real first launch on a real phone, in sun, at arm's
-length, held by somebody who has not seen it before.
+`js/hints.js`, the CSS, the registration, the rail's four line deference. Ship
+it and watch one real first launch on a real phone, in sun, at arm's length,
+held by somebody who has not seen it before.
 
-**Phase 2. The retirements.**
-Profile visit and sign-in mark it done. Small, and easy to forget, which is
-why it is its own line rather than a footnote to phase 1.
+**Phase 2. Sign-in ends it.**
+One line in the `auth` subscriber `js/app.js` already has. It was a whole phase
+when there were two retirement paths and a stored flag behind them; now it is
+the only one, and it is the difference between a hint and a permanent fixture,
+so it is still written down rather than assumed.
 
 **Phase 3, optional and not soon. A second hint.**
 Only once phase 1 has been out long enough to know whether anybody noticed the
@@ -425,7 +508,9 @@ Listed so the registry is built with them in mind, not so they get built.
 - The layer never takes a tap.
 - Any pointerdown ends it, and lands anyway.
 - One hint per launch.
-- Three launches, and any Profile visit retires it.
+- **Every launch until there is an account. Signing in is the only thing that
+  ends it, and there is no limit and no stored counter.** §3d, decided after
+  the first draft proposed three launches and lost the argument.
 - Reduce Motion degrades it rather than refusing it.
 - The policy is pure and tested; the drawing is neither.
 
@@ -450,3 +535,15 @@ Listed so the registry is built with them in mind, not so they get built.
 - Whether the index rail's own hint should move into the registry in phase 3.
   It works, it is delicate, and "it is now consistent" is not by itself a
   reason to open it.
+
+- **Which of the three answers in §3e a second hint gets**, since a signed out
+  phone now spends its one slot on the account hint every launch and nothing
+  else can run. Nothing to decide until a second hint exists, and the options
+  are written down so it starts from there.
+
+- **Whether the Profile visit case ever needs quietening.** §3d keeps showing
+  the full hint to somebody who opened Profile and chose not to sign in, which
+  is the one place this design comes closest to not listening. The fix, if it
+  grates, is the ring alone without the caption, not a retirement. It is the
+  only thing in the whole design that would need something stored, so it is
+  worth being sure before building it.

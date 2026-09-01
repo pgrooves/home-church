@@ -73,9 +73,11 @@ Worth doing in this order:
   replays.
 - **Home is a sketch.** A greeting, a carousel and three cards, there to give
   the hint something to sit over and be tapped through. Not a Home redesign.
-- **The three launch counter of §3d is not modelled.** This phone hints every
-  time you ask it to, because a study you have to reinstall to see twice is a
-  study nobody sees twice.
+That is the list. It used to include the launch policy: the study hinted on
+every replay while §3d capped it at three launches, and the README said so. §3d
+now *is* every launch until there is an account, with no limit and no counter,
+so the liberty the study was taking turned out to be the shipping behaviour.
+Replay is the second launch, and the ninetieth.
 
 Everything else, the tokens, the geometry, the durations, the death list and
 `pointer-events: none` on the layer and every child, is the shipping thing.
