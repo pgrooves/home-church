@@ -1,4 +1,10 @@
-Copyright 2015 the Cormorant Project Authors (github.com/CatharsisFonts/Cormorant)
+Copyright 2018 The Manrope Project Authors (github.com/sharanda/manrope)
+Copyright 2020 The Poppins Project Authors (github.com/itfoundry/Poppins)
+
+Both families in this directory are licensed under the SIL Open Font License,
+Version 1.1, reproduced in full below. Cormorant, copyright 2015 the Cormorant
+Project Authors, was bundled here until the reading face moved to Manrope and
+is named only so this file's history reads straight.
 
 This Font Software is licensed under the SIL Open Font License, Version 1.1.
 This license is copied below, and is also available with a FAQ at:

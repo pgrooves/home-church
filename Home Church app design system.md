@@ -144,28 +144,32 @@ Do not invert to pure black. Home Church’s dark is warm, not clinical. Invert 
 
 The guide system pairs a light humanist serif for display with a small tracked sans for labels. That pairing is the brand’s typographic signature and should carry into the app.
 
-**Display and reading face: Cormorant** (Light, Regular, Italic, LightItalic, SemiBold, Bold)
-Open source, free to use, available at [github.com/CatharsisFonts/Cormorant](https://github.com/CatharsisFonts/Cormorant). Elegant, high contrast, generous. Perfect for headlines, scripture, sermon titles, and pull quotes.
+**Reading face: Manrope** (variable, 200–800; the app uses 400 and 500)
+Open source, free to use, available at [github.com/sharanda/manrope](https://github.com/sharanda/manrope). A semi-geometric sans with open apertures and a large x-height. It reads at 16px without argument, which is the size the guides are actually read at.
 
-**Label and UI face: a neutral grotesque.** The print system uses Helvetica. For app work, use the platform system font (SF Pro on iOS, Roboto on Android) or Inter for cross-platform consistency. Reserve it for all-caps labels, buttons, tab bars, form fields, and dense metadata.
+> **This slot was Cormorant** (a Garamond revival) through the first release, and the two-face serif-and-sans signature described above was the brand's original typographic move. Cormorant is a display face: hairline thins, small x-height, long extenders. It was set at 17px for long-form reading and at 300 weight for titles, and in both places the strokes thinned out — worse on the dark theme, where halation eats them. Manrope replaced it. What the app kept is the *other* half of the pairing: **Poppins 800 headers over a quiet reading face**, which is now sans over sans rather than sans over serif. Manrope has no italic cut, so pull quotes and empty states get a synthetic oblique.
 
-**Critical constraint:** Cormorant is beautiful but has a small x-height and thin light weights. It is a display and long-form reading face, not a UI face. Never set body UI, buttons, or form labels in Cormorant Light below 16pt.
+**Label and UI face: a neutral grotesque.** The print system uses Helvetica. For app work, use the platform system font (SF Pro on iOS, Roboto on Android). Reserve it for all-caps labels, buttons, tab bars, form fields, and dense metadata.
 
-**Type scale `[PROPOSED]`**
+**Critical constraint:** never set the reading face below 400. Manrope carries weights down to 200 and they are all too thin for a phone in daylight, and thinner again as light text on the dark theme. Titles are 500.
 
-|Role      |Face             |Size / Line                |Notes                              |
-|----------|-----------------|---------------------------|-----------------------------------|
-|Display XL|Cormorant Light  |40 / 44                    |Sermon series title, cover moments |
-|Display L |Cormorant Light  |32 / 36                    |Screen titles                      |
-|Display M |Cormorant Light  |26 / 30                    |Section titles                     |
-|Eyebrow   |Sans, 600        |11 / 14, +0.12em, uppercase|`--hc-accent`, sits above titles   |
-|Body serif|Cormorant Regular|17 / 26                    |Sermon summaries, long-form reading|
-|Body sans |Sans, 400        |16 / 24                    |UI copy, lists, forms              |
-|Question  |Cormorant Regular|18 / 27                    |Discussion and reflection questions|
-|Pull quote|Cormorant Italic |20 / 29                    |One-liner cards                    |
-|Caption   |Sans, 400        |13 / 18                    |`--hc-mid`, timestamps, metadata   |
-|Button    |Sans, 600        |16 / 20, +0.02em           |                                   |
-|Tab label |Sans, 500        |11 / 14                    |                                   |
+**Type scale** — roughly 10% below the Cormorant-era numbers. Manrope's x-height is much larger, so the same pixel size draws a visibly bigger letter; these land the actual reading height back where it was.
+
+|Role      |Face            |Size / Line                |Notes                              |
+|----------|----------------|---------------------------|-----------------------------------|
+|Display XL|Manrope 500     |36 / 40, −0.015em          |Sermon series title, cover moments |
+|Display L |Manrope 500     |29 / 34, −0.015em          |Screen titles                      |
+|Display M |Manrope 500     |23 / 28, −0.015em          |Section titles                     |
+|Eyebrow   |Sans, 600       |11 / 14, +0.12em, uppercase|`--hc-accent`, sits above titles   |
+|Body serif|Manrope 400     |16 / 25                    |Sermon summaries, long-form reading|
+|Body sans |Sans, 400       |16 / 24                    |UI copy, lists, forms              |
+|Question  |Manrope 400     |17 / 26                    |Discussion and reflection questions|
+|Pull quote|Manrope oblique |19 / 28                    |One-liner cards, synthetic slant   |
+|Caption   |Sans, 400       |13 / 18                    |`--hc-mid`, timestamps, metadata   |
+|Button    |Sans, 600       |16 / 20, +0.02em           |                                   |
+|Tab label |Sans, 500       |11 / 14                    |                                   |
+
+The `--hc-serif` token still carries the reading face under its old name; `Body serif` above is the same historical naming. See the note where it is declared in `css/tokens.css`.
 
 **The eyebrow pattern is the brand’s most recognizable typographic move.** A tiny tracked all-caps label in taupe, sitting directly above a large light serif title, with a short rule beneath. Use it at the top of every major section. It is doing more brand work than the logo is.
 
@@ -222,7 +226,7 @@ The most-used pattern in the app. Direct port from the guides.
 
 ```
 [EYEBROW IN TRACKED CAPS, --hc-accent, 11pt]
-Large Serif Title in Cormorant Light 26pt
+Large Title in Manrope 500, 23pt
 [short rule, 22% width, 0.75pt, --hc-accent]
 ```
 
@@ -232,11 +236,11 @@ Background `--hc-cream`, radius 12, padding 20, no shadow. Optional 1.5pt `--hc-
 
 ### 4c. Quote card
 
-The one-liner treatment from the guides, unchanged: `--hc-cream` background, 1.5pt taupe left edge, quote set in Cormorant Italic 20pt with curly quotation marks, attribution below in tracked caps `--hc-mid`.
+The one-liner treatment from the guides, unchanged: `--hc-cream` background, 1.5pt taupe left edge, quote set in the reading face, oblique, 19pt with curly quotation marks, attribution below in tracked caps `--hc-mid`.
 
 ### 4d. Numbered question row
 
-For self-reflection lists. A taupe two-digit numeral (01, 02) right-aligned in a narrow left column, question text in Cormorant 18pt to its right, 0.5pt `--hc-rule` hairline above each row. This is the single most distinctive component carried from print and it should survive intact.
+For self-reflection lists. A taupe two-digit numeral (01, 02) right-aligned in a narrow left column, question text in the reading face at 17pt to its right, 0.5pt `--hc-rule` hairline above each row. This is the single most distinctive component carried from print and it should survive intact.
 
 ### 4e. Buttons
 
@@ -251,7 +255,7 @@ Four to five items maximum. `--hc-paper` background with a 0.5pt `--hc-rule` top
 
 ### 4g. Empty states
 
-An empty state is a hospitality moment. Structure: a small line illustration or icon in `--hc-rule`, a one-line warm explanation in Cormorant Italic `--hc-mid`, and a single action if one exists. Never a shrug, never an error tone.
+An empty state is a hospitality moment. Structure: a small line illustration or icon in `--hc-rule`, a one-line warm explanation in the reading face, oblique, `--hc-mid`, and a single action if one exists. Never a shrug, never an error tone.
 
 -----
 
@@ -374,7 +378,7 @@ Guide {
 Non-negotiable, and worth stating because this palette has real risks.
 
 - **Contrast.** `--hc-mid` (#7A7570) on `--hc-paper` (#F7F4EF) is roughly 4.5:1, which passes for normal text but only barely. Never use `--hc-mid` below 13pt. `--hc-accent` (#B5A898) on paper is roughly 2.4:1 and **fails**, so it is decorative only. Never set body copy, form labels, or anything a user must read in `--hc-accent`. Use `--hc-accent-deep` when accent-colored text must be legible.
-- **Cormorant Light is a contrast risk** at small sizes. Do not go below 16pt in Light. Prefer Regular for anything under 20pt.
+- **A light reading weight is a contrast risk** at small sizes, and more so as light text on the dark theme. Never go below 400; titles are 500.
 - Support Dynamic Type. The generous spacing gives room to scale, use it.
 - All touch targets minimum 44x44.
 - Full VoiceOver and TalkBack labeling, especially on the numbered question rows where the numeral is decorative and should be hidden from screen readers.
@@ -407,14 +411,14 @@ export const space = { xs:4, sm:8, md:12, base:16, lg:24, xl:32, xxl:48, xxxl:64
 export const radius = { sm:8, md:10, lg:12, pill:999 };
 
 export const type = {
-  displayXL: { family:'Cormorant', weight:'300', size:40, line:44 },
-  displayL:  { family:'Cormorant', weight:'300', size:32, line:36 },
-  displayM:  { family:'Cormorant', weight:'300', size:26, line:30 },
+  displayXL: { family:'Manrope', weight:'500', size:36, line:40 },
+  displayL:  { family:'Manrope', weight:'500', size:29, line:34 },
+  displayM:  { family:'Manrope', weight:'500', size:23, line:28 },
   eyebrow:   { family:'Inter', weight:'600', size:11, line:14, tracking:0.12, transform:'uppercase' },
-  bodySerif: { family:'Cormorant', weight:'400', size:17, line:26 },
+  bodySerif: { family:'Manrope', weight:'400', size:16, line:25 },
   bodySans:  { family:'Inter', weight:'400', size:16, line:24 },
-  question:  { family:'Cormorant', weight:'400', size:18, line:27 },
-  quote:     { family:'Cormorant', weight:'400', style:'italic', size:20, line:29 },
+  question:  { family:'Manrope', weight:'400', size:17, line:26 },
+  quote:     { family:'Manrope', weight:'400', style:'italic', size:19, line:28 },
   caption:   { family:'Inter', weight:'400', size:13, line:18 },
   button:    { family:'Inter', weight:'600', size:16, line:20 },
 };
@@ -422,7 +426,7 @@ export const type = {
 
 ### 8b. Suggested stack `[PROPOSED]`
 
-React Native with Expo is the pragmatic choice for a church this size: one codebase, over-the-air updates without app store review (which matters when a guide has a typo on Saturday night), and straightforward push notifications. Cormorant loads cleanly via `expo-font`.
+React Native with Expo is the pragmatic choice for a church this size: one codebase, over-the-air updates without app store review (which matters when a guide has a typo on Saturday night), and straightforward push notifications. Manrope loads cleanly via `expo-font`.
 
 If the guide pipeline stays Python and ReportLab, keep it. Publish guides as structured JSON to the app and generate the PDF from the same source for leaders who print.
 
@@ -431,7 +435,7 @@ If the guide pipeline stays Python and ReportLab, keep it. Publish guides as str
 ## 9. Things to confirm before you build `[VERIFY]`
 
 1. **Official brand assets.** Logo files, clear space, minimum sizes, and whether a formal brand guide exists that overrides anything here.
-1. **Licensed typeface.** If the church has a paid display face in use on print or motion graphics, it should replace or sit alongside Cormorant.
+1. **Licensed typeface.** If the church has a paid display face in use on print or motion graphics, it should replace or sit alongside Manrope.
 1. **Exact web palette.** Pull the real hex values off the live site with a color picker or from the Squarespace theme settings, and reconcile against the paper system above.
 1. **Service times.** The site currently lists 8:00, 9:30, and 11:00 AM, while older Instagram posts reference 10:00 AM. Confirm current times before hardcoding.
 1. **Backend reality.** What church management system is in use (Planning Center, Breeze, Church Community Builder)? That determines whether groups, serve teams, and events can be pulled live or must be entered manually.

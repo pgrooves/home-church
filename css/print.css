@@ -44,7 +44,13 @@
     --pp-cover:   #1A1918;
     --pp-cover-ink: #F4F0E8;
     --pp-cover-mid: #C7B9A3;
-    --pp-serif: "Cormorant", "Cormorant Garamond", Georgia, "Times New Roman", serif;
+    /* PAPER KEEPS A SERIF, on purpose, and does not follow --hc-serif. The
+       screen dropped Cormorant because hairlines vanish at 17px on a phone;
+       print has 600dpi and none of that problem, and a guide read around a
+       living room table is better set in a serif. Georgia leads because it is
+       on every machine that will ever print this and Cormorant is no longer
+       bundled to be named first. */
+    --pp-serif: Georgia, "Times New Roman", "Iowan Old Style", serif;
     --pp-sans:  "Poppins", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 
     font-family: var(--pp-serif);

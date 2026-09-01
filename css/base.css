@@ -151,9 +151,15 @@ button, .hc-tab, .hc-eyebrow, .hc-numeral, .hc-section__toggle, .hc-tabbar {
 .hc-display-l,
 .hc-display-m {
   font-family: var(--hc-serif);
-  font-weight: 300;          /* Cormorant Light, never below 16px */
+  /* 500, not the 300 this was under Cormorant. A light weight on a high
+     contrast serif still has thick strokes carrying the word; the same 300 on
+     a sans is just thin, and thinner again as light text on the dark theme.
+     Every former Cormorant Light slot in the app moved to 500 together. */
+  font-weight: 500;
   color: var(--hc-ink);
-  letter-spacing: 0.005em;
+  /* Negative now. Cormorant needed opening up; Manrope is fitted tighter by
+     default and wants closing at display sizes. */
+  letter-spacing: -0.015em;
 }
 
 .hc-display-xl { font-size: calc(var(--hc-display-xl) * var(--hc-text-scale)); line-height: 1.1; }

@@ -107,8 +107,11 @@ const SUPPORT = `
 // Only the faces the legal screens actually use. Embedding all six would
 // double the file for italics that never appear in a policy.
 const FONTS = [
-  { family: 'Cormorant', weight: 400, style: 'normal', file: 'cormorant-400.woff2' },
-  { family: 'Poppins',   weight: 800, style: 'normal', file: 'poppins-800.woff2' }
+  // Manrope's file is the variable one, so the weight here is the range it
+  // carries rather than a single cut. Naming one weight would make the
+  // browser synthesise the others off it.
+  { family: 'Manrope', weight: '200 800', style: 'normal', file: 'manrope-latin.woff2' },
+  { family: 'Poppins', weight: 800,       style: 'normal', file: 'poppins-800.woff2' }
 ];
 
 function read(...parts) {

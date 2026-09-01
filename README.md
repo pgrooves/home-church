@@ -46,12 +46,19 @@ relative, so it runs from a subdirectory without changes.
 To see it the way it is designed, open your browser's device toolbar and set
 the viewport to 390 x 844.
 
-**Fonts.** Cormorant and Poppins ship with the app, in `assets/fonts`, latin
-subset only, six files and 185KB. They used to load from Google Fonts on every
+**Fonts.** Manrope and Poppins ship with the app, in `assets/fonts`, latin
+subset only, two files and 32KB. They used to load from Google Fonts on every
 cold launch, which was a render blocking third party request that also handed
 Google every user's network address for no functional gain. Inside a packaged
 app there was never a reason for it. Both families are SIL Open Font License
 1.1, which permits bundling. See `css/fonts.css`.
+
+The reading face was Cormorant, a Garamond revival, until it wasn't. It is a
+display face and the guides are read at 17px for twenty minutes at a stretch,
+where its hairlines thin out and, on the dark theme, wash out further. Manrope
+replaced it. Poppins 800 still does the headers, unchanged. `--hc-serif` keeps
+its name and no longer holds a serif; `css/tokens.css` says so where it is
+declared.
 
 That leaves Supabase as the only network request the app makes on its own.
 
@@ -82,7 +89,7 @@ js/
   components.js       render functions returning HTML strings
   screens/            one file per screen, including legal.js
   app.js              boot, route table, delegated event handling
-assets/fonts          Cormorant and Poppins, latin subset, plus the OFL
+assets/fonts          Manrope and Poppins, latin subset, plus the OFL
 assets/icons          the mark, favicon, app icons, all without alpha
 assets/img            placeholder note, real photography goes here later
 ios-config/           hand written files for the generated Xcode project
@@ -933,8 +940,9 @@ it is not part of the UI palette and no interface element should adopt it.
 - **`--hc-accent` is decorative only.** It fails contrast on paper at roughly
   2.4:1. Anything a user has to read uses `--hc-ink`, `--hc-mid`, or
   `--hc-accent-deep`.
-- **Cormorant Light never goes below 16px**, and below 20px it is set in
-  Regular.
+- **The reading face is set at 400 for text and 500 for titles.** Manrope has
+  weights down to 200 and none of them belong in this app: a light sans is
+  thin on paper stock and thinner still as light text on the dark theme.
 - **No stock photography, ever.** Cream placeholder blocks until real
   photographs of real people exist. Podcast cover art is the one drawn
   exception, the church lockup on a dark panel, which is what the show wears
@@ -976,7 +984,8 @@ These are marked in the code where they appear:
 2. The 28 messages with no preacher recorded and the 43 with no passage, both
    because the episode notes do not state them. They render cleanly without,
    the byline just gets shorter. Fill them in as you know them.
-3. Whether a licensed display typeface should replace Cormorant.
+3. Whether a licensed display typeface should replace Manrope, and whether
+   Poppins 800 is still the right partner for it in the headers.
 4. ~~Which church management system holds groups, serve teams, and events.~~
    **Answered.** The church runs **Planning Center**, through Church Center,
    and **Group Vitals**. The Connect tab now sends people to both rather than

@@ -40,7 +40,14 @@
   --hc-on-dark:     #F7F4EF;
 
   /* --- Type faces ------------------------------------------------------ */
-  --hc-serif: "Cormorant", "Cormorant Garamond", Georgia, "Times New Roman", serif;
+  /* THE NAME IS HISTORICAL. This token held Cormorant, a Garamond revival,
+     and every rule in the app still reads it by the name it had then. It now
+     holds Manrope, which is a sans. Renaming it would touch a hundred lines
+     across four files and leave the .hc-body-serif class, which lives in
+     template strings all over js/, still saying serif. So the name stays and
+     this comment carries the truth: --hc-serif is the reading face, whatever
+     it happens to be. See the note in css/fonts.css for why it moved. */
+  --hc-serif: "Manrope", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --hc-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   /* Section headers, the Home greeting, and the scroll-revealed screen
      title. A heavier geometric sans, distinct from both the reading serif
@@ -48,15 +55,21 @@
      itself at a glance. */
   --hc-sans-display: "Poppins", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 
-  /* --- Type scale, size / line ----------------------------------------- */
-  --hc-display-xl:      40px;  --hc-display-xl-line:  44px;
-  --hc-display-l:       32px;  --hc-display-l-line:   36px;
-  --hc-display-m:       26px;  --hc-display-m-line:   30px;
+  /* --- Type scale, size / line -----------------------------------------
+     THE READING SIZES CAME DOWN A STEP when Cormorant left. Cormorant has an
+     unusually small x-height, so it was set large to compensate; Manrope's is
+     much bigger and the same pixel size reads noticeably larger. These are
+     roughly 10% off the old numbers, which lands the actual drawn height of a
+     lowercase letter back where it was. The sans and eyebrow sizes are
+     untouched, because nothing about them changed. */
+  --hc-display-xl:      36px;  --hc-display-xl-line:  40px;
+  --hc-display-l:       29px;  --hc-display-l-line:   34px;
+  --hc-display-m:       23px;  --hc-display-m-line:   28px;
   --hc-eyebrow:         11px;  --hc-eyebrow-line:     14px;
-  --hc-body-serif:      17px;  --hc-body-serif-line:  26px;
+  --hc-body-serif:      16px;  --hc-body-serif-line:  25px;
   --hc-body-sans:       16px;  --hc-body-sans-line:   24px;
-  --hc-question:        18px;  --hc-question-line:    27px;
-  --hc-quote:           20px;  --hc-quote-line:       29px;
+  --hc-question:        17px;  --hc-question-line:    26px;
+  --hc-quote:           19px;  --hc-quote-line:       28px;
   --hc-caption:         13px;  --hc-caption-line:     18px;
   --hc-button:          16px;  --hc-button-line:      20px;
   --hc-tab:             11px;  --hc-tab-line:         14px;

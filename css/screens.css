@@ -278,9 +278,10 @@
 
 .hc-guide-row__title {
   font-family: var(--hc-serif);
-  font-weight: 300;
+  font-weight: 500;          /* was 300, see the note in base.css */
   font-size: calc(23px * var(--hc-text-scale));
   line-height: 1.2;
+  letter-spacing: -0.015em;
   color: var(--hc-ink);
 }
 
@@ -433,9 +434,10 @@
 
 .hc-present__question {
   font-family: var(--hc-serif);
-  font-weight: 300;
+  font-weight: 500;          /* was 300, see the note in base.css */
   font-size: calc(30px * var(--hc-text-scale));
   line-height: 1.28;
+  letter-spacing: -0.015em;
   color: var(--hc-ink);
 }
 

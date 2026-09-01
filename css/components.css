@@ -709,9 +709,10 @@ a.hc-card:active { background: var(--hc-paper-sunk); }
 
 .hc-card__title {
   font-family: var(--hc-serif);
-  font-weight: 300;
+  font-weight: 500;          /* was 300, see the note in base.css */
   font-size: calc(22px * var(--hc-text-scale));
   line-height: 1.2;
+  letter-spacing: -0.015em;
   color: var(--hc-ink);
 }
 
@@ -791,7 +792,7 @@ a.hc-card:active { background: var(--hc-paper-sunk); }
 
 .hc-numeral {
   font-family: var(--hc-serif);
-  font-weight: 300;
+  font-weight: 500;          /* was 300, see the note in base.css */
   font-size: 20px;
   line-height: 27px;
   text-align: right;

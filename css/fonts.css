@@ -1,6 +1,6 @@
 /* ==========================================================================
    Home Church, typefaces
-   Cormorant and Poppins, served from the app rather than from Google.
+   Manrope and Poppins, served from the app rather than from Google.
 
    WHY THESE ARE BUNDLED. The app used to pull both from fonts.googleapis.com
    on every cold launch. That was one render blocking request to a third party
@@ -8,14 +8,14 @@
    of Google for no functional gain, and it meant a phone opening the app in a
    building with concrete walls read the whole thing in the fallback serif.
 
-   Inside a packaged app there was never a reason for it. These six files ship
-   in the binary, cost nothing at runtime, and are one fewer third party to
-   name in the privacy policy.
+   Inside a packaged app there was never a reason for it. These files ship in
+   the binary, cost nothing at runtime, and are one fewer third party to name
+   in the privacy policy.
 
    WHAT IS HERE. Latin subset only, which is what an English language church in
-   Metairie needs. Google serves thirteen more subsets of these families,
+   Metairie needs. Google serves several more subsets of these families,
    Cyrillic and Vietnamese among them, and none of them would ever be drawn.
-   Six files, 185KB total.
+   Two files, 32KB total.
 
    Both families are licensed under the SIL Open Font License 1.1, which
    permits bundling and redistribution. See assets/fonts/OFL.txt.
@@ -24,53 +24,41 @@
    files it almost never comes into play, but a phone under memory pressure can
    still delay a font, and text appearing in the fallback beats text not
    appearing at all.
+
+   WHY THE READING FACE IS NO LONGER A SERIF. Cormorant Light held this slot
+   until it didn't. It is a display face: hairline thins, a small x-height,
+   long extenders. At 26px on a dark fill that reads as ornament, and at 17px
+   in a paragraph it reads as thin, which is the size the guides are actually
+   read at for twenty minutes at a stretch with a group. Light text on the
+   dark theme's ground made it worse, because halation eats the thin strokes.
+   Manrope gives up the flourish and keeps the words.
    ========================================================================== */
 
-/* --- Cormorant, the reading serif ---------------------------------------- */
+/* --- Manrope, the reading face -------------------------------------------
+   ONE FILE, EVERY WEIGHT, which is a departure from the file-per-weight shape
+   this stylesheet used to have. Manrope's latin subset ships as a variable
+   font carrying the whole 200-800 range in 24KB, less than any single one of
+   the five static Cormorant files it replaces. The range is declared on the
+   descriptor so the browser interpolates rather than synthesising.
+
+   NO ITALIC. Manrope has no italic cut, and Google publishes none, so the
+   handful of places that ask for one (pull quotes, empty states, the practice
+   subtitle) get the browser's synthetic oblique. It is a slant rather than a
+   drawn italic. That is a real, if small, loss against Cormorant, which had
+   two true italics, and it is the price of the trade above. */
 
 @font-face {
-  font-family: 'Cormorant';
+  font-family: 'Manrope';
   font-style: normal;
-  font-weight: 300;
+  font-weight: 200 800;
   font-display: swap;
-  src: url('../assets/fonts/cormorant-300.woff2') format('woff2');
-}
-
-@font-face {
-  font-family: 'Cormorant';
-  font-style: normal;
-  font-weight: 400;
-  font-display: swap;
-  src: url('../assets/fonts/cormorant-400.woff2') format('woff2');
-}
-
-@font-face {
-  font-family: 'Cormorant';
-  font-style: normal;
-  font-weight: 600;
-  font-display: swap;
-  src: url('../assets/fonts/cormorant-600.woff2') format('woff2');
-}
-
-@font-face {
-  font-family: 'Cormorant';
-  font-style: italic;
-  font-weight: 300;
-  font-display: swap;
-  src: url('../assets/fonts/cormorant-300-italic.woff2') format('woff2');
-}
-
-@font-face {
-  font-family: 'Cormorant';
-  font-style: italic;
-  font-weight: 400;
-  font-display: swap;
-  src: url('../assets/fonts/cormorant-400-italic.woff2') format('woff2');
+  src: url('../assets/fonts/manrope-latin.woff2') format('woff2');
 }
 
 /* --- Poppins, the display sans --------------------------------------------
    One weight, 800, used only where something has to announce itself: section
-   headers, the Home greeting, the scroll revealed screen title. */
+   headers, the Home greeting, the scroll revealed screen title. Unchanged by
+   the reading face swap: the bold headers were never the problem. */
 
 @font-face {
   font-family: 'Poppins';
