@@ -8,6 +8,14 @@
  * and writes down what happened. An admin opens Settings -> Admin ->
  * Announcements and finds the drafts waiting under "Needs review".
  *
+ * AND SINCE 0043, IT SAYS SO. A run that added anything to either queue asks
+ * for a push at the end, one for the announcements queue and one for the dates
+ * queue, and only the admins hear it. Before that the only way to learn there
+ * was a queue was to think of looking, which most weeks meant a newsletter
+ * that arrived on Tuesday reached Home on Sunday. See tellTheAdmins() in main,
+ * which is deliberately the last thing that happens rather than a trigger on
+ * the table.
+ *
  * NOTHING THIS FUNCTION WRITES IS EVER PUBLISHED. Every insert below is
  * `published: false`, and migration 0026's select policy means an unpublished
  * announcement is visible to admins and to nobody else. The app's own content
@@ -1281,6 +1289,13 @@ async function runBackfill(
     madeFor.push(row.title);
   }
 
+  /* NO NOTIFICATION FROM HERE, unlike the ordinary parse. A backfill is run by
+     hand, with a service role key, by the one person who is already looking at
+     the result: telling them by push that the thing they just started has
+     finished is noise, and a backfill over a year of announcements would
+     announce a queue of thirty dates that nobody asked for today. The two
+     review topics are for the twenty minute tick, where there is genuinely
+     nobody watching. */
   return { ok: true, backfill: true, looked_at: rows.length, events: made, titles: madeFor };
 }
 
@@ -1333,6 +1348,47 @@ Deno.serve(async (req: Request) => {
       });
     }
     return json({ ok, ...counts, note }, status);
+  };
+
+  /* Tell the admins something is waiting on them.
+   *
+   * WHY THIS IS HERE AND NOT A TRIGGER ON THE TABLE, which was the first
+   * design and is the tidier looking one. A statement level AFTER INSERT
+   * trigger on announcements would catch every path that ever writes a pending
+   * row, including a hand written one and whatever the next pipeline turns out
+   * to be, and it would fire once per statement rather than once per row.
+   *
+   * It would also fire inside the transaction that writes the drafts, and this
+   * function writes events, then a ledger row, then announcements, with a
+   * rollback path on each. A notification sent from inside that sequence is a
+   * notification that can go out for drafts that never landed. A push cannot
+   * be unsent, which is the sentence migration 0027 is built around, so the
+   * send waits until the writes are done and the run is over.
+   *
+   * ONE SEND PER RUN PER QUEUE, not one per email or one per draft. A
+   * newsletter carries four or five items and an admin does not want four
+   * notifications about one email. iOS would collapse them anyway, because
+   * they share a collapse id, and relying on that to fix a decision made here
+   * would be relying on it.
+   *
+   * FAILURES ARE SWALLOWED ON PURPOSE. The drafts are already saved and the
+   * run has already succeeded. A notification that did not go out is worth a
+   * line in the logs and is not worth turning a good parse into a failed run,
+   * which is what throwing here would do: the admin would see "the newsletter
+   * check failed" above a queue full of perfectly good drafts.
+   */
+  const tellTheAdmins = async (counts: { drafts: number; events: number }) => {
+    const topics = [
+      counts.drafts > 0 ? 'announcement_review' : null,
+      counts.events > 0 ? 'event_review' : null,
+    ].filter(Boolean) as string[];
+
+    for (const topic of topics) {
+      const { error } = await admin.rpc('hc_send_push', { p_topic: topic });
+      if (error) {
+        console.error(`newsletter-intake: could not ask for the ${topic} push:`, error.message);
+      }
+    }
   };
 
   /* Trimmed, and stripped of the angle brackets somebody pastes when they read
@@ -1389,6 +1445,12 @@ Deno.serve(async (req: Request) => {
   let found = 0;
   let parsedCount = 0;
   let draftCount = 0;
+  /* What this run actually added to each queue, which is not the same as what
+     is in each queue. The counts here decide WHETHER the admins are told; the
+     sender counts the queue itself to decide what to say. See tellTheAdmins()
+     above and compose() in send-push. */
+  let newDrafts = 0;
+  let newEvents = 0;
   // Emails left exactly as they were because something transient got in the
   // way. Counted rather than swallowed: a run whose only outcome was "Gemini
   // was busy" has to say so, or a week with no drafts looks like a week with
@@ -1687,6 +1749,9 @@ Deno.serve(async (req: Request) => {
                   .eq('id', emailRow.id);
                 throw new Error(`Could not write the events: ${eventError.message}`);
               }
+              // Counted after the insert returned, never before it. Nobody is
+              // told about a date that did not land.
+              newEvents += events.length;
             }
 
             const withSource = rows.map((r) => ({ ...r, source_email_id: emailRow.id }));
@@ -1699,6 +1764,7 @@ Deno.serve(async (req: Request) => {
             }
 
             draftCount += rows.length;
+            newDrafts += rows.length;
             parsedCount += 1;
             // Only now, with the drafts safely in the table.
             await imap.markSeen(uid);
@@ -1755,6 +1821,11 @@ Deno.serve(async (req: Request) => {
     const note = deferred
       ? `${deferred} email${deferred === 1 ? '' : 's'} left for the next run. ${deferredNote ?? ''}`.trim().slice(0, 500)
       : null;
+
+    /* After the mailbox is closed and before the run is written, which is the
+       one moment where everything this run was going to write is written and
+       nothing else is waiting on it. */
+    await tellTheAdmins({ drafts: newDrafts, events: newEvents });
 
     return await finish(true, { found, parsed: parsedCount, drafts: draftCount }, note);
   } catch (err) {

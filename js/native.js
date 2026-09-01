@@ -250,15 +250,114 @@
      the lock screen before any of our code runs. Either the server knows, or
      two of the three switches are decorative. Migration 0012 adds the columns
      and explains the privacy trade in full. */
-  function prefsBody() {
+  function registerArgs(token) {
     var prefs = (HC.store.getProfile().notifications) || {};
     return {
-      active: true,
-      wants_new_guide: !!prefs.newGuide,
-      wants_sunday_reminder: !!prefs.sundayReminder,
-      wants_group_day: !!prefs.groupWeek,
-      wants_announcements: !!prefs.announcements
+      p_token: token,
+      p_platform: 'ios',
+      p_new_guide: !!prefs.newGuide,
+      p_sunday_reminder: !!prefs.sundayReminder,
+      p_group_day: !!prefs.groupWeek,
+      p_announcements: !!prefs.announcements
     };
+  }
+
+  /* One POST, used by both the first registration and every later change. This
+     used to be two shapes, an RPC to register and a PATCH straight at the
+     table to change a switch, and the PATCH never worked once.
+
+     WHY IT NEVER WORKED, since it is the same mistake twice and worth naming
+     so it is not made a third time. PostgREST turns `?token=eq.X` into a WHERE
+     clause, and Postgres requires SELECT on every column a WHERE clause reads.
+     0010 revoked SELECT from anon on purpose and 0037 refused to give it back,
+     for the reason both files spell out: a readable token table is a
+     downloadable list of every phone with this app installed. So every switch
+     somebody moved came back 42501, and the `res.ok` check below turned it
+     into a silent false, on a path with no error surface, for every phone,
+     forever. Exactly the bug 0037 found in the registration, in the two lines
+     0037's header says are fine.
+
+     Re-registering IS the update. hc_register_device_token upserts all four
+     switches and sets active, which is the whole of what a preference change
+     is, so there is one door instead of two and the one that works is the one
+     that is left. Migration 0043 section 3 takes the table grants away
+     entirely on the strength of that. */
+  function registerRequest(token) {
+    var cfg = HC.config || {};
+    return fetch(cfg.SUPABASE_URL + '/rest/v1/rpc/hc_register_device_token', {
+      method: 'POST',
+      headers: restHeaders({ Prefer: 'return=minimal' }),
+      body: JSON.stringify(registerArgs(token))
+    });
+  }
+
+  /* ------------------------------------------- the two admin switches
+
+     Everything above this point is addressed to a phone. These two are
+     addressed to a person: they say "the review queue has something in it",
+     and the queue holds words the church has not published yet, so the only
+     phones that may hear about it are the phones of people the database agrees
+     are admins.
+
+     WHICH IS WHY THEY DO NOT TRAVEL WITH THE OTHER FOUR. registerRequest()
+     above carries the publishable key and no session, and a field in that
+     request saying "and I am an admin" would be a field anybody could set,
+     with every unpublished draft title as the prize. So these go through a
+     different function, over the caller's own session, and the server writes
+     auth.uid() rather than anything it was handed. Migration 0043 sections 3
+     and 4 are the two halves of that.
+
+     Silent throughout, like syncPreferences(). A phone that is offline when a
+     switch moves is repaired by the re-register on next launch, and there is
+     nothing to say to somebody who has just tapped a switch that already
+     looks the way they tapped it. */
+
+  function isAdminHere() {
+    return !!(HC.admin && HC.admin.isAdmin());
+  }
+
+  function syncAdminPreferences(token) {
+    token = token || HC.store.storage.get(TOKEN_KEY, null);
+    if (!token || !isAdminHere()) return Promise.resolve(false);
+
+    var prefs = HC.store.getProfile().notifications || {};
+    return HC.auth.rpc('hc_set_admin_device_token', {
+      p_token: token,
+      p_announcement_review: !!prefs.announcementReview,
+      p_event_review: !!prefs.eventReview
+    }).then(function () {
+      return true;
+    }).catch(function (err) {
+      /* The same reasoning as the console.error in saveToken. There is nobody
+         to show this to and nothing useful to say, but a phone plugged into a
+         Mac is how the one silent failure in this chain would ever be found. */
+      console.warn('push: could not tell the server this is an admin phone.', err);
+      return false;
+    });
+  }
+
+  /* Gives this phone its anonymity back. Two callers, and both of them are a
+     moment where this stops being an admin's phone: signing out, and a session
+     refresh that comes back saying the church has taken the role away.
+
+     ON SIGN OUT IT HAS TO RUN BEFORE THE SESSION GOES. The function is guarded
+     by ownership rather than by hc_is_admin, so a demoted admin can still give
+     up the row that names them, and that guard reads auth.uid(). Called after
+     the logout it would do nothing, silently.
+
+     The other way an admin phone stops being one is every notification going
+     off, and that path does not come through here: hc_deactivate_device_token
+     clears the name along with the switches, in one call, from a phone that
+     may well be signed out by then. */
+  function clearAdminNotifications(token) {
+    token = token || HC.store.storage.get(TOKEN_KEY, null);
+    if (!token || !HC.auth.isConfigured() || !HC.auth.isSignedIn()) {
+      return Promise.resolve(false);
+    }
+
+    return HC.auth.rpc('hc_clear_admin_device_token', { p_token: token })
+      .then(function () { return true; })
+      .catch(function () { return false; });
   }
 
   function saveToken(token) {
@@ -289,22 +388,9 @@
        for every phone, forever.
 
        0037 moves the upsert into a SECURITY DEFINER function that anon may
-       call and nothing else. The table keeps the grants it had. */
-    var prefs = prefsBody();
-    var args = {
-      p_token: token,
-      p_platform: 'ios',
-      p_new_guide: prefs.wants_new_guide,
-      p_sunday_reminder: prefs.wants_sunday_reminder,
-      p_group_day: prefs.wants_group_day,
-      p_announcements: prefs.wants_announcements
-    };
-
-    return fetch(cfg.SUPABASE_URL + '/rest/v1/rpc/hc_register_device_token', {
-      method: 'POST',
-      headers: restHeaders({ Prefer: 'return=minimal' }),
-      body: JSON.stringify(args)
-    }).then(function (res) {
+       call and nothing else. Since 0043 it is the only way in: the table has
+       no grants for any client role at all. */
+    return registerRequest(token).then(function (res) {
       if (!res.ok) {
         /* SAY SOMETHING. The bug 0037 fixed was invisible for exactly one
            reason: this branch returned false and told nobody, so a permission
@@ -322,6 +408,14 @@
         return false;
       }
       HC.store.storage.set(TOKEN_KEY, token);
+      /* Second, and only ever second. hc_set_admin_device_token updates a row
+         it refuses to create, on the reasoning in 0043 section 4 that a token
+         with no registration behind it is a row no phone will ever receive
+         anything for. So the anonymous registration is what makes the row, and
+         this says whose it is. Not waited on: the four ordinary switches are
+         already saved and an admin phone that fails this step is repaired by
+         the re-register on next launch. */
+      syncAdminPreferences(token);
       return true;
     }).catch(function (err) {
       // Offline. The switch stays on and this retries next launch.
@@ -330,21 +424,31 @@
     });
   }
 
-  /* A switch moved and the phone is already registered, so this is an update
-     rather than another registration. Silent by design: somebody flipping a
-     switch does not need a receipt, and a failure here is repaired by the
-     re-register on next launch. */
+  /* A switch moved and the phone is already registered. Silent by design:
+     somebody flipping a switch does not need a receipt, and a failure here is
+     repaired by the re-register on next launch. */
   function syncPreferences() {
     var token = HC.store.storage.get(TOKEN_KEY, null);
     var cfg = HC.config || {};
     if (!token || !cfg.SUPABASE_URL || !cfg.SUPABASE_ANON_KEY) return Promise.resolve(false);
 
-    return fetch(cfg.SUPABASE_URL + '/rest/v1/device_tokens?token=eq.' +
-                 encodeURIComponent(token), {
-      method: 'PATCH',
-      headers: restHeaders({ Prefer: 'return=minimal' }),
-      body: JSON.stringify(prefsBody())
-    }).then(function (res) {
+    /* Both halves, because Profile has one kind of switch on it as far as a
+       thumb is concerned and two as far as the server is concerned. The
+       registration carries the four anonymous preferences; the RPC below
+       carries the two an admin has, over their own session, and does nothing
+       at all on a phone that is not one. Neither waits on the other: they
+       write different columns through different doors. */
+    syncAdminPreferences(token);
+
+    return registerRequest(token).then(function (res) {
+      if (!res.ok) {
+        res.text().then(function (detail) {
+          console.error('push: the server refused this preference change.',
+                        res.status, detail);
+        }, function () {
+          console.error('push: the server refused this preference change.', res.status);
+        });
+      }
       return res.ok;
     }).catch(function () {
       return false;
@@ -399,18 +503,29 @@
     var cfg = HC.config || {};
     if (!token || !cfg.SUPABASE_URL || !cfg.SUPABASE_ANON_KEY) return Promise.resolve(true);
 
-    return fetch(cfg.SUPABASE_URL + '/rest/v1/device_tokens?token=eq.' +
-                 encodeURIComponent(token), {
-      method: 'PATCH',
+    /* One call, and it takes the name off the row along with everything else.
+       This was a PATCH straight at the table until 0043 and had never once
+       worked, for the reason set out at length above registerRequest(): the
+       `?token=eq.X` filter is a WHERE clause and anon has no SELECT. So every
+       phone that ever switched notifications off stayed on the list, and the
+       app said nothing because this catch resolves true either way.
+
+       THE ANONYMOUS KEY RATHER THAN THE SESSION, even for an admin, and that
+       is not an oversight either. Somebody who signed out an hour ago must
+       still be able to turn their notifications off, and a phone in this app
+       is far more often signed out than signed in. The function does not ask
+       who is calling for exactly that reason; migration 0043 section 3b says
+       what that costs and why it is the same cost 0010 already accepted.
+
+       Resolves true whatever happens, which is unchanged and is right. The
+       switch is off on this phone, the stored token is already gone, and there
+       is nothing a person could do about a failure here. A row left active is
+       repaired by the sender, which retires anything APNs stops accepting. */
+    return fetch(cfg.SUPABASE_URL + '/rest/v1/rpc/hc_deactivate_device_token', {
+      method: 'POST',
       headers: restHeaders({ Prefer: 'return=minimal' }),
-      body: JSON.stringify({
-        active: false,
-        wants_new_guide: false,
-        wants_sunday_reminder: false,
-        wants_group_day: false,
-        wants_announcements: false
-      })
-    }).then(function () { return true; }).catch(function () { return true; });
+      body: JSON.stringify({ p_token: token })
+    }).then(function () { return true; }, function () { return true; });
   }
 
   /* Re-registers on launch when the switch is already on, because an APNs
@@ -420,8 +535,20 @@
   function resumeNotifications() {
     if (!isNative()) return;
     var prefs = HC.store.getProfile().notifications || {};
-    if (!prefs.newGuide && !prefs.sundayReminder && !prefs.groupWeek &&
-        !prefs.announcements) return;
+    var wantsSomething = prefs.newGuide || prefs.sundayReminder ||
+      prefs.groupWeek || prefs.announcements;
+
+    /* The two admin ones count, but only on a phone that is actually an
+       admin's. Without the isAdminHere() half this reads as "every phone wants
+       something", because the two default to true for everybody: Profile draws
+       them for nobody else and the server refuses them for nobody else, but
+       this line would have registered a phone whose owner had turned all four
+       real switches off. */
+    if (isAdminHere() && (prefs.announcementReview || prefs.eventReview)) {
+      wantsSomething = true;
+    }
+
+    if (!wantsSomething) return;
     enableNotifications();
   }
 
@@ -517,6 +644,8 @@
     enableNotifications: enableNotifications,
     disableNotifications: disableNotifications,
     syncPreferences: syncPreferences,
+    syncAdminPreferences: syncAdminPreferences,
+    clearAdminNotifications: clearAdminNotifications,
     resumeNotifications: resumeNotifications
   };
 

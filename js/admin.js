@@ -39,7 +39,10 @@
     newsletter: null,
     // Events waiting to be approved. A table of its own rather than a filter,
     // see the events queue section below.
-    events: null
+    events: null,
+    // Who approved what, from migration 0043. An admin-only table, and the
+    // only place the name of the person who tapped Approve is written down.
+    approvals: null
   };
   var inflight = {};
   var lastError = {};
@@ -178,6 +181,43 @@
     });
   }
 
+  /* ---------------------------------------------------- who approved what
+
+     The internal note, from migration 0043. It exists because more than one
+     person can now be looking at the same queue at the same time: the intake
+     tells every admin at once that something is waiting, and the first one to
+     get there settles it for the rest. "It disappeared" is a worse answer to
+     the second person than "Ada approved it".
+
+     ONE FETCH FOR BOTH KINDS. review_approvals holds announcements and events
+     in one table keyed on (kind, row_id), so this is a single list filtered
+     twice rather than two round trips. It is small by construction, one row
+     per thing ever approved out of the two queues, and it is only ever read on
+     a screen somebody had to be an admin to open.
+
+     There is no anon path to this table at all, which is the whole reason it
+     is a table rather than two columns on announcements: the app's content
+     sync reads announcements with the publishable key, so a name stored there
+     would be a name downloaded by every phone in the church. 0043 section 7
+     says the same thing from the database's side. */
+
+  function loadApprovals() {
+    load('approvals', function () {
+      return HC.auth.restFetch('/review_approvals?select=*');
+    });
+  }
+
+  /* The note for one row, or null. Null is the ordinary answer for anything
+     approved before 0043 ran and for everything a person wrote by hand, and
+     the screen simply draws nothing rather than guessing at a name. */
+  function approvalFor(kind, id) {
+    var rows = list('approvals');
+    for (var i = 0; i < rows.length; i++) {
+      if (rows[i].kind === kind && rows[i].row_id === id) return rows[i];
+    }
+    return null;
+  }
+
   /* ------------------------------------------------- the events queue
 
      Events parsed out of the newsletter and not yet approved. A second queue
@@ -202,12 +242,26 @@
     return list('events');
   }
 
+  /* THE REFRESH HAPPENS WHETHER OR NOT THIS WORKED, which is the one thing
+     here that is not obvious. Since 0043 the most likely reason for a refusal
+     is that another admin approved this a minute ago and this screen is
+     holding a list from before they did. Leaving the stale card on screen
+     after telling somebody it is already settled is how they tap it again.
+
+     So the queue is dropped first and the error is re-thrown after, and the
+     repaint that follows takes the card away for this admin the same way the
+     approval took it away for everybody else. */
   function approveEvent(id) {
     return HC.auth.rpc('hc_admin_approve_event', { p_id: id })
       .then(function () {
         invalidate('events');
+        invalidate('approvals');
         // The Connect tab draws from the synced copy, so it has to be told.
         HC.content.refresh();
+      }, function (err) {
+        invalidate('events');
+        invalidate('approvals');
+        throw err;
       });
   }
 
@@ -219,6 +273,10 @@
       .then(function () {
         invalidate('events');
         invalidate('announcements');
+        // 0043 deletes the note along with the row, because ids in this
+        // project come back on a later parse of the same recurring event and a
+        // stale note would name somebody who never saw it.
+        invalidate('approvals');
         HC.content.refresh();
       });
   }
@@ -329,7 +387,14 @@
     return HC.auth.rpc('hc_admin_approve_announcement', { p_id: id })
       .then(function () {
         invalidate('announcements');
+        invalidate('approvals');
         HC.content.refresh();
+      }, function (err) {
+        // Same as approveEvent above, and for the same reason: a refusal here
+        // usually means somebody else got there first, and the card has to go.
+        invalidate('announcements');
+        invalidate('approvals');
+        throw err;
       });
   }
 
@@ -810,6 +875,8 @@
     notifyAnnouncement: notifyAnnouncement,
 
     pending: pending,
+    loadApprovals: loadApprovals,
+    approvalFor: approvalFor,
     pendingEvents: pendingEvents,
     loadPendingEvents: loadPendingEvents,
     approveEvent: approveEvent,

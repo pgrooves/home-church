@@ -506,6 +506,39 @@ above, under Before submission.)*
       on a real device from the Xcode build, not from Safari, before you
       submit.
 
+- [!] **Migration 0043, and the two Edge Functions it changes.** Run
+      `supabase/migrations/0043_admin_review_push.sql` in the SQL editor, then
+      redeploy both:
+
+      ```
+      supabase functions deploy send-push --no-verify-jwt
+      supabase functions deploy newsletter-intake --no-verify-jwt
+      ```
+
+      **Nothing new has to be set up.** No secrets, no keys, no dashboard. The
+      two review topics travel the road 0012 and 0027 already built: the same
+      vault secret, the same function, the same APNs credentials.
+
+      **Applying the migration without redeploying is the failure to avoid**,
+      and it is a quiet one in both directions. An old `send-push` does not
+      know the two topics and answers 400, so the intake asks and nobody is
+      told. An old `newsletter-intake` never asks in the first place. Either
+      way the queue fills in silence, which is exactly the behaviour 0043
+      exists to end, with every check green.
+
+      **0043 also fixes a bug that has been live since 0010,** which is worth
+      knowing about because it changes what a phone does rather than only what
+      it hears. Turning a notification switch off, and turning the last one
+      off, were both a `PATCH` at `device_tokens`, and both were refused by
+      Postgres on every phone, every time: PostgREST turns `?token=eq.X` into a
+      WHERE clause and a WHERE clause needs SELECT, which anon must never have
+      on that table. `js/native.js` swallowed the refusal. The same mistake
+      0037 found in the registration, in the two lines 0037's own header calls
+      fine. Both now go through functions. **After this ships, a phone that
+      switched notifications off will actually stop receiving them**, which
+      may be visible as the church reaching fewer phones than `device_tokens`
+      suggested it would.
+
 - [!] **Deploy the two Edge Functions the admin dashboard needs.** The
       migrations are applied, the app is wired, and two of the four sections
       go through Edge Functions that have to be pushed before they work.

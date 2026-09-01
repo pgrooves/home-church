@@ -11,6 +11,18 @@
  * You can also call it by hand for a test, which is the only sane way to prove
  * push works before a Monday arrives.
  *
+ * Two other things call it now, both through the same `hc_send_push`. An admin
+ * tapping Notify on an announcement, since 0027. And the newsletter intake at
+ * the end of a parse, since 0043, for the two review topics that tell the
+ * admins their queue has something in it.
+ *
+ * THE TWO REVIEW TOPICS ARE ADDRESSED DIFFERENTLY from everything else here,
+ * and it is the one thing in this file worth reading before changing it. They
+ * go to the phones of people who are admins right now, established from
+ * profiles on every send, rather than to whoever asked. See ADMIN_ONLY below
+ * and the header of migration 0043 for why that is a line this project was
+ * reluctant to cross.
+ *
  * WHY verify_jwt IS OFF, and why that is not careless. This is invoked by the
  * database, which has no user session to present. The alternative is storing a
  * service role key in Postgres so it can mint a bearer token, and that key
@@ -41,15 +53,43 @@
 
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 
-type Topic = 'new_guide' | 'sunday_reminder' | 'group_day' | 'test' | 'announcement';
+type Topic =
+  | 'new_guide'
+  | 'sunday_reminder'
+  | 'group_day'
+  | 'test'
+  | 'announcement'
+  | 'announcement_review'
+  | 'event_review';
 
 const TOPIC_COLUMN: Record<Topic, string | null> = {
   new_guide: 'wants_new_guide',
   sunday_reminder: 'wants_sunday_reminder',
   group_day: 'wants_group_day',
   announcement: 'wants_announcements',
+  announcement_review: 'wants_announcement_review',
+  event_review: 'wants_event_review',
   test: null, // a test goes to every active phone, on purpose
 };
+
+/* The two topics that go to some phones rather than to all of them.
+ *
+ * Every other topic here is addressed to a preference: whoever asked for it
+ * gets it, and the church never learns whose phone that is. These two are
+ * addressed to a role, because what they say is "there is something in the
+ * queue only you can decide", and the queue holds words the church has not
+ * published yet.
+ *
+ * Which is why the switch is not the check. `wants_announcement_review` is a
+ * preference and preferences can only ever narrow this: the identity comes
+ * first, and it is re-established from profiles on every single send rather
+ * than trusted from device_tokens. The recipient query in main() is where that
+ * happens, and the comment above it says what it buys.
+ */
+const ADMIN_ONLY: ReadonlySet<Topic> = new Set<Topic>([
+  'announcement_review',
+  'event_review',
+]);
 
 function json(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
@@ -232,6 +272,60 @@ async function compose(
     };
   }
 
+  /* The two review topics.
+   *
+   * COUNTED AT SEND TIME RATHER THAN CARRIED IN. The intake knows exactly how
+   * many drafts it just wrote and could pass that number through as `ref`, and
+   * it deliberately does not. What an admin wants to know is how much is
+   * waiting for them, not how much arrived in the last twenty minutes: a run
+   * that adds one draft to a queue of three is "four things are waiting", and
+   * telling them "1 new announcement" while three others sit unlooked-at is
+   * how a queue quietly grows. So the intake decides WHETHER to send, because
+   * only it knows something changed, and this decides WHAT to say, because
+   * only the table knows what is true right now.
+   *
+   * A queue that emptied between the two is the null case, and it is a real
+   * one: an admin who was already on the screen can approve everything in the
+   * seconds it takes pg_net to hand this request over. Nothing goes out and
+   * push_log records that nothing did, which is the same shape as a Monday
+   * with no new guide.
+   */
+  if (topic === 'announcement_review') {
+    const { count } = await admin
+      .from('announcements')
+      .select('id', { count: 'exact', head: true })
+      .eq('review_state', 'pending');
+
+    const waiting = count ?? 0;
+    if (!waiting) return null;
+
+    return {
+      title: waiting === 1 ? 'An announcement needs you' : `${waiting} announcements need you`,
+      body: 'Parsed out of the newsletter, and on nobody’s Home until you approve it.',
+    };
+  }
+
+  /* The dates queue. Its own topic rather than a line in the one above,
+   * because 0041 split the queues on the argument that vouching for a date
+   * that lands in somebody's calendar is not the same act as approving the
+   * wording of a card. A notification that merged them back would undo that
+   * on the only screen where the difference is visible.
+   */
+  if (topic === 'event_review') {
+    const { count } = await admin
+      .from('events')
+      .select('id', { count: 'exact', head: true })
+      .eq('review_state', 'pending');
+
+    const waiting = count ?? 0;
+    if (!waiting) return null;
+
+    return {
+      title: waiting === 1 ? 'A date needs you' : `${waiting} dates need you`,
+      body: 'Nothing reaches the calendar until you say so.',
+    };
+  }
+
   return null;
 }
 
@@ -365,6 +459,46 @@ Deno.serve(async (req: Request) => {
   let query = admin.from('device_tokens').select('token').eq('active', true);
   const column = TOPIC_COLUMN[topic];
   if (column) query = query.eq(column, true);
+
+  /* WHO IS AN ADMIN IS ASKED OF profiles, EVERY TIME.
+   *
+   * device_tokens.admin_user_id says whose phone this is. It does not say that
+   * they are still an admin, and the gap between those two is the whole reason
+   * this is a second query rather than a `not null` filter.
+   *
+   * A person who is demoted keeps their phone. Nothing in the app runs on that
+   * phone at the moment the church takes the role away, so nothing clears the
+   * row, and the only honest place to notice is here, at the moment of
+   * addressing. Asking profiles on every send means the send after a demotion
+   * is the last one that phone gets, with no cleanup job, no trigger, and no
+   * window where a former admin is still hearing what is in the queue.
+   *
+   * The cost is one query over a partial index of a handful of rows, on a
+   * topic that fires a few times a week.
+   */
+  if (ADMIN_ONLY.has(topic)) {
+    const { data: admins, error: adminError } = await admin
+      .from('profiles')
+      .select('id')
+      .eq('role', 'admin');
+
+    if (adminError) {
+      await admin.from('push_log').insert({
+        topic, failed: 1, note: `Could not read profiles: ${adminError.message}`,
+      });
+      return json({ error: adminError.message }, 500);
+    }
+
+    const ids = (admins ?? []).map((r) => r.id as string);
+    if (ids.length === 0) {
+      await admin.from('push_log').insert({
+        topic, skipped: true, note: 'Nobody is an admin, so there is nobody to tell.',
+      });
+      return json({ ok: true, skipped: true, recipients: 0 });
+    }
+
+    query = query.in('admin_user_id', ids);
+  }
 
   const { data: rows, error: readError } = await query;
   if (readError) {

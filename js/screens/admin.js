@@ -678,6 +678,35 @@
     return '';
   }
 
+  /* The internal note, from migration 0043.
+
+     WHAT IT IS FOR. The intake tells every admin at once that the queue has
+     something in it, so more than one person can be on this screen at the same
+     time, which was never true before there was a notification. The first one
+     to tap Approve settles it for everybody, and this is what the others see
+     afterwards: not a card that vanished, but a line saying who dealt with it.
+
+     ADMINS AND NOBODY ELSE. review_approvals has one select policy and it is
+     hc_is_admin(), and there is no anon read path to it at all. That is why
+     the name lives in a table of its own rather than in a column on
+     announcements: the app's content sync reads announcements with the
+     publishable key, so a name stored there would be a name on every phone in
+     the church. See 0043 section 7.
+
+     Drawn as a caption rather than as a warning, because it is not one. It is
+     the ordinary record of somebody having done their job. */
+  function approvedNote(kind, id, lead) {
+    var note = HC.admin.approvalFor(kind, id);
+    if (!note) return '';
+
+    var when = note.approved_at
+      ? ' · ' + c.formatDateShort(String(note.approved_at).slice(0, 10))
+      : '';
+
+    return '<p class="hc-caption hc-admin__approved">' +
+      c.esc(lead + ' ' + (note.approved_by_name || 'an admin')) + c.esc(when) + '</p>';
+  }
+
   function reviewSection(rows) {
     var html = c.sectionHeader('', 'Needs review');
     html += '<p class="hc-caption hc-admin__intro-note">Parsed out of the newsletter ' +
@@ -851,6 +880,15 @@
           '<p class="hc-eyebrow">' + c.esc(announcementStatus(row)) + '</p>' +
           '<p class="hc-row__title">' + c.esc(row.title) + '</p>' +
           (row.body ? '<p class="hc-caption">' + c.esc(row.body) + '</p>' : '') +
+          approvedNote('announcement', row.id, 'Approved by') +
+          /* And its date, when it had one and somebody has approved that too.
+             Said here because this is the only screen an approved event is
+             visible from at all: the dates queue empties on approval and the
+             Connect tab shows the church a calendar entry, not a decision. So
+             the announcement carries the note for both halves of what the
+             newsletter parsed, which is also the order the two were decided
+             in. */
+          (row.event_id ? approvedNote('event', row.event_id, 'Its date, by') : '') +
         '</div>' +
         '<div class="hc-admin__item-actions">' +
           c.button('Edit', { action: 'admin-announcement-edit', id: row.id,
@@ -1221,6 +1259,10 @@
     // fetches, and the section can draw before either has landed.
     if (id === 'announcements') HC.admin.loadNewsletter();
     if (id === 'announcements') HC.admin.loadPendingEvents();
+    // And who approved what, for the note under each posted row. A fourth
+    // fetch on this section, and the smallest of them: one row per thing ever
+    // approved out of the two queues.
+    if (id === 'announcements') HC.admin.loadApprovals();
     if (id === 'users') HC.admin.loadUsers();
     if (id === 'content') HC.admin.loadPages();
     if (id === 'settings') HC.admin.loadSettings();

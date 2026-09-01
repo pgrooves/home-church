@@ -2300,7 +2300,26 @@
 
       if (!HC.native.isNative()) return;
 
-      var anyStillOn = Object.keys(next).some(function (k) { return next[k]; });
+      /* Which switches count as "still on", and why this is not simply every
+         key in the object.
+
+         The two review switches from migration 0043 default to true on every
+         phone, because Profile draws them only for an admin and the server
+         refuses them for anybody else, so nothing is gained by drawing a
+         member's phone a false it will never see. That makes them useless as
+         evidence here: `some(k => next[k])` would be true on every phone in
+         the congregation, so a member turning their last real switch off would
+         take the syncPreferences branch, and their row would keep `active =
+         true` for ever. Nothing addressed by preference would reach them, and
+         the `test` topic, which goes to every active phone on purpose, would.
+
+         So the two only count on a phone that is actually an admin's, which is
+         the same condition that draws them. */
+      var isAdmin = HC.admin && HC.admin.isAdmin();
+      var anyStillOn = Object.keys(next).some(function (k) {
+        if (!isAdmin && (k === 'announcementReview' || k === 'eventReview')) return false;
+        return next[k];
+      });
 
       if (turningOn) {
         HC.native.enableNotifications().then(function (granted) {

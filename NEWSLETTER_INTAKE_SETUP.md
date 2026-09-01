@@ -24,9 +24,18 @@ a credit card, stop and read that section.
 `newsletter-intake` Edge Function, which signs in to the dedicated mailbox over
 IMAP, finds any email it has not already read, hands the words to Gemini with a
 schema that forces structured output, and writes each thing it finds as an
-unpublished announcement with `review_state = 'pending'`. You open Settings →
+unpublished announcement with `review_state = 'pending'`. Then it tells the
+admins, and only the admins, that there is something waiting: one notification
+for the announcements queue and one for the dates queue. You open Settings →
 Admin → Announcements and they are sitting under **Needs review** with Approve,
 Edit and Discard on each one.
+
+Both notifications are switches under Notifications in Your account, both are
+on by default, and neither is drawn for anybody who is not an admin. If more
+than one person is an admin they are all told, the first one to approve settles
+it for the rest, and the card afterwards carries **Approved by** and their
+name. Migration 0043 is that whole half, and its header is where the reasoning
+lives.
 
 ---
 
@@ -238,9 +247,13 @@ not look the same as "no newsletter arrived."
 ## What this deliberately does not do
 
 - **It does not publish.** Ever. There is no setting that makes it publish.
-- **It does not send notifications.** An approved announcement is a card on
-  Home; telling everybody about it is still the Notify button, still a separate
-  deliberate act, still with a confirm in front of it. See migration 0027.
+- **It does not tell the church anything.** A run that found something notifies
+  the admins, and only the admins, that there is a queue: two topics, one for
+  the announcements queue and one for the dates queue, added in migration 0043.
+  Telling everybody about an approved announcement is still the Notify button,
+  still a separate deliberate act, still with a confirm in front of it, and
+  still migration 0027. Nothing the intake writes reaches a phone in the
+  congregation, before approval or after it.
 - **It does not invent URLs.** The model is given the links and images that
   were actually in the email and may only choose from that list. Anything else
   it returns is dropped on the way in.

@@ -540,9 +540,42 @@ nodding, including the one path that is easy to miss: everybody has always been
 allowed to write their own profile row, and `role` is a column on it, so the
 guard is a trigger rather than a policy.
 
+**The review queue now says something.** The newsletter intake runs every
+twenty minutes and used to write drafts in silence, so the only way to learn
+there was a queue was to remember to look, which most weeks meant a newsletter
+that arrived on Tuesday reached Home on Sunday. A run that adds anything now
+sends a notification, and there are two of them because there are two queues:
+**Announcements waiting** and **Dates waiting**, matching the split `0041` made
+between approving the wording of a card and vouching for a date that lands in
+four hundred calendars. Both are switches under Notifications in Your account,
+both are on by default, and both are drawn for admins and for nobody else.
+
+They are the first notifications in this project addressed to a person rather
+than to whoever asked for them, which is a line `0010` and `0012` deliberately
+did not cross and `0043` crosses on purpose, at length, in its header. Two
+things make it safe rather than convenient. `device_tokens.admin_user_id` is
+writable only by `hc_set_admin_device_token`, which writes `auth.uid()` rather
+than anything it is handed and refuses anybody the database does not agree is
+an admin. And the sender establishes who is an admin from `profiles` on every
+single send, so the send after a demotion is the last one that phone gets, with
+no cleanup job and no window.
+
+**One admin approving settles it for the rest.** Everybody is told at once, so
+more than one person can be looking at the same card, and the approve functions
+claim the row by its review state: the first tap wins, and the second comes
+back naming the person who got there first rather than reporting an error about
+a row that is fine. Afterwards the Posted list carries an internal note,
+**Approved by Ada Lovelace**, and its date underneath when the date was
+approved too. The note lives in `review_approvals`, which is a table of its own
+rather than two columns on `announcements` for one reason: the app's content
+sync reads announcements with the publishable key, so a name stored there would
+be a name downloaded by every phone in the church. There is no anon read path
+to that table at all.
+
 The migrations are `0025_admin_role.sql`, `0026_admin_content.sql`,
-`0027_announcement_push.sql`, `0028_announcement_pin.sql` and
-`0033_announcement_media.sql`, each with the full reasoning in its header.
+`0027_announcement_push.sql`, `0028_announcement_pin.sql`,
+`0033_announcement_media.sql` and `0043_admin_review_push.sql`, each with the
+full reasoning in its header.
 
 ### An announcement's own page
 

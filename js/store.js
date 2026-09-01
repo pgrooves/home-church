@@ -102,7 +102,21 @@
       groupWeek: false,
       // The church posting something on purpose. Default on for the reason in
       // migration 0027: a phone with notifications on at all wants to hear it.
-      announcements: true
+      announcements: true,
+      /* The two admin ones, from migration 0043. Default on, because an admin
+         who cannot be told the queue has something in it finds out by
+         remembering to look, which is how a newsletter that arrived on Tuesday
+         reaches Home on Sunday.
+
+         THEY ARE HERE FOR EVERYBODY AND THEY REACH THE SERVER FOR NOBODY
+         ELSE. Profile draws the two switches only for an admin, and the only
+         thing that carries them to device_tokens is
+         hc_set_admin_device_token, which refuses anybody the database does
+         not agree is an admin. So a member's phone holds two true booleans
+         that nothing reads, and the day the church makes them an admin the
+         switches are already on rather than waiting to be found. */
+      announcementReview: true,
+      eventReview: true
     },
     textScale: 1.1,    // 110%, the app's default reading size
     theme: 'system',   // system | light | dark
@@ -154,12 +168,29 @@
     {}, DEFAULT_PROFILE.notifications, storedNotifications || {}
   );
 
+  function wantedAnything(stored) {
+    return !!(stored.newGuide || stored.sundayReminder ||
+              stored.groupWeek || stored.announcements);
+  }
+
   if (storedNotifications && storedNotifications.announcements === undefined) {
     state.profile.notifications.announcements = !!(
       storedNotifications.newGuide ||
       storedNotifications.sundayReminder ||
       storedNotifications.groupWeek
     );
+    storage.set('profile', state.profile);
+  }
+
+  /* The two admin switches, added in 0043, inherit the same way and for the
+     same reason. Being an admin is not a reason to overrule somebody who
+     turned every notification off: a person who did that and is then made an
+     admin should find two switches waiting, not two notifications arriving.
+     A fresh profile still gets the default, which is on. */
+  if (storedNotifications && storedNotifications.announcementReview === undefined) {
+    var inherited = wantedAnything(storedNotifications);
+    state.profile.notifications.announcementReview = inherited;
+    state.profile.notifications.eventReview = inherited;
     storage.set('profile', state.profile);
   }
 

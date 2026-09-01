@@ -199,6 +199,22 @@
   }
 
   function signOut() {
+    /* FIRST, WHILE THERE IS STILL A SESSION TO DO IT WITH. An admin's phone
+       carries their user id on its device_tokens row, so the church can tell
+       them the review queue has something in it (migration 0043). Signing out
+       has to take that back, and the function that takes it back is guarded by
+       ownership, which means it needs the session that is about to end. Doing
+       it after would be doing nothing, silently.
+
+       Not waited on and not allowed to fail the sign out. Somebody signing out
+       on a bad connection signs out; what is left behind is a row with a name
+       on it that the sender ignores, because it checks profiles.role on every
+       send and this phone will re-register as itself the next time anybody
+       signs in on it. */
+    if (HC.native && HC.native.clearAdminNotifications) {
+      HC.native.clearAdminNotifications();
+    }
+
     var done = session
       ? gotrueFetch('/logout', { headers: { Authorization: 'Bearer ' + session.accessToken } }).catch(function () {})
       : Promise.resolve();
@@ -400,6 +416,21 @@
          instead of leaving whatever this phone last held. */
       patch.role = (remote && remote.role === 'admin') ? 'admin' : 'member';
       HC.store.updateProfile(patch);
+
+      /* And the phone follows the role. This is the one place that knows the
+         answer changed: an admin signing in on a phone that registered for
+         push as an anonymous device needs that row to learn whose it is, and
+         somebody whose role was taken away between two sessions needs it to
+         forget. Both directions, every sync, for the same reason the two lines
+         above write can_host and role on every sync rather than only when the
+         column says yes.
+
+         The store is updated first, because both of these read the role off it
+         through HC.admin.isAdmin(). */
+      if (HC.native) {
+        if (patch.role === 'admin') HC.native.syncAdminPreferences();
+        else HC.native.clearAdminNotifications();
+      }
     }).catch(function () {
       // Offline, or the table is not there yet. Sign-in still succeeded,
       // the person just keeps working from whatever is on this device.

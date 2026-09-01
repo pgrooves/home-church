@@ -196,7 +196,8 @@ select t_check('but service_role can, because something has to run it',
 -- phone. It leaks nothing: with no session auth.uid() is null, so it can only
 -- ever answer false.
 --
--- hc_register_device_token, from 0037, is the fourth and is the odd one out:
+-- hc_register_device_token, from 0037, is the fourth and is the first odd one
+-- out:
 -- it is not a policy helper, it writes. It is on this list because registering
 -- a phone for push happens with the publishable key and no session, and the
 -- upsert it performs needs SELECT on device_tokens, which anon must never have
@@ -204,7 +205,22 @@ select t_check('but service_role can, because something has to run it',
 -- lets the table keep that revoke. What it can do is smaller than the anon
 -- INSERT policy 0010 already grants: one row, keyed by a value the caller
 -- passes in, returning void, reading nothing back.
-select t_check('anon can execute exactly the four functions it needs',
+--
+-- hc_deactivate_device_token, from 0043, is the fifth and is the other half of
+-- the fourth. It exists because the write it replaces had never worked: the
+-- app turned notifications off with a PATCH at device_tokens, PostgREST turned
+-- `?token=eq.X` into a WHERE clause, and a WHERE clause needs SELECT on the
+-- column it reads, which anon must never have here. 0037's header says that
+-- write was fine and it was not.
+--
+-- It is callable by a signed out phone because that is who calls it: this app
+-- is signed out far more often than in, and somebody turning their
+-- notifications off is not going to sign in first. What it can do is smaller
+-- than what hc_register_device_token can: it names one row by a token the
+-- caller must already hold and sets every switch on it to false. The residual
+-- risk is 0010's, unchanged and stated there in full, that somebody who
+-- already knows a token can stop that phone being notified.
+select t_check('anon can execute exactly the five functions it needs',
   (select coalesce(string_agg(p.proname, ', ' order by p.proname), 'none')
      from pg_proc p
      join pg_type t on t.oid = p.prorettype
@@ -212,7 +228,8 @@ select t_check('anon can execute exactly the four functions it needs',
       and p.proname like 'hc\_%'
       and t.typname <> 'trigger'
       and has_function_privilege('anon', p.oid, 'EXECUTE')),
-  'hc_is_admin, hc_register_device_token, hc_room_is_live, hc_room_is_member');
+  'hc_deactivate_device_token, hc_is_admin, hc_register_device_token, ' ||
+  'hc_room_is_live, hc_room_is_member');
 
 -- The standing guard, and the reason migration 0017 does not try to solve this
 -- with ALTER DEFAULT PRIVILEGES. Postgres hands PUBLIC an EXECUTE grant on
@@ -229,6 +246,6 @@ select t_check('and nothing else in the schema is reachable by a signed out clie
       and p.proname like 'hc\_%'
       and t.typname <> 'trigger'
       and p.proname not in ('hc_room_is_live', 'hc_room_is_member', 'hc_is_admin',
-                            'hc_register_device_token')
+                            'hc_register_device_token', 'hc_deactivate_device_token')
       and has_function_privilege('anon', p.oid, 'EXECUTE')),
   'none');

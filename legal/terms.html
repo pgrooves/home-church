@@ -598,19 +598,47 @@ button, .hc-tab, .hc-eyebrow, .hc-numeral, .hc-section__toggle, .hc-tabbar {
   height: 20px;
   width: auto;
   opacity: 0;
+  /* Height is in here with the rest so the lockup shrinks on the way across
+     rather than snapping a size the moment the scroll threshold is passed.
+     See the note on the scrolled rule below for why it shrinks at all. */
   transition: left var(--hc-dur-fast) var(--hc-ease),
               transform var(--hc-dur-fast) var(--hc-ease),
+              height var(--hc-dur-fast) var(--hc-ease),
               opacity var(--hc-dur-fast) var(--hc-ease);
 }
 
 /* At rest on a tab, the logo sits where the title will later appear. */
 .hc-topbar[data-is-tab="true"] .hc-topbar__logo { opacity: 1; }
 
-/* Once the screen scrolls, the title claims the left edge, so the logo
-   slides to the header's center instead of disappearing. */
+/* Once the screen scrolls, the title claims the left edge, so the logo gets
+   out of its way rather than disappearing.
+
+   IT GOES TO THE FAR END OF THE SLOT RATHER THAN TO THE MIDDLE OF IT, and
+   the difference is the two discs to the right of it. The middle was the
+   right destination while the bar ended in one avatar: with light-or-dark and
+   search beside the initials the slot is 201pt wide on the narrowest phone
+   this design targets, and a 127pt lockup centred in it starts at 94, which
+   is under the tail of a title like "Practices" that runs to 102. Ending at
+   the slot's right edge instead is the same gesture doing the same job, and
+   it is measured rather than eyeballed: it is exactly as far out of the
+   title's way as the header allows.
+
+   AND IT STEPS DOWN THREE PIXELS ON THE WAY. At 20px the lockup is 127 wide
+   and right-aligned it still starts at 94; at 17px it is about 108 and starts
+   at 113, which clears the longest tab title by 11pt on a 375pt phone and by
+   26 on a 390. Three pixels of height is what buys that, and a lockup that is
+   a size smaller once it is no longer the thing being read is right anyway.
+   Nothing here is a compromise on the discs: all three stay a full 44pt tap
+   target.
+
+   left and transform are both percentages, of the slot and of the lockup's
+   own width, which is what makes this animate the way the old centring rule
+   did rather than jumping. The arithmetic above is asserted on a real page,
+   at three widths and against every tab title, in tests/e2e/search.js. */
 .hc-topbar[data-is-tab="true"][data-scrolled="true"] .hc-topbar__logo {
-  left: 50%;
-  transform: translate(-50%, -50%);
+  left: 100%;
+  transform: translate(-100%, -50%);
+  height: 17px;
 }
 
 /* A pushed view has no logo at all, the back arrow and title fill that role. */
@@ -662,6 +690,46 @@ button, .hc-tab, .hc-eyebrow, .hc-numeral, .hc-section__toggle, .hc-tabbar {
 }
 
 .hc-topbar__spacer { flex: 1 1 auto; }
+
+/* The three circles at the right end of the bar: light or dark, search, you.
+
+   One flex child of the header rather than three, so the header still has
+   exactly two things to space at --hc-space-md and the logo keeps its room.
+   The gap inside is zero: each button is a 44pt tap target with a smaller
+   circle drawn inside it, so the discs already sit apart by the padding
+   around them and a gap on top of that pushes the row into the logo. */
+.hc-topbar__actions {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 0;
+}
+
+/* The two icon buttons. A 44pt target, a 36pt circle, matching the avatar
+   beside them at one step down: the initials are who you are and outrank a
+   pair of controls, so they stay the largest of the three. */
+.hc-topbar__disc {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--hc-tap-min);
+  height: var(--hc-tap-min);
+  padding: 0;
+  color: var(--hc-ink);
+}
+
+.hc-topbar__disc-icon {
+  width: 36px;
+  height: 36px;
+  padding: 7px;
+  border-radius: var(--hc-radius-pill);
+  background: var(--hc-cream);
+  border: var(--hc-hairline) solid var(--hc-rule);
+  transition: background var(--hc-dur-fast) var(--hc-ease);
+}
+
+.hc-topbar__disc:active .hc-topbar__disc-icon { background: var(--hc-paper-sunk); }
 
 /* Avatar button, the only way into Profile. No bell, no chat. */
 .hc-avatar {
@@ -5504,6 +5572,19 @@ a.hc-card:active { background: var(--hc-paper-sunk); }
 
 .hc-admin__new { margin: var(--hc-space-lg) 0; }
 
+/* Fetch Announcements, above Write an announcement and pushed to the right.
+   Right aligned so it reads as a utility over the section rather than as the
+   first of two things to choose between: the eye goes to the full width
+   primary button underneath it, which is the one somebody came here to press
+   on the weeks the newsletter has nothing in it. */
+.hc-admin__fetch {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: var(--hc-space-lg);
+}
+
+.hc-admin__fetch .hc-btn { margin-top: 0; }
+
 .hc-admin__form > * + * { margin-top: var(--hc-space-lg); }
 
 /* One announcement, page, person or setting in a list. */
@@ -5534,8 +5615,39 @@ a.hc-card:active { background: var(--hc-paper-sunk); }
   margin-top: var(--hc-space-sm);
 }
 
+/* An announcement the newsletter reader parsed and nobody has looked at yet.
+   The accent edge is the only thing separating it from the posted rows
+   underneath, which is the right amount of difference: it is the same card
+   holding the same kind of thing, and the stripe says "this one is waiting on
+   you" without inventing a second style of list. Same edge the pinned banner
+   uses, for the same reason. See migration 0038. */
+.hc-admin__item--review {
+  border-left: 3px solid var(--hc-accent);
+  border-top-left-radius: var(--hc-radius-sm);
+  border-bottom-left-radius: var(--hc-radius-sm);
+}
+
+/* The dates the model guessed. Set apart from the body above it because it is
+   the line most likely to be wrong and so the line most worth reading twice. */
+.hc-admin__review-dates { color: var(--hc-mid); }
+
+.hc-admin__intro-note {
+  color: var(--hc-mid);
+  margin-top: var(--hc-space-sm);
+  margin-bottom: var(--hc-space-md);
+}
+
 .hc-admin__warn {
   color: var(--hc-accent-deep);
+  margin-top: var(--hc-space-sm);
+}
+
+/* Who approved a thing out of the newsletter queue, from migration 0043. An
+   internal note on an admin-only screen: quieter than the body above it,
+   because it is a record rather than something to act on, and not warning
+   coloured, because nothing is wrong. */
+.hc-admin__approved {
+  color: var(--hc-mid);
   margin-top: var(--hc-space-sm);
 }
 
@@ -5660,6 +5772,21 @@ a.hc-card:active { background: var(--hc-paper-sunk); }
 
 .hc-announce__text + .hc-announce__text { margin-top: var(--hc-space-base); }
 .hc-announce__text { margin-top: var(--hc-space-md); }
+
+/* Add to calendar, and the when and where under it. The button is the same
+   hc-inline-link Connect draws, so it needs no rules of its own; this is the
+   block around it, set off from the words above so the one thing on the page
+   a person acts on does not read as another paragraph. */
+.hc-announce__calendar {
+  margin-top: var(--hc-space-lg);
+  padding-top: var(--hc-space-md);
+  border-top: var(--hc-hairline) solid var(--hc-rule);
+}
+
+.hc-announce__calendar .hc-caption {
+  margin-top: var(--hc-space-sm);
+  color: var(--hc-mid);
+}
 
 /* Markup somebody typed, after the sanitizer. Only seven tags can be in here
    and every one of them is given a size, because a paragraph with no rule is
@@ -5957,6 +6084,413 @@ a.hc-card:active { background: var(--hc-paper-sunk); }
   font-weight: 600;
   font-size: var(--hc-caption);
 }
+
+/* --------------------------------------------------------------------------
+   Search. The box under the heading, then the list.
+
+   A pushed view, so it clears the header the way every screen does and
+   nothing else on it is chrome: no filters, no tabs, no rail. What somebody
+   types is the only control on the page.
+   -------------------------------------------------------------------------- */
+
+.hc-search__field { margin-top: var(--hc-space-lg); }
+
+/* The magnifier sits inside the field rather than beside it, so the field is
+   still the full width of the screen and still one tap target. Absolute over
+   the input with the input padded to clear it, which keeps the 16px font size
+   the input needs to stop iOS zooming the page on focus. */
+.hc-search__box {
+  position: relative;
+  display: block;
+}
+
+.hc-search__icon {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 20px;
+  height: 20px;
+  color: var(--hc-mid);
+  pointer-events: none;
+}
+
+.hc-search__input { padding-left: 44px; }
+
+/* Safari draws its own clear button on type="search" and it is the right
+   control in the right place, so it is left alone. What is taken away is the
+   decoration around it, which does not match anything else in this app. */
+.hc-search__input::-webkit-search-decoration,
+.hc-search__input::-webkit-search-results-button,
+.hc-search__input::-webkit-search-results-decoration {
+  -webkit-appearance: none;
+}
+
+.hc-search__results { margin-top: var(--hc-space-lg); }
+
+.hc-search__hint {
+  color: var(--hc-mid);
+  font-size: calc(var(--hc-body-serif) * var(--hc-text-scale));
+  line-height: var(--hc-body-serif-line);
+}
+
+.hc-search__count {
+  color: var(--hc-mid);
+  margin-bottom: var(--hc-space-sm);
+}
+
+/* --------------------------------------------------------------- one result
+
+   A row, not a card. There can be sixty of them and a column of sixty cards
+   is a wall: the hairline between rows is enough separation for a list you
+   are scanning rather than reading. */
+.hc-results {
+  display: flex;
+  flex-direction: column;
+}
+
+.hc-result {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--hc-space-base);
+  width: 100%;
+  padding: var(--hc-space-base) 0;
+  text-align: left;
+  border-bottom: var(--hc-hairline) solid var(--hc-rule);
+}
+
+.hc-result:first-child { border-top: var(--hc-hairline) solid var(--hc-rule); }
+
+.hc-result:active { background: var(--hc-paper-sunk); }
+
+.hc-result__body {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* What kind of thing this is, above the name of it. The list mixes messages,
+   guides, events and screens, and without this line a result is a sentence
+   with no idea what tapping it will open. */
+.hc-result__kind {
+  display: block;
+  color: var(--hc-accent-deep);
+}
+
+.hc-result__title {
+  display: block;
+  margin-top: 4px;
+  font-family: var(--hc-sans-display);
+  font-weight: 800;
+  font-size: calc(17px * var(--hc-text-scale));
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+  color: var(--hc-ink);
+}
+
+.hc-result__sub {
+  display: block;
+  margin-top: 2px;
+}
+
+/* The words, where they were found. Two lines and then it stops: a snippet
+   is there to prove the match, not to be read instead of the page. */
+.hc-result__snippet {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  margin-top: 6px;
+  font-family: var(--hc-serif);
+  font-size: calc(14px * var(--hc-text-scale));
+  line-height: 1.45;
+  color: var(--hc-mid);
+}
+
+/* The matched words. The same wash a kept sentence in a guide gets, because
+   it is the same gesture: these are the words, in this text, that somebody
+   asked about. A <mark> comes out of the browser bright yellow, which would
+   be the loudest thing in a two-palette app, so the background is replaced
+   rather than tinted. The ink goes back to full strength inside the mark, so
+   the match reads out of the grey line around it. */
+.hc-search__hit {
+  background: color-mix(in srgb, var(--hc-accent) 34%, transparent);
+  color: var(--hc-ink);
+  border-radius: 2px;
+  padding: 0;
+}
+
+@supports not (color: color-mix(in srgb, red 50%, transparent)) {
+  .hc-search__hit { background: var(--hc-cream); }
+}
+
+.hc-result__chevron {
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+  margin-top: 18px;
+  color: var(--hc-mid);
+}
+
+/* --------------------------------------------------------------------------
+   Cal
+   The church's calendar: a month you can walk through, the day you opened
+   under it, and the upcoming events under that.
+
+   THE GRID IS SEVEN EQUAL COLUMNS AND NOTHING ELSE. No week numbers, no
+   greyed out days from the months either side. On a 375pt phone, inside the
+   screen's own 20pt padding, a column is 47.8pt wide, which is what makes a
+   44pt tap target fit with room around it: the day is the full width of its
+   column and 44 tall, so the highlight reads as a rounded tile rather than
+   as a circle squeezed into a gap. That measurement is why the day is not a
+   fixed size square. Nothing here goes under --hc-tap-min.
+
+   ONLY A DAY WITH SOMETHING ON IT IS A BUTTON. The rest are spans. A grid
+   where every cell answers a tap with "nothing here" is a grid that asked
+   for the tap.
+   -------------------------------------------------------------------------- */
+
+.hc-cal { margin-top: var(--hc-space-lg); }
+
+/* Months on the left, years on the right. Two steppers rather than one, so a
+   date eight months out is two taps rather than eight. */
+.hc-cal__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--hc-space-sm);
+}
+
+.hc-cal__stepper {
+  display: flex;
+  align-items: center;
+}
+
+.hc-cal__step {
+  width: var(--hc-tap-min);
+  height: var(--hc-tap-min);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  padding: 0;
+  background: none;
+  color: var(--hc-ink);
+  border-radius: var(--hc-radius-pill);
+  cursor: pointer;
+}
+
+.hc-cal__step:active { background: var(--hc-paper-sunk); }
+
+.hc-cal__step-icon {
+  width: 20px;
+  height: 20px;
+}
+
+/* The month name and the year, sized to the widest each can be. Without the
+   min-width the chevrons walk sideways between May and September, which
+   makes a thumb that is stepping through months miss the second tap. */
+.hc-cal__stepper-label {
+  font-family: var(--hc-sans-display);
+  font-size: calc(17px * var(--hc-text-scale));
+  font-weight: 600;
+  color: var(--hc-ink);
+  text-align: center;
+}
+
+.hc-cal__stepper:first-child .hc-cal__stepper-label { min-width: 5.6em; }
+.hc-cal__stepper + .hc-cal__stepper .hc-cal__stepper-label { min-width: 3em; }
+
+.hc-cal__grid { margin-top: var(--hc-space-sm); }
+
+.hc-cal__row {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+}
+
+.hc-cal__row--head { margin-bottom: var(--hc-space-xs); }
+
+.hc-cal__dow {
+  text-align: center;
+  font-size: var(--hc-eyebrow);
+  line-height: var(--hc-eyebrow-line);
+  letter-spacing: var(--hc-track-eyebrow);
+  text-transform: uppercase;
+  color: var(--hc-mid);
+}
+
+.hc-cal__cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.hc-cal__day {
+  position: relative;
+  width: 100%;
+  height: var(--hc-tap-min);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  padding: 0;
+  background: none;
+  border-radius: var(--hc-radius-md);
+  font-family: var(--hc-sans);
+  font-size: calc(15px * var(--hc-text-scale));
+  color: var(--hc-mid);
+}
+
+/* A day with nothing on it is a span, so this is the button's cursor only. */
+button.hc-cal__day { cursor: pointer; }
+
+/* Something is happening. Full strength ink and a dot under the number,
+   which is the highlight the screen promises: the days worth looking at are
+   the ones that stand out from the month around them. */
+.hc-cal__day--has {
+  color: var(--hc-ink);
+  font-weight: 600;
+  background: var(--hc-cream);
+}
+
+.hc-cal__dot {
+  position: absolute;
+  bottom: 6px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 4px;
+  height: 4px;
+  border-radius: var(--hc-radius-pill);
+  background: var(--hc-accent-deep);
+}
+
+/* Today, whether or not anything is on it. A ring rather than a fill, so it
+   never competes with the day somebody has actually opened. */
+.hc-cal__day--today {
+  box-shadow: inset 0 0 0 1.5px var(--hc-rule);
+  color: var(--hc-ink);
+}
+
+.hc-cal__day--open {
+  background: var(--hc-dark);
+  color: var(--hc-on-dark);
+  box-shadow: none;
+}
+
+.hc-cal__day--open .hc-cal__dot { background: var(--hc-on-dark); }
+
+.hc-cal__today {
+  margin-top: var(--hc-space-sm);
+  text-align: center;
+}
+
+/* The day somebody opened. A card rather than a list, because it is one day
+   lifted out of the grid above it and it has to read as an answer to the tap
+   that opened it. */
+.hc-cal__panel {
+  margin-top: var(--hc-space-base);
+  padding: var(--hc-card-pad);
+  background: var(--hc-cream);
+  border-radius: var(--hc-radius-lg);
+}
+
+.hc-cal__panel-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--hc-space-sm);
+}
+
+.hc-cal__panel-close {
+  flex: 0 0 auto;
+  width: var(--hc-tap-min);
+  height: var(--hc-tap-min);
+  margin: calc(var(--hc-space-md) * -1) calc(var(--hc-space-md) * -1) 0 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  padding: 0;
+  background: none;
+  color: var(--hc-mid);
+  border-radius: var(--hc-radius-pill);
+  cursor: pointer;
+}
+
+.hc-cal__panel-close-icon {
+  width: 18px;
+  height: 18px;
+}
+
+.hc-cal__panel-event { margin-top: var(--hc-space-md); }
+
+.hc-cal__panel-event + .hc-cal__panel-event {
+  margin-top: var(--hc-space-base);
+  padding-top: var(--hc-space-base);
+  border-top: var(--hc-hairline) solid var(--hc-rule);
+}
+
+/* An admin's two controls in the corner of an event: what this is, and
+   whether it should be here at all. Absolutely placed so they sit level with
+   the date, and the two lines beside them are given the room back, because a
+   title running under a delete button is a title you cannot read and a button
+   you press by accident. */
+.hc-event--managed { position: relative; }
+
+.hc-event--managed .hc-eyebrow,
+.hc-event--managed .hc-row__title {
+  padding-right: calc(var(--hc-tap-min) * 2);
+}
+
+.hc-event__admin {
+  position: absolute;
+  top: var(--hc-space-sm);
+  right: 0;
+  display: flex;
+}
+
+.hc-event__admin-btn {
+  width: var(--hc-tap-min);
+  height: var(--hc-tap-min);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  padding: 0;
+  background: none;
+  color: var(--hc-mid);
+  border-radius: var(--hc-radius-pill);
+  cursor: pointer;
+}
+
+.hc-event__admin-btn:active { background: var(--hc-paper-sunk); }
+.hc-event__admin-btn[disabled] { opacity: 0.5; }
+
+/* The x is the one destructive control on this screen, so it is the one
+   thing on it drawn in the error colour. */
+.hc-event__admin-btn--x { color: var(--hc-error); }
+
+.hc-event__admin-icon {
+  width: 18px;
+  height: 18px;
+}
+
+.hc-cal__add { margin-top: var(--hc-space-md); }
+
+.hc-cal__form { margin-top: var(--hc-space-base); }
+
+.hc-cal__form > .hc-eyebrow { margin-bottom: var(--hc-space-md); }
+
+.hc-cal__form-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--hc-space-sm);
+  margin-top: var(--hc-space-lg);
+}
+
+/* The row already carries the gap the form's own rule would add to each
+   button, and taking it twice puts Save and Cancel a long way below the last
+   field they belong to. */
+.hc-cal__form-actions .hc-btn { margin-top: 0; }
 
 
 /* --- standalone page overrides ------------------------------------------ */

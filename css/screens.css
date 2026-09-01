@@ -2241,6 +2241,15 @@
   margin-top: var(--hc-space-sm);
 }
 
+/* Who approved a thing out of the newsletter queue, from migration 0043. An
+   internal note on an admin-only screen: quieter than the body above it,
+   because it is a record rather than something to act on, and not warning
+   coloured, because nothing is wrong. */
+.hc-admin__approved {
+  color: var(--hc-mid);
+  margin-top: var(--hc-space-sm);
+}
+
 /* The picture block on the announcement form, and the link block under it.
    Both are lists of things with previews, so they share the preview. */
 .hc-admin__image > * + *,

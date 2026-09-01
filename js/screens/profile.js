@@ -18,6 +18,13 @@
   var NOTIFY_GUIDE = 'Monday morning, once a week';
   var NOTIFY_SUNDAY = 'Saturday evening, service times and address';
   var NOTIFY_NEWS = 'When the church posts something on purpose';
+  /* The two admin ones. Not editable, unlike the three above, and the
+     difference is not an oversight. Those three describe a schedule the church
+     can change its mind about, which is exactly the sort of line that goes
+     stale. These two describe what the app does the moment the newsletter is
+     parsed, which is not a decision anybody makes on a Tuesday. */
+  var NOTIFY_REVIEW_NEWS = 'When the newsletter leaves an announcement waiting on you';
+  var NOTIFY_REVIEW_DATES = 'When it leaves a date waiting on you';
   /* There is no LEADER_ copy here any more. Leader mode is a tier an admin
      sets, not a preference this screen has an opinion about, so it says
      nothing at all about it. See the note where the section used to be. */
@@ -286,6 +293,44 @@
         id: 'groupWeek',
         on: p.notifications.groupWeek
       });
+    }
+
+    /* The two an admin has, and nobody else is shown.
+
+       WHY THEY ARE HERE RATHER THAN ON THE ADMIN SCREEN, which was the other
+       option and the more obvious one. Because they are preferences, and this
+       screen is where a person's preferences live. The Admin screen is a place
+       to do the church's work; deciding whether your own phone buzzes at seven
+       in the morning is not that, and somebody looking for a notification
+       switch looks where the other four are.
+
+       They sit under the same heading for the same reason, rather than in an
+       Admin section of their own. A separate box would say these are a
+       different kind of thing, and they are not: they are two more answers to
+       "when should this app reach out".
+
+       HIDING THEM IS PRESENTATION AND NOTHING MORE, the same as the Admin row
+       further down. hc_set_admin_device_token refuses anybody the database
+       does not agree is an admin, so a member who made these appear would
+       flip a switch that writes to nothing. See migration 0043 section 4. */
+    if (HC.admin && HC.admin.isAdmin()) {
+      html += switchRow({
+        title: 'Announcements waiting',
+        sub: NOTIFY_REVIEW_NEWS,
+        action: 'toggle-notify',
+        id: 'announcementReview',
+        on: p.notifications.announcementReview
+      });
+      html += switchRow({
+        title: 'Dates waiting',
+        sub: NOTIFY_REVIEW_DATES,
+        action: 'toggle-notify',
+        id: 'eventReview',
+        on: p.notifications.eventReview
+      });
+      html += '<p class="hc-caption hc-profile__hint">These two are yours because ' +
+        'you are an admin. Nobody else in the church is told what is in the queue, ' +
+        'and nothing in it is on Home until you say so.</p>';
     }
 
     // Reading

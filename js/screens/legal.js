@@ -128,7 +128,14 @@
 
     html += block('What actually leaves your phone', [
       'Content. The app downloads sermons, guides, events, and the church’s own details so you always have this week’s material, and keeps a copy so it still works when you have no signal. That is an ordinary web request, and like any web request it includes your device’s network address. We do not use it to work out who you are and we do not build a profile from it.',
-      'Notifications, if you turn them on. Apple gives us an anonymous token for your device, and we keep it alongside which of the switches you turned on, so we know what to send and what not to. None of it is attached to your name, your email, or your account: a row here says that some phone wants the Monday guide notice, never whose phone it is. Turning the switches off stops the sending, and we retire the token when your phone tells Apple the app is gone.'
+      'Notifications, if you turn them on. Apple gives us an anonymous token for your device, and we keep it alongside which of the switches you turned on, so we know what to send and what not to. None of it is attached to your name, your email, or your account: a row here says that some phone wants the Monday guide notice, never whose phone it is. Turning the switches off stops the sending, and we retire the token when your phone tells Apple the app is gone.',
+      /* The exception to the paragraph above, and it is written out rather
+         than quietly making that paragraph a little bit untrue. Nothing here
+         applies to anybody but the handful of people who run the app, and it
+         only says about them a thing the church set by hand in the first
+         place. Migration 0043 makes the same argument at length on the
+         database's side. */
+      'There is one exception, and it applies to the few people who run the app for the church. An admin can be notified that something is waiting for them to approve, and a notification like that has to go to a person rather than to whoever asked, so on an admin’s own phone that token does carry their account. It is set when they turn those two switches on, it comes off when they sign out or switch them back off, and it says nothing about them the church did not already know. If you are not an admin, this paragraph is not about you and your token stays anonymous.'
     ]);
 
     html += block('When the app hands you off to somebody else', [

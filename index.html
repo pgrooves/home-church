@@ -48,7 +48,7 @@
        cold launch, which was a render blocking third party request that also
        handed Google every user's network address. Inside a packaged app there
        was never a reason for it. See css/fonts.css. -->
-  <link rel="stylesheet" href="css/fonts.css?v=9607819a">
+  <link rel="stylesheet" href="css/fonts.css?v=3f251acb">
 
   <!-- DO NOT EDIT THESE STAMPS BY HAND. `npm run stamp` writes every ?v= in
        this file from a hash of css/ and js/, so they all move together and
@@ -56,11 +56,11 @@
        serving last week's JavaScript from cache, Safari most stubbornly, and
        the failure is quiet: the app works, it is just the old one.
        See scripts/stamp_assets.js. -->
-  <link rel="stylesheet" href="css/tokens.css?v=9607819a">
-  <link rel="stylesheet" href="css/base.css?v=9607819a">
-  <link rel="stylesheet" href="css/components.css?v=9607819a">
-  <link rel="stylesheet" href="css/screens.css?v=9607819a">
-  <link rel="stylesheet" href="css/print.css?v=9607819a">
+  <link rel="stylesheet" href="css/tokens.css?v=3f251acb">
+  <link rel="stylesheet" href="css/base.css?v=3f251acb">
+  <link rel="stylesheet" href="css/components.css?v=3f251acb">
+  <link rel="stylesheet" href="css/screens.css?v=3f251acb">
+  <link rel="stylesheet" href="css/print.css?v=3f251acb">
 </head>
 <body>
   <!-- No role="application" here. That role tells a screen reader to stop
@@ -94,119 +94,119 @@
     </div>
   </noscript>
 
-  <script src="js/data.js?v=9607819a"></script>
-  <script src="js/store.js?v=9607819a"></script>
+  <script src="js/data.js?v=3f251acb"></script>
+  <script src="js/store.js?v=3f251acb"></script>
   <!-- The greeting that is already on screen. Needs store.js above it for the
        first name and the theme, and nothing below it: app.js tells it when
        Home is ready, and it does the rest on its own. -->
-  <script src="js/splash.js?v=9607819a"></script>
+  <script src="js/splash.js?v=3f251acb"></script>
   <!-- Share sheet, calendar, haptics, notifications. Works in a browser
        too, quietly, so nothing below has to check where it is running. -->
-  <script src="js/native.js?v=9607819a"></script>
+  <script src="js/native.js?v=3f251acb"></script>
   <!-- Empty until js/config.js is filled in, see that file. Now that the
        typefaces ship with the app, Supabase is the only network traffic the
        app makes on its own. -->
-  <script src="js/config.js?v=9607819a"></script>
-  <script src="js/auth.js?v=9607819a"></script>
+  <script src="js/config.js?v=3f251acb"></script>
+  <script src="js/auth.js?v=3f251acb"></script>
   <!-- Fills HC.data from Supabase after the first paint. Needs data.js,
        store.js, and config.js above it, and nothing below it. -->
-  <script src="js/content.js?v=9607819a"></script>
+  <script src="js/content.js?v=3f251acb"></script>
   <!-- The allowlist markup somebody typed comes through, plus the plain text
        mirror of it. Read by admin.js, journal.js and editor.js below, under
        their own link policies. Depends on nothing itself. -->
-  <script src="js/richtext.js?v=9607819a"></script>
+  <script src="js/richtext.js?v=3f251acb"></script>
   <!-- Everything Settings -> Admin reads and writes. Needs auth.js above it
        for the session, content.js for the refresh it fires after a write, and
        richtext.js for the words on an announcement.
        Draws nothing: js/screens/admin.js below is the screen. -->
-  <script src="js/admin.js?v=9607819a"></script>
+  <script src="js/admin.js?v=3f251acb"></script>
   <!-- Editing a sentence where it is written, for the half hour an admin has
        edit mode on. Needs auth.js above it for the session and content.js for
        the refresh after a write; every screen below it calls HC.edit.wrap()
        around the sentences it is willing to have changed. -->
-  <script src="js/edit-mode.js?v=9607819a"></script>
+  <script src="js/edit-mode.js?v=3f251acb"></script>
   <!-- The Journal's data layer. Needs store.js for the cache and auth.js for
        who is signed in, and js/screens/journal.js below it. -->
-  <script src="js/journal.js?v=9607819a"></script>
+  <script src="js/journal.js?v=3f251acb"></script>
   <!-- The nine practices, read from the static files under data/practices/.
        Needs store.js above it to emit, and js/screens/practices.js below it.
        No network beyond the app's own bundle: see the header of that file. -->
-  <script src="js/practices.js?v=9607819a"></script>
+  <script src="js/practices.js?v=3f251acb"></script>
   <!-- Sixty-six books and the length of every chapter, for the scripture
        picker. Data only, and js/editor.js below is the only thing that reads
        it. -->
-  <script src="js/bible.js?v=9607819a"></script>
-  <script src="js/components.js?v=9607819a"></script>
+  <script src="js/bible.js?v=3f251acb"></script>
+  <script src="js/components.js?v=3f251acb"></script>
   <!-- The writing surface in the Journal. Needs components.js above it for
        esc() and the icons, and bible.js for the scripture sheet. -->
-  <script src="js/editor.js?v=9607819a"></script>
+  <script src="js/editor.js?v=3f251acb"></script>
   <!-- Selecting words in a guide and keeping them. Needs editor.js above it
        for the note sheet's writing surface. -->
-  <script src="js/highlight.js?v=9607819a"></script>
-  <script src="js/print-guide.js?v=9607819a"></script>
+  <script src="js/highlight.js?v=3f251acb"></script>
+  <script src="js/print-guide.js?v=3f251acb"></script>
   <!-- The index behind the magnifying glass in the top bar. It reads
        js/data.js, js/practices.js and js/journal.js above it, and draws the
        screens through js/router.js below it, but it does all of that the
        first time somebody searches rather than on load, so the only thing
        that has to be above this line is js/store.js, whose events tell it
        when the content underneath it has moved. -->
-  <script src="js/search.js?v=9607819a"></script>
-  <script src="js/router.js?v=9607819a"></script>
+  <script src="js/search.js?v=3f251acb"></script>
+  <script src="js/router.js?v=3f251acb"></script>
   <!-- The month strip under the header on Listen. Shell chrome, so it loads
        with the router rather than with the screen it serves. -->
-  <script src="js/date-rail.js?v=9607819a"></script>
+  <script src="js/date-rail.js?v=3f251acb"></script>
   <!-- Swiping sideways between the five tabs. Shell chrome like the rail
        above, and it needs the router, which is why it sits here. -->
-  <script src="js/swipe.js?v=9607819a"></script>
+  <script src="js/swipe.js?v=3f251acb"></script>
   <!-- The right edge, in place of the scrollbar. Shell chrome again, and it
        reads the same finger swipe.js reads, so it goes next to it. -->
-  <script src="js/index-rail.js?v=9607819a"></script>
+  <script src="js/index-rail.js?v=3f251acb"></script>
   <!-- The Group tab's data layer. Needs auth.js above it for the transport
        and store.js for the cache, and js/screens/group.js below it. -->
-  <script src="js/rooms.js?v=9607819a"></script>
-  <script src="js/screens/guide.js?v=9607819a"></script>
-  <script src="js/screens/home.js?v=9607819a"></script>
-  <script src="js/screens/listen.js?v=9607819a"></script>
-  <script src="js/screens/connect.js?v=9607819a"></script>
+  <script src="js/rooms.js?v=3f251acb"></script>
+  <script src="js/screens/guide.js?v=3f251acb"></script>
+  <script src="js/screens/home.js?v=3f251acb"></script>
+  <script src="js/screens/listen.js?v=3f251acb"></script>
+  <script src="js/screens/connect.js?v=3f251acb"></script>
   <!-- The ••• tile. Five tabs swipe, everything else is a module listed here. -->
-  <script src="js/screens/more.js?v=9607819a"></script>
+  <script src="js/screens/more.js?v=3f251acb"></script>
   <!-- What the band played on Sunday, a week at a time. First of the modules
        behind •••, and the last screen that belongs to Sunday morning. -->
-  <script src="js/screens/worship.js?v=9607819a"></script>
+  <script src="js/screens/worship.js?v=3f251acb"></script>
   <!-- The month grid and the church's own dates under it. Second of the
        modules behind •••, next to Worship because the two are the church's
        week: what happened on Sunday, and what is happening next. The events
        it draws were the fourth section of Connect until this screen existed.
        Needs components.js above it and admin.js for the pencil and the x. -->
-  <script src="js/screens/cal.js?v=9607819a"></script>
+  <script src="js/screens/cal.js?v=3f251acb"></script>
   <!-- The grid of nine, and the one page all nine are drawn with. -->
-  <script src="js/screens/practices.js?v=9607819a"></script>
+  <script src="js/screens/practices.js?v=3f251acb"></script>
   <!-- Alpha, one page, straight after Practices behind ••• and next to it for
        the same reason it sits next to it in the sheet: somebody else's course,
        gathered here. Needs components.js above it for the play badge and the
        numbered question row, and nothing below it. -->
-  <script src="js/screens/alpha.js?v=9607819a"></script>
-  <script src="js/screens/journal.js?v=9607819a"></script>
+  <script src="js/screens/alpha.js?v=3f251acb"></script>
+  <script src="js/screens/journal.js?v=3f251acb"></script>
   <!-- One screen that draws any row in content_pages. Above give.js because
        Give reads its paragraph helper. -->
-  <script src="js/screens/page.js?v=9607819a"></script>
+  <script src="js/screens/page.js?v=3f251acb"></script>
   <!-- One announcement, on its own page, opened from the card on Home. Below
        page.js because it draws a plain text announcement with the same
        paragraph helper Give uses. -->
-  <script src="js/screens/announcement.js?v=9607819a"></script>
-  <script src="js/screens/give.js?v=9607819a"></script>
-  <script src="js/screens/profile.js?v=9607819a"></script>
+  <script src="js/screens/announcement.js?v=3f251acb"></script>
+  <script src="js/screens/give.js?v=3f251acb"></script>
+  <script src="js/screens/profile.js?v=3f251acb"></script>
   <!-- Announcements, users, content and app settings. Drawn only for an
        admin, and refused by the database for everybody else. -->
-  <script src="js/screens/admin.js?v=9607819a"></script>
-  <script src="js/screens/group.js?v=9607819a"></script>
-  <script src="js/screens/leader.js?v=9607819a"></script>
-  <script src="js/screens/legal.js?v=9607819a"></script>
+  <script src="js/screens/admin.js?v=3f251acb"></script>
+  <script src="js/screens/group.js?v=3f251acb"></script>
+  <script src="js/screens/leader.js?v=3f251acb"></script>
+  <script src="js/screens/legal.js?v=3f251acb"></script>
   <!-- The box and the list under it. Last of the screens, because the index
        behind it draws the others for their words, and because being last
        means a screen added later is on that index without anybody having to
        move this line. -->
-  <script src="js/screens/search.js?v=9607819a"></script>
-  <script src="js/app.js?v=9607819a"></script>
+  <script src="js/screens/search.js?v=3f251acb"></script>
+  <script src="js/app.js?v=3f251acb"></script>
 </body>
 </html>
