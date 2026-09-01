@@ -506,25 +506,51 @@ above, under Before submission.)*
       on a real device from the Xcode build, not from Safari, before you
       submit.
 
-- [!] **Migration 0043, and the two Edge Functions it changes.** Run
-      `supabase/migrations/0043_admin_review_push.sql` in the SQL editor, then
-      redeploy both:
+- [x] **Migration 0043, and the two Edge Functions it changes.** Applied to the
+      project and both functions redeployed, on the branch that added them.
+      Nothing new had to be set up: no secrets, no keys, no dashboard. The two
+      review topics travel the road 0012 and 0027 already built.
 
-      ```
-      supabase functions deploy send-push --no-verify-jwt
-      supabase functions deploy newsletter-intake --no-verify-jwt
-      ```
+      **What was checked afterwards, rather than assumed.** The applied schema
+      was read back and matches what `0043_admin_review_push_test.sql` asserts
+      against the throwaway Postgres: the three new columns, `review_approvals`
+      with RLS on and no anon grant, no client-role privileges of any kind left
+      on `device_tokens`, and an anon-executable function list of exactly the
+      five `0017`'s test allows. The security advisor returns the three
+      SECURITY DEFINER warnings that migration predicts by name and no new
+      class of lint.
 
-      **Nothing new has to be set up.** No secrets, no keys, no dashboard. The
-      two review topics travel the road 0012 and 0027 already built: the same
-      vault secret, the same function, the same APNs credentials.
+      `hc_send_push` was then called for both new topics against the live
+      project. Both queues were empty, so both composed nothing, sent nothing,
+      and wrote a skipped row to `push_log` — which is the end-to-end proof
+      that the deployed sender authenticates, understands the topics and
+      reaches the database, without a single phone lighting up.
 
-      **Applying the migration without redeploying is the failure to avoid**,
-      and it is a quiet one in both directions. An old `send-push` does not
-      know the two topics and answers 400, so the intake asks and nobody is
-      told. An old `newsletter-intake` never asks in the first place. Either
-      way the queue fills in silence, which is exactly the behaviour 0043
-      exists to end, with every check green.
+      `newsletter-intake` was verified twice over, because retyping it into a
+      deploy API rather than sending the file off disk is a real risk and the
+      dangerous version of it is silent. A dry run returned
+      `{"ok":true,"found":2}`: it booted, authenticated, and drove IMAP through
+      TLS, login, search and a header fetch. Both emails were already in the
+      ledger so it stopped before the body parser. So the source itself was
+      read back off the project and hashed: sha256
+      `419f8667b75b4389a1795193c61466e804c569619acf46f9408359b30ea40b15`,
+      82,074 bytes, identical to the repo file. That check matters more than it
+      sounds. Line 523 of that file carries a literal U+00A0 non-breaking
+      space, invisible, inside the character class that `htmlToText` uses to
+      collapse runs of whitespace. A copy that turned it into an ordinary
+      space would have quietly stopped collapsing `&nbsp;` runs out of
+      Mailchimp mail, with nothing anywhere reporting a fault.
+
+      **If either function is ever redeployed from a checkout**, that is a
+      no-op and is the better habit: `supabase functions deploy <name>
+      --no-verify-jwt` sends the exact bytes off disk.
+
+      **The failure this avoided**, kept for whoever reads this next: applying
+      the migration without redeploying is quiet in both directions. An old
+      `send-push` does not know the two topics and answers 400, so the intake
+      asks and nobody is told. An old `newsletter-intake` never asks at all.
+      Either way the queue fills in silence, which is the behaviour 0043 exists
+      to end, with every check green.
 
       **0043 also fixes a bug that has been live since 0010,** which is worth
       knowing about because it changes what a phone does rather than only what
