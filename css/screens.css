@@ -2173,14 +2173,15 @@
 
 .hc-admin__new { margin: var(--hc-space-lg) 0; }
 
-/* Fetch Announcements, above Write an announcement and pushed to the right.
-   Right aligned so it reads as a utility over the section rather than as the
-   first of two things to choose between: the eye goes to the full width
-   primary button underneath it, which is the one somebody came here to press
-   on the weeks the newsletter has nothing in it. */
+/* Fetch Announcements, directly above Write an announcement and matching it:
+   centred, full width, same height. The two are the only ways an announcement
+   reaches this screen, so they are a pair, and the small right aligned button
+   this used to be read as a utility bolted onto the section rather than as
+   half of that pair. The hierarchy is carried by fill alone now, secondary
+   over primary, which is enough to say which one is the ordinary press. */
 .hc-admin__fetch {
   display: flex;
-  justify-content: flex-end;
+  justify-content: center;
   margin-top: var(--hc-space-lg);
 }
 

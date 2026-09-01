@@ -825,6 +825,44 @@
     return html;
   }
 
+  /* The one app setting that is drawn on this screen rather than on App
+     settings, and the reason it moved.
+
+     It sets how "Tell everybody" starts when a new announcement is opened,
+     which is a sentence that only means anything within arm's reach of the
+     button it is describing. On App settings it sat between the pinned banner
+     rows under the old label "Notify on new announcements", where it read as a
+     church-wide copy of the Announcements switch every member has in their own
+     Profile. Those are opposite halves of one thing: the member's switch says
+     whether a phone is in the list send-push sends to, and this one says
+     nothing at all about who is notified, only about which way a switch is
+     already flipped when a form opens. Migration 0044 carries the label. */
+  var PUSH_DEFAULT_KEY = 'announcement_push_default';
+
+  function pushDefaultRow() {
+    var row = HC.admin.settings().filter(function (s) {
+      return s.key === PUSH_DEFAULT_KEY;
+    })[0];
+
+    /* Nothing at all until the row is in hand. Every other switch on this
+       screen writes to a row that is already on it, and drawing this one from
+       the built-in default would put a switch on screen in a position nobody
+       chose, which for this particular switch is a lie about whether four
+       hundred phones are about to buzz. The section header waits with it, so
+       what arrives is a labelled row rather than a control appearing under a
+       heading that was already there. */
+    if (!row || row.kind !== 'boolean') return '';
+
+    return c.sectionHeader('', 'Writing one') +
+      switchRow({
+        title: row.label,
+        sub: row.help || '',
+        action: 'admin-setting-toggle',
+        id: row.key,
+        on: !!row.value_bool
+      });
+  }
+
   function announcementsSection() {
     var html = '<div class="hc-screen hc-admin">';
     html += c.sectionHeader('For the church', 'Announcements', { flush: true, tag: 'h1' });
@@ -837,22 +875,20 @@
 
     html += newsletterNotice();
 
-    /* Check the mailbox now. Above Write an announcement and aligned right,
-       which is the order the two are reached for: the newsletter is the thing
-       that fills this screen most weeks, and writing one by hand is the
-       exception.
+    /* Check the mailbox now. Above Write an announcement, and the same size as
+       it: these are the two ways an announcement gets onto this screen, and
+       they are reached for about as often as each other, so one of them being
+       a small button off to the right was reading as a footnote rather than as
+       the thing that fills this screen most weeks.
 
-       Secondary and small on purpose. Write an announcement is the primary
-       action on this screen and stays the only full width button; this one is
-       a convenience over something that already happens on its own every
-       twenty minutes, and a second primary button would make the two look like
-       a choice somebody has to make. */
+       Still secondary, which is the whole of the hierarchy now. Write an
+       announcement is the primary action and keeps the only filled button;
+       this one matches its footprint without competing for the eye. */
     html += '<div class="hc-admin__fetch">' +
       c.button('Fetch Announcements', {
         action: 'admin-newsletter-fetch',
         icon: 'plus',
         variant: 'secondary',
-        small: true,
         busy: busy === 'fetch'
       }) +
     '</div>';
@@ -860,6 +896,10 @@
     html += '<div class="hc-admin__new">' +
       c.button('Write an announcement', { action: 'admin-announcement-new', icon: 'plus' }) +
     '</div>';
+
+    // Under the two buttons, because the only thing it changes is how the
+    // second one opens. See pushDefaultRow().
+    html += pushDefaultRow();
 
     var rows = HC.admin.announcements();
     if (!rows.length) {
@@ -1202,6 +1242,15 @@
     announcement_push_default: true
   };
 
+  /* Rows this screen deliberately does not draw, because another screen draws
+     them where they mean something. Skipped rather than moved: the row is an
+     ordinary app_settings row that admin-setting-toggle writes the same way
+     from either screen, so the only thing that changes is which list it
+     appears in. A key here must be a key SEEDED knows, or the App settings
+     screen would hide a row an admin added and could not then get back to. */
+  var DRAWN_ELSEWHERE = {};
+  DRAWN_ELSEWHERE[PUSH_DEFAULT_KEY] = true;
+
   function settingsSection() {
     var html = '<div class="hc-screen hc-admin">';
     html += c.sectionHeader('For the church', 'App settings', { flush: true, tag: 'h1' });
@@ -1211,7 +1260,9 @@
     // can draw while the rows below are still loading.
     html += editModeSection();
 
-    var rows = HC.admin.settings();
+    var rows = HC.admin.settings().filter(function (s) {
+      return !DRAWN_ELSEWHERE[s.key];
+    });
 
     /* A header the screen did not need while the rows were the only thing on
        it. With Edit mode above them they do: without it the pinned banner
@@ -1293,6 +1344,10 @@
     // fetch on this section, and the smallest of them: one row per thing ever
     // approved out of the two queues.
     if (id === 'announcements') HC.admin.loadApprovals();
+    // And the app settings, for the one switch of theirs this screen draws.
+    // The same load App settings does, cached the same way, so an admin who
+    // has been to either screen this session pays for it once.
+    if (id === 'announcements') HC.admin.loadSettings();
     if (id === 'users') HC.admin.loadUsers();
     if (id === 'content') HC.admin.loadPages();
     if (id === 'settings') HC.admin.loadSettings();
