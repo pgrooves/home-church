@@ -359,26 +359,6 @@
       on: isDark
     }) + '</div>';
 
-    /* The hints. One switch for all of them, and it is the only thing in the
-       app that can turn them off, which is why it is a switch here rather
-       than a per hint dismissal somewhere else: somebody who does not want
-       to be shown things does not want to say so nine times.
-
-       Off is honest about what it means. It does not hide the ones already
-       retired or reset anything, it stops any from being drawn, and
-       js/hints.js checks it first so nothing can route around it.
-
-       Undefined is on, so a phone that has never touched this keeps its
-       hints, and only an explicit no turns them off. */
-    html += switchRow({
-      title: 'Hints',
-      sub: p.hints === false
-        ? 'Nothing will be pointed out to you.'
-        : 'Point out the things that are easy to miss.',
-      action: 'toggle-hints',
-      on: p.hints !== false
-    });
-
     /* THERE IS NO LEADER MODE ON THIS SCREEN, and there should not be one
        again. Somebody is a member, a leader or an admin, an admin sets which
        under Manage users, and nobody sets their own. A screen whose whole job

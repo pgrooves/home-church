@@ -580,16 +580,6 @@
       if (home) {
         firstTimer = window.setTimeout(function () {
           firstTimer = 0;
-          /* Not on top of js/hints.js. Both of these want roughly the same
-             moment two seconds into Home, and two swells arriving at once is
-             a tour rather than a hint. The account hint wins the opening slot
-             because it points at something a person has to do and this points
-             at something they can find later.
-
-             Only the opening swell yields. The standing thirty second offer
-             below is untouched, and by the time it comes round the hint has
-             been gone for twenty seconds. */
-          if (HC.hints && HC.hints.busy()) return;
           hint();
         }, HINT_FIRST);
       }

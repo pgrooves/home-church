@@ -3,11 +3,21 @@
 Where a new phone gets pointed on its first launch, and the one piece of
 machinery that has to exist before that question has a good answer.
 
-This started as a map and is now also the record of what got built from it.
-On `main`: `js/hints.js` with all three kinds from §7, the three shapes from
-§9, Tier 1 of the catalogue in §8, the off switch in Your account -> Display,
-and `tests/hints.test.js`. Tier 2 is not built and is a survey, not a
-backlog.
+This started as a map, became the record of what got built from it, and is now
+also the record of that being taken back out.
+
+**REVERTED, AND NOTHING HERE IS IN THE APP.** Every runtime change was undone
+on `main`: `js/hints.js`, the shapes in `css/components.css`, the
+registrations in `js/app.js`, the store fields, the switch in Your account,
+the script tag, and `tests/hints.test.js`. The app is byte for byte what it
+was before any of it shipped. This document and `demo-hint/` stay, because the
+thinking is worth keeping and the code is one `git revert` away in the
+history.
+
+**Why.** It was slower on a real phone and the hints were not appearing, and
+neither of those reproduced in a headless browser on a desktop, which is the
+whole lesson. See §12 for what is actually suspected and what would have to
+be true before any of this goes back.
 
 Read `Home Church app design system.md` §2b (voice), §3g (motion) and §7
 (accessibility) alongside it. The precedent in code is `js/index-rail.js`,
@@ -773,3 +783,57 @@ wrap on a 375pt phone.
   grates, is the ring alone without the caption, not a retirement. It is the
   only thing in the whole design that would need something stored, so it is
   worth being sure before building it.
+
+---
+
+## 12. Why it was reverted, and what to do differently
+
+Reverted at the author's call after it went out: the app felt slower on a
+real phone and no hint appeared. Neither reproduced in headless Chromium on a
+desktop, where five consecutive launches showed the account hint every time
+and the suite was green. That gap is the finding, and it is worth more than
+the feature was.
+
+**The most likely cause of the slowness, and it is mine.** The `travel` shape
+animates `background-position` across the tab bar. Every comment in that file
+claims transform and opacity only, and this one shape is neither: moving a
+background is a repaint on every frame, and the element it was drawn on is
+the one element in the app with `backdrop-filter: blur(22px) saturate(150%)`
+on it. A repaint over a live blur re-composites the blur every frame, for
+three seconds, twice, on a phone GPU. That is a plausible whole-app stutter
+and it is exactly the thing the rest of the file was careful to avoid. A
+`travel` shape has to be a transformed element inside an `overflow: hidden`
+box, never a moving background, and never over the plinth.
+
+**Why nothing appeared is still open.** The ordering fix was verified in
+headless and could still be wrong on a device, the toggle may have been off,
+and retire on use means one swipe spends the swipe hint on that phone for
+good. Any of the three, or a stale cache, and they all look identical from
+the outside, which is its own problem: nothing in the feature could say why
+it was silent.
+
+**What would have to be true before this goes back.**
+
+1. **Profiled on a real phone, not asserted in a comment.** Every shape, with
+   the frame timings written down here. The claim "transform and opacity
+   only" has to be measured once rather than repeated.
+2. **`travel` rebuilt, or dropped.** It is the one shape that failed the rule
+   the others keep, and the swipe hint it exists for is also the least
+   necessary: a sideways drag is discovered by accident more than anything
+   else in the app.
+3. **A way to ask the app why it is quiet.** A hint that does not appear is
+   indistinguishable from a hint that is broken, from the off switch, from a
+   retired flag and from a stale bundle. `HC.hints.explain()` returning the
+   first rule that said no would have answered in one line what cost a
+   revert.
+4. **One hint at a time, and watched.** Tier 1 was six at once on top of a
+   scheduler rewrite. The account hint alone was verified working in the app
+   and was reverted with everything else, which is the price of shipping them
+   together.
+5. **Reduce Motion and an old phone in the test matrix,** since both are the
+   conditions under which this would be worst and neither was checked.
+
+**And the process lesson, plainly.** Headless Chromium on a desktop said this
+was fine three separate times. It is a good check for logic and a poor one
+for whether an app feels right, and it should never again be the last word
+before something touching every screen goes to `main`.
