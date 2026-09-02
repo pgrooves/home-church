@@ -4,10 +4,10 @@ Where a new phone gets pointed on its first launch, and the one piece of
 machinery that has to exist before that question has a good answer.
 
 This started as a map and is now also the record of what got built from it.
-Phases 0 to 2 in §6 are on `main`: `js/hints.js`, the `.hc-hint` block in
-`css/components.css`, the account hint's registration in `js/app.js`, and
-`tests/hints.test.js`. Sections 7 to 9 are the survey of everything else
-worth hinting at, and none of that is built.
+On `main`: `js/hints.js` with all three kinds from §7, the three shapes from
+§9, Tier 1 of the catalogue in §8, the off switch in Your account -> Display,
+and `tests/hints.test.js`. Tier 2 is not built and is a survey, not a
+backlog.
 
 Read `Home Church app design system.md` §2b (voice), §3g (motion) and §7
 (accessibility) alongside it. The precedent in code is `js/index-rail.js`,
@@ -642,6 +642,13 @@ at, only performed: swipe between tabs, the carousel, the header pager.
 
 **Caption.** The words. Pairs with any of the three, or stands alone.
 
+**The off switch.** Your account -> Display -> Hints. One switch for all of
+them, because somebody who does not want to be shown things does not want to
+say so nine times. It is the first line of `shouldShow()` so nothing can route
+around it, it ends whatever is on the glass the moment it is flipped, and it
+resets nothing: turning hints back on does not re-offer what somebody already
+learned.
+
 **Not arrows, and this is worth saying plainly** since the brief asked about
 them. An arrow has to point *from* somewhere, which means choosing an origin
 that means nothing, and it has to be drawn at an angle, which nothing else in
@@ -733,10 +740,13 @@ wrap on a 375pt phone.
   else can run. Nothing to decide until a second hint exists, and the options
   are written down so it starts from there.
 
-- **Which of the three kinds in §7 gets built next, and whether the catalogue
-  ships in tiers or not at all.** §8 is a survey, not a plan. Six hints is a
-  help and thirty is a tour, and the difference between them is a decision
-  somebody makes on purpose rather than a backlog somebody works through.
+- **Whether Tier 2 ships at all.** §8 is a survey, not a plan. Six hints is a
+  help and thirty is a tour, and the difference is a decision somebody makes
+  on purpose rather than a backlog somebody works through. Tier 1 is out;
+  watch it before adding to it.
+
+- **Whether two a launch is right.** The budget is a guess. It wants a week
+  on a real phone, not an argument.
 
 - **Whether the index rail's hint joins the budget** even if it keeps its own
   behaviour. It currently spends a slot nothing else can see, which is

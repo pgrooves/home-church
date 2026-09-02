@@ -895,7 +895,7 @@
      second module restarts the second rather than stacking one peek on
      another, and the raised tile moves with you. */
   HC.overflow = {
-    open: function () { openSheet(); },
+    open: function () { openSheet(); HC.hints.noteUse('shell.more'); },
     close: function () { closeSheet(); },
     isOpen: sheetIsOpen,
     arrived: function (name) {
@@ -1868,8 +1868,23 @@
 
     /* ------------------------------------------------------ highlighting */
 
-    'hl-note': function () { HC.highlight.create(true); },
-    'hl-mark': function () { HC.highlight.create(false); },
+    /* Both of these retire the guide hint: somebody who has kept a line has
+       found the feature, whether or not they wrote anything about it.
+
+       Noting one also fires the confirmation hint, which is the only place in
+       the app that does. Deliberately not fired by hl-mark: a highlight stays
+       in the guide and only a note becomes a journal entry, so saying "that is
+       in your Journal now" after a plain highlight would be telling somebody
+       about a thing that did not happen. */
+    'hl-note': function () {
+      HC.highlight.create(true);
+      HC.hints.noteUse('guide.highlight');
+      HC.hints.after('journal.first');
+    },
+    'hl-mark': function () {
+      HC.highlight.create(false);
+      HC.hints.noteUse('guide.highlight');
+    },
     'hl-open': function (el) { HC.highlight.open(el.getAttribute('data-id')); },
     'hl-close': function () { HC.highlight.closeNote(); },
 
@@ -2086,6 +2101,10 @@
     },
 
     'toggle-section': function (el) {
+      // Opening anything on Listen is the archive being found.
+      var hereNow = HC.router.current();
+      if (hereNow && hereNow.name === 'listen') HC.hints.noteUse('listen.archive');
+
       var open = el.getAttribute('aria-expanded') === 'true';
       el.setAttribute('aria-expanded', open ? 'false' : 'true');
       var panel = document.getElementById('panel-' + el.getAttribute('data-section-id'));
@@ -2349,6 +2368,28 @@
        trusts, and this is the one moment where failing is free. Turning it
        off does not ask, because somebody who can already see the switch has
        already got past the lock. */
+    /* The hints switch, Your account -> Display. See js/hints.js, which reads
+       HC.store.hintsOn() first thing in shouldShow() so this cannot be routed
+       around, and js/screens/profile.js for the row.
+
+       Turning them off ends whatever is on the glass right now, because a
+       switch whose effect starts on the next screen is a switch that looks
+       broken to the person who just flipped it. */
+    'toggle-hints': function (el) {
+      var on = HC.store.getProfile().hints === false;
+      HC.store.updateProfile({ hints: on });
+      setSwitch(el, on);
+      if (!on && HC.hints) HC.hints.end();
+
+      var sub = el.querySelector('.hc-switch-row__sub');
+      if (sub) {
+        sub.textContent = on
+          ? 'Point out the things that are easy to miss.'
+          : 'Nothing will be pointed out to you.';
+      }
+      c.toast(on ? 'Hints are on.' : 'Hints are off.');
+    },
+
     'toggle-lock': function (el) {
       var on = !HC.store.getProfile().lockJournal;
 
@@ -3922,6 +3963,103 @@
       },
 
       anchor: function () { return document.getElementById('hc-avatar-disc'); }
+    });
+
+    /* ------------------------------------------------------- screen hints
+
+       Tier 1 of the catalogue in HINTS.md §8. Six, not thirty: six is a help
+       and thirty is a tour, and the scheduler's budget (two a launch, forty
+       five seconds apart, never on launch one) is what keeps it the former
+       even as this list grows.
+
+       Every one of them names the event that retires it, and retire on use
+       beats retire on views: a hint about highlighting is finished the moment
+       somebody highlights something, so the app never explains a thing to
+       somebody who already found it. HC.hints.noteUse() is called from
+       wherever the thing actually happens. */
+
+    /* The app's most undiscoverable feature by a distance. The selection bar
+       is docked above the tab bar and only exists once something is selected,
+       so there is nothing on screen to find and no reason to try. Edge rather
+       than ring because the target is a paragraph, not a control. */
+    HC.hints.register({
+      id: 'guide.highlight',
+      kind: 'screen',
+      route: 'guide-reader',
+      shape: 'edge',
+      text: 'Press a line to keep it.',
+      anchor: function () { return document.querySelector('.hc-hl-src'); }
+    });
+
+    /* A whole navigation model nothing announces: the five tabs swipe, and
+       the row runs past Connect into the modules behind •••. Travel, because
+       a gesture cannot be pointed at, only performed. */
+    HC.hints.register({
+      id: 'shell.swipe',
+      kind: 'screen',
+      shape: 'travel',
+      order: 20,
+      text: 'Swipe to the next tab.',
+      when: function (ctx) { return HC.router.isTop(ctx.route); },
+      anchor: function () { return document.getElementById('hc-tabbar'); }
+    });
+
+    /* Four modules behind one tile, five for an admin. */
+    HC.hints.register({
+      id: 'shell.more',
+      kind: 'screen',
+      shape: 'ring',
+      order: 30,
+      text: 'More lives behind here.',
+      when: function (ctx) { return HC.router.isTop(ctx.route); },
+      anchor: function () {
+        return document.querySelector('.hc-tab[data-tab="more"]');
+      }
+    });
+
+    /* The archive starts folded and runs back years. Somebody can use Listen
+       for months and see only this season. */
+    HC.hints.register({
+      id: 'listen.archive',
+      kind: 'screen',
+      route: 'listen',
+      shape: 'edge',
+      order: 40,
+      text: 'Every message, back years, folds out here.',
+      anchor: function () {
+        var all = document.querySelectorAll('#hc-view .hc-section');
+        return all.length ? all[all.length - 1] : null;
+      }
+    });
+
+    /* Admin only. A row in the review queue was parsed out of the church's
+       email newsletter, not typed by anybody, and nothing on it says so. */
+    HC.hints.register({
+      id: 'admin.intake',
+      kind: 'screen',
+      route: 'admin',
+      shape: 'edge',
+      order: 50,
+      text: 'These were read out of the newsletter email.',
+      when: function () { return HC.admin && HC.admin.isAdmin(); },
+      anchor: function () {
+        return document.querySelector('.hc-admin__item--review');
+      }
+    });
+
+    /* The third kind, and the best thing in the catalogue. Nobody is looking
+       for it, which is exactly why it lands: somebody has just done the work
+       and does not know where it went. Fired by the note sheet, not by
+       arriving anywhere. Shown once, ever. */
+    HC.hints.register({
+      id: 'journal.first',
+      kind: 'after',
+      shape: 'ring',
+      limit: 1,
+      text: 'That is in your Journal now.',
+      anchor: function () {
+        return document.querySelector('.hc-tab[data-tab="more"]');
+      }
     });
 
     HC.hints.arm();

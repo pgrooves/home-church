@@ -147,6 +147,9 @@
     guideState: storage.get('guideState', {}),
     dismissed: storage.get('dismissed', {}),
     dismissedPins: storage.get('dismissedPins', {}),
+    // What js/hints.js remembers. See hintState() below.
+    hints: storage.get('hints', {}),
+    launches: storage.get('launches', 0),
     roster: storage.get('roster', null),
     prayers: storage.get('prayers', [])
   };
@@ -315,6 +318,55 @@
   }
 
   /* ------------------------------------------------------------ dismissed */
+
+  /* ------------------------------------------------------------ the hints
+
+     What js/hints.js is allowed to remember, and it is deliberately very
+     little. Two shapes, and they answer different questions.
+
+     `hints` is per hint: { seen: n, used: true }. A screen hint retires when
+     somebody has USED the thing it points at, and the seen count is only a
+     backstop for somebody who never does. The account hint stores nothing at
+     all and is not in here, because "is this phone signed out" is already
+     answered by the session. See HINTS.md §3d and §7.
+
+     `launches` is how many times this app has been opened on this phone. It
+     exists for one rule: no screen hint fires on launch one. Somebody opening
+     this app for the first time is looking at a church, not learning a piece
+     of software. */
+  function hintState(id) {
+    var row = state.hints[id];
+    return {
+      seen: row && row.seen ? row.seen : 0,
+      used: !!(row && row.used)
+    };
+  }
+
+  function noteHint(id, patch) {
+    var next = Object.assign({}, hintState(id), patch || {});
+    state.hints[id] = next;
+    storage.set('hints', state.hints);
+    emit('hints', state.hints);
+    return next;
+  }
+
+  /* Called once per launch by js/hints.js, and by nothing else. Reading it
+     without counting is what every other caller wants. */
+  function launchCount() { return state.launches; }
+
+  function countLaunch() {
+    state.launches += 1;
+    storage.set('launches', state.launches);
+    return state.launches;
+  }
+
+  /* The master switch, off Your account -> Display. Undefined means on: a
+     phone that has never touched the setting gets hints, and only an explicit
+     false turns them off. Written as a profile field rather than as its own
+     key so it rides the same sync to Supabase every other preference does. */
+  function hintsOn() {
+    return state.profile.hints !== false;
+  }
 
   function isDismissed(id) {
     return state.dismissed[id] === true;
@@ -510,6 +562,12 @@
     getJournal: getJournal,
     setJournal: setJournal,
     journalCount: journalCount,
+
+    hintState: hintState,
+    noteHint: noteHint,
+    launchCount: launchCount,
+    countLaunch: countLaunch,
+    hintsOn: hintsOn,
 
     isDismissed: isDismissed,
     dismiss: dismiss,

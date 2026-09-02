@@ -221,16 +221,24 @@
    the thing being pointed at, and .hc-hint[data-show] on the words.
    -------------------------------------------------------------------------- */
 
-/* THE RING. Two pseudo elements rather than one, so the two breaths overlap
-   instead of queueing, and both on the disc rather than on the button, so
-   neither can touch layout. transform and opacity only, which is the same
-   discipline js/index-rail.js holds itself to.
+/* THE SHAPES. Three, and the vocabulary stops there: a hint language with an
+   escape hatch becomes a hint language with twelve shapes and no consistency.
+   Each is switched on by [data-hint] carrying its name, set by js/hints.js on
+   the thing being pointed at, and each is transform and opacity only, which is
+   the discipline js/index-rail.js holds itself to.
 
-   It grows out of the disc's own edge: starts at scale 1, exactly the border
-   it is drawn on, and opens to 1.62 while it fades. No overshoot, nothing
-   springs, per §3g of the design system. */
-.hc-avatar__disc::before,
-.hc-avatar__disc::after {
+   NO ARROWS, deliberately. An arrow has to point from somewhere, which means
+   choosing an origin that means nothing, and it has to be drawn at an angle,
+   which nothing else in this app is. Travel plus a caption says "swipe here"
+   better, because it shows the motion rather than naming a direction. */
+
+.hc-avatar__disc,
+[data-hint] { position: relative; }
+
+/* --- ring: a small target with an edge of its own ---------------------- */
+
+[data-hint="ring"]::before,
+[data-hint="ring"]::after {
   content: "";
   position: absolute;
   inset: -1px;
@@ -240,27 +248,88 @@
   pointer-events: none;
 }
 
-/* The disc needs to be the containing block for them, and it was not one:
-   the rule above is the only reason this is positioned. */
-.hc-avatar__disc { position: relative; }
-
-.hc-avatar__disc[data-hint="on"]::before {
+/* Two pseudo elements rather than one, so the two breaths overlap instead of
+   queueing. It grows out of the thing's own edge: starts at scale 1, exactly
+   the border it is drawn on, and opens to 1.62 while it fades. No overshoot,
+   nothing springs, per §3g of the design system. */
+[data-hint="ring"]::before {
   animation: hc-hint-ring 1400ms cubic-bezier(0.16, 0.84, 0.44, 1) 0ms 1 both;
 }
-.hc-avatar__disc[data-hint="on"]::after {
+[data-hint="ring"]::after {
   animation: hc-hint-ring 1400ms cubic-bezier(0.16, 0.84, 0.44, 1) 1700ms 1 both;
 }
 
 /* The disc's own hairline warms while the rings run and cools back after.
    Not decoration: two rings leaving an unlit disc reads as a notification
-   going off, and the thing being lit is what makes them read as light coming
+   going off, and lighting the thing is what makes them read as light coming
    off it instead. */
-.hc-avatar__disc[data-hint="on"] { border-color: var(--hc-gold); }
+.hc-avatar__disc[data-hint="ring"] { border-color: var(--hc-gold); }
 
 @keyframes hc-hint-ring {
   0%   { opacity: 0;    transform: scale(1); }
   18%  { opacity: 0.62; }
   100% { opacity: 0;    transform: scale(1.62); }
+}
+
+/* --- edge: "this whole block does something" --------------------------- */
+
+/* A gold hairline that draws itself down the left side of a block and fades.
+   It borrows the signature left edge rule the design system already uses
+   (--hc-edge-rule), which is why it reads as this app rather than as a
+   tooltip library. scaleY from the top, so it is drawn rather than revealed. */
+[data-hint="edge"]::before {
+  content: "";
+  position: absolute;
+  left: calc(var(--hc-space-md) * -1);
+  top: 0;
+  bottom: 0;
+  width: var(--hc-edge-rule);
+  border-radius: 2px;
+  background: var(--hc-gold);
+  transform-origin: 50% 0;
+  opacity: 0;
+  pointer-events: none;
+  animation: hc-hint-edge 2600ms var(--hc-ease) 0ms 1 both;
+}
+
+@keyframes hc-hint-edge {
+  0%   { opacity: 0;    transform: scaleY(0); }
+  14%  { opacity: 0.85; }
+  30%  { opacity: 0.85; transform: scaleY(1); }
+  74%  { opacity: 0.85; transform: scaleY(1); }
+  100% { opacity: 0;    transform: scaleY(1); }
+}
+
+/* --- travel: the only shape that can show a gesture -------------------- */
+
+/* A swell that crosses the thing, twice, the way a thumb would. A gesture
+   cannot be pointed at, only performed, which is why swiping gets this and
+   not a ring. The rail's own hint is the same idea drawn vertically.
+
+   Clipped to the anchor, so the pill never escapes the tab bar it is
+   crossing, and drawn behind the anchor's contents rather than over them. */
+[data-hint="travel"]::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  overflow: hidden;
+  pointer-events: none;
+  opacity: 0;
+  background-image: linear-gradient(100deg,
+    rgba(215, 186, 133, 0) 38%,
+    var(--hc-gold) 50%,
+    rgba(215, 186, 133, 0) 62%);
+  background-size: 240% 100%;
+  background-repeat: no-repeat;
+  animation: hc-hint-travel 1500ms var(--hc-ease) 0ms 2 both;
+}
+
+@keyframes hc-hint-travel {
+  0%   { opacity: 0;    background-position: 130% 0; }
+  16%  { opacity: 0.55; }
+  84%  { opacity: 0.55; }
+  100% { opacity: 0;    background-position: -30% 0; }
 }
 
 /* THE CAPTION. Positioned from script off the thing it points at, so it is
@@ -307,7 +376,7 @@
 .hc-hint[data-show="true"] { opacity: 1; transform: translateY(0); }
 
 /* Under Reduce Motion this is information, not decoration, so it degrades
-   rather than refusing: no ring, no travel, the caption simply present, and
+   rather than refusing: no shape at all, the caption simply present, and
    js/hints.js holds it longer because there is no movement to draw the eye.
    That is the same call js/splash.js makes with FLOOR_STILL. base.css already
    collapses the transition; this is here so the 4px of travel does not become

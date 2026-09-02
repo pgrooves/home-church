@@ -71,6 +71,7 @@ const account = {
 /* A launch where everything is fine. Every case below is this with one thing
    changed, so what each test is actually about is the line that overrides. */
 function ctx(over) {
+  const seen = (over && over._seen) || {};
   return Object.assign({
     route: 'home',
     signedIn: false,
@@ -78,9 +79,20 @@ function ctx(over) {
     splashUp: false,
     sheetOpen: false,
     hidden: false,
-    alreadyRanThisLaunch: false
+    hintsOn: true,
+    busyScreen: false,
+    typing: false,
+    alreadyRanThisLaunch: false,
+    screenRuns: 0,
+    launch: 5,
+    sinceLast: Infinity,
+    hintState: (id) => seen[id] || { seen: 0, used: false }
   }, over || {});
 }
+
+// A screen hint, for everything below the launch hint's own cases.
+const screenHint = { id: 'guide.highlight', kind: 'screen', route: 'guide-reader' };
+function sctx(over) { return ctx(Object.assign({ route: 'guide-reader' }, over || {})); }
 
 console.log('\n--- the happy path ---');
 ok('a signed out phone on Home gets the hint',
@@ -98,8 +110,6 @@ console.log('\n--- the hundredth launch, which is the point of this file ---');
    changing its signature breaks this file. That is the tripwire. */
 ok('a hundredth launch, still signed out, still shows',
   shouldShow(account, ctx()), true);
-ok('and shouldShow takes no state argument, so there is nothing to count with',
-  shouldShow.length, 2);
 ok('opening Profile without signing in does not retire it',
   shouldShow(account, ctx({ route: 'home', signedIn: false })), true);
 
@@ -136,6 +146,91 @@ ok('and still cannot jump the one per launch rule',
   shouldShow({ id: 'bare' }, ctx({ alreadyRanThisLaunch: true })), false);
 ok('nothing registered shows nothing',
   shouldShow(null, ctx()), false);
+
+console.log('\n--- the off switch, which nothing may route around ---');
+/* First line of shouldShow, deliberately, so no kind and no future gate can
+   sit in front of it. Both kinds, because a switch that only silenced one of
+   them would be a switch that looks broken. */
+ok('hints off silences the launch hint',
+  shouldShow(account, ctx({ hintsOn: false })), false);
+ok('hints off silences a screen hint',
+  shouldShow(screenHint, sctx({ hintsOn: false })), false);
+ok('hints off beats every other condition being perfect',
+  shouldShow(screenHint, sctx({ hintsOn: false, launch: 99 })), false);
+
+console.log('\n--- retire on use, not on views ---');
+ok('a screen hint runs when the thing has not been used',
+  shouldShow(screenHint, sctx()), true);
+ok('and is finished the moment it has',
+  shouldShow(screenHint, sctx({ _seen: { 'guide.highlight': { seen: 0, used: true } } })), false);
+ok('used beats everything, including never having been seen',
+  shouldShow(screenHint, sctx({ _seen: { 'guide.highlight': { seen: 0, used: true } } })), false);
+
+console.log('\n--- the seen cap, a backstop and not the rule ---');
+ok('twice seen still shows',
+  shouldShow(screenHint, sctx({ _seen: { 'guide.highlight': { seen: 2, used: false } } })), true);
+ok('three times seen does not',
+  shouldShow(screenHint, sctx({ _seen: { 'guide.highlight': { seen: 3, used: false } } })), false);
+
+console.log('\n--- launch one belongs to the account hint alone ---');
+ok('no screen hint on launch one',
+  shouldShow(screenHint, sctx({ launch: 1 })), false);
+ok('but the account hint still fires on launch one',
+  shouldShow(account, ctx({ launch: 1 })), true);
+ok('screen hints start on launch two',
+  shouldShow(screenHint, sctx({ launch: 2 })), true);
+
+console.log('\n--- the session budget and the cooldown ---');
+ok('a second screen hint in a launch is allowed',
+  shouldShow(screenHint, sctx({ screenRuns: 1 })), true);
+ok('a third is not',
+  shouldShow(screenHint, sctx({ screenRuns: 2 })), false);
+ok('and none within forty five seconds of the last',
+  shouldShow(screenHint, sctx({ sinceLast: 44000 })), false);
+ok('just after is fine',
+  shouldShow(screenHint, sctx({ sinceLast: 46000 })), true);
+
+console.log('\n--- the two budgets do not touch ---');
+/* The whole reason §7 exists. A signed out phone runs the account hint every
+   launch, and if that spent the screen budget nothing else could ever run. */
+ok('a launch hint having run does not block a screen hint',
+  shouldShow(screenHint, sctx({ alreadyRanThisLaunch: true })), true);
+ok('and screen hints having run do not block the launch hint',
+  shouldShow(account, ctx({ screenRuns: 2 })), true);
+
+console.log('\n--- a screen hint stays on its own screen ---');
+ok('not on the wrong route',
+  shouldShow(screenHint, sctx({ route: 'home' })), false);
+ok('a screen hint with no route runs anywhere',
+  shouldShow({ id: 'shell.swipe', kind: 'screen' }, sctx()), true);
+
+console.log('\n--- never while somebody is working ---');
+ok('not in presentation mode',
+  shouldShow(screenHint, sctx({ busyScreen: true })), false);
+ok('not while a text box has focus',
+  shouldShow(screenHint, sctx({ typing: true })), false);
+ok('and not for the launch hint either',
+  shouldShow(account, ctx({ typing: true })), false);
+
+console.log('\n--- a confirmation hint is not a screen hint ---');
+/* It shows once, ever, at a moment the person created by finishing
+   something. A rule that defers it does not delay it, it cancels it. This is
+   the bug the browser found: with the screen rules applied, noting a line
+   within forty five seconds of any other hint silently spent the only
+   showing this hint would ever have. */
+const confirm = { id: 'journal.first', kind: 'after', limit: 1 };
+ok('fires inside the cooldown, where a screen hint would not',
+  shouldShow(confirm, ctx({ sinceLast: 1000 })), true);
+ok('fires with the session budget already spent',
+  shouldShow(confirm, ctx({ sinceLast: 1000, screenRuns: 2 })), true);
+ok('fires on launch one, because the action is what summoned it',
+  shouldShow(confirm, ctx({ launch: 1 })), true);
+ok('but only once, ever',
+  shouldShow(confirm, ctx({ _seen: { 'journal.first': { seen: 1, used: false } } })), false);
+ok('and still answers to the off switch',
+  shouldShow(confirm, ctx({ hintsOn: false })), false);
+ok('and still not while somebody is typing',
+  shouldShow(confirm, ctx({ typing: true })), false);
 
 console.log('\n' + pass + ' passed, ' + fail + ' failed.');
 process.exit(fail ? 1 : 0);

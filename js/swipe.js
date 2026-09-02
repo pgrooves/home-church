@@ -286,6 +286,11 @@
            Only a drag calls this, because only a drag can land you somewhere
            the bar cannot name. See js/app.js. */
         if (HC.overflow) HC.overflow.arrived(name);
+        /* A drag that committed is somebody who has found the gesture, so the
+           hint about it is finished. This is the one call site, because it is
+           the only place a swipe is known to have landed rather than sprung
+           back to where it started. */
+        if (HC.hints) HC.hints.noteUse('shell.swipe');
       } else if (totop && totopWas) {
         totop.setAttribute('data-show', totopWas);
       }
