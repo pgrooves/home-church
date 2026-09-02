@@ -2417,55 +2417,61 @@ a.hc-card:active { background: var(--hc-paper-sunk); }
 
    The one moment in this app that is allowed to be loud. The panels drop, the
    house settles back toward the middle of the screen, and light comes out
-   from behind it: rays in the brand gold, clipped to a ring so they start at
-   the edge of the mark rather than through it, and a warm bloom under them.
+   from behind it: a warm glow with no edge on it, and one hairline ring of
+   gold travelling out of that glow and away.
 
    Under Reduce Motion base.css collapses all of it, and because the burst
    ends at opacity 0 it is simply never seen, which is the intended still
    version. The words still change, which is the part that carries the news.
    -------------------------------------------------------------------------- */
 
+/* The core. A round warm glow with no edge to it, brightest right behind the
+   house and gone by the time it reaches the words.
+
+   THERE WERE RAYS HERE AND THEY WERE WRONG. A conic gradient masked to a ring
+   drew a sunburst, which is a cartoon of light rather than light: the thing
+   this moment wants is the screen brightening from behind the mark, not a
+   drawing of the sun. What replaced it is this glow and the ring below it. */
 .hc-splash__burst {
   position: absolute;
   left: 50%;
   top: 50%;
-  width: 320px;
-  height: 320px;
-  margin: -160px 0 0 -160px;
+  width: 340px;
+  height: 340px;
+  margin: -170px 0 0 -170px;
   pointer-events: none;
+  border-radius: 50%;
   opacity: 0;
+  background: radial-gradient(closest-side,
+    rgba(255, 250, 238, 1) 0%,
+    rgba(236, 212, 164, 0.62) 28%,
+    rgba(219, 192, 143, 0.26) 46%,
+    rgba(215, 186, 133, 0) 68%);
   /* Behind the house, which is the only place light coming from behind the
      house can be. */
   z-index: -1;
 }
 
-.hc-splash__burst::before,
-.hc-splash__burst::after {
+/* And one ring of light leaving it. This is the half that makes the moment
+   read as something happening rather than something being lit: a single
+   hairline of gold that travels outward and is gone, softened just enough
+   that it is a ripple and not a drawn circle.
+
+   It is a child of the glow above, so the glow's own scale multiplies into
+   this one. That is deliberate and it is what was drawn from: the ring
+   accelerates away a little faster than its own keyframes say. */
+.hc-splash__burst::before {
   content: '';
   position: absolute;
-  inset: 0;
+  left: 50%;
+  top: 50%;
+  width: 150px;
+  height: 150px;
+  margin: -75px 0 0 -75px;
   border-radius: 50%;
-}
-
-/* The rays. Masked to a ring so the gold never crosses the mark itself, and
-   faded out at the far edge so they end in paper rather than at a hard
-   circle nobody drew. */
-.hc-splash__burst::before {
-  background: repeating-conic-gradient(from 8deg,
-    var(--hc-gold) 0deg 2.4deg,
-    rgba(215, 186, 133, 0) 2.4deg 15deg);
-  -webkit-mask: radial-gradient(closest-side,
-    rgba(0, 0, 0, 0) 17%, #000 34%, #000 54%, rgba(0, 0, 0, 0) 78%);
-          mask: radial-gradient(closest-side,
-    rgba(0, 0, 0, 0) 17%, #000 34%, #000 54%, rgba(0, 0, 0, 0) 78%);
-}
-
-/* And the bloom the rays come out of. */
-.hc-splash__burst::after {
-  background: radial-gradient(closest-side,
-    rgba(255, 246, 226, 0.92) 0%,
-    rgba(215, 186, 133, 0.50) 34%,
-    rgba(215, 186, 133, 0) 68%);
+  border: 1.75px solid var(--hc-gold);
+  filter: blur(0.7px);
+  opacity: 0;
 }
 
 /* The gate stands down. */
@@ -2481,11 +2487,11 @@ a.hc-card:active { background: var(--hc-paper-sunk); }
 .hc-splash--in .hc-splash__lockup { transform: translateY(-32px); }
 
 .hc-splash--in .hc-splash__burst {
-  animation: hc-burst 1200ms cubic-bezier(0.12, 0.66, 0.28, 1) forwards;
+  animation: hc-burst-core 1200ms cubic-bezier(0.12, 0.66, 0.28, 1) forwards;
 }
 
 .hc-splash--in .hc-splash__burst::before {
-  animation: hc-burst-turn 1200ms cubic-bezier(0.12, 0.66, 0.28, 1) forwards;
+  animation: hc-burst-ring 1200ms cubic-bezier(0.16, 0.74, 0.3, 1) forwards;
 }
 
 .hc-splash--in .hc-splash__markwrap {
@@ -2499,16 +2505,19 @@ a.hc-card:active { background: var(--hc-paper-sunk); }
   animation: hc-gate-say 520ms cubic-bezier(0.16, 0.84, 0.44, 1) forwards;
 }
 
-@keyframes hc-burst {
-  0%   { opacity: 0; transform: scale(0.28); }
-  18%  { opacity: 1; }
-  62%  { opacity: 0.9; }
-  100% { opacity: 0; transform: scale(1.45); }
+/* Both come up fast and leave slowly, which is what light does. The glow
+   barely grows, because a glow that travels is a balloon; the ring is the
+   only thing that goes anywhere. */
+@keyframes hc-burst-core {
+  0%   { opacity: 0; transform: scale(0.5); }
+  16%  { opacity: 1; }
+  100% { opacity: 0; transform: scale(1.22); }
 }
 
-@keyframes hc-burst-turn {
-  from { transform: rotate(-10deg); }
-  to   { transform: rotate(9deg); }
+@keyframes hc-burst-ring {
+  0%   { opacity: 0; transform: scale(0.66); }
+  16%  { opacity: 0.88; }
+  100% { opacity: 0; transform: scale(2.35); }
 }
 
 @keyframes hc-gate-pop {
