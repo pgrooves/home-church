@@ -232,5 +232,24 @@ ok('and still answers to the off switch',
 ok('and still not while somebody is typing',
   shouldShow(confirm, ctx({ typing: true })), false);
 
+console.log('\n--- the opening moment belongs to the launch hint ---');
+/* The regression that shipped: a screen hint's settle timer is shorter than
+   the launch hint's delay, so the screen hint took the glass and the account
+   hint was dropped on `if (current)`. The symptom was the account hint
+   appearing on the very first launch and never again, which reads like §3d
+   being broken rather than like two kinds racing.
+
+   The ordering itself lives in arm() and cannot be reached from here, so what
+   is asserted is the thing that made the race possible: both kinds are
+   eligible at the same moment on a signed out launch two, and nothing in the
+   policy separates them. Ordering is the scheduler's job, and this is the
+   note that says so. */
+ok('on a signed out launch two, the account hint is eligible',
+  shouldShow(account, ctx({ launch: 2 })), true);
+ok('and so is a screen hint, at the same moment',
+  shouldShow(screenHint, sctx({ launch: 2 })), true);
+ok('so the launch hint keeps its slot after a screen hint has run',
+  shouldShow(account, ctx({ launch: 2, screenRuns: 1, sinceLast: 1000 })), true);
+
 console.log('\n' + pass + ' passed, ' + fail + ' failed.');
 process.exit(fail ? 1 : 0);

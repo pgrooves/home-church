@@ -364,6 +364,17 @@
      phone that has never touched the setting gets hints, and only an explicit
      false turns them off. Written as a profile field rather than as its own
      key so it rides the same sync to Supabase every other preference does. */
+  /* Forget every hint. Both copies: removing the key alone leaves the in
+     memory map answering for the rest of the session, so hints would stay
+     retired until the next launch and the reset would look like it failed. */
+  function resetHints() {
+    state.hints = {};
+    state.launches = 0;
+    storage.remove('hints');
+    storage.remove('launches');
+    emit('hints', state.hints);
+  }
+
   function hintsOn() {
     return state.profile.hints !== false;
   }
@@ -511,6 +522,13 @@
     state.guideState = {};
     state.dismissed = {};
     state.dismissedPins = {};
+    /* The hints come back too. Erase everything means this phone has never
+       seen the app, and a phone that has never seen the app has not been
+       shown anything. Without these two the keys go from disk and the in
+       memory copy keeps answering, so every hint stays retired for the rest
+       of the session and comes back only on the next launch. */
+    state.hints = {};
+    state.launches = 0;
     state.roster = [];      // [] not null, so getRoster does not reseed the sample names
     state.prayers = [];
 
@@ -565,6 +583,7 @@
 
     hintState: hintState,
     noteHint: noteHint,
+    resetHints: resetHints,
     launchCount: launchCount,
     countLaunch: countLaunch,
     hintsOn: hintsOn,

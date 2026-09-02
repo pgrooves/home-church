@@ -529,6 +529,14 @@ way past is the tour we are not building. Screen hints start on launch two.
 most two or three across a whole launch, and a cooldown of about forty five
 seconds so two never arrive close enough together to read as a sequence.
 
+**The opening moment belongs to the launch hint, and screen hints queue
+behind it.** A screen hint settles faster than a launch hint waits, so
+without this the screen hint takes the glass on a cold launch and is still up
+when the launch hint's turn comes, and the launch hint is dropped. The
+symptom is the account hint appearing on the very first launch and never
+again, which reads exactly like §3d being broken rather than like two kinds
+racing. Found by opening the app four times in a row, not by reading it.
+
 **Never on a screen somebody is working in.** Not while a room is open and
 somebody is typing, not while a note sheet is up, not in presentation mode,
 not while Edit mode is on and an admin is mid sentence.
@@ -747,6 +755,13 @@ wrap on a 375pt phone.
 
 - **Whether two a launch is right.** The budget is a guess. It wants a week
   on a real phone, not an argument.
+
+- **Whether retire on use is too sharp for testing.** It is right for a
+  member and awkward for whoever is checking the work: one swipe retires the
+  swipe hint on that phone for good. `HC.hints.reset()` from a console puts
+  them all back, and Erase everything does the same. There is deliberately no
+  button for it, because a person who has learned something does not need to
+  be taught it again.
 
 - **Whether the index rail's hint joins the budget** even if it keeps its own
   behaviour. It currently spends a slot nothing else can see, which is

@@ -103,6 +103,31 @@
   var lastShown  = 0;    // when the last hint of any kind ended, for COOLDOWN
   var thisVisit  = null; // the route we last considered, so one visit is one try
   var settleTimer = 0;
+
+  /* THE OPENING MOMENT BELONGS TO THE LAUNCH HINT, and this is what reserves
+     it. A screen hint's settle timer is shorter than the launch hint's delay,
+     so without this the screen hint takes the glass first and is still up when
+     the launch hint's turn comes, and show() drops it on `if (current)`.
+
+     The symptom was the account hint appearing on the very first launch and
+     never again, which reads exactly like the every-launch rule in §3d being
+     broken rather than like an ordering problem between two kinds. Found by
+     opening the app four times in a row rather than by reading it. */
+  var launchDone = false;
+  var waitingOnLaunch = [];
+
+  function afterLaunchSlot(fn) {
+    if (launchDone) { fn(); return; }
+    waitingOnLaunch.push(fn);
+  }
+
+  function settleLaunch() {
+    if (launchDone) return;
+    launchDone = true;
+    var list = waitingOnLaunch;
+    waitingOnLaunch = [];
+    for (var i = 0; i < list.length; i++) list[i]();
+  }
   var current = null;    // the spec on the glass, or null
   var layer   = null;    // its element, or null
   var target  = null;    // what it is pointing at, so the shape can be undone
@@ -351,11 +376,15 @@
 
   function end(why) {
     if (!current) return;
+    var wasLaunch = (current.kind || 'launch') === 'launch';
     current = null;
     lastShown = Date.now();
     window.clearTimeout(holdTimer);
     holdTimer = 0;
     undraw();
+    // A launch hint that has had its moment releases it. The cooldown then
+    // keeps the next screen hint well clear of it.
+    if (wasLaunch) settleLaunch();
   }
 
   /* --- retiring ----------------------------------------------------------
@@ -460,6 +489,9 @@
       delayTimer = window.setTimeout(function () {
         delayTimer = 0;
         runFirst('launch');
+        // Nothing to wait for: no launch hint was eligible, so the screen
+        // hints holding behind this can go as soon as they are ready.
+        if (!current) settleLaunch();
       }, DELAY);
     };
 
@@ -482,11 +514,12 @@
         settleTimer = 0;
         // Not on top of the greeting. On a cold launch this timer is running
         // long before the splash has finished its own sequence.
+        var go = function () { afterLaunchSlot(function () { runFirst('screen'); }); };
         if (HC.splash && HC.splash.showing && HC.splash.showing()) {
-          if (HC.splash.whenGone) HC.splash.whenGone(function () { runFirst('screen'); });
+          if (HC.splash.whenGone) HC.splash.whenGone(go);
           return;
         }
-        runFirst('screen');
+        go();
       }, SETTLE);
     };
 
@@ -536,6 +569,20 @@
        not arrive on top of each other two seconds into the same launch. Its
        standing thirty second offer is unaffected: by then this is long gone. */
     busy: function () { return !!current || !!delayTimer; },
+
+    /* Forget every hint this phone has been shown or has retired, so they all
+       come round again. There is no button for this and there should not be
+       one: the switch in Your account turns hints off, and a person who has
+       learned something does not need to be taught it again. It exists for
+       testing on a real phone, where normal use retires a hint permanently
+       after one swipe, and it is what Erase everything calls. */
+    reset: function () {
+      if (HC.store.resetHints) HC.store.resetHints();
+      ranThisLaunch = false;
+      screenRuns = 0;
+      lastShown = 0;
+      thisVisit = null;
+    },
 
     // For the tests, and for anything that needs the policy without the DOM.
     shouldShow: shouldShow,
