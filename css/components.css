@@ -2442,10 +2442,16 @@ a.hc-card:active { background: var(--hc-paper-sunk); }
   pointer-events: none;
   border-radius: 50%;
   opacity: 0;
+  /* THE ALPHAS ARE THE BRIGHTNESS AND THE ONLY BRIGHTNESS. Every stop is one
+     quarter down from where this was first drawn, and the reach, the scale and
+     the timing were left exactly where they were: dimming a glow by shrinking
+     it makes it a smaller glow rather than a softer one. If this ever wants
+     turning up or down again, it is these four numbers and the ring's peak
+     below, and nothing else. */
   background: radial-gradient(closest-side,
-    rgba(255, 250, 238, 1) 0%,
-    rgba(236, 212, 164, 0.62) 28%,
-    rgba(219, 192, 143, 0.26) 46%,
+    rgba(255, 250, 238, 0.75) 0%,
+    rgba(236, 212, 164, 0.47) 28%,
+    rgba(219, 192, 143, 0.20) 46%,
     rgba(215, 186, 133, 0) 68%);
   /* Behind the house, which is the only place light coming from behind the
      house can be. */
@@ -2516,7 +2522,7 @@ a.hc-card:active { background: var(--hc-paper-sunk); }
 
 @keyframes hc-burst-ring {
   0%   { opacity: 0; transform: scale(0.66); }
-  16%  { opacity: 0.88; }
+  16%  { opacity: 0.66; }
   100% { opacity: 0; transform: scale(2.35); }
 }
 
