@@ -6,7 +6,8 @@ machinery that has to exist before that question has a good answer.
 This started as a map and is now also the record of what got built from it.
 Phases 0 to 2 in §6 are on `main`: `js/hints.js`, the `.hc-hint` block in
 `css/components.css`, the account hint's registration in `js/app.js`, and
-`tests/hints.test.js`. Anything in §7 is a proposal and nothing more.
+`tests/hints.test.js`. Sections 7 to 9 are the survey of everything else
+worth hinting at, and none of that is built.
 
 Read `Home Church app design system.md` §2b (voice), §3g (motion) and §7
 (accessibility) alongside it. The precedent in code is `js/index-rail.js`,
@@ -232,7 +233,7 @@ from scratch:
 
 1. **Let it starve.** A signed out phone is a phone that has not started, and
    the account is the only thing worth pointing at until it has. Honest, and
-   it means §7's list only ever reaches people with accounts.
+   it means §8's catalogue only ever reaches people with accounts.
 2. **The account hint stands aside every third launch.** Keeps "every launch"
    in spirit, gives the registry a slot to breathe, and costs one line in the
    scheduler.
@@ -462,25 +463,213 @@ first one.
 
 ---
 
-## 7. What the second hint would be, when there is one
+## 7. Three kinds of hint, and why the scheduler cannot ship the other two
 
-Listed so the registry is built with them in mind, not so they get built.
+§6 built one hint. A survey of the whole app (§8) turns up around thirty more
+worth making, and almost none of them can run on what is in `js/hints.js`
+today. Not because the drawing is wrong, it is the right drawing, but because
+the account hint is a different *kind* of hint from nearly everything else,
+and the scheduler was written for its kind alone.
 
-- **Swiping between tabs.** Five tabs swipe sideways and nothing says so. The
-  strongest candidate, and the one most likely to be discovered by accident
-  anyway, which is an argument both ways.
-- **The ••• sheet.** Four modules live behind one tile.
-- **Highlight to note, in a guide.** Select a line, keep it. Genuinely
-  undiscoverable, and it needs a guide open and a paragraph on screen, so it
-  cannot ride the launch slot. It would want a different trigger entirely,
-  something like the third guide opened, which is a good reason not to
-  generalise the scheduler for it until it is real.
-- **The date rail on Listen.** Probably not. It appears on scroll, which is
-  its own hint.
+**1. A launch hint.** Fires when the app opens, points at shell chrome, and
+lives on a condition that is true across launches. The account hint is the
+only one, and probably always will be.
+
+**2. A screen hint.** Fires when you *arrive somewhere*, points at something
+inside that screen, and is done once you have used the thing it points at.
+Almost the entire catalogue is this. Highlighting in a guide, the archive
+that starts folded, the ••• sheet, the month grid.
+
+**3. A confirmation hint.** Fires *after* you did something, and says where
+the result went. "That is in your Journal now." Nobody is looking for it,
+which is exactly why it lands: it answers a question the person did not know
+to ask, at the one moment they would understand the answer.
+
+Three blockers, all in `js/hints.js`, and none of them hard:
+
+**One hint per launch.** With the account hint taking the slot every launch
+while signed out, a signed out phone would see **none** of the catalogue,
+ever. This is the §3e trade coming due exactly as predicted, and the
+catalogue is the second hint that makes it real. The answer is not to raise
+the cap to thirty. It is that launch hints and screen hints have separate
+budgets, because they are not competing for the same moment: one happens as
+the app opens, the other happens when you walk into a room.
+
+**It arms once at boot.** A screen hint has to fire on a `view` change,
+after the screen has painted, and re-resolve its anchor each time, because
+screens here render to a string in one pass and some redraw themselves on a
+poll. The Group room replaces its whole subtree every eight seconds.
+`js/index-rail.js` already solved this exact problem with a `MutationObserver`
+and its solution is the one to copy rather than reinvent.
+
+**It stores nothing.** §3d removed persistence on purpose and was right to,
+for a hint whose stopping condition is an account. A screen hint's stopping
+condition is "you have done this", which nothing else in the app records. So
+persistence comes back, for these only, and the account hint stays stateless.
+
+### The rules the second kind needs
+
+**Retire on use, not on views.** The rail's own rule, and the honest one: a
+hint about highlighting is finished the moment you highlight something. It
+means the app never explains a thing to somebody who has already found it.
+Every entry in §8 names the event that retires it.
+
+**A cap as a backstop, not as the rule.** Somebody who never uses the thing
+would otherwise see the same line on every visit to that screen for a year.
+Three showings, then it retires whether or not they ever used it. That is not
+the account hint's rule and should not be: an account is worth asking about
+until it exists, and a swipe gesture is not.
+
+**The first launch belongs to the account hint alone.** No screen hint fires
+on launch one. Somebody opening this app for the first time is looking at a
+church, not learning a piece of software, and teaching them six things on the
+way past is the tour we are not building. Screen hints start on launch two.
+
+**A budget, so a session never feels like a tour.** One per screen visit, at
+most two or three across a whole launch, and a cooldown of about forty five
+seconds so two never arrive close enough together to read as a sequence.
+
+**Never on a screen somebody is working in.** Not while a room is open and
+somebody is typing, not while a note sheet is up, not in presentation mode,
+not while Edit mode is on and an admin is mid sentence.
+
+```js
+HC.hints.register({
+  id: 'guide.highlight',
+  kind: 'screen',                  // vs 'launch', vs 'after'
+  route: 'guide-reader',           // when to consider it
+  shape: 'edge',                   // §9
+  minLaunch: 2,
+  limit: 3,                        // the backstop, not the rule
+  retireOn: 'journal:highlight',   // the store event that means "they found it"
+  anchor: function () { return document.querySelector('.hc-hl-src'); },
+  text: 'Press a line to keep it.'
+});
+```
+
+Everything new is declarative and the scheduler still owns whether, when and
+how it ends. That is the §5 split holding under thirty hints, which is the
+whole reason it was built that way.
 
 ---
 
-## 8. Ideas worth skipping, and why
+## 8. The catalogue
+
+Every non-obvious thing in this app, found by reading it rather than guessing.
+Tiered, because thirty hints shipped at once is a tour and six is a help.
+
+**Two findings worth having before the table.**
+
+*Some of these are already solved, in prose, and must not be said twice.*
+`js/screens/group.js` writes "Swipe for an earlier Sunday. The room opens on
+whichever guide you are looking at." as a caption under the carousel, and "A
+code is good for one night." under the join box. Worship draws chevrons either
+side of its header "for the thumb that never tries". Those are hints that
+earned a permanent place in the layout, which is better than a floating one.
+A floating hint on top of them is the app repeating itself.
+
+*The best hint in the catalogue is a confirmation, not a pointer.* The one the
+brief asked for by name, "did you know this saves to your Journal", is worth
+more than any of the pointers, because the person has already done the work
+and does not know where it went.
+
+### Tier 1, the six worth shipping first
+
+| Where | What is hidden | Shape | Fires | Retires on |
+|---|---|---|---|---|
+| **Guide reader** | Prose can be selected and kept. `js/highlight.js` is the app's most undiscoverable feature by a distance: the bar is docked above the tab bar and only exists once something is selected, so there is nothing on screen to find. | Edge on the first `[data-hl-path]` block | Second guide opened | First highlight |
+| **After a first note** | It went to the Journal tab. The confirmation hint, and the strongest thing here. | Ring on the Journal route in the ••• sheet, or the tab if open | Right after the first note saves | Shown once, ever |
+| **Anywhere** | The five tabs swipe, and the row runs past Connect into the modules behind •••. `js/swipe.js` is a whole navigation model nothing announces. | Travel across the tab bar | Launch 2, on any stop | First swipe |
+| **••• tile** | Four modules live behind it, and an admin has five. | Ring on the ••• tile | Launch 2 or 3 | First sheet open |
+| **Listen** | The archive starts folded and runs back years. `js/date-rail.js` says so out loud: "it starts folded". A person can use Listen for months and see only this season. | Edge on the archive chevron | Second visit to Listen | First time it is opened |
+| **Admin only** | An announcement in the review queue was parsed out of the email newsletter by Gemini, not typed by anybody. Nothing on the row says where it came from. | Caption on the review queue heading | First time the queue has a row | First review |
+
+### Tier 2, worth doing once Tier 1 has been out a while
+
+| Where | What is hidden | Retires on |
+|---|---|---|
+| Listen | Once the archive is open, the month rail slides in under the header and jumps you back years. | First rail tap |
+| Listen | A sermon with a guide carries a quiet link straight into it. | First `open-guide` |
+| Home | The block under the greeting is a carousel, not one photograph. | First carousel move |
+| Guide reader | The six sections fold. Seven `collapsible()` calls, all closed. | First `toggle-section` |
+| Guide reader | Your self reflection answers are already journal entries and always were. | Shown once |
+| Group | Answers stay shut until the leader opens them, which is the whole trust model and is invisible to a member. | First room joined |
+| Group | "From your journal" offers your own writing as a starting point for an answer, and never posts anything. | First `room-journal-toggle` |
+| Journal | The whole journal exports as one file. | First export |
+| Cal | Tapping a day filters the list under the month. | First `cal-day` |
+| Cal | Add to calendar writes to the phone's real calendar, not to this app. | First `add-to-calendar` |
+| Profile | Text size is here, and it is on top of the system's, not instead of it. | First `text-size` |
+| Profile | The Journal can be locked behind Face ID, and the switch is here rather than in the Journal. | First toggle |
+| Admin | Edit mode lets you fix a sentence where you are reading it. Genuinely invisible: a switch three levels into Settings that changes how every screen behaves. | First `edit-open` |
+| Admin | While Edit mode is on, every outlined sentence is tappable, and it expires in half an hour. | Shown once per session it is turned on |
+| Leader | Presentation mode runs the questions one at a time on the big screen. | First `toggle-present` |
+
+### Tier 3, do not hint
+
+- **Anything already written into the layout.** The two Group carousel
+  captions, the join code line, the Worship chevrons. Said once, permanently,
+  in the right place.
+- **The pinned announcement's x.** Chrome that stays, and an x is its own
+  affordance.
+- **Practices, Connect, Worship, Search.** Read as what they are. Connect in
+  particular deliberately has no hidden behaviour: §"THE RULE THIS SCREEN NOW
+  KEEPS" in `js/screens/connect.js` is that nothing there implies something
+  will happen unless it does.
+- **The index rail.** It has its own hint and that hint is good. It should
+  move into the registry eventually so the budget can see it, but its
+  behaviour should not change when it does.
+- **The theme disc, search, back, to top.** Visible, labelled, conventional.
+
+---
+
+## 9. The shapes, and the ones we will not draw
+
+Four, and the vocabulary stops there. A hint language with an escape hatch
+becomes a hint language with twelve shapes and no consistency.
+
+**Ring.** A gold ring out of the thing's own edge, twice. Built. For a small
+target with an edge of its own: a disc, a tile, an icon button.
+
+**Edge.** A gold hairline that draws itself along one side of a block, once,
+then fades. For "this whole thing does something": a foldable section, a
+paragraph you can select, a row that opens. It borrows the signature left
+edge rule the design system already uses, which is why it will look like this
+app rather than like a tooltip library.
+
+**Travel.** A swell that moves along a path. The rail's hint, generalised.
+The only shape that can show a *gesture*, because a gesture cannot be pointed
+at, only performed: swipe between tabs, the carousel, the header pager.
+
+**Caption.** The words. Pairs with any of the three, or stands alone.
+
+**Not arrows, and this is worth saying plainly** since the brief asked about
+them. An arrow has to point *from* somewhere, which means choosing an origin
+that means nothing, and it has to be drawn at an angle, which nothing else in
+this app is. The icon set is thin line, rounded, drawn not engineered, and
+nothing in it gestures at anything. Travel plus a caption says "swipe here"
+better than an arrow does, because it shows the motion rather than naming a
+direction.
+
+**Not spotlights, scrims, tooltips with tails, numbered tours, or a Got it
+button.** §3a and §10.
+
+### The words
+
+Same voice rules, and one trap specific to this feature. **Do not write "Did
+you know".** It is the phrasing every nagging app reaches for, it makes the
+app sound pleased with itself, and it turns a fact into a quiz. Say the
+thing:
+
+- "That is in your Journal now." Not "Did you know this saves to your Journal?"
+- "Press a line to keep it." Not "Try highlighting some text!"
+- "Swipe to the next tab." Not "Tip: you can swipe between tabs."
+
+One line, second person, no exclamation mark, no em-dash, and it must not
+wrap on a 375pt phone.
+
+---
+
+## 10. Ideas worth skipping, and why
 
 - **A spotlight or scrim over everything else.** This is the exact thing the
   brief rules out. It is in the way by construction, it is the loudest
@@ -504,7 +693,7 @@ Listed so the registry is built with them in mind, not so they get built.
 
 ---
 
-## 9. Settled, and still open
+## 11. Settled, and still open
 
 **Settled, unless somebody argues:**
 
@@ -543,6 +732,15 @@ Listed so the registry is built with them in mind, not so they get built.
   phone now spends its one slot on the account hint every launch and nothing
   else can run. Nothing to decide until a second hint exists, and the options
   are written down so it starts from there.
+
+- **Which of the three kinds in §7 gets built next, and whether the catalogue
+  ships in tiers or not at all.** §8 is a survey, not a plan. Six hints is a
+  help and thirty is a tour, and the difference between them is a decision
+  somebody makes on purpose rather than a backlog somebody works through.
+
+- **Whether the index rail's hint joins the budget** even if it keeps its own
+  behaviour. It currently spends a slot nothing else can see, which is
+  harmless with one other hint registered and is not harmless with six.
 
 - **Whether the Profile visit case ever needs quietening.** §3d keeps showing
   the full hint to somebody who opened Profile and chose not to sign in, which
