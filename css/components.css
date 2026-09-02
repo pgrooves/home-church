@@ -2417,21 +2417,23 @@ a.hc-card:active { background: var(--hc-paper-sunk); }
 
    The one moment in this app that is allowed to be loud. The panels drop, the
    house settles back toward the middle of the screen, and light comes out
-   from behind it: a warm glow with no edge on it, and one hairline ring of
-   gold travelling out of that glow and away.
+   from behind it: a warm glow with no edge on it and nothing else. One shape,
+   softly lit and softly gone.
 
    Under Reduce Motion base.css collapses all of it, and because the burst
    ends at opacity 0 it is simply never seen, which is the intended still
    version. The words still change, which is the part that carries the news.
    -------------------------------------------------------------------------- */
 
-/* The core. A round warm glow with no edge to it, brightest right behind the
-   house and gone by the time it reaches the words.
+/* A round warm glow with no edge to it, brightest right behind the house and
+   gone by the time it reaches the words. This is the whole effect now.
 
-   THERE WERE RAYS HERE AND THEY WERE WRONG. A conic gradient masked to a ring
-   drew a sunburst, which is a cartoon of light rather than light: the thing
-   this moment wants is the screen brightening from behind the mark, not a
-   drawing of the sun. What replaced it is this glow and the ring below it. */
+   TWO THINGS WERE HERE BEFORE IT AND BOTH CAME OUT. First a conic gradient
+   masked to a ring, which drew a sunburst: a cartoon of light rather than
+   light, when what this moment wants is the screen brightening from behind
+   the mark. Then a hairline ring travelling out of the glow, which was closer
+   but still something drawn on top of the light rather than the light itself.
+   What is left is the part that was never in question. */
 .hc-splash__burst {
   position: absolute;
   left: 50%;
@@ -2446,8 +2448,7 @@ a.hc-card:active { background: var(--hc-paper-sunk); }
      quarter down from where this was first drawn, and the reach, the scale and
      the timing were left exactly where they were: dimming a glow by shrinking
      it makes it a smaller glow rather than a softer one. If this ever wants
-     turning up or down again, it is these four numbers and the ring's peak
-     below, and nothing else. */
+     turning up or down again, it is these four numbers and nothing else. */
   background: radial-gradient(closest-side,
     rgba(255, 250, 238, 0.75) 0%,
     rgba(236, 212, 164, 0.47) 28%,
@@ -2456,28 +2457,6 @@ a.hc-card:active { background: var(--hc-paper-sunk); }
   /* Behind the house, which is the only place light coming from behind the
      house can be. */
   z-index: -1;
-}
-
-/* And one ring of light leaving it. This is the half that makes the moment
-   read as something happening rather than something being lit: a single
-   hairline of gold that travels outward and is gone, softened just enough
-   that it is a ripple and not a drawn circle.
-
-   It is a child of the glow above, so the glow's own scale multiplies into
-   this one. That is deliberate and it is what was drawn from: the ring
-   accelerates away a little faster than its own keyframes say. */
-.hc-splash__burst::before {
-  content: '';
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  width: 150px;
-  height: 150px;
-  margin: -75px 0 0 -75px;
-  border-radius: 50%;
-  border: 1.75px solid var(--hc-gold);
-  filter: blur(0.7px);
-  opacity: 0;
 }
 
 /* The gate stands down. */
@@ -2496,10 +2475,6 @@ a.hc-card:active { background: var(--hc-paper-sunk); }
   animation: hc-burst-core 1200ms cubic-bezier(0.12, 0.66, 0.28, 1) forwards;
 }
 
-.hc-splash--in .hc-splash__burst::before {
-  animation: hc-burst-ring 1200ms cubic-bezier(0.16, 0.74, 0.3, 1) forwards;
-}
-
 .hc-splash--in .hc-splash__markwrap {
   animation: hc-gate-pop 760ms cubic-bezier(0.2, 0.9, 0.3, 1) forwards;
 }
@@ -2511,19 +2486,13 @@ a.hc-card:active { background: var(--hc-paper-sunk); }
   animation: hc-gate-say 520ms cubic-bezier(0.16, 0.84, 0.44, 1) forwards;
 }
 
-/* Both come up fast and leave slowly, which is what light does. The glow
-   barely grows, because a glow that travels is a balloon; the ring is the
-   only thing that goes anywhere. */
+/* Up fast and gone slowly, which is what light does. It barely grows, because
+   a glow that travels is a balloon: what changes over the twelve hundred
+   milliseconds is how bright it is, not how big. */
 @keyframes hc-burst-core {
   0%   { opacity: 0; transform: scale(0.5); }
   16%  { opacity: 1; }
   100% { opacity: 0; transform: scale(1.22); }
-}
-
-@keyframes hc-burst-ring {
-  0%   { opacity: 0; transform: scale(0.66); }
-  16%  { opacity: 0.66; }
-  100% { opacity: 0; transform: scale(2.35); }
 }
 
 @keyframes hc-gate-pop {
