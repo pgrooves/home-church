@@ -2372,6 +2372,15 @@
   color: var(--hc-accent-deep);
 }
 
+/* Who posted it, drawn only for an admin or a leader. Tighter to the header
+   than the full paragraph gap `.hc-section-header + *` would give it, because
+   it belongs to the date in the label above rather than to the words below: a
+   byline set a paragraph away reads as the announcement opening with one.
+   Deliberately quiet, in the caption colour the class already carries rather
+   than the accent the window note uses, since this is an aside to the church's
+   own staff and not something the church is saying. */
+.hc-section-header + .hc-announce__by { margin-top: var(--hc-space-sm); }
+
 .hc-announce__text + .hc-announce__text { margin-top: var(--hc-space-base); }
 .hc-announce__text { margin-top: var(--hc-space-md); }
 

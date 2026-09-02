@@ -586,10 +586,26 @@ sync reads announcements with the publishable key, so a name stored there would
 be a name downloaded by every phone in the church. There is no anon read path
 to that table at all.
 
+**And every announcement says who posted it, to the people who get asked.** An
+admin or a leader reading a card on Home sees the line **Announcement 09/14/2026
+· by Ada Lovelace**, and the announcement's own page carries the same note under
+its title; one parsed out of the weekly email reads **from the email
+newsletter** instead. Nobody else sees any of it, because to everybody else this
+is a notice from their church and not an audit trail. The name is written by a
+trigger on `announcements` from `auth.uid()`, so it cannot be forgotten by one
+of the four doors into that table and cannot be dictated by whoever is walking
+through one; an announcement written by `/new-announcement` carries no name at
+all, because nobody was signed in and a guess would be worse than a blank. It
+lives in `announcement_authors` for `review_approvals`' reason, said again in
+`0045`'s header: a name on the announcements table is a name every phone in the
+church downloads with the announcement. This is the first internal note in the
+app that leaders see as well as admins, which is `hc_is_leader()` in the policy
+where the others have `hc_is_admin()`.
+
 The migrations are `0025_admin_role.sql`, `0026_admin_content.sql`,
 `0027_announcement_push.sql`, `0028_announcement_pin.sql`,
-`0033_announcement_media.sql` and `0043_admin_review_push.sql`, each with the
-full reasoning in its header.
+`0033_announcement_media.sql`, `0043_admin_review_push.sql` and
+`0045_announcement_authors.sql`, each with the full reasoning in its header.
 
 ### An announcement's own page
 

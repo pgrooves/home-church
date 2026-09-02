@@ -356,7 +356,104 @@ const ids = list => list.map(a => a.id);
     sandbox.window.HC.store.isDismissed('announcement-serve-day'), true);
 }
 
-/* -------------------------------------------------------------------------- */
+/* ------------------------------------------------------- who posted it
 
-console.log('\n' + pass + ' passed, ' + fail + ' failed.');
-process.exit(fail ? 1 : 0);
+   The line an admin or a leader sees beside the date, from js/bylines.js. The
+   database is what actually decides whether a name reaches this phone, and
+   supabase/tests/0045_announcement_authors_test.sql is where that is asked as
+   the roles. What is tested here is the half that runs on the phone: that a
+   member is not shown a name even if one somehow arrived, that a fetch is not
+   made on their behalf at all, and that the sentence says the right thing for
+   each of the three shapes a note comes in.
+
+   The module answers synchronously off a list it fetches once, so every
+   assertion below is made twice: before the fetch has landed, when the honest
+   answer is nothing, and after. */
+
+function withBylines(rows, who) {
+  const HC = load(['data.js', 'store.js', 'bylines.js']);
+  let fetches = 0;
+
+  HC.auth = {
+    isConfigured: function () { return true; },
+    isSignedIn: function () { return who.signedIn !== false; },
+    restFetch: function () { fetches += 1; return Promise.resolve(rows); }
+  };
+
+  HC.store.updateProfile({ role: who.role || 'member', canHost: !!who.canHost });
+  HC.fetches = function () { return fetches; };
+  return HC;
+}
+
+const NOTES = [
+  { announcement_id: 'ann-typed',  author_name: 'Ada Lovelace', source: 'admin' },
+  { announcement_id: 'ann-parsed', author_name: null,           source: 'newsletter' },
+  { announcement_id: 'ann-script', author_name: null,           source: 'admin' }
+];
+
+// One turn of the microtask queue, which is all a resolved fetch needs.
+const settled = () => new Promise(function (r) { setTimeout(r, 0); });
+
+Promise.resolve().then(function () {
+  const HC = withBylines(NOTES, { role: 'admin' });
+
+  ok('nothing is claimed before the notes have arrived', HC.bylines.note('ann-typed'), '');
+  ok('and asking again does not ask the server twice', HC.fetches(), 1);
+
+  return settled().then(function () {
+    ok('an admin sees who posted it', HC.bylines.note('ann-typed'), 'by Ada Lovelace');
+    // The other two shapes a note comes in. A parsed draft has no name on it
+    // because nobody was signed in when the intake wrote it, and the app says
+    // where it came from instead of guessing at a person.
+    ok('a parsed one says where it came from',
+      HC.bylines.note('ann-parsed'), 'from the email newsletter');
+    // Written by /new-announcement: the service role, no session, and nothing
+    // honest to say. A blank is the answer, not "by an admin".
+    ok('and one written by a script says nothing', HC.bylines.note('ann-script'), '');
+    ok('an announcement with no note at all says nothing',
+      HC.bylines.note('ann-missing'), '');
+    ok('and neither does no announcement', HC.bylines.note(''), '');
+  });
+}).then(function () {
+  const HC = withBylines(NOTES, { role: 'member', canHost: true });
+  // Asking is what starts the fetch, exactly as a first draw of Home does.
+  HC.bylines.note('ann-typed');
+  return settled().then(function () {
+    // The half of migration 0045 that is new: this note is the first internal
+    // one in the app that leaders see as well as admins.
+    ok('a leader sees it too', HC.bylines.note('ann-typed'), 'by Ada Lovelace');
+  });
+}).then(function () {
+  const HC = withBylines(NOTES, { role: 'member' });
+  ok('a member is shown nothing', HC.bylines.note('ann-typed'), '');
+  // And the fetch is never made, so a member's phone does not spend a round
+  // trip on a table the database would answer with nothing anyway.
+  ok('and their phone never asks', HC.fetches(), 0);
+
+  return settled().then(function () {
+    ok('which is still true once everything has settled',
+      HC.bylines.note('ann-typed'), '');
+  });
+}).then(function () {
+  const HC = withBylines(NOTES, { role: 'admin', signedIn: false });
+  ok('a signed out phone is shown nothing', HC.bylines.note('ann-typed'), '');
+  ok('and asks nothing', HC.fetches(), 0);
+}).then(function () {
+  const HC = withBylines(NOTES, { role: 'admin' });
+  HC.bylines.note('ann-typed');
+  return settled().then(function () {
+    ok('the notes are in hand', HC.bylines.note('ann-typed'), 'by Ada Lovelace');
+    /* What js/admin.js calls after a write, and what signing out runs through
+       the 'auth' subscriber: the names leave this phone, and the next screen
+       that wants one asks again. */
+    HC.bylines.forget();
+    ok('forgetting them takes them off the screen', HC.bylines.note('ann-typed'), '');
+    ok('and asks again', HC.fetches(), 2);
+    return settled().then(function () {
+      ok('which brings them back', HC.bylines.note('ann-typed'), 'by Ada Lovelace');
+    });
+  });
+}).then(function () {
+  console.log('\n' + pass + ' passed, ' + fail + ' failed.');
+  process.exit(fail ? 1 : 0);
+});

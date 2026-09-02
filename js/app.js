@@ -4013,6 +4013,23 @@
                    { force: true, animate: false, replace: true });
     });
 
+    /* Who posted an announcement has arrived, which only ever happens on an
+       admin's or a leader's phone and only once per launch. Same shape as the
+       subscriber above and for the same reason: js/bylines.js reads a table
+       the congregation cannot, with a session, after Home has already drawn.
+
+       Two routes rather than one, because the line appears in two places: on
+       the card's label on Home and under the header on the announcement's own
+       page. Anywhere else is left alone, so a byline landing while somebody is
+       reading a guide does not redraw the guide. */
+    HC.store.on('bylines', function () {
+      var route = HC.router.current();
+      if (!route) return;
+      if (route.name !== 'home' && route.name !== 'announcement') return;
+      HC.router.go(Object.assign({}, route, { restore: true }),
+                   { force: true, animate: false, replace: true });
+    });
+
     HC.store.on('practices', function () {
       var route = HC.router.current();
       if (!route) return;

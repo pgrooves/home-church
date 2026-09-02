@@ -285,6 +285,24 @@
       : 'Announcement';
   }
 
+  /* And, for an admin or a leader, who posted it, on the end of that same
+     line: "Announcement 09/14/2026 · by Ada Lovelace".
+
+     ON THE LABEL RATHER THAN ON A LINE OF ITS OWN, which is where the
+     announcement's page puts it. The two differ because the label does: here
+     it is a plain span and a byline can simply join the date it is about,
+     which is where somebody looking for it would look first. On the page the
+     same line is wrapped by edit mode, so a byline folded into it would sit
+     inside an admin's edit box. Both sentences come from js/bylines.js so the
+     two screens cannot end up saying different things about the same card.
+
+     Empty for everybody else, and for them until the note arrives. A card
+     whose byline lands a moment after the first paint is repainted by the
+     'bylines' subscriber in js/app.js. */
+  function announcementByline(a) {
+    return (HC.bylines && HC.bylines.note(a.id)) || '';
+  }
+
   /* The lead picture on an announcement, if there is one.
 
      THE FIRST OF THEM AND NOT ALL OF THEM. An announcement can carry a
@@ -394,7 +412,8 @@
         '<button type="button" class="hc-banner__open" data-action="open-announcement" ' +
             'data-id="' + c.esc(a.id) + '">' +
           '<span class="hc-eyebrow hc-banner__label">' +
-            c.esc(announcementLabel(a)) + '</span>' +
+            c.esc(c.metaLine([announcementLabel(a), announcementByline(a)])) +
+          '</span>' +
           '<span class="hc-banner__title hc-body-serif">' + c.esc(a.title) + '</span>' +
           (a.body
             ? '<span class="hc-caption hc-banner__snippet">' + c.esc(a.body) + '</span>'

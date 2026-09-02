@@ -61,6 +61,22 @@
       ('0' + d.getDate()).slice(-2);
   }
 
+  /* Who posted it, for the people who get asked about it.
+
+     A LINE OF ITS OWN RATHER THAN PART OF THE LABEL ABOVE, which is where
+     Home puts it. The label here is editable: HC.edit wraps it so an admin can
+     rewrite the eyebrow in place, and a byline folded into that string would
+     be a byline sitting inside somebody's edit box waiting to be saved as
+     part of the sentence. Directly underneath is as close to "next to the
+     date" as this screen can honestly get.
+
+     Empty for everybody who is not an admin or a leader, and empty for them
+     too until the note arrives, which is one fetch on the first announcement
+     they open. See js/bylines.js. */
+  function byline(a) {
+    return (HC.bylines && HC.bylines.note(a.id)) || '';
+  }
+
   /* One sentence for an announcement that is no longer on Home, or ''.
 
      This is the whole of what the page does about the date window. Somebody
@@ -276,6 +292,9 @@
         value: a.eyebrow || '', label: 'the label over the announcement'
       }
     });
+
+    var who = byline(a);
+    if (who) html += '<p class="hc-caption hc-announce__by">' + c.esc(who) + '</p>';
 
     var note = windowNote(a);
     if (note) html += '<p class="hc-caption hc-announce__note">' + c.esc(note) + '</p>';

@@ -557,6 +557,11 @@
       // refresh here is what makes a just-posted announcement appear on Home
       // without waiting for the next cold start.
       HC.content.refresh();
+      /* And the byline the database has just written for it, which the list
+         js/bylines.js is holding cannot have: this is the one moment in the
+         app where a new announcement_authors row appears. Dropped rather than
+         patched, for the reason invalidate() gives above. */
+      if (HC.bylines) HC.bylines.forget();
       return saved;
     });
   }
@@ -568,6 +573,8 @@
     }).then(function () {
       invalidate('announcements');
       HC.content.refresh();
+      // The note went with the row, per the cascade in migration 0045.
+      if (HC.bylines) HC.bylines.forget();
     });
   }
 
