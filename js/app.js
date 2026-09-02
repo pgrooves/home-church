@@ -3892,6 +3892,40 @@
        finished rather than cutting away mid animation. See js/splash.js. */
     if (HC.splash) HC.splash.ready();
 
+    /* The one hint this app points with, and the only one registered so far.
+
+       WHY IT EXISTS. Everything on Home works signed out, deliberately, which
+       is exactly why nothing on Home tells anybody to sign in: there is no
+       wall and no blocked feature doing it for us. The cost of that generosity
+       is that the one thing worth doing first is the one thing nothing points
+       at, and this is the pointer. See HINTS.md.
+
+       WHAT IT DOES NOT DO. It does not block, it does not take a tap, it has
+       no button, and it is gone the moment anybody touches anything. Every one
+       of those is load bearing: they are the reason it is allowed to come back
+       every launch rather than needing a limit. If any of them ever softens,
+       the rule below has to be revisited on the same commit.
+
+       `when` is the whole of the launch policy. There is no counter beside it
+       and no flag behind it: the hint runs while the phone is signed out and
+       stops when it is not, and isSignedIn() is already right across launches
+       because the session is already stored. */
+    HC.hints.register({
+      id: 'account',
+      order: 10,
+      text: 'Make it yours.',
+
+      when: function (ctx) {
+        return ctx.configured &&        // no pointing at a sign-in that is not wired up
+               !ctx.signedIn &&         // the only terminal condition there is
+               ctx.route === 'home';    // not into somewhere they navigated to
+      },
+
+      anchor: function () { return document.getElementById('hc-avatar-disc'); }
+    });
+
+    HC.hints.arm();
+
     // Session restore is async and best effort. If it lands while Profile
     // is on screen, repaint it so the signed-in state catches up.
     HC.store.on('auth', function () {

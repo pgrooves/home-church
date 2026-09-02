@@ -211,6 +211,113 @@
 .hc-avatar:active .hc-avatar__disc { background: var(--hc-paper-sunk); }
 
 /* --------------------------------------------------------------------------
+   The hint. One quiet pointer at one thing, a couple of seconds after the
+   greeting lifts, gone the moment anybody touches anything. See js/hints.js
+   for whether and when, HINTS.md for why, and demo-hint/ for the drawing it
+   was decided from.
+
+   Two pieces, and they are switched on by two different attributes so a hint
+   can have the ring without the caption if it ever wants to: [data-hint] on
+   the thing being pointed at, and .hc-hint[data-show] on the words.
+   -------------------------------------------------------------------------- */
+
+/* THE RING. Two pseudo elements rather than one, so the two breaths overlap
+   instead of queueing, and both on the disc rather than on the button, so
+   neither can touch layout. transform and opacity only, which is the same
+   discipline js/index-rail.js holds itself to.
+
+   It grows out of the disc's own edge: starts at scale 1, exactly the border
+   it is drawn on, and opens to 1.62 while it fades. No overshoot, nothing
+   springs, per §3g of the design system. */
+.hc-avatar__disc::before,
+.hc-avatar__disc::after {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  border: 1.5px solid var(--hc-gold);
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* The disc needs to be the containing block for them, and it was not one:
+   the rule above is the only reason this is positioned. */
+.hc-avatar__disc { position: relative; }
+
+.hc-avatar__disc[data-hint="on"]::before {
+  animation: hc-hint-ring 1400ms cubic-bezier(0.16, 0.84, 0.44, 1) 0ms 1 both;
+}
+.hc-avatar__disc[data-hint="on"]::after {
+  animation: hc-hint-ring 1400ms cubic-bezier(0.16, 0.84, 0.44, 1) 1700ms 1 both;
+}
+
+/* The disc's own hairline warms while the rings run and cools back after.
+   Not decoration: two rings leaving an unlit disc reads as a notification
+   going off, and the thing being lit is what makes them read as light coming
+   off it instead. */
+.hc-avatar__disc[data-hint="on"] { border-color: var(--hc-gold); }
+
+@keyframes hc-hint-ring {
+  0%   { opacity: 0;    transform: scale(1); }
+  18%  { opacity: 0.62; }
+  100% { opacity: 0;    transform: scale(1.62); }
+}
+
+/* THE CAPTION. Positioned from script off the thing it points at, so it is
+   right on a phone with a notch and one without, and right if the bar ever
+   changes height. Right aligned so its right edge lands under the disc.
+
+   No nub, no caret, no arrow. Proximity plus the ring does the work, and a
+   nub is one more thing to get wrong against a status bar whose height
+   nobody can predict.
+
+   z-index 48: over every other piece of chrome, under the sheets at 55 and
+   the toast at 60. It must never be over a sheet, and it is never up at the
+   same time as one, because opening one is a view change and a view change
+   ends the hint. */
+.hc-hint {
+  position: fixed;
+  z-index: 48;
+  margin: 0;
+  padding: 7px 12px;
+  border-radius: var(--hc-radius-sm);
+  background: var(--hc-paper);
+  color: var(--hc-mid);
+  font-family: var(--hc-sans);
+  font-size: var(--hc-caption);
+  line-height: var(--hc-caption-line);
+  white-space: nowrap;
+  opacity: 0;
+  transform: translateY(4px);
+  transition: opacity var(--hc-dur-base) var(--hc-ease-enter),
+              transform var(--hc-dur-base) var(--hc-ease-enter);
+
+  /* THE PROMISE, AND IT IS THIS LINE. Not pointer-events: auto with a
+     click-through handler, not a scrim that re-dispatches. Actually none, on
+     the layer and every child, so there is no code path anywhere in which a
+     tap lands on the hint instead of on the app.
+
+     This is why there is no Got it button, no x, and nothing tappable here. A
+     hint you have to dismiss is a modal wearing a smaller coat. If a future
+     hint seems to need one, the hint is wrong, not this rule. */
+  pointer-events: none;
+}
+.hc-hint * { pointer-events: none; }
+
+.hc-hint[data-show="true"] { opacity: 1; transform: translateY(0); }
+
+/* Under Reduce Motion this is information, not decoration, so it degrades
+   rather than refusing: no ring, no travel, the caption simply present, and
+   js/hints.js holds it longer because there is no movement to draw the eye.
+   That is the same call js/splash.js makes with FLOOR_STILL. base.css already
+   collapses the transition; this is here so the 4px of travel does not become
+   a jump. */
+@media (prefers-reduced-motion: reduce) {
+  .hc-hint { transform: none; }
+  .hc-hint[data-show="true"] { transform: none; }
+}
+
+/* --------------------------------------------------------------------------
    Date rail. A second strip of chrome, directly under the top bar and only on
    the Listen archive: the month each message was preached, running in the
    order the page draws them, with the one you are reading filled in.

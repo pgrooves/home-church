@@ -3,7 +3,10 @@
 Where a new phone gets pointed on its first launch, and the one piece of
 machinery that has to exist before that question has a good answer.
 
-This is a map, not a record. Nothing in here is built yet.
+This started as a map and is now also the record of what got built from it.
+Phases 0 to 2 in §6 are on `main`: `js/hints.js`, the `.hc-hint` block in
+`css/components.css`, the account hint's registration in `js/app.js`, and
+`tests/hints.test.js`. Anything in §7 is a proposal and nothing more.
 
 Read `Home Church app design system.md` §2b (voice), §3g (motion) and §7
 (accessibility) alongside it. The precedent in code is `js/index-rail.js`,
