@@ -715,14 +715,45 @@
       tiles.push({ route: 'admin', icon: 'shield', title: 'Admin', action: 'go-admin', id: '' });
     }
 
+    /* Your account, last, past Admin on the phones that have one.
+
+       A SECOND DOOR TO THE SAME ROOM, ON PURPOSE. The initials in the top bar
+       already go here and they stay. They are also the one piece of navigation
+       in the app that is not a picture of what it opens: a person who has not
+       been told their initials are a button does not go looking for their text
+       size behind their own name. This is the tile they do find, and both taps
+       land on the same screen, so nothing had to be moved to add it.
+
+       LAST BECAUSE IT IS NOT ONE OF THEM. Everything above is somewhere the
+       church put something. This is where you change how the app behaves for
+       you, which is the thing you reach for least often and the thing that
+       belongs at the end of a list rather than in the middle of one.
+
+       `stop: false` is what keeps it out of the sideways swipe, and it is the
+       only tile here that needs saying. Every other one is a stop: a drag left
+       off Give lands on Admin. Your account is a pushed view with an arrow out
+       of it, the way Search is, so a drag must not be able to arrive at it
+       from Give and then have nowhere to go. See syncModules below. */
+    tiles.push({
+      route: 'profile', icon: 'settings', title: 'Settings',
+      action: 'go-profile', id: '', stop: false
+    });
+
     return tiles;
   }
 
   /* Hand the row to the router, which owns where a drag can land. Called at
      boot and again whenever who is signed in changes, because the last stop
-     belongs to the person rather than to the build. */
+     belongs to the person rather than to the build.
+
+     The sheet and the row were the same list until Settings joined the sheet,
+     and they are still the same order: this drops the tiles that are doors to
+     pushed views rather than stops, and keeps the rest exactly as the grid
+     draws them. */
   function syncModules() {
-    HC.router.setModules(sheetTiles().map(function (t) { return t.route; }));
+    HC.router.setModules(sheetTiles().filter(function (t) {
+      return t.stop !== false;
+    }).map(function (t) { return t.route; }));
   }
 
   function paintSheet() {
@@ -1017,7 +1048,14 @@
       scroller.scrollTo({ top: 0, behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
     },
 
+    /* Two ways in now, the initials in the top bar and the cog in the sheet,
+       and only one of them can have a sheet up behind it. Closing it here
+       rather than leaning on the view change covers the tap that lands while
+       you are already on Your account: the router treats that as a scroll to
+       the top and fires nothing, so without this the sheet would sit there
+       over the screen it was asked to open. */
     'go-profile': function () {
+      if (HC.overflow.isOpen()) HC.overflow.close();
       HC.router.go({ name: 'profile' });
     },
 

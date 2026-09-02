@@ -294,6 +294,27 @@
        silhouette still carries at 24px in the sheet's grid. */
     shield: '<path d="M12 3.1 5 5.9v5.5c0 4.2 2.9 7.6 7 9.5 4.1-1.9 7-5.3 7-9.5V5.9z"/>' +
             '<path d="m9.3 12.1 1.9 1.9 3.5-3.7"/>',
+
+    /* Your account, from the sheet behind •••. The cog the note above says a
+       shield is not: this is exactly where somebody changes their text size,
+       so it gets the glyph everybody already reads as settings.
+
+       Eight teeth, and they are teeth rather than rays, which is the whole
+       reason it does not collide with `sun` three inches up in the top bar. A
+       ray is a stroke with air between it and the disc; a tooth is part of the
+       outline, so the two silhouettes are never the same shape at any size.
+       Drawn as one closed polygon rather than a ring with spokes for the same
+       reason: what carries at 24px is the bumpy edge, not the count.
+
+       The hub is r="3", which is the largest hole that still leaves a visible
+       rim on the 1.5 stroke. Smaller and the middle fills in and the cog reads
+       as a flower. */
+    settings: '<path d="M21.5 9.8 21.5 14.2 18.4 14.2 18.1 15 20.2 17.1 17.1 20.2 ' +
+              '15 18.1 14.2 18.4 14.2 21.5 9.8 21.5 9.8 18.4 9 18.1 6.9 20.2 3.8 17.1 ' +
+              '5.9 15 5.6 14.2 2.5 14.2 2.5 9.8 5.6 9.8 5.9 9 3.8 6.9 6.9 3.8 9 5.9 ' +
+              '9.8 5.6 9.8 2.5 14.2 2.5 14.2 5.6 15 5.9 17.1 3.8 20.2 6.9 18.1 9 ' +
+              '18.4 9.8Z"/>' +
+              '<circle cx="12" cy="12" r="3"/>',
     doc: '<path d="M13.5 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8.5z"/>' +
          '<path d="M13.5 3v5.5H19"/>',
     message: '<path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9.5 9.5 0 0 1-2.9-.4L4 21l1.4-4.1A8.2 8.2 0 0 1 3.6 11.5 8.4 8.4 0 0 1 12 3.1a8.4 8.4 0 0 1 9 8.4z"/>',
