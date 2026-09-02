@@ -781,6 +781,34 @@ and reviewed rather than written against a deadline:
 **Before switching it on**, read the note in `0009` about data minimization.
 Of the twelve fields in that table the app itself reads exactly one.
 
+### The way in, the screen between the greeting and Home
+
+`js/gate.js`. On any launch where this church has accounts configured and this
+phone is not signed in, the greeting does not leave when it is finished. The
+house and "Welcome home." climb, and two buttons come up underneath them: **Log
+in with email** and **Continue as guest**. Choosing the first slides them off
+to the left and brings the address panel in from the right edge, and sending
+the code slides that one away for the panel the six digits are typed into. The
+code that arrives is the same code the Profile screen has always asked for,
+from the same `requestCode` in `js/auth.js`. Signing in ends with light coming
+out from behind the mark and the greeting changing its mind: *You're in!*
+
+**It is drawn on the splash rather than being a screen of its own,** and that
+is the whole design. A route would mean the greeting fading out and something
+else fading in. What was wanted, and what this is, is one movement: the pieces
+already on the glass make room. `js/splash.js` hands the layer and its own exit
+to `js/gate.js` at the end of the greeting's hold, and takes it away again when
+the gate says so.
+
+**Continue as guest is not a courtesy, it is the reason this is allowed to
+exist.** Nothing in the app is behind it, the choice is not written down, and
+the next launch asks again at no cost to anybody who keeps saying no. If it
+ever reads as nagging, `shouldGate()` is one function and the place to remember
+an answer is `HC.store.updateProfile`. See 2.2 in `APP_STORE_COMPLIANCE.md` for
+why the button's size and placement are a compliance question and not a taste
+one, and `tests/e2e/gate.js` for the whole flow driven in a browser, sign in,
+wrong code, guest, and Reduce Motion.
+
 ### The sign in email has to be edited by hand
 
 `js/auth.js` asks Supabase for a one time code and the Profile screen asks the

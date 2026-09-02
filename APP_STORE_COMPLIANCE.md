@@ -229,6 +229,30 @@ This is our strongest position in the whole document and it needs to be stated
 explicitly in the review notes, because a reviewer who sees a sign in form on
 Profile may assume something is gated behind it.
 
+**And now a reviewer sees one before Profile, so this paragraph is no longer
+optional.** `js/gate.js` puts the offer to sign in between the greeting and the
+Home tab on every launch where nobody is signed in. That is an invitation and
+not a wall, and the distinction is the whole of 5.1.1(v):
+
+- **Continue as guest is on the same panel, in the same size type**, as Log in
+  with email. Not a link in the corner, not a Skip in grey, not a second screen
+  you have to ask for.
+- **Tapping it reaches Home with no account and no record that it was tapped.**
+  The next launch asks again, and taking it every time costs nothing: no
+  feature in the app is dimmer for a guest than it was before this screen
+  existed.
+- **The gate cannot become the thing that traps somebody.** It is drawn on the
+  splash layer, and that layer's ceiling in `js/splash.js` hands over to the
+  gate rather than to a spinner, so even a boot that never finishes lands on a
+  screen with a way out of it.
+
+The review note to write is one sentence: *the app opens with an optional sign
+in; Continue as guest reaches everything, and the reviewer is welcome to use
+it.* `tests/e2e/gate.js` asserts that sentence is true, which is the only way
+it stays true. If anyone ever proposes removing Continue as guest, the answer
+is that it is not a courtesy, it is the reason this section still says
+compliant.
+
 ### Account deletion
 
 **Status with accounts off: does not apply.** No account creation, no
@@ -760,7 +784,10 @@ how this app gets rejected on 4.2 without anyone having seen the reason it
 should pass.**
 
 The review notes must walk them there in numbered steps. Phase 7 will write
-them.
+them, and step 1 is now the way in: *the app opens with an optional sign in.
+Tap Continue as guest. Everything below works from there.* A reviewer who
+stalls on the first screen never reaches the numbered steps at all, so that
+line goes above them rather than in a note at the end. See 2.2.
 
 If push notifications ship, the reviewer also needs to be able to see one. That
 means either a scheduled send during the review window or a documented way to

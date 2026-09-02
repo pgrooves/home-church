@@ -66,6 +66,11 @@ node "$(dirname "$0")/alpha.js" || exit 1
 # everything that can be asked without a page is all layout and traffic.
 node "$(dirname "$0")/search.js" || exit 1
 
+# The way in. This one stands up its own GoTrue-shaped answers rather than the
+# seed, because a sign-in has to have something to sign into, but it is still
+# local and still needs no database, so it belongs up here with the cheap ones.
+node "$(dirname "$0")/gate.js" || exit 1
+
 # The database, built the same way the migration tests build it. Doing it
 # through that script rather than by hand means this can never run against a
 # schema the migration tests have not also seen.

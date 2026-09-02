@@ -3944,6 +3944,17 @@
 
       var route = HC.router.current();
       if (route && route.name === 'profile') HC.router.go({ name: 'profile' }, { force: true });
+      /* And Home, for the one line on it that is about who is holding the
+         phone. Somebody signing in at the gate is signing in while Home is
+         already drawn underneath, so without this the first thing they see
+         after "You're in!" is a greeting that does not know their name yet.
+         restore:true because this is a repaint and not a visit: the router
+         writes the live scroll position down on its way through, so a session
+         refresh landing mid-scroll puts the page back where the thumb had
+         it. */
+      else if (route && route.name === 'home') {
+        HC.router.go({ name: 'home', restore: true }, { force: true });
+      }
     });
 
     // A content check finishing changes the line at the bottom of Profile even

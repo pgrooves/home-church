@@ -14,6 +14,13 @@
    ship in the document and this file only does the two things markup cannot:
    put the name in, and take the whole thing away when Home is ready.
 
+   AND WHERE IT GOES INSTEAD OF AWAY. On a phone that is not signed in the
+   greeting does not leave at the end of its hold. It climbs, and the way in
+   comes up underneath it. That belongs to js/gate.js, which is handed this
+   layer and this file's own exit and decides when to use it. Everything here
+   about the floor, the ceiling and the fade is unchanged by that; the only
+   difference is who says when.
+
    WHY IT READS THE THEME BEFORE app.js DOES. Dark mode is an attribute on
    <html>, set by store.applyPreferences(), which used to happen in boot().
    The splash paints before boot, so on a phone in dark mode it would appear
@@ -36,7 +43,8 @@
 
      The ceiling is the promise that this can never be what keeps somebody out
      of the app. Home is already painted underneath, so if boot never says it
-     is ready, the layer leaves anyway. */
+     is ready, the layer leaves anyway, or on a signed out phone hands over to
+     the gate, which is a screen with a way past it on the first panel. */
   var FLOOR = 2750;
   var FLOOR_STILL = 1200;
   var CEILING = 5000;
@@ -86,6 +94,34 @@
     gone();
   }
 
+  /* The exit, on its own, because there are now two things that can start it
+     and one of them is in another file. js/gate.js is handed this and calls
+     it when whoever is holding the phone has either signed in or said they
+     would rather not. */
+  function leave() {
+    if (!el) return;
+    el.classList.add('hc-splash--out');
+    /* Removed rather than left at opacity 0. A fixed layer over the whole
+       screen still swallows taps, and a phone that never fires the
+       transition would be a phone nobody could use. */
+    setTimeout(remove, FADE + 60);
+  }
+
+  /* WHAT HAPPENS WHEN THE GREETING IS DONE. Either the app opens, which is
+     every launch where somebody is signed in or this church has no accounts
+     at all, or the greeting climbs and the way in comes up under it. The
+     answer belongs to js/gate.js, which is the only file that knows what
+     being signed in means; this one only knows when the greeting has finished
+     saying what it came to say. */
+  function handOff() {
+    if (!el) return;
+    if (HC.gate && HC.gate.shouldShow()) {
+      HC.gate.open(el, leave);
+      return;
+    }
+    leave();
+  }
+
   /* Called by boot() the moment Home is on the glass. Everything after this
      is the floor: if Home was ready early, which it always is, the splash
      waits out the rest of its own sequence before leaving. */
@@ -97,14 +133,7 @@
     var floor = reduced() ? FLOOR_STILL : FLOOR;
     var waited = Date.now() - shownAt;
 
-    setTimeout(function () {
-      if (!el) return;
-      el.classList.add('hc-splash--out');
-      /* Removed rather than left at opacity 0. A fixed layer over the whole
-         screen still swallows taps, and a phone that never fires the
-         transition would be a phone nobody could use. */
-      setTimeout(remove, FADE + 60);
-    }, Math.max(0, floor - waited));
+    setTimeout(handOff, Math.max(0, floor - waited));
   }
 
   function init() {
@@ -115,11 +144,13 @@
     if (HC.store) HC.store.applyPreferences();
     paintGreeting();
 
+    /* The ceiling hands off the same way the floor does rather than tearing
+       the layer away. A boot that never says it is ready still owes a signed
+       out phone its way in, and the gate is somewhere somebody can act, not
+       somewhere they are stuck: Continue as guest is on the first panel. */
     ceilingTimer = setTimeout(function () {
       done = true;
-      if (!el) return;
-      el.classList.add('hc-splash--out');
-      setTimeout(remove, FADE + 60);
+      handOff();
     }, CEILING);
   }
 

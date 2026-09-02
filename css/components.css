@@ -2301,6 +2301,235 @@ a.hc-card:active { background: var(--hc-paper-sunk); }
   50%      { filter: drop-shadow(0 0 7px rgba(215, 186, 133, 0.34)); }
 }
 
+/* ==========================================================================
+   The way in
+
+   What the screen above becomes on a phone that is not signed in: the same
+   layer, the same house, the same welcome, lifted to make room for two
+   buttons underneath them. See js/gate.js for the order of it.
+
+   NOTHING HERE FADES BETWEEN STATES. The lockup climbs, the panels slide, and
+   the light at the end comes out from behind the mark. Every one of those is
+   a movement of something already on the glass, which is the difference
+   between a greeting that turns into a door and two screens taking turns.
+   ========================================================================== */
+
+/* The house and the welcome, wrapped so one transform carries both. It has to
+   be this element and not the two inside it: those are still holding the
+   transform their entrance animation ended on, and a transition on a property
+   an animation is filling forwards is a second opinion about the same number.
+   This div has no animation, so it is free to move. */
+.hc-splash__lockup {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transition: transform 720ms cubic-bezier(0.16, 0.84, 0.44, 1);
+}
+
+.hc-splash--gate .hc-splash__lockup { transform: translateY(-104px); }
+
+/* Loading is finished being true the moment there is something to tap. */
+.hc-splash--gate .hc-splash__loading {
+  animation: none;
+  opacity: 0;
+  transition: opacity 260ms ease;
+}
+
+/* THE DECK IS FULL BLEED AND THE PADDING IS ON THE PANELS. A panel is meant
+   to arrive from the right edge of the screen, so the thing that clips it has
+   to reach that edge. Anchored below the middle rather than to the bottom of
+   the screen, because the middle is where the lockup is and the two of them
+   move as one arrangement; the keyboard shrinking the viewport takes both up
+   together instead of pushing this into it. */
+.hc-splash__gate {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(50% + 24px);
+  overflow: hidden;
+  opacity: 0;
+  transform: translateY(10px);
+  transition: opacity 420ms ease,
+              transform 520ms cubic-bezier(0.16, 0.84, 0.44, 1);
+}
+
+.hc-splash--gate .hc-splash__gate { opacity: 1; transform: translateY(0); }
+
+/* Three panels side by side and the track is what moves. A carousel rather
+   than three elements each sliding on their own: one transform means the
+   panel leaving and the panel arriving can never disagree about where the
+   middle of the screen is, and the one going back the other way is the same
+   number in reverse rather than a second set of rules. */
+.hc-gate__track {
+  display: flex;
+  width: 300%;
+  transition: transform 560ms cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+.hc-gate__track[data-step="1"] { transform: translateX(-33.3333%); }
+.hc-gate__track[data-step="2"] { transform: translateX(-66.6667%); }
+
+.hc-gate__panel {
+  flex: 0 0 33.3333%;
+  width: 33.3333%;
+  display: flex;
+  flex-direction: column;
+  gap: var(--hc-space-md);
+  padding: 0 var(--hc-screen-pad);
+  /* Every panel is as tall as the tallest one, which is what keeps the track
+     from changing height under a slide. */
+  align-self: stretch;
+}
+
+.hc-gate__label {
+  font-family: var(--hc-sans);
+  font-size: var(--hc-caption);
+  line-height: var(--hc-caption-line);
+  letter-spacing: var(--hc-track-eyebrow);
+  text-transform: uppercase;
+  color: var(--hc-accent-deep);
+}
+
+.hc-gate__note {
+  margin: 0;
+  font-family: var(--hc-sans);
+  font-size: var(--hc-caption);
+  line-height: var(--hc-caption-line);
+  color: var(--hc-mid);
+  text-align: center;
+}
+
+.hc-gate__error {
+  margin: 0;
+  font-family: var(--hc-sans);
+  font-size: var(--hc-caption);
+  line-height: var(--hc-caption-line);
+  color: var(--hc-error);
+}
+
+/* Tertiary is a link with no width of its own, which sits left in a column.
+   In here it is the way back and it belongs under the middle of the button
+   above it. */
+.hc-gate__back { align-self: center; }
+
+/* --------------------------------------------------------------------------
+   You're in
+
+   The one moment in this app that is allowed to be loud. The panels drop, the
+   house settles back toward the middle of the screen, and light comes out
+   from behind it: rays in the brand gold, clipped to a ring so they start at
+   the edge of the mark rather than through it, and a warm bloom under them.
+
+   Under Reduce Motion base.css collapses all of it, and because the burst
+   ends at opacity 0 it is simply never seen, which is the intended still
+   version. The words still change, which is the part that carries the news.
+   -------------------------------------------------------------------------- */
+
+.hc-splash__burst {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 320px;
+  height: 320px;
+  margin: -160px 0 0 -160px;
+  pointer-events: none;
+  opacity: 0;
+  /* Behind the house, which is the only place light coming from behind the
+     house can be. */
+  z-index: -1;
+}
+
+.hc-splash__burst::before,
+.hc-splash__burst::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+}
+
+/* The rays. Masked to a ring so the gold never crosses the mark itself, and
+   faded out at the far edge so they end in paper rather than at a hard
+   circle nobody drew. */
+.hc-splash__burst::before {
+  background: repeating-conic-gradient(from 8deg,
+    var(--hc-gold) 0deg 2.4deg,
+    rgba(215, 186, 133, 0) 2.4deg 15deg);
+  -webkit-mask: radial-gradient(closest-side,
+    rgba(0, 0, 0, 0) 17%, #000 34%, #000 54%, rgba(0, 0, 0, 0) 78%);
+          mask: radial-gradient(closest-side,
+    rgba(0, 0, 0, 0) 17%, #000 34%, #000 54%, rgba(0, 0, 0, 0) 78%);
+}
+
+/* And the bloom the rays come out of. */
+.hc-splash__burst::after {
+  background: radial-gradient(closest-side,
+    rgba(255, 246, 226, 0.92) 0%,
+    rgba(215, 186, 133, 0.50) 34%,
+    rgba(215, 186, 133, 0) 68%);
+}
+
+/* The gate stands down. */
+.hc-splash--in .hc-splash__gate {
+  opacity: 0;
+  transform: translateY(8px);
+  pointer-events: none;
+}
+
+/* And the house comes most of the way back to where it started. After this
+   rule, not before it: both classes are on the layer at this point and they
+   carry the same weight, so the order in this file is what decides. */
+.hc-splash--in .hc-splash__lockup { transform: translateY(-32px); }
+
+.hc-splash--in .hc-splash__burst {
+  animation: hc-burst 1200ms cubic-bezier(0.12, 0.66, 0.28, 1) forwards;
+}
+
+.hc-splash--in .hc-splash__burst::before {
+  animation: hc-burst-turn 1200ms cubic-bezier(0.12, 0.66, 0.28, 1) forwards;
+}
+
+.hc-splash--in .hc-splash__markwrap {
+  animation: hc-gate-pop 760ms cubic-bezier(0.2, 0.9, 0.3, 1) forwards;
+}
+
+/* Replaces the entrance animation still filling this element, which is why it
+   holds opacity 1 at both ends: whatever this says is what the greeting is
+   from here on. */
+.hc-splash--in .hc-splash__greeting {
+  animation: hc-gate-say 520ms cubic-bezier(0.16, 0.84, 0.44, 1) forwards;
+}
+
+@keyframes hc-burst {
+  0%   { opacity: 0; transform: scale(0.28); }
+  18%  { opacity: 1; }
+  62%  { opacity: 0.9; }
+  100% { opacity: 0; transform: scale(1.45); }
+}
+
+@keyframes hc-burst-turn {
+  from { transform: rotate(-10deg); }
+  to   { transform: rotate(9deg); }
+}
+
+@keyframes hc-gate-pop {
+  0%   { transform: scale(1); }
+  36%  { transform: scale(1.13); }
+  100% { transform: scale(1); }
+}
+
+@keyframes hc-gate-say {
+  from { opacity: 0; transform: translateY(7px) scale(0.96); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* A shorter phone lifts less, so the welcome does not climb into the notch on
+   the way to making room. */
+@media (max-height: 700px) {
+  .hc-splash--gate .hc-splash__lockup { transform: translateY(-84px); }
+  .hc-splash--in .hc-splash__lockup { transform: translateY(-24px); }
+  .hc-splash__gate { top: calc(50% + 12px); }
+}
+
 /* --------------------------------------------------------------------------
    The index rail. The right edge, in place of a scrollbar this design does
    not draw. See js/index-rail.js for what moves and why.

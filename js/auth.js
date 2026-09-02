@@ -194,7 +194,16 @@
 
     return gotrueFetch('/verify', { body: body }).then(function (session) {
       storeSessionFromResponse(session);
-      return syncAfterSignIn();
+      return syncAfterSignIn().then(function () {
+        /* Said twice, on purpose. setSession() above announces that somebody
+           is signed in, which is true a whole round trip before the phone
+           knows anything about them; this one announces who, and the name in
+           the greeting on Home is what was waiting for it. init() below has
+           done exactly this since it was written, for exactly this reason,
+           and the two sign-in paths should not differ in what they tell the
+           rest of the app. */
+        HC.store.emit('auth', { signedIn: true, user: getUser() });
+      });
     });
   }
 

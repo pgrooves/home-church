@@ -43,6 +43,7 @@ const { chromium } = require('playwright-core');
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
+const pastTheGate = require('./past-the-gate');
 
 const ROOT = path.join(__dirname, '..', '..');
 const PORT = Number(process.env.HC_CONTENT_PORT || 8231);
@@ -151,6 +152,8 @@ function serve() {
   await page.goto('http://127.0.0.1:' + PORT + '/index.html');
   await page.waitForFunction(() => window.HC && window.HC.data && window.HC.router, null,
     { timeout: 15000 });
+  // The way in, answered the way a person answers it. See past-the-gate.js.
+  await pastTheGate(page);
   await page.waitForTimeout(600);
 
   const covered = await page.evaluate(() => {
