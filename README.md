@@ -276,8 +276,10 @@ settles it.
 
 ## The Cal tab
 
-Behind the ••• menu, next to Worship: a month you can walk through, the day
-you tapped underneath it, and the church's upcoming events under that.
+The fourth tile in the bar, between Guide and Connect: a month you can walk
+through, the day you tapped underneath it, and the church's upcoming events
+under that. It swapped places with Group, which is behind the ••• menu now,
+next to Worship, in the slot Cal used to hold.
 
 **It is where the events from the Connect tab went.** They were the fourth
 section of Connect, below the group finder and the serve teams, which is a

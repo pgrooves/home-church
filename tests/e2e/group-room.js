@@ -116,7 +116,11 @@ async function phone(browser, user) {
 
   await page.goto(APP);
   await page.waitForTimeout(900);
-  await page.locator('.hc-tab', { hasText: 'Group' }).click();
+  /* Group is a module behind ••• rather than a tile in the bar, so this goes
+     through the router the way tests/e2e/alpha.js reaches Alpha. The sheet is
+     a real tap in the app and a fragile one in a script: the panel animates
+     up, and what this file is about starts on the other side of it. */
+  await page.evaluate(() => window.HC.router.go({ name: 'group' }, { force: true }));
   await page.waitForTimeout(700);
   return { ctx, page, errs, user, net };
 }

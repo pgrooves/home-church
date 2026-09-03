@@ -271,10 +271,11 @@
          'M2.9 12h2.2M18.9 12h2.2M4.6 19.4l1.6-1.6M17.8 6.2l1.6-1.6"/>',
     moon: '<path d="M20.4 14.6A8.6 8.6 0 0 1 9.4 3.6a8.7 8.7 0 1 0 11 11z"/>',
 
-    /* The Group tab and the reveal. `group` is the tab's own mark: a room
-       with people in it, drawn as a rounded frame rather than the two figures
-       Connect already uses, because at 11px two person glyphs one tab apart
-       read as the same icon twice. */
+    /* The Group tab, behind ••• now, and the reveal. `group` is that screen's
+       own mark: a room with people in it, drawn as a rounded frame rather than
+       the two figures Connect already uses, because two person glyphs read as
+       the same icon twice whether they are a tab apart in the bar or a tile
+       apart in the sheet. */
     group: '<rect x="3" y="5" width="18" height="14" rx="4"/>' +
            '<circle cx="8.5" cy="12" r="1.2"/><circle cx="12" cy="12" r="1.2"/>' +
            '<circle cx="15.5" cy="12" r="1.2"/>',
@@ -321,14 +322,16 @@
     flag: '<path d="M5 21V4"/><path d="M5 5h11l-1.6 3.2L16 11.5H5z"/>',
     pencil: '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>',
 
-    /* The Cal tab, behind •••. A month block with its two rings and one day
-       marked, which is the drawing the whole screen is: a grid where the days
-       with something on them are the ones that stand out.
+    /* The Cal tab, the fourth tile in the bar. A month block with its two
+       rings and one day marked, which is the drawing the whole screen is: a
+       grid where the days with something on them are the ones that stand out.
 
        The band under the rings is what makes it a calendar rather than a note
        with two pins in it, and it is a rule rather than a filled header, so
-       the glyph keeps the same weight as `guide` and `journal` beside it in
-       the sheet. The dot is a filled disc for the reason `more`, `worship` and
+       the glyph keeps the same weight as `guide` beside it in the bar. It was
+       drawn for the sheet and needed no redrawing to come into the bar: the
+       same 24 grid at the same 1.5 stroke every tile already uses.
+       The dot is a filled disc for the reason `more`, `worship` and
        `alpha` fill theirs: a 1.5 stroke ring this small is mostly hole. It
        opts out of `svg { fill: none }` on itself so the frame stays a stroke. */
     calendar: '<rect x="3.5" y="5" width="17" height="15.5" rx="3"/>' +

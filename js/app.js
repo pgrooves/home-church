@@ -26,12 +26,18 @@
 
      `tab: false` is what keeps ••• out of the sideways swipe and out of
      HC.router.TABS. Promoting a module into the five later is a line in this
-     array and a line out of MODULES below. */
+     array and a line out of MODULES below.
+
+     CAL AND GROUP HAVE SWAPPED. The fourth tile is Cal now and Group is the
+     second module behind •••. The count did not move, so the geometry above
+     still holds: one name came out of the bar and another went in. Both lists
+     were edited together, which is the whole trade the note above describes,
+     and HC.router.TABS below was edited with them. */
   var TAB_META = [
     { name: 'home',    label: 'Home',    icon: 'home' },
     { name: 'listen',  label: 'Listen',  icon: 'listen' },
     { name: 'guide',   label: 'Guide',   icon: 'guide' },
-    { name: 'group',   label: 'Group',   icon: 'group' },
+    { name: 'cal',     label: 'Cal',     icon: 'calendar' },
     { name: 'connect', label: 'Connect', icon: 'connect' },
     { name: 'more',    label: 'More',    icon: 'more', tab: false }
   ];
@@ -56,15 +62,16 @@
       title: 'Worship',
       sub: 'The songs from Sunday, and where to hear them again.'
     },
-    /* Second, next to Worship, because these two are the church's own week:
-       what happened on Sunday, and what is happening next. Cal is where the
-       events that used to be the fourth section of Connect live now, with a
-       month grid over them. */
+    /* Second, next to Worship, in the slot Cal held before the two swapped.
+       It keeps that slot for the same reason Cal had it: these two are the
+       church's own Sunday, the songs the band played and the room the guide
+       is read in, and a drag left off the bar reaches both of them together.
+       Nothing else about the Group tab changed in the move. */
     {
-      route: 'cal',
-      icon: 'calendar',
-      title: 'Cal',
-      sub: 'Every date the church has, a month at a time.'
+      route: 'group',
+      icon: 'group',
+      title: 'Group',
+      sub: 'Your room, the guide it is reading, and who is in it.'
     },
     {
       route: 'practices',
@@ -113,7 +120,7 @@
      more reach that route than they can reach the tile. Its four sections
      share the route name, so the tile stays lit down inside Manage users the
      way it stays lit inside a practice. */
-  var MODULE_ROUTES = ['more', 'worship', 'cal', 'practices', 'practice', 'alpha',
+  var MODULE_ROUTES = ['more', 'worship', 'group', 'practices', 'practice', 'alpha',
                        'journal', 'journal-entry', 'give', 'admin'];
 
   var TITLES = {
@@ -124,8 +131,9 @@
     connect: 'Connect',
     more: 'More',
     worship: 'Worship',
-    // The month grid and the church's own dates under it. Named the way the
-    // sheet names it, because the bar and the sheet have to agree.
+    // The month grid and the church's own dates under it. Still "Cal" now
+    // that it is the fourth tile: the tile's label and this table have to
+    // agree, and the short name is what fits under the icon.
     cal: 'Cal',
     practices: 'Practices',
     // Replaced with the practice's own name once its file has loaded, see

@@ -14,7 +14,7 @@
   /* The five with a tile of their own in the bar. There is a sixth tile and it
      is not in here on purpose: ••• is not a destination, it lifts the overflow
      sheet. See TAB_META in js/app.js. */
-  var TABS = ['home', 'listen', 'guide', 'group', 'connect'];
+  var TABS = ['home', 'listen', 'guide', 'cal', 'connect'];
 
   /* The modules behind •••, in the order the sheet lists them. Handed over by
      js/app.js from the one list that also draws the sheet, so the order you

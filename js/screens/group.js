@@ -1,6 +1,7 @@
 /* ==========================================================================
    Home Church, Group
-   The sixth tab. A leader opens a room, the app mints a six digit code, the
+   The second module behind •••, in the slot Cal used to hold. A leader opens
+   a room, the app mints a six digit code, the
    group joins with it, and everyone answers this week's guide questions in
    the same place. Answers stay shut until the leader opens them.
 

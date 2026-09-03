@@ -217,7 +217,7 @@ async function type(page, text) {
     const titleEl = el('.hc-topbar__title');
     const was = titleEl.textContent;
     let widest = 0, widestName = '';
-    ['Home', 'Listen', 'Guides', 'Group', 'Connect'].concat(
+    ['Home', 'Listen', 'Guides', 'Cal', 'Connect'].concat(
       (window.HC.modules || []).map(m => window.HC.titles[m.route] || m.route)
     ).forEach(name => {
       titleEl.textContent = name;
