@@ -197,3 +197,24 @@ on your behalf.
 
 **Read back what you wrote.** One `select` after the write, showing the row as
 it now stands, before you tell anyone it is published.
+
+---
+
+## What neither transport can do: Storage
+
+Both transports above reach Postgres. Neither reaches Storage.
+
+`hc_supabase.py` has no upload verb, and the MCP server has no Storage tool at
+all, so there is no way to put a file in a bucket from a web session. The
+buckets are `instagram`, `announcements` and `narration`, and everything that
+fills them is a script run on a real machine with the service role key:
+`scripts/upload_narration.js` for the guide audio, the Instagram sync for the
+images.
+
+This is worth knowing before you promise anything. A guide can be published
+over MCP from a phone in full, and its narration cannot. The row and the audio
+are two different writes to two different systems, and only one of them travels.
+
+| What you see | What it means |
+|---|---|
+| `CONNECT tunnel failed, response 403` to `supabase.co` on an upload | Same proxy, same answer as the tables. There is no MCP fallback for this one. Hand the command to somebody on a Mac. |

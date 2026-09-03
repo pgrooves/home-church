@@ -121,12 +121,63 @@ before the first fetch lands. It is a frozen snapshot, not a second catalogue
 to maintain. Let it go stale. Nobody needs to keep it current, and editing it
 by hand is how the two copies diverge again.
 
+## Last: narrate it
+
+Every guide section carries a play button, and the recording behind it is made
+here. A guide that skips this step is published and silent, and nothing in the
+app says so, so this is part of publishing rather than an extra.
+
+**Run it after the row is in Supabase, never before.** The narrator reads the
+published guide, not your draft, so the order is: upsert, read the row back,
+then narrate. Narrating first records text that may still change.
+
+```bash
+npm run narrate          # writes the text, then speaks it
+npm run narrate:upload   # needs SUPABASE_SERVICE_ROLE_KEY in the environment
+```
+
+**Read the first command's output before letting the second one run.** It
+prints where the guides came from. `source supabase` is correct. `source seed`
+means it could not reach the project and fell back to the three guides frozen
+in `js/data.js`, so the guide you just wrote is not among them and every guide
+it missed stays silent. It warns in six lines when that happens. Do not
+narrate past that warning.
+
+**This needs a real machine, and most sessions on this app are not one.** The
+speech model is a 340MB local download and the upload is an HTTPS PUT to
+`supabase.co`, which the web session proxy refuses, exactly as
+`supabase/ACCESS.md` describes. MCP is not a way around it: it reaches Postgres,
+and Storage has no MCP path at all.
+
+So in a web session: publish the guide, say plainly that the narration has not
+been made yet, and give the pastor the two commands above to run on the Mac.
+Do not report the guide as fully published without saying which half is
+missing. In a session on a real machine with `.env` present, just run them.
+
+First run on any machine needs the model, once. `NEW_GUIDE_PROCESS.md`
+Step 5b has the four commands.
+
+**It costs nothing.** Kokoro-82M is Apache 2.0 and runs on the CPU: no API, no
+key, no account, no quota, no per-play charge. A weekly guide is about four
+minutes of laptop time, and re-running with unchanged text regenerates nothing
+at all. Do not swap it for a hosted TTS service without saying out loud what
+that would cost the church per year.
+
 ## Confirm, briefly
 
-Three facts and stop. No summary of the steps, no offer of next steps:
+Four facts and stop. No summary of the steps, no offer of next steps:
 
 ```
 Published  The Slow Burn
 Stephen, August 16 2026
 guides, series-david, 7 sections, 18 questions, 14 one-liners
+Narrated   6 sections, 9.4 min, af_heart
+```
+
+If the narration did not run, say which half is missing and what to run,
+rather than leaving the last line off:
+
+```
+Not narrated. Run `npm run narrate && npm run narrate:upload` on the Mac,
+this session cannot reach Storage.
 ```
