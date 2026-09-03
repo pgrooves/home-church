@@ -162,8 +162,34 @@
       reflectionQuestions: arr(r.reflection_questions),
       oneLiners: arr(r.one_liners),
       scriptures: arr(r.scriptures),
-      closingScripture: r.closing_scripture || null
+      closingScripture: r.closing_scripture || null,
+      /* Which sections have been narrated, keyed by the section ids the
+         reader draws. Resolved to full URLs here rather than in the reader,
+         so the screen never has to know the bucket exists. A guide published
+         before narration shipped has no column value at all, which arrives as
+         undefined and becomes {}, and every section simply has no play
+         button. See migration 0046. */
+      narration: narrationUrls(r.narration)
     };
+  }
+
+  /* The stored path is bucket-relative, 'guide-slow-burn/af_heart/group.mp3',
+     for the same reason instagram stores an object path rather than a URL: a
+     project that moves keeps working, and nothing in the table is a link that
+     can rot on its own. */
+  function narrationUrls(value) {
+    var out = {};
+    if (!value || typeof value !== 'object') return out;
+    Object.keys(value).forEach(function (section) {
+      var row = value[section];
+      if (!row || !row.path) return;
+      out[section] = {
+        src: storageUrl('narration', row.path),
+        seconds: Number(row.seconds) || 0,
+        voice: str(row.voice)
+      };
+    });
+    return out;
   }
 
   function mapSermon(r) {

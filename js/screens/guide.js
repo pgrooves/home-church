@@ -28,6 +28,17 @@
       '</' + tag + '>';
   }
 
+  /* The recording for one section, or nothing. Nothing is the normal answer:
+     a guide published before its audio is generated, a guide whose text was
+     edited after the fact so the recording no longer matches, and every guide
+     at all if the church never runs the narration step. In each of those
+     cases the section draws exactly as it always has, with no play button and
+     no apology. A button that cannot play is worse than no button. */
+  function audioFor(guide, sectionId) {
+    var have = guide.narration && guide.narration[sectionId];
+    return have && have.src ? have : null;
+  }
+
   /* ------------------------------------------------------------ the index */
 
   // The series name is already on the header above these rows, so the eyebrow
@@ -107,6 +118,7 @@
       eyebrow: 'Short Summary',
       title: 'Overview',
       body: body,
+      audio: audioFor(guide, 'short-summary'),
       open: true    // the only section open by default
     });
   }
@@ -134,7 +146,8 @@
       id: 'full-summary',
       eyebrow: 'Full Summary',
       title: 'Sermon Summary',
-      body: body
+      body: body,
+      audio: audioFor(guide, 'full-summary')
     });
   }
 
@@ -163,7 +176,8 @@
       id: 'group',
       eyebrow: 'For the Group',
       title: 'Discussion Questions',
-      body: body
+      body: body,
+      audio: audioFor(guide, 'group')
     });
   }
 
@@ -226,7 +240,8 @@
       id: 'reflection',
       eyebrow: 'Take Home',
       title: 'Self-Reflection Questions',
-      body: body
+      body: body,
+      audio: audioFor(guide, 'reflection')
     });
   }
 
@@ -245,7 +260,8 @@
       id: 'oneliners',
       eyebrow: 'From the Pulpit',
       title: 'Impactful One-Liners',
-      body: body
+      body: body,
+      audio: audioFor(guide, 'oneliners')
     });
   }
 
@@ -257,7 +273,8 @@
       id: 'scripture',
       eyebrow: 'Referenced in the Sermon',
       title: 'Scripture Index',
-      body: body
+      body: body,
+      audio: audioFor(guide, 'scripture')
     });
   }
 

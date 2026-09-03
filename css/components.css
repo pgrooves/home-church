@@ -863,6 +863,21 @@ a.hc-card:active { background: var(--hc-paper-sunk); }
   margin-top: var(--hc-space-lg);
 }
 
+/* The header is a row of two things now: the toggle, which is still a full
+   width button, and the narration controls, which only the guide reader ever
+   passes. A section with no audio has an empty row and behaves exactly as it
+   did when the <h2> held the button directly. */
+.hc-section__bar {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--hc-space-sm);
+}
+
+.hc-section__h {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
 .hc-section__toggle {
   display: flex;
   align-items: flex-start;
@@ -915,6 +930,115 @@ a.hc-card:active { background: var(--hc-paper-sunk); }
 }
 
 .hc-section__toggle[aria-expanded="true"] .hc-section__chevron { transform: rotate(180deg); }
+
+/* --------------------------------------------------------------------------
+   Narration, the play button on an open section
+
+   ONLY ON AN OPEN SECTION, which is the point. Six play buttons stacked down
+   a closed guide is a remote control. One play button on the part you just
+   opened is an offer. js/app.js unhides these in the toggle-section handler,
+   using the `hidden` attribute so a screen reader is told the same thing the
+   eye is.
+   -------------------------------------------------------------------------- */
+
+.hc-section__controls {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: var(--hc-space-xs);
+  /* Sits on the title's line rather than the eyebrow's. The eyebrow is 11px
+     over a 25px title, so the optical centre of the heading is well below the
+     top of the box. */
+  margin-top: 18px;
+}
+
+.hc-section__controls[hidden] { display: none; }
+
+.hc-narrate {
+  flex: 0 0 auto;
+  width: 34px;
+  height: 34px;
+  border-radius: var(--hc-radius-pill);
+  background: var(--hc-dark);
+  color: var(--hc-on-dark);
+  display: grid;
+  place-items: center;
+  padding: 0;
+  transition: transform var(--hc-dur-fast) var(--hc-ease);
+}
+
+.hc-narrate:active { transform: scale(0.94); }
+
+.hc-narrate__glyph {
+  width: 15px;
+  height: 15px;
+  grid-area: 1 / 1;
+}
+
+/* The play triangle's mass sits left of its bounding box, so centring the box
+   leaves the glyph looking shoved back. One pixel forward fixes it. */
+.hc-narrate__glyph--play { transform: translateX(1px); }
+.hc-narrate__glyph--pause { display: none; }
+
+.hc-narrate[aria-pressed="true"] .hc-narrate__glyph--play { display: none; }
+.hc-narrate[aria-pressed="true"] .hc-narrate__glyph--pause { display: block; }
+
+/* Loading. A phone on one bar can sit here for a few seconds after the tap,
+   and a button that does nothing visible is a button somebody presses again. */
+.hc-narrate[data-state="loading"] .hc-narrate__glyph { opacity: 0.45; }
+
+/* The row under the header while a section is talking: how far in, and how
+   fast. js/narration.js builds it on play and removes it on stop, so a guide
+   sitting still has none of these.
+
+   THE SPEED PILL IS DOWN HERE AND NOT IN THE HEADER, and the reason is the
+   heading. At 390px the header has room for a 27px title, a chevron and one
+   34px button, and not for a 70px pill as well: putting it up there wrapped
+   "Sermon Summary" onto two lines, and because the pill appears on play, the
+   title reflowed under the thumb that pressed it. */
+.hc-section__playbar {
+  display: flex;
+  align-items: center;
+  gap: var(--hc-space-md);
+  margin-top: var(--hc-space-md);
+}
+
+.hc-narrate-speed {
+  flex: 0 0 auto;
+  min-width: 52px;
+  height: 28px;
+  padding: 0 var(--hc-space-sm);
+  border-radius: var(--hc-radius-pill);
+  border: var(--hc-hairline) solid var(--hc-rule);
+  color: var(--hc-accent-deep);
+  font-family: var(--hc-sans);
+  font-size: 13px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: var(--hc-track-button);
+}
+
+/* The same 1.5px as the app's signature left edge, laid flat. */
+.hc-section__progress {
+  flex: 1 1 auto;
+  height: var(--hc-edge-rule);
+  border-radius: var(--hc-edge-rule);
+  background: var(--hc-rule);
+  overflow: hidden;
+}
+
+.hc-section__progress > span {
+  display: block;
+  height: 100%;
+  width: 0;
+  background: var(--hc-accent-deep);
+  transition: width 250ms linear;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hc-narrate { transition: none; }
+  .hc-section__progress > span { transition: none; }
+}
 
 .hc-section__panel {
   overflow: hidden;

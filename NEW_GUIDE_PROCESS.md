@@ -251,6 +251,60 @@ to go straight through.
 
 -----
 
+## Step 5b: Narrate it
+
+Every guide section carries a play button, and the recording behind it is
+made here. This is a real step in publishing a guide, not an optional extra:
+a guide without it simply has no play buttons, which is a quiet loss nobody
+reports.
+
+```bash
+npm run narrate          # writes the text, then speaks it
+npm run narrate:upload   # needs SUPABASE_SERVICE_ROLE_KEY in the environment
+```
+
+The first command is two halves. `scripts/narration_text.js` turns the guide
+rows into six blocks of speakable prose, one per section, and hashes each
+one. `scripts/build_narration.py` speaks them with Kokoro-82M on the CPU. It
+only regenerates sections whose hash moved, so a normal week narrates the one
+new guide and leaves the catalogue alone, about four minutes.
+
+**Setup, the first time only.** The model is not in the repo, it is 340MB:
+
+```bash
+python3 -m venv .venv
+.venv/bin/pip install kokoro-onnx soundfile imageio-ffmpeg
+mkdir -p models
+curl -L -o models/kokoro-v1.0.onnx https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.0/kokoro-v1.0.onnx
+curl -L -o models/voices-v1.0.bin  https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.0/voices-v1.0.bin
+```
+
+**It costs nothing and it never will.** Kokoro is Apache 2.0 and runs
+locally. There is no API, no key, no account and no quota, so there is no
+per-guide charge, no per-play charge, and no vendor who can reprice this out
+from under the church. Do not replace it with a hosted TTS service without
+saying out loud what that would cost per year.
+
+**The voice is `af_heart` and the pace is 0.95.** Both are set in
+`scripts/build_narration.py`. Do not change either casually: the whole
+catalogue is in that voice, and a guide that sounds like somebody else is a
+guide people notice for the wrong reason. The app can speed playback up at
+listen time, and doing so costs nothing, but it cannot slow down what was
+rushed.
+
+**If you edit a guide's text after narrating it,** re-run both commands. The
+hash in `guides.narration` is what stops a recording reading out a question
+that has since been rewritten. This is not hypothetical: `subtitle`,
+`group_sections` and `reflection_questions` are all editable from inside the
+app by an admin on a Sunday (migration 0031).
+
+**Do not commit the audio.** `narration/`, `models/` and
+`narration-text.json` are all gitignored. The mp3s live in the `narration`
+Storage bucket, which is where phones read them from, and a second copy in
+git would be a few hundred megabytes a year of binaries no diff can read.
+
+-----
+
 ## Step 6: Commit and push
 
 ### Bump the asset version

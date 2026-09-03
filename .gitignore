@@ -28,6 +28,23 @@
 # only ever lives in Xcode, not in the web app.
 /ios-icons/
 
+# The narration. Three kinds of file, none of them belonging in git.
+#
+# narration/ is the mp3s and their manifest, about 5MB per guide. They live in
+# the `narration` Storage bucket, which is where phones read them from, and a
+# second copy in git would be roughly 250MB a year of binaries that no diff
+# can ever be read. `npm run narrate` rebuilds any of it from the text.
+#
+# models/ is the Kokoro weights, 340MB, downloaded once. Same reasoning, more
+# so: it is somebody else's release artifact and it is byte for byte the same
+# for everyone.
+#
+# narration-text.json is the intermediate handoff from narration_text.js to
+# build_narration.py, regenerated on every run.
+/narration/
+/models/
+/narration-text.json
+
 # OS and editor noise
 .DS_Store
 Thumbs.db

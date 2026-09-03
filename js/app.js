@@ -2129,6 +2129,11 @@
       var panel = document.getElementById('panel-' + el.getAttribute('data-section-id'));
       if (panel) panel.setAttribute('data-open', open ? 'false' : 'true');
 
+      /* The play button belongs to the open section and only to the open
+         section. Folding a section that is talking also stops it, which is
+         handled in there rather than here. */
+      if (HC.narration) HC.narration.sectionToggled(el.closest('.hc-section'), !open);
+
       /* The room is the one screen that redraws itself under you, so the DOM
          cannot be where it remembers which question chunks are open. Nothing
          is repainted here: the fold has already happened, and this only makes
@@ -2142,6 +2147,14 @@
       // has no rows to read. Opening or closing it is the one section toggle
       // that changes what the rail has to say.
       if (el.closest('.hc-listen')) HC.dateRail.build(HC.router.current());
+    },
+
+    narrate: function (el) {
+      HC.narration.toggle(el);
+    },
+
+    'narrate-speed': function () {
+      HC.narration.cycle();
     },
 
     'toggle-check': function (el) {

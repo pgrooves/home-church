@@ -5,8 +5,8 @@
   "description": "Home Church, Metairie. Sermons, small group guides, and a way in.",
   "license": "UNLICENSED",
   "scripts": {
-    "test": "node scripts/preflight.js && node scripts/stamp_assets.js --check && node tests/auth.test.js && node tests/rooms.test.js && node tests/journal.test.js && node tests/practices.test.js && node tests/reading-plan.test.js && node tests/announcements.test.js && node tests/calendar.test.js && node tests/edit-mode.test.js && node tests/search.test.js && node tests/listen.test.js && node tests/worship.test.js && node tests/resolve-songs.test.js && sh supabase/tests/run.sh",
-    "test:js": "node scripts/preflight.js && node scripts/stamp_assets.js --check && node tests/auth.test.js && node tests/rooms.test.js && node tests/journal.test.js && node tests/practices.test.js && node tests/reading-plan.test.js && node tests/announcements.test.js && node tests/calendar.test.js && node tests/edit-mode.test.js && node tests/search.test.js && node tests/listen.test.js && node tests/worship.test.js && node tests/resolve-songs.test.js",
+    "test": "node scripts/preflight.js && node scripts/stamp_assets.js --check && node tests/auth.test.js && node tests/rooms.test.js && node tests/journal.test.js && node tests/practices.test.js && node tests/reading-plan.test.js && node tests/announcements.test.js && node tests/calendar.test.js && node tests/edit-mode.test.js && node tests/search.test.js && node tests/listen.test.js && node tests/narration.test.js && node tests/worship.test.js && node tests/resolve-songs.test.js && sh supabase/tests/run.sh",
+    "test:js": "node scripts/preflight.js && node scripts/stamp_assets.js --check && node tests/auth.test.js && node tests/rooms.test.js && node tests/journal.test.js && node tests/practices.test.js && node tests/reading-plan.test.js && node tests/announcements.test.js && node tests/calendar.test.js && node tests/edit-mode.test.js && node tests/search.test.js && node tests/listen.test.js && node tests/narration.test.js && node tests/worship.test.js && node tests/resolve-songs.test.js",
     "test:db": "sh supabase/tests/run.sh",
     "test:e2e": "sh tests/e2e/run.sh",
     "test:content": "node tests/e2e/editable-content.js",
@@ -21,7 +21,9 @@
     "ios": "npm run stamp && npm run sync && npx cap sync ios",
     "ios:open": "npm run ios && npx cap open ios",
     "icons": "python3 scripts/make_icons.py",
-    "practices": "node scripts/build_practices.js"
+    "practices": "node scripts/build_practices.js",
+    "narrate": "node scripts/narration_text.js && python3 scripts/build_narration.py",
+    "narrate:upload": "node scripts/upload_narration.js"
   },
   "dependencies": {
     "@aparajita/capacitor-biometric-auth": "^10.0.0",

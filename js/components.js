@@ -338,6 +338,14 @@
     leaf: '<path d="M20 4C10 4 4 9 4 16v4"/><path d="M20 4c0 9-5 13-11 13H4"/>',
     download: '<path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/>',
 
+    /* FILLED, not stroked, which breaks the rule every other icon here
+       follows. A play triangle drawn as a 1.5 stroke outline at 16px is
+       mostly hole, and next to a solid pause it reads as a different weight
+       of thing rather than the other state of the same control. Same reason
+       the calendar's dot and the tab bar's three specks are filled. */
+    play:  '<path d="M8.8 5.6 18.6 12l-9.8 6.4z" fill="currentColor" stroke="none"/>',
+    pause: '<path d="M9 5.9h2.1v12.2H9zM12.9 5.9H15v12.2h-2.1z" fill="currentColor" stroke="none"/>',
+
     /* The sixth tile in the tab bar, and the only one that is not a tab. Three
        filled dots rather than three stroked circles: at 22px a 1.5 stroke ring
        is mostly hole, and next to five solid-feeling glyphs it reads as three
@@ -794,25 +802,68 @@
      the way a guide's Discussion Questions is, and one item in a list, the way
      each serve team on Connect is. The first belongs in an index of the page
      and the second turns that index into a list of serve teams, and nothing
-     in the markup can tell them apart. So the call site says. */
+     in the markup can tell them apart. So the call site says.
+
+     opts.audio, when given, hangs a play button off the right of the header.
+     It is {src, seconds, label} and it is only ever passed by the guide
+     reader. THE HEADER IS A ROW NOW, NOT A BUTTON, and that is the whole
+     reason this markup changed: the toggle is a full width <button>, and a
+     second button cannot live inside it. So the toggle and the audio controls
+     are siblings in .hc-section__bar, the toggle still stretches to fill
+     whatever the controls do not take, and the tap target is unchanged for
+     every section that has no audio.
+
+     The controls are drawn with `hidden` when the section is closed and shown
+     by the toggle-section handler in js/app.js. Not CSS, because `hidden` is
+     also the answer for a screen reader, and a play button announced inside a
+     collapsed section is a button that reads out a part of the page nobody
+     has opened.
+
+     ONE BUTTON HERE AND NO MORE. The speed control lives in the progress row
+     that js/narration.js draws under this header while a section is playing,
+     not up here. It was up here first, and it cost "Sermon Summary" its
+     single line: the pill is 70px, the title is 27px Poppins, and 390px of
+     phone does not have both. Worse, the pill appears when you press play,
+     so the title reflowed under your thumb. Down there it has a whole row to
+     itself and the heading never moves. */
   function collapsible(opts) {
     var open = opts.open === true;
+    var audio = opts.audio;
+
+    var controls = '';
+    if (audio && audio.src) {
+      controls =
+        '<div class="hc-section__controls"' + (open ? '' : ' hidden') + '>' +
+          '<button type="button" class="hc-narrate" data-action="narrate" ' +
+            'data-narrate-key="' + esc(opts.id) + '" ' +
+            'data-narrate-src="' + esc(audio.src) + '" ' +
+            'aria-pressed="false" ' +
+            'aria-label="Listen to ' + esc(audio.label || opts.title) + '">' +
+            icon('play', 'hc-narrate__glyph hc-narrate__glyph--play') +
+            icon('pause', 'hc-narrate__glyph hc-narrate__glyph--pause') +
+          '</button>' +
+        '</div>';
+    }
+
     return '' +
       '<section class="hc-section" data-section="' + esc(opts.id) + '"' +
         (opts.anchorId ? ' id="' + esc(opts.anchorId) + '"' : '') +
         (opts.index === false ? ' data-no-index' : '') + '>' +
-        '<h2>' +
-          '<button type="button" class="hc-section__toggle" data-action="toggle-section" ' +
-            'data-section-id="' + esc(opts.id) + '" aria-expanded="' + (open ? 'true' : 'false') + '" ' +
-            'aria-controls="panel-' + esc(opts.id) + '">' +
-            '<span class="hc-section__heading">' +
-              '<span class="hc-eyebrow">' + esc(opts.eyebrow) + '</span>' +
-              '<span class="hc-section__title">' + esc(opts.title) + '</span>' +
-              '<span class="hc-section__rule" aria-hidden="true"></span>' +
-            '</span>' +
-            icon('chevronDown', 'hc-section__chevron') +
-          '</button>' +
-        '</h2>' +
+        '<div class="hc-section__bar">' +
+          '<h2 class="hc-section__h">' +
+            '<button type="button" class="hc-section__toggle" data-action="toggle-section" ' +
+              'data-section-id="' + esc(opts.id) + '" aria-expanded="' + (open ? 'true' : 'false') + '" ' +
+              'aria-controls="panel-' + esc(opts.id) + '">' +
+              '<span class="hc-section__heading">' +
+                '<span class="hc-eyebrow">' + esc(opts.eyebrow) + '</span>' +
+                '<span class="hc-section__title">' + esc(opts.title) + '</span>' +
+                '<span class="hc-section__rule" aria-hidden="true"></span>' +
+              '</span>' +
+              icon('chevronDown', 'hc-section__chevron') +
+            '</button>' +
+          '</h2>' +
+          controls +
+        '</div>' +
         '<div class="hc-section__panel" id="panel-' + esc(opts.id) + '" ' +
           'data-open="' + (open ? 'true' : 'false') + '">' +
           '<div>' + opts.body + '</div>' +

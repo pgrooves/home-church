@@ -119,6 +119,12 @@
       eventReview: true
     },
     textScale: 1.1,    // 110%, the app's default reading size
+    /* How fast a guide is read aloud, one of HC.narration.SPEEDS. Kept beside
+       textScale because it is the same kind of preference: how this person
+       takes the words in. Set from the small pill on an open guide section
+       rather than from Profile, because the moment you know you want it
+       faster is the moment you are listening. */
+    narrationSpeed: 1,
     theme: 'system',   // system | light | dark
     /* Leader mode, mirrored from profiles.can_host by js/auth.js on every sign
        in and session refresh. It was a switch on this screen until migration
