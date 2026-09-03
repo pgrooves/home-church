@@ -32,10 +32,36 @@
      the sheet exists. */
   var modules = [];
 
-  /* Everywhere a sideways drag can land, in the order it lands. The five, then
-     the modules. */
+  /* Parked past the end of the row: pushed views that a sideways drag can
+     still reach, and that are not stops when you get there.
+
+     ONE ENTRY, AND IT IS SETTINGS. It is the last tile in the ••• sheet, sat
+     right after Admin, and for a long time it was the one tile in that sheet a
+     drag could not reach: a drag left off the end of the row hit the edge pull
+     and stopped, and the only way in was the cog or the initials. It is
+     reachable now, and it is still a pushed view, which is the distinction
+     this list exists to keep. It has an arrow out of it and a title in the
+     bar, the way Search does, because it is opened from the top bar on every
+     screen in the app and the arrow is the way back out to wherever that was.
+     Being at the end of the row does not change any of that; it only means
+     the drag keeps going one more screen.
+
+     Handed over by js/app.js from the same list that draws the sheet, so what
+     is in the row and what is past it can never disagree with the order the
+     sheet lists them in. */
+  var tail = [];
+
+  /* The row proper: everywhere a sideways drag lands as a stop, in order. The
+     five, then the modules. */
   function stops() {
     return TABS.concat(modules);
+  }
+
+  /* Everywhere that drag can go at all, in the order it goes: the row, and
+     then whatever is parked past the end of it. Longer than stops() by
+     exactly the pushed views in `tail`. */
+  function lane() {
+    return stops().concat(tail);
   }
 
   // Old route names kept alive so a link or a restored history entry from
@@ -211,8 +237,12 @@
     back: back,
     current: function () { return current; },
 
-    setModules: function (names) { modules = names.slice(); },
+    setModules: function (names, past) {
+      modules = names.slice();
+      tail = past ? past.slice() : [];
+    },
     stops: stops,
+    lane: lane,
     isModule: function (name) { return modules.indexOf(name) !== -1; },
 
     /* A top level destination: one of the five, or one of the modules behind
@@ -231,13 +261,30 @@
        `admin` with a section on it is somewhere you went from there and needs
        the arrow back. Every other stop is a stop however it is addressed.
 
-       Anything deciding chrome or gestures for the view on screen wants this
-       one. isTop above stays what it says on the tin, a question about a name,
-       and is what the sheet and the tab bar ask when all they have is one. */
+       Anything deciding chrome for the view on screen wants this one. isTop
+       above stays what it says on the tin, a question about a name, and is
+       what the sheet and the tab bar ask when all they have is one. What the
+       drag itself asks is laneIndex below, which is a wider question now that
+       the drag runs one screen past the row. */
     isStop: function (route) {
       if (!route) return false;
       if (route.name === 'admin' && route.id) return false;
       return stops().indexOf(route.name) !== -1;
+    },
+
+    /* Where this route stands in the lane, and -1 for anywhere a sideways drag
+       does not run. What js/swipe.js asks before it takes a finger, and how it
+       finds what is on either side once it has.
+
+       Not the same question as isStop, and Settings is why: a drag runs
+       through Settings, and Settings still gets the arrow and the title of a
+       pushed view when it arrives. The Admin sections are the other way round,
+       wearing a stop's name without being anywhere a drag runs, and they are
+       excluded here for the same reason isStop excludes them. */
+    laneIndex: function (route) {
+      if (!route) return -1;
+      if (route.name === 'admin' && route.id) return -1;
+      return lane().indexOf(route.name);
     }
   };
 

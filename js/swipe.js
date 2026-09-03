@@ -13,6 +13,15 @@
    there are is not fixed: an admin has one more, Admin itself, at the end.
    See HC.router.stops().
 
+   AND THE DRAG IS LONGER THAN THE ROW, BY ONE. Settings is the last tile in
+   the sheet and it is not a stop, so for a while it was the one tile in there
+   a drag could not reach. It is the end of the line now: a drag left off the
+   last stop, which is Admin on the phones that have it and Give on the rest,
+   brings Settings in, and a drag right off Settings goes back to it. What
+   arrives is still a pushed view, with the arrow and the title it has when the
+   initials in the top bar open it. HC.router.lane() is the row plus that, and
+   HC.router.laneIndex() is what this file asks of the view on screen.
+
    HOW IT IS PUT TOGETHER. The app has exactly one scroll container, so two
    screens cannot simply sit side by side inside it, and giving each screen
    its own scroller would mean rebuilding the header, the date rail, and the
@@ -41,7 +50,10 @@
    between the last frame of the animation and the mounted screen.
 
    WHAT IT KEEPS ITS HANDS OFF. Pushed views like a guide, where the platform
-   back gesture already owns horizontal travel. Anything typed into. A rail
+   back gesture already owns horizontal travel. Settings is the one pushed view
+   that is in the lane, and it is safe there because the first few points from
+   the left edge are handed back to the system either way, see onStart.
+   Anything typed into, which on Settings is most of the screen. A rail
    that still has somewhere to scroll, so the Instagram strip on Connect and
    the month strip on Listen are dragged rather than the tab under them. A
    second finger, because that is a pinch and this app deliberately kept zoom.
@@ -95,10 +107,10 @@
               window.matchMedia('(prefers-reduced-motion: reduce)').matches);
   }
 
-  /* Everywhere the drag can land: the five tabs, then the modules behind •••.
-     Connect used to be the end of the line. */
-  function stops() {
-    return HC.router.stops();
+  /* Everywhere the drag can land, in order: the five tabs, then the modules
+     behind •••, then Settings. Connect used to be the end of the line. */
+  function lane() {
+    return HC.router.lane();
   }
 
   /* The bar has one more tile than it has tabs, and the last one is •••. Past
@@ -158,7 +170,7 @@
   function paneFor(dir) {
     if (g.panes[dir] !== undefined) return g.panes[dir];
 
-    var name = stops()[g.index + dir];
+    var name = lane()[g.index + dir];
     var el = name ? HC.router.renderRoute({ name: name }) : null;
     if (!el) {
       g.panes[dir] = null;
@@ -232,7 +244,7 @@
     if (settling) return;
 
     var pane = dir ? g.panes[dir] : null;
-    var name = dir ? stops()[g.index + dir] : null;
+    var name = dir ? lane()[g.index + dir] : null;
     var totopWas = g.totopWas;
 
     if (g.flat || !g.dragging) {
@@ -337,9 +349,11 @@
     /* Asked of the whole route, not its name. The Admin menu is the last stop
        in the row and its four sections are pushed views wearing the same
        name, and a drag inside Manage users belongs to that screen rather than
-       to the row. See HC.router.isStop. */
+       to the row. Settings is the other way round, a pushed view that the drag
+       does run through. See HC.router.laneIndex. */
     var route = HC.router.current();
-    if (!route || !HC.router.isStop(route)) return;
+    var index = HC.router.laneIndex(route);
+    if (index < 0) return;
 
     var touch = evt.touches[0];
     if (typingTarget(evt.target)) return;
@@ -357,7 +371,7 @@
       lastDx: 0,
       lastT: Date.now(),
       velocity: 0,
-      index: stops().indexOf(route.name),
+      index: index,
       width: scroller.clientWidth || window.innerWidth || 1,
       panes: {},
       dragging: false,

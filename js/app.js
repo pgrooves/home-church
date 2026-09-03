@@ -737,11 +737,13 @@
        you, which is the thing you reach for least often and the thing that
        belongs at the end of a list rather than in the middle of one.
 
-       `stop: false` is what keeps it out of the sideways swipe, and it is the
-       only tile here that needs saying. Every other one is a stop: a drag left
-       off Give lands on Admin. Your account is a pushed view with an arrow out
-       of it, the way Search is, so a drag must not be able to arrive at it
-       from Give and then have nowhere to go. See syncModules below. */
+       `stop: false` says it is a pushed view, not that a drag cannot reach it,
+       and it is the only tile here that needs saying. Every other one is a
+       stop: a drag left off Give lands on Admin. This one is where the drag
+       ends, one screen past the last stop, and it keeps the arrow and the
+       title it has always had, the way Search does, because the initials in
+       the top bar open it from every screen in the app and that arrow is the
+       way back out to wherever you were. See syncModules below. */
     tiles.push({
       route: 'profile', icon: 'settings', title: 'Settings',
       action: 'go-profile', id: '', stop: false
@@ -754,14 +756,22 @@
      boot and again whenever who is signed in changes, because the last stop
      belongs to the person rather than to the build.
 
-     The sheet and the row were the same list until Settings joined the sheet,
-     and they are still the same order: this drops the tiles that are doors to
-     pushed views rather than stops, and keeps the rest exactly as the grid
-     draws them. */
+     TWO HALVES OF ONE LIST, IN ONE ORDER. The stops go first and the pushed
+     views parked past them go second, and both come out of the grid in the
+     order the grid draws them, so the sheet you read top to bottom and the
+     screens you drag through left to right are the same sequence by
+     construction. Today that is every module, then Admin on the phones that
+     have one, and then Settings: a drag left off the last stop brings Settings
+     in, and a drag right off Settings goes back to it. Settings is still a
+     pushed view when it lands, which is what the second argument means and the
+     first does not. See the `tail` note in js/router.js. */
   function syncModules() {
-    HC.router.setModules(sheetTiles().filter(function (t) {
-      return t.stop !== false;
-    }).map(function (t) { return t.route; }));
+    var tiles = sheetTiles();
+    function routes(stop) {
+      return tiles.filter(function (t) { return (t.stop !== false) === stop; })
+                  .map(function (t) { return t.route; });
+    }
+    HC.router.setModules(routes(true), routes(false));
   }
 
   function paintSheet() {

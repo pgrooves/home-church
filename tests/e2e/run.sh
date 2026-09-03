@@ -61,6 +61,11 @@ node "$(dirname "$0")/editable-content.js" || exit 1
 # Runs up here with the other cheap one rather than down with the stack.
 node "$(dirname "$0")/alpha.js" || exit 1
 
+# The sideways drag, and the one screen it reaches that is not a stop. Same
+# terms again, the bundled seed and no database: what it needs a browser for
+# is a finger, not a row in a table.
+node "$(dirname "$0")/swipe.js" || exit 1
+
 # Search and the two discs in the top bar. Same terms again, and here for the
 # same reason: what is left over once tests/search.test.js has asked
 # everything that can be asked without a page is all layout and traffic.
