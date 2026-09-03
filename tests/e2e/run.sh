@@ -71,6 +71,10 @@ node "$(dirname "$0")/search.js" || exit 1
 # local and still needs no database, so it belongs up here with the cheap ones.
 node "$(dirname "$0")/gate.js" || exit 1
 
+# The contact form at the top of Connect. Stands up its own answers for the
+# contact Edge Function, including the failure, and needs no database either.
+node "$(dirname "$0")/contact.js" || exit 1
+
 # The database, built the same way the migration tests build it. Doing it
 # through that script rather than by hand means this can never run against a
 # schema the migration tests have not also seen.

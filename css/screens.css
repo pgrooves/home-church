@@ -579,6 +579,45 @@
 .hc-form .hc-field + .hc-field { margin-top: var(--hc-space-base); }
 .hc-form .hc-btn { margin-top: var(--hc-space-lg); }
 
+/* --- the contact form ------------------------------------------------------
+   The first thing on Connect. Nothing here is a new look: the fields are the
+   app's own .hc-field and .hc-input, and what these rules do is space them and
+   put the honeypot out of reach.
+   ------------------------------------------------------------------------ */
+
+.hc-contact__blurb { color: var(--hc-mid); }
+
+.hc-contact__form { margin-top: var(--hc-space-lg); }
+
+.hc-contact__note {
+  margin-top: var(--hc-space-md);
+  color: var(--hc-mid);
+}
+
+.hc-contact__error {
+  margin: var(--hc-space-md) 0 0;
+  font-size: var(--hc-caption);
+  color: var(--hc-error);
+}
+
+.hc-contact__actions,
+.hc-contact__again { margin-top: var(--hc-space-lg); }
+
+.hc-contact__thanks { margin-top: var(--hc-space-sm); }
+
+/* The honeypot. Off screen rather than display:none, which is the version
+   that does not work: a bot worth defending against skips a field the CSS has
+   hidden and fills one it has not. Absolutely positioned out of the layout,
+   so it costs no space, takes no tab stop (tabindex="-1" on the input), and is
+   already aria-hidden in the markup. A person never meets it. */
+.hc-contact__hp {
+  position: absolute;
+  left: -9999px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+
 /* ==========================================================================
    Give
    ========================================================================== */

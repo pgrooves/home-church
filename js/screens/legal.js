@@ -78,7 +78,7 @@
 
     html += block('The short version', [
       'Almost everything you do in this app stays on your phone. We do not track you, there is no analytics, there is no advertising, and we do not sell your information to anyone. That is not a promise we are making for now. It is how the app is built.',
-      'Three things leave, and all three are things you choose. Signing in, which puts your email address and whatever you have filled in under Your information on our server so they follow you to another phone. Your journal, once you are signed in, so what you write follows you too. And writing in a group room, which is the point of a room: what you write there is read by the people in it. You can delete any of them from inside the app whenever you like.'
+      'Four things leave, and all four are things you choose. Signing in, which puts your email address and whatever you have filled in under Your information on our server so they follow you to another phone. Your journal, once you are signed in, so what you write follows you too. Writing in a group room, which is the point of a room: what you write there is read by the people in it. And writing to us from the form at the top of Connect, which becomes an email to the church office. You can delete the first three from inside the app whenever you like, and the fourth is an email you sent us, which we will delete if you ask.'
     ]);
 
     html += list('What stays on your phone, and only on your phone', [
@@ -138,6 +138,23 @@
       'There is one exception, and it applies to the few people who run the app for the church. An admin can be notified that something is waiting for them to approve, and a notification like that has to go to a person rather than to whoever asked, so on an admin’s own phone that token does carry their account. It is set when they turn those two switches on, it comes off when they sign out or switch them back off, and it says nothing about them the church did not already know. If you are not an admin, this paragraph is not about you and your token stays anonymous.'
     ]);
 
+    /* The contact form at the top of Connect, added after the group rooms and
+       the journal and written out at the same length, because it is the third
+       thing in this app that takes what somebody typed and sends it somewhere.
+       The others got a section each and so does this.
+
+       The peppered hash is the paragraph that would be easiest to leave out,
+       which is exactly why it is here. This app's whole claim is that it does
+       not track anybody, and a form that quietly recorded where a message came
+       from without saying so would be the one place that was not true. See
+       supabase/functions/contact and migration 0047. */
+    html += block('Writing to us from Connect', [
+      'At the top of Connect there is a form. What you type into it, your name, your email address and your message, is sent to our server and becomes an email to the church office. That is the whole point of it, and it is the only reason we hold any of it.',
+      'A copy is kept on our server as well, so that a message cannot be lost if the email fails to send. Nobody but an admin can read it, it is not attached to your account, and it is deleted after a hundred and eighty days. The email in the church’s mailbox is the part that lasts, in the same way any email you sent us would.',
+      'One thing we do record, and we would rather say it than have you find it. Along with the message we keep a scrambled fingerprint of the network address it came from, so that the form cannot be used to send thousands of messages at once. It is put through a one way function with a secret we hold, which means it cannot be turned back into an address, and it is compared only against other messages from the last hour. We do not use it to work out who you are, and nothing else in this app records anything like it.',
+      'If you would rather not use the form, the church’s email address is on the same screen and in this policy, and it reaches the same people.'
+    ]);
+
     html += block('When the app hands you off to somebody else', [
       'Some things here are not ours. Giving opens Overflow. Messages open our podcast host or Spotify. Scripture opens BibleGateway. Baptism and Alpha open Church Center. Hosting a group opens Group Vitals. Sending us a prayer request opens a Google form. The email list opens Flodesk.',
       'Each of those opens in your phone’s own browser, and once you are there you are on their site and under their privacy policy, not ours. Anything you type into one of their forms goes to them and to the church. It does not pass through this app, and we only ever see what you chose to send.'
@@ -145,7 +162,7 @@
 
     html += list('The services this app depends on', [
       'Supabase, which stores the sermons, guides, and events the app downloads, and which stores your account if you make one. Their servers for this project are in Ohio, in the United States.',
-      'Resend, which delivers the six digit sign in code to your email address. They handle the sending and nothing else.',
+      'Resend, which delivers the six digit sign in code to your email address, and delivers a message you send from the form on Connect to the church. They handle the sending and nothing else.',
       'Apple, which delivers notifications if you have turned them on.'
     ]);
 
@@ -156,6 +173,7 @@
     html += block('How long we keep it', [
       'Whatever is on your phone stays there until you remove it. If you have an account, what is in it stays until you delete the account, and then it is gone from our server rather than hidden or marked inactive.',
       'Group rooms are the exception, and they delete themselves. Ninety days after a room is opened, the room and everything written in it is removed. Long enough that a group can look back at a night, short enough that a hard season somebody wrote about in March is not still sitting on a server in December.',
+      'Our copy of a message sent from the form on Connect goes the same way, after a hundred and eighty days. That copy is a safety net under the email, not a record we keep; the email itself sits in the church’s mailbox like any other, and we will delete that too if you ask.',
       'One thing that ninety days does not reach. If whoever hosted a room sent the night out as a document, that file is on the phones it went to, and we cannot delete it for you. It is worth asking them.'
     ]);
 

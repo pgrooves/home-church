@@ -1434,6 +1434,37 @@ a.hc-card:active { background: var(--hc-paper-sunk); }
   margin-top: var(--hc-space-lg);
 }
 
+/* The header is a row of two things now: the toggle, which is still a full
+   width button, and the narration controls, which only the guide reader ever
+   passes. A section with no audio has an empty row and behaves exactly as it
+   did when the <h2> held the button directly. */
+.hc-section__bar {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--hc-space-sm);
+
+  /* THE CHEVRON TAKES THE OUTER COLUMN AND THE PLAY BUTTON SITS INSIDE IT.
+     The index rail is a 34px ruler fixed to right:0 and the play button is a
+     34px disc, so with the button outermost the two shared an edge and the
+     notches read as part of the control. A chevron is a thin mark and loses
+     nothing by being the thing next to a ruler.
+
+     This is padding and a position rather than a move in the markup, and the
+     reason is that the chevron has to stay inside the toggle. A tap resolves
+     through evt.target.closest('[data-action]') in js/app.js, which reads DOM
+     ancestry and not where a box was painted, so a chevron drawn outside its
+     button still folds the section. Moving it in the markup would have cost
+     that, and cost the [aria-expanded="true"] selector below that turns it
+     over, and put a second aria-expanded on the page to keep in step. */
+  position: relative;
+  padding-right: calc(20px + var(--hc-space-md));
+}
+
+.hc-section__h {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
 .hc-section__toggle {
   display: flex;
   align-items: flex-start;
@@ -1475,9 +1506,14 @@ a.hc-card:active { background: var(--hc-paper-sunk); }
 }
 
 .hc-section__chevron {
-  flex: 0 0 auto;
+  /* Placed against .hc-section__bar's padding, not laid out in the row. The
+     10px that was margin-top is now top: it is the same offset, still setting
+     the mark against the title's cap rather than the middle of a heading that
+     may run to two lines. */
+  position: absolute;
+  right: 0;
+  top: 10px;
   width: 20px; height: 20px;
-  margin-top: 10px;
   stroke: var(--hc-accent-deep);
   stroke-width: 1.5;
   stroke-linecap: round;
@@ -1486,6 +1522,115 @@ a.hc-card:active { background: var(--hc-paper-sunk); }
 }
 
 .hc-section__toggle[aria-expanded="true"] .hc-section__chevron { transform: rotate(180deg); }
+
+/* --------------------------------------------------------------------------
+   Narration, the play button on an open section
+
+   ONLY ON AN OPEN SECTION, which is the point. Six play buttons stacked down
+   a closed guide is a remote control. One play button on the part you just
+   opened is an offer. js/app.js unhides these in the toggle-section handler,
+   using the `hidden` attribute so a screen reader is told the same thing the
+   eye is.
+   -------------------------------------------------------------------------- */
+
+.hc-section__controls {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: var(--hc-space-xs);
+  /* Sits on the title's line rather than the eyebrow's. The eyebrow is 11px
+     over a 25px title, so the optical centre of the heading is well below the
+     top of the box. */
+  margin-top: 18px;
+}
+
+.hc-section__controls[hidden] { display: none; }
+
+.hc-narrate {
+  flex: 0 0 auto;
+  width: 34px;
+  height: 34px;
+  border-radius: var(--hc-radius-pill);
+  background: var(--hc-dark);
+  color: var(--hc-on-dark);
+  display: grid;
+  place-items: center;
+  padding: 0;
+  transition: transform var(--hc-dur-fast) var(--hc-ease);
+}
+
+.hc-narrate:active { transform: scale(0.94); }
+
+.hc-narrate__glyph {
+  width: 15px;
+  height: 15px;
+  grid-area: 1 / 1;
+}
+
+/* The play triangle's mass sits left of its bounding box, so centring the box
+   leaves the glyph looking shoved back. One pixel forward fixes it. */
+.hc-narrate__glyph--play { transform: translateX(1px); }
+.hc-narrate__glyph--pause { display: none; }
+
+.hc-narrate[aria-pressed="true"] .hc-narrate__glyph--play { display: none; }
+.hc-narrate[aria-pressed="true"] .hc-narrate__glyph--pause { display: block; }
+
+/* Loading. A phone on one bar can sit here for a few seconds after the tap,
+   and a button that does nothing visible is a button somebody presses again. */
+.hc-narrate[data-state="loading"] .hc-narrate__glyph { opacity: 0.45; }
+
+/* The row under the header while a section is talking: how far in, and how
+   fast. js/narration.js builds it on play and removes it on stop, so a guide
+   sitting still has none of these.
+
+   THE SPEED PILL IS DOWN HERE AND NOT IN THE HEADER, and the reason is the
+   heading. At 390px the header has room for a 27px title, a chevron and one
+   34px button, and not for a 70px pill as well: putting it up there wrapped
+   "Sermon Summary" onto two lines, and because the pill appears on play, the
+   title reflowed under the thumb that pressed it. */
+.hc-section__playbar {
+  display: flex;
+  align-items: center;
+  gap: var(--hc-space-md);
+  margin-top: var(--hc-space-md);
+}
+
+.hc-narrate-speed {
+  flex: 0 0 auto;
+  min-width: 52px;
+  height: 28px;
+  padding: 0 var(--hc-space-sm);
+  border-radius: var(--hc-radius-pill);
+  border: var(--hc-hairline) solid var(--hc-rule);
+  color: var(--hc-accent-deep);
+  font-family: var(--hc-sans);
+  font-size: 13px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: var(--hc-track-button);
+}
+
+/* The same 1.5px as the app's signature left edge, laid flat. */
+.hc-section__progress {
+  flex: 1 1 auto;
+  height: var(--hc-edge-rule);
+  border-radius: var(--hc-edge-rule);
+  background: var(--hc-rule);
+  overflow: hidden;
+}
+
+.hc-section__progress > span {
+  display: block;
+  height: 100%;
+  width: 0;
+  background: var(--hc-accent-deep);
+  transition: width 250ms linear;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hc-narrate { transition: none; }
+  .hc-section__progress > span { transition: none; }
+}
 
 .hc-section__panel {
   overflow: hidden;
@@ -2872,6 +3017,219 @@ a.hc-card:active { background: var(--hc-paper-sunk); }
   50%      { filter: drop-shadow(0 0 7px rgba(215, 186, 133, 0.34)); }
 }
 
+/* ==========================================================================
+   The way in
+
+   What the screen above becomes on a phone that is not signed in: the same
+   layer, the same house, the same welcome, lifted to make room for two
+   buttons underneath them. See js/gate.js for the order of it.
+
+   NOTHING HERE FADES BETWEEN STATES. The lockup climbs, the panels slide, and
+   the light at the end comes out from behind the mark. Every one of those is
+   a movement of something already on the glass, which is the difference
+   between a greeting that turns into a door and two screens taking turns.
+   ========================================================================== */
+
+/* The house and the welcome, wrapped so one transform carries both. It has to
+   be this element and not the two inside it: those are still holding the
+   transform their entrance animation ended on, and a transition on a property
+   an animation is filling forwards is a second opinion about the same number.
+   This div has no animation, so it is free to move. */
+.hc-splash__lockup {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transition: transform 720ms cubic-bezier(0.16, 0.84, 0.44, 1);
+}
+
+.hc-splash--gate .hc-splash__lockup { transform: translateY(-104px); }
+
+/* Loading is finished being true the moment there is something to tap. */
+.hc-splash--gate .hc-splash__loading {
+  animation: none;
+  opacity: 0;
+  transition: opacity 260ms ease;
+}
+
+/* THE DECK IS FULL BLEED AND THE PADDING IS ON THE PANELS. A panel is meant
+   to arrive from the right edge of the screen, so the thing that clips it has
+   to reach that edge. Anchored below the middle rather than to the bottom of
+   the screen, because the middle is where the lockup is and the two of them
+   move as one arrangement; the keyboard shrinking the viewport takes both up
+   together instead of pushing this into it. */
+.hc-splash__gate {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(50% + 24px);
+  overflow: hidden;
+  opacity: 0;
+  transform: translateY(10px);
+  transition: opacity 420ms ease,
+              transform 520ms cubic-bezier(0.16, 0.84, 0.44, 1);
+}
+
+.hc-splash--gate .hc-splash__gate { opacity: 1; transform: translateY(0); }
+
+/* Three panels side by side and the track is what moves. A carousel rather
+   than three elements each sliding on their own: one transform means the
+   panel leaving and the panel arriving can never disagree about where the
+   middle of the screen is, and the one going back the other way is the same
+   number in reverse rather than a second set of rules. */
+.hc-gate__track {
+  display: flex;
+  width: 300%;
+  transition: transform 560ms cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+.hc-gate__track[data-step="1"] { transform: translateX(-33.3333%); }
+.hc-gate__track[data-step="2"] { transform: translateX(-66.6667%); }
+
+.hc-gate__panel {
+  flex: 0 0 33.3333%;
+  width: 33.3333%;
+  display: flex;
+  flex-direction: column;
+  gap: var(--hc-space-md);
+  padding: 0 var(--hc-screen-pad);
+  /* Every panel is as tall as the tallest one, which is what keeps the track
+     from changing height under a slide. */
+  align-self: stretch;
+}
+
+.hc-gate__label {
+  font-family: var(--hc-sans);
+  font-size: var(--hc-caption);
+  line-height: var(--hc-caption-line);
+  letter-spacing: var(--hc-track-eyebrow);
+  text-transform: uppercase;
+  color: var(--hc-accent-deep);
+}
+
+.hc-gate__note {
+  margin: 0;
+  font-family: var(--hc-sans);
+  font-size: var(--hc-caption);
+  line-height: var(--hc-caption-line);
+  color: var(--hc-mid);
+  text-align: center;
+}
+
+.hc-gate__error {
+  margin: 0;
+  font-family: var(--hc-sans);
+  font-size: var(--hc-caption);
+  line-height: var(--hc-caption-line);
+  color: var(--hc-error);
+}
+
+/* Tertiary is a link with no width of its own, which sits left in a column.
+   In here it is the way back and it belongs under the middle of the button
+   above it. */
+.hc-gate__back { align-self: center; }
+
+/* --------------------------------------------------------------------------
+   You're in
+
+   The one moment in this app that is allowed to be loud. The panels drop, the
+   house settles back toward the middle of the screen, and light comes out
+   from behind it: a warm glow with no edge on it and nothing else. One shape,
+   softly lit and softly gone.
+
+   Under Reduce Motion base.css collapses all of it, and because the burst
+   ends at opacity 0 it is simply never seen, which is the intended still
+   version. The words still change, which is the part that carries the news.
+   -------------------------------------------------------------------------- */
+
+/* A round warm glow with no edge to it, brightest right behind the house and
+   gone by the time it reaches the words. This is the whole effect now.
+
+   TWO THINGS WERE HERE BEFORE IT AND BOTH CAME OUT. First a conic gradient
+   masked to a ring, which drew a sunburst: a cartoon of light rather than
+   light, when what this moment wants is the screen brightening from behind
+   the mark. Then a hairline ring travelling out of the glow, which was closer
+   but still something drawn on top of the light rather than the light itself.
+   What is left is the part that was never in question. */
+.hc-splash__burst {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 340px;
+  height: 340px;
+  margin: -170px 0 0 -170px;
+  pointer-events: none;
+  border-radius: 50%;
+  opacity: 0;
+  /* THE ALPHAS ARE THE BRIGHTNESS AND THE ONLY BRIGHTNESS. Every stop is one
+     quarter down from where this was first drawn, and the reach, the scale and
+     the timing were left exactly where they were: dimming a glow by shrinking
+     it makes it a smaller glow rather than a softer one. If this ever wants
+     turning up or down again, it is these four numbers and nothing else. */
+  background: radial-gradient(closest-side,
+    rgba(255, 250, 238, 0.75) 0%,
+    rgba(236, 212, 164, 0.47) 28%,
+    rgba(219, 192, 143, 0.20) 46%,
+    rgba(215, 186, 133, 0) 68%);
+  /* Behind the house, which is the only place light coming from behind the
+     house can be. */
+  z-index: -1;
+}
+
+/* The gate stands down. */
+.hc-splash--in .hc-splash__gate {
+  opacity: 0;
+  transform: translateY(8px);
+  pointer-events: none;
+}
+
+/* And the house comes most of the way back to where it started. After this
+   rule, not before it: both classes are on the layer at this point and they
+   carry the same weight, so the order in this file is what decides. */
+.hc-splash--in .hc-splash__lockup { transform: translateY(-32px); }
+
+.hc-splash--in .hc-splash__burst {
+  animation: hc-burst-core 1200ms cubic-bezier(0.12, 0.66, 0.28, 1) forwards;
+}
+
+.hc-splash--in .hc-splash__markwrap {
+  animation: hc-gate-pop 760ms cubic-bezier(0.2, 0.9, 0.3, 1) forwards;
+}
+
+/* Replaces the entrance animation still filling this element, which is why it
+   holds opacity 1 at both ends: whatever this says is what the greeting is
+   from here on. */
+.hc-splash--in .hc-splash__greeting {
+  animation: hc-gate-say 520ms cubic-bezier(0.16, 0.84, 0.44, 1) forwards;
+}
+
+/* Up fast and gone slowly, which is what light does. It barely grows, because
+   a glow that travels is a balloon: what changes over the twelve hundred
+   milliseconds is how bright it is, not how big. */
+@keyframes hc-burst-core {
+  0%   { opacity: 0; transform: scale(0.5); }
+  16%  { opacity: 1; }
+  100% { opacity: 0; transform: scale(1.22); }
+}
+
+@keyframes hc-gate-pop {
+  0%   { transform: scale(1); }
+  36%  { transform: scale(1.13); }
+  100% { transform: scale(1); }
+}
+
+@keyframes hc-gate-say {
+  from { opacity: 0; transform: translateY(7px) scale(0.96); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* A shorter phone lifts less, so the welcome does not climb into the notch on
+   the way to making room. */
+@media (max-height: 700px) {
+  .hc-splash--gate .hc-splash__lockup { transform: translateY(-84px); }
+  .hc-splash--in .hc-splash__lockup { transform: translateY(-24px); }
+  .hc-splash__gate { top: calc(50% + 12px); }
+}
+
 /* --------------------------------------------------------------------------
    The index rail. The right edge, in place of a scrollbar this design does
    not draw. See js/index-rail.js for what moves and why.
@@ -3999,6 +4357,45 @@ a.hc-card:active { background: var(--hc-paper-sunk); }
 
 .hc-form .hc-field + .hc-field { margin-top: var(--hc-space-base); }
 .hc-form .hc-btn { margin-top: var(--hc-space-lg); }
+
+/* --- the contact form ------------------------------------------------------
+   The first thing on Connect. Nothing here is a new look: the fields are the
+   app's own .hc-field and .hc-input, and what these rules do is space them and
+   put the honeypot out of reach.
+   ------------------------------------------------------------------------ */
+
+.hc-contact__blurb { color: var(--hc-mid); }
+
+.hc-contact__form { margin-top: var(--hc-space-lg); }
+
+.hc-contact__note {
+  margin-top: var(--hc-space-md);
+  color: var(--hc-mid);
+}
+
+.hc-contact__error {
+  margin: var(--hc-space-md) 0 0;
+  font-size: var(--hc-caption);
+  color: var(--hc-error);
+}
+
+.hc-contact__actions,
+.hc-contact__again { margin-top: var(--hc-space-lg); }
+
+.hc-contact__thanks { margin-top: var(--hc-space-sm); }
+
+/* The honeypot. Off screen rather than display:none, which is the version
+   that does not work: a bot worth defending against skips a field the CSS has
+   hidden and fills one it has not. Absolutely positioned out of the layout,
+   so it costs no space, takes no tab stop (tabindex="-1" on the input), and is
+   already aria-hidden in the markup. A person never meets it. */
+.hc-contact__hp {
+  position: absolute;
+  left: -9999px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
 
 /* ==========================================================================
    Give
@@ -5594,14 +5991,15 @@ a.hc-card:active { background: var(--hc-paper-sunk); }
 
 .hc-admin__new { margin: var(--hc-space-lg) 0; }
 
-/* Fetch Announcements, above Write an announcement and pushed to the right.
-   Right aligned so it reads as a utility over the section rather than as the
-   first of two things to choose between: the eye goes to the full width
-   primary button underneath it, which is the one somebody came here to press
-   on the weeks the newsletter has nothing in it. */
+/* Fetch Announcements, directly above Write an announcement and matching it:
+   centred, full width, same height. The two are the only ways an announcement
+   reaches this screen, so they are a pair, and the small right aligned button
+   this used to be read as a utility bolted onto the section rather than as
+   half of that pair. The hierarchy is carried by fill alone now, secondary
+   over primary, which is enough to say which one is the ordinary press. */
 .hc-admin__fetch {
   display: flex;
-  justify-content: flex-end;
+  justify-content: center;
   margin-top: var(--hc-space-lg);
 }
 
@@ -5791,6 +6189,15 @@ a.hc-card:active { background: var(--hc-paper-sunk); }
   margin-top: var(--hc-space-md);
   color: var(--hc-accent-deep);
 }
+
+/* Who posted it, drawn only for an admin or a leader. Tighter to the header
+   than the full paragraph gap `.hc-section-header + *` would give it, because
+   it belongs to the date in the label above rather than to the words below: a
+   byline set a paragraph away reads as the announcement opening with one.
+   Deliberately quiet, in the caption colour the class already carries rather
+   than the accent the window note uses, since this is an aside to the church's
+   own staff and not something the church is saying. */
+.hc-section-header + .hc-announce__by { margin-top: var(--hc-space-sm); }
 
 .hc-announce__text + .hc-announce__text { margin-top: var(--hc-space-base); }
 .hc-announce__text { margin-top: var(--hc-space-md); }

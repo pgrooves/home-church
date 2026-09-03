@@ -474,6 +474,25 @@ above, under Before submission.)*
 
 ## Supabase dashboard
 
+- [ ] **Turn on the contact form at the top of Connect.** Built and merged,
+      and deliberately quiet until you do three things: run migration
+      `0047_contact_messages.sql`, add `RESEND_API_KEY` (and ideally
+      `CONTACT_IP_PEPPER`) under Edge Function secrets, and
+      `supabase functions deploy contact --no-verify-jwt`. The whole list, with
+      what each secret is and where to get it, is **CONTACT_FORM_SETUP.md**.
+
+      **It does not lie in the meantime.** With none of it done, the top of
+      Connect draws the church's email address and a button that opens Mail,
+      which is what that screen did before. With the function deployed and no
+      key set, it says the form is not connected and offers the address. There
+      is no state in which somebody is thanked for a message that did not go.
+
+      Two things to check when you do it, because they are the two that
+      actually fail. The `From` address has to be at a domain **verified in
+      Resend**, or every send is refused; and the migration's output has to say
+      the nightly sweep was scheduled, or the hundred and eighty days the
+      privacy policy now promises is not true.
+
 - [x] **Move off Supabase's default auth email sender.** Done, Resend is wired
       in and codes are arriving.
 

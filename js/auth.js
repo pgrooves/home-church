@@ -302,6 +302,40 @@
     });
   }
 
+  /* An Edge Function called by somebody who may well not be signed in, with
+     the publishable key and no session at all.
+
+     WHY THIS IS NOT callFunction WITH THE TOKEN LEFT OFF. That function starts
+     by refusing anybody who is signed out, which is right for deleting an
+     account and wrong for the contact form: a visitor who has never made an
+     account is exactly the person most likely to be writing to the church.
+
+     WHAT IT DOES NOT DO IS AUTHORISE ANYTHING. The publishable key is in the
+     bundle and anybody can read it out, so a function called this way must
+     treat every caller as a stranger and defend itself. See the header of
+     supabase/functions/contact, which is the only thing using this and which
+     spells out what it does instead. Do not reach for this for anything that
+     acts on a person's own data. */
+  function callPublicFunction(path, body, fallbackMessage) {
+    return networkSafe(fetch(functionsUrl(path), {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        apikey: cfg.SUPABASE_ANON_KEY,
+        Authorization: 'Bearer ' + cfg.SUPABASE_ANON_KEY
+      },
+      body: body ? JSON.stringify(body) : undefined
+    })).then(function (res) {
+      return res.json().catch(function () { return {}; }).then(function (payload) {
+        if (!res.ok) {
+          throw new Error(friendlyError(payload,
+            fallbackMessage || 'That did not go through. Try again in a moment.'));
+        }
+        return payload;
+      });
+    });
+  }
+
   function deleteAccount() {
     return callFunction('/delete-account', null,
       'We could not finish deleting your account. Please email the church and we will do it by hand.'
@@ -519,6 +553,7 @@
     publicGet: publicGet,
     withSession: withSession,
     callFunction: callFunction,
+    callPublicFunction: callPublicFunction,
     isSignedIn: isSignedIn,
     getUser: getUser,
     classify: classify,

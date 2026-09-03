@@ -15,6 +15,21 @@
    destinations are the systems the church already runs, Church Center, Group
    Vitals, Flodesk, and an SMS keyword, because those have somebody watching
    them and a second copy in this app would not.
+
+   AND THEN A FORM CAME BACK, at the top of this screen, which deserves an
+   explanation given the four paragraphs above it. The rule was never "no
+   forms". It was that nothing may claim to have happened unless it happened.
+   The next steps form broke it by calling form.reset() on what it collected;
+   this one keeps it by sending an email to hello@homechurchnola.com, which is
+   a mailbox with people in it, and by refusing to say "thank you" until that
+   email has actually been accepted for delivery. When it fails it says so and
+   puts the church's address on screen instead.
+
+   The other half of the rule is that the destination is a system the church
+   already runs. That is why this sends mail to an inbox somebody reads every
+   day rather than filling a table that would need a screen, a notification,
+   and somebody remembering it exists. See supabase/functions/contact, and
+   js/contact.js, which is the only file here that talks to it.
    ========================================================================== */
 
 (function (HC) {
@@ -24,6 +39,18 @@
 
   // Filter state lives here so the list can repaint without a full navigation.
   var filters = { day: 'all', neighborhood: 'all' };
+
+  /* What somebody has typed into the contact form, held for as long as this
+     screen is on and not one moment longer. Kept here rather than read off the
+     inputs because tapping a day filter repaints this screen, and a person who
+     loses a half written message to a filter chip does not write it again.
+
+     Never persisted. js/contact.js says why at length: an unsent message to
+     the church left on a phone is not a convenience. */
+  var contact = { name: '', email: '', message: '', website: '' };
+  var contactBusy = false;
+  var contactSent = false;
+  var contactError = null;
 
   function uniq(list, prop) {
     var seen = {};
@@ -230,6 +257,181 @@
     return html;
   }
 
+  /* --------------------------------------------------------- the contact form
+     The first thing on this screen, above everything else, because "how do I
+     talk to somebody" is the question a stranger opens Connect with and the
+     one the app was quietest about. Every other route out of here goes to a
+     system that assumes you already know which one you want.
+
+     WHY THE HEADING IS NOT EDITABLE and the words around it are. Same rule
+     the whole app keeps: a heading is how somebody finds their place on a
+     page, and the eyebrow, the invitation, the note under the button and what
+     it says once it has sent are all the church's own voice and all of them
+     go stale. Those are slots, rewritable from a phone in edit mode.
+
+     THE BUTTON IS NEVER DISABLED. It could be, and then typing would have to
+     repaint the screen to enable it, which costs the keyboard and the cursor
+     position on a phone. Instead the tap is where the checking happens, the
+     same way Leader mode adds a member, and what is missing is said in a
+     sentence with the cursor put back in the field that needs it.
+     ------------------------------------------------------------------- */
+
+  /* The address the church has published everywhere else. Hardcoded, and it
+     agrees with js/screens/legal.js and js/screens/profile.js, which have both
+     always spelled it out. There is no email column on church_profile to read
+     it from; if one is ever added, all three should read it. */
+  var CHURCH_EMAIL = 'hello@homechurchnola.com';
+
+  var CONTACT_BLURB = 'Questions, prayer, a hard week, or you are new and not ' +
+    'sure where to start. Write to us here and a real person answers.';
+  var CONTACT_NOTE = 'Goes to the church office. Nobody else sees it.';
+  var CONTACT_THANKS = 'That is with us. Somebody will write back, usually within a day or two.';
+
+  function contactField(opts) {
+    var id = 'hc-contact-' + opts.name;
+    var input = opts.rows
+      ? '<textarea class="hc-input hc-textarea" id="' + id + '" rows="' + opts.rows + '" ' +
+          'name="' + c.esc(opts.name) + '" data-contact-field="' + c.esc(opts.name) + '" ' +
+          'maxlength="' + opts.max + '" ' +
+          'placeholder="' + c.esc(opts.placeholder || '') + '">' + c.esc(opts.value) + '</textarea>'
+      : '<input class="hc-input" id="' + id + '" type="' + c.esc(opts.type || 'text') + '" ' +
+          'name="' + c.esc(opts.name) + '" data-contact-field="' + c.esc(opts.name) + '" ' +
+          'maxlength="' + opts.max + '" ' +
+          (opts.autocomplete ? 'autocomplete="' + c.esc(opts.autocomplete) + '" ' : '') +
+          (opts.inputmode ? 'inputmode="' + c.esc(opts.inputmode) + '" ' : '') +
+          'placeholder="' + c.esc(opts.placeholder || '') + '" ' +
+          'value="' + c.esc(opts.value) + '">';
+
+    return '<label class="hc-field" for="' + id + '">' +
+      '<span class="hc-field__label">' + c.esc(opts.label) + '</span>' +
+      input +
+    '</label>';
+  }
+
+  /* What it says once it has gone. A card rather than a toast: a toast is
+     gone in two seconds and this is the answer to "did that work", which
+     somebody may well look back at. The way to write a second message is a
+     button, so nobody has to guess whether tapping something will lose the
+     first one. */
+  function contactSentCard() {
+    var thanks = HC.data.copy('connect.contact-thanks', CONTACT_THANKS);
+    return c.card(
+      '<p class="hc-eyebrow">Sent</p>' +
+      HC.edit.wrap(
+        '<p class="hc-body-serif hc-contact__thanks">' + c.esc(thanks) + '</p>',
+        { slot: 'connect.contact-thanks', value: thanks,
+          label: 'what the contact form says once a message has gone' }
+      ) +
+      '<div class="hc-contact__again">' +
+        c.button('Write another', { action: 'contact-reset', variant: 'secondary' }) +
+      '</div>',
+      { edge: true }
+    );
+  }
+
+  /* No Supabase project means nothing behind the form, and this screen does
+     not draw controls with nothing behind them. The church's address is not a
+     degraded version of a contact form, it is the thing the form is a
+     convenience over, so saying it plainly is the honest fallback. */
+  function contactFallback() {
+    return c.card(
+      '<p class="hc-body-serif hc-contact__blurb">' +
+        'Write to us at ' + c.esc(CHURCH_EMAIL) + ' and a real person answers.' +
+      '</p>' +
+      '<div class="hc-contact__actions">' +
+        c.button('Email the church', {
+          action: 'open-url', url: 'mailto:' + CHURCH_EMAIL, icon: 'connect'
+        }) +
+      '</div>',
+      { edge: true }
+    );
+  }
+
+  function contactForm() {
+    var html = c.sectionHeader('Talk to us', 'Get in touch', {
+      eyebrowSlot: 'connect.contact-eyebrow'
+    });
+
+    if (!HC.contact || !HC.contact.isAvailable()) return html + contactFallback();
+    if (contactSent) return html + contactSentCard();
+
+    var blurb = HC.data.copy('connect.contact-blurb', CONTACT_BLURB);
+    var note = HC.data.copy('connect.contact-note', CONTACT_NOTE);
+    var limits = HC.contact.limits;
+
+    html += HC.edit.wrap(
+      '<p class="hc-body-serif hc-contact__blurb">' + c.esc(blurb) + '</p>',
+      { slot: 'connect.contact-blurb', value: blurb,
+        label: 'the invitation above the contact form', rows: 4 }
+    );
+
+    html += '<form class="hc-form hc-contact__form" data-contact-form novalidate>';
+
+    html += contactField({
+      name: 'name', label: 'Your name', value: contact.name,
+      max: limits.name, autocomplete: 'name', placeholder: 'First and last'
+    });
+
+    html += contactField({
+      name: 'email', label: 'Your email', value: contact.email,
+      max: limits.email, type: 'email', autocomplete: 'email',
+      inputmode: 'email', placeholder: 'So we can write back'
+    });
+
+    html += contactField({
+      name: 'message', label: 'Your message', value: contact.message,
+      max: limits.message, rows: 5, placeholder: 'Say as much or as little as you like.'
+    });
+
+    /* The honeypot. Hidden from people and from screen readers, which is both
+       halves of the job: aria-hidden and tabindex keep it off the path
+       somebody navigating by keyboard or by VoiceOver actually walks, and a
+       bot filling in every field it can find fills this one too.
+
+       NOT type="hidden", which is the version that does not work. Bots skip
+       hidden inputs and fill visible ones; this has to look like a real field
+       to something reading the markup and be unreachable to a person. */
+    html += '<div class="hc-contact__hp" aria-hidden="true">' +
+      '<label for="hc-contact-website">Website</label>' +
+      '<input id="hc-contact-website" type="text" name="website" ' +
+        'data-contact-field="website" tabindex="-1" autocomplete="off">' +
+    '</div>';
+
+    /* The last failure, said where the person is looking rather than in a
+       toast that has already gone. role="alert" so it is read out the moment
+       it appears, since the person who most needs to know the send failed is
+       the one who cannot see the screen. */
+    if (contactError) {
+      html += '<p class="hc-contact__error" role="alert">' + c.esc(contactError) + '</p>';
+    }
+
+    html += c.button(contactBusy ? 'Sending…' : 'Send', {
+      action: 'contact-send', busy: contactBusy, icon: 'connect'
+    });
+
+    html += '</form>';
+
+    html += HC.edit.wrap(
+      '<p class="hc-caption hc-contact__note">' + c.esc(note) + '</p>',
+      { slot: 'connect.contact-note', value: note,
+        label: 'the note under the contact form' }
+    );
+
+    /* The way through when the form is the thing that is broken. Drawn only
+       after a failure, because offering two ways to do one thing before
+       either has been tried is how a screen starts to look like a settings
+       page. */
+    if (contactError) {
+      html += '<div class="hc-contact__actions">' +
+        c.button('Email the church instead', {
+          action: 'open-url', url: 'mailto:' + CHURCH_EMAIL, variant: 'secondary'
+        }) +
+      '</div>';
+    }
+
+    return html;
+  }
+
   /* ------------------------------------------------------ the Instagram rail
      A strip of the church's latest posts, across the top of this screen.
 
@@ -406,6 +608,17 @@
 
     html += c.sectionHeader('Find your people', 'Connect', { flush: true, tag: 'h1', eyebrowSlot: 'connect.eyebrow' });
 
+    /* First, above the rail and above the group finder. Everything else on
+       this screen answers "where do I fit", which is a question you can only
+       ask once you know the place; this one answers "who do I talk to", which
+       is the question underneath it.
+
+       Under the h1 rather than over it, for the same reason the Instagram
+       rail is: a screen whose first element is a form has no title, and a
+       screen reader arriving in a text box with no heading above it has
+       nothing to say about where it landed. */
+    html += contactForm();
+
     // Under the h1, never above it. A screen whose first element is a strip of
     // unlabeled photographs reads as an ad banner to a person and as an
     // unheaded region to a screen reader. Renders nothing at all until the
@@ -458,11 +671,59 @@
     if (target) target.innerHTML = groupList();
   }
 
+  /* --------------------------------------------------- the form's own state
+     Reached from the action handlers in js/app.js, which own every tap in the
+     app and do not reach into a screen's variables directly. */
+
+  function getContact() {
+    return contact;
+  }
+
+  function setContactField(name, value) {
+    if (!(name in contact)) return;
+    contact[name] = value;
+    /* Typing clears the last failure without a repaint. The message said the
+       send did not work; the moment somebody starts changing what they are
+       sending, it is answering a question nobody is asking any more. Cleared
+       in state only, so the paragraph stays on screen until the next redraw
+       and the keyboard does not jump. */
+    contactError = null;
+  }
+
+  function setContactBusy(on) {
+    contactBusy = !!on;
+  }
+
+  function setContactError(message) {
+    contactError = message || null;
+  }
+
+  /* Sent. The draft goes with it, because the next message is a new message
+     and finding the last one still in the boxes is how somebody sends the
+     same thing twice. */
+  function contactDone() {
+    contact = { name: '', email: '', message: '', website: '' };
+    contactBusy = false;
+    contactError = null;
+    contactSent = true;
+  }
+
+  function contactAgain() {
+    contactSent = false;
+    contactError = null;
+  }
+
   HC.screens = HC.screens || {};
   HC.screens.connect = render;
   HC.screens.connectHelpers = {
     setFilter: setFilter,
-    repaintGroups: repaintGroups
+    repaintGroups: repaintGroups,
+    getContact: getContact,
+    setContactField: setContactField,
+    setContactBusy: setContactBusy,
+    setContactError: setContactError,
+    contactDone: contactDone,
+    contactAgain: contactAgain
   };
 
 })(window.HC = window.HC || {});

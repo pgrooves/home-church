@@ -2251,7 +2251,62 @@
        submit-step called form.reset() on what the person had typed. Connect
        now sends people to the systems the church actually runs, so there is
        nothing left for them to do. Do not add them back without a destination.
+
+       THE TWO BELOW ARE THE EXCEPTION THAT PROVES IT. The contact form at the
+       top of Connect has a destination, hello@homechurchnola.com, and the
+       handler below is written so that the difference is visible in the code
+       rather than only in the intention: the toast that thanks anybody lives
+       inside .then(), after the church has the email, and the .catch() puts
+       the failure on the screen instead. Nothing here fires optimistically.
        ---------------------------------------------------------------------- */
+
+    'contact-send': function (el) {
+      var h = HC.screens.connectHelpers;
+      var form = el.closest('form');
+      if (!form) return;
+
+      /* Read off the form rather than out of the draft. The draft is there to
+         survive a repaint, not to be the truth about what is in the boxes at
+         the moment of the tap: an autofill or a paste can put text in a field
+         without an input event this app ever hears about. */
+      var draft = {};
+      Array.prototype.forEach.call(
+        form.querySelectorAll('[data-contact-field]'),
+        function (input) {
+          draft[input.getAttribute('data-contact-field')] = input.value || '';
+          h.setContactField(input.getAttribute('data-contact-field'), input.value || '');
+        }
+      );
+
+      var problem = HC.contact.firstProblem(draft);
+      if (problem) {
+        c.toast(problem.message);
+        var missing = form.querySelector('[data-contact-field="' + problem.field + '"]');
+        if (missing) missing.focus();
+        return;
+      }
+
+      h.setContactBusy(true);
+      h.setContactError(null);
+      repaintView();
+
+      HC.contact.send(draft).then(function () {
+        h.contactDone();
+        repaintView();
+        HC.native.tap('Light');
+        c.toast('Sent. Somebody will write back.');
+      }).catch(function (err) {
+        h.setContactBusy(false);
+        h.setContactError(err.message ||
+          'We could not get that through just now. Email the church directly and somebody will answer.');
+        repaintView();
+      });
+    },
+
+    'contact-reset': function () {
+      HC.screens.connectHelpers.contactAgain();
+      repaintView();
+    },
 
     /* ---------------------------------------------------------- leader mode */
 
@@ -3610,6 +3665,17 @@
            survive it. */
         if (el.getAttribute('data-edit-field')) {
           HC.edit.setValue(el.value);
+          return;
+        }
+
+        /* The contact form at the top of Connect. Writes into the screen's own
+           state and draws nothing, on purpose: nothing about typing here
+           changes what is on the screen, so there is no repaint to make, and
+           the state exists only so that tapping a filter chip further down
+           does not take a half written message with it. */
+        var contactField = el.getAttribute('data-contact-field');
+        if (contactField) {
+          HC.screens.connectHelpers.setContactField(contactField, el.value);
           return;
         }
 
