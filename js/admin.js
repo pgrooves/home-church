@@ -37,6 +37,11 @@
     // failure mode: the drafts can arrive perfectly while the last poll failed,
     // and the screen has to be able to say both.
     newsletter: null,
+    // The home groups box's own last run, read for the notice under its
+    // button. A slot of its own for the same reason the newsletter has one:
+    // it is a different table with a different failure mode, and the box can
+    // be perfectly current while the last attempt to update it failed.
+    groupStatus: null,
     // Events waiting to be approved. A table of its own rather than a filter,
     // see the events queue section below.
     events: null,
@@ -178,6 +183,79 @@
   function pending() {
     return list('announcements').filter(function (row) {
       return row.review_state === 'pending';
+    });
+  }
+
+  /* ------------------------------------------------- the home groups box
+
+     The paragraph on Connect where the group finder would be, and the two
+     ways it moves: a button that shortens the church's most recent home
+     groups announcement into it, and a form for typing it. Migration 0048,
+     and the group_status mode in supabase/functions/newsletter-intake.
+
+     THE LOG IS READ THE SAME WAY THE NEWSLETTER'S IS, and for the same
+     reason: pg_net throws the Edge Function's response away, so a row in
+     group_status_runs is the only account of what a tap did. The extra thing
+     this log carries is previous_note, which is the undo — see the notice in
+     js/screens/admin.js, which offers it back when a shortening is not
+     wanted. */
+
+  function loadGroupStatus() {
+    load('groupStatus', function () {
+      return HC.auth.restFetch('/group_status_runs?select=*&order=ran_at.desc&limit=1');
+    });
+  }
+
+  function lastGroupRun() {
+    var rows = list('groupStatus');
+    return rows.length ? rows[0] : null;
+  }
+
+  /* Shorten the latest announcement into the box now.
+
+     Through a named function for the reason migration 0039 gives about the
+     newsletter's button and 0048 repeats: the Edge Function proves its caller
+     with a secret that lives in the vault and must never reach a phone.
+     hc_admin_refresh_group_status is the whole of what an admin can reach, it
+     takes no arguments, and it checks hc_is_admin() before it does anything. */
+  function refreshGroupStatus() {
+    return HC.auth.rpc('hc_admin_refresh_group_status');
+  }
+
+  /* The newest run, asked of the network rather than of the cache, for exactly
+     the reason latestRun() below does the same: the poll is watching for a row
+     that does not exist yet, and the cache would answer instantly with the one
+     from before the tap. */
+  function latestGroupRun() {
+    return HC.auth.restFetch('/group_status_runs?select=*&order=ran_at.desc&limit=1')
+      .then(function (rows) {
+        return Array.isArray(rows) && rows.length ? rows[0] : null;
+      });
+  }
+
+  /* The paragraph and the flyer, written together.
+
+     One RPC rather than a PATCH, because the flyer is a URL and 0031 keeps
+     phone-writable columns to prose on purpose. hc_admin_set_group_note
+     checks that the picture is an upload in this project's own bucket, which
+     a column grant could not. Migration 0048 section 4 is the long version.
+
+     The content sync is refreshed rather than the admin cache, because what
+     changed is on Connect: church_profile is content, not an admin list. */
+  /* The log slot, after a run has finished. Same move refreshNewsletter()
+     makes: the row the poll just read is newer than the one in hand, and the
+     notice under the button is drawn from the cache. */
+  function invalidateGroupStatus() {
+    invalidate('groupStatus');
+  }
+
+  function saveGroupNote(note, imageUrl) {
+    return HC.auth.rpc('hc_admin_set_group_note', {
+      p_note: note || '',
+      p_image_url: imageUrl || null
+    }).then(function () {
+      invalidate('groupStatus');
+      HC.content.refresh();
     });
   }
 
@@ -901,6 +979,13 @@
     fetchNewsletter: fetchNewsletter,
     latestRun: latestRun,
     refreshNewsletter: refreshNewsletter,
+
+    loadGroupStatus: loadGroupStatus,
+    lastGroupRun: lastGroupRun,
+    refreshGroupStatus: refreshGroupStatus,
+    latestGroupRun: latestGroupRun,
+    invalidateGroupStatus: invalidateGroupStatus,
+    saveGroupNote: saveGroupNote,
 
     uploadImage: uploadImage,
     suggestLinkImage: suggestLinkImage,

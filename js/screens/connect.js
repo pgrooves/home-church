@@ -145,22 +145,91 @@
     return list.map(groupCard).join('');
   }
 
+  /* A web address written into the note, drawn as something a thumb can use.
+
+     WHY THIS EXISTS AT ALL. The note used to be one evergreen sentence about
+     a season that had not started, and a sentence has no links in it. It is
+     now whatever the church last said about home groups, shortened from an
+     announcement, and "sign up here" announcements carry the sign-up link.
+     Escaping that to plain text would leave somebody looking at a URL they
+     cannot tap and would have to retype by hand off a phone screen.
+
+     ESCAPED FIRST, ALWAYS. Every span between the matches goes through esc(),
+     and the href and the text of each match go through it too. The only markup
+     that reaches the page from here is the anchor this function wrote. Nothing
+     else in the note is treated as HTML, because the note is prose and one day
+     somebody will write "<3" in it.
+
+     http and https only. Those are the two schemes a URL in a shortened
+     announcement is, and the anchor is picked up by the delegated handler in
+     js/app.js, which opens it in the phone's browser rather than navigating
+     the web view. A trailing full stop belongs to the sentence rather than to
+     the address, so it is left outside the link. */
+  var NOTE_URL = /https?:\/\/[^\s<>"')]+/g;
+
+  function linkify(text) {
+    var out = '';
+    var last = 0;
+    var m;
+
+    NOTE_URL.lastIndex = 0;
+    while ((m = NOTE_URL.exec(text)) !== null) {
+      var url = m[0].replace(/[.,;:!?)]+$/, '');
+      out += c.esc(text.slice(last, m.index));
+      out += '<a href="' + c.esc(url) + '">' + c.esc(url) + '</a>';
+      last = m.index + url.length;
+    }
+
+    return out + c.esc(text.slice(last));
+  }
+
   /* Groups run in seasons, and between them there is nothing to join. A filter
      strip standing over an empty list reads as a broken screen rather than as
      a season, so the whole finder drops and this takes its place. One boolean
-     in church_profile, flipped twice a year. */
+     in church_profile, flipped twice a year.
+
+     "Between seasons" is now the emptier half of what this box does. Since
+     migration 0048 an admin can put the current word about home groups here in
+     one tap — Settings -> Admin -> Announcements, Update from the latest
+     announcement — so out of season it says what it always said, and in the
+     week groups open it says how to get into one. Both are the same paragraph
+     and the same card; only the words move.
+
+     The flyer, when there is one, is above the words rather than below them,
+     because a season's art is what somebody recognises from the stage and the
+     paragraph is the detail underneath it. It is drawn at whatever shape it
+     is: cropping a flyer is how the date printed along the bottom of it goes
+     missing. See .hc-group__flyer in css/screens.css. */
   function offSeason() {
     var note = HC.data.church.groupsOffSeasonNote;
-    if (!note) return '';
-    return '' +
-      c.sectionHeader('Between seasons', 'Home groups', { eyebrowSlot: 'connect.off-season-eyebrow' }) +
-      c.card(HC.edit.wrap(
-        '<p class="hc-body-serif hc-group__off-season">' + c.esc(note) + '</p>',
+    var flyer = HC.data.church.groupsNoteImageUrl;
+    if (!note && !flyer) return '';
+
+    var inner = '';
+
+    if (flyer) {
+      inner += '<img class="hc-group__flyer" src="' + c.esc(flyer) + '" alt="" ' +
+        'loading="lazy" decoding="async">';
+    }
+
+    /* Still editable exactly where it is read, and that has not changed: the
+       column is the one 0030 opened and 0031 kept, and Edit mode still turns
+       this paragraph into a text box on a long press. What it edits is the
+       plain note, which is why `value` is the raw string and only the drawn
+       copy is linkified. */
+    if (note) {
+      inner += HC.edit.wrap(
+        '<p class="hc-body-serif hc-group__off-season">' + linkify(note) + '</p>',
         { table: 'church_profile', id: HC.data.church.id || 'church-home',
           column: 'groups_off_season_note',
           target: HC.data.church, field: 'groupsOffSeasonNote',
-          value: note, label: 'the between seasons note', rows: 4 }
-      ), { edge: true });
+          value: note, label: 'the home groups note', rows: 4 }
+      );
+    }
+
+    return '' +
+      c.sectionHeader('Between seasons', 'Home groups', { eyebrowSlot: 'connect.off-season-eyebrow' }) +
+      c.card(inner, { edge: true });
   }
 
   /* --------------------------------------------------------- serve teams
@@ -716,6 +785,18 @@
   HC.screens = HC.screens || {};
   HC.screens.connect = render;
   HC.screens.connectHelpers = {
+    /* Exported for tests/group-note.test.js rather than for js/app.js, which
+       is the only thing every other name here is for.
+
+       WORTH THE EXCEPTION because of what this function is: the one place on
+       this screen where a string from the database reaches the page as
+       something other than escaped text. Everything else in this app goes
+       through c.esc() and stops there. A regression that let a note write its
+       own markup would not look like a broken layout, it would look like
+       nothing at all, and the note is now written by a model reading email.
+       So the escaping is asserted rather than reviewed. */
+    linkify: linkify,
+
     setFilter: setFilter,
     repaintGroups: repaintGroups,
     getContact: getContact,

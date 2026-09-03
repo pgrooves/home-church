@@ -84,6 +84,12 @@
     // Replace them with the real groups before flipping this back to true.
     groupsInSeason: false,
     groupsOffSeasonNote: 'Home groups are between seasons right now. When the next one starts this is where you will find it, and we will make sure you hear about it before it fills up.',
+    /* A flyer above that paragraph. Empty in the seed on purpose: a season's
+       art is a season's art, and a picture frozen into the binary would still
+       be advertising last spring on a phone with no signal. Live rows carry
+       whatever an admin uploaded or the button carried over from the
+       announcement it shortened. See migration 0048. */
+    groupsNoteImageUrl: '',
 
     /* Alpha, behind •••, and the same switch groups have one line up. True
        here because there is a live registration to point at on the day this

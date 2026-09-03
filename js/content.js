@@ -541,6 +541,10 @@
       // hiding them by default would be the worse of the two mistakes.
       groupsInSeason: r.groups_in_season !== false,
       groupsOffSeasonNote: str(r.groups_off_season_note),
+      // A flyer over that paragraph, when there is one. Empty is the ordinary
+      // answer and Connect draws no frame at all rather than a gap. See
+      // migration 0048.
+      groupsNoteImageUrl: str(r.groups_note_image_url),
 
       /* Alpha runs in seasons too, and the same reading of a missing column
          for the same reason. The url is the registration for whichever run is

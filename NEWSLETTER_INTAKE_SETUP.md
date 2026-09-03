@@ -244,6 +244,74 @@ not look the same as "no newsletter arrived."
 
 ---
 
+## The home groups box on Connect
+
+The same reader does one more job, and this one needs no setup at all: no new
+secret, no new function to deploy, nothing to switch on. If the newsletter
+reader works, this works.
+
+**Settings → Admin → Announcements**, at the foot of the section, is a box
+called *The home groups box* with a button on it: **Update from the latest
+announcement**. Tapping it reads the announcements the church has already
+posted, finds the most recent one about home groups, shortens it to fit the
+card on the Connect tab, and writes it there. Roughly half a minute, the same
+as a mailbox check and for the same reason: a model is involved.
+
+It writes to the paragraph that used to say *"Home groups are between seasons
+right now"* — one column, `church_profile.groups_off_season_note`, which the
+Connect tab has drawn since `0007`.
+
+**This one does not queue, and that is deliberate.** Everything the intake
+parses out of an email waits for approval, because it runs every twenty
+minutes with nobody watching and it writes a card that goes to the whole
+church. This runs only when somebody presses a button that says what it will
+do, and the result lands in one paragraph they are looking at. The tap is the
+review. What it is not is unrecoverable: whatever the box said before is kept
+in `group_status_runs`, and **Put back what it said before** appears under the
+button whenever there is something to go back to.
+
+**Every link, date, time and phone number has to survive.** The shortened
+version is checked against the announcement it came from before anything is
+written. If it dropped the sign-up link or the date, the model is asked once
+more, naming what it lost; if the second answer drops something too, nothing
+is written at all and the line under the button says which detail went
+missing. A paragraph that reads well and has lost the number you text to get
+into a group is worse than the between-seasons sentence it replaced.
+
+**Underneath the button is the same box, editable.** The words are in a text
+box and the flyer is beside them, with a file picker. So the shortening is a
+starting point: tap, read it, fix the word you disagree with, Save. A flyer
+uploaded here goes into the same bucket the announcement pictures use, and it
+is drawn on Connect at whatever shape it is — a poster, a square, a banner —
+because cropping a flyer to fit a frame is how the date printed along the
+bottom of it disappears. If the announcement itself had a picture, the button
+carries it over and you can replace it or take it off.
+
+One line of SQL says what the last few taps did:
+
+```sql
+select ran_at, ok, changed, announcement_id, note
+  from public.group_status_runs order by ran_at desc limit 10;
+```
+
+**Costs nothing new.** One Gemini call per tap, two if the first answer
+dropped a detail, on a button pressed a few times a season.
+
+To run it by hand, the same way as the modes above:
+
+```bash
+curl -X POST https://ibqkumxfltfiuqevviji.supabase.co/functions/v1/newsletter-intake \
+  -H "x-hc-cron-secret: <the secret>" \
+  -H "Content-Type: application/json" \
+  -d '{"group_status": true}'
+```
+
+Nothing puts this on a schedule, on purpose. There is no reason to re-shorten
+the same announcement all day, and a paragraph on a public screen that
+rewrites itself while nobody is looking is not a thing this app does.
+
+---
+
 ## What this deliberately does not do
 
 - **It does not publish.** Ever. There is no setting that makes it publish.

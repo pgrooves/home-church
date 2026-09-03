@@ -1343,6 +1343,99 @@
       });
     },
 
+    /* ---------------------------------------------- the home groups box
+
+       The paragraph on Connect where the group finder would be, updated from
+       whatever the church last said about home groups. Migration 0048 and the
+       group_status mode in supabase/functions/newsletter-intake.
+
+       SHAPED LIKE THE MAILBOX BUTTON ABOVE, down to the poll, and for the same
+       reason: hc_admin_refresh_group_status returns the moment pg_net accepts
+       the request, and what follows is a model call that takes twenty to forty
+       seconds. The completion signal is a row in group_status_runs newer than
+       the one we started with, which the Edge Function writes whichever way it
+       goes.
+
+       THE ONE DIFFERENCE IS WHAT HAPPENS AFTER. This writes a paragraph that
+       is already on a public screen, so a finished run refreshes the content
+       sync and drops the form's draft, and the words the model chose are in
+       the text box a second later — ready to be fixed by the person who knows
+       whether they are right. */
+    'admin-group-refresh': function () {
+      var h = adminHelpers();
+      h.setBusy('group');
+      repaintAdmin();
+
+      HC.admin.latestGroupRun().then(function (previous) {
+        var sinceId = previous ? previous.id : null;
+
+        return HC.admin.refreshGroupStatus().then(function () {
+          HC.components.toast('Reading the announcements…');
+          return pollForGroupRun(sinceId, 20);   // 20 x 3s, a minute of patience
+        });
+      }).then(function (run) {
+        HC.admin.invalidateGroupStatus();
+
+        if (!run) {
+          HC.components.toast('Still working. It will appear here when it is done.');
+          return;
+        }
+
+        /* The content sync, and then the form, in that order. The box is read
+           from HC.data.church, which only the sync fills, so dropping the
+           draft first would seed the form from the words that are still in
+           hand — the old ones. */
+        return HC.content.refresh().then(function () {
+          h.clearGroupBox();
+          if (run.ok === false) {
+            HC.components.toast(run.note || 'That did not work, and nothing was changed.');
+            return;
+          }
+          HC.components.toast(run.changed
+            ? 'The home groups box has been updated. Read it before you leave.'
+            : (run.note || 'Nothing about home groups has been posted, so nothing changed.'));
+        });
+      }).catch(function (err) {
+        HC.components.toast(err.message || 'Could not update the home groups box.');
+      }).then(function () {
+        h.setBusy('');
+        repaintAdmin();
+      });
+    },
+
+    'admin-group-save': function () {
+      var h = adminHelpers();
+      var box = h.getGroupBox();
+
+      adminRun('group-save', HC.admin.saveGroupNote(box.note, box.imageUrl)
+        .then(function () {
+          // Dropped so the next draw seeds from what the database now holds,
+          // which is the same words unless somebody else was editing too.
+          h.clearGroupBox();
+        }), function () {
+          HC.components.toast('Saved. That is what Connect says now.');
+        });
+    },
+
+    /* The way back from a shortening nobody liked. Both halves, because the
+       run that carried a flyer over and was undone note-only would leave this
+       season's poster over last season's sentence. */
+    'admin-group-undo': function () {
+      var h = adminHelpers();
+      var run = HC.admin.lastGroupRun();
+      if (!run || !run.previous_note) return;
+
+      adminRun('group-undo',
+        HC.admin.saveGroupNote(run.previous_note, run.previous_image)
+          .then(function () { h.clearGroupBox(); }),
+        function () { HC.components.toast('Put back the way it was.'); });
+    },
+
+    'admin-group-image-remove': function () {
+      adminHelpers().getGroupBox().imageUrl = '';
+      repaintAdmin();
+    },
+
     /* ------------------------------------------------- the dates queue
 
        The same two taps as the announcements queue, on the other half of a
@@ -3333,6 +3426,12 @@
 
     if (d && ANNOUNCEMENT_FIELDS[name]) { d[name] = value; return; }
 
+    /* The home groups paragraph, which is its own small form at the foot of
+       the announcements section and is not part of either draft above. Written
+       into the object the screen holds and saved when the button is pressed,
+       the same rule as everything else on this screen. */
+    if (name === 'groupNote') { h.getGroupBox().note = value; return; }
+
     if (p) {
       if (name === 'pageTitle') { p.title = value; return; }
       if (name === 'pageEyebrow') { p.eyebrow = value; return; }
@@ -3447,6 +3546,35 @@
     });
   }
 
+  /* The home groups flyer. The same bucket and the same helper as the
+     announcement pictures above, because it is the same kind of thing going to
+     the same place, and migration 0026 already wrote the upload policies for
+     it. The difference is the shape of the field: one picture, so this
+     replaces rather than appends, and choosing another is how you change your
+     mind.
+
+     Uploaded on choosing rather than on Save, exactly as above: a person sees
+     it land, and a picture that would not upload is about the picture instead
+     of about the paragraph they had just finished typing. It is not on Connect
+     until Save, because the column is what Connect reads. */
+  function uploadGroupFlyer(file) {
+    var h = adminHelpers();
+    if (!file) return;
+
+    h.setUploading(true);
+    repaintAdmin();
+
+    HC.admin.uploadImage(file).then(function (url) {
+      h.getGroupBox().imageUrl = url;
+      HC.components.toast('Added. Save the box to put it on Connect.');
+    }).catch(function (err) {
+      HC.components.toast(err.message || 'That picture would not upload.');
+    }).then(function () {
+      h.setUploading(false);
+      repaintAdmin();
+    });
+  }
+
   /* Wraps a network call in the busy flag, so the button that started it is
      disabled and marked while it is out. One helper because every admin write
      wants exactly this and forgetting it is how somebody double posts an
@@ -3496,6 +3624,25 @@
         // One failed poll on a phone in a building with concrete walls is not
         // the check failing. Keep waiting.
         return pollForRun(sinceId, tries - 1);
+      });
+  }
+
+  /* The same wait, on the other log. Its own function rather than a parameter
+     on the one above, because the two watch different tables through different
+     reads and a shared one would take a fetcher as an argument to save four
+     lines. Same contract: null on timeout, because a run still going is not a
+     run that failed. */
+  function pollForGroupRun(sinceId, tries) {
+    if (tries <= 0) return Promise.resolve(null);
+
+    return new Promise(function (resolve) { window.setTimeout(resolve, 3000); })
+      .then(function () { return HC.admin.latestGroupRun(); })
+      .then(function (run) {
+        if (run && run.id !== sinceId) return run;
+        return pollForGroupRun(sinceId, tries - 1);
+      })
+      .catch(function () {
+        return pollForGroupRun(sinceId, tries - 1);
       });
   }
 
@@ -3890,6 +4037,12 @@
       // never 'input', which is why this is here rather than above.
       if (evt.target.hasAttribute && evt.target.hasAttribute('data-admin-image')) {
         uploadAnnouncementImage(evt.target.files && evt.target.files[0]);
+      }
+
+      // The home groups flyer, into the same bucket by the same helper. One
+      // picture rather than a list, so it replaces instead of appending.
+      if (evt.target.hasAttribute && evt.target.hasAttribute('data-admin-group-image')) {
+        uploadGroupFlyer(evt.target.files && evt.target.files[0]);
       }
     });
 

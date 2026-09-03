@@ -503,9 +503,39 @@
 
 .hc-mygroup__next { margin-top: var(--hc-space-md); }
 
-/* Between group seasons. One card, one paragraph, no filter strip standing
-   over an empty list. */
+/* Between group seasons, and now also in the week they open. One card, one
+   paragraph, no filter strip standing over an empty list. */
 .hc-group__off-season { color: var(--hc-ink); }
+
+/* The season's flyer, above that paragraph.
+
+   NO FRAME AND NO CROP, which is the one thing this rule is for and the one
+   way it differs from every other picture in the app. The slides on Home sit
+   in a frame of a chosen shape and fill it with object-fit: cover, because a
+   photograph of a room has no edges that matter. A flyer does: the date is
+   usually printed along the bottom of it and the crop that makes it fit a 4:3
+   frame is the crop that cuts the date off. So the height is the height the
+   picture is, whatever that turns out to be — a square for Instagram, a
+   portrait for a poster, a wide banner for a header — and the shape adapts
+   to the art instead of the art being cut to the shape.
+
+   The cap is the other half of that bargain. A tall poster at full width
+   would push the paragraph explaining it off the bottom of the phone, so it
+   stops at 62vh, the same ceiling the portrait slides on Home use. At the cap
+   the picture scales down whole rather than losing its edges.
+
+   Cream underneath for the moment before it arrives and for good if it never
+   does, matching every other piece of missing art in the app. */
+.hc-group__flyer {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 62vh;
+  object-fit: contain;
+  background: var(--hc-cream);
+  border-radius: var(--hc-radius-lg);
+  margin-bottom: var(--hc-space-md);
+}
 
 /* --- Serve teams ---------------------------------------------------------
    Each team is a collapsible now rather than a one tap interest button, so

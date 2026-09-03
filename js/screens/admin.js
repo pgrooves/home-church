@@ -42,12 +42,14 @@
 
   var draft = null;        // the announcement being written or edited
   var pageDraft = null;    // the content page being edited
+  var groupBox = null;     // the home groups paragraph on Connect, being edited
   var busy = '';           // the id of whatever is mid network call
   var uploading = false;
 
   function resetDrafts() {
     draft = null;
     pageDraft = null;
+    groupBox = null;
     busy = '';
     uploading = false;
   }
@@ -863,15 +865,182 @@
       });
   }
 
+  /* --------------------------------------------- the home groups box
+
+     The paragraph on Connect that stands where the group finder would be, and
+     the two ways it moves. Migration 0048 and the group_status mode in
+     supabase/functions/newsletter-intake are the other end of both.
+
+     WHY IT IS ON THIS SCREEN AND NOT ON CONNECT. Because the button reads
+     announcements, and this is the screen announcements live on: somebody who
+     has just approved "Home Groups Open, September 6" is one scroll away from
+     putting it in the box, which is the moment they will want to. Editing the
+     paragraph where it is read still works exactly as it did — Edit mode, a
+     long press on Connect — and that is the better move for fixing one word.
+     This is the form for the other job: the whole paragraph, and the picture,
+     which Edit mode has never handled and is not going to. Its header says
+     where the words come out, so nobody has to remember which screen this is.
+
+     THE BUTTON AND THE FORM ARE ONE THING ON PURPOSE. The shortening is a
+     draft written by a model, and the person reading it is the one who knows
+     whether "this Sunday" is still this Sunday. So the words it wrote are in a
+     text box, already editable, rather than behind a second tap: tap, read,
+     fix the word you disagree with, Save. The undo underneath is for the time
+     the whole thing is wrong. */
+
+  function groupBoxDraft() {
+    if (!groupBox) {
+      var church = HC.data.church || {};
+      groupBox = {
+        note: String(church.groupsOffSeasonNote || ''),
+        imageUrl: String(church.groupsNoteImageUrl || '')
+      };
+    }
+    return groupBox;
+  }
+
+  /* One line under the button, same arrangement as the newsletter's notice
+     above: a warning when the last attempt failed and a caption when it did
+     not. The `note` is drawn on a successful run too, because the useful
+     outcomes here are mostly successes that changed nothing — no announcement
+     mentioned home groups, or the box already said it — and a silent button is
+     indistinguishable from a broken one. */
+  function groupNotice() {
+    if (!HC.admin.ready('groupStatus')) return '';
+
+    if (HC.admin.failed('groupStatus')) {
+      return '<p class="hc-caption hc-admin__warn">Could not check when this ' +
+        'was last updated. The box itself is still whatever it says below.</p>';
+    }
+
+    var run = HC.admin.lastGroupRun();
+    if (!run) {
+      return '<p class="hc-caption hc-admin__loading">Nothing has been shortened ' +
+        'into this box yet. The button reads the announcements the church has ' +
+        'posted and writes the newest one about home groups here.</p>';
+    }
+
+    var when = agoText(run.ran_at);
+    var line = run.ok === false
+      ? '<p class="hc-caption hc-admin__warn">Could not update this ' + c.esc(when) +
+        '. ' + c.esc(run.note || 'No reason was recorded.') + '</p>'
+      : '<p class="hc-caption hc-admin__loading">' +
+        c.esc(run.changed ? 'Updated ' + when + '.' : 'Checked ' + when + '.') +
+        (run.note ? ' ' + c.esc(run.note) : '') + '</p>';
+
+    /* The way back, offered only when there is somewhere to go back to: a run
+       that actually moved the words, and kept what they were. It puts the
+       flyer back too, because a season's poster over last season's sentence is
+       half an undo. */
+    if (run.changed && run.previous_note) {
+      line += '<div class="hc-admin__item-actions">' +
+        c.button('Put back what it said before', { action: 'admin-group-undo',
+          variant: 'tertiary', small: true, busy: busy === 'group-undo' }) +
+      '</div>';
+    }
+
+    return line;
+  }
+
+  function groupBoxSection() {
+    var d = groupBoxDraft();
+
+    var html = c.sectionHeader('On the Connect tab', 'The home groups box');
+
+    html += '<p class="hc-caption hc-admin__intro-note">This is the card people ' +
+      'find under Home groups on Connect. The button shortens the church’s most ' +
+      'recent home groups announcement to fit it, keeping every link, date and ' +
+      'phone number in it. Everything below is yours to change afterwards.</p>';
+
+    html += '<div class="hc-admin__fetch">' +
+      c.button('Update from the latest announcement', {
+        action: 'admin-group-refresh',
+        icon: 'plus',
+        variant: 'secondary',
+        busy: busy === 'group'
+      }) +
+    '</div>';
+
+    html += groupNotice();
+
+    html += textarea({
+      name: 'groupNote',
+      label: 'What the box says',
+      value: d.note,
+      rows: 5,
+      help: 'A short paragraph. A web address typed in here becomes a link people can tap.'
+    });
+
+    /* The flyer. One picture, not a list: a flyer is one image by definition
+       and the second one is a gallery, which is a different feature. Uploaded
+       the moment it is chosen rather than when Save is pressed, the same way
+       the announcement form does it, so a failure is about the picture instead
+       of about everything typed above it.
+
+       Drawn at whatever shape it is on Connect, never cropped — the date is
+       usually printed along the bottom of a flyer and a crop to fit a frame is
+       what takes it off. See .hc-group__flyer in css/screens.css. */
+    html += '<div class="hc-admin__images">';
+    html += '<span class="hc-field__label">A flyer</span>';
+
+    if (d.imageUrl) {
+      html += '<div class="hc-admin__thumb" data-media-fallback>' +
+        '<img src="' + c.esc(d.imageUrl) + '" alt="" decoding="async" loading="lazy">' +
+        '<button type="button" class="hc-admin__thumb-x" ' +
+          'data-action="admin-group-image-remove" ' +
+          'aria-label="Take the flyer off">' + c.icon('close') + '</button>' +
+      '</div>';
+    } else {
+      html += '<p class="hc-caption hc-admin__loading">No flyer. The card is ' +
+        'just the words, which is how it has always looked.</p>';
+    }
+
+    html += '<div class="hc-admin__image-add">' +
+      '<label class="hc-admin__file">' +
+        '<input type="file" accept="image/*" data-admin-group-image hidden>' +
+        '<span class="hc-btn hc-btn--secondary hc-btn--small">' +
+          c.icon('plus', 'hc-btn__icon') +
+          '<span>' + (uploading ? 'Uploading…' : (d.imageUrl ? 'Choose another' : 'Choose a flyer')) + '</span>' +
+        '</span>' +
+      '</label>' +
+    '</div>';
+
+    html += '<p class="hc-caption hc-field__help">It goes above the words, at ' +
+      'whatever shape it is. A poster, a square, a banner: none of them get ' +
+      'cropped.</p>';
+    html += '</div>';
+
+    html += '<div class="hc-admin__new">' +
+      c.button('Save the home groups box', { action: 'admin-group-save',
+        busy: busy === 'group-save' }) +
+    '</div>';
+
+    return html;
+  }
+
+  /* The section, and the home groups box under it.
+
+     WHY THE WRAPPER IS OUT HERE. The body below leaves by four different
+     doors — the form is open, nothing is posted yet, everything posted is
+     still in the queue, or the ordinary full screen — and the home groups box
+     belongs on three of them. Closing the screen div in one place rather than
+     four is what makes that true without four copies of the same line, and it
+     is why the body no longer opens or closes it.
+
+     Not while the announcement form is open, which is the one door it does
+     not belong on: that form is a modal in everything but name, and a second
+     form underneath it is two Save buttons on one screen. */
   function announcementsSection() {
     var html = '<div class="hc-screen hc-admin">';
-    html += c.sectionHeader('For the church', 'Announcements', { flush: true, tag: 'h1' });
+    html += announcementsBody();
+    if (!draft) html += groupBoxSection();
+    return html + '</div>';
+  }
 
-    if (draft) {
-      html += announcementForm();
-      html += '</div>';
-      return html;
-    }
+  function announcementsBody() {
+    var html = c.sectionHeader('For the church', 'Announcements', { flush: true, tag: 'h1' });
+
+    if (draft) return html + announcementForm();
 
     html += newsletterNotice();
 
@@ -903,9 +1072,8 @@
 
     var rows = HC.admin.announcements();
     if (!rows.length) {
-      html += pending('announcements', 'Nothing posted yet. The first one goes at the top of Home.');
-      html += '</div>';
-      return html;
+      return html + pending('announcements',
+        'Nothing posted yet. The first one goes at the top of Home.');
     }
 
     /* The queue first, and the rows in it are taken out of the list below.
@@ -920,10 +1088,7 @@
     if (dates.length) html += eventsSection(dates);
 
     rows = rows.filter(function (row) { return row.review_state !== 'pending'; });
-    if (!rows.length) {
-      html += '</div>';
-      return html;
-    }
+    if (!rows.length) return html;
 
     html += c.sectionHeader('', 'Posted');
     rows.forEach(function (row) {
@@ -960,7 +1125,6 @@
       '</div>';
     });
 
-    html += '</div>';
     return html;
   }
 
@@ -1348,6 +1512,9 @@
     // The same load App settings does, cached the same way, so an admin who
     // has been to either screen this session pays for it once.
     if (id === 'announcements') HC.admin.loadSettings();
+    // And when the home groups box on Connect was last updated, for the line
+    // under its button at the foot of the same section.
+    if (id === 'announcements') HC.admin.loadGroupStatus();
     if (id === 'users') HC.admin.loadUsers();
     if (id === 'content') HC.admin.loadPages();
     if (id === 'settings') HC.admin.loadSettings();
@@ -1376,6 +1543,14 @@
     getPageDraft: function () { return pageDraft; },
     startPageDraft: function (row) { pageDraft = pageEditorFor(row); },
     clearPageDraft: function () { pageDraft = null; },
+
+    /* The home groups box. `clearGroupBox` rather than a setter for the whole
+       thing: the form is seeded from church_profile whenever it is null, so
+       dropping it is how the screen picks up a paragraph that changed under it
+       — which is exactly what the button does, half a minute after it was
+       tapped. */
+    getGroupBox: function () { return groupBoxDraft(); },
+    clearGroupBox: function () { groupBox = null; },
 
     setBusy: function (value) { busy = value || ''; },
     setUploading: function (value) { uploading = !!value; }
