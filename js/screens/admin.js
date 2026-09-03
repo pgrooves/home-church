@@ -928,6 +928,17 @@
         c.esc(run.changed ? 'Updated ' + when + '.' : 'Checked ' + when + '.') +
         (run.note ? ' ' + c.esc(run.note) : '') + '</p>';
 
+    /* What the card is claiming right now, said in the same words the church
+       will read on Connect. Drawn from church_profile rather than from the run,
+       because the run is what happened last time and this is what is true: a
+       season ended by the button below leaves a log row that still says the
+       parse found groups open. */
+    line = '<p class="hc-caption hc-admin__intro-note">The card says ' +
+      (HC.data.church.groupsNoteInSeason
+        ? '<strong>Open now</strong>. It is carrying a current announcement.'
+        : '<strong>Between seasons</strong>.') +
+      '</p>' + line;
+
     /* The way back, offered only when there is somewhere to go back to: a run
        that actually moved the words, and kept what they were. It puts the
        flyer back too, because a season's poster over last season's sentence is
@@ -961,6 +972,36 @@
       }) +
     '</div>';
 
+    /* The other direction, and it only exists while there is somewhere to go:
+       a card already between seasons has nothing to put back, and a button
+       whose only outcome is doing what has already been done is a button that
+       teaches people it does nothing.
+
+       Underneath the update button rather than beside it, because these are
+       not a pair. One is pressed most weeks of a season and the other twice a
+       year, and two buttons of equal weight side by side is how the wrong one
+       gets pressed on a Sunday morning. */
+    if (HC.data.church.groupsNoteInSeason) {
+      html += '<div class="hc-admin__fetch">' +
+        c.button('Put it back to between seasons', {
+          action: 'admin-group-end-season',
+          variant: 'tertiary',
+          busy: busy === 'group-end'
+        }) +
+      '</div>';
+
+      /* The words that button would put back, shown before it is pressed. They
+         are not a constant in the app: they are whatever the card last said
+         while it was between seasons, including a wording somebody fixed on
+         the Connect tab, so the only honest way to say what will happen is to
+         show it. */
+      var evergreen = HC.data.church.groupsBetweenSeasonsNote;
+      if (evergreen) {
+        html += '<p class="hc-caption hc-field__help">It would go back to: “' +
+          c.esc(evergreen) + '” and the flyer would come off.</p>';
+      }
+    }
+
     html += groupNotice();
 
     html += textarea({
@@ -968,7 +1009,14 @@
       label: 'What the box says',
       value: d.note,
       rows: 5,
-      help: 'A short paragraph. A web address typed in here becomes a link people can tap.'
+      /* The second sentence is the trigger from 0049 said in a way somebody
+         can act on. Editing these words while the card is between seasons is
+         also editing what comes back at the end of the next season, which is
+         what people expect and would never guess. While it is in season it is
+         a temporary paragraph and says so. */
+      help: HC.data.church.groupsNoteInSeason
+        ? 'A short paragraph. A web address typed in here becomes a link people can tap. These words last until the season ends.'
+        : 'A short paragraph. A web address typed in here becomes a link people can tap. This is also what comes back at the end of the next season.'
     });
 
     /* The flyer. One picture, not a list: a flyer is one image by definition

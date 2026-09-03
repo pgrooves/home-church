@@ -227,8 +227,27 @@
       );
     }
 
+    /* The label over the card, which is the other half of what the button
+       writes. "Between seasons" standing over a paragraph explaining how to
+       join a group this Sunday is the contradiction migration 0049 exists to
+       fix: the words and the label move together, decided in the same breath
+       from the same announcement, so they cannot disagree by more than a
+       content sync.
+
+       TWO SLOTS AND NOT ONE, which is the whole reason this is read through
+       copy() rather than passed as a literal like the other eyebrows on this
+       screen. They are two different sentences a church might want to reword
+       differently — "Coming back soon" is a fine edit to one of them and a
+       lie over the other — and one slot holding whichever was last edited
+       would put the wrong one on screen at the turn of a season. The slot on
+       screen is the slot Edit mode offers, so a long press edits the state
+       somebody is actually looking at. */
+    var inSeason = HC.data.church.groupsNoteInSeason;
+    var eyebrowSlot = inSeason ? 'connect.in-season-eyebrow' : 'connect.off-season-eyebrow';
+    var eyebrow = HC.data.copy(eyebrowSlot, inSeason ? 'Open now' : 'Between seasons');
+
     return '' +
-      c.sectionHeader('Between seasons', 'Home groups', { eyebrowSlot: 'connect.off-season-eyebrow' }) +
+      c.sectionHeader(eyebrow, 'Home groups', { eyebrowSlot: eyebrowSlot }) +
       c.card(inner, { edge: true });
   }
 

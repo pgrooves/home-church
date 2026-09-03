@@ -90,6 +90,13 @@
        whatever an admin uploaded or the button carried over from the
        announcement it shortened. See migration 0048. */
     groupsNoteImageUrl: '',
+    /* Which face the card wears. False in the seed for the same reason the
+       column defaults false: a phone that has never reached Supabase should
+       draw the sentence below under "Between seasons", not claim a season is
+       running. The evergreen copy is the same sentence, because between
+       seasons is exactly the state this seed describes. */
+    groupsNoteInSeason: false,
+    groupsBetweenSeasonsNote: 'Home groups are between seasons right now. When the next one starts this is where you will find it, and we will make sure you hear about it before it fills up.',
 
     /* Alpha, behind •••, and the same switch groups have one line up. True
        here because there is a live registration to point at on the day this

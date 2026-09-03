@@ -172,6 +172,9 @@ bootContent([{
     HC.data.church.groupsNoteImageUrl,
     'https://ibqkumxfltfiuqevviji.supabase.co/storage/v1/object/public/announcements/2026-09/flyer.jpg');
 
+  ok('and the card knows it is in a season when it is told so',
+    HC.data.church.groupsNoteInSeason, false);
+
   return bootContent([{
     id: 'church-home',
     name: 'Home Church',
@@ -184,6 +187,40 @@ bootContent([{
   // with an answer.
   ok('a profile with no flyer reads as no flyer',
     HC.data.church.groupsNoteImageUrl, '');
+
+  console.log('\n--- which season the card says it is in ---');
+
+  /* The costly mistake is one way round. A column that has not been migrated
+     yet, or a row written before 0049, must read as between seasons: "Open
+     now" over the between seasons sentence is a church telling people groups
+     are running when they are not. */
+  ok('a profile with no season column at all is between seasons',
+    HC.data.church.groupsNoteInSeason, false);
+
+  return bootContent([{
+    id: 'church-home',
+    name: 'Home Church',
+    published: true,
+    groups_note_in_season: true,
+    groups_off_season_note: 'Home groups open Sunday, September 6 at 9:00am.',
+    groups_between_seasons_note: 'Home groups are between seasons right now.'
+  }]);
+}).then((HC) => {
+  ok('a card carrying a current announcement says so',
+    HC.data.church.groupsNoteInSeason, true);
+
+  /* Read by the Admin form to show what the button would put back, and never
+     drawn on Connect: while a season is on, the live note is the one on
+     screen and this is the sentence waiting underneath it. */
+  ok('and the sentence it would go back to comes through beside it',
+    HC.data.church.groupsBetweenSeasonsNote,
+    'Home groups are between seasons right now.');
+
+  /* Not the same column as the finder's switch, which is the mistake this
+     whole feature is arranged to avoid. A card that is in season says nothing
+     about whether there are real groups to draw. */
+  ok('while the switch that draws the finder is untouched by any of it',
+    HC.data.church.groupsInSeason, true);
 
   console.log('\n' + pass + ' passed, ' + fail + ' failed.');
   if (fail) process.exit(1);

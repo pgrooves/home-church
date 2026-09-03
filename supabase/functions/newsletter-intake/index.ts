@@ -1347,12 +1347,18 @@ async function runBackfill(
 const GROUP_LOOKBACK = 12;
 const GROUP_NOTE_MAX = 300;
 
+/* `in_season` is required alongside `found`, not optional, and that is the
+   same lesson the backfill schema learned in its own header: a field the model
+   may leave out is a field it leaves out. Asking for a label on every answer it
+   gives is a labelling task, which it does reliably; asking it to speak up only
+   when groups are open is a filtering task, which it does not. */
 const GROUP_STATUS_SCHEMA = {
   type: 'object',
   properties: {
     found: { type: 'boolean' },
     announcement_id: { type: 'string' },
     note: { type: 'string' },
+    in_season: { type: 'boolean' },
   },
   required: ['found'],
 };
@@ -1540,6 +1546,14 @@ function groupStatusPrompt(rows: GroupRow[], today: string, retry: string[]): st
     'says so. If it says "this Sunday", write "this Sunday" — do not work out which',
     'Sunday it was.',
     '',
+    'THREE: set in_season. True if that announcement is telling people groups are',
+    'running or about to be — opening, launching, taking sign-ups, still taking',
+    'sign-ups, meeting this week. False if it is telling them a season has finished or',
+    'is paused — wrapping up, taking a break, back in the spring, no groups over the',
+    'summer. Judge the announcement, not the calendar: an announcement from August',
+    'saying groups open in September is in season, because that is what the church has',
+    'most recently said about them.',
+    '',
     'Return the id of the announcement you used, so a person can check your work.',
     ...(retry.length
       ? ['',
@@ -1564,7 +1578,7 @@ async function askForGroupNote(
   rows: GroupRow[],
   today: string,
   retry: string[],
-): Promise<{ found: boolean; announcement_id?: string; note?: string }> {
+): Promise<{ found: boolean; announcement_id?: string; note?: string; in_season?: boolean }> {
   let res: Response;
   try {
     res = await fetch(
@@ -1728,7 +1742,7 @@ async function runGroupStatus(
 
   const { data: profile, error: readError } = await admin
     .from('church_profile')
-    .select('id, groups_off_season_note, groups_note_image_url')
+    .select('id, groups_off_season_note, groups_note_image_url, groups_note_in_season')
     .eq('published', true)
     .limit(1);
 
@@ -1740,10 +1754,21 @@ async function runGroupStatus(
   const previous = profile?.[0]?.groups_off_season_note ?? null;
   const previousImage = profile?.[0]?.groups_note_image_url ?? null;
 
-  if (String(previous ?? '').trim() === note) {
+  /* Which face the card should be wearing. An answer that left the field out
+     is read as in season rather than as a season that has ended, because it
+     got here by finding a current announcement about home groups and the
+     ordinary reason a church posts one is that groups are happening. The
+     costly mistake is the other way: "Between seasons" over a paragraph
+     explaining how to join. */
+  const inSeason = answer.in_season !== false;
+
+  const seasonMoved = (profile?.[0]?.groups_note_in_season === true) !== inSeason;
+
+  if (String(previous ?? '').trim() === note && !seasonMoved) {
     return {
       ok: true,
       changed: false,
+      in_season: inSeason,
       announcement_id: chosen.id,
       previous_note: previous,
       previous_image: previousImage,
@@ -1756,7 +1781,20 @@ async function runGroupStatus(
      church's own art for this season and it is already on Home, so there is
      nothing new being published here. An admin who wants a different one
      replaces it in the form, and one who wants none takes it off there. */
-  const update: Record<string, unknown> = { groups_off_season_note: note };
+  /* The words and the label in one write, which is the whole reason the label
+     is decided here rather than by a second call afterwards. "Between seasons"
+     standing over a paragraph about how to join a group is the bug this exists
+     to fix, and two writes are two chances to leave the card in exactly that
+     state.
+
+     groups_in_season is NOT in this update and must never be: that boolean
+     draws the group finder from the `groups` table, which still holds the
+     placeholder rows 0008 left there. Migration 0049's header is the long
+     version. */
+  const update: Record<string, unknown> = {
+    groups_off_season_note: note,
+    groups_note_in_season: inSeason,
+  };
   if (chosen.image) update.groups_note_image_url = chosen.image;
 
   const { error: writeError } = await admin
@@ -1769,11 +1807,14 @@ async function runGroupStatus(
   return {
     ok: true,
     changed: true,
+    in_season: inSeason,
     announcement_id: chosen.id,
     previous_note: previous,
     previous_image: previousImage,
     new_note: note,
-    note: `Shortened from ${chosen.title}.`,
+    note: inSeason
+      ? `Shortened from ${chosen.title}, and the card now says groups are open.`
+      : `Shortened from ${chosen.title}, which says this season has finished.`,
   };
 }
 
@@ -1916,6 +1957,7 @@ Deno.serve(async (req: Request) => {
         ok: row.ok === true,
         changed: row.changed === true,
         announcement_id: row.announcement_id ?? null,
+        in_season: row.in_season ?? null,
         previous_note: row.previous_note ?? null,
         previous_image: row.previous_image ?? null,
         new_note: row.new_note ?? null,

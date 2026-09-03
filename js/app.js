@@ -1436,6 +1436,30 @@
       repaintAdmin();
     },
 
+    /* The end of a season. Confirmed, unlike Save beside it, because it throws
+       away a paragraph rather than replacing it with one somebody is looking
+       at: the current words go, the flyer goes, and what comes back is the
+       sentence from before the season. The confirm quotes that sentence, so
+       the question is "do you want the card to say this" rather than "are you
+       sure", which is a question nobody can answer.
+
+       The draft is dropped after, so the form shows the restored words instead
+       of the ones that were on screen when the button was pressed. */
+    'admin-group-end-season': function () {
+      var h = adminHelpers();
+      var back = HC.data.church.groupsBetweenSeasonsNote;
+
+      if (!window.confirm('Put the home groups box back to between seasons?' +
+          (back ? '\n\nIt will say: ' + back : '') +
+          '\n\nThe flyer comes off too.')) return;
+
+      adminRun('group-end', HC.admin.endGroupSeason().then(function () {
+        h.clearGroupBox();
+      }), function () {
+        HC.components.toast('Back to between seasons.');
+      });
+    },
+
     /* ------------------------------------------------- the dates queue
 
        The same two taps as the announcements queue, on the other half of a

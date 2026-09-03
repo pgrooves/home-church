@@ -278,6 +278,27 @@ is written at all and the line under the button says which detail went
 missing. A paragraph that reads well and has lost the number you text to get
 into a group is worse than the between-seasons sentence it replaced.
 
+**It also sets which season the card is in.** The parse answers a second
+question about the announcement it picked — is this saying groups are running,
+or that a season has finished — and the label over the card follows the answer.
+So the week groups open it reads **Open now** instead of **Between seasons**,
+which is the contradiction this started as: current words under a heading
+saying there are none.
+
+That label is the *card's* state and nothing more. It is not `groups_in_season`,
+the switch from `0007` that decides whether the group finder is drawn at all —
+that one stays where it is, because the rows behind it are still the four
+placeholder groups `0008` left there, and a parse must never publish those.
+
+**And there is a button back.** While the card is in season, **Put it back to
+between seasons** appears under the update button: the evergreen sentence
+returns, the flyer comes off, and the label goes back. It confirms first, and
+the confirm quotes the exact words it would put back, because those words are
+not a constant in the app — they are whatever the card last said while it was
+between seasons, *including a wording somebody fixed in place on the Connect
+tab*. A database trigger keeps that copy current, so the sentence that comes
+back at the end of a season is the last one that was actually true.
+
 **Underneath the button is the same box, editable.** The words are in a text
 box and the flyer is beside them, with a file picker. So the shortening is a
 starting point: tap, read it, fix the word you disagree with, Save. A flyer

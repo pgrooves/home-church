@@ -242,6 +242,20 @@
 
      The content sync is refreshed rather than the admin cache, because what
      changed is on Connect: church_profile is content, not an admin list. */
+  /* Back to between seasons: the evergreen sentence, no flyer, and the label
+     to match, in one call for the reason 0049 gives — three PATCHes from a
+     phone is three ways to leave a poster over a sentence that contradicts it.
+
+     It takes no arguments, so the words it writes are always words the church
+     has already published. What comes back is the column, not anything this
+     phone is holding. */
+  function endGroupSeason() {
+    return HC.auth.rpc('hc_admin_end_group_season').then(function () {
+      invalidate('groupStatus');
+      return HC.content.refresh();
+    });
+  }
+
   /* The log slot, after a run has finished. Same move refreshNewsletter()
      makes: the row the poll just read is newer than the one in hand, and the
      notice under the button is drawn from the cache. */
@@ -986,6 +1000,7 @@
     latestGroupRun: latestGroupRun,
     invalidateGroupStatus: invalidateGroupStatus,
     saveGroupNote: saveGroupNote,
+    endGroupSeason: endGroupSeason,
 
     uploadImage: uploadImage,
     suggestLinkImage: suggestLinkImage,

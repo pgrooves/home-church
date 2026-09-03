@@ -546,6 +546,18 @@
       // migration 0048.
       groupsNoteImageUrl: str(r.groups_note_image_url),
 
+      /* Which face that card is wearing, and read strictly: a missing column
+         is between seasons, because "Open now" over the between seasons
+         sentence is the worse of the two mistakes. NOT the same thing as
+         groupsInSeason above, which decides whether the finder is drawn at
+         all. Migration 0049 says why they are two columns.
+
+         The evergreen sentence beside it is only ever read by the Admin form,
+         which shows what the button would put back. Connect draws the live
+         note and never this. */
+      groupsNoteInSeason: r.groups_note_in_season === true,
+      groupsBetweenSeasonsNote: str(r.groups_between_seasons_note),
+
       /* Alpha runs in seasons too, and the same reading of a missing column
          for the same reason. The url is the registration for whichever run is
          open: empty is a real answer and the screen falls back to the one in
