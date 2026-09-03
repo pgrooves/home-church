@@ -246,9 +246,25 @@ not look the same as "no newsletter arrived."
 
 ## The home groups box on Connect
 
-The same reader does one more job, and this one needs no setup at all: no new
-secret, no new function to deploy, nothing to switch on. If the newsletter
-reader works, this works.
+A second Edge Function, `group-status`, does a related job on the other side of
+the same table: it reads the announcements that are already published rather
+than the mailbox. It needs **no new setup** — Edge Function secrets are project
+wide, so it uses the same `HC_NEWSLETTER_CRON_SECRET` and `GEMINI_API_KEY` that
+are already set above.
+
+It started life as a mode inside `newsletter-intake` and was moved out in
+migration `0050`, for a reason worth knowing before you put anything else in
+there: that function is a hundred kilobytes of hand-written IMAP client, so
+changing a prompt meant redeploying the church's mailbox reader. The first time
+that bill came due, the button shipped against a function that predated it —
+the old code ignored the flag, ran an ordinary mailbox check, answered `200`,
+and wrote a `newsletter_runs` row, which from the app was indistinguishable
+from a model that never finished. Small functions can be redeployed on a
+Saturday. Deploy this one on its own:
+
+```
+supabase functions deploy group-status --no-verify-jwt
+```
 
 **Settings → Admin → Announcements**, at the foot of the section, is a box
 called *The home groups box* with a button on it: **Update from the latest
@@ -318,14 +334,18 @@ select ran_at, ok, changed, announcement_id, note
 **Costs nothing new.** One Gemini call per tap, two if the first answer
 dropped a detail, on a button pressed a few times a season.
 
-To run it by hand, the same way as the modes above:
+To run it by hand, or to see what it would write without writing it:
 
 ```bash
-curl -X POST https://ibqkumxfltfiuqevviji.supabase.co/functions/v1/newsletter-intake \
+curl -X POST https://ibqkumxfltfiuqevviji.supabase.co/functions/v1/group-status \
   -H "x-hc-cron-secret: <the secret>" \
   -H "Content-Type: application/json" \
-  -d '{"group_status": true}'
+  -d '{"dry_run": true}'
 ```
+
+`dry_run` does the whole job and writes nothing — no paragraph, no run row —
+and returns the shortening it would have made. Take the flag off to let it
+write.
 
 Nothing puts this on a schedule, on purpose. There is no reason to re-shorten
 the same announcement all day, and a paragraph on a public screen that
