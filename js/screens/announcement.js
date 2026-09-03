@@ -93,6 +93,18 @@
       return 'This came down on ' + c.formatDate(a.endsOn) + '. It is here because ' +
         'you came looking for it.';
     }
+    /* The other way a card retires: it was given no end date of its own, and
+       the thing it was about has been and gone. Dated by the event rather
+       than by a column, because that is what actually ended it, and a page
+       still describing a Friday in October needs to say which Friday it has
+       missed. The rule itself is in liveAnnouncements(), in js/data.js. */
+    if (!a.endsOn) {
+      var when = HC.data.announcementEventDate(a);
+      if (when && today > when) {
+        return 'This came down after ' + c.formatDate(when) + ', when it happened. ' +
+          'It is here because you came looking for it.';
+      }
+    }
     return '';
   }
 

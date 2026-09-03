@@ -529,8 +529,8 @@ outside Home. With it on, the announcement's title rides a strip under the top
 bar on every tab, tapping the strip opens that announcement's own page, and an
 x on the right of it puts the strip away on that phone for good. It is
 deliberately the loudest thing the app can do, so it is off unless somebody
-turns it on, and the strip retires when the announcement's own `ends_on` does
-rather than on a second schedule of its own. It is a separate thing from the
+turns it on, and the strip retires when the announcement behind it does rather
+than on a second schedule of its own. It is a separate thing from the
 pinned Home banner under App settings, which is a sentence with no announcement
 behind it and so has nowhere to send anybody: that one stays, on Home, and is
 not dismissible. The migration is `0028_announcement_pin.sql`.
@@ -621,6 +621,20 @@ so in a line under the title. A card comes off Home at midnight because Home is
 what the church is saying today; a page is an address, in somebody's history
 and behind a notification they left on their lock screen for a fortnight, and
 emptying it under a reader would be worse than dating it.
+
+**Two things take a card off Home**, and the second one is the reason a church
+that never fills in a date still gets a noticeboard that clears itself.
+`ends_on` is the first: it is the first day the card does not show, so a
+Saturday event announced with `ends_on` on the Sunday is gone when people wake
+up. The second is the event the announcement is about. An announcement carrying
+an `event_id` and no `ends_on` of its own comes down the morning after that
+event, which is the same morning the Cal tab drops the event out of Upcoming,
+so the two screens retire the same thing on the same day. `ends_on` wins
+whenever it is set and the event never shortens it, because that date is one a
+person typed into a form that told them what it would do. The rule is
+`liveAnnouncements()` in `js/data.js`, read by Home and by the pinned strip,
+and `0047_announcement_event_window.sql` teaches the same thing to the Send
+button so a notification cannot point at a card that has retired.
 
 **Three things about what an announcement can hold** are worth knowing:
 

@@ -561,8 +561,22 @@
     if (row.published === false) return false;
     var today = todayLocal();
     if (row.starts_on && today < row.starts_on) return false;
-    if (row.ends_on && today >= row.ends_on) return false;
+    if (row.ends_on) return today < row.ends_on;
+    var day = eventDay(row);
+    if (day && today > day) return false;
     return true;
+  }
+
+  /* The day this row's event happens, or ''. The one line of translation
+     between the two shapes of the same thing: this screen holds announcements
+     as they came out of Supabase, where the column is event_id, and the
+     shared lookup in js/data.js takes an announcement as the app maps it.
+
+     Shared rather than reimplemented because the whole point of the rule is
+     that Home and this list agree about it. See announcementEventDate() and
+     liveAnnouncements() there. */
+  function eventDay(row) {
+    return HC.data.announcementEventDate({ eventId: row.event_id });
   }
 
   /* One row in the list. The status line is generated rather than typed, so a
@@ -580,6 +594,13 @@
     if (row.starts_on && today < row.starts_on) return 'Goes up ' + c.formatDateShort(row.starts_on);
     if (row.ends_on && today >= row.ends_on) return 'Came down ' + c.formatDateShort(row.ends_on);
     if (row.ends_on) return pin + 'On Home until ' + c.formatDateShort(row.ends_on);
+    /* No end date of its own, but a date it is about, which is an end date by
+       another name. Named as the event rather than as a column, because an
+       admin looking for why this card is gone will not find a date on the
+       form to explain it. */
+    var day = eventDay(row);
+    if (day && today > day) return 'Came down with its date, ' + c.formatDateShort(day);
+    if (day) return pin + 'On Home until the day after ' + c.formatDateShort(day);
     return pin + 'On Home';
   }
 
@@ -655,7 +676,29 @@
      is most likely to have got wrong, and they are the reason somebody would
      open Edit rather than tapping Approve. */
   function reviewDates(row) {
-    if (!row.starts_on && !row.ends_on) return 'No dates. It would stay up until you take it down.';
+    if (!row.starts_on && !row.ends_on) {
+      /* "It would stay up until you take it down" stopped being true for a
+         parsed announcement that carries a date: with no ends_on of its own
+         it now retires with its event. Said here rather than left to be
+         discovered, because this line is the reason somebody opens Edit.
+
+         ASKED OF event_id AND NOT OF THE EVENT'S DAY, which is the difference
+         between this line and every other use of the rule on this screen. A
+         row in the review queue has an unapproved event, and js/content.js
+         syncs with the anon key, so the day is not on this phone to print. The
+         sentence has to be true anyway, and it is: the rule follows the id.
+         The day is added only when it happens to be known, which on the Posted
+         list below is always. */
+      var withEvent = eventDay(row);
+      if (withEvent) {
+        return 'No end date, so it comes down the day after ' +
+          c.formatDateShort(withEvent) + ', when its date happens.';
+      }
+      if (row.event_id) {
+        return 'No end date, so it comes down with the date it is about.';
+      }
+      return 'No dates. It would stay up until you take it down.';
+    }
     if (row.starts_on && row.ends_on) {
       return 'On Home ' + c.formatDateShort(row.starts_on) + ' to ' + c.formatDateShort(row.ends_on) + '.';
     }
@@ -686,6 +729,18 @@
     if (row.ends_on && today >= row.ends_on) {
       return 'These dates have already passed, so approving this would not show it ' +
         'on Home at all. Edit the dates first.';
+    }
+    /* The same silent no-op, arriving by the other route. An announcement with
+       no end date of its own comes down with the date it is about, so a card
+       parsed out of last month's newsletter would be approved, correct, and
+       absent. Only the announcement is spoken about here: whether to put the
+       event itself in the calendar is a separate card and a separate call. */
+    if (!row.ends_on) {
+      var day = eventDay(row);
+      if (day && today > day) {
+        return 'The date this is about has already passed, so approving this would ' +
+          'not show it on Home. Give it an end date first if you want it up anyway.';
+      }
     }
     return '';
   }

@@ -90,6 +90,7 @@ function ann(over) {
     bodyHtml: null,
     startsOn: null,
     endsOn: null,
+    eventId: null,
     priority: 0,
     imageUrl: null,
     videoUrl: null,
@@ -107,6 +108,15 @@ function ann(over) {
 function withAnnouncements(HC, rows) {
   HC.data.announcements.length = 0;
   rows.forEach(function (r) { HC.data.announcements.push(r); });
+  return HC;
+}
+
+/* The same, for the list an announcement's date is looked up in. Only the two
+   fields the lookup reads, in the shape mapEvent() produces: a 'YYYY-MM-DD'
+   day in the phone's own zone, which is what makes the comparison exact. */
+function withEvents(HC, rows) {
+  HC.data.events.length = 0;
+  rows.forEach(function (r) { HC.data.events.push(r); });
   return HC;
 }
 
@@ -134,6 +144,110 @@ const ids = list => list.map(a => a.id);
   // can say "up to and including Saturday" with one date.
   ok('one that ends today is already down', live.includes('ends-today'), false);
   ok('one that ends tomorrow is still up', live.includes('ends-tomorrow'), true);
+}
+
+/* ----------------------------------------------- the date it is about
+
+   An announcement carrying an eventId with no endsOn of its own retires the
+   morning after that event. Every assertion below is one of the four ways
+   that can be got wrong: off by a day, applied over an end date somebody
+   typed, applied to an event that is not there, or not applied at all. */
+
+{
+  const HC = load(['data.js']);
+
+  withEvents(HC, [
+    { id: 'event-yesterday', date: YESTERDAY },
+    { id: 'event-today', date: TODAY },
+    { id: 'event-tomorrow', date: TOMORROW },
+    { id: 'event-undated', date: '' }
+  ]);
+
+  withAnnouncements(HC, [
+    ann({ id: 'after-it', eventId: 'event-yesterday' }),
+    ann({ id: 'on-the-day', eventId: 'event-today' }),
+    ann({ id: 'before-it', eventId: 'event-tomorrow' }),
+    ann({ id: 'undated-event', eventId: 'event-undated' }),
+    ann({ id: 'event-not-here', eventId: 'event-nobody-fetched' }),
+    ann({ id: 'no-event' })
+  ]);
+
+  const live = ids(HC.data.liveAnnouncements());
+
+  ok('a card whose date has passed is down', live.includes('after-it'), false);
+  // The whole of the day, not up to the hour it starts. A serve day at 8am is
+  // still worth reading about at 8pm, and this is also the day the Cal tab
+  // keeps the event in Upcoming, so the two screens agree.
+  ok('but it stays up all through the day itself', live.includes('on-the-day'), true);
+  ok('and before it', live.includes('before-it'), true);
+  // An event row with no usable starts_at maps to date '', which is not a day
+  // that has passed. Nothing is hidden on the strength of a missing value.
+  ok('an event with no date takes nothing down', live.includes('undated-event'), true);
+  /* The events list syncs separately from announcements, so this is an
+     ordinary cold start, not a broken row: retiring on an event this phone has
+     not fetched yet would empty Home while the network catches up. */
+  ok('an event this phone does not have takes nothing down',
+    live.includes('event-not-here'), true);
+  ok('and an announcement with no event is untouched', live.includes('no-event'), true);
+}
+
+{
+  const HC = load(['data.js']);
+
+  // endsOn is a date a person typed on a form that told them what it would do,
+  // and the admin list reads it back to them. It answers on its own, in both
+  // directions: the event never extends it and never cuts it short.
+  withEvents(HC, [
+    { id: 'event-yesterday', date: YESTERDAY },
+    { id: 'event-tomorrow', date: TOMORROW }
+  ]);
+
+  withAnnouncements(HC, [
+    ann({ id: 'kept-up', eventId: 'event-yesterday', endsOn: TOMORROW }),
+    ann({ id: 'taken-down', eventId: 'event-tomorrow', endsOn: TODAY })
+  ]);
+
+  const live = ids(HC.data.liveAnnouncements());
+
+  ok('an end date in the future outlives its own past event', live.includes('kept-up'), true);
+  ok('and one that has passed comes down before its event',
+    live.includes('taken-down'), false);
+}
+
+{
+  const HC = load(['data.js']);
+
+  withEvents(HC, [{ id: 'event-yesterday', date: YESTERDAY }]);
+  withAnnouncements(HC, [
+    ann({ id: 'pinned-past', pinned: true, eventId: 'event-yesterday' })
+  ]);
+
+  // The strip has no dates of its own and no events of its own. It retires
+  // with the announcement behind it, by whichever of the two rules ended it.
+  ok('the strip comes down with the date it was about',
+    ids(HC.data.pinnedAnnouncements()), []);
+
+  // And the page is still an address, exactly as it is for a card that ran out
+  // of endsOn. See windowNote() in js/screens/announcement.js, which says which
+  // day it was that came and went.
+  ok('but the page still holds the words',
+    (HC.data.getAnnouncement('pinned-past') || {}).id, 'pinned-past');
+}
+
+{
+  const HC = load(['data.js']);
+
+  // The shared lookup itself, because three callers read it and '' is a real
+  // answer to two different questions: no event, and an event not here.
+  withEvents(HC, [{ id: 'event-real', date: TOMORROW }]);
+
+  ok('the lookup finds the day an announcement is about',
+    HC.data.announcementEventDate(ann({ eventId: 'event-real' })), TOMORROW);
+  ok('an announcement with no event has no day',
+    HC.data.announcementEventDate(ann({})), '');
+  ok('an event that is not here has no day either',
+    HC.data.announcementEventDate(ann({ eventId: 'event-missing' })), '');
+  ok('and nothing at all is not a crash', HC.data.announcementEventDate(null), '');
 }
 
 /* ------------------------------------------------------------- the order */

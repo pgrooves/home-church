@@ -72,6 +72,13 @@ hands off, and it is the one nobody thinks to give you. An announcement for a
 September 12 serve day should stop showing on September 13, and setting
 `ends_on` now means nobody has to remember to come back and remove it.
 
+The one case where you do not have to ask is an announcement carrying an
+`event_id`: with `ends_on` left null it comes down the morning after that
+event on its own, which is the rule `0047_announcement_event_window.sql`
+describes and `liveAnnouncements()` in `js/data.js` applies. Set `ends_on`
+anyway when the card should retire on some other day — it wins whenever it is
+set, and the event never shortens it.
+
 ## Step 2. Write it in the church's voice
 
 Home shows one announcement at a time, so this is the single most read piece

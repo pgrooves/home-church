@@ -2792,6 +2792,29 @@
        open. A Saturday event announced with endsOn on the Sunday is gone when
        people wake up Sunday.
 
+       AND WHEN THERE IS NO endsOn BUT THERE IS AN EVENT, that event's own day
+       ends it. An announcement carrying an eventId is by definition about a
+       dated thing, and a card still saying "Homecoming this Friday" on the
+       following Tuesday is the app being wrong about the one fact it exists
+       to carry. It comes down the morning after its event, which is the same
+       morning the Cal tab drops that event out of Upcoming, so the two
+       screens retire the same thing on the same day rather than a day apart.
+
+       endsOn STILL WINS WHENEVER IT IS SET, and the event never shortens it.
+       It is a date a person typed into a form that told them what it would
+       do, and the admin list reads it back to them; a hidden rule taking the
+       card down earlier than the line they are looking at would make that
+       line a lie. This is for the announcement nobody gave an end date to,
+       which is the only case that used to run forever.
+
+       A MISSING EVENT IS NOT A PAST EVENT. Events sync separately from
+       announcements, so a row can name an event this phone has not fetched
+       yet, or one that was deleted, or one still unapproved in the review
+       queue. Retiring on any of those would empty Home on a cold start, so
+       nothing is hidden unless the event is actually here and its day has
+       actually gone. Lingering a day longer is the safe direction to be
+       wrong in; a card that vanishes because a fetch was slow is not.
+
        DISMISSALS ARE NOT APPLIED HERE, on purpose. Whether this phone has put
        something away lives in js/store.js, which loads after this file and
        knows nothing about content, and the two callers put away different
@@ -2799,6 +2822,7 @@
        separately. So this answers what the church is saying today, and each
        caller decides what this phone has already been told. */
     liveAnnouncements: function () {
+      var self = this;
       var d = new Date();
       var today = d.getFullYear() + '-' +
         ('0' + (d.getMonth() + 1)).slice(-2) + '-' +
@@ -2806,7 +2830,10 @@
 
       return (announcements || []).filter(function (a) {
         if (a.startsOn && today < a.startsOn) return false;
-        if (a.endsOn && today >= a.endsOn) return false;
+        // Set, and therefore the whole answer. The event is not consulted.
+        if (a.endsOn) return today < a.endsOn;
+        var eventDay = self.announcementEventDate(a);
+        if (eventDay && today > eventDay) return false;
         return true;
       }).sort(function (x, y) {
         var px = x.priority || 0;
@@ -2817,6 +2844,25 @@
         if (cx !== cy) return cx < cy ? 1 : -1;
         return String(x.id) < String(y.id) ? -1 : 1;
       });
+    },
+
+    /* The day the event an announcement is about happens, as 'YYYY-MM-DD'.
+       '' when the announcement carries no event, and '' when it carries one
+       this payload does not have — see the note above on why those two are
+       deliberately the same answer.
+
+       ONE LOOKUP, for the same reason liveAnnouncements() is one definition.
+       Three places ask this question now: the window above, the line the
+       announcement's own page draws once it has come down, and the status in
+       the admin list. They have to agree about which cards are retired and
+       why, or the admin screen says "On Home" about something that is not on
+       Home, which is the drift this file exists to prevent. */
+    announcementEventDate: function (a) {
+      if (!a || !a.eventId) return '';
+      var evt = (events || []).filter(function (e) {
+        return e && e.id === a.eventId;
+      })[0];
+      return (evt && evt.date) || '';
     },
 
     /* The announcements an admin has pinned and that are on screen today, in
