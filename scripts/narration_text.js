@@ -202,6 +202,37 @@ function configured() {
   }
 }
 
+/* Why this is noisier than it looks. Every one of these failures used to be
+   the same silent `return null`, and the seed fallback below made that look
+   like success: the script printed a smaller guide count and carried on. Two
+   separate sessions burned a model download chasing that. A refused proxy, a
+   revoked key and an unreachable host are three different fixes, so they get
+   three different lines. */
+function say(what) {
+  console.log('  could not read Supabase, falling back to the seed: ' + what);
+}
+
+function host(u) {
+  try { return new URL(u).host; } catch (e) { return String(u); }
+}
+
+/* A non-ok response is not an exception. The egress proxy answers a blocked
+   host with a perfectly well-formed 403, so `r.ok` is false while nothing
+   throws, which is exactly how this hid. Read the body: the proxy names the
+   host it refused, and PostgREST names the column or the key it rejected. */
+async function get(endpoint, key, onFail) {
+  const res = await fetch(endpoint, {
+    headers: { apikey: key, Authorization: 'Bearer ' + key }
+  });
+  if (!res.ok) {
+    const body = (await res.text().catch(() => '')).trim().slice(0, 300);
+    say('HTTP ' + res.status + ' from ' + host(endpoint) +
+        (body ? ', ' + body : ''));
+    return onFail;
+  }
+  return res.json();
+}
+
 async function fromSupabase() {
   const fallback = configured() || {};
   const url = process.env.SUPABASE_URL || fallback.url;
@@ -211,12 +242,8 @@ async function fromSupabase() {
   if (!url || !key) return null;
   try {
     const [guides, podcasts] = await Promise.all([
-      fetch(url + '/rest/v1/guides?select=*', {
-        headers: { apikey: key, Authorization: 'Bearer ' + key }
-      }).then((r) => (r.ok ? r.json() : null)),
-      fetch(url + '/rest/v1/podcasts?select=id,title', {
-        headers: { apikey: key, Authorization: 'Bearer ' + key }
-      }).then((r) => (r.ok ? r.json() : []))
+      get(url + '/rest/v1/guides?select=*', key, null),
+      get(url + '/rest/v1/podcasts?select=id,title', key, [])
     ]);
     if (!Array.isArray(guides)) return null;
     const titles = {};
@@ -235,6 +262,7 @@ async function fromSupabase() {
       title: r.theme_title || titles[r.sermon_id] || r.id
     }));
   } catch (e) {
+    say('could not reach ' + host(url) + ', ' + (e.message || e));
     return null;
   }
 }

@@ -22,7 +22,7 @@
     "ios:open": "npm run ios && npx cap open ios",
     "icons": "python3 scripts/make_icons.py",
     "practices": "node scripts/build_practices.js",
-    "narrate": "node scripts/narration_text.js && python3 scripts/build_narration.py",
+    "narrate": "node scripts/narration_text.js && sh -c 'PY=$([ -x .venv/bin/python ] && echo .venv/bin/python || echo python3); exec \"$PY\" scripts/build_narration.py \"$@\"' --",
     "narrate:upload": "node scripts/upload_narration.js"
   },
   "dependencies": {
