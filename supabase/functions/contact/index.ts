@@ -78,7 +78,19 @@ import { createClient } from 'jsr:@supabase/supabase-js@2';
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, content-type, apikey',
+  /* `content-type` is the one that matters and the one that is easy to leave
+     out. The app posts JSON with an Authorization header, which makes the
+     browser send a preflight, and Supabase's own gateway answers a preflight
+     for a function that does not exist with a header list that does NOT
+     include content-type. The browser then blocks the request and fetch
+     rejects with a bare TypeError, which js/auth.js turns into "Could not
+     reach the church's servers" — an offline message for a deployment
+     problem. That is exactly how this first went wrong in production.
+
+     x-client-info is here because supabase-js sends it and a future caller
+     may well be supabase-js rather than the hand written fetch in
+     js/auth.js. */
+  'Access-Control-Allow-Headers': 'authorization, content-type, apikey, x-client-info',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
