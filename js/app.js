@@ -1376,8 +1376,23 @@
       }).then(function (run) {
         HC.admin.invalidateGroupStatus();
 
+        /* A minute with no row in the log at all, which has two causes and
+           they want different things done about them.
+
+           The ordinary one is a slow model on a busy afternoon, and the run
+           lands a moment after this gives up.
+
+           The other one happened on the day this shipped and is worth naming
+           rather than shrugging at: the Edge Function had not been redeployed
+           since this button was written, so it did not know the group_status
+           flag, ignored it, and ran an ordinary mailbox check instead. It
+           answers 200, writes a newsletter_runs row, and writes nothing here —
+           which from the app looks exactly like a slow model that never
+           finishes, forever. The deploy is the fix, and a toast that does not
+           say so sends somebody looking at the parse instead. */
         if (!run) {
-          HC.components.toast('Still working. It will appear here when it is done.');
+          HC.components.toast('Nothing came back. Either it is still working, or ' +
+            'newsletter-intake needs redeploying.');
           return;
         }
 
