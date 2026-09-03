@@ -871,6 +871,22 @@ a.hc-card:active { background: var(--hc-paper-sunk); }
   display: flex;
   align-items: flex-start;
   gap: var(--hc-space-sm);
+
+  /* THE CHEVRON TAKES THE OUTER COLUMN AND THE PLAY BUTTON SITS INSIDE IT.
+     The index rail is a 34px ruler fixed to right:0 and the play button is a
+     34px disc, so with the button outermost the two shared an edge and the
+     notches read as part of the control. A chevron is a thin mark and loses
+     nothing by being the thing next to a ruler.
+
+     This is padding and a position rather than a move in the markup, and the
+     reason is that the chevron has to stay inside the toggle. A tap resolves
+     through evt.target.closest('[data-action]') in js/app.js, which reads DOM
+     ancestry and not where a box was painted, so a chevron drawn outside its
+     button still folds the section. Moving it in the markup would have cost
+     that, and cost the [aria-expanded="true"] selector below that turns it
+     over, and put a second aria-expanded on the page to keep in step. */
+  position: relative;
+  padding-right: calc(20px + var(--hc-space-md));
 }
 
 .hc-section__h {
@@ -919,9 +935,14 @@ a.hc-card:active { background: var(--hc-paper-sunk); }
 }
 
 .hc-section__chevron {
-  flex: 0 0 auto;
+  /* Placed against .hc-section__bar's padding, not laid out in the row. The
+     10px that was margin-top is now top: it is the same offset, still setting
+     the mark against the title's cap rather than the middle of a heading that
+     may run to two lines. */
+  position: absolute;
+  right: 0;
+  top: 10px;
   width: 20px; height: 20px;
-  margin-top: 10px;
   stroke: var(--hc-accent-deep);
   stroke-width: 1.5;
   stroke-linecap: round;
