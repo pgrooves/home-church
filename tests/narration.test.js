@@ -138,5 +138,17 @@ ok('a half written guide records what it has',
 ok('the section ids are the reader\'s ids', n.SECTIONS,
   ['short-summary', 'full-summary', 'group', 'reflection', 'oneliners', 'scripture']);
 
+/* ------------------------------------------------------------- the project
+   narration_text.js reads js/config.js so a run needs no environment at all.
+   Without this it falls back to the seed in js/data.js, which is three guides
+   against the six that are published, and the three that are missing lose
+   their play buttons without anybody being told. */
+
+const cfg = n.configured();
+ok('the project is found without any environment', !!cfg, true);
+ok('and it is the project the app itself talks to',
+  !!(cfg && /^https:\/\/[a-z0-9]+\.supabase\.co$/.test(cfg.url)), true);
+ok('with a key to read guides with', !!(cfg && cfg.key.length > 10), true);
+
 console.log('\n' + pass + ' passed, ' + fail + ' failed');
 process.exit(fail ? 1 : 0);

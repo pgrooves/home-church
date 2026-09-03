@@ -269,6 +269,13 @@ one. `scripts/build_narration.py` speaks them with Kokoro-82M on the CPU. It
 only regenerates sections whose hash moved, so a normal week narrates the one
 new guide and leaves the catalogue alone, about four minutes.
 
+**Read what the first command prints.** It says where the guides came from
+and how many it found. If it says `source seed` it could not reach Supabase
+and fell back to the three guides bundled in `js/data.js`, which is not the
+published catalogue. Every guide it did not see ends up with no play buttons
+and nothing anywhere says so. It warns loudly in that case; do not narrate
+past the warning.
+
 **Setup, the first time only.** The model is not in the repo, it is 340MB:
 
 ```bash

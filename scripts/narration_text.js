@@ -179,9 +179,35 @@ function build(guide, title) {
    seed is three complete guides, which is enough to run the whole pipeline
    offline, and it is what a fresh clone has before anybody hands it a key. */
 
+/* The project the app itself talks to. js/config.js holds the URL and the
+   publishable anon key, which is safe in client code and safe here, and
+   guides are publicly readable (migration 0001), so reading them needs
+   nothing else.
+
+   THIS IS NOT A CONVENIENCE. Without it the script needs two environment
+   variables that nothing else in this repo needs, and a run that does not
+   have them falls back to the seed in js/data.js and narrates whatever is in
+   there. The seed is three guides. Supabase has six. Nobody would see the
+   difference: the script would succeed, print a smaller number than anyone
+   was counting, and three published guides would quietly have no play
+   buttons. */
+function configured() {
+  try {
+    const src = fs.readFileSync(path.join(__dirname, '..', 'js', 'config.js'), 'utf8');
+    const url = (src.match(/SUPABASE_URL:\s*'([^']*)'/) || [])[1];
+    const key = (src.match(/SUPABASE_ANON_KEY:\s*'([^']*)'/) || [])[1];
+    return url && key ? { url: url, key: key } : null;
+  } catch (e) {
+    return null;
+  }
+}
+
 async function fromSupabase() {
-  const url = process.env.SUPABASE_URL;
-  const key = process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const fallback = configured() || {};
+  const url = process.env.SUPABASE_URL || fallback.url;
+  const key = process.env.SUPABASE_ANON_KEY ||
+              process.env.SUPABASE_SERVICE_ROLE_KEY ||
+              fallback.key;
   if (!url || !key) return null;
   try {
     const [guides, podcasts] = await Promise.all([
@@ -246,9 +272,22 @@ async function main() {
   console.log('words         ' + words);
   console.log('est. audio    ' + (words / 150).toFixed(1) + ' min');
   console.log('wrote         ' + out);
+
+  /* Loud, because the quiet version of this is the whole failure. The seed is
+     the cold start catalogue, not the real one, and a run that fell back to
+     it has just decided that half the published guides get no play button. */
+  if (source === 'seed') {
+    console.log('');
+    console.log('  WARNING. This came from the seed in js/data.js, not from Supabase,');
+    console.log('  which means it is whatever the repo shipped rather than what the');
+    console.log('  church has published. Every guide missing from the seed will end up');
+    console.log('  with no play buttons, silently. Check your connection, or set');
+    console.log('  SUPABASE_URL and SUPABASE_ANON_KEY, and run this again before');
+    console.log('  generating any audio.');
+  }
 }
 
-module.exports = { SECTIONS, BOOKS, normalize, sectionText, hash, isSpeakable, build };
+module.exports = { SECTIONS, BOOKS, normalize, sectionText, hash, isSpeakable, build, configured };
 
 if (require.main === module) {
   main().catch((e) => { console.error(e); process.exit(1); });
