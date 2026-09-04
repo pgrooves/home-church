@@ -585,16 +585,45 @@
     invalidate('newsletter');
   }
 
-  /* Approve. One PATCH, and it is the only place in this feature that sets
-     published to true.
+  /* Approve, and it is the only place in this feature that sets published to
+     true.
 
-     `published` and `review_state` are written together and never apart. Two
-     PATCHes would leave a window in which a row is live but still in the
-     queue, and the failure of the second one would leave it there permanently.
-     Nothing else on the row is touched, so whatever the parse produced is what
-     goes up, which is the point of having reviewed it. */
+     `published` and `review_state` are written together and never apart, in
+     one RPC. Two PATCHes would leave a window in which a row is live but still
+     in the queue, and the failure of the second one would leave it there
+     permanently. Nothing the parse produced is touched, so what was reviewed
+     is what goes up, which is the point of having reviewed it.
+
+     The one thing written afterwards is where it lands on Home, which is a
+     separate write on purpose. See the note on it below. */
   function approveAnnouncement(id) {
+    /* Read before the approval rather than after it, because the approval
+       invalidates the list this counts. */
+    var want = nextPriority();
+
     return HC.auth.rpc('hc_admin_approve_announcement', { p_id: id })
+      .then(function () {
+        /* And where it lands on Home, for the reason nextPriority() gives: the
+           intake writes a draft with no priority, and once the arrows have
+           numbered anything, no priority means underneath everything. An
+           announcement approved this morning belongs at the top of Home, which
+           is where this screen already shows it.
+
+           A SECOND WRITE AND NOT A WIDER RPC, which is the opposite of the
+           call made directly above about `published` and `review_state`. Those
+           two are a promise: a row that is live but still in the queue is a
+           state nothing in the app knows how to draw. This is a position in a
+           list. If it does not land, the announcement is live, at the bottom,
+           and one arrow from where it should be — visible, and fixable by the
+           person who is already looking at it. So a failure here is swallowed
+           rather than turned into "approving that did not work", which would
+           be a lie about a row that is on Home. */
+        return HC.auth.restFetch('/announcements?id=eq.' + encodeURIComponent(id), {
+          method: 'PATCH',
+          headers: { Prefer: 'return=minimal' },
+          body: { priority: want }
+        }).then(null, function () { return null; });
+      })
       .then(function () {
         invalidate('announcements');
         invalidate('approvals');
@@ -721,7 +750,22 @@
       link_image_url: row.linkImageUrl || null,
       starts_on: row.startsOn || null,
       ends_on:   row.endsOn || null,
-      priority:  row.priority || 0,
+      /* `priority` IS NOT HERE, and its absence is the fix for a bug that read
+         as "the arrows are broken".
+
+         Nothing on this form sets it. It is set by the up and down controls in
+         the list, which renumber the whole live list at once, and a PATCH that
+         carried it would write back whatever number was on the row when the
+         editor opened — which is the number from before the last reorder if
+         this screen has repainted since, and 0 for every row that has never
+         been moved. So fixing a typo could drop a card to the bottom of Home,
+         silently, minutes after somebody had put it at the top.
+
+         Leaving the column out of the PATCH leaves it exactly as it is, which
+         is the same rule migration 0051 section 4 gives for the merge: where a
+         card sits on Home is a decision somebody made about the card, and
+         editing its words is not that decision. See nextPriority() below for
+         the one moment this column is written from anywhere but the arrows. */
       published: row.published !== false,
       // The strip under the top bar. Written on every save, including the
       // saves that turn it off: `!!` rather than `|| null`, because the
@@ -757,7 +801,11 @@
       : HC.auth.restFetch('/announcements', {
           method: 'POST',
           headers: { Prefer: 'return=representation' },
-          body: Object.assign({ id: announcementId(row.title) }, body)
+          // priority last, so it cannot be undone by a `priority` finding its
+          // way back into the body above. It is written here and by the
+          // arrows, and nowhere else.
+          body: Object.assign({ id: announcementId(row.title) }, body,
+            { priority: nextPriority() })
         });
 
     return done.then(function (rows) {
@@ -878,6 +926,33 @@
     });
   }
 
+  /* The number a brand new announcement is born with: one above the highest
+     any announcement is carrying.
+
+     WHY A NEW ONE NEEDS A NUMBER AT ALL, when 0003 shipped this column with a
+     default of 0 and everything sorted itself by date. Because the arrows
+     renumber: the moment somebody moves anything, every card on Home today is
+     carrying 1, 2, 3, and a 0 is not "no opinion" any more, it is last. An
+     announcement written that afternoon would appear at the top of this screen
+     and at the bottom of Home, under a card from March, which is exactly the
+     disagreement between the two lists this whole section exists to stop.
+
+     One above the top is the same thing "newest first" already meant, said in
+     the column that is now doing the sorting. Before anybody has ever used an
+     arrow every row is 0, the first new one gets 1 and goes top, and the
+     ordering is unchanged from what the dates gave. Deleted rows are not
+     counted: a restored announcement is put back where it was, and a number
+     nothing can see should not push every future one higher. */
+  function nextPriority() {
+    var top = 0;
+    list('announcements').forEach(function (row) {
+      if (row.deleted_at) return;
+      var p = row.priority || 0;
+      if (p > top) top = p;
+    });
+    return top + 1;
+  }
+
   /* The live list in the order Home draws it, which is the order the up and
      down controls move things around in. Deliberately the same comparison
      js/data.js makes rather than a second opinion about it: a screen that
@@ -904,6 +979,37 @@
       if (cx !== cy) return cx < cy ? 1 : -1;
       return String(x.id) < String(y.id) ? -1 : 1;
     });
+  }
+
+  /* The Posted list on the Admin screen, in the order it is drawn.
+
+     WHY THIS IS HERE AND NOT IN THE SCREEN, which is where it was and is what
+     broke. The screen drew the list straight from the table, newest first, and
+     numbered the arrows from orderedLive(), which is Home's order. Two orders
+     on one list: the arrows moved the right card on Home while this screen
+     appeared not to change, and the disabled top arrow sat on whichever row was
+     first on Home rather than on the row at the top of the screen.
+
+     So the order the list is drawn in is stated once, next to the order Home is
+     drawn in, for the same reason orderedLive() borrows js/data.js's comparison
+     rather than writing a second opinion about it.
+
+     Live first, in Home's order, because those are the rows the arrows move.
+     Then everything that is not on Home today — drafts, ones dated for next
+     month, ones that have already come down — newest first, which is the order
+     the table already gave them. Those carry no arrows, so there is nothing for
+     their order to be wrong about. */
+  function postedOrder() {
+    var live = orderedLive();
+    var seen = {};
+    live.forEach(function (row) { seen[row.id] = true; });
+
+    var rest = list('announcements').filter(function (row) {
+      if (row.review_state === 'pending' || row.deleted_at) return false;
+      return !seen[row.id];
+    });
+
+    return live.concat(rest);
   }
 
   /* ------------------------------------------------------- the same thing twice
@@ -1243,6 +1349,8 @@
     notifyAnnouncement: notifyAnnouncement,
 
     orderedLive: orderedLive,
+    postedOrder: postedOrder,
+    nextPriority: nextPriority,
     reorderAnnouncement: reorderAnnouncement,
     applyAnnouncementUpdate: applyAnnouncementUpdate,
     keepAnnouncementSeparate: keepAnnouncementSeparate,

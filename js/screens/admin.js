@@ -215,7 +215,11 @@
       // second paste never overwrites what they chose. See the x in
       // linkFields() and 'admin-link-thumb-clear' in js/app.js.
       linkImageTouched: false,
-      startsOn: '', endsOn: '', priority: 0,
+      startsOn: '', endsOn: '',
+      // No `priority`. Where a card sits on Home belongs to the arrows in the
+      // list, not to this form: a field nothing draws would only ever be sent
+      // back stale. saveAnnouncement() gives a new announcement its number and
+      // never writes one on an edit.
       published: true,
       // Off unless somebody asks for it. The strip is the most insistent
       // thing in the app, and a default that puts one there is a default that
@@ -270,7 +274,10 @@
       linkImageTouched: true,
       startsOn: row.starts_on || '',
       endsOn: row.ends_on || '',
-      priority: row.priority || 0,
+      // Not carried, per blankDraft(). Opening an announcement and saving it
+      // used to write its priority back, which meant fixing a typo could put a
+      // card back where it was three reorders ago, or at the bottom of Home if
+      // it had never been moved at all.
       published: row.published !== false,
       // Unlike the notification below, this one is read off the row: it is a
       // state the announcement is in rather than something that happens when
@@ -1287,15 +1294,31 @@
     var place = {};
     live.forEach(function (row, i) { place[row.id] = i; });
 
+    /* AND THE ORDER THIS LIST IS DRAWN IN IS THAT ORDER, which is the whole of
+       a bug that read as "the arrows are broken".
+
+       They were not. This list used to be drawn straight from
+       HC.admin.announcements(), which is the table newest first, while the
+       arrows were numbered from orderedLive(), which is Home's order. So the
+       arrows moved the right card on Home and nothing appeared to move here,
+       the greyed-out top arrow sat on whichever row happened to be first on
+       Home rather than on the first row on this screen, and the note directly
+       underneath promised the two lists agreed when they did not.
+
+       postedOrder() is that list, said once in js/admin.js beside the two
+       orderings it is made of. Live first, then everything that is not on Home
+       today, which carries no arrows. */
+    var ordered = HC.admin.postedOrder();
+
     html += c.sectionHeader('', 'Posted');
 
     if (live.length > 1) {
       html += '<p class="hc-caption hc-admin__intro-note">The arrows set the order ' +
-        'on Home. Only the ones on Home today can move, and the top one here is the ' +
-        'top one there.</p>';
+        'on Home, and this list is in it: the top one here is the top one there. ' +
+        'Anything not on Home today sits underneath, and cannot move.</p>';
     }
 
-    rows.forEach(function (row) {
+    ordered.forEach(function (row) {
       var at = place[row.id];
       var movable = at !== undefined && live.length > 1;
 
