@@ -487,11 +487,26 @@
 
     html += linkFields(d);
 
+    /* "Goes up" and not "Starts", which is a one word change and the whole of
+       a real mistake somebody made with it.
+
+       Both of these are about the CARD, not about the thing the card is about.
+       "Comes down" said that plainly and "Starts" did not, so a sign-up for a
+       baby blessing on the 20th got the 20th typed into it — meaning "the
+       blessing is on the 20th" — and the announcement went quiet until the
+       morning of the event it was advertising. Nothing was broken and nothing
+       said anything was: the list read "Goes up Sep 20", correctly, about a
+       card nobody had meant to schedule.
+
+       So the field now uses the same three words the list prints back at you,
+       and the help says what the date is instead of only what leaving it empty
+       does. A date field that has to be right the first time should not need
+       the list underneath to explain what it did. */
     html += '<div class="hc-form-row">' +
-      field({ name: 'startsOn', label: 'Starts', type: 'date', value: d.startsOn,
-        help: 'Empty shows it now.' }) +
+      field({ name: 'startsOn', label: 'Goes up', type: 'date', value: d.startsOn,
+        help: 'The day the card appears. Empty puts it on Home now.' }) +
       field({ name: 'endsOn', label: 'Comes down', type: 'date', value: d.endsOn,
-        help: 'Empty leaves it up.' }) +
+        help: 'The day it disappears. Empty leaves it up.' }) +
     '</div>';
 
     html += switchRow({
@@ -585,6 +600,20 @@
     return true;
   }
 
+  /* Has this phone put this announcement away? The x on the card on Home is
+     one tap, has no confirm, and until now had no way back at all: the only
+     caller of undismiss() was tapping the pinned strip. So a thumb that
+     caught the x while scrolling took a card off Home for good, on that phone
+     only — which from the Admin screen looked exactly like an announcement
+     that was live, movable, and mysteriously not there.
+
+     It is a fact about this phone and not about the announcement, which is
+     why it is read from js/store.js here rather than being anything the
+     church can see. Everybody else still has the card. */
+  function isPutAway(row) {
+    return isLiveNow(row) && HC.store.isDismissed(row.id);
+  }
+
   /* One row in the list. The status line is generated rather than typed, so a
      card that is a draft, or scheduled, or expired, says which without
      anybody having to remember to keep a label in step with two date
@@ -596,11 +625,15 @@
     // app without opening it. A pinned draft says "Draft" and nothing more,
     // which is the truth: there is no banner until it is published.
     var pin = row.pinned && isLiveNow(row) ? 'Pinned · ' : '';
+    /* And on the end, the one thing this screen used to get wrong: "On Home"
+       said of a card that is not on this phone's Home. It is still on the
+       church's, so the status is not replaced, it is qualified. */
+    var away = isPutAway(row) ? ' · not on your Home' : '';
     if (row.published === false) return 'Draft';
     if (row.starts_on && today < row.starts_on) return 'Goes up ' + c.formatDateShort(row.starts_on);
     if (row.ends_on && today >= row.ends_on) return 'Came down ' + c.formatDateShort(row.ends_on);
-    if (row.ends_on) return pin + 'On Home until ' + c.formatDateShort(row.ends_on);
-    return pin + 'On Home';
+    if (row.ends_on) return pin + 'On Home until ' + c.formatDateShort(row.ends_on) + away;
+    return pin + 'On Home' + away;
   }
 
   /* ------------------------------------------------ the newsletter intake
@@ -1375,6 +1408,19 @@
             : '') +
           c.button('Edit', { action: 'admin-announcement-edit', id: row.id,
             variant: 'secondary', small: true }) +
+          /* The way back from the x on Home, and the only one there was ever
+             going to be: dismissing is remembered on the phone, so the undo
+             has to be on the phone that did it, and this is the screen that is
+             already showing every announcement whether it drew a card or not.
+
+             Drawn only when there is something to undo. A button that says
+             "put it back" beside a card that is already there is a button that
+             makes somebody wonder what they have done. */
+          (isPutAway(row)
+            ? c.button('Put it back', { action: 'admin-announcement-undismiss',
+                id: row.id, variant: 'secondary', small: true,
+                ariaLabel: 'Show “' + row.title + '” on your Home again' })
+            : '') +
           /* Notify is only drawn for a row that is on Home. A draft, one dated
              for next month, and one that has already come down are all refused
              by hc_admin_send_announcement, and a button whose only outcome is
