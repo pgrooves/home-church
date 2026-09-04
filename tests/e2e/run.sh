@@ -80,6 +80,12 @@ node "$(dirname "$0")/gate.js" || exit 1
 # contact Edge Function, including the failure, and needs no database either.
 node "$(dirname "$0")/contact.js" || exit 1
 
+# Get notified, the second button under every event on the Cal tab. Installs a
+# pretend Capacitor before the app's own scripts run, because a reminder is
+# the operating system's to hold and a browser has none. Still local, still no
+# database, so it belongs up here with the cheap ones.
+node "$(dirname "$0")/reminders.js" || exit 1
+
 # The database, built the same way the migration tests build it. Doing it
 # through that script rather than by hand means this can never run against a
 # schema the migration tests have not also seen.

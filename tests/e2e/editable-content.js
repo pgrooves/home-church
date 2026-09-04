@@ -100,6 +100,15 @@ const SLOTS = [
      its name: the button moved screens, and renaming its slot would silently
      drop an override the church had already written for it. */
   'cal.eyebrow', 'cal.events-eyebrow', 'cal.events-empty',
+  /* cal.get-notified is the one slot in this list these rounds cannot
+     actually reach. The button it labels is drawn only where the phone can
+     hold a reminder, which is never in a browser, so an override written here
+     goes into the table and onto nothing. It is listed anyway so this stays a
+     complete inventory of what the church can reword, and because the day
+     that button is drawn somewhere a browser can see it, this line is already
+     right. What protects it in the meantime is the same esc() every other
+     label goes through; see remindMe() in js/components.js. */
+  'cal.get-notified',
   'more.note', 'more.practices-sub', 'more.journal-sub', 'more.give-sub',
   'journal.intro', 'journal.eyebrow', 'journal.export-note', 'journal.empty',
   'journal.no-matches', 'guide.empty', 'guide.missing',

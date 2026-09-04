@@ -2163,6 +2163,38 @@
       });
     },
 
+    /* --------------------------------------------------- get notified
+
+       The other button under an event on the Cal tab. Everything it does is
+       in js/reminders.js, including the sheet: these five are the same thin
+       shape as the scripture and link sheet handlers above, which is what
+       keeps every tap in this app arriving in one place.
+
+       Nothing here is guarded on the app being native, because nothing here
+       can be reached in a browser: components.remindMe() draws no button
+       where HC.native.canRemind() is false, and open() says so out loud on
+       the off chance it is wrong. */
+
+    'event-remind': function (el) {
+      HC.reminders.open(el.getAttribute('data-id'));
+    },
+
+    'remind-close': function () {
+      HC.reminders.close();
+    },
+
+    'remind-preset': function (el) {
+      HC.reminders.preset(el.getAttribute('data-id'));
+    },
+
+    'remind-save': function () {
+      HC.reminders.save();
+    },
+
+    'remind-clear': function (el) {
+      HC.reminders.remove(el.getAttribute('data-id'));
+    },
+
     'open-url': function (el) {
       c.openExternal(el.getAttribute('data-url'));
     },
@@ -3977,6 +4009,16 @@
         return;
       }
 
+      /* The reminder sheet's day and time. Same rule as the link sheet, and
+         one more besides: on iOS both of these are pickers rather than
+         keyboards, and redrawing the panel under an open wheel takes the
+         wheel with it. */
+      var remindPart = el.getAttribute && el.getAttribute('data-remind');
+      if (remindPart) {
+        HC.reminders.setField(remindPart, el.value);
+        return;
+      }
+
       if (el.getAttribute && el.getAttribute('data-journal-guide') !== null) {
         var j = HC.screens.journalHelpers;
         var wrap = el.closest('[data-entry]');
@@ -4089,6 +4131,15 @@
     document.addEventListener('change', function (evt) {
       var what = evt.target.getAttribute && evt.target.getAttribute('data-scripture');
       if (what) HC.editor.setPick(what, evt.target.value);
+
+      /* The reminder sheet's day and time. Handled here as well as under
+         'input' above, and both are needed: a date or time input that is
+         typed into reports 'input', and one answered on the iOS wheel reports
+         only 'change', once, when the picker is dismissed. Setting the same
+         value twice costs nothing; missing it entirely means Remind me acts
+         on the default rather than on what somebody picked. */
+      var remindWhat = evt.target.getAttribute && evt.target.getAttribute('data-remind');
+      if (remindWhat) HC.reminders.setField(remindWhat, evt.target.value);
 
       // The announcement picture. A file input only ever reports 'change',
       // never 'input', which is why this is here rather than above.
@@ -4355,6 +4406,13 @@
     // silence rather than an error, so this re-registers on every launch
     // where somebody has already asked for notifications.
     HC.native.resumeNotifications();
+
+    /* Event reminders. Registers the tap listener that opens the Cal tab on
+       the right day, and sweeps: an event somebody was waiting on may have
+       moved or been taken off the calendar since this phone was last opened,
+       and iOS may have forgotten reminders this phone still remembers wanting.
+       See the housekeeping section of js/reminders.js. */
+    HC.reminders.boot();
 
     /* The Journal lock row appears only on a phone that can actually
        challenge somebody. The answer is asynchronous and Profile has already

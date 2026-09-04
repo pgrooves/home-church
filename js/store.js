@@ -154,7 +154,18 @@
     dismissed: storage.get('dismissed', {}),
     dismissedPins: storage.get('dismissedPins', {}),
     roster: storage.get('roster', null),
-    prayers: storage.get('prayers', [])
+    prayers: storage.get('prayers', []),
+    /* One phone's own reminders about what is on the church calendar, and the
+       whole of what the app knows about them, keyed by event id:
+
+         { at: <epoch ms>, id: <notification id>, offset: <ms before it> }
+
+       `at` is what was scheduled and `offset` is why, which is what lets a
+       reminder follow an event the church moves. See sweep() in
+       js/reminders.js. Nothing here is ever sent anywhere; the long note
+       above canRemind() in js/native.js is why that is the design rather than
+       a version one shortcut. */
+    reminders: storage.get('reminders', {})
   };
 
   /* Notifications is nested, so a shallow merge can leave it undefined on an
@@ -467,6 +478,11 @@
     state.dismissedPins = {};
     state.roster = [];      // [] not null, so getRoster does not reseed the sample names
     state.prayers = [];
+    /* The record goes, and so must the notifications it stands for: iOS holds
+       those itself and would keep tapping somebody on the shoulder about a
+       church calendar they have just erased. js/reminders.js listens for the
+       'erased' event below and cancels them. */
+    state.reminders = {};
 
     emit('profile', state.profile);
     emit('roster', state.roster);
@@ -474,6 +490,37 @@
     emit('erased', { ok: ok });
 
     return ok;
+  }
+
+  /* ------------------------------------------------------------ reminders
+
+     A thin map, kept here rather than in js/reminders.js for the same reason
+     every other preference is: this file is the one place that knows how to
+     write to a localStorage that might throw. What a reminder means, when it
+     is due and how it reaches a lock screen are all somebody else's business.
+     ------------------------------------------------------------------- */
+
+  function getReminders() {
+    return state.reminders || (state.reminders = {});
+  }
+
+  function getReminder(eventId) {
+    if (!eventId) return null;
+    return getReminders()[eventId] || null;
+  }
+
+  function setReminder(eventId, record) {
+    if (!eventId) return;
+    getReminders()[eventId] = record;
+    storage.set('reminders', state.reminders);
+    emit('reminders', state.reminders);
+  }
+
+  function clearReminder(eventId) {
+    if (!eventId) return;
+    delete getReminders()[eventId];
+    storage.set('reminders', state.reminders);
+    emit('reminders', state.reminders);
   }
 
   /* ---------------------------------------------------------------- theme */
@@ -530,6 +577,11 @@
     getPrayers: getPrayers,
     addPrayer: addPrayer,
     removePrayer: removePrayer,
+
+    getReminders: getReminders,
+    getReminder: getReminder,
+    setReminder: setReminder,
+    clearReminder: clearReminder,
 
     eraseEverything: eraseEverything,
 

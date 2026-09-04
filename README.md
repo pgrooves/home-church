@@ -316,10 +316,53 @@ back would turn "All three services" into a time nobody can parse. The form
 writes six columns and leaves `signup_url`, `capacity` and `category` alone,
 so a typo fixed on a phone cannot blank the registration link on a serve day.
 
+**Get notified sits beside Add to calendar**, under every event, and the two
+are different offers rather than one offer twice. Add to calendar hands the
+event to whichever calendar this person keeps, where it waits until they go
+and look at it. Get notified opens a sheet asking when they want reminding,
+opens it on **the day before at the event's own time**, and lets them change
+it — three presets (the day before, that morning, an hour before) over a date
+box and a time box. Once one is set the button stops offering and starts
+reporting: "Reminding you Sep 11, 6:30 PM", and tapping it reopens the same
+sheet to move it or turn it off.
+
+**The reminder never leaves the phone.** It is a local notification, held by
+iOS, delivered whether or not the app is running and whether or not there is a
+network. Nothing is sent to Supabase and there is no table behind it: the
+church has no use for a list of who wants reminding about what, and every
+reason not to hold one. All this phone keeps is `hc:reminders` in
+localStorage — a time, a notification id, and how long before the event it
+was, per event. The privacy policy says so in the list of what stays on the
+phone.
+
+That is also why the button is drawn **only on a phone**. A browser cannot
+hand a reminder to an operating system: the Notification API fires while the
+tab is open, and a reminder for tomorrow evening from a tab that closed
+tonight is a button that quietly did nothing. `HC.native.canRemind()` answers
+false there and `c.remindMe()` returns an empty string, the same rule the
+Journal's Face ID switch keeps. Add to calendar is unchanged and still works
+everywhere.
+
+**Three things go wrong to a reminder without anybody touching it**, and
+`sweep()` in `js/reminders.js` handles all three on launch and after every
+content refresh. The event is taken off the calendar, so the notification is
+cancelled. The event **moves**, so the reminder moves with it by the offset it
+was set at — somebody asked to be told a day before, not at 6pm on the
+eleventh. The reminder has already fired, so the record is spent and the
+button is an offer again. There is a fourth that is nobody's edit: iOS forgets
+its queue on a restore from backup, so anything this phone still remembers
+wanting and the system is no longer holding is scheduled again.
+
 `tests/calendar.test.js` holds the arithmetic still: a February that starts on
 a Sunday, a leap one four years later, a month with a lead and a tail, and the
 nine in the morning that an event with no clock time gets at both ends of the
-trip.
+trip. `tests/reminders.test.js` does the same for the reminder side — the
+default, the presets that drop once they have passed, the notification id that
+has to be stable and in range, and the two boxes round tripping in this
+phone's own zone. `tests/e2e/reminders.js` drives the whole thing in a browser
+wearing a pretend Capacitor, because what actually goes wrong here is the four
+steps between a thumb and a scheduled notification and every one of them fails
+silently.
 
 -----
 

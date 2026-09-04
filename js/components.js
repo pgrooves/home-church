@@ -56,6 +56,22 @@
     return pad2(d.getMonth() + 1) + '/' + pad2(d.getDate()) + '/' + d.getFullYear();
   }
 
+  /* '6:30 PM', no leading zero, matching how the seed content reads.
+
+     THE APP'S ONLY CLOCK. This lived privately in js/content.js, where it turns
+     an event's starts_at into the line under its title, and a second copy grew
+     up in the reminder sheet, which has to say back what time somebody picked.
+     Two of these is how "6:30 PM" on an event ends up under "06:30 pm" on the
+     reminder for it. content.js now calls this one; see localTime() there. */
+  function formatClock(date) {
+    var h = date.getHours();
+    var m = pad2(date.getMinutes());
+    var suffix = h >= 12 ? 'PM' : 'AM';
+    h = h % 12;
+    if (h === 0) h = 12;
+    return h + ':' + m + ' ' + suffix;
+  }
+
   function dayName(date) {
     return DAYS[date.getDay()];
   }
@@ -338,6 +354,14 @@
               '<path d="M3.5 9.6h17"/>' +
               '<path d="M8 3.2v3.4M16 3.2v3.4"/>' +
               '<circle cx="12" cy="14.8" r="1.3" fill="currentColor" stroke="none"/>',
+    /* The reminder bell on the Cal tab, drawn on the same 24 grid at the same
+       1.5 stroke as `calendar` beside it, because the two sit side by side
+       under every event and a heavier bell would read as the louder offer.
+       The clapper is a separate short arc rather than part of the outline, so
+       it survives being scaled down to the 16px the inline links use. */
+    bell: '<path d="M6 16.5V11a6 6 0 0 1 12 0v5.5"/>' +
+          '<path d="M4.5 16.5h15"/>' +
+          '<path d="M10.2 19.4a2 2 0 0 0 3.6 0"/>',
     leaf: '<path d="M20 4C10 4 4 9 4 16v4"/><path d="M20 4c0 9-5 13-11 13H4"/>',
     download: '<path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/>',
 
@@ -754,6 +778,56 @@
     return html;
   }
 
+  /* ----------------------------------------------------------- get notified
+
+     The other half of the pair under an event: Add to calendar puts it in the
+     phone's calendar, this asks the phone to tap you on the shoulder about it.
+     They sit side by side because they answer the same question, "and then
+     what", with the two different things a person actually wants.
+
+     IT IS NOT DRAWN WHERE IT CANNOT WORK. A reminder needs the operating
+     system to hold it while the app is closed, which a browser cannot do, so
+     canRemind() answers false there and this returns an empty string. See the
+     long note above canRemind() in js/native.js. Nothing else on this screen
+     changes: Add to calendar works everywhere and keeps its place.
+
+     ONCE ONE IS SET THE BUTTON SAYS SO, in the words of the reminder rather
+     than in the words of the offer, and tapping it opens the same sheet with
+     the time already in it and a way to turn it off. One control per event,
+     in one place, whichever state it is in: a second "turn it off" button
+     beside a "get notified" button is two controls for one decision. */
+  function remindMe(eventId) {
+    if (!(HC.native && HC.native.canRemind && HC.native.canRemind())) return '';
+
+    var set = HC.reminders && HC.reminders.get(eventId);
+    var label = set
+      ? HC.reminders.shortLabel(eventId)
+      : HC.data.copy('cal.get-notified', 'Get notified');
+
+    var html = '<button type="button" class="hc-inline-link' +
+        (set ? ' hc-inline-link--on' : '') + '" ' +
+      'data-action="event-remind" data-id="' + esc(eventId) + '"' +
+      (set ? ' aria-label="' + esc('Change the reminder, ' + label) + '"' : '') + '>' +
+        icon('bell', 'hc-share__icon') +
+        '<span>' + esc(label) + '</span>' +
+      '</button>';
+
+    /* Only the offer is editable, never the set state. "Get notified" is the
+       church's sentence and it can reword it, the way it can reword Add to
+       calendar above. "Reminding you Sep 11, 6:30 PM" is not a sentence at
+       all, it is a time somebody picked read back to them, and an Edit mode
+       pencil over it would offer to rewrite one person's reminder into a
+       label on everybody's. */
+    if (!set && HC.edit && HC.edit.mark) {
+      return HC.edit.mark(html, {
+        slot: 'cal.get-notified',
+        value: label,
+        label: 'the Get notified link'
+      });
+    }
+    return html;
+  }
+
   /* ------------------------------------------------------------------ card */
 
   function card(innerHtml, opts) {
@@ -978,6 +1052,7 @@
     formatDate: formatDate,
     formatDateShort: formatDateShort,
     formatDateNumeric: formatDateNumeric,
+    formatClock: formatClock,
     byline: byline,
     metaLine: metaLine,
     dayName: dayName,
@@ -1004,6 +1079,7 @@
     checkRow: checkRow,
     button: button,
     addToCalendar: addToCalendar,
+    remindMe: remindMe,
     card: card,
     row: row,
     collapsible: collapsible,

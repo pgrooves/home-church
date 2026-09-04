@@ -218,6 +218,185 @@
     });
   }
 
+  /* --------------------------------------------------------- reminders
+
+     One notification, on this phone, at a time one person picked, about one
+     event on the Cal tab.
+
+     WHY THESE ARE LOCAL AND NOT PUSH, which is the whole design and the one
+     thing to read before changing any of it. Everything under `notifications`
+     below is the church addressing a topic: a guide is up, it is Sunday, the
+     queue has something in it. The server composes it, APNs carries it, and
+     every phone that asked for that topic gets the same words at the same
+     moment. A reminder about the Serve Day is not that. It is one phone
+     asking to be tapped on the shoulder at 6pm on the Friday, and the church
+     has no business knowing that, no reason to store it, and no way to send
+     it that would not mean a row per person per event and a cron job walking
+     it every minute.
+
+     So it never leaves the phone. iOS holds the notification and delivers it
+     whether or not the app is running, whether or not there is a network, and
+     whether or not the church's server is up. What arrives on the lock screen
+     is indistinguishable from a push, which is the only part the person cares
+     about. See js/reminders.js for what the app remembers about it, which is
+     one line of localStorage per event — a time, the notification's id, and
+     how long before the event that time was — and nothing else.
+
+     WHY canRemind() ANSWERS FALSE IN A BROWSER, and why that is not a gap
+     waiting to be filled. There is no way to hand a web page's reminder to
+     the operating system: the Notification API fires while the tab is open,
+     and a reminder for tomorrow evening from a tab that closed tonight is a
+     button that quietly did nothing. That is the same lie as a switch with no
+     permission behind it, and this file has a long note under `biometry`
+     about not drawing one. So the Cal tab draws the button on a phone and
+     leaves it off everywhere else.
+     ------------------------------------------------------------------- */
+
+  function localNotifications() {
+    var p = plugins();
+    return (p && p.LocalNotifications) || null;
+  }
+
+  /* Whether this build can actually put something on a lock screen at a time
+     nobody is watching. Synchronous on purpose: the Cal tab decides whether to
+     draw a button while it is drawing the event, and a promise there means a
+     button that appears a frame late on every repaint. */
+  function canRemind() {
+    return isNative() && !!localNotifications();
+  }
+
+  /* Asked at the moment somebody sets their first reminder, which is the same
+     rule the push switch keeps and for the same reason: the prompt makes sense
+     when it answers a question the person just asked.
+
+     iOS has one notification permission, not two, so a phone that already said
+     yes to the church's notifications says yes here without being asked again,
+     and a phone that said no to those is asked once more here — which is
+     right, because "I do not want the church's Sunday reminder" and "I do not
+     want the thing I just asked for" are different answers to different
+     questions. */
+  function askToRemind() {
+    var ln = localNotifications();
+    if (!ln) return Promise.resolve(false);
+
+    var check = ln.checkPermissions ? ln.checkPermissions() : Promise.resolve(null);
+
+    return check.then(function (state) {
+      if (state && state.display === 'granted') return true;
+      if (!ln.requestPermissions) return false;
+      return ln.requestPermissions().then(function (result) {
+        return !!(result && result.display === 'granted');
+      });
+    }).catch(function () {
+      return false;
+    });
+  }
+
+  /* Schedules one, replacing whatever was already scheduled under that id.
+     iOS treats a repeat id as an update rather than a second notification,
+     which is exactly what changing a reminder's time should do.
+
+     `at` is a Date in the phone's own zone, which is the zone the person
+     picked it in and the zone the event is on the calendar in. Nothing here
+     converts anything: a reminder is a wall clock promise.
+
+     Resolves false rather than throwing on every failure, because there are
+     three of them — no plugin, no permission, a time already gone — and to
+     the screen waiting on this they are one answer, which is "that did not
+     get set". The caller says so and does not save the reminder. */
+  function scheduleReminder(reminder) {
+    var ln = localNotifications();
+    if (!ln || !ln.schedule) return Promise.resolve(false);
+
+    var at = reminder.at instanceof Date ? reminder.at : new Date(reminder.at);
+    if (!at.getTime() || at.getTime() <= Date.now()) return Promise.resolve(false);
+
+    return askToRemind().then(function (granted) {
+      if (!granted) return false;
+
+      return ln.schedule({
+        notifications: [{
+          id: reminder.id,
+          title: reminder.title,
+          body: reminder.body,
+          schedule: { at: at },
+          /* Comes back on the tap, so opening the notification can open the
+             Cal tab rather than wherever the app was left. See the
+             localNotificationActionPerformed listener in js/reminders.js. */
+          extra: { event: reminder.eventId }
+        }]
+      }).then(function () { return true; });
+    }).catch(function (err) {
+      console.warn('reminders: iOS would not take that one.', err);
+      return false;
+    });
+  }
+
+  /* Takes one back off the queue. Silent and always resolves: a reminder the
+     phone has already forgotten and a reminder it never had are the same
+     thing to somebody who has just turned one off. */
+  function cancelReminder(id) {
+    var ln = localNotifications();
+    if (!ln || !ln.cancel) return Promise.resolve(true);
+
+    return ln.cancel({ notifications: [{ id: id }] })
+      .then(function () { return true; }, function () { return true; });
+  }
+
+  /* Every reminder iOS is still holding, as ids. Used once, on launch, to
+     re-schedule anything this phone remembers wanting that the system has
+     lost — which it does on a restore from backup, and on any reinstall.
+     Resolves an empty list rather than rejecting, so the caller's reconcile
+     is a plain list comparison with no error branch in it. */
+  function pendingReminderIds() {
+    var ln = localNotifications();
+    if (!ln || !ln.getPending) return Promise.resolve([]);
+
+    return ln.getPending().then(function (result) {
+      return ((result && result.notifications) || []).map(function (n) {
+        return Number(n.id);
+      });
+    }).catch(function () {
+      return [];
+    });
+  }
+
+  /* Everything this phone has queued, gone. One caller: erasing the app's
+     data, which cannot name the reminders it is erasing because the record of
+     them is what it just deleted. Safe to be this broad, because the only
+     local notifications this app ever schedules are event reminders. */
+  function cancelAllReminders() {
+    var ln = localNotifications();
+    if (!ln || !ln.cancel) return Promise.resolve(true);
+
+    return pendingReminderIds().then(function (ids) {
+      if (!ids.length) return true;
+      return ln.cancel({
+        notifications: ids.map(function (id) { return { id: id }; })
+      }).then(function () { return true; }, function () { return true; });
+    });
+  }
+
+  /* A reminder that was tapped on the lock screen, handed to `fn` as the
+     event id it was set for. Registered once, at boot, so a tap that woke the
+     app lands on the Cal tab rather than on whatever screen was last open.
+
+     Every plugin in this app is reached through this file and this listener is
+     no exception, which is the only reason it is here rather than beside the
+     rest of the reminder code in js/reminders.js. */
+  function onReminderTapped(fn) {
+    var ln = localNotifications();
+    if (!ln || !ln.addListener) return;
+
+    try {
+      ln.addListener('localNotificationActionPerformed', function (action) {
+        var note = action && action.notification;
+        var extra = note && note.extra;
+        if (extra && extra.event) fn(String(extra.event));
+      });
+    } catch (err) { /* an older plugin, or none */ }
+  }
+
   /* ------------------------------------------------------- notifications
      Asked for at the moment somebody turns the switch on in Profile, never
      at launch. A permission prompt on first open, before anybody knows what
@@ -641,6 +820,13 @@
     downloadInBrowser: downloadInBrowser,
     buildIcs: buildIcs,
     addToCalendar: addToCalendar,
+    canRemind: canRemind,
+    askToRemind: askToRemind,
+    scheduleReminder: scheduleReminder,
+    cancelReminder: cancelReminder,
+    pendingReminderIds: pendingReminderIds,
+    cancelAllReminders: cancelAllReminders,
+    onReminderTapped: onReminderTapped,
     enableNotifications: enableNotifications,
     disableNotifications: disableNotifications,
     syncPreferences: syncPreferences,

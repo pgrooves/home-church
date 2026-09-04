@@ -85,6 +85,15 @@
       'Which questions you have checked off in a guide.',
       'Your group roster, who was there, and any private notes you keep about the people in it.',
       'Prayer requests you write down in Leader mode.',
+      /* Added with the Get notified button on the Cal tab. It belongs in this
+         list rather than beside the notification paragraph further down,
+         because it is the opposite kind of thing: that one is the church
+         reaching a phone and this one is a phone reminding itself. Somebody
+         who reads "notifications" in a policy and finds only the paragraph
+         about tokens would reasonably assume the church was told they wanted
+         reminding about the Serve Day. It is not, and this is where a reader
+         looking for that finds it. See the header of js/reminders.js. */
+      'Reminders you set yourself about an event on the calendar. Your phone holds them and sends them to itself. The church is not told which events you asked about, or that you asked.',
       'Dark mode and text size.',
       'Your journal, for as long as you are not signed in.'
     ]);

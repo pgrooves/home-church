@@ -237,6 +237,27 @@ copy it from a file. `npm run preflight` checks `AppDelegate.swift` for both
 methods whenever `ios/` exists on the machine, so this cannot go missing again
 without something saying so.
 
+## 8c. Event reminders, which need none of the above
+
+The **Get notified** button on the Cal tab uses `@capacitor/local-notifications`,
+and it is worth knowing what it does *not* need: no capability in Xcode, no
+entitlement, no key from Apple, and no server. A local notification is
+scheduled by the app and delivered by the phone to itself, so nothing in this
+section touches APNs.
+
+What it does need is the plugin being in the build, which is `npm install`
+followed by `npm run ios` (that runs `npx cap sync ios`, which installs the
+pod). If the plugin is missing, nothing breaks and nothing is logged: the app
+asks `HC.native.canRemind()` while drawing an event, gets false, and simply
+does not draw the button — the same answer a browser gets. So **a build where
+Get notified never appears on the Cal tab is a build where the pod did not
+install**, not a bug in the screen.
+
+The permission is iOS's one notification permission, the same one push asks
+for. A phone that has already said yes to the church's notifications is not
+asked again; a phone that said no is asked once more the first time somebody
+sets a reminder, which is right, because that is a different question.
+
 -----
 
 That is the Xcode half. The other half is in Apple's developer portal, and you

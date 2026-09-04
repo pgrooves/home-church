@@ -1164,6 +1164,17 @@ a.hc-card:active { background: var(--hc-paper-sunk); }
   font-size: var(--hc-caption);
 }
 
+/* An inline link that is reporting rather than offering: Get notified once a
+   reminder is set, which reads "Reminding you Sep 11, 6:30 PM".
+
+   Quieter than the offer beside it, and deliberately so. It has already been
+   accepted, so it should not go on competing for the tap that Add to calendar
+   is still asking for, and it stays a link because it is still the way back in
+   to change the time or turn it off. --hc-mid is the same 4.5:1 secondary text
+   colour every caption in the app uses, so quieter here does not mean fainter
+   than legible. */
+.hc-inline-link--on { color: var(--hc-mid); }
+
 /* --------------------------------------------------------------------------
    Rows and lists
    -------------------------------------------------------------------------- */
@@ -2183,6 +2194,18 @@ a.hc-card:active { background: var(--hc-paper-sunk); }
 }
 
 .hc-sheet__note { margin-top: var(--hc-space-md); }
+
+/* The reminder sheet on the Cal tab. Three presets over the two boxes, which
+   is the whole of the question it asks. It borrows .hc-sheet__verses for the
+   day and the time, because those are two halves of one answer in exactly the
+   way a verse and a through are. */
+.hc-remind__presets { margin-top: var(--hc-space-lg); }
+
+/* Turning one off, under the button that saves it rather than beside it. A
+   destructive-ish action sharing a row with the one somebody came here to
+   press is a mis-tap waiting to happen, and this one has no confirm behind it
+   because it costs nothing to set again. */
+.hc-remind__off { margin-top: var(--hc-space-md); }
 
 /* --------------------------------------------------------------------------
    Highlighting

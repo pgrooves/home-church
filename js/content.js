@@ -612,14 +612,19 @@
       ('0' + d.getDate()).slice(-2);
   }
 
-  // '6:30 PM', no leading zero, matching how the seed content reads.
+  /* '6:30 PM', no leading zero, matching how the seed content reads.
+
+     ONE CLOCK, IN js/components.js. This used to be its own six lines, and
+     then the reminder sheet on the Cal tab needed to say a time back to
+     somebody and grew a second six. An event reading "6:30 PM" above a
+     reminder reading "06:30 pm" is the shape that mistake takes, so the
+     formatter moved to components.js and both sides call it.
+
+     Reached at call time rather than held in a variable: js/components.js
+     loads after this file, and a reference taken while this one is being
+     evaluated would be undefined forever. */
   function localTime(d) {
-    var h = d.getHours();
-    var m = ('0' + d.getMinutes()).slice(-2);
-    var suffix = h >= 12 ? 'PM' : 'AM';
-    h = h % 12;
-    if (h === 0) h = 12;
-    return h + ':' + m + ' ' + suffix;
+    return HC.components.formatClock(d);
   }
 
   /* ------------------------------------------------------------- applying --- */

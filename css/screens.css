@@ -580,7 +580,22 @@
 
 .hc-event .hc-row__title { margin-top: 4px; }
 .hc-event__blurb { margin-top: var(--hc-space-sm); color: var(--hc-mid); }
-.hc-event__action { margin-top: var(--hc-space-md); }
+
+/* Add to calendar and Get notified, side by side under an event.
+
+   A row rather than a stack, because they are two answers to one question and
+   a stack reads as a list of steps. It wraps, and the wrap is the point: the
+   second one grows a date into its label the moment a reminder is set
+   ("Reminding you Sep 11, 6:30 PM"), and at the largest text size that is
+   wider than a phone. Two lines is the right failure. A truncated reminder is
+   not. */
+.hc-event__action {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0 var(--hc-space-lg);
+  margin-top: var(--hc-space-md);
+}
 
 /* The offline line under the guide index intro. Icon and text on one
    baseline, quiet enough not to compete with the guides themselves. */

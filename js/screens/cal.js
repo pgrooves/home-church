@@ -306,7 +306,10 @@
         '<p class="hc-row__title">' + c.esc(evt.title) + '</p>' +
         (metaLine(evt) ? '<p class="hc-caption">' + c.esc(metaLine(evt)) + '</p>' : '') +
         (evt.blurb ? '<p class="hc-body-serif hc-event__blurb">' + c.esc(evt.blurb) + '</p>' : '') +
-        '<div class="hc-event__action">' + c.addToCalendar(evt.id) + '</div>' +
+        '<div class="hc-event__action">' +
+          c.addToCalendar(evt.id) +
+          c.remindMe(evt.id) +
+        '</div>' +
       '</div>';
     });
 
@@ -370,8 +373,17 @@
             target: evt, field: 'blurb',
             value: evt.blurb, label: evt.title + ', the description', rows: 4 }
         ) +
+        /* Two offers, side by side, and they are not the same offer. Add to
+           calendar hands the event to whichever calendar this person keeps,
+           where it sits until they go and look at it. Get notified asks the
+           phone to tap them on the shoulder once, at a time they choose, and
+           then it is done. Which of those somebody wants is not something
+           this screen can guess, so both are here and neither is the loud
+           one. See remindMe() in js/components.js for why the second is drawn
+           on a phone and nowhere else. */
         '<div class="hc-event__action">' +
           c.addToCalendar(evt.id) +
+          c.remindMe(evt.id) +
         '</div>' +
       '</div>';
   }
