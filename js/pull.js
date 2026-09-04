@@ -39,10 +39,23 @@
    is being touched. And presentation mode, where a leader is standing in
    front of a group and the whole of the chrome is already gone.
 
-   NOT EVERYBODY CAN DRAG. VoiceOver announces this disc through the live
-   region below, and Your account carries the button that does the same work
-   without a gesture. See HC.pull.now(), and contentLine() in
+   THE ONLY WAY TO ASK, AND THE ONLY ONE THERE SHOULD BE. There is no button
+   anywhere that does this too. A second control for the same work is a
+   second thing to find, to word, to keep in step, and to be wrong in its own
+   way, and this app would rather have one gesture that is true everywhere.
+   Your account still says where this phone's content came from, and it says
+   it as a fact rather than as a control: see contentLine() in
    js/screens/profile.js.
+
+   WHAT THE APP STILL DOES ON ITS OWN, which is not a way of asking and is
+   not competing with this: js/app.js fetches once after the first paint of
+   every launch, and js/journal.js and js/rooms.js catch up when the app
+   comes back to the foreground. Nobody taps anything for those. The disc is
+   for the minute when somebody knows something has changed and is not
+   willing to wait for the next launch to find out.
+
+   VoiceOver hears this through the live region js/app.js draws beside the
+   disc, so the gesture is not silent to somebody who cannot see it turn.
    ========================================================================== */
 
 (function (HC) {
@@ -375,16 +388,6 @@
 
   /* ------------------------------------------------------------------- api */
 
-  /* The same sync, without a finger. This is what the button at the foot of
-     Your account calls, and it is the reason the gesture is not the only way
-     to ask: a drag is not available to everybody, and a feature reachable
-     only by drag is a feature some people do not have. */
-  function now() {
-    if (working || !el) return Promise.resolve(false);
-    if (!HC.content.isConfigured()) return Promise.resolve(false);
-    return run();
-  }
-
   function init(config) {
     scroller = config.scroller;
     el = config.pull;
@@ -401,7 +404,6 @@
 
   HC.pull = {
     init: init,
-    now: now,
     isSyncing: function () { return working; },
 
     // Exported for the tests and for nothing else.

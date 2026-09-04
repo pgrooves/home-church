@@ -1085,19 +1085,6 @@
       scroller.scrollTo({ top: 0, behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
     },
 
-    /* The pull, as a button. It is at the foot of Your account, under the
-       line that says where this phone's content came from, and it exists
-       because a drag from the top of the screen is not a gesture everybody
-       can make. Same disc, same three fetches, same words afterwards.
-
-       Profile is repainted when the sync lands rather than by this handler:
-       js/content.js announces itself on 'content' and the listener further
-       down is already redrawing the screen for it. */
-    'sync-now': function () {
-      HC.native.tap('Light');
-      HC.pull.now();
-    },
-
     /* Two ways in now, the initials in the top bar and the cog in the sheet,
        and only one of them can have a sheet up behind it. Closing it here
        rather than leaning on the view change covers the tap that lands while

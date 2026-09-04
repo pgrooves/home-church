@@ -528,18 +528,23 @@ catalogue: **the publishing commands write to Supabase only.** Do not hand
 edit content into it, that is how two copies drift apart. Let it go stale, and
 regenerate it from Supabase if you ever want the floor raised.
 
-**And a person can ask for it themselves.** Pull down from the top of any
-screen in the app and the disc that comes out from under the header goes and
-gets everything again: the tables above through `js/content.js`, the group
-room through `js/rooms.js`, and the Journal in both directions through
+**And a person can ask for it themselves, one way.** Pull down from the top
+of any screen in the app and the disc that comes out from under the header
+goes and gets everything again: the tables above through `js/content.js`, the
+group room through `js/rooms.js`, and the Journal in both directions through
 `js/journal.js`. Past the mark, let go, and it fetches; short of it, it
 springs back and does nothing. It is shell chrome, in `js/pull.js`, so every
-screen has it and no screen had to ask, and the same three fetches are behind
-the **Check for new content** button at the foot of Your account, because a
-drag from the top of the screen is not a gesture everybody can make. The app
-already refreshes on its own after every launch; this is for the Sunday
-morning where an announcement went up four minutes ago and somebody is
-holding the phone.
+screen has it and no screen had to ask. The app already refreshes on its own
+after every launch, and the Journal and the group room catch up whenever the
+app comes back to the foreground; the pull is for the Sunday morning where an
+announcement went up four minutes ago and somebody is holding the phone.
+
+**There is no button that does this too, and there should not be.** One
+gesture syncs this app. A second control for the same work is a second thing
+to find, to word, to keep in step, and to be wrong in its own way. Your
+account still tells you where this phone's content came from, and it says it
+as a fact rather than as a control. `tests/e2e/pull.js` checks that nothing
+has grown one back.
 
 Deleting the last row of a table is honored too, so content can be removed and
 not just added. Two exceptions, both deliberate. A project where *every* table

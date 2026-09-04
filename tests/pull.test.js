@@ -111,10 +111,15 @@ yes('a very long pull rests just short of the stop',
 
 /* ---------------------------------------------------------------- the surface */
 
-yes('the module hands out the two ways to start a sync',
-  typeof pull.init === 'function' && typeof pull.now === 'function');
-yes('and a way to ask whether one is already out',
+yes('the module is wired up and nothing else', typeof pull.init === 'function');
+yes('and can say whether a sync is already out',
   typeof pull.isSyncing === 'function' && pull.isSyncing() === false);
+
+/* There is no second way to start one, on purpose. A now() here, or anything
+   like it, is what a button somewhere else would reach for, and one gesture
+   syncing this app is the decision. See the head of js/pull.js. */
+ok('and hands out no way to sync without a finger',
+  Object.keys(pull).filter(k => !/^_/.test(k)).sort(), ['init', 'isSyncing']);
 
 console.log('\n' + pass + ' passed, ' + fail + ' failed');
 process.exit(fail ? 1 : 0);

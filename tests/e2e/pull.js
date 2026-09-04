@@ -21,6 +21,10 @@
      4. It is not the tab swipe and it is not a scroll. A sideways drag has to
         reach js/swipe.js untouched, and a pull that starts halfway down a
         page has to stay an ordinary scroll.
+     5. It is the only way to ask. No button anywhere does this too, and
+        js/pull.js hands out nothing that could start a sync without a finger.
+        A second control for the same work is the thing this checks for,
+        because it is the kind of thing that gets added back kindly.
 
    No database, and no Supabase: the fetches are counted rather than made, so
    what this asks about is the gesture and the disc, not the network. See
@@ -294,28 +298,31 @@ const counts = page => page.evaluate('window.__hc');
     (await counts(page)).content === 0 && scrolled.state === 'off',
     JSON.stringify(scrolled));
 
-  /* ------------------------------------------------- the way that is not a
-     gesture. Your account carries a button that does the same three fetches,
-     because a drag from the top of the screen is not available to everybody. */
+  /* --------------------------------------------------- and the only way ---
+     One gesture syncs this app. There is no button anywhere that does the
+     same work, and nothing in the app can start a sync without a finger on
+     the glass, which is what the two checks below hold in place: the pair of
+     them is what would fail the day somebody adds a second control for this
+     rather than reaching for the one that exists. */
 
   await page.evaluate(() => { document.querySelector('.hc-scroll').scrollTop = 0; });
   await page.evaluate(() => window.HC.router.go({ name: 'profile' }));
   await page.waitForTimeout(600);
-  await page.evaluate('window.__hc = { content: 0, rooms: 0, journal: 0 }');
 
-  const button = await page.$('[data-action="sync-now"]');
-  ok('Your account has a button that does it without a gesture', !!button);
-  if (button) {
-    await button.click();
-    await page.waitForTimeout(200);
-    ok('and it fetches the same things the pull does',
-      (await counts(page)).content === 1);
-    ok('with the same disc out while it works',
-      (await page.evaluate(DISC)).state === 'syncing');
-    await page.waitForTimeout(1200);
-    ok('and the same disc away afterwards',
-      (await page.evaluate(DISC)).state === 'off');
-  }
+  ok('Your account still says where this phone\'s content came from',
+    !!(await page.$('.hc-about__content')));
+
+  const controls = await page.evaluate(() =>
+    Array.from(document.querySelectorAll('[data-action]'))
+      .map(el => el.getAttribute('data-action'))
+      .filter(a => /sync|refresh|update|reload|fetch/i.test(a)));
+  ok('and offers no button that syncs instead of the pull',
+    controls.length === 0, controls.join(', '));
+
+  const surface = await page.evaluate(() =>
+    Object.keys(window.HC.pull).filter(k => k[0] !== '_').sort().join(','));
+  ok('and js/pull.js hands out no way in without one',
+    surface === 'init,isSyncing', surface);
 
   ok('nothing threw along the way', noise.length === 0, noise.join('\n        '));
 
