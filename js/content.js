@@ -52,8 +52,14 @@
     // has to re-sort. It still sorts, because a cached payload from before
     // this line existed is not ordered, and because Home's tie-break is
     // priority rather than date.
+    /* `filter` is asked for here and nowhere else so far, and it is not an
+       optimisation. Since 0051 a deleted announcement keeps its row, and the
+       policy still hands it to an admin's session — which is right for the
+       Admin screen and wrong for this, because it would leave an admin's own
+       Home drawing a card they had just deleted. Everybody else is already
+       refused the row by the policy; this is what makes the two agree. */
     { table: 'announcements', target: 'announcements', map: mapAnnouncement,
-      order: 'created_at.desc' },
+      order: 'created_at.desc', filter: 'deleted_at=is.null' },
     { table: 'reading_plans', target: 'readingPlan',   map: mapReadingPlan, single: true },
 
     /* What the band played, newest Sunday first. The order is the order the
@@ -744,6 +750,10 @@
 
   function getTable(spec) {
     var url = cfg.SUPABASE_URL + '/rest/v1/' + spec.table + '?select=*';
+    // A PostgREST condition, written whole because that is what it is:
+    // 'deleted_at=is.null'. Not encoded, for the same reason `order` is only
+    // encoded as a value — the operators are the syntax.
+    if (spec.filter) url += '&' + spec.filter;
     if (spec.order) url += '&order=' + encodeURIComponent(spec.order);
     // Only the Instagram rail sets this so far. Ordering has to be set with
     // it or a limit would take an arbitrary nine rows rather than the newest

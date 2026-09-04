@@ -51,11 +51,12 @@ function fakeStorage() {
 
 /* ------------------------------------------------------------ the mapper */
 
-function bootContent(rows) {
+function bootContent(rows, seenUrls) {
   const sandbox = {
     window: {
       localStorage: fakeStorage(),
       fetch: (url) => {
+        if (seenUrls) seenUrls.push(String(url));
         const table = /rest\/v1\/([a-z_]+)/.exec(String(url))[1];
         return Promise.resolve({
           ok: true,
@@ -205,7 +206,7 @@ bootContent([{
     groups_off_season_note: 'Home groups open Sunday, September 6 at 9:00am.',
     groups_between_seasons_note: 'Home groups are between seasons right now.'
   }]);
-}).then((HC) => {
+}).then(async (HC) => {
   ok('a card carrying a current announcement says so',
     HC.data.church.groupsNoteInSeason, true);
 
@@ -221,6 +222,28 @@ bootContent([{
      about whether there are real groups to draw. */
   ok('while the switch that draws the finder is untouched by any of it',
     HC.data.church.groupsInSeason, true);
+
+  console.log('\n--- a deleted announcement is not content ---');
+
+  /* Since 0051 a deleted announcement keeps its row, and an admin's session is
+     still allowed to read it. The content sync asks for `deleted_at=is.null`
+     so that an admin's own Home does not keep drawing a card they just
+     deleted — which is a thing only this filter prevents, because the policy
+     cannot tell an admin reading the Admin screen from an admin reading Home.
+
+     Asserted on the URL rather than on the rows, because the rows come back
+     already filtered by the server and a test that only checked them would
+     pass just as happily with the filter deleted. */
+  const asked = [];
+  await bootContent([{ id: 'church-home', name: 'Home Church', published: true }], asked);
+
+  const announcementsUrl = asked.find((u) => u.indexOf('/announcements') > -1) || '';
+
+  ok('the content sync refuses to fetch deleted announcements',
+    announcementsUrl.indexOf('deleted_at=is.null') > -1, true);
+
+  ok('and still asks for them newest first',
+    announcementsUrl.indexOf('order=created_at.desc') > -1, true);
 
   console.log('\n' + pass + ' passed, ' + fail + ' failed.');
   if (fail) process.exit(1);

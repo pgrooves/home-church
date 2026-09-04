@@ -658,15 +658,164 @@
     });
   }
 
+  /* Delete, which since 0051 is a column rather than a DELETE.
+
+     WHY THE VERB DID NOT CHANGE WITH THE MECHANISM. To the person tapping it,
+     this still means "take it off Home", and that still happens the moment
+     this returns: the policy narrowed to `published and deleted_at is null`,
+     so a phone cannot see the row at all any more. What changed is only what
+     happens to the row afterwards, which is nothing, so a mis-tap is one tap
+     from being undone rather than being the end of an announcement, its
+     pictures and its byline.
+
+     The content refresh matters more than it used to. An admin's own session
+     is allowed to read deleted rows, so without the sync dropping them this
+     screen would delete a card that stayed on the admin's Home. See the
+     filter on the announcements table in js/content.js. */
   function deleteAnnouncement(id) {
+    return HC.auth.restFetch('/announcements?id=eq.' + encodeURIComponent(id), {
+      method: 'PATCH',
+      headers: { Prefer: 'return=minimal' },
+      body: { deleted_at: new Date().toISOString() }
+    }).then(function () {
+      invalidate('announcements');
+      HC.content.refresh();
+    });
+  }
+
+  function restoreAnnouncement(id) {
+    return HC.auth.restFetch('/announcements?id=eq.' + encodeURIComponent(id), {
+      method: 'PATCH',
+      headers: { Prefer: 'return=minimal' },
+      body: { deleted_at: null }
+    }).then(function () {
+      invalidate('announcements');
+      HC.content.refresh();
+    });
+  }
+
+  /* The end of the line, and the only thing on this screen that is not
+     recoverable. Kept because a soft delete with no hard delete is a table
+     that only grows, and because a draft somebody discarded by mistake and a
+     test announcement they want gone for good are different wishes.
+
+     The byline goes with it, per the cascade in 0045, which is why this is the
+     one delete that still tells js/bylines.js to forget. */
+  function destroyAnnouncement(id) {
     return HC.auth.restFetch('/announcements?id=eq.' + encodeURIComponent(id), {
       method: 'DELETE',
       headers: { Prefer: 'return=minimal' }
     }).then(function () {
       invalidate('announcements');
       HC.content.refresh();
-      // The note went with the row, per the cascade in migration 0045.
       if (HC.bylines) HC.bylines.forget();
+    });
+  }
+
+  /* ------------------------------------------------- what order they sit in
+
+     Home draws every live announcement, newest first, with `priority` ahead of
+     the date. So "move this one up" is a question about priority, and the
+     honest way to answer it is to renumber the whole live list from the top
+     rather than to nudge one row: two rows that both ended up at 0 in some
+     earlier life would otherwise swap places on a date tiebreak the moment
+     anything else moved.
+
+     WRITTEN AS SEPARATE PATCHES, and it is worth saying why that is safe here
+     when the same shape was ruled out for the announcement-and-event pair in
+     0040. There, half the writes landing left a card promising a date that did
+     not exist. Here, half the writes landing leaves the list in an order
+     nobody asked for, which the next tap fixes and which nobody can be misled
+     by. Not every pair of writes needs a transaction; the ones that make a
+     promise do. */
+  function reorderAnnouncement(id, direction) {
+    var live = orderedLive();
+    var at = -1;
+    live.forEach(function (row, i) { if (row.id === id) at = i; });
+
+    var to = at + (direction === 'up' ? -1 : 1);
+    if (at < 0 || to < 0 || to >= live.length) return Promise.resolve(false);
+
+    var moved = live.slice();
+    moved.splice(to, 0, moved.splice(at, 1)[0]);
+
+    /* Counting down from the top so the first row has the highest number, and
+       spaced by one because nothing else reads these values. Only the rows
+       whose number actually changes are written. */
+    var writes = [];
+    moved.forEach(function (row, i) {
+      var want = moved.length - i;
+      if ((row.priority || 0) === want) return;
+      writes.push(HC.auth.restFetch('/announcements?id=eq.' + encodeURIComponent(row.id), {
+        method: 'PATCH',
+        headers: { Prefer: 'return=minimal' },
+        body: { priority: want }
+      }));
+    });
+
+    return Promise.all(writes).then(function () {
+      invalidate('announcements');
+      HC.content.refresh();
+      return true;
+    });
+  }
+
+  /* The live list in the order Home draws it, which is the order the up and
+     down controls move things around in. Deliberately the same comparison
+     js/data.js makes rather than a second opinion about it: a screen that
+     reorders a list by a different rule than the one that draws it is a screen
+     where the arrows appear to do nothing. */
+  function orderedLive() {
+    var today = new Date();
+    var iso = today.getFullYear() + '-' +
+      ('0' + (today.getMonth() + 1)).slice(-2) + '-' +
+      ('0' + today.getDate()).slice(-2);
+
+    return list('announcements').filter(function (row) {
+      if (!row.published || row.deleted_at) return false;
+      if (row.review_state === 'pending') return false;
+      if (row.starts_on && iso < row.starts_on) return false;
+      if (row.ends_on && iso >= row.ends_on) return false;
+      return true;
+    }).sort(function (x, y) {
+      var px = x.priority || 0;
+      var py = y.priority || 0;
+      if (px !== py) return py - px;
+      var cx = String(x.created_at || '');
+      var cy = String(y.created_at || '');
+      if (cx !== cy) return cx < cy ? 1 : -1;
+      return String(x.id) < String(y.id) ? -1 : 1;
+    });
+  }
+
+  /* ------------------------------------------------------- the same thing twice
+
+     Written by the announcement-dedupe function, decided by a person here. The
+     two ways out of "looks like an update to X": apply it, or say it is its
+     own announcement after all. See migration 0051. */
+
+  function applyAnnouncementUpdate(id) {
+    return HC.auth.rpc('hc_admin_apply_announcement_update', { p_draft_id: id })
+      .then(function (target) {
+        invalidate('announcements');
+        invalidate('approvals');
+        HC.content.refresh();
+        return target;
+      }, function (err) {
+        // Same as approveAnnouncement: a refusal usually means somebody else
+        // got there first, so the card has to be redrawn either way.
+        invalidate('announcements');
+        throw err;
+      });
+  }
+
+  function keepAnnouncementSeparate(id) {
+    return HC.auth.restFetch('/announcements?id=eq.' + encodeURIComponent(id), {
+      method: 'PATCH',
+      headers: { Prefer: 'return=minimal' },
+      body: { duplicate_of: null, duplicate_note: null }
+    }).then(function () {
+      invalidate('announcements');
     });
   }
 
@@ -971,7 +1120,14 @@
     loadAnnouncements: loadAnnouncements,
     saveAnnouncement: saveAnnouncement,
     deleteAnnouncement: deleteAnnouncement,
+    restoreAnnouncement: restoreAnnouncement,
+    destroyAnnouncement: destroyAnnouncement,
     notifyAnnouncement: notifyAnnouncement,
+
+    orderedLive: orderedLive,
+    reorderAnnouncement: reorderAnnouncement,
+    applyAnnouncementUpdate: applyAnnouncementUpdate,
+    keepAnnouncementSeparate: keepAnnouncementSeparate,
 
     pending: pending,
     loadApprovals: loadApprovals,

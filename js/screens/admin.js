@@ -119,6 +119,17 @@
     return c.emptyState(emptyMessage);
   }
 
+  /* One announcement out of the list this screen already holds. Asked of the
+     cache rather than the network because every caller is drawing a row that
+     came from it: the review card naming the announcement a draft would
+     update, and nothing else so far. Null when the match points at something
+     that has since been deleted, which the card then simply does not mention. */
+  function announcementById(id) {
+    return HC.admin.announcements().filter(function (a) {
+      return a.id === id && !a.deleted_at;
+    })[0] || null;
+  }
+
   /* 'YYYY-MM-DD' in the phone's own zone. The date columns are plain dates,
      so this never involves a timezone. Same helper Home uses, for the same
      reason: an announcement retires at midnight in Metairie. */
@@ -732,11 +743,26 @@
         ? 'From the newsletter · ' + c.formatDateShort(String(row.created_at).slice(0, 10))
         : 'From the newsletter';
 
+      /* The same thing, said twice. The dedupe pass in migration 0051 wrote
+         `duplicate_of` on this row; what it means for the person reading is
+         that they have a third option, and it is usually the right one.
+
+         The card it matches is named rather than linked, because the point is
+         to decide here rather than to go and read two screens. `whats_new` is
+         the one line that makes that possible: without it the choice is
+         "update something, I forget what it says". */
+      var updates = row.duplicate_of ? announcementById(row.duplicate_of) : null;
+
       html += '<div class="hc-admin__item hc-admin__item--review">' +
         '<div class="hc-admin__item-head">' +
           '<p class="hc-eyebrow">' + c.esc(from) + '</p>' +
           '<p class="hc-row__title">' + c.esc(row.title) + '</p>' +
           (row.body ? '<p class="hc-caption">' + c.esc(row.body) + '</p>' : '') +
+          (updates
+            ? '<p class="hc-caption hc-admin__warn">Looks like an update to “' +
+              c.esc(updates.title) + '”' +
+              (row.duplicate_note ? ': ' + c.esc(row.duplicate_note) : '') + '</p>'
+            : '') +
           '<p class="hc-caption hc-admin__review-dates">' + c.esc(reviewDates(row)) + '</p>' +
           /* Said before the tap, not discovered after it. Approving an
              announcement that carries an event changes two screens, and a
@@ -754,9 +780,21 @@
             ? '<p class="hc-caption hc-admin__warn">' + c.esc(whyNotLive(row)) + '</p>'
             : '') +
         '</div>' +
+        /* Update it takes the primary button when there is something to
+           update, and Approve steps down beside it. That is the hierarchy the
+           situation actually has: a reminder about Homecoming almost always
+           wants to become the Homecoming card rather than a second one, and
+           the tap that does the wrong thing should be the one that takes
+           more deciding. */
         '<div class="hc-admin__item-actions">' +
-          c.button('Approve', { action: 'admin-review-approve', id: row.id,
-            small: true, busy: busy === 'approve:' + row.id }) +
+          (updates
+            ? c.button('Update it', { action: 'admin-review-apply-update', id: row.id,
+                small: true, busy: busy === 'merge:' + row.id }) +
+              c.button('Post separately', { action: 'admin-review-keep-separate',
+                id: row.id, variant: 'secondary', small: true,
+                busy: busy === 'separate:' + row.id })
+            : c.button('Approve', { action: 'admin-review-approve', id: row.id,
+                small: true, busy: busy === 'approve:' + row.id })) +
           c.button('Edit', { action: 'admin-announcement-edit', id: row.id,
             variant: 'secondary', small: true }) +
           c.button('Discard', { action: 'admin-review-discard', id: row.id,
@@ -1135,11 +1173,34 @@
     var dates = HC.admin.pendingEvents();
     if (dates.length) html += eventsSection(dates);
 
-    rows = rows.filter(function (row) { return row.review_state !== 'pending'; });
-    if (!rows.length) return html;
+    var deleted = rows.filter(function (row) { return !!row.deleted_at; });
+
+    rows = rows.filter(function (row) {
+      return row.review_state !== 'pending' && !row.deleted_at;
+    });
+
+    if (!rows.length) return html + deletedSection(deleted);
+
+    /* Which rows the arrows are drawn on, and in which order they sit. Only
+       what is live can be reordered, because priority is only read among the
+       cards Home is drawing today: an arrow on a card dated for November would
+       move it up a list it is not in. */
+    var live = HC.admin.orderedLive();
+    var place = {};
+    live.forEach(function (row, i) { place[row.id] = i; });
 
     html += c.sectionHeader('', 'Posted');
+
+    if (live.length > 1) {
+      html += '<p class="hc-caption hc-admin__intro-note">The arrows set the order ' +
+        'on Home. Only the ones on Home today can move, and the top one here is the ' +
+        'top one there.</p>';
+    }
+
     rows.forEach(function (row) {
+      var at = place[row.id];
+      var movable = at !== undefined && live.length > 1;
+
       html += '<div class="hc-admin__item">' +
         '<div class="hc-admin__item-head">' +
           '<p class="hc-eyebrow">' + c.esc(announcementStatus(row)) + '</p>' +
@@ -1156,6 +1217,21 @@
           (row.event_id ? approvedNote('event', row.event_id, 'Its date, by') : '') +
         '</div>' +
         '<div class="hc-admin__item-actions">' +
+          /* The arrows, first because they are the ones used most and because
+             a thumb reaching for "move this above the bake sale" should not
+             have to read past Edit and Notify to find them.
+
+             Disabled rather than dropped at the ends of the list. A control
+             that vanishes at the top makes the whole row jump as things move,
+             and the pair is easier to aim at when it stays where it was. */
+          (movable
+            ? c.button('▲', { action: 'admin-announcement-up', id: row.id,
+                variant: 'secondary', small: true, disabled: at === 0,
+                ariaLabel: 'Move “' + row.title + '” up on Home' }) +
+              c.button('▼', { action: 'admin-announcement-down', id: row.id,
+                variant: 'secondary', small: true, disabled: at === live.length - 1,
+                ariaLabel: 'Move “' + row.title + '” down on Home' })
+            : '') +
           c.button('Edit', { action: 'admin-announcement-edit', id: row.id,
             variant: 'secondary', small: true }) +
           /* Notify is only drawn for a row that is on Home. A draft, one dated
@@ -1173,7 +1249,59 @@
       '</div>';
     });
 
-    return html;
+    return html + deletedSection(deleted);
+  }
+
+  /* ------------------------------------------------------------- deleted
+
+     Collapsed, at the very bottom, and absent entirely when nothing is in it.
+     Everything about how it is drawn says the same thing: this is not part of
+     the screen, it is the drawer under it.
+
+     WHY IT IS NOT A LIST OF DATES AND BUTTONS. Because the question somebody
+     arrives here with is "which one did I just delete", and the answer is the
+     title. The eyebrow says when it went, so a row deleted a month ago is
+     visibly not the one they are looking for.
+
+     Delete for good is drawn as tertiary and confirms, and it is the only
+     control on this screen with no way back. Restore does not confirm: putting
+     an announcement back is not a thing anybody needs protecting from, and a
+     confirm in front of it would make undoing a mis-tap cost two taps. */
+  function deletedSection(rows) {
+    if (!rows.length) return '';
+
+    var body = '';
+
+    body += '<p class="hc-caption hc-admin__intro-note">Nothing here is on Home. ' +
+      'Restore puts one back exactly as it was, with its pictures and its date.</p>';
+
+    rows.slice().sort(function (x, y) {
+      return String(y.deleted_at || '') < String(x.deleted_at || '') ? -1 : 1;
+    }).forEach(function (row) {
+      var when = row.deleted_at ? agoText(row.deleted_at) : '';
+
+      body += '<div class="hc-admin__item">' +
+        '<div class="hc-admin__item-head">' +
+          '<p class="hc-eyebrow">' + c.esc(when ? 'Deleted ' + when : 'Deleted') + '</p>' +
+          '<p class="hc-row__title">' + c.esc(row.title) + '</p>' +
+          (row.body ? '<p class="hc-caption">' + c.esc(row.body) + '</p>' : '') +
+        '</div>' +
+        '<div class="hc-admin__item-actions">' +
+          c.button('Restore', { action: 'admin-announcement-restore', id: row.id,
+            variant: 'secondary', small: true, busy: busy === 'restore:' + row.id }) +
+          c.button('Delete for good', { action: 'admin-announcement-destroy', id: row.id,
+            variant: 'tertiary', small: true, busy: busy === 'destroy:' + row.id }) +
+        '</div>' +
+      '</div>';
+    });
+
+    return c.collapsible({
+      id: 'admin-deleted',
+      eyebrow: 'Recoverable',
+      title: 'Deleted (' + rows.length + ')',
+      body: body,
+      index: false
+    });
   }
 
   /* ================================================================== users */

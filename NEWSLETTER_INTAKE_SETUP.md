@@ -262,6 +262,48 @@ not look the same as "no newsletter arrived."
 
 ---
 
+## When the newsletter says the same thing twice
+
+The church emails about Homecoming in September, again in October with a ticket
+link, and again the week before with a change of time. Each of those parses into
+a new announcement, so Home ends up with three cards about one night.
+
+A third Edge Function, `announcement-dedupe`, reads each new draft alongside the
+announcements the church already has and writes down which one it looks like an
+update to, and what is new in it. `pg_cron` calls it every five minutes through
+`hc_dedupe_tick()`, which returns immediately unless a draft is actually waiting
+— so the ordinary week is an index lookup every five minutes and a handful of
+model calls when a newsletter lands. No new secret; it shares the intake's.
+
+In the review queue the card then says *"Looks like an update to 'Homecoming
+Gala, October 23': adds a ticket link and moves it to 6:30pm"*, and Approve is
+replaced by two buttons:
+
+- **Update it** — copies the new words, dates, link and picture onto the card
+  the church already has, and takes the draft out of the queue. The card keeps
+  its place on Home: `published`, `pinned` and `priority` are never touched,
+  because where a card sits is the church's decision and not a reminder email's.
+  A field the reminder doesn't mention is left alone rather than cleared.
+- **Post separately** — it is its own announcement after all, and it goes back
+  to the normal Approve flow.
+
+**It never merges on its own.** The pass writes three columns and stops; the
+merge is `hc_admin_apply_announcement_update` and it needs a person's tap, for
+the same reason nothing else here publishes itself.
+
+To see what it would say without it saying anything:
+
+```bash
+curl -X POST https://ibqkumxfltfiuqevviji.supabase.co/functions/v1/announcement-dedupe \
+  -H "x-hc-cron-secret: <the secret>" -H "Content-Type: application/json" \
+  -d '{"dry_run": true}'
+```
+
+`{"all": true}` re-checks drafts it has already looked at, which is what to use
+after changing the prompt.
+
+---
+
 ## The home groups box on Connect
 
 A second Edge Function, `group-status`, does a related job on the other side of

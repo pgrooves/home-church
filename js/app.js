@@ -1555,16 +1555,84 @@
       }));
     },
 
+    /* Delete, which since migration 0051 keeps the row. The confirm says so,
+       because the old one said "there is no undo" and that sentence is now
+       false — and a confirm that overstates what a button does is how people
+       learn to stop reading confirms. */
     'admin-announcement-delete': function (el) {
       var id = el.getAttribute('data-id');
       var row = announcementById(id);
       if (!row) return;
 
-      if (!window.confirm('Delete “' + row.title + '”? It comes off Home for everybody, ' +
-                          'and there is no undo.')) return;
+      if (!window.confirm('Delete “' + row.title + '”? It comes off Home for ' +
+                          'everybody, and waits under Deleted if you want it back.')) return;
 
       adminRun('delete:' + id, HC.admin.deleteAnnouncement(id).then(function () {
-        HC.components.toast('Deleted.');
+        HC.components.toast('Deleted. It is under Deleted at the bottom.');
+      }));
+    },
+
+    'admin-announcement-restore': function (el) {
+      var id = el.getAttribute('data-id');
+
+      // No confirm. Putting something back is not a thing to protect somebody
+      // from, and this is the tap that undoes a mis-tap.
+      adminRun('restore:' + id, HC.admin.restoreAnnouncement(id).then(function () {
+        HC.components.toast('Back, exactly as it was.');
+      }));
+    },
+
+    /* The only control on this screen with nothing behind it. Named in the
+       confirm, and the confirm says the word the button does not: permanently. */
+    'admin-announcement-destroy': function (el) {
+      var id = el.getAttribute('data-id');
+      var row = announcementById(id);
+      if (!row) return;
+
+      if (!window.confirm('Permanently delete “' + row.title + '”? This one cannot ' +
+                          'be undone, and its pictures and byline go with it.')) return;
+
+      adminRun('destroy:' + id, HC.admin.destroyAnnouncement(id).then(function () {
+        HC.components.toast('Gone for good.');
+      }));
+    },
+
+    /* ------------------------------------------------ the order on Home
+
+       Two taps of the same thing, which is why they share a handler. The busy
+       token is the row rather than the direction: what is waiting is this
+       announcement moving, and a second tap on either arrow while that is in
+       flight would renumber a list that is already being renumbered. */
+    'admin-announcement-up': function (el) { moveAnnouncement(el, 'up'); },
+    'admin-announcement-down': function (el) { moveAnnouncement(el, 'down'); },
+
+    /* ---------------------------------------------- the same thing twice
+
+       Update it, and the way out of it. Both live on the review card that the
+       dedupe pass marked; neither exists on a card it did not. */
+    'admin-review-apply-update': function (el) {
+      var id = el.getAttribute('data-id');
+      var row = announcementById(id);
+      var target = row && row.duplicate_of ? announcementById(row.duplicate_of) : null;
+      if (!row || !target) return;
+
+      /* Confirmed, unlike Approve beside it, and the confirm names both cards.
+         This is the one button on the queue that writes over words the church
+         has already published, so "which card am I about to change" has to be
+         answerable without scrolling. */
+      if (!window.confirm('Update “' + target.title + '” with what this one says?' +
+          '\n\nThe card keeps its place on Home and this draft leaves the queue.')) return;
+
+      adminRun('merge:' + id, HC.admin.applyAnnouncementUpdate(id).then(function () {
+        HC.components.toast('Updated “' + target.title + '”.');
+      }));
+    },
+
+    'admin-review-keep-separate': function (el) {
+      var id = el.getAttribute('data-id');
+
+      adminRun('separate:' + id, HC.admin.keepAnnouncementSeparate(id).then(function () {
+        HC.components.toast('Kept as its own announcement.');
       }));
     },
 
@@ -3737,6 +3805,25 @@
 
   function announcementById(id) {
     return HC.admin.announcements().filter(function (a) { return a.id === id; })[0] || null;
+  }
+
+  /* Moving one announcement above or below its neighbour on Home.
+
+     THE REPAINT IS THE POINT OF DOING THIS HERE rather than in the handler
+     above: HC.admin.reorderAnnouncement writes several rows and then drops the
+     cache, so the list this screen draws is rebuilt from the table rather than
+     from an optimistic guess about where things landed. Which means the arrow
+     a thumb is resting on may be a different arrow by the time the repaint
+     finishes, and that is correct — the row moved. */
+  function moveAnnouncement(el, direction) {
+    var id = el.getAttribute('data-id');
+    if (!id) return;
+
+    adminRun('move:' + id, HC.admin.reorderAnnouncement(id, direction)
+      .then(function (moved) {
+        if (!moved) return;
+        HC.components.toast(direction === 'up' ? 'Moved up.' : 'Moved down.');
+      }));
   }
 
   function pageById(id) {
