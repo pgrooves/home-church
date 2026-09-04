@@ -743,6 +743,12 @@
 .hc-about__version { margin-top: var(--hc-space-md) !important; }
 .hc-about__warn { margin-top: var(--hc-space-md) !important; color: var(--hc-warning); }
 
+/* The pull, as a button, directly under the line it changes. Centred with
+   the rest of the block rather than run full width: this is the footnote's
+   own control, not the screen's next step. See syncButton() in
+   js/screens/profile.js. */
+.hc-about__sync { margin-top: var(--hc-space-md); }
+
 /* ==========================================================================
    Leader tools
    ========================================================================== */

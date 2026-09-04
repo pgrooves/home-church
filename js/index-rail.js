@@ -922,7 +922,17 @@
     init: init,
     build: build,
     update: update,
-    jump: jump
+    jump: jump,
+
+    /* Does this file have the finger? Asked by js/pull.js, which reads the
+       same gesture off the same scroller and has to stay out of the way when
+       somebody is scrubbing the edge rather than pulling the page down.
+
+       Armed counts, not just engaged: armed is a thumb inside the rail's
+       band that has not yet said which way it is going, and a pull that
+       started under it would be a second claim on a finger this file is
+       already holding. */
+    busy: function () { return armed || engaged; }
   };
 
 })(window.HC = window.HC || {});

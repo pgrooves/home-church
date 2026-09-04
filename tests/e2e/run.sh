@@ -66,6 +66,11 @@ node "$(dirname "$0")/alpha.js" || exit 1
 # is a finger, not a row in a table.
 node "$(dirname "$0")/swipe.js" || exit 1
 
+# The pull down from the top, which is the other gesture the shell owns. Same
+# terms as the drag above it: the bundled seed, no database, and the fetches
+# counted rather than made, because what it needs a browser for is a finger.
+node "$(dirname "$0")/pull.js" || exit 1
+
 # Search and the two discs in the top bar. Same terms again, and here for the
 # same reason: what is left over once tests/search.test.js has asked
 # everything that can be asked without a page is all layout and traffic.

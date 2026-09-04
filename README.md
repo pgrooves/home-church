@@ -86,6 +86,7 @@ js/
   router.js           pushState routing, query string, no hash
   date-rail.js        the month strip under the header on Listen
   swipe.js            drag sideways: the five tabs, the modules, then Settings
+  pull.js             drag down from the top of anything: go and sync it all
   components.js       render functions returning HTML strings
   screens/            one file per screen, including legal.js
   app.js              boot, route table, delegated event handling
@@ -526,6 +527,19 @@ install with no signal. But it is a frozen cold start seed now, not a second
 catalogue: **the publishing commands write to Supabase only.** Do not hand
 edit content into it, that is how two copies drift apart. Let it go stale, and
 regenerate it from Supabase if you ever want the floor raised.
+
+**And a person can ask for it themselves.** Pull down from the top of any
+screen in the app and the disc that comes out from under the header goes and
+gets everything again: the tables above through `js/content.js`, the group
+room through `js/rooms.js`, and the Journal in both directions through
+`js/journal.js`. Past the mark, let go, and it fetches; short of it, it
+springs back and does nothing. It is shell chrome, in `js/pull.js`, so every
+screen has it and no screen had to ask, and the same three fetches are behind
+the **Check for new content** button at the foot of Your account, because a
+drag from the top of the screen is not a gesture everybody can make. The app
+already refreshes on its own after every launch; this is for the Sunday
+morning where an announcement went up four minutes ago and somebody is
+holding the phone.
 
 Deleting the last row of a table is honored too, so content can be removed and
 not just added. Two exceptions, both deliberate. A project where *every* table

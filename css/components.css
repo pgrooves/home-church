@@ -314,6 +314,161 @@
 .hc-date-rail__chip:focus-visible { outline-offset: 1px; }
 
 /* --------------------------------------------------------------------------
+   Pull to sync. The disc that comes down out from under the header when a
+   thumb drags the top of a screen, and the ring inside it that closes as it
+   travels and turns while the app is fetching. See js/pull.js.
+
+   THE LAYER IS FULL WIDTH AND EMPTY. It is a fixed strip pinned to the
+   bottom of the chrome with one disc centred in it, so the disc lands on the
+   same axis on every screen and on a tablet without anything measuring
+   anything. Nothing in it takes a tap: the gesture is read off .hc-scroll,
+   the way the index rail's is, which is what leaves the glass under the disc
+   working normally the whole time.
+
+   NOTHING HERE TRANSITIONS BY DEFAULT. Every number while a thumb is down is
+   written frame by frame from js/pull.js, and a transition on top of that is
+   a second opinion about the same number. [data-settling="true"] is the one
+   exception, and it is on only for the length of a release.
+   -------------------------------------------------------------------------- */
+
+.hc-pull {
+  position: fixed;
+  /* Under the top bar, which is 40, and under the month strip at 39. Both
+     are opaque, and being under them is what lets the disc come out from
+     beneath the chrome rather than appear on top of it. */
+  z-index: 38;
+  top: calc(var(--hc-header-h) + var(--hc-pin-h, 0px) + env(safe-area-inset-top));
+  left: 0; right: 0;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+  /* Half a disc above its own strip, so at rest it is behind the header
+     rather than sitting on the first line of the page. */
+  margin-top: -17px;
+}
+
+/* Listen's month strip is a second band of chrome under the header, and the
+   disc comes out from under that instead while it is out. 42px is the
+   strip's own height, written here for the same reason .hc-index writes it:
+   the two are only ever equal by agreement. */
+.hc-date-rail[data-show="true"] ~ .hc-pull {
+  top: calc(var(--hc-header-h) + var(--hc-pin-h, 0px) + 42px + env(safe-area-inset-top));
+}
+
+.hc-pull[data-settling="true"],
+.hc-pull[data-settling="true"] .hc-pull__disc {
+  transition: transform var(--hc-dur-base) var(--hc-ease),
+              opacity var(--hc-dur-fast) var(--hc-ease);
+}
+
+/* The same gold the discs by the thumb are made of, at three quarters the
+   size: this one is read, not pressed, and a full 44px of it under the
+   header is a lozenge rather than a marker. */
+.hc-pull__disc {
+  position: relative;   /* the sheen below is absolute against it */
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--hc-radius-pill);
+  border: var(--hc-hairline) solid var(--hc-gold-edge);
+  background: var(--hc-gold-skin);
+  box-shadow: var(--hc-gold-shadow);
+  color: var(--hc-gold-ink);
+  isolation: isolate;
+
+  /* Down by default, and every state that puts it up is below, so there is
+     one place to look when it is in the wrong one. */
+  opacity: 0;
+  transform: scale(0.62);
+}
+
+@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+  .hc-pull__disc {
+    background: var(--hc-gold-skin-lens);
+    backdrop-filter: blur(20px) saturate(1.7);
+    -webkit-backdrop-filter: blur(20px) saturate(1.7);
+  }
+}
+
+.hc-pull__disc::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--hc-gold-sheen);
+  pointer-events: none;
+}
+
+.hc-pull__ring {
+  position: relative;
+  z-index: 1;
+  width: 19px;
+  height: 19px;
+  /* Twelve o'clock, so the ring closes the way a clock hand would rather
+     than starting from three. */
+  transform: rotate(-90deg);
+  filter: drop-shadow(0 0 2px var(--hc-gold-halo));
+}
+
+.hc-pull__track,
+.hc-pull__arc {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 3.4;
+  stroke-linecap: round;
+}
+
+.hc-pull__track { opacity: 0.26; }
+
+/* 81.68 is the circumference at r=13 in the 36 unit box, and js/pull.js
+   writes the offset against the same number. Closed until the finger opens
+   it. */
+.hc-pull__arc {
+  stroke-dasharray: 81.68;
+  stroke-dashoffset: 81.68;
+}
+
+/* Working. The inline numbers the drag wrote are cleared at this point, so
+   these are what is left holding the disc out. */
+.hc-pull[data-state="syncing"] .hc-pull__disc {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.hc-pull[data-state="syncing"] .hc-pull__arc {
+  /* A quarter of the ring, turning. Long enough to read as a hand and short
+     enough that the gap says it is moving. */
+  stroke-dasharray: 20 62;
+  stroke-dashoffset: 0;
+}
+
+.hc-pull[data-state="syncing"] .hc-pull__ring {
+  animation: hc-pull-turn 900ms linear infinite;
+}
+
+@keyframes hc-pull-turn {
+  from { transform: rotate(-90deg); }
+  to   { transform: rotate(270deg); }
+}
+
+/* Reduced motion still gets the disc and still gets an answer, it just does
+   not spin. The ring closes whole and holds while the fetch is out. */
+@media (prefers-reduced-motion: reduce) {
+  .hc-pull[data-state="syncing"] .hc-pull__ring { animation: none; }
+  .hc-pull[data-state="syncing"] .hc-pull__arc {
+    stroke-dasharray: 81.68;
+    stroke-dashoffset: 0;
+    opacity: 0.6;
+  }
+}
+
+/* Presentation mode has no chrome at all, and js/pull.js refuses the gesture
+   there. This is the same answer said in CSS, for the frame where a sync
+   started somewhere else is still settling as the slide goes up. */
+#app[data-view="present"] .hc-pull { display: none; }
+
+/* --------------------------------------------------------------------------
    Tab bar. A glass plinth floating clear of the screen edges, with the
    active tab raised out of it as a tile.
 

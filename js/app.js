@@ -247,6 +247,25 @@
         '<div class="hc-date-rail__track"></div>' +
       '</nav>' +
 
+      /* Pull down from the top of anything and the app goes and asks for
+         everything again.
+
+         A sibling of the date rail rather than a child of the scroller,
+         because it has to hold still while the page moves under it, and
+         because the rail's own `~` selector is what drops it below Listen's
+         month strip when that strip is out. See js/pull.js. */
+      '<div class="hc-pull" id="hc-pull" data-state="off" data-settling="false" ' +
+          'aria-hidden="true">' +
+        '<span class="hc-pull__disc">' +
+          '<svg class="hc-pull__ring" viewBox="0 0 36 36" aria-hidden="true">' +
+            '<circle class="hc-pull__track" cx="18" cy="18" r="13"></circle>' +
+            '<circle class="hc-pull__arc" cx="18" cy="18" r="13"></circle>' +
+          '</svg>' +
+        '</span>' +
+      '</div>' +
+      // What the disc says to a screen reader, which cannot see it turn.
+      '<p class="hc-visually-hidden" id="hc-pull-live" role="status" aria-live="polite"></p>' +
+
       '<main class="hc-scroll" id="hc-scroll">' +
         '<div id="hc-view"></div>' +
       '</main>' +
@@ -1064,6 +1083,19 @@
     'to-top': function () {
       HC.native.tap('Light');
       scroller.scrollTo({ top: 0, behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
+    },
+
+    /* The pull, as a button. It is at the foot of Your account, under the
+       line that says where this phone's content came from, and it exists
+       because a drag from the top of the screen is not a gesture everybody
+       can make. Same disc, same three fetches, same words afterwards.
+
+       Profile is repainted when the sync lands rather than by this handler:
+       js/content.js announces itself on 'content' and the listener further
+       down is already redrawing the screen for it. */
+    'sync-now': function () {
+      HC.native.tap('Light');
+      HC.pull.now();
     },
 
     /* Two ways in now, the initials in the top bar and the cog in the sheet,
@@ -4318,6 +4350,18 @@
       mount: mount,
       tabbar: tabbar,
       totop: totop
+    });
+
+    /* And down, from the top of anything, to go and get it all again.
+
+       After the swipe on purpose. Both read touchmove off the same scroller
+       and the swipe is the one that has to see a finger first: it drops the
+       gesture the moment it reads as vertical, which is precisely when this
+       one wants it. */
+    HC.pull.init({
+      scroller: scroller,
+      pull: document.getElementById('hc-pull'),
+      live: document.getElementById('hc-pull-live')
     });
 
     HC.router.start({

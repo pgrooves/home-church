@@ -210,6 +210,24 @@
       'We will catch up the next time you have signal.</p>';
   }
 
+  /* The pull, as a button.
+
+     Dragging down from the top of any screen goes and gets everything again,
+     which is where almost everybody will do it. This is the same three
+     fetches for the people a drag does not serve: somebody using VoiceOver,
+     somebody on a keyboard, somebody whose hands do not do a long smooth
+     gesture on a Sunday morning. It sits under the line above because that
+     line is the answer this button changes.
+
+     The line and the button are both redrawn when the fetch lands, on the
+     'content' subscriber in js/app.js, so "checked today at 9:14 AM" is
+     current the moment there is anything to say. */
+  function syncButton() {
+    if (!HC.content || !HC.content.isConfigured()) return '';
+    return '<button type="button" class="hc-btn hc-btn--tertiary hc-about__sync" ' +
+      'data-action="sync-now">Check for new content</button>';
+  }
+
   // 'today at 6:42 PM' when it is today, otherwise the date. Short on purpose.
   function when(iso) {
     var d = new Date(iso);
@@ -437,6 +455,7 @@
     );
     html += '<p class="hc-caption hc-about__version">Version 1.0</p>';
     html += contentLine();
+    html += syncButton();
     if (!HC.store.storage.available) {
       html += '<p class="hc-caption hc-about__warn">Your browser is not saving anything right now, so notes and checkmarks will not survive a reload. Private browsing usually does this.</p>';
     }
