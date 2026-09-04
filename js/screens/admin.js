@@ -487,11 +487,26 @@
 
     html += linkFields(d);
 
+    /* "Goes up" and not "Starts", which is a one word change and the whole of
+       a real mistake somebody made with it.
+
+       Both of these are about the CARD, not about the thing the card is about.
+       "Comes down" said that plainly and "Starts" did not, so a sign-up for a
+       baby blessing on the 20th got the 20th typed into it — meaning "the
+       blessing is on the 20th" — and the announcement went quiet until the
+       morning of the event it was advertising. Nothing was broken and nothing
+       said anything was: the list read "Goes up Sep 20", correctly, about a
+       card nobody had meant to schedule.
+
+       So the field now uses the same three words the list prints back at you,
+       and the help says what the date is instead of only what leaving it empty
+       does. A date field that has to be right the first time should not need
+       the list underneath to explain what it did. */
     html += '<div class="hc-form-row">' +
-      field({ name: 'startsOn', label: 'Starts', type: 'date', value: d.startsOn,
-        help: 'Empty shows it now.' }) +
+      field({ name: 'startsOn', label: 'Goes up', type: 'date', value: d.startsOn,
+        help: 'The day the card appears. Empty puts it on Home now.' }) +
       field({ name: 'endsOn', label: 'Comes down', type: 'date', value: d.endsOn,
-        help: 'Empty leaves it up.' }) +
+        help: 'The day it disappears. Empty leaves it up.' }) +
     '</div>';
 
     html += switchRow({
