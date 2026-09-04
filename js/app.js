@@ -1648,6 +1648,28 @@
       }));
     },
 
+    /* Put it back, which undoes the x on the card on Home.
+
+       NOT A WRITE, and that is the whole of what makes it different from
+       Restore directly above. Nothing about the announcement changed and
+       nothing about it is going to: the church has had this card all along.
+       What changed is one key in this phone's localStorage, which is why
+       there is no adminRun, no busy state and no network — undismiss() and a
+       repaint, and the card is on Home again by the time you get there.
+
+       No confirm, for the same reason Restore has none: this is the tap that
+       undoes a mis-tap, and putting something back is not a thing anybody
+       needs protecting from. */
+    'admin-announcement-undismiss': function (el) {
+      var id = el.getAttribute('data-id');
+      if (!id) return;
+
+      HC.store.undismiss(id);
+      HC.native.tap('Light');
+      repaintAdmin();
+      HC.components.toast('Back on your Home.');
+    },
+
     /* The only control on this screen with nothing behind it. Named in the
        confirm, and the confirm says the word the button does not: permanently. */
     'admin-announcement-destroy': function (el) {
