@@ -817,25 +817,15 @@
      that can be wrong in a way nobody catches. A misworded announcement is
      visible on Home and fixable; a date that is a week out is correct-looking
      everywhere and wrong in four hundred calendars, and the app cannot reach
-     in and take it back. So the card leads with when, not with what. */
+     in and take it back. So the card leads with when, not with what.
+
+     THE SENTENCE ITSELF MOVED TO js/components.js when 0052 gave the confirm
+     in front of Merge the same thing to say. It was written here, and it is
+     still only this screen and the dialogs over it that use it, but two copies
+     of a date sentence is how a card and the confirm about that card come to
+     disagree about which evening they mean. */
   function eventWhen(row) {
-    if (!row.starts_at) return 'No date';
-
-    var d = new Date(row.starts_at);
-    if (isNaN(d.getTime())) return 'No date';
-
-    var day = c.formatDate(d.getFullYear() + '-' +
-      ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2));
-
-    // time_label is what the intake writes when the email gave no hour, so it
-    // says "Time to be announced" rather than a nine o'clock nobody chose.
-    if (row.time_label) return day + ', ' + row.time_label;
-
-    var hour = d.getHours();
-    var mins = ('0' + d.getMinutes()).slice(-2);
-    var ampm = hour >= 12 ? 'PM' : 'AM';
-    var shown = hour % 12 === 0 ? 12 : hour % 12;
-    return day + ', ' + shown + ':' + mins + ' ' + ampm;
+    return c.eventWhen(row);
   }
 
   function eventsSection(rows) {
@@ -845,6 +835,21 @@
       'Add to calendar button, on the announcement as well.</p>';
 
     rows.forEach(function (row) {
+      /* The same night, already in the calendar. The event-dedupe pass from
+         migration 0052 flagged this row against one the church already has,
+         and what that means for the person reading is that the tap they came
+         here to make is the wrong one: approving this would put a second entry
+         under one evening, where merging writes what this one knows onto the
+         entry that is already there.
+
+         Merge takes the primary button when there is something to merge into,
+         and Approve steps aside entirely rather than sitting beside it. That
+         is the difference from the announcements queue above, where Approve
+         stays: a second card on Home is untidy, and a second date is two Add
+         to calendar buttons and two things in somebody's phone. Keep both is
+         the way out, and it puts Approve back. */
+      var same = HC.admin.duplicateFor(row.id);
+
       html += '<div class="hc-admin__item hc-admin__item--review">' +
         '<div class="hc-admin__item-head">' +
           '<p class="hc-eyebrow">' + c.esc(eventWhen(row)) + '</p>' +
@@ -852,12 +857,86 @@
           (row.location
             ? '<p class="hc-caption">' + c.esc(row.location) + '</p>'
             : '<p class="hc-caption hc-admin__review-dates">No location given.</p>') +
+          sameNightNote(same) +
         '</div>' +
         '<div class="hc-admin__item-actions">' +
-          c.button('Approve', { action: 'admin-event-approve', id: row.id,
-            small: true, busy: busy === 'event-approve:' + row.id }) +
+          (same
+            ? c.button('Merge', { action: 'admin-event-merge', id: row.id,
+                small: true, busy: busy === 'event-merge:' + row.id }) +
+              c.button('Keep both', { action: 'admin-event-keep-separate', id: row.id,
+                variant: 'secondary', small: true,
+                busy: busy === 'event-separate:' + row.id })
+            : c.button('Approve', { action: 'admin-event-approve', id: row.id,
+                small: true, busy: busy === 'event-approve:' + row.id })) +
           c.button('Discard', { action: 'admin-event-discard', id: row.id,
             variant: 'tertiary', small: true, busy: busy === 'event-discard:' + row.id }) +
+        '</div>' +
+      '</div>';
+    });
+
+    return html;
+  }
+
+  /* The line under a flagged date, drawn the same on both queues so the two
+     sections read as one idea. `duplicate_row` is the event that survives a
+     merge, attached by HC.admin.loadEventDuplicates.
+
+     IT NAMES THE OTHER DATE AS WELL AS THE OTHER TITLE, which the announcements
+     version does not have to. "Looks like an update to Homecoming Gala" is
+     enough when the thing being decided is wording; here the thing being
+     decided is which evening the church is keeping, and a merge that quietly
+     moved a date the reader never saw would be the one mistake this screen
+     cannot let somebody make. */
+  function sameNightNote(flagged) {
+    if (!flagged || !flagged.duplicate_row) return '';
+
+    var keeps = flagged.duplicate_row;
+
+    return '<p class="hc-caption hc-admin__warn">Looks like the same night as “' +
+      c.esc(keeps.title) + '”, ' + c.esc(eventWhen(keeps)) +
+      (flagged.duplicate_note ? ': ' + c.esc(flagged.duplicate_note) : '') + '</p>';
+  }
+
+  /* ------------------------------------ the same night, already on the calendar
+
+     The half of migration 0052 that has no equivalent upstairs. An announcement
+     the church has already posted twice is untidy; a date the church has
+     already approved twice is two entries in the month grid, two rows in
+     Upcoming, and two Add to calendar buttons — and the second tap on one of
+     those puts a thing in somebody's own calendar that this app can never
+     reach again. So the pass looks at approved events too, and what it finds
+     gets a section of its own down here rather than a card in a queue: nothing
+     in it is waiting on a decision, the calendar works today, and this is the
+     tidying somebody does when they have a minute.
+
+     WHY THE MERGE BUTTON IS NOT THE PRIMARY ONE HERE, unlike in the queue
+     above. Up there the alternative is publishing a second date, which is the
+     mistake. Down here both dates are already live and the church has been
+     using them, so the tap that changes something is the one that should take
+     more deciding. */
+  function eventDuplicatesSection(rows) {
+    var html = c.sectionHeader('', 'The same night, twice');
+    html += '<p class="hc-caption hc-admin__intro-note">Both of these are on the ' +
+      'calendar already, and they look like one evening entered twice. Merge keeps ' +
+      'the date each card names — its place, its Add to calendar button and anything ' +
+      'pointing at it — and writes what the card knows onto it. Keep both says they ' +
+      'are two different nights and stops asking.</p>';
+
+    rows.forEach(function (row) {
+      html += '<div class="hc-admin__item hc-admin__item--review">' +
+        '<div class="hc-admin__item-head">' +
+          '<p class="hc-eyebrow">' + c.esc(eventWhen(row)) + '</p>' +
+          '<p class="hc-row__title">' + c.esc(row.title) + '</p>' +
+          (row.location ? '<p class="hc-caption">' + c.esc(row.location) + '</p>' : '') +
+          sameNightNote(row) +
+          approvedNote('event', row.id, 'Approved by') +
+        '</div>' +
+        '<div class="hc-admin__item-actions">' +
+          c.button('Merge', { action: 'admin-event-merge', id: row.id,
+            variant: 'secondary', small: true, busy: busy === 'event-merge:' + row.id }) +
+          c.button('Keep both', { action: 'admin-event-keep-separate', id: row.id,
+            variant: 'tertiary', small: true,
+            busy: busy === 'event-separate:' + row.id }) +
         '</div>' +
       '</div>';
     });
@@ -1168,10 +1247,29 @@
     var waiting = HC.admin.pending();
     if (waiting.length) html += reviewSection(waiting);
 
-    // The dates queue, under the announcements one. Two decisions, two
-    // queues, in the order they are made: the words, then the date.
+    /* The dates queue, under the announcements one. Two decisions, two
+       queues, in the order they are made: the words, then the date.
+
+       IT WAITS FOR THE DUPLICATES LIST AS WELL AS FOR ITSELF, which is the one
+       thing on this screen that waits on a second fetch. A card drawn before
+       the flags land carries Approve where it should carry Merge, and the tap
+       that lands in that half second puts the same evening on the calendar
+       twice — which is the exact mistake the flags exist to prevent. Both
+       fetches are started together on the way in, and until then this section
+       is simply not there yet, the same as it is not there while its own rows
+       are in flight. A failed fetch settles too, so this cannot hang. */
     var dates = HC.admin.pendingEvents();
-    if (dates.length) html += eventsSection(dates);
+    if (dates.length && HC.admin.ready('eventDuplicates')) html += eventsSection(dates);
+
+    /* And the pairs already on the calendar. Below the two queues because
+       nothing here is waiting on anybody — the app works exactly as it does
+       now, it is just showing one evening twice. The pending half of what the
+       dedupe pass flagged is not repeated here; it is drawn in the queue above
+       with the same two buttons on it. */
+    var twice = HC.admin.eventDuplicates().filter(function (row) {
+      return row.review_state !== 'pending';
+    });
+    if (twice.length) html += eventDuplicatesSection(twice);
 
     var deleted = rows.filter(function (row) { return !!row.deleted_at; });
 
@@ -1680,6 +1778,11 @@
     // fetches, and the section can draw before either has landed.
     if (id === 'announcements') HC.admin.loadNewsletter();
     if (id === 'announcements') HC.admin.loadPendingEvents();
+    // And the dates that look like one evening entered twice, from 0052. Its
+    // own fetch rather than a filter over the queue above, because most of
+    // what it finds is already on the calendar and the queue holds only what
+    // is pending.
+    if (id === 'announcements') HC.admin.loadEventDuplicates();
     // And who approved what, for the note under each posted row. A fourth
     // fetch on this section, and the smallest of them: one row per thing ever
     // approved out of the two queues.

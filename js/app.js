@@ -1550,6 +1550,53 @@
       }));
     },
 
+    /* ------------------------------------------- the same night, twice
+
+       Merging two events into one, and the way out of it. Both live on a card
+       the event-dedupe pass marked, in the queue or in the section below it,
+       and neither exists on a card it did not mark. Migration 0052.
+
+       THE CONFIRM NAMES THE DATE THAT SURVIVES, not just the two titles, and
+       it is the one thing here that had to be got right. Everything else on
+       this screen is reversible or visible: this button deletes a row from the
+       church's calendar, and if the two events disagree about the evening then
+       one of those evenings is about to stop existing. Somebody should read
+       which one before they tap, not discover it on the Cal tab afterwards. */
+
+    'admin-event-merge': function (el) {
+      var id = el.getAttribute('data-id');
+      var row = HC.admin.duplicateFor(id);
+      var keeps = row && row.duplicate_row;
+      if (!row || !keeps) return;
+
+      /* What the merge will leave behind, worked out the same way migration
+         0052 works it out: the duplicate's date is taken only when the
+         duplicate knows an hour, which is exactly when it has no time_label.
+         Said in the confirm rather than left to be discovered, because "the
+         time moved" and "the time did not move" are both surprises to
+         somebody who has not read the migration. */
+      var moves = !row.time_label && row.starts_at !== keeps.starts_at;
+
+      if (!window.confirm('Merge “' + row.title + '” into “' + keeps.title + '”?' +
+          '\n\nOne date is left on the calendar' +
+          (moves ? ', and it moves to ' + HC.components.eventWhen(row) + '.'
+                 : ': ' + HC.components.eventWhen(keeps) + '.') +
+          '\n\nAnything pointing at this one points at the one that stays. ' +
+          'There is no undo.')) return;
+
+      adminRun('event-merge:' + id, HC.admin.applyEventUpdate(id).then(function () {
+        HC.components.toast('One date now, “' + keeps.title + '”.');
+      }));
+    },
+
+    'admin-event-keep-separate': function (el) {
+      var id = el.getAttribute('data-id');
+
+      adminRun('event-separate:' + id, HC.admin.keepEventSeparate(id).then(function () {
+        HC.components.toast('Kept as two different nights.');
+      }));
+    },
+
     'admin-review-approve': function (el) {
       var id = el.getAttribute('data-id');
       var row = announcementById(id);

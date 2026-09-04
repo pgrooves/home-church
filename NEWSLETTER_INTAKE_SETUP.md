@@ -304,6 +304,64 @@ after changing the prompt.
 
 ---
 
+## When the calendar has one night in it twice
+
+The same three emails carry a date each, so the Cal tab ends up with
+"Homecoming" beside "Homecoming Gala", and "Ladies Night" beside "Women's
+Night" — one evening, entered twice, usually under two names by two people who
+each thought they were adding something new.
+
+A fourth Edge Function, `event-dedupe`, does for the calendar what
+`announcement-dedupe` does for Home. `pg_cron` calls it every five minutes at
+two minutes past — deliberately off the other one's beat, so two passes woken by
+the same newsletter do not meet each other at the Gemini key — through
+`hc_event_dedupe_tick()`, which returns immediately unless an event is waiting.
+No new secret; it shares the intake's. Migration `0052` is the other end of it.
+
+**It looks at approved events too**, which is the one place it goes further than
+the announcements pass. A second card on Home is untidy; a second date is two
+entries in the month grid, two Add to calendar buttons, and — once somebody taps
+one — a thing in their own phone's calendar that this app can never reach again.
+The duplicate worth catching is usually one that was approved a fortnight ago.
+So every event from a fortnight back and everything ahead of it gets compared
+once, including dates typed in by hand on the Cal tab.
+
+Two places on the Admin screen show what it found:
+
+- in **Dates to review**, a card that says *"Looks like the same night as
+  'Ladies Night', October 23, 2030, 6:30 PM"* offers **Merge** and **Keep both**
+  instead of Approve, because approving it would put the same evening on the
+  calendar twice.
+- under **The same night, twice**, the pairs that are both already live.
+
+**Merge keeps the row people already have** — the published one, or the older of
+two of the same kind — so its id, its place, and every announcement pointing at
+it survive. What the other row knows is written onto it, a field it is silent
+about is left alone, and *a time nobody vouched for never wins*: a parsed event
+whose email gave no hour carries a nine in the morning and a label saying so,
+and the merge refuses to move a known evening onto it. The confirm names the
+date that will be left. Then the second row is deleted, along with any note
+about who approved it, and anything pointing at it is moved across.
+
+**Keep both** says they are two different nights and stops the pair being
+offered. As everywhere else here, the pass itself merges nothing: it writes
+three columns and stops.
+
+```bash
+curl -X POST https://ibqkumxfltfiuqevviji.supabase.co/functions/v1/event-dedupe \
+  -H "x-hc-cron-secret: <the secret>" -H "Content-Type: application/json" \
+  -d '{"dry_run": true}'
+```
+
+`{"all": true}` re-checks events it has already looked at. Deploy it the same
+way as the others:
+
+```bash
+supabase functions deploy event-dedupe --no-verify-jwt
+```
+
+---
+
 ## The home groups box on Connect
 
 A second Edge Function, `group-status`, does a related job on the other side of

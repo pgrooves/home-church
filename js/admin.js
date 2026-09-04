@@ -45,6 +45,11 @@
     // Events waiting to be approved. A table of its own rather than a filter,
     // see the events queue section below.
     events: null,
+    // Events the dedupe pass thinks are the same night as another one, from
+    // migration 0052. A slot of its own rather than a filter over the one
+    // above, because half of what belongs in it is already on the calendar and
+    // the queue above holds only what is pending.
+    eventDuplicates: null,
     // Who approved what, from migration 0043. An admin-only table, and the
     // only place the name of the person who tapped Approve is written down.
     approvals: null
@@ -334,6 +339,109 @@
     return list('events');
   }
 
+  /* ------------------------------------------- the same night, twice
+
+     What the event-dedupe pass wrote, from migration 0052. Every event
+     carrying a duplicate_of, whether it is waiting in the queue above or has
+     been on the calendar for a fortnight — which is the half that matters,
+     because "Ladies Night" and "Women's Night" were both approved weeks ago by
+     two people who each thought they were adding something new.
+
+     TWO FETCHES, NOT AN EMBED. PostgREST can join this table to itself on the
+     foreign key and hand back the row each flag points at, and it is the kind
+     of query that is right until somebody renames a constraint. Two plain
+     reads say what they mean, cost one extra round trip on a screen that is
+     opened a few times a week, and are read by the next person without a
+     manual. The same trade announcement-dedupe makes on the server side.
+
+     The row it points at is attached as `duplicate_row` so the screen can name
+     both dates in one card. Attached to this file's own copy, which is dropped
+     whole on every write, so there is no stale half to worry about. */
+  function loadEventDuplicates() {
+    load('eventDuplicates', function () {
+      return HC.auth.restFetch(
+        '/events?select=*&duplicate_of=not.is.null&order=starts_at.asc'
+      ).then(function (rows) {
+        var flagged = Array.isArray(rows) ? rows : [];
+        if (!flagged.length) return [];
+
+        var want = [];
+        flagged.forEach(function (row) {
+          if (want.indexOf(row.duplicate_of) === -1) want.push(row.duplicate_of);
+        });
+
+        return HC.auth.restFetch('/events?select=*&id=in.(' +
+          want.map(encodeURIComponent).join(',') + ')'
+        ).then(function (targets) {
+          var by = {};
+          (Array.isArray(targets) ? targets : []).forEach(function (row) {
+            by[row.id] = row;
+          });
+
+          /* A flag whose row has gone is dropped rather than drawn. The
+             foreign key from 0052 nulls the column on delete so this should
+             not happen, and a card that says "looks like the same night as"
+             with nothing after it is a bad enough thing to draw that it is
+             worth one filter. */
+          return flagged.filter(function (row) {
+            row.duplicate_row = by[row.duplicate_of] || null;
+            return !!row.duplicate_row;
+          });
+        });
+      });
+    });
+  }
+
+  function eventDuplicates() {
+    return list('eventDuplicates');
+  }
+
+  /* The flag on one event, or null. Asked by the queue above, so a pending
+     event that is also a duplicate draws the Merge buttons rather than
+     Approve. */
+  function duplicateFor(id) {
+    var rows = list('eventDuplicates');
+    for (var i = 0; i < rows.length; i++) {
+      if (rows[i].id === id) return rows[i];
+    }
+    return null;
+  }
+
+  /* Merging, and the way out of it. Both go through migration 0052's
+     functions, because events still have no write policy for any client role —
+     0026 decided that and 0040, 0041 and 0042 each restated it.
+
+     FOUR LISTS ARE DROPPED, and every one of them has to be. The pair is gone
+     from the duplicates list; one row is gone from the pending queue if it was
+     in it; the announcement that pointed at the row that went now points at
+     the one that stayed; and the note saying who approved that row went with
+     it, per 0052. HC.content.refresh() is the fifth thing to tell: the Cal tab
+     draws the synced copy, not any of these. */
+  function applyEventUpdate(id) {
+    return HC.auth.rpc('hc_admin_apply_event_update', { p_duplicate_id: id })
+      .then(function (target) {
+        invalidate('eventDuplicates');
+        invalidate('events');
+        invalidate('announcements');
+        invalidate('approvals');
+        HC.content.refresh();
+        return target;
+      }, function (err) {
+        // Same as approveEvent: a refusal usually means another admin got
+        // there first, so this screen is holding a list from before they did.
+        invalidate('eventDuplicates');
+        invalidate('events');
+        throw err;
+      });
+  }
+
+  function keepEventSeparate(id) {
+    return HC.auth.rpc('hc_admin_keep_event_separate', { p_id: id })
+      .then(function () {
+        invalidate('eventDuplicates');
+      });
+  }
+
   /* THE REFRESH HAPPENS WHETHER OR NOT THIS WORKED, which is the one thing
      here that is not obvious. Since 0043 the most likely reason for a refusal
      is that another admin approved this a minute ago and this screen is
@@ -348,11 +456,15 @@
       .then(function () {
         invalidate('events');
         invalidate('approvals');
+        // A flagged date that has just been approved is still flagged, and the
+        // card that draws it now has to say it is on the calendar. See 0052.
+        invalidate('eventDuplicates');
         // The Connect tab draws from the synced copy, so it has to be told.
         HC.content.refresh();
       }, function (err) {
         invalidate('events');
         invalidate('approvals');
+        invalidate('eventDuplicates');
         throw err;
       });
   }
@@ -365,6 +477,10 @@
       .then(function () {
         invalidate('events');
         invalidate('announcements');
+        // It may have been half of a pair, either half. 0052's foreign key
+        // nulls the flag on the row left behind, and this is what makes this
+        // screen stop drawing the card about it.
+        invalidate('eventDuplicates');
         // 0043 deletes the note along with the row, because ids in this
         // project come back on a later parse of the same recurring event and a
         // stale note would name somebody who never saw it.
@@ -429,6 +545,8 @@
       // it draws loses its Add to calendar button, so the admin list of
       // announcements is stale from here too.
       invalidate('announcements');
+      // And so is either half of a pair the dedupe pass had flagged.
+      invalidate('eventDuplicates');
       HC.content.refresh();
     });
   }
@@ -1136,6 +1254,13 @@
     loadPendingEvents: loadPendingEvents,
     approveEvent: approveEvent,
     discardEvent: discardEvent,
+
+    loadEventDuplicates: loadEventDuplicates,
+    eventDuplicates: eventDuplicates,
+    duplicateFor: duplicateFor,
+    applyEventUpdate: applyEventUpdate,
+    keepEventSeparate: keepEventSeparate,
+
     approveAnnouncement: approveAnnouncement,
     discardAnnouncement: discardAnnouncement,
 

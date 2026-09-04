@@ -175,5 +175,32 @@ const unclocked = new Date(cal.startsAtIso({ date: '2026-09-12', time: '' }));
 ok('and an event with no clock time makes the same nine o clock guess',
   [unclocked.getDate(), unclocked.getHours()], [12, 9]);
 
+/* ------------------------------------------- one event, said one way ---
+
+   HC.components.eventWhen is the sentence the Admin screen puts on a date and
+   the sentence the confirm in front of Merge repeats back. Two things read it
+   and one of them is a dialog about deleting a row from the church's calendar,
+   so the case that matters is the placeholder: a parsed event whose email gave
+   no hour still carries a starts_at, because the column is not null, and an
+   app that printed its nine in the morning would be stating as a fact
+   something nobody said. Migration 0052 leans on exactly this distinction when
+   it decides whether a merge moves a date. */
+
+const clocked = HC.components.eventWhen({
+  starts_at: new Date(2026, 9, 23, 18, 30).toISOString(), time_label: null
+});
+ok('a date with an hour says the hour', clocked, 'October 23, 2026, 6:30 PM');
+
+const labelled = HC.components.eventWhen({
+  starts_at: new Date(2026, 9, 23, 9, 0).toISOString(),
+  time_label: 'Time to be announced'
+});
+ok('and one without says so instead of printing the guess',
+  labelled, 'October 23, 2026, Time to be announced');
+
+ok('a row with no date at all says so', HC.components.eventWhen({}), 'No date');
+ok('and so does a date nothing can parse',
+  HC.components.eventWhen({ starts_at: 'the second Tuesday' }), 'No date');
+
 console.log('\n' + pass + ' passed, ' + fail + ' failed.');
 if (fail) process.exit(1);

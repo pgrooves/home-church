@@ -309,6 +309,11 @@ create table public.events (
   time_label  text,
   location    text,
   signup_url  text,
+  -- capacity is here for 0052, whose merge carries it from one row to the
+  -- other. Same rule as everywhere else in this file: a column appears when a
+  -- migration names it, and 0052's function would fail on a %rowtype without
+  -- one rather than on anything a test is asking about.
+  capacity    integer,
   category    text default 'gathering',
   published   boolean not null default true,
   updated_at  timestamptz not null default now()

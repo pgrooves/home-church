@@ -72,6 +72,34 @@
     return h + ':' + m + ' ' + suffix;
   }
 
+  /* 'October 23, 2026, 6:30 PM', or the words the church used when nobody knew
+     the hour: 'October 23, 2026, Time to be announced'.
+
+     ONE EVENT, SAID ONE WAY, wherever the app has to say it in a sentence
+     rather than draw it in a card. It grew up privately on the Admin screen,
+     where the dates queue leads with when rather than with what; the confirm
+     in front of Merge then needed the same sentence, and a second copy of it
+     in js/app.js is how "Oct 23, 6:30 PM" on a card ends up as "October 23 at
+     18:30" in the dialog about that card. Same reasoning as formatClock above,
+     which this uses.
+
+     time_label is respected rather than overridden, which is the whole reason
+     this is not two lines at each call site: a parsed event whose email gave
+     no time still carries a starts_at, because the column is not null, and
+     printing its nine in the morning would be a guess wearing the clothes of a
+     fact. See the intake, and migration 0052 section 3. */
+  function eventWhen(row) {
+    if (!row || !row.starts_at) return 'No date';
+
+    var d = new Date(row.starts_at);
+    if (isNaN(d.getTime())) return 'No date';
+
+    var day = formatDate(d.getFullYear() + '-' +
+      pad2(d.getMonth() + 1) + '-' + pad2(d.getDate()));
+
+    return day + ', ' + (row.time_label || formatClock(d));
+  }
+
   function dayName(date) {
     return DAYS[date.getDay()];
   }
@@ -1053,6 +1081,7 @@
     formatDateShort: formatDateShort,
     formatDateNumeric: formatDateNumeric,
     formatClock: formatClock,
+    eventWhen: eventWhen,
     byline: byline,
     metaLine: metaLine,
     dayName: dayName,
