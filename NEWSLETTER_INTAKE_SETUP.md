@@ -203,12 +203,30 @@ thinking and hit its output ceiling before finishing the JSON.
 
 `gemini-3.5-flash` answered in 21 seconds and split a five item newsletter
 correctly, which is why it is the default. If it stops being the right answer,
-**set the `GEMINI_MODEL` secret** rather than changing any code. Get the list of
-what your key can actually reach with:
+**set the `GEMINI_MODEL` secret** rather than changing any code.
+
+To find out what to set it to, ask the `group-status` function, which already
+holds the key:
 
 ```bash
-curl "https://generativelanguage.googleapis.com/v1beta/models?key=<your key>"
+curl -X POST https://ibqkumxfltfiuqevviji.supabase.co/functions/v1/group-status \
+  -H "x-hc-cron-secret: <the secret>" -H "Content-Type: application/json" \
+  -d '{"models": true}'
 ```
+
+It lists what the key can reach, sends each likely model a two word prompt, and
+reports which ones answered — `working` is the list, `suggestion` is one to try.
+It writes nothing and the key never leaves the function, which is the point: the
+old way was pasting an API key into a terminal, and the key lives in a secrets
+page precisely so that it is not in terminals.
+
+**A 503 does not always mean the model is gone.** The first time this happened
+in anger, the small prompt above got a `200` from the very model the newsletter
+run was failing on: Google was shedding the intake's *large* request — a whole
+newsletter, an 8192 token ceiling, and a thinking budget — while happily
+answering a two word one. Re-running the intake a few minutes later parsed it
+fine. So the order to try things in is: run it again, then check `models`, then
+change the secret.
 
 A busy model is not a lost newsletter. A 429 or a 5xx makes the function leave
 the email completely alone — no ledger row, not marked read — so the next tick

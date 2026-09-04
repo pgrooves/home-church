@@ -75,6 +75,15 @@
  * It returns what it would have written, so a bad shortening can be looked at
  * before it is on a screen.
  *
+ * `{"models": true}` answers the question that comes up every time Google
+ * congests or retires something: which model should GEMINI_MODEL be set to
+ * today. It asks the API which models this key can reach, then sends each
+ * likely one a two word prompt and reports what came back. Nothing about the
+ * church is in that request and nothing is written; the key never leaves the
+ * function. This exists because the alternative is pasting an API key into a
+ * terminal to run curl, and because "Gemini is busy" is a sentence somebody
+ * will read again in six months with no idea what to try instead.
+ *
  * DEPLOY
  *   supabase functions deploy group-status --no-verify-jwt
  */
@@ -423,6 +432,122 @@ async function ask(
 }
 
 /* ------------------------------------------------------------------------
+   Which model to use today
+
+   WHY THIS IS IN THE APP'S OWN CODE rather than in a runbook. Twice now the
+   answer to "why did nothing get parsed" has been that Google was shedding
+   load on the model this project names, and both times the fix was one word in
+   one secret. What made it slow was not the fix, it was finding out which word:
+   the honest way needs the API key in a terminal, and the key lives in a
+   secrets page precisely so it is not in terminals.
+
+   So the function that holds the key asks on our behalf. It reports names and
+   status codes, nothing else, and it writes nothing at all.
+
+   PREFERRING FLASH, and saying why out loud: this job is one short paragraph
+   out of a page of announcements, on a free tier measured in requests per day.
+   Flash answers it in twenty seconds. A Pro model would answer it slightly
+   better, considerably slower, and would spend a quota that exists for the
+   newsletter reader too.
+   --------------------------------------------------------------------- */
+
+interface ModelTry {
+  model: string;
+  status: number | string;
+  ok: boolean;
+  note?: string;
+}
+
+/* A one word answer is all this needs: the question is "does this model answer
+   this key right now", not "is it any good". maxOutputTokens is deliberately
+   small, and a thinking model that spends it all before replying still tells us
+   what we asked, because it answers 200 either way. */
+async function tryModel(apiKey: string, model: string): Promise<ModelTry> {
+  try {
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ role: 'user', parts: [{ text: 'Reply with the word OK.' }] }],
+          generationConfig: { temperature: 0, maxOutputTokens: 64 },
+        }),
+      },
+    );
+
+    if (res.ok) return { model, status: 200, ok: true };
+
+    const detail = await res.text().catch(() => '');
+    return {
+      model,
+      status: res.status,
+      ok: false,
+      note: res.status === 503
+        ? 'busy'
+        : res.status === 429
+          ? 'rate limited'
+          : detail.slice(0, 120),
+    };
+  } catch (err) {
+    return { model, status: 'unreachable', ok: false, note: String((err as Error).message ?? err) };
+  }
+}
+
+async function listModels(apiKey: string, current: string): Promise<Record<string, unknown>> {
+  let names: string[] = [];
+
+  try {
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(apiKey)}&pageSize=200`,
+    );
+    if (!res.ok) {
+      const detail = await res.text().catch(() => '');
+      return { ok: false, note: `Could not list models: ${res.status} ${detail.slice(0, 200)}` };
+    }
+    const payload = await res.json();
+    names = (payload?.models ?? [])
+      .filter((m: { supportedGenerationMethods?: string[] }) =>
+        (m.supportedGenerationMethods ?? []).includes('generateContent'))
+      .map((m: { name?: string }) => String(m.name ?? '').replace(/^models\//, ''))
+      .filter(Boolean);
+  } catch (err) {
+    return { ok: false, note: `Could not reach Gemini: ${String((err as Error).message ?? err)}` };
+  }
+
+  /* Flash first, newest first within that, and never a preview or an
+     experimental build: this runs unattended behind a button somebody presses
+     twice a season, and a model that can be withdrawn without notice is not a
+     thing to point a church at. The current one is always tried, whatever it
+     is, because "is it back yet" is half the question. */
+  const candidates = names
+    .filter((n) => /flash/.test(n) && !/(preview|exp|thinking|image|tts|live)/.test(n))
+    .sort()
+    .reverse()
+    .slice(0, 6);
+
+  if (!candidates.includes(current)) candidates.unshift(current);
+
+  const tried: ModelTry[] = [];
+  for (const model of candidates) tried.push(await tryModel(apiKey, model));
+
+  const working = tried.filter((t) => t.ok).map((t) => t.model);
+
+  return {
+    ok: true,
+    current,
+    current_works: tried.some((t) => t.model === current && t.ok),
+    working,
+    suggestion: working.find((m) => m !== current) ?? working[0] ?? null,
+    tried,
+    reachable_count: names.length,
+    note: working.length
+      ? 'Set GEMINI_MODEL in Project Settings -> Edge Functions -> Secrets to one of `working`. Both functions read it on the next run; neither needs redeploying.'
+      : 'Nothing answered. That is Google having a bad afternoon rather than a setting: the newsletter leaves the email untouched and the next tick tries again.',
+  };
+}
+
+/* ------------------------------------------------------------------------
    The run
    --------------------------------------------------------------------- */
 
@@ -640,9 +765,10 @@ Deno.serve(async (req: Request) => {
     return json({ error: 'No.' }, 401);
   }
 
-  let body: { dry_run?: boolean } = {};
+  let body: { dry_run?: boolean; models?: boolean } = {};
   try { body = await req.json(); } catch { /* an empty body is the ordinary call */ }
   const dryRun = body.dry_run === true;
+  const models = body.models === true;
 
   const url = Deno.env.get('SUPABASE_URL');
   const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
@@ -685,6 +811,11 @@ Deno.serve(async (req: Request) => {
       note: 'Not set up yet: GEMINI_API_KEY is missing from this function\'s secrets.',
     });
   }
+
+  /* Answers before the run, and writes no log row: this is a person at a
+     keyboard asking what to put in a secret, not an attempt to update the
+     card. */
+  if (models) return json(await listModels(geminiKey, model));
 
   try {
     return await settle(await run(admin, geminiKey, model, dryRun));
