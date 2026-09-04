@@ -32,9 +32,12 @@
  * these the same night", which is a question about English, and this file
  * answers "which one survives", which is a question about the church.
  *
- * WHO CALLS IT. pg_cron, every five minutes at two minutes past, through
+ * WHO CALLS IT. Two things, since migration 0053. pg_cron every five minutes
+ * at two minutes past, and an insert on events — both through
  * public.hc_event_dedupe_tick(), which returns without calling anything unless
- * an event is actually waiting to be checked.
+ * an event is actually waiting to be checked. The second is what gets the
+ * flags written before an admin reads the intake's notification rather than up
+ * to five minutes after it.
  *
  * SECRETS, all shared project-wide and already set for the newsletter intake:
  *   HC_NEWSLETTER_CRON_SECRET, GEMINI_API_KEY, GEMINI_MODEL (optional)
@@ -300,7 +303,11 @@ async function ask(
    the one already on the Cal tab and in the announcements pointing at it, and
    between two of the same kind the one written first wins. Nothing here asks
    the model, and nothing here reads a title: this is the rule the merge in
-   0052 relies on, and a rule that changed with the wording would not be one. */
+   0052 relies on, and a rule that changed with the wording would not be one.
+
+   Stated a second time in SQL, in 0053's same-day guard, because that one has
+   to reach the same answer without this file being involved. Two statements of
+   one rule, each with its own test, beat one statement neither side can see. */
 function survivor(a: Row, b: Row): Row {
   if (a.published !== b.published) return a.published ? a : b;
   if (a.created !== b.created) return a.created < b.created ? a : b;
