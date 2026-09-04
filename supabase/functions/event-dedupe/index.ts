@@ -412,10 +412,33 @@ async function run(
 
     /* Stamped whatever the answer was. A "no" is an answer, and asking it
        again in five minutes is how a quiet calendar turns into a standing
-       Gemini bill. */
+       Gemini bill.
+
+       AND A "NO" CLEARS A FLAG NOBODY CONFIRMED, which is what makes the
+       same-day guard in migration 0053 safe to leave loose. That guard pairs
+       two events on one day whose titles share a word, in plain SQL and with
+       no idea what either of them is, so it will sometimes raise a men's
+       breakfast against a women's night. This is the line that takes such a
+       pair back down, five minutes later, without anybody tapping anything.
+
+       Safe to clear, because of who writes this column. The guard writes it, a
+       previous run of this pass writes it, and nobody else: a person only ever
+       clears it, through Keep both, which also stamps dedupe_checked_at — and
+       a stamped row is not in this batch at all. So every flag reaching this
+       line is one no human has answered for.
+
+       ONLY WHEN THERE IS NO MATCH AT ALL, which is the whole of why this is
+       not simply part of the patch below. A row can be the survivor of the
+       pair being judged here and still be a copy of some third row itself, and
+       clearing its flag on the way past would break that chain and lose a pair
+       nobody has answered. */
     const writes: Array<{ id: string; patch: Record<string, unknown> }> = [
       { id: draft.id, patch: { dedupe_checked_at: stamp } },
     ];
+
+    if (!other) {
+      Object.assign(writes[0].patch, { duplicate_of: null, duplicate_note: null });
+    }
 
     if (other) {
       const keep = survivor(draft, other);

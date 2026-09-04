@@ -360,6 +360,38 @@ way as the others:
 supabase functions deploy event-dedupe --no-verify-jwt
 ```
 
+### Catching it before it lands, not after
+
+The pass above runs on a five minute clock, and the intake notifies every admin
+the moment it writes. So the ordinary sequence used to be: a second Homecoming
+is written, four hundred phones buzz, somebody opens the queue, and the flag is
+not there yet — but Approve is. Migration `0053` closes that with three things,
+none of which involve a model:
+
+- **The insert wakes the pass.** A trigger on `events` calls
+  `hc_event_dedupe_tick()` when anything is written, so the flags are usually
+  there before the notification is read. It's a trigger rather than a line in
+  `newsletter-intake` on purpose — nobody should have to redeploy the church's
+  mailbox reader to change this — and it means dates typed on the Cal tab get
+  the same treatment, which the intake never would have given them.
+- **A same-day guard with no model at all.** Two events on one day whose titles
+  share a real word are flagged in plain SQL the instant the second is written.
+  Both of the pairs this church actually had share a word and a day, so this
+  alone catches them, in no time and for nothing.
+- **Approve refuses a flagged date**, naming the other one. The screen already
+  hides the button; this is the same rule where a stale phone, a second admin,
+  or curl can't get round it. **Keep both** is one tap through it.
+
+The guard is deliberately a little loose — same day, one shared word — so it
+will sometimes pair two things that are not one night, and Approve on that date
+is withheld while it stands. That costs one tap of Keep both, and the pass
+clears its own false pairs within five minutes anyway. A guard tight enough to
+never be wrong is a guard that misses the pair it was written for.
+
+Nothing here merges anything. The whole of 0053 is about *when the flag
+appears*; Merge and Keep both are still the only two ways a pair is settled,
+and both are taps.
+
 ---
 
 ## The home groups box on Connect

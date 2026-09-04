@@ -316,6 +316,9 @@ create table public.events (
   capacity    integer,
   category    text default 'gathering',
   published   boolean not null default true,
+  -- created_at for 0053, whose same-day guard breaks a tie between two events
+  -- of the same kind by taking the one written first.
+  created_at  timestamptz not null default now(),
   updated_at  timestamptz not null default now()
 );
 

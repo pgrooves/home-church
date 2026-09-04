@@ -899,9 +899,29 @@
 
     var keeps = flagged.duplicate_row;
 
-    return '<p class="hc-caption hc-admin__warn">Looks like the same night as “' +
-      c.esc(keeps.title) + '”, ' + c.esc(eventWhen(keeps)) +
-      (flagged.duplicate_note ? ': ' + c.esc(flagged.duplicate_note) : '') + '</p>';
+    /* WHO SAID SO, which changes what this sentence is allowed to claim.
+       Migration 0053 lets the database raise a pair the moment the second one
+       is written — same day, one word in common, no model involved — so a flag
+       can be on screen before anything has read either title properly. That
+       guard is deliberately loose and it is sometimes wrong, and the pass takes
+       its own false pairs back down within five minutes.
+
+       A row it has looked at carries dedupe_checked_at; one only the guard has
+       touched does not. So the unchecked case says a plainer thing and does not
+       put the word "same" in somebody's head — the two dates are named either
+       way, and an admin who can see both can settle it faster than the model
+       will. Both cards carry the same two buttons. */
+    var looked = !!flagged.dedupe_checked_at;
+
+    return '<p class="hc-caption hc-admin__warn">' +
+      (looked
+        ? 'Looks like the same night as “' + c.esc(keeps.title) + '”, ' +
+          c.esc(eventWhen(keeps)) +
+          (flagged.duplicate_note ? ': ' + c.esc(flagged.duplicate_note) : '')
+        : 'Also on this day: “' + c.esc(keeps.title) + '”, ' +
+          c.esc(eventWhen(keeps)) + '. Being looked at — merge it now if you ' +
+          'already know they are one night.') +
+      '</p>';
   }
 
   /* ------------------------------------ the same night, already on the calendar
