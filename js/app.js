@@ -1459,7 +1459,8 @@
       var h = adminHelpers();
       var box = h.getGroupBox();
 
-      adminRun('group-save', HC.admin.saveGroupNote(box.note, box.imageUrl)
+      adminRun('group-save',
+        HC.admin.saveGroupNote(box.note, box.imageUrl, box.linkUrl, box.linkLabel)
         .then(function () {
           // Dropped so the next draw seeds from what the database now holds,
           // which is the same words unless somebody else was editing too.
@@ -1469,16 +1470,19 @@
         });
     },
 
-    /* The way back from a shortening nobody liked. Both halves, because the
-       run that carried a flyer over and was undone note-only would leave this
-       season's poster over last season's sentence. */
+    /* The way back from a shortening nobody liked. Every part of the card, not
+       just the words: the run that carried a flyer over and was undone
+       note-only would leave this season's poster over last season's sentence,
+       and one undone without its button would leave this season's way in under
+       words that no longer explain it. */
     'admin-group-undo': function () {
       var h = adminHelpers();
       var run = HC.admin.lastGroupRun();
       if (!run || !run.previous_note) return;
 
       adminRun('group-undo',
-        HC.admin.saveGroupNote(run.previous_note, run.previous_image)
+        HC.admin.saveGroupNote(run.previous_note, run.previous_image,
+          run.previous_link_url, run.previous_link_label)
           .then(function () { h.clearGroupBox(); }),
         function () { HC.components.toast('Put back the way it was.'); });
     },
@@ -3676,6 +3680,12 @@
        into the object the screen holds and saved when the button is pressed,
        the same rule as everything else on this screen. */
     if (name === 'groupNote') { h.getGroupBox().note = value; return; }
+
+    /* The button under that paragraph, from migration 0054. Written into the
+       same object and saved by the same button, so the four parts of the card
+       move together. */
+    if (name === 'groupLinkUrl') { h.getGroupBox().linkUrl = value; return; }
+    if (name === 'groupLinkLabel') { h.getGroupBox().linkLabel = value; return; }
 
     if (p) {
       if (name === 'pageTitle') { p.title = value; return; }

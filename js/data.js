@@ -90,6 +90,12 @@
        whatever an admin uploaded or the button carried over from the
        announcement it shortened. See migration 0048. */
     groupsNoteImageUrl: '',
+    /* The button under it, and empty for the same reason the flyer is: a way
+       into a group belongs to a season, and a sign-up link frozen into the
+       binary would still be pointing at a closed form a year later. A live row
+       carries whatever the latest announcement was offering. Migration 0054. */
+    groupsNoteLinkUrl: '',
+    groupsNoteLinkLabel: '',
     /* Which face the card wears. False in the seed for the same reason the
        column defaults false: a phone that has never reached Supabase should
        draw the sentence below under "Between seasons", not claim a season is

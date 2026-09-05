@@ -537,6 +537,33 @@
   margin-bottom: var(--hc-space-md);
 }
 
+/* The way into a group, at the foot of that card and centred.
+
+   ALWAYS LAST AND ALWAYS THERE, which is the whole of this rule. A card that
+   is a flyer, a paragraph and an action reads in that order, and the action
+   does not move when the paragraph gets longer or the season changes the words
+   above it: somebody who joined a group last spring should find the button in
+   the same place this autumn.
+
+   Centred rather than stretched, and capped, because a button the full width
+   of a phone reads as a bar rather than as a thing to tap — and on a tablet it
+   would be a hundred characters of tap target for two words. The cap is a
+   comfortable thumb's width and the auto margins do the centring.
+
+   Not .hc-group__join: that name belongs to the joining flow on the Group tab,
+   further down this file. Two unrelated screens sharing a class is how one of
+   them changes on a Tuesday for no reason anybody can find. */
+.hc-group__cta {
+  margin-top: var(--hc-space-lg);
+  text-align: center;
+}
+
+.hc-group__cta .hc-btn {
+  width: 100%;
+  max-width: 320px;
+  margin: 0 auto;
+}
+
 /* --- Serve teams ---------------------------------------------------------
    Each team is a collapsible now rather than a one tap interest button, so
    reading about one costs nothing and commits to nothing. */

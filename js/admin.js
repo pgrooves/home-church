@@ -268,10 +268,21 @@
     invalidate('groupStatus');
   }
 
-  function saveGroupNote(note, imageUrl) {
+  /* All four parts of the card in one call, and every one of them sent every
+     time — including the empty ones.
+
+     THAT IS THE CONTRACT, not an accident of how this is written. Migration
+     0054 gave hc_admin_set_group_note four parameters and no defaults, so
+     "the caller did not mention the button" cannot be mistaken for "take the
+     button off". A save that left one out would be refused rather than
+     quietly clearing it, which is the failure this shape exists to make
+     impossible. */
+  function saveGroupNote(note, imageUrl, linkUrl, linkLabel) {
     return HC.auth.rpc('hc_admin_set_group_note', {
       p_note: note || '',
-      p_image_url: imageUrl || null
+      p_image_url: imageUrl || null,
+      p_link_url: linkUrl || null,
+      p_link_label: linkLabel || null
     }).then(function () {
       invalidate('groupStatus');
       HC.content.refresh();

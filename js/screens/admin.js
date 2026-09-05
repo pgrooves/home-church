@@ -1070,7 +1070,9 @@
       var church = HC.data.church || {};
       groupBox = {
         note: String(church.groupsOffSeasonNote || ''),
-        imageUrl: String(church.groupsNoteImageUrl || '')
+        imageUrl: String(church.groupsNoteImageUrl || ''),
+        linkUrl: String(church.groupsNoteLinkUrl || ''),
+        linkLabel: String(church.groupsNoteLinkLabel || '')
       };
     }
     return groupBox;
@@ -1137,8 +1139,9 @@
 
     html += '<p class="hc-caption hc-admin__intro-note">This is the card people ' +
       'find under Home groups on Connect. The button shortens the church’s most ' +
-      'recent home groups announcement to fit it, keeping every link, date and ' +
-      'phone number in it. Everything below is yours to change afterwards.</p>';
+      'recent home groups announcement to fit it, keeping every date and phone ' +
+      'number in it, and puts the way into a group on a button underneath. ' +
+      'Everything below is yours to change afterwards.</p>';
 
     html += '<div class="hc-admin__fetch">' +
       c.button('Update from the latest announcement', {
@@ -1192,8 +1195,47 @@
          what people expect and would never guess. While it is in season it is
          a temporary paragraph and says so. */
       help: HC.data.church.groupsNoteInSeason
-        ? 'A short paragraph. A web address typed in here becomes a link people can tap. These words last until the season ends.'
-        : 'A short paragraph. A web address typed in here becomes a link people can tap. This is also what comes back at the end of the next season.'
+        ? 'A short paragraph. The way into a group goes in the button below, not in here. These words last until the season ends.'
+        : 'A short paragraph. The way into a group goes in the button below, not in here. This is also what comes back at the end of the next season.'
+    });
+
+    /* The button under the card, and it is two fields because it is two
+       decisions: where somebody lands, and what the button says on the way.
+
+       WHY IT IS NOT LEFT IN THE PARAGRAPH, which is where it used to go. A
+       sign-up address is not a sentence — the one this church posts is 355
+       characters of query string, which no shortened paragraph can hold and
+       nobody can read. It has its own place on the card now, at the foot of it
+       and centred, and it has its own place here. Migration 0054.
+
+       THE LABEL IS OPTIONAL AND THE URL IS NOT. A button with words and
+       nowhere to go is drawn on nothing; a button with somewhere to go and no
+       words says "Join a group", which is what the church would have written
+       anyway. */
+    html += field({
+      name: 'groupLinkUrl',
+      label: 'The way into a group',
+      value: d.linkUrl,
+      type: 'url',
+      inputmode: 'url',
+      placeholder: 'https://',
+      help: 'Paste the link people tap to join or sign up. It becomes a button ' +
+        'across the bottom of the card. Leave it empty and there is no button, ' +
+        'which is right between seasons.'
+    });
+
+    /* Always drawn, never conditional on there being a link yet. Showing it
+       only once the field above has something in it would mean repainting the
+       screen on a keystroke, which takes the caret out of the box somebody is
+       typing in. A label with no link is harmless: nothing is drawn on
+       Connect, and the function refuses to store one. */
+    html += field({
+      name: 'groupLinkLabel',
+      label: 'What that button says',
+      value: d.linkLabel,
+      placeholder: 'Join a group',
+      help: 'A few words, in the church’s own wording if the announcement has ' +
+        'any. Empty says “Join a group”.'
     });
 
     /* The flyer. One picture, not a list: a flyer is one image by definition

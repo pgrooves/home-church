@@ -48,6 +48,24 @@
  *   The previous words are kept in the run log, so a shortening nobody likes
  *   is one tap from being put back.
  *
+ * THE WAY IN IS NOT PROSE, and this is the change that made the feature work at
+ * all on the announcement it was built for. The first version asked the model
+ * to copy every URL into the paragraph, which was fine while the links were
+ * `homechurchnola.com/groups` and impossible the week the church posted a group
+ * finder link 355 characters long: it does not fit in a 300 character box, so
+ * every run either dropped it and was refused, or ran the answer past the token
+ * ceiling and came back as `Unterminated string in JSON at position 395`. A URL
+ * nobody can read is also not a sentence anybody wants to read.
+ *
+ * So the way in travels as a link of its own. The model says WHICH of the
+ * announcement's links is the one you tap to join a group — by number, so it
+ * never has to spell a URL out — and what the button should say. The function
+ * copies the URL itself, character for character, out of the row it already
+ * read. It cannot be mistyped, it costs no tokens, and Connect draws it as a
+ * button across the bottom of the card where a thumb expects it. Every OTHER
+ * link in the announcement is still prose and still has to survive, exactly as
+ * before.
+ *
  * IT NEVER TOUCHES `groups_in_season`. That column draws the group finder out
  * of the `groups` table, which still holds the placeholder rows migration 0008
  * left there. What this writes is `groups_note_in_season`, which is a fact
@@ -112,6 +130,13 @@ const DEFAULT_MODEL = 'gemini-3.5-flash';
 const LOOKBACK = 12;
 const NOTE_MAX = 300;
 
+/* The words on the button under the paragraph. Short because it is a button:
+   "Join a group" is twelve characters and is what nearly every one of these
+   announcements is offering. A model that writes a sentence there gets it
+   trimmed back to the fallback rather than drawn across two lines. */
+const LINK_LABEL_MAX = 28;
+const LINK_LABEL_FALLBACK = 'Join a group';
+
 function json(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
     status,
@@ -146,6 +171,10 @@ interface GroupRow {
   body: string;
   written: string;
   links: string[];
+  /* The card's own button on Home (`link_url`, migration 0033), which is where
+     an announcement puts the one thing it is asking people to do. Kept apart
+     from the list because it is the answer when the model does not give one. */
+  primary: string;
   image: string;
 }
 
@@ -184,7 +213,12 @@ function announcementLinks(row: Record<string, unknown>): string[] {
    model gives.
 
    A LINK is checked exactly. There is one correct spelling of a URL and the
-   model was handed it.
+   model was handed it. The one link this is NOT asked about is the one on the
+   button under the card: that address is copied out of the announcement row by
+   this function rather than retyped by the model, so there is nothing for a
+   check to catch. Every other link is prose and is checked here as it always
+   was — see readAnswer(), which is the only caller that decides which is
+   which.
 
    A PHONE NUMBER is checked on its digits. (833) 801-3857 and 833-801-3857 are
    the same number and the church writes it both ways.
@@ -307,6 +341,14 @@ const SCHEMA = {
     announcement_id: { type: 'string' },
     note: { type: 'string' },
     in_season: { type: 'boolean' },
+    /* A NUMBER AND NOT A URL, which is the whole point. The links are handed
+       to the model numbered; it hands one number back and this function copies
+       the address out of the row it already has. A model asked to spell a 380
+       character group finder URL either gets a character wrong or runs out of
+       output tokens halfway through the JSON, and both of those have happened
+       to this church. Zero means none of them is a way in. */
+    link_index: { type: 'integer' },
+    link_label: { type: 'string' },
   },
   required: ['found'],
 };
@@ -329,20 +371,30 @@ function prompt(rows: GroupRow[], today: string, retry: string[]): string {
     'plain, the way one person tells another where something stands. Do not open with',
     '"Attention" or "Exciting news".',
     '',
-    'WHAT YOU MAY NOT DROP, and this is the part that matters most. Every link, every',
-    'date, every time and every phone number in that announcement has to appear in',
-    'your paragraph. Copy each one exactly as it is written: a URL character for',
-    'character, a phone number with its own punctuation, a date the way the church',
-    'wrote it. Shorten the words around them, never them. If keeping all of them',
-    `takes you past ${NOTE_MAX} characters, drop adjectives and whole sentences of`,
-    'encouragement until it fits — never a detail somebody needs in order to turn up.',
+    'WHAT YOU MAY NOT DROP, and this is the part that matters most. Every date, every',
+    'time and every phone number in that announcement has to appear in your paragraph.',
+    'Copy each one exactly as it is written: a phone number with its own punctuation, a',
+    'date the way the church wrote it. Shorten the words around them, never them. If',
+    `keeping all of them takes you past ${NOTE_MAX} characters, drop adjectives and`,
+    'whole sentences of encouragement until it fits — never a detail somebody needs in',
+    'order to turn up.',
     '',
-    'Invent nothing. No date that is not there, no link that is not there, and nothing',
-    'about groups being "open to everyone" or "filling fast" unless the announcement',
-    'says so. If it says "this Sunday", write "this Sunday" — do not work out which',
-    'Sunday it was.',
+    'Invent nothing. No date that is not there, and nothing about groups being "open to',
+    'everyone" or "filling fast" unless the announcement says so. If it says "this',
+    'Sunday", write "this Sunday" — do not work out which Sunday it was.',
     '',
-    'THREE: set in_season. True if that announcement is telling people groups are',
+    'THREE: the way in. Each announcement\'s links are numbered below. Set link_index to',
+    'the number of the ONE link a person taps to join or sign up for a home group, and',
+    'set link_label to what the button should say — a few words, at most',
+    `${LINK_LABEL_MAX} characters, in the church's own words if the announcement gives`,
+    `them ("Join a group", "Sign up", "Find your group"). The app draws it as a button`,
+    'across the bottom of the card, so DO NOT write that address into your paragraph as',
+    'well: no URL of any kind belongs in the words. Set link_index to 0 if none of the',
+    'links is a way into a group — a link to a flyer, to the church\'s home page, to a',
+    'different event. Any link you did NOT choose still has to appear in the paragraph',
+    'exactly as it is written, because nothing else will carry it.',
+    '',
+    'FOUR: set in_season. True if that announcement is telling people groups are',
     'running or about to be — opening, launching, taking sign-ups, still taking',
     'sign-ups, meeting this week. False if it is telling them a season has finished or',
     'is paused — wrapping up, taking a break, back in the spring, no groups over the',
@@ -363,9 +415,20 @@ function prompt(rows: GroupRow[], today: string, retry: string[]): string {
       `posted: ${r.written}`,
       `title: ${r.title}`,
       `text: ${r.body.slice(0, 1500)}`,
-      r.links.length ? `links: ${r.links.join(' , ')}` : 'links: none',
+      r.links.length
+        ? 'links:\n' + r.links.map((u, i) => `  [${i + 1}] ${u}`).join('\n')
+        : 'links: none',
     ].join('\n')),
   ].join('\n');
+}
+
+interface Answer {
+  found?: boolean;
+  announcement_id?: string;
+  note?: string;
+  in_season?: boolean;
+  link_index?: number;
+  link_label?: string;
 }
 
 async function ask(
@@ -374,7 +437,7 @@ async function ask(
   rows: GroupRow[],
   today: string,
   retry: string[],
-): Promise<{ found?: boolean; announcement_id?: string; note?: string; in_season?: boolean }> {
+): Promise<Answer> {
   let res: Response;
   try {
     res = await fetch(
@@ -390,7 +453,7 @@ async function ask(
                answer: this asks for one short paragraph and gets back a few
                hundred tokens of JSON after a few thousand of thought. A model
                that hits the ceiling stops mid-JSON and the parse below fails. */
-            maxOutputTokens: 4096,
+            maxOutputTokens: 8192,
             responseMimeType: 'application/json',
             responseSchema: SCHEMA,
           },
@@ -422,13 +485,204 @@ async function ask(
      is also correct for an answer split across parts. */
   const parts = payload?.candidates?.[0]?.content?.parts ?? [];
   const raw = parts.map((p: { text?: string }) => p?.text ?? '').join('').trim();
+  const finish = String(payload?.candidates?.[0]?.finishReason ?? '');
 
   if (!raw) {
-    const reason = payload?.candidates?.[0]?.finishReason ?? 'no reason given';
-    throw new Error(`Gemini returned nothing to parse (${reason}).`);
+    throw new Error(`Gemini returned nothing to parse (${finish || 'no reason given'}).`);
   }
 
-  return JSON.parse(raw);
+  /* An answer that stopped in the middle of a word, said in a sentence a
+     person can act on.
+
+     This is worth its own branch because of what it used to say. The parse
+     threw whatever JSON.parse throws, so the line under the button on the
+     Admin screen read "Unterminated string in JSON at position 395 (line 5
+     column 299)" — which is true, is about a file nobody has, and tells an
+     admin nothing about what to do next. The cause is always the same: the
+     model spent its output budget thinking and ran out mid-answer. Trying
+     again is genuinely the fix, and it is now what the sentence says. */
+  if (finish === 'MAX_TOKENS') {
+    throw new TransientError(
+      'Gemini ran out of room before it finished its answer. Nothing was changed, try again in a minute.');
+  }
+
+  try {
+    return JSON.parse(raw) as Answer;
+  } catch {
+    throw new TransientError(
+      'Gemini\'s answer came back unfinished and could not be read. Nothing was changed, try again in a minute.');
+  }
+}
+
+/* A busy afternoon on the free tier, waited out rather than reported.
+
+   WHY THIS IS HERE NOW. "Gemini is busy (503). Nothing was changed, try again
+   in a minute" is a true and useless thing to tell somebody standing at a
+   button: they press it again, and the fifteen second cooldown in
+   hc_admin_refresh_group_status tells them off for it. The wait belongs on
+   this side of the button, where it costs nobody anything.
+
+   TWO EXTRA TRIES AND NO MORE, three and a half seconds apart. Long enough to
+   step over the congestion that clears in a moment, short enough to stay well
+   inside the sixty second pg_net timeout alongside a model call that takes
+   twenty. A third failure is Google having an afternoon, and the honest answer
+   then is the sentence TransientError already carries. */
+async function askPatiently(
+  apiKey: string,
+  model: string,
+  rows: GroupRow[],
+  today: string,
+  retry: string[],
+): Promise<Answer> {
+  const waits = [2000, 3500];
+  for (let attempt = 0; ; attempt++) {
+    try {
+      return await ask(apiKey, model, rows, today, retry);
+    } catch (err) {
+      if (!(err instanceof TransientError) || attempt >= waits.length) throw err;
+      console.log(`group-status: ${(err as Error).message} Waiting ${waits[attempt]}ms.`);
+      await new Promise((resolve) => setTimeout(resolve, waits[attempt]));
+    }
+  }
+}
+
+/* ------------------------------------------------------------------------
+   Reading the answer back
+
+   One place, called twice: once for the first answer and once for the retry.
+   Everything the run has to decide from what the model said is decided here,
+   so the two passes cannot come to different conclusions about the same
+   words.
+   --------------------------------------------------------------------- */
+
+interface Shortened {
+  row: GroupRow;
+  note: string;
+  linkUrl: string;
+  linkLabel: string;
+  inSeason: boolean;
+  lost: string[];
+}
+
+/* The button's words, kept to the size of a button. Anything longer than a
+   short phrase is a model writing a sentence where a label goes, and the
+   fallback reads better than a label wrapped onto three lines. */
+function readLabel(raw: unknown): string {
+  const label = String(raw ?? '').replace(/\s+/g, ' ').replace(/["“”]/g, '').trim();
+  if (!label || label.length > LINK_LABEL_MAX) return LINK_LABEL_FALLBACK;
+  return label;
+}
+
+/* The address out of the paragraph, once it is on the button underneath.
+
+   The prompt says not to write it in the words, and mostly it is obeyed. When
+   it is not, the same link twice on one card — once as 355 unreadable
+   characters in the middle of a sentence, once as the button — is worse than
+   either alone.
+
+   A WHOLE SENTENCE, OR NOTHING. The first version of this cut the URL out and
+   repaired the punctuation it left behind, and the repairs are where it went
+   wrong: "Sign up at https://… today." became "Sign up at today." Prose that a
+   machine has stitched back together reads worse than prose it has left alone,
+   and this is on the Connect tab under the church's name.
+
+   So the sentence carrying the link goes, whole, and the rest is untouched.
+   That works because a sentence with a sign-up link in it IS the call to
+   action — "Sign up at <link> today" — and the button underneath is now
+   saying the same thing better. The caller checks what is left still carries
+   every date, time and number the announcement had before it accepts this;
+   see readAnswer(). */
+function withoutLinkSentence(note: string, url: string): string {
+  if (!url || !note.includes(url)) return note;
+
+  /* Stood in for before the sentences are counted, because a URL is full of
+     full stops. Splitting on punctuation with the address still in it cuts
+     `groupvitals.com/groupFinder` into three "sentences", none of which
+     contains the whole link, so nothing matches and nothing is removed — which
+     is exactly the silent no-op this function is here to avoid. */
+  const MARK = '\u0001';
+  const marked = note.split(url).join(MARK);
+  const sentences = marked.match(/[^.!?]+[.!?]*\s*/g) ?? [marked];
+
+  return sentences.filter((s) => s.indexOf(MARK) === -1).join('')
+    .replace(/\s{2,}/g, ' ').trim();
+}
+
+/* The fallback, for the one case the sentence cut cannot have: the link is in
+   the only sentence there is, or in the one carrying the date. Taking the
+   address out and closing the gap is not good prose — it is how "Sign up at
+   today." happens — but a paragraph with a missing preposition in it is still
+   a smaller mess than 355 characters of query string in the middle of a card,
+   and this is a fallback behind a fallback behind an instruction the model has
+   already been given twice. */
+function withoutLinkWord(note: string, url: string): string {
+  if (!url || !note.includes(url)) return note;
+  return note.split(url).join(' ')
+    .replace(/\(\s*\)/g, '')
+    .replace(/\s+([.,;:!?])/g, '$1')
+    /* The one repair worth making, because it is the one shape this always
+       leaves behind: the preposition that was pointing at the address. "Sign
+       up at." and "open 9:00am at, text Season 3" both lose a word here and
+       read as sentences again. Nothing else is touched — a machine rewriting
+       prose it does not understand is how the first version of this went
+       wrong. */
+    .replace(/\s\b(?:at|to|via|here)([.,;:!?])/gi, '$1')
+    .replace(/\s{2,}/g, ' ')
+    .replace(/\s+\b(?:at|to|via|here)$/i, '')
+    .trim();
+}
+
+function readAnswer(answer: Answer, rows: GroupRow[]): Shortened | null {
+  const row = rows.find((r) => r.id === String(answer.announcement_id ?? '')) ?? null;
+  const said = String(answer.note ?? '').replace(/\s+/g, ' ').trim();
+  if (!row || !said) return null;
+
+  /* Zero is "none of these is a way in" and is respected: an announcement can
+     be about home groups and carry nothing but a link to the flyer. A number
+     outside the list, or no number at all, falls back to the announcement's
+     own button — which is where an announcement puts the thing it is asking
+     people to do, and is right far more often than nothing is. */
+  const index = Number(answer.link_index);
+  const linkUrl = Number.isInteger(index) && index >= 1 && index <= row.links.length
+    ? row.links[index - 1]
+    : (index === 0 ? '' : row.primary);
+
+  /* Every link EXCEPT the one on the button still has to be in the words,
+     which is the rule 0048 wrote and this only narrows. The button is a
+     stronger promise than prose, not a weaker one: the address is copied out
+     of the row rather than retyped by a model, so it cannot come out wrong. */
+  const source = row.title + '\n' + row.body;
+  const others = row.links.filter((u) => u !== linkUrl);
+
+  /* Taking the address out of the words, and checking the words afterwards
+     rather than trusting the cut. Losing a whole sentence is only allowed to
+     lose a sentence: if the one carrying the link was also carrying the date
+     groups start, the cut is refused and the blunter one is taken instead. */
+  let note = said;
+  if (linkUrl && note.indexOf(linkUrl) > -1) {
+    const cut = withoutLinkSentence(note, linkUrl);
+    note = (cut && !whatWasLost(source, others, cut).length)
+      ? cut
+      : withoutLinkWord(note, linkUrl);
+  }
+
+  return {
+    row,
+    note,
+    linkUrl,
+    linkLabel: linkUrl ? readLabel(answer.link_label) : '',
+    /* Which face the card should be wearing. An answer that left the field out
+       is read as in season rather than as a season that has ended, because it
+       got here by finding a current announcement about home groups and the
+       ordinary reason a church posts one is that groups are happening. The
+       costly mistake is the other way: "Between seasons" over a paragraph
+       explaining how to join.
+
+       Read here rather than off the first answer, so a retry that changed its
+       mind about the season is the one that counts. */
+    inSeason: answer.in_season !== false,
+    lost: whatWasLost(source, others, note),
+  };
 }
 
 /* ------------------------------------------------------------------------
@@ -576,6 +830,7 @@ async function run(
     body: String(r.body ?? ''),
     written: String(r.created_at ?? '').slice(0, 10),
     links: announcementLinks(r as Record<string, unknown>),
+    primary: String(r.link_url ?? '').trim(),
     image: String(r.image_url ?? '').trim(),
   }));
 
@@ -591,9 +846,7 @@ async function run(
      season. A second failure is reported rather than retried again: at that
      point the model is not going to keep the link, and the honest outcome is
      the card keeping the words it already had. */
-  let answer = await ask(apiKey, model, rows, today, []);
-  let picked = rows.find((r) => r.id === String(answer.announcement_id ?? '')) ?? null;
-  let note = String(answer.note ?? '').replace(/\s+/g, ' ').trim();
+  const answer = await askPatiently(apiKey, model, rows, today, []);
 
   // Nothing about home groups, which is the ordinary answer for most of the
   // year and is a success.
@@ -605,12 +858,14 @@ async function run(
     };
   }
 
+  let read = readAnswer(answer, rows);
+
   /* Said it found one and then did not name it, or named one we did not send.
      Rare, and worth its own sentence rather than being folded into the line
      above: "nothing was posted about home groups" would be a lie, and whoever
      read it would go looking for an announcement that is in fact sitting
      there. */
-  if (!picked || !note) {
+  if (!read) {
     return {
       ok: false,
       changed: false,
@@ -618,22 +873,17 @@ async function run(
     };
   }
 
-  let lost = whatWasLost(picked.title + '\n' + picked.body, picked.links, note);
-
-  if (lost.length) {
-    answer = await ask(apiKey, model, rows, today, lost);
-    const second = rows.find((r) => r.id === String(answer.announcement_id ?? '')) ?? null;
-    const secondNote = String(answer.note ?? '').replace(/\s+/g, ' ').trim();
-    if (answer.found === true && second && secondNote) {
-      picked = second;
-      note = secondNote;
-      lost = whatWasLost(second.title + '\n' + second.body, second.links, note);
-    }
+  if (read.lost.length) {
+    const again = await askPatiently(apiKey, model, rows, today, read.lost);
+    const second = again.found === true ? readAnswer(again, rows) : null;
+    if (second) read = second;
   }
 
   // Const from here down, so nothing below has to wonder whether the retry
   // moved it.
-  const chosen = picked;
+  const chosen = read.row;
+  const lost = read.lost;
+  let note = read.note;
 
   if (lost.length) {
     // Not written. Named, so an admin knows what to type in by hand rather
@@ -656,7 +906,11 @@ async function run(
     const stop = Math.max(cut.lastIndexOf('. '), cut.lastIndexOf('! '), cut.lastIndexOf('? '));
     const trimmed = stop > 80 ? cut.slice(0, stop + 1) : '';
     const kept = trimmed || note;
-    const stillLost = whatWasLost(chosen.title + '\n' + chosen.body, chosen.links, kept);
+    const stillLost = whatWasLost(
+      chosen.title + '\n' + chosen.body,
+      chosen.links.filter((u) => u !== read.linkUrl),
+      kept,
+    );
     if (stillLost.length) {
       return {
         ok: false,
@@ -670,28 +924,28 @@ async function run(
 
   const { data: profile, error: readError } = await admin
     .from('church_profile')
-    .select('id, groups_off_season_note, groups_note_image_url, groups_note_in_season')
+    .select('id, groups_off_season_note, groups_note_image_url, groups_note_in_season, ' +
+      'groups_note_link_url, groups_note_link_label')
     .eq('published', true)
     .limit(1);
 
   if (readError) throw new Error(`Could not read the church profile: ${readError.message}`);
 
-  /* Both halves of what the card says now, kept so undoing puts it back whole.
+  /* Every part of what the card says now, kept so undoing puts it back whole.
      A run that carried a flyer over and was then undone note-only would leave
-     this season's poster above last season's sentence. */
+     this season's poster above last season's sentence, and one undone without
+     its button would leave last season's way in under this season's words. */
   const previous = profile?.[0]?.groups_off_season_note ?? null;
   const previousImage = profile?.[0]?.groups_note_image_url ?? null;
+  const previousLink = profile?.[0]?.groups_note_link_url ?? null;
+  const previousLinkLabel = profile?.[0]?.groups_note_link_label ?? null;
 
-  /* Which face the card should be wearing. An answer that left the field out
-     is read as in season rather than as a season that has ended, because it
-     got here by finding a current announcement about home groups and the
-     ordinary reason a church posts one is that groups are happening. The
-     costly mistake is the other way: "Between seasons" over a paragraph
-     explaining how to join. */
-  const inSeason = answer.in_season !== false;
+  const inSeason = read.inSeason;
   const seasonMoved = (profile?.[0]?.groups_note_in_season === true) !== inSeason;
+  const linkMoved = String(previousLink ?? '') !== read.linkUrl ||
+    String(previousLinkLabel ?? '') !== read.linkLabel;
 
-  if (String(previous ?? '').trim() === note && !seasonMoved) {
+  if (String(previous ?? '').trim() === note && !seasonMoved && !linkMoved) {
     return {
       ok: true,
       changed: false,
@@ -699,6 +953,8 @@ async function run(
       announcement_id: chosen.id,
       previous_note: previous,
       previous_image: previousImage,
+      previous_link_url: previousLink,
+      previous_link_label: previousLinkLabel,
       note: 'The card already says this, so nothing was changed.',
     };
   }
@@ -715,6 +971,13 @@ async function run(
   const update: Record<string, unknown> = {
     groups_off_season_note: note,
     groups_note_in_season: inSeason,
+    /* The way in, in the same write as the words that explain it. Written every
+       run including when it is empty, because an announcement that no longer
+       offers a way in has to take last season's button down with it — a live
+       "Join a group" under a paragraph saying the season has finished is the
+       same class of lie as "Between seasons" over one saying it has not. */
+    groups_note_link_url: read.linkUrl || null,
+    groups_note_link_label: read.linkUrl ? read.linkLabel : null,
   };
 
   /* The flyer, when the announcement has one. Carried over rather than
@@ -731,10 +994,15 @@ async function run(
     announcement_id: chosen.id,
     previous_note: previous,
     previous_image: previousImage,
+    previous_link_url: previousLink,
+    previous_link_label: previousLinkLabel,
     new_note: note,
-    note: inSeason
+    new_link_url: read.linkUrl || null,
+    new_link_label: read.linkUrl ? read.linkLabel : null,
+    note: (inSeason
       ? `Shortened from ${chosen.title}, and the card now says groups are open.`
-      : `Shortened from ${chosen.title}, which says this season has finished.`,
+      : `Shortened from ${chosen.title}, which says this season has finished.`) +
+      (read.linkUrl ? ` The “${read.linkLabel}” button goes under it.` : ''),
   };
 
   if (dryRun) return { ...result, changed: false, dry_run: true };
@@ -793,7 +1061,11 @@ Deno.serve(async (req: Request) => {
         announcement_id: row.announcement_id ?? null,
         previous_note: row.previous_note ?? null,
         previous_image: row.previous_image ?? null,
+        previous_link_url: row.previous_link_url ?? null,
+        previous_link_label: row.previous_link_label ?? null,
         new_note: row.new_note ?? null,
+        new_link_url: row.new_link_url ?? null,
+        new_link_label: row.new_link_label ?? null,
         note: row.note ?? null,
       });
       if (error) console.error('group-status: could not log the run:', error.message);

@@ -98,10 +98,20 @@ function bootConnect() {
   vm.runInContext(read('js', 'components.js'), sandbox);
   vm.runInContext(read('js', 'screens', 'connect.js'), sandbox);
 
-  return sandbox.window.HC.screens.connectHelpers.linkify;
+  return sandbox.window.HC;
 }
 
-const linkify = bootConnect();
+const connectHC = bootConnect();
+const linkify = connectHC.screens.connectHelpers.linkify;
+const joinButton = connectHC.screens.connectHelpers.joinButton;
+
+/* The button is drawn from the church row rather than from an argument, the
+   same way the paragraph beside it is, so setting it means setting that. */
+function withLink(url, label) {
+  connectHC.data.church.groupsNoteLinkUrl = url;
+  connectHC.data.church.groupsNoteLinkLabel = label;
+  return joinButton();
+}
 
 console.log('\n--- what the box does with a plain sentence ---');
 
@@ -155,6 +165,52 @@ ok('two links in one note both survive',
 ok('a scheme that is not http stays as text',
   linkify('javascript:alert(1)').indexOf('<a '), -1);
 
+console.log('\n--- the way into a group, at the foot of the card ---');
+
+/* The reason this is a button and not a sentence, asserted with the real
+   thing: the link the church posted in September is 355 characters of query
+   string. It could never have survived into a 300 character paragraph, and
+   two runs of the Update button died trying — once refused for dropping it,
+   once cut off mid-JSON spelling it out. Nothing here has to hold it in
+   prose, so its length is not a fact about anything any more. */
+const REAL_LINK = 'https://homechurchnola.groupvitals.com/groupFinder?childcare-check=' +
+  '&group-location-check=&group-type%5B%5D=all&groupmodel-check=&grouptopic-check=' +
+  '&grouptype-check=&lifestage-check=&meeting-day%5B%5D=all&meeting-location%5B%5D=all' +
+  '&meeting-time=all&meetingday-check=&meetingtime-check=&timezone-check=' +
+  '&tld=.com%2FgroupFinder%3Fcampus-check%3D&view_type=list';
+
+ok('a link the church posted becomes a button that opens it',
+  withLink(REAL_LINK, 'JOIN A GROUP').indexOf('data-url="' + REAL_LINK.replace(/&/g, '&amp;') + '"') > -1,
+  true);
+
+ok('and it says what the church called it',
+  withLink(REAL_LINK, 'JOIN A GROUP').indexOf('<span>JOIN A GROUP</span>') > -1, true);
+
+ok('with no words of its own it still says something',
+  withLink('https://example.com/groups', '').indexOf('<span>Join a group</span>') > -1, true);
+
+/* The whole of the request this was built for: wherever it appears, it appears
+   at the bottom, in the middle. The class is where both of those live — see
+   .hc-group__cta in css/screens.css — and the paragraph is not allowed to
+   carry it instead. */
+ok('it is wrapped in the class that puts it at the bottom, centred',
+  withLink('https://example.com/groups', 'Join').indexOf('class="hc-group__cta"') > -1, true);
+
+ok('no link is no button at all, which is the ordinary state between seasons',
+  withLink('', ''), '');
+
+/* The same rule linkify() follows one function up, enforced twice on purpose:
+   this hands its URL to the phone's browser, and a scheme that is not a web
+   address has no business being handed to one. Migration 0054 refuses to store
+   one; this refuses to draw one that got in some other way. */
+ok('and a scheme that is not the web draws nothing',
+  withLink('javascript:alert(1)', 'Join'), '');
+
+ok('nor does a bare word somebody typed into the field',
+  withLink('homechurchnola.com/groups', 'Join'), '');
+
+withLink('', '');
+
 console.log('\n--- the flyer column ---');
 
 bootContent([{
@@ -163,7 +219,9 @@ bootContent([{
   published: true,
   groups_in_season: false,
   groups_off_season_note: 'Home groups open Sunday, September 6 at 9:00am.',
-  groups_note_image_url: 'https://ibqkumxfltfiuqevviji.supabase.co/storage/v1/object/public/announcements/2026-09/flyer.jpg'
+  groups_note_image_url: 'https://ibqkumxfltfiuqevviji.supabase.co/storage/v1/object/public/announcements/2026-09/flyer.jpg',
+  groups_note_link_url: 'https://homechurchnola.groupvitals.com/groupFinder?view_type=list',
+  groups_note_link_label: 'JOIN A GROUP'
 }]).then((HC) => {
   ok('the note comes through the content sync',
     HC.data.church.groupsOffSeasonNote,
@@ -172,6 +230,17 @@ bootContent([{
   ok('and so does the flyer beside it',
     HC.data.church.groupsNoteImageUrl,
     'https://ibqkumxfltfiuqevviji.supabase.co/storage/v1/object/public/announcements/2026-09/flyer.jpg');
+
+  /* The columns migration 0054 added, through the same mapper. A mapper that
+     silently dropped these would leave the Update button apparently working
+     and the way into a group never appearing, which is a bug nobody would
+     think to look for in content.js. */
+  ok('and the way into a group, which is its own column now',
+    HC.data.church.groupsNoteLinkUrl,
+    'https://homechurchnola.groupvitals.com/groupFinder?view_type=list');
+
+  ok('with the words the church put on it',
+    HC.data.church.groupsNoteLinkLabel, 'JOIN A GROUP');
 
   ok('and the card knows it is in a season when it is told so',
     HC.data.church.groupsNoteInSeason, false);
@@ -188,6 +257,9 @@ bootContent([{
   // with an answer.
   ok('a profile with no flyer reads as no flyer',
     HC.data.church.groupsNoteImageUrl, '');
+
+  ok('and a profile with no way in reads as no button',
+    HC.data.church.groupsNoteLinkUrl, '');
 
   console.log('\n--- which season the card says it is in ---');
 

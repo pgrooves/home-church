@@ -29,6 +29,15 @@
 --
 -- The pg_net call is stubbed by harness.sql, which is the right seam:
 -- everything this migration adds happens before a request leaves the database.
+--
+-- WHY hc_admin_set_group_note IS CALLED WITH FOUR ARGUMENTS BELOW when this
+-- migration gave it two. 0054 added the button under the card and replaced the
+-- function with one that writes all four parts of it, dropping the old
+-- signature rather than defaulting the new parameters — see its section 3 for
+-- why a default there would silently delete a link. These tests run against
+-- the schema every migration has finished with, so they call what is actually
+-- there. Everything they assert is still this migration's: who may write the
+-- card, that a picture has to be ours, and that clearing it stores nothing.
 -- ===========================================================================
 
 \set ON_ERROR_STOP on
@@ -105,12 +114,12 @@ select t_check('and the button takes no arguments, so there is nothing to point 
 
 select t_check('anon cannot call either of them',
   (select bool_or(has_function_privilege('anon', f, 'EXECUTE'))
-     from unnest(array['public.hc_admin_set_group_note(text, text)',
+     from unnest(array['public.hc_admin_set_group_note(text, text, text, text)',
                        'public.hc_admin_refresh_group_status()']) as t(f)), false);
 
 select t_check('authenticated can, and hc_is_admin narrows that inside',
   (select bool_and(has_function_privilege('authenticated', f, 'EXECUTE'))
-     from unnest(array['public.hc_admin_set_group_note(text, text)',
+     from unnest(array['public.hc_admin_set_group_note(text, text, text, text)',
                        'public.hc_admin_refresh_group_status()']) as t(f)), true);
 
 -- ------------------------------------------------------------- as a member ---
@@ -119,7 +128,7 @@ do $$
 begin
   set local role authenticated;
   set local request.jwt.claims = '{"sub":"cc000000-0000-0000-0000-000000000002"}';
-  perform public.hc_admin_set_group_note('Groups are open, come along.', null);
+  perform public.hc_admin_set_group_note('Groups are open, come along.', null, null, null);
   raise warning 'FAIL  a member cannot write the home groups box';
 exception when insufficient_privilege then
   raise notice 'PASS  a member cannot write the home groups box';
@@ -153,7 +162,8 @@ begin
   set local request.jwt.claims = '{"sub":"cc000000-0000-0000-0000-000000000001"}';
   perform public.hc_admin_set_group_note(
     'Home groups open Sunday, September 6 at 9:00am. Text Season 3 to (833) 801-3857.',
-    'https://ibqkumxfltfiuqevviji.supabase.co/storage/v1/object/public/announcements/2026-09/flyer.jpg');
+    'https://ibqkumxfltfiuqevviji.supabase.co/storage/v1/object/public/announcements/2026-09/flyer.jpg',
+    null, null);
 end
 $$;
 
@@ -174,7 +184,8 @@ begin
   set local role authenticated;
   set local request.jwt.claims = '{"sub":"cc000000-0000-0000-0000-000000000001"}';
   perform public.hc_admin_set_group_note('Groups are open.',
-                                         'https://example.com/tracker.gif');
+                                         'https://example.com/tracker.gif',
+                                         null, null);
   raise warning 'FAIL  a picture from somewhere else is refused';
 exception
   when insufficient_privilege then
@@ -197,7 +208,7 @@ do $$
 begin
   set local role authenticated;
   set local request.jwt.claims = '{"sub":"cc000000-0000-0000-0000-000000000001"}';
-  perform public.hc_admin_set_group_note('  ', '');
+  perform public.hc_admin_set_group_note('  ', '', '', '');
 end
 $$;
 

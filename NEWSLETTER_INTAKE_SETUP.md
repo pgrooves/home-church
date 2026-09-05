@@ -436,13 +436,35 @@ review. What it is not is unrecoverable: whatever the box said before is kept
 in `group_status_runs`, and **Put back what it said before** appears under the
 button whenever there is something to go back to.
 
-**Every link, date, time and phone number has to survive.** The shortened
-version is checked against the announcement it came from before anything is
-written. If it dropped the sign-up link or the date, the model is asked once
-more, naming what it lost; if the second answer drops something too, nothing
-is written at all and the line under the button says which detail went
-missing. A paragraph that reads well and has lost the number you text to get
-into a group is worse than the between-seasons sentence it replaced.
+**Every date, time and phone number has to survive.** The shortened version is
+checked against the announcement it came from before anything is written. If it
+dropped the date, the model is asked once more, naming what it lost; if the
+second answer drops something too, nothing is written at all and the line under
+the button says which detail went missing. A paragraph that reads well and has
+lost the number you text to get into a group is worse than the between-seasons
+sentence it replaced.
+
+**The way into a group is a button, not a sentence.** The model does not copy
+the sign-up link into the paragraph — it says *which* of the announcement's
+links is the one you tap to join, by number, and the function copies the
+address itself out of the announcement. Connect draws it across the bottom of
+the card, centred, under the words and under the flyer, saying whatever the
+announcement's own button said ("JOIN A GROUP") or just "Join a group".
+
+That is `0054`, and it is there because of what happened without it. The link
+on the September sign-up announcement is a Group Vitals group finder URL 355
+characters long. The old version needed it inside a 300 character paragraph, so
+every tap of the button either lost it and was refused, or spent the model's
+whole output budget spelling it out and came back as `Unterminated string in
+JSON at position 395` — which is a real thing an admin read on this screen,
+twice. A link the function copies for itself cannot be truncated and cannot be
+mistyped. Anything the model does write a link into is still checked as before.
+
+**"Gemini is busy (503)" waits rather than giving up.** A busy free tier is
+retried twice, a few seconds apart, before the run gives up — pressing the
+button again is not the fix it sounds like, because there is a fifteen second
+cooldown behind it. An answer that came back cut off says so in words now,
+rather than quoting a JSON parser at somebody.
 
 **It also sets which season the card is in.** The parse answers a second
 question about the announcement it picked — is this saying groups are running,
@@ -458,7 +480,10 @@ placeholder groups `0008` left there, and a parse must never publish those.
 
 **And there is a button back.** While the card is in season, **Put it back to
 between seasons** appears under the update button: the evergreen sentence
-returns, the flyer comes off, and the label goes back. It confirms first, and
+returns, the flyer comes off, the join button comes off, and the label goes
+back. Taking the button down matters as much as the words: a live **Join a
+group** under a paragraph saying groups are back in the spring sends people to
+a form for a season that is over. It confirms first, and
 the confirm quotes the exact words it would put back, because those words are
 not a constant in the app — they are whatever the card last said while it was
 between seasons, *including a wording somebody fixed in place on the Connect
@@ -466,7 +491,8 @@ tab*. A database trigger keeps that copy current, so the sentence that comes
 back at the end of a season is the last one that was actually true.
 
 **Underneath the button is the same box, editable.** The words are in a text
-box and the flyer is beside them, with a file picker. So the shortening is a
+box, the join link and its label are two fields under them, and the flyer is
+beside them with a file picker. So the shortening is a
 starting point: tap, read it, fix the word you disagree with, Save. A flyer
 uploaded here goes into the same bucket the announcement pictures use, and it
 is drawn on Connect at whatever shape it is — a poster, a square, a banner —

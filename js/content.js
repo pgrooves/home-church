@@ -32,7 +32,7 @@
 
   var cfg = HC.config || {};
   var CACHE_KEY = 'content';
-  var CACHE_VERSION = 13;     // bump when a mapping below changes shape
+  var CACHE_VERSION = 14;     // bump when a mapping below changes shape
   var TIMEOUT_MS = 12000;
 
   // The tables we pull, and the HC.data key each one fills. Adding another
@@ -551,6 +551,15 @@
       // answer and Connect draws no frame at all rather than a gap. See
       // migration 0048.
       groupsNoteImageUrl: str(r.groups_note_image_url),
+
+      /* The way into a group, drawn as a button across the bottom of that
+         card. Its own pair of columns rather than a URL left in the paragraph,
+         because the one this church posts is 355 characters of query string
+         and no shortened paragraph can hold it — migration 0054 is the long
+         version. Empty is the ordinary state between seasons and Connect draws
+         no button at all. */
+      groupsNoteLinkUrl: str(r.groups_note_link_url),
+      groupsNoteLinkLabel: str(r.groups_note_link_label),
 
       /* Which face that card is wearing, and read strictly: a missing column
          is between seasons, because "Open now" over the between seasons

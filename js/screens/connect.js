@@ -183,6 +183,37 @@
     return out + c.esc(text.slice(last));
   }
 
+  /* The one thing the card is asking somebody to do, and the only place it is
+     ever drawn: across the bottom of the block, centred.
+
+     WHY IT IS NOT IN THE PARAGRAPH, where 0048 left it. A link people join a
+     group through is not a sentence — it is the action, and every other card
+     in this app puts its action at the foot of the card where a thumb is
+     already resting. It also could not survive being one: the group finder
+     link this church posts is 355 characters of query string, which does not
+     fit in a 300 character note and cost two runs of the button before it was
+     given a column of its own. Migration 0054, and the header of
+     supabase/functions/group-status/index.ts.
+
+     http and https only, which is the same rule linkify() below follows and
+     is enforced in two places on purpose. The button hands its URL to
+     openExternal() through the delegated handler in js/app.js, and a scheme
+     that is not a web address has no business being handed to a browser.
+     Migration 0054 refuses one on the way in; this refuses to draw one that
+     got in some other way. */
+  var WEB_URL = /^https?:\/\//i;
+
+  function joinButton() {
+    var url = HC.data.church.groupsNoteLinkUrl;
+    if (!url || !WEB_URL.test(url)) return '';
+
+    var label = HC.data.church.groupsNoteLinkLabel || 'Join a group';
+
+    return '<div class="hc-group__cta">' +
+      c.button(label, { action: 'open-url', url: url }) +
+    '</div>';
+  }
+
   /* Groups run in seasons, and between them there is nothing to join. A filter
      strip standing over an empty list reads as a broken screen rather than as
      a season, so the whole finder drops and this takes its place. One boolean
@@ -203,7 +234,8 @@
   function offSeason() {
     var note = HC.data.church.groupsOffSeasonNote;
     var flyer = HC.data.church.groupsNoteImageUrl;
-    if (!note && !flyer) return '';
+    var join = joinButton();
+    if (!note && !flyer && !join) return '';
 
     var inner = '';
 
@@ -226,6 +258,11 @@
           value: note, label: 'the home groups note', rows: 4 }
       );
     }
+
+    /* Last, always, whatever else the card is carrying. Under the flyer and
+       under the words, because it is the answer to what they say rather than
+       part of it. */
+    inner += join;
 
     /* The label over the card, which is the other half of what the button
        writes. "Between seasons" standing over a paragraph explaining how to
@@ -816,6 +853,12 @@
        nothing at all, and the note is now written by a model reading email.
        So the escaping is asserted rather than reviewed. */
     linkify: linkify,
+
+    /* Exported for the same test and for the same kind of reason: this is the
+       one control on a public screen that takes somebody off it, and what it
+       refuses to draw — anything that is not an http or https address — is a
+       claim worth asserting rather than reading. */
+    joinButton: joinButton,
 
     setFilter: setFilter,
     repaintGroups: repaintGroups,
