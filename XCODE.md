@@ -415,10 +415,47 @@ even when the version is the same.
 ## The short version, once you have done it once
 
 ```bash
-git pull
-npm install          # only when dependencies changed
-npm run ios:open
+cd /Users/trey_1/home-church
+git merge --abort 2>/dev/null || true
+git fetch origin main && git reset --hard origin/main && npm install && npm run ios:open
+npx cap ls ios
 ```
 
 Then in Xcode: bump **Build**, choose **Any iOS Device**, **Product**,
 **Archive**, **Distribute App**.
+
+**`npm install` runs every time, and this line used to say "only when
+dependencies changed".** That was wrong in the quiet way, and it cost a build.
+`node_modules/` is gitignored, so pulling a commit that adds a plugin gives you
+the `package.json` naming it and not the package itself. Nothing in
+`npm run ios:open` installs dependencies — it is
+`stamp → sync → cap sync ios → cap open ios`, and `cap sync` discovers plugins
+by reading `node_modules`. With the package absent it finds nothing, adds no
+pod, and **the build still succeeds**. The app runs, the feature is simply not
+there, and nothing is logged anywhere. Section 8c describes what that looked
+like from the outside the one time it happened.
+
+Running it unconditionally costs about a second when nothing has changed, and
+you never have to know whether anything did.
+
+**`npx cap ls ios` is the receipt.** It lists every plugin Capacitor actually
+wired into the Xcode project. Read it before you archive: if a feature depends
+on a plugin and the plugin is not in that list, the pod did not install and
+that feature will do nothing on the phone. It is the general form of the check,
+so it stays true as plugins come and go.
+
+**`git reset --hard` throws away uncommitted work without asking.** That is
+the right behaviour here, because this checkout is a place builds are made
+rather than a place code is written — everything is authored elsewhere and
+arrives through `main`. But if you have ever edited a file on this machine and
+forgotten, it goes. `git stash -u` in front of the reset parks it instead, and
+`git stash pop` brings it back:
+
+```bash
+git fetch origin main && git stash -u && git reset --hard origin/main && npm install && npm run ios:open
+```
+
+`git merge --abort` on the second line is only there to clear a half finished
+merge from a previous session. It prints `fatal: There is no merge to abort`
+when there is nothing to clear, which is not a problem; `2>/dev/null || true`
+keeps it quiet so the line below still runs.
