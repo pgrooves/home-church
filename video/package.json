@@ -1,0 +1,20 @@
+{
+  "name": "home-church-video",
+  "version": "1.0.0",
+  "private": true,
+  "description": "The App Store preview for Home Church, rendered from the app itself with Remotion.",
+  "license": "UNLICENSED",
+  "scripts": {
+    "stage": "node prepare.mjs",
+    "studio": "npm run stage && remotion studio src/index.jsx",
+    "render": "npm run stage && remotion render src/index.jsx AppStorePreview out/home-church-app-store.mp4",
+    "render:marketing": "npm run stage && remotion render src/index.jsx Marketing out/home-church-marketing.mp4",
+    "still": "npm run stage && remotion still src/index.jsx AppStorePreview out/still.png"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.521",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "remotion": "4.0.521"
+  }
+}

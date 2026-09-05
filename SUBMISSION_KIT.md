@@ -342,6 +342,29 @@ which is honest and is accepted. If you want the last few percent of fidelity,
 retake them in the iOS simulator following the same order and captions. Do not
 ship a mix of both, the tonal difference shows.
 
+### The app preview
+
+Optional, and worth the two minutes it costs. It sits above the stills on the
+store page and it is the only place a person can see the app move.
+
+```bash
+cd video
+npm install
+npm run render      # video/out/home-church-app-store.mp4
+```
+
+Twenty nine seconds at 1320 x 2868, H.264, silent. Six beats in the same order
+as the table above, minus the guide index, ending on the lockup so there is a
+poster frame worth holding. Upload it on the version page under Previews and
+Screenshots, 6.9 inch iPhone tab, and choose the last frame as the poster.
+
+**It is not a slideshow of the six stills.** Remotion runs the real app inside
+the composition and drives it one frame at a time, so the folding sections, the
+sliding tab tile and the two questions ticking off are the app doing them, off
+the seed in `js/data.js`, with no network. Same argument as the stills: the
+content moves every week and the fix is to re-render. `video/README.md` has the
+rest, including the one thing that is not identical between two renders.
+
 -----
 
 ## 5. App Privacy questionnaire, filled in

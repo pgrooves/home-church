@@ -1,0 +1,9 @@
+# The staged copy of the app. Written by prepare.mjs from the repo above this
+# folder, so it is never the source of anything and committing it would put a
+# second copy of js/ and css/ in the history every time either one moved.
+public/app/
+
+# Rendered video.
+out/
+
+node_modules/
