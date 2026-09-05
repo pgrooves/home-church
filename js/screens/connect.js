@@ -773,14 +773,16 @@
     // the whole section drops instead.
     var serveTeams = HC.data.serveTeams || [];
     if (serveTeams.length) {
-      html += c.sectionHeader('Lend a hand', 'Serve teams', { eyebrowSlot: 'connect.serve-eyebrow' });
+      html += c.sectionHeader('Lend a hand', 'Serve teams',
+        { eyebrowSlot: 'connect.serve-eyebrow', overList: true });
       serveTeams.forEach(function (t) { html += serveTeam(t); });
       html += serveSignup();
     }
 
     var nextSteps = HC.data.nextSteps || [];
     if (nextSteps.length) {
-      html += c.sectionHeader('Start somewhere', 'Next steps', { eyebrowSlot: 'connect.steps-eyebrow' });
+      html += c.sectionHeader('Start somewhere', 'Next steps',
+        { eyebrowSlot: 'connect.steps-eyebrow', overList: true });
       nextSteps.forEach(function (s) { html += nextStep(s); });
     }
 

@@ -643,9 +643,28 @@
      serve teams. The eyebrow above it carries none of that weight and is
      pure voice, which is why the line is drawn between them. See
      js/edit-mode.js. */
+  /* opts.overList is the variant for a header that stands over a stack of
+     c.collapsible() sections, which is what Connect does twice, over the serve
+     teams and over the next steps.
+
+     WHY IT EXISTS. A collapsible draws the same three marks this does, an
+     eyebrow over a heavy sans title over a short taupe rule, because they are
+     the same brand move at two levels. Stacked directly, they stop reading as
+     two levels: "LEND A HAND / Serve teams" and "SERVE TEAM / Home Kids" are
+     the same shape at the same size, so the header reads as the first item in
+     its own list rather than the name of it.
+
+     What the variant changes is the silhouette, never the type. The eyebrow
+     moves off the top of the title and out to the right end of its baseline,
+     and the rule runs the full column instead of 22% of it. Nothing below it
+     does either of those things, so the header is told apart at a glance and
+     from across the room, while the face, the size and the colors stay
+     exactly what they are everywhere else on the screen. */
   function sectionHeader(eyebrow, title, opts) {
     opts = opts || {};
-    var cls = 'hc-section-header' + (opts.flush ? ' hc-section-header--flush' : '');
+    var cls = 'hc-section-header' +
+      (opts.flush ? ' hc-section-header--flush' : '') +
+      (opts.overList ? ' hc-section-header--over-list' : '');
     var tag = opts.tag || 'h2';
     var eyebrowHtml = eyebrow
       ? '<span class="hc-eyebrow hc-section-header__eyebrow">' + esc(eyebrow) + '</span>'
@@ -663,10 +682,21 @@
       if (!desc.rows) desc.rows = 2;
       eyebrowHtml = HC.edit.wrap(eyebrowHtml, desc);
     }
+    /* The eyebrow and the title share a row in the variant so the two column
+       grid that puts one at each end has exactly two children to lay out,
+       whether or not edit mode has wrapped the eyebrow in a tap target of its
+       own. Reading order is untouched: the eyebrow is still first in the
+       markup and still read first, it is only painted at the other end of the
+       line. */
+    var heading = eyebrowHtml +
+      '<' + tag + ' class="hc-section-header__title">' + esc(title) + '</' + tag + '>';
+    if (opts.overList) {
+      heading = '<div class="hc-section-header__row">' + heading + '</div>';
+    }
+
     return '' +
       '<header class="' + cls + '"' + (opts.id ? ' id="' + esc(opts.id) + '"' : '') + '>' +
-        eyebrowHtml +
-        '<' + tag + ' class="hc-section-header__title">' + esc(title) + '</' + tag + '>' +
+        heading +
         '<div class="hc-section-header__rule" aria-hidden="true"></div>' +
       '</header>';
   }
