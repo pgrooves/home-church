@@ -135,7 +135,16 @@
      has no "the day before" left, and a pill that sets a reminder for
      yesterday is worse than a pill that is not there. offerings() drops them
      rather than disabling them, because a greyed pill invites a tap that
-     explains nothing. */
+     explains nothing.
+
+     A REMINDER AFTER THE THING IT REMINDS YOU OF IS NOT A REMINDER, which is
+     the second half of that filter and was missing at first. "That morning" is
+     eight o'clock on the event's own day, and an event at half past six in the
+     morning is earlier than that: the pill sat there offering to tap somebody
+     on the shoulder ninety minutes after the doors opened. Being in the future
+     is not enough. It has to be in the future AND at or before the event, and
+     tests/reminders.test.js only caught it because it happened to run before
+     eight in the morning. */
 
   var PRESETS = [
     { id: 'day-before', label: 'The day before',
@@ -156,7 +165,8 @@
     return PRESETS.map(function (preset) {
       return { id: preset.id, label: preset.label, when: preset.at(start) };
     }).filter(function (option) {
-      return option.when.getTime() > floor;
+      var when = option.when.getTime();
+      return when > floor && when <= start.getTime();
     });
   }
 

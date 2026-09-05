@@ -222,6 +222,27 @@ ok('and the first of them is what the sheet opens on',
 const imminentOffers = r.offerings(imminent).map(o => o.id);
 ok('an event about to start is offered none of them, not a past one',
   imminentOffers, []);
+
+/* AND NOT A LATE ONE EITHER, which is the half that was missing and that this
+   file found by accident: it ran at three in the morning, and "That morning"
+   is eight o'clock on the event's own day. For an event about to start before
+   eight, that pill was still in the future, so it passed the filter and sat
+   there offering to tap somebody on the shoulder hours after the doors opened.
+
+   Written against a fixed early hour rather than against the clock, so it
+   fails at every time of day rather than only before breakfast. A 6:30 AM
+   event is a real thing on a church calendar — a sunrise service, a men's
+   breakfast — so this is not a contrived case. */
+const dawn = { id: 'dawn', title: 'Sunrise service', date: localDay(9),
+               time: '6:30 AM', location: 'The levee' };
+const dawnOffers = r.offerings(dawn);
+ok('no preset ever lands after the event it is about',
+  dawnOffers.every(o => o.when.getTime() <=
+    HC.screens.calHelpers.eventStart(dawn).getTime()), true);
+ok('so a dawn event is not offered “that morning” at eight',
+  dawnOffers.map(o => o.id).indexOf('morning-of'), -1);
+ok('but the day before and an hour before still stand',
+  dawnOffers.map(o => o.id), ['day-before', 'hour-before']);
 ok('every offer that is made is still to come',
   r.offerings(tomorrow).every(o => o.when.getTime() > Date.now()), true);
 
