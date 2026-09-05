@@ -4347,6 +4347,15 @@
       if (mq.addEventListener) mq.addEventListener('change', onChange);
       else if (mq.addListener) mq.addListener(onChange);
     }
+
+    /* The iOS text size is changed in Settings, which means the app was in
+       the background while it happened and this is the first moment it can
+       be noticed. Nothing is redrawn: the answer lands in --hc-text-scale
+       and every font on the screen is a calc() away from it. */
+    document.addEventListener('visibilitychange', function () {
+      if (document.visibilityState !== 'visible') return;
+      HC.store.refreshSystemTextScale();
+    });
   }
 
   /* ------------------------------------------------------------------- boot */

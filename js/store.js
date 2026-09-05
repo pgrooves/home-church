@@ -523,7 +523,84 @@
     emit('reminders', state.reminders);
   }
 
-  /* ---------------------------------------------------------------- theme */
+  /* ------------------------------------------------ theme and text size */
+
+  /* The iOS text size, read rather than obeyed.
+
+     css/base.css used to let -webkit-text-size-adjust go to auto so that
+     WKWebView would scale the app with the phone's accessibility text size.
+     It did that, and it also switched on WebKit's text autosizing, which
+     boosts type by the ratio of the viewport width to the layout width.
+     Landscape made every word in the app bigger and portrait did not give it
+     back, because WebKit does not recompute the boost on the way down. The
+     property is pinned now, and the part that was actually wanted is done
+     here.
+
+     A hidden probe wearing -apple-system-body is the one thing WKWebView
+     still sizes from the content size category: 17px at the default Large,
+     23px at the largest of the ordinary sizes, 53px at the largest
+     accessibility one. The ratio multiplies the person's own choice from
+     Profile rather than competing with it, which is what auto was for.
+
+     Bounded at both ends, because this multiplies a scale that already goes
+     to 1.4. It never shrinks: Profile's smallest step is the smallest this
+     design reads well at, and somebody who set iOS smaller did not ask this
+     app to be tighter than it was drawn. It never grows past SYSTEM_MAX
+     either, because 3.1 times Largest is a screen with four words on it, and
+     a phone that needs more than this has system zoom for it.
+
+     Measured through the DOM rather than kept, because the answer changes in
+     Settings while the app is in the background. js/app.js re-asks on the
+     way back in. */
+  var SYSTEM_BODY = 17;     // -apple-system-body at the default Large
+  var SYSTEM_MAX = 1.35;
+  var systemScale = null;   // measured on first use, then cached
+
+  function measureSystemScale() {
+    if (typeof document === 'undefined' || !document.createElement) return 1;
+
+    var probe = document.createElement('div');
+    probe.setAttribute('aria-hidden', 'true');
+    probe.style.position = 'absolute';
+    probe.style.visibility = 'hidden';
+    probe.style.pointerEvents = 'none';
+    probe.style.font = '-apple-system-body';
+
+    /* A browser that has never heard of the keyword drops the declaration,
+       which is the honest way to ask whether this is WebKit at all. */
+    var known = (window.CSS && window.CSS.supports &&
+                 window.CSS.supports('font', '-apple-system-body')) ||
+                !!probe.style.font;
+    if (!known) return 1;
+
+    var host = document.body || document.documentElement;
+    if (!host || !host.appendChild) return 1;
+
+    host.appendChild(probe);
+    var px = parseFloat(window.getComputedStyle(probe).fontSize);
+    host.removeChild(probe);
+
+    if (!px) return 1;   // 0, or the NaN a browser without a real font gives
+    var scale = px / SYSTEM_BODY;
+    if (scale < 1) return 1;
+    if (scale > SYSTEM_MAX) return SYSTEM_MAX;
+    return Math.round(scale * 1000) / 1000;
+  }
+
+  function systemTextScale() {
+    if (systemScale === null) systemScale = measureSystemScale();
+    return systemScale;
+  }
+
+  /* Somebody changed the setting in Settings and came back. Returns whether
+     anything moved, so the caller can leave the common case alone. */
+  function refreshSystemTextScale() {
+    var next = measureSystemScale();
+    if (next === systemScale) return false;
+    systemScale = next;
+    applyPreferences();
+    return true;
+  }
 
   function applyPreferences() {
     var root = document.documentElement;
@@ -537,7 +614,9 @@
       root.setAttribute('data-theme', theme);
     }
 
-    root.style.setProperty('--hc-text-scale', String(state.profile.textScale || 1));
+    /* The choice made on Profile, times the one already made in Settings. */
+    var scale = (state.profile.textScale || 1) * systemTextScale();
+    root.style.setProperty('--hc-text-scale', String(Math.round(scale * 1000) / 1000));
 
     var meta = document.querySelector('meta[name="theme-color"]');
     if (meta) {
@@ -585,7 +664,9 @@
 
     eraseEverything: eraseEverything,
 
-    applyPreferences: applyPreferences
+    applyPreferences: applyPreferences,
+    systemTextScale: systemTextScale,
+    refreshSystemTextScale: refreshSystemTextScale
   };
 
 })(window.HC = window.HC || {});
