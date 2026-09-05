@@ -51,7 +51,7 @@ function router(stops, past) {
 
 // What syncModules hands over on a phone signed in as an admin, and on
 // everybody else's, which has no Admin tile.
-const MODULES = ['worship', 'group', 'practices', 'alpha', 'journal', 'give'];
+const MODULES = ['group', 'worship', 'practices', 'alpha', 'journal', 'give'];
 const admin = router(MODULES.concat(['admin']), ['profile']);
 const member = router(MODULES, ['profile']);
 

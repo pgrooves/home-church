@@ -39,9 +39,9 @@
      geometry above is untouched, measurements and all. Only the order moved,
      and the order is also the order a sideways drag runs, so HC.router.TABS
      below was edited to match on the same commit. Listen and Guide stayed
-     side by side and stayed next to the modules, which is what keeps Sunday's
-     message, the guide read from it, and Worship behind ••• within a drag of
-     each other. */
+     side by side and stayed at the end, against the modules, so the message
+     and the guide read from it are still a drag apart and the sheet's first
+     tile is still a drag off Guide. */
   var TAB_META = [
     { name: 'home',    label: 'Home',    icon: 'home' },
     { name: 'cal',     label: 'Cal',     icon: 'calendar' },
@@ -61,26 +61,35 @@
      which is the whole reason the ••• tile stopped pushing a screen. */
   var MODULES = [
     /* First in the row, and the position is the argument. A drag left off
-       Guide brings in the first module, and Worship is the one of these
-       that belongs to Sunday morning the way Listen and Guide do: it is the
-       songs from the same service as the message two tabs to its left. The
-       three below it are things you do during the week. */
-    {
-      route: 'worship',
-      icon: 'worship',
-      title: 'Worship',
-      sub: 'The songs from Sunday, and where to hear them again.'
-    },
-    /* Second, next to Worship, in the slot Cal held before the two swapped.
-       It keeps that slot for the same reason Cal had it: these two are the
-       church's own Sunday, the songs the band played and the room the guide
-       is read in, and a drag left off the bar reaches both of them together.
-       Nothing else about the Group tab changed in the move. */
+       Guide brings in the first module, and Group is the room that guide is
+       read in: the tile it arrives from is the guide itself, so the two
+       halves of the same evening are one drag apart.
+
+       WORSHIP AND GROUP HAVE SWAPPED. Group was second and is first now.
+       Nothing else in this array moved and neither did the sheet's shape,
+       because the pair is still the pair: whichever of the two is in front,
+       both of them sit at the head of the sheet and a drag off the bar
+       reaches them together, which is the thing the note below is about. */
     {
       route: 'group',
       icon: 'group',
       title: 'Group',
       sub: 'Your room, the guide it is reading, and who is in it.'
+    },
+    /* Second, next to Group, in the slot Group held before the two swapped
+       and Cal held before that. It keeps that slot for the reason both of
+       them had it: these two are the church's own Sunday between them, the
+       songs the band played and the room the guide is read in, and a drag
+       left off the bar reaches both of them together.
+
+       Worship is still the songs from the same service as the message on
+       Listen, which is three stops to its left now rather than two. Nothing
+       else about the screen changed in the move. */
+    {
+      route: 'worship',
+      icon: 'worship',
+      title: 'Worship',
+      sub: 'The songs from Sunday, and where to hear them again.'
     },
     {
       route: 'practices',
