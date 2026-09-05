@@ -366,7 +366,7 @@
     flag: '<path d="M5 21V4"/><path d="M5 5h11l-1.6 3.2L16 11.5H5z"/>',
     pencil: '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>',
 
-    /* The Cal tab, the fourth tile in the bar. A month block with its two
+    /* The Cal tab, the second tile in the bar. A month block with its two
        rings and one day marked, which is the drawing the whole screen is: a
        grid where the days with something on them are the ones that stand out.
 

@@ -7,10 +7,11 @@
    under the finger, and let go early and they spring back where they were.
 
    THE ROW IS LONGER THAN THE BAR. It runs the five tabs and then the modules
-   behind •••, so Connect is no longer where a drag stops. The bar cannot
-   follow that far, having six tiles and more stops than that, so the tile
-   parks on ••• and the sheet says which module you are on. How many stops
-   there are is not fixed: an admin has one more, Admin itself, at the end.
+   behind •••, so Guide, the last of the five, is no longer where a drag
+   stops. The bar cannot follow that far, having six tiles and more stops than
+   that, so the tile parks on ••• and the sheet says which module you are on.
+   How many stops there are is not fixed: an admin has one more, Admin itself,
+   at the end.
    See HC.router.stops().
 
    AND THE DRAG IS LONGER THAN THE ROW, BY ONE. Settings is the last tile in

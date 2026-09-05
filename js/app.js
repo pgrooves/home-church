@@ -28,17 +28,26 @@
      HC.router.TABS. Promoting a module into the five later is a line in this
      array and a line out of MODULES below.
 
-     CAL AND GROUP HAVE SWAPPED. The fourth tile is Cal now and Group is the
+     CAL AND GROUP HAVE SWAPPED. Cal is a tile in the bar now and Group is the
      second module behind •••. The count did not move, so the geometry above
      still holds: one name came out of the bar and another went in. Both lists
      were edited together, which is the whole trade the note above describes,
-     and HC.router.TABS below was edited with them. */
+     and HC.router.TABS below was edited with them.
+
+     AND THE FIVE HAVE BEEN REORDERED: Home, Cal, Connect, Listen, Guide.
+     Nothing entered or left the bar and ••• is still the sixth tile, so the
+     geometry above is untouched, measurements and all. Only the order moved,
+     and the order is also the order a sideways drag runs, so HC.router.TABS
+     below was edited to match on the same commit. Listen and Guide stayed
+     side by side and stayed next to the modules, which is what keeps Sunday's
+     message, the guide read from it, and Worship behind ••• within a drag of
+     each other. */
   var TAB_META = [
     { name: 'home',    label: 'Home',    icon: 'home' },
-    { name: 'listen',  label: 'Listen',  icon: 'listen' },
-    { name: 'guide',   label: 'Guide',   icon: 'guide' },
     { name: 'cal',     label: 'Cal',     icon: 'calendar' },
     { name: 'connect', label: 'Connect', icon: 'connect' },
+    { name: 'listen',  label: 'Listen',  icon: 'listen' },
+    { name: 'guide',   label: 'Guide',   icon: 'guide' },
     { name: 'more',    label: 'More',    icon: 'more', tab: false }
   ];
 
@@ -47,12 +56,12 @@
      them in, and the list on the More screen. Adding a module is a row here
      and a route in the table at the bottom of this file.
 
-     They are stops, not pushed views. Swiping left off Connect brings the
-     first one in exactly the way Connect arrives from Group, which is the
-     whole reason the ••• tile stopped pushing a screen. */
+     They are stops, not pushed views. Swiping left off Guide, the last of the
+     five, brings the first one in exactly the way Guide arrives from Listen,
+     which is the whole reason the ••• tile stopped pushing a screen. */
   var MODULES = [
     /* First in the row, and the position is the argument. A drag left off
-       Connect brings in the first module, and Worship is the one of these
+       Guide brings in the first module, and Worship is the one of these
        that belongs to Sunday morning the way Listen and Guide do: it is the
        songs from the same service as the message two tabs to its left. The
        three below it are things you do during the week. */
@@ -132,7 +141,7 @@
     more: 'More',
     worship: 'Worship',
     // The month grid and the church's own dates under it. Still "Cal" now
-    // that it is the fourth tile: the tile's label and this table have to
+    // that it is the second tile: the tile's label and this table have to
     // agree, and the short name is what fits under the icon.
     cal: 'Cal',
     practices: 'Practices',

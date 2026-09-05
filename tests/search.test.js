@@ -75,7 +75,7 @@ function boot(over) {
   // bottom of js/search.js, which must not throw when the index is built.
   HC.store = { on: () => {} };
 
-  HC.router = { TABS: ['home', 'listen', 'guide', 'cal', 'connect'] };
+  HC.router = { TABS: ['home', 'cal', 'connect', 'listen', 'guide'] };
   HC.titles = { home: 'Home', listen: 'Listen', guide: 'Guides',
                 cal: 'Cal', group: 'Group', connect: 'Connect', give: 'Give',
                 profile: 'Your account', privacy: 'Privacy policy',

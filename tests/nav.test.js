@@ -59,7 +59,7 @@ const member = router(MODULES, ['profile']);
 
 ok('the row is the five tabs and then the sheet, in the sheet\'s order',
   admin.stops(),
-  ['home', 'listen', 'guide', 'cal', 'connect'].concat(MODULES, ['admin']));
+  ['home', 'cal', 'connect', 'listen', 'guide'].concat(MODULES, ['admin']));
 
 ok('and it is one shorter without an Admin tile',
   member.stops().indexOf('admin'), -1);

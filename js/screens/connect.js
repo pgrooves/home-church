@@ -663,7 +663,7 @@
   }
 
   /* EVENTS ARE NOT ON THIS SCREEN ANY MORE. They were the fourth section, and
-     they are now the Cal tab, the fourth tile in the bar: a month you can
+     they are now the Cal tab, the second tile in the bar: a month you can
      walk through, with
      the same upcoming list under it. Nothing about an event changed in the
      move, including the Add to calendar button and the editable description,
