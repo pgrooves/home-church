@@ -643,28 +643,29 @@
      serve teams. The eyebrow above it carries none of that weight and is
      pure voice, which is why the line is drawn between them. See
      js/edit-mode.js. */
-  /* opts.overList is the variant for a header that stands over a stack of
-     c.collapsible() sections, which is what Connect does twice, over the serve
-     teams and over the next steps.
+  /* opts.right hangs the whole header off the right edge instead of the left,
+     which is what Connect does twice, over the serve teams and over the next
+     steps.
 
-     WHY IT EXISTS. A collapsible draws the same three marks this does, an
-     eyebrow over a heavy sans title over a short taupe rule, because they are
-     the same brand move at two levels. Stacked directly, they stop reading as
-     two levels: "LEND A HAND / Serve teams" and "SERVE TEAM / Home Kids" are
-     the same shape at the same size, so the header reads as the first item in
-     its own list rather than the name of it.
+     WHY IT EXISTS. A collapsible section draws the same three marks this does,
+     an eyebrow over a heavy sans title over a short taupe rule, because they
+     are the same brand move at two levels. Stacked directly, they stop reading
+     as two levels: "LEND A HAND / Serve teams" and "SERVE TEAM / Home Kids"
+     are the same shape at the same size, so the header reads as the first item
+     in its own list rather than the name of it.
 
-     What the variant changes is the silhouette, never the type. The eyebrow
-     moves off the top of the title and out to the right end of its baseline,
-     and the rule runs the full column instead of 22% of it. Nothing below it
-     does either of those things, so the header is told apart at a glance and
-     from across the room, while the face, the size and the colors stay
-     exactly what they are everywhere else on the screen. */
+     Nothing else on these screens leaves the left margin, so crossing to the
+     other one is the loudest thing a header can do without changing what it is
+     made of. The three marks keep their own order and their own spacing, they
+     are simply set from the other edge, and the type gains a step of size and
+     a little tracking rather than a heavier weight, because Poppins is bundled
+     at 800 alone and asking a browser for 900 buys a synthetic bold that looks
+     smeared next to the real one below it. See css/fonts.css. */
   function sectionHeader(eyebrow, title, opts) {
     opts = opts || {};
     var cls = 'hc-section-header' +
       (opts.flush ? ' hc-section-header--flush' : '') +
-      (opts.overList ? ' hc-section-header--over-list' : '');
+      (opts.right ? ' hc-section-header--right' : '');
     var tag = opts.tag || 'h2';
     var eyebrowHtml = eyebrow
       ? '<span class="hc-eyebrow hc-section-header__eyebrow">' + esc(eyebrow) + '</span>'
@@ -682,21 +683,13 @@
       if (!desc.rows) desc.rows = 2;
       eyebrowHtml = HC.edit.wrap(eyebrowHtml, desc);
     }
-    /* The eyebrow and the title share a row in the variant so the two column
-       grid that puts one at each end has exactly two children to lay out,
-       whether or not edit mode has wrapped the eyebrow in a tap target of its
-       own. Reading order is untouched: the eyebrow is still first in the
-       markup and still read first, it is only painted at the other end of the
-       line. */
-    var heading = eyebrowHtml +
-      '<' + tag + ' class="hc-section-header__title">' + esc(title) + '</' + tag + '>';
-    if (opts.overList) {
-      heading = '<div class="hc-section-header__row">' + heading + '</div>';
-    }
-
+    /* Same three elements in the same order whichever edge they are set from.
+       The variant is a class on the header and nothing else: no extra wrapper,
+       nothing for edit mode's tap target to have to fit inside. */
     return '' +
       '<header class="' + cls + '"' + (opts.id ? ' id="' + esc(opts.id) + '"' : '') + '>' +
-        heading +
+        eyebrowHtml +
+        '<' + tag + ' class="hc-section-header__title">' + esc(title) + '</' + tag + '>' +
         '<div class="hc-section-header__rule" aria-hidden="true"></div>' +
       '</header>';
   }

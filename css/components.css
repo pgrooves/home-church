@@ -831,85 +831,52 @@
 .hc-section-header + .hc-section-header { margin-top: var(--hc-section-top); }
 
 /* --------------------------------------------------------------------------
-   Section header, the variant that stands over a stack of collapsibles.
+   Section header, the variant set from the right edge.
 
    THE PROBLEM IT SOLVES. A collapsible section draws the same three marks a
    section header does, eyebrow over title over a short taupe rule, because
-   they are the same brand move at two levels. On Connect they meet: "LEND A
+   they are the same brand move at two levels. On Connect the two meet: "LEND A
    HAND / Serve teams" is followed immediately by seven of "SERVE TEAM / Home
    Kids", identical in face, size, weight and rule, and the header stops
    reading as the name of the list and starts reading as the first thing in it.
 
-   WHAT IT CHANGES, AND WHAT IT DOES NOT. Only the arrangement. The eyebrow
-   leaves the top of the title and goes to the right end of its baseline, and
-   the rule runs the whole column instead of 22% of it. Nothing under it does
-   either, so the two levels separate at a glance. The typeface, the sizes, the
-   weights and the colors are untouched, which is what keeps this a header of
-   the same family rather than a second design on one screen.
-
-   The full width rule is the top hairline of the list as well as the closing
-   mark of the header, so the first section below it drops its own. One line,
-   doing both jobs, instead of two lines a stray 24px apart.
+   WHY THE RIGHT EDGE. Every other line on these screens starts at the same
+   left margin, so crossing to the other one is the loudest thing a header can
+   do while still being made of exactly the same parts. The eyebrow is still
+   over the title and the rule is still under it, at the same sizes and in the
+   same colors and in the same order; the block is simply set from the far
+   side, where nothing else is.
    -------------------------------------------------------------------------- */
 
-/* GRID AND NOT FLEX, for the eyebrow's sake. The eyebrow is a short tracked
-   label and it wants to stay on one line; the title is a heading and can take
-   two. Two auto sized flex children share the shortfall between them, which
-   breaks the eyebrow first. An auto track takes its content's width and the
-   1fr beside it gives way, which wraps the title first, which is the right
-   one to bend. */
-.hc-section-header--over-list .hc-section-header__row {
-  display: grid;
-  /* Half the column is the title's floor and the eyebrow's is nothing, which
-     is what settles who gives way when the church writes a sentence into a
-     slot meant for two words: the eyebrow wraps in its own half rather than
-     squeezing the heading down to one letter a line. */
-  grid-template-columns: minmax(50%, 1fr) minmax(0, auto);
-  align-items: baseline;
-  column-gap: var(--hc-space-md);
+.hc-section-header--right { text-align: right; }
+
+/* The rule is a box with a width, not a line of text, so the alignment above
+   does not reach it. Pushing all of the free space to its left is what hangs
+   its right end on the same margin the title's last letter sits on. */
+.hc-section-header--right .hc-section-header__rule { margin-left: auto; }
+
+/* A STEP OF SIZE AND A LITTLE TRACKING, WHICH IS WHERE THE EXTRA WEIGHT COMES
+   FROM. Poppins is bundled at 800 and at 800 only, see css/fonts.css, so
+   font-weight: 900 here would not load a heavier cut, it would ask the browser
+   to smear the one that is loaded. That synthetic bold would sit directly
+   above seven titles drawing the real 800 and would read as a rendering fault
+   rather than as emphasis. Three more pixels and a tighter fit buy the same
+   impression out of the type that actually exists. */
+.hc-section-header--right .hc-section-header__title {
+  font-size: calc(28px * var(--hc-text-scale));
+  letter-spacing: -0.02em;
 }
 
-/* Both floors dropped to nothing, because both of these are the church's to
-   rewrite from inside the app and neither has a length limit. A 40 word
-   eyebrow is somebody's mistake and it should look like one, on its own two
-   lines, rather than pushing the screen sideways. */
-.hc-section-header--over-list .hc-section-header__row > * {
-  min-width: 0;
-  overflow-wrap: anywhere;
-}
-
-/* Whatever is first in the row is the eyebrow, or the tap target edit mode
-   wraps it in, and it is the thing that moves. A header drawn without one
-   leaves the title alone in the row, where the order is moot. */
-.hc-section-header--over-list .hc-section-header__row > :first-child { order: 2; }
-
-/* The 8px that set the title under its eyebrow is what a baseline row does
-   now. */
-.hc-section-header--over-list .hc-section-header__title { margin-top: 0; }
-
-.hc-section-header--over-list .hc-section-header__rule {
-  width: 100%;
-  margin-top: var(--hc-space-base);
-}
-
-/* The header's rule is the list's top hairline. Beating .hc-section's own
-   margin, which is set further down this file and would otherwise win on
-   source order, is the whole reason this says the gap out loud. */
-.hc-section-header--over-list + .hc-section {
-  border-top: 0;
-  margin-top: var(--hc-space-lg);
-  padding-top: 0;
-}
-
-/* 320 wide, where the same trade stops paying. A title and an eyebrow on one
-   line is a line and a half of title here, and a heading that wraps in order
-   to get a label onto its baseline has given up more than it bought. The
-   eyebrow goes back over the title and the rule is left to tell the two levels
-   apart on its own, which on a column this narrow it does: one line the width
-   of the screen against six short taupe marks under the titles below it. */
-@media (max-width: 359px) {
-  .hc-section-header--over-list .hc-section-header__row { display: block; }
-  .hc-section-header--over-list .hc-section-header__title { margin-top: 8px; }
+/* Edit mode wraps the eyebrow in a tap target, and that target is a block
+   with its own text-align: left, which parks a right hand eyebrow at the far
+   left of a pill running the width of the screen while the title stays over
+   on the right. Shrinking it to its contents lets the header's own alignment
+   carry it across with everything else. Only admins in edit mode ever see
+   this, which is exactly why it is worth saying here rather than leaving to be
+   found. */
+.hc-section-header--right > .hc-editable {
+  display: inline-block;
+  text-align: right;
 }
 
 /* --------------------------------------------------------------------------
