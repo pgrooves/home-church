@@ -178,6 +178,25 @@ interface GroupRow {
   image: string;
 }
 
+/* An href is HTML, and HTML escapes ampersands. Undoing that is not tidiness,
+   it is the difference between one link and two.
+
+   The group finder URL on the September sign-up announcement has eleven query
+   parameters, so `link_url` holds it with ten `&` in it and the anchor in
+   `body_html` holds the same address with ten `&amp;`. Compared as strings
+   those are two different links, and the first dry run of the button after the
+   button existed proved it: the model quite correctly put the one it had not
+   chosen into the paragraph, where it did not fit, and the run refused itself.
+   Five entities is all an href ever carries. */
+function decodeEntities(url: string): string {
+  return url
+    .replace(/&amp;/gi, '&')
+    .replace(/&quot;/gi, '"')
+    .replace(/&#0*39;|&#x0*27;|&apos;/gi, "'")
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>');
+}
+
 /* Every link on an announcement, wherever it is kept.
 
    THREE PLACES AND NOT ONE, which is a fact about the table rather than a
@@ -189,7 +208,7 @@ interface GroupRow {
 function announcementLinks(row: Record<string, unknown>): string[] {
   const out: string[] = [];
   const add = (u: unknown) => {
-    const url = String(u ?? '').trim();
+    const url = decodeEntities(String(u ?? '').trim());
     if (url && !out.includes(url)) out.push(url);
   };
 
@@ -343,7 +362,7 @@ const SCHEMA = {
     in_season: { type: 'boolean' },
     /* A NUMBER AND NOT A URL, which is the whole point. The links are handed
        to the model numbered; it hands one number back and this function copies
-       the address out of the row it already has. A model asked to spell a 380
+       the address out of the row it already has. A model asked to spell a 355
        character group finder URL either gets a character wrong or runs out of
        output tokens halfway through the JSON, and both of those have happened
        to this church. Zero means none of them is a way in. */
@@ -830,7 +849,9 @@ async function run(
     body: String(r.body ?? ''),
     written: String(r.created_at ?? '').slice(0, 10),
     links: announcementLinks(r as Record<string, unknown>),
-    primary: String(r.link_url ?? '').trim(),
+    // Decoded the same way the list is, so `primary` is always one of `links`
+    // rather than a near miss that no filter can match.
+    primary: decodeEntities(String(r.link_url ?? '').trim()),
     image: String(r.image_url ?? '').trim(),
   }));
 
