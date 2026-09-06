@@ -2525,6 +2525,25 @@
       return series.filter(function (s) { return s.id === id; })[0] || null;
     },
 
+    /* The artwork for one series, or '' when it has none.
+
+       ONE ANSWER FOR EVERY SCREEN THAT DRAWS THE SERIES. Listen puts it on
+       the rail, on the latest message and on every episode row, the Guide
+       index puts it beside each guide in the series, and Home puts it on the
+       week's guide card. All five ask this, so a series that gets art gets it
+       everywhere at once and none of those screens has to know that a guide
+       reaches its series through `seriesId` while a sermon reaches it through
+       its own.
+
+       '' rather than null, because every caller hands the answer straight to
+       c.cover() as opts.art, and an empty string is the falsy value that
+       leaves the drawn house tile showing. A missing series answers the same
+       way as a series with no art, which is the honest answer for both. */
+    seriesArt: function (id) {
+      var row = series.filter(function (s) { return s.id === id; })[0];
+      return (row && row.artUrl) || '';
+    },
+
     /* A page by its permanent id, or null. Null is a real answer and every
        caller handles it: it is what a screen sees before the first content
        fetch lands, and what it sees forever on a project where nobody has

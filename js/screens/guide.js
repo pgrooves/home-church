@@ -43,10 +43,25 @@
 
   // The series name is already on the header above these rows, so the eyebrow
   // carries the passage instead of repeating it.
+  //
+  // THE THUMB IS THE SERIES', AND IT IS THERE ONLY WHEN THE SERIES HAS ONE.
+  // A guide has no artwork of its own and never will: what a group is looking
+  // at on this list is one week of a series, so the picture beside it is the
+  // series' picture, exactly as it is on the Listen rows. It is left off
+  // entirely rather than drawn as the house tile when the series has no art,
+  // which is the difference between this list and Listen's: an episode row is
+  // podcast artwork and has always had a square, and these rows have never had
+  // one, so a church with no series art keeps the list it has today.
   function guideRow(guide) {
     var meta = HC.data.guideMeta(guide);
+    var art = HC.data.seriesArt(guide.seriesId);
     return '' +
       '<button type="button" class="hc-guide-row" data-action="open-guide" data-id="' + c.esc(guide.id) + '">' +
+        (art
+          ? '<span class="hc-guide-row__thumb">' +
+              c.cover('', '1x1', { compact: true, art: art }) +
+            '</span>'
+          : '') +
         '<span class="hc-guide-row__body">' +
           '<span class="hc-eyebrow">' + c.esc(meta.passage) + '</span>' +
           '<span class="hc-guide-row__title">' + c.esc(meta.title) + '</span>' +

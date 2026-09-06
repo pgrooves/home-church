@@ -63,6 +63,28 @@
 
 .hc-guide-card__title { margin-top: 6px; }
 
+/* The week's guide with its series art beside it. Only drawn when the series
+   has art, so the words below fall straight back to the stacked card this has
+   always been when it does not. The square leads, because the picture is what
+   is recognised from across a room and the type is what is read up close. */
+.hc-guide-card__lead {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--hc-space-base);
+}
+
+.hc-guide-card__thumb {
+  flex: 0 0 64px;
+  width: 64px;
+  display: block;
+}
+
+.hc-guide-card__words {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: block;
+}
+
 .hc-guide-card__cue {
   display: flex;
   align-items: center;
@@ -142,20 +164,10 @@
 /* The tiles are artwork and nothing else. What names them is the caption, so
    the slide's only child that takes space is the cover itself. Real series art
    sits on top of that cover rather than replacing it, which is what makes a
-   photograph that never arrives fall back to the drawn tile underneath. */
-.hc-series-slide { position: relative; }
+   photograph that never arrives fall back to the drawn tile underneath, and
+   that layering is `.hc-cover__art` in components.css: it is the same tile
+   here, on the episode rows and on Home. */
 .hc-series-slide .hc-cover { width: 100%; }
-
-.hc-series-slide__img {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  border-radius: var(--hc-radius-lg);
-}
-
-.hc-series-slide[data-failed="true"] .hc-series-slide__img { display: none; }
 
 .hc-series-meta { margin-top: var(--hc-space-md); }
 .hc-series-meta__kicker { display: block; }
@@ -273,6 +285,16 @@
 
 .hc-guide-row:last-child { border-bottom: var(--hc-hairline) solid var(--hc-rule); }
 .hc-guide-row:active { opacity: 0.6; }
+
+/* The series' art, when the series has any. Smaller than the square on a
+   Listen row: that one is the episode's artwork and leads the row, this one
+   is the shelf the guide came off and sits beside three lines of type it must
+   not out-shout. */
+.hc-guide-row__thumb {
+  flex: 0 0 56px;
+  width: 56px;
+  display: block;
+}
 
 .hc-guide-row__body {
   flex: 1 1 auto;

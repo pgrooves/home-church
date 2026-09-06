@@ -79,7 +79,11 @@
           'aria-label="' + c.esc(HC.data.hasEpisode(sermon)
             ? 'Listen to ' + sermon.title + ' on ' + HC.data.podcast.platform
             : sermon.title + ', audio coming soon. Opens ' + HC.data.podcast.platform) + '">' +
-          c.cover(HC.data.podcast.name, '16x9', { play: true }) +
+          /* The series' own graphic when it has one, over the house tile,
+             with the play disc still on top of it. A series with no art is
+             the drawn tile this has always been. */
+          c.cover(HC.data.podcast.name, '16x9',
+            { play: true, art: HC.data.seriesArt(sermon.seriesId) }) +
         '</button>' +
         '<p class="hc-eyebrow hc-latest__eyebrow">' + c.esc(series ? series.title : 'Latest') + '</p>' +
         '<h2 class="hc-display-m hc-latest__title">' + c.esc(sermon.title) + '</h2>' +
@@ -107,7 +111,12 @@
       '<div class="hc-sermon" data-date="' + c.esc(sermon.preachedOn) + '">' +
         '<button type="button" class="hc-sermon__main" data-action="toggle-episode" ' +
           'aria-expanded="false" aria-controls="' + c.esc(panelId) + '">' +
-          '<span class="hc-sermon__thumb">' + c.cover('', '1x1', { compact: true }) + '</span>' +
+          /* Every episode wears the art of the series it was preached in, so
+             a run of rows under one header reads as one run of messages. The
+             thumb is the same square it always was when there is no art. */
+          '<span class="hc-sermon__thumb">' +
+            c.cover('', '1x1', { compact: true, art: HC.data.seriesArt(sermon.seriesId) }) +
+          '</span>' +
           '<span class="hc-sermon__body">' +
             '<span class="hc-row__title">' + c.esc(sermon.title) + '</span>' +
             '<span class="hc-caption">' + c.esc(c.byline(sermon.preacherShort, sermon.preachedOn)) + '</span>' +
@@ -195,16 +204,14 @@
      A series with art in the catalogue wears it, laid over the house tile
      rather than instead of it, so art that does not arrive leaves the drawn
      cover showing rather than a hole. Most series have none and are the plain
-     tile, which is what this screen has always drawn. */
+     tile, which is what this screen has always drawn. That laying-over is
+     c.cover()'s own job now, and this slide is drawn by the same call as the
+     episode rows below it and the thumb on Home. */
   function seriesSlide(series) {
-    var art = series.artUrl
-      ? '<img class="hc-series-slide__img" src="' + c.esc(series.artUrl) + '" alt="" ' +
-          'decoding="async" loading="lazy">'
-      : '';
     return '' +
-      '<li class="hc-carousel__slide hc-series-slide"' + (art ? ' data-media-fallback' : '') + '>' +
+      '<li class="hc-carousel__slide hc-series-slide">' +
         '<span class="hc-visually-hidden">' + c.esc(series.title) + '</span>' +
-        c.cover('', '4x3', { compact: true }) + art +
+        c.cover('', '4x3', { compact: true, art: series.artUrl || '' }) +
       '</li>';
   }
 

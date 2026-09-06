@@ -254,12 +254,29 @@
     }
     var series = HC.data.getSeries(guide.seriesId);
     var meta = HC.data.guideMeta(guide);
-    var inner = '' +
+    var art = HC.data.seriesArt(guide.seriesId);
+
+    /* The series' name and the series' picture, which are the same fact said
+       twice on purpose: the eyebrow is what a screen reader gets and the
+       artwork is what the room recognises from Sunday. The picture only shows
+       up when the series has one, so a church with no art keeps the card it
+       has today rather than gaining a house tile on its front door. */
+    var words = '' +
       '<p class="hc-eyebrow">' + c.esc(series ? series.title : 'This week') + '</p>' +
       '<p class="hc-card__title hc-guide-card__title">' + c.esc(meta.title) + '</p>' +
       '<p class="hc-caption hc-card__meta">' +
         c.esc(c.byline(meta.preacherShort, meta.preachedOn)) +
-      '</p>' +
+      '</p>';
+
+    var inner = '' +
+      (art
+        ? '<span class="hc-guide-card__lead">' +
+            '<span class="hc-guide-card__thumb">' +
+              c.cover('', '1x1', { compact: true, art: art }) +
+            '</span>' +
+            '<span class="hc-guide-card__words">' + words + '</span>' +
+          '</span>'
+        : words) +
       '<p class="hc-guide-card__cue hc-caption">' +
         c.esc(HC.data.copy('home.guide-cue', GUIDE_CUE)) +
         c.icon('chevronRight', 'hc-guide-card__chev') + '</p>';

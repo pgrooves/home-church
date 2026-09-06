@@ -1040,6 +1040,21 @@
      every episode wears it, so this is the church lockup on a dark panel,
      which is what the art on Spotify is. Ships with the app, needs no
      network, and holds up at 64px and at full width alike.
+
+     THE DRAWN TILE IS THE FLOOR, NEVER THE CEILING. opts.art is a real
+     picture, the series' own graphic, and it is laid over the drawn tile
+     rather than instead of it. Three things fall out of that and all three
+     are the point: the tile is what shows for the seasons and shows that
+     have no art, it is what shows for the second the photograph is still
+     loading, and it is what shows again if the photograph never arrives, the
+     last of those because the tile carries data-media-fallback and the image
+     error listener in js/app.js marks it. So art that 404s costs the app a
+     drawn cover, not a hole and not a broken image glyph.
+
+     The picture goes over the logo and the label and under the play disc, so
+     a tile with artwork on it still says out loud that it plays. The disc's
+     own colours come from `.hc-cover .hc-play__disc`, which is why the badge
+     stays inside this tile rather than being stacked on top of it.
      ---------------------------------------------------------------------- */
 
   function cover(label, ratio, opts) {
@@ -1051,9 +1066,13 @@
       (opts.compact ? ' hc-cover--compact' : '') +
       (opts.play ? ' hc-cover--play' : '');
     return '' +
-      '<span class="' + cls + '">' +
+      '<span class="' + cls + '"' + (opts.art ? ' data-media-fallback' : '') + '>' +
         '<img class="hc-cover__logo" src="' + art + '" alt="" aria-hidden="true">' +
         (label ? '<span class="hc-cover__label">' + esc(label) + '</span>' : '') +
+        (opts.art
+          ? '<img class="hc-cover__art" src="' + esc(opts.art) + '" alt="" ' +
+              'decoding="async" loading="lazy">'
+          : '') +
         (opts.play ? playBadge() : '') +
       '</span>';
   }

@@ -1667,6 +1667,25 @@ a.hc-card:active { background: var(--hc-paper-sunk); }
 /* The house mark alone. Capped so it stays a mark at any tile size. */
 .hc-cover--compact .hc-cover__logo { width: 46%; max-width: 96px; }
 
+/* Real artwork, over the drawn tile. The tile is already clipped to the
+   radius and hides its overflow, so the picture needs neither of its own: it
+   simply fills the frame it was handed, whatever shape that frame is, which
+   is how one series graphic serves a 16:9 hero, a 4:3 rail tile and a 56px
+   square thumb without three files. */
+.hc-cover__art {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* Art that never arrived, marked by the image error listener in js/app.js.
+   Taking the picture away is the whole fix, because the drawn cover it was
+   laid over is still underneath it. */
+.hc-cover[data-failed="true"] .hc-cover__art { display: none; }
+
 .hc-cover__label {
   position: absolute;
   left: 0; right: 0; bottom: var(--hc-space-md);

@@ -58,6 +58,21 @@ python3 scripts/hc_supabase.py upsert series '{"id":"series-xxx","title":"...","
 python3 scripts/hc_supabase.py update series series-david '{"is_current": false}'
 ```
 
+**Give it `art_url` while you are there.** It is optional and it is the one
+field that shows up on five screens: the rail on Listen, the latest message
+above it, every episode row under it, every guide in the series on the Guide
+index, and the week's guide card on Home. The church has already made the
+graphic — it is the picture on the announcement that launched the series — so
+this is usually a copy of that announcement's `image_url`:
+
+```bash
+python3 scripts/hc_supabase.py update series series-xxx '{"art_url": "https://.../series-art.png"}'
+```
+
+An external URL is what this column is for, the same as album art on a worship
+set. Leave it off and every one of those five places draws the house tile it
+has always drawn, which is also what they fall back to if the URL ever dies.
+
 **Then publish the guide.** Same content, same ids, snake_case columns. The
 column names map one for one onto the `Guide {}` model in section 6 of the
 design system doc:
