@@ -2140,41 +2140,34 @@
      be true of both halves of the row. startsOn is the first day of week 1 and
      Home counts the weeks from it (0024); weeks is the whole schedule and Home
      takes the entry for the week it just counted (0032). currentWeek and
-     thisWeek are what a plan missing either of those falls back to. */
+     thisWeek are what a plan missing either of those falls back to.
+
+     David is retired and this is Jonah, which is the one kind of edit this
+     seed still earns: a cold start opening on a plan the church finished is
+     the front door of the app being four months out of date for the length of
+     one fetch. A stale sermon is last week's; a stale plan is last season's.
+
+     seriesId is not here on purpose. It is what makes the live row follow the
+     sermons (0055), and a seed has no sermons to follow: this is a snapshot of
+     where the plan was when the file was written, and js/content.js replaces
+     the whole object the moment the first fetch lands. */
   var readingPlan = {
-    id: 'plan-david',
-    title: 'The Life of David',
-    subtitle: 'A twenty week walk through the whole story',
-    totalWeeks: 20,
-    startsOn: '2026-06-14',
-    currentWeek: 8,
-    thisWeek: '2 Samuel 11 and 12, plus Psalm 51',
+    id: 'plan-jonah',
+    title: 'The Book of Jonah',
+    subtitle: 'A four week devotional through running, repenting, obeying, and learning to want what God wants',
+    totalWeeks: 4,
+    startsOn: '2026-09-06',
+    currentWeek: 1,
+    thisWeek: 'Jonah 1:1 to 10',
     weeks: [
-      '1 Samuel 16 and 17',
-      '1 Samuel 18 to 20',
-      '1 Samuel 21 to 24',
-      '1 Samuel 25 to 27',
-      '1 Samuel 28 to 31',
-      '2 Samuel 1 to 5',
-      '2 Samuel 6 to 10',
-      '2 Samuel 11 and 12, plus Psalm 51',
-      '2 Samuel 13',
-      '2 Samuel 14 and 15',
-      '2 Samuel 16 to 18',
-      '2 Samuel 19 and 20',
-      '2 Samuel 21 and 22, plus Psalm 18',
-      '2 Samuel 23 and 24',
-      '1 Kings 1 and 2',
-      'Psalms 3 to 8',
-      'Psalms 22 to 25',
-      'Psalms 27, 30 and 31',
-      'Psalms 32, 34 and 37',
-      'Psalms 138 to 145'
+      'Jonah 1:1 to 10, the call you already know',
+      'Jonah 1:11 to 2:10, grace at the bottom',
+      'Jonah 3, the second chance',
+      'Jonah 4, the heart behind the obedience'
     ],
     current: true,
     resources: [
-      { label: 'The Bible Project, 2 Samuel', url: 'https://bibleproject.com/explore/video/2-samuel/' },
-      { label: 'Robert Alter, The David Story', url: 'https://www.google.com/search?q=Robert+Alter+The+David+Story' }
+      { label: 'The devotional, a day at a time', url: 'https://brianaguillory.github.io/jonah-homechurch/' }
     ]
   };
 

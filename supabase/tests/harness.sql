@@ -387,21 +387,35 @@ create table public.podcasts (
 
 create table public.guides (
   id                   text primary key,
+  series_id            text references public.series (id),
   subtitle             text,
   theme_title          text,
+  preached_on          date,
   reflection_questions jsonb not null default '[]'::jsonb,
   published            boolean not null default true,
   updated_at           timestamptz not null default now()
 );
 
+/* series_id and preached_on are here for 0055, which reads them to work out
+   which sermon of the series is this week's. The rest is 0031's. */
+
 create table public.reading_plans (
-  id          text primary key,
-  title       text not null,
-  subtitle    text,
-  this_week   text,
-  total_weeks integer not null default 1,
-  published   boolean not null default true,
-  updated_at  timestamptz not null default now()
+  id           text primary key,
+  title        text not null,
+  subtitle     text,
+  this_week    text,
+  total_weeks  integer not null default 1,
+  current_week integer not null default 1,
+  starts_on    date,
+  resources    jsonb not null default '[]'::jsonb,
+  is_current   boolean not null default false,
+  published    boolean not null default true,
+  updated_at   timestamptz not null default now(),
+
+  -- 0004's, copied because 0055 clamps against it: a five sermon series beside
+  -- a four week plan has to stop at four rather than fail the write.
+  constraint reading_plans_week_in_range
+    check (current_week >= 1 and current_week <= total_weeks)
 );
 
 create table public.groups (
@@ -423,7 +437,9 @@ create table public.instagram_posts (
 insert into public.groups (id, name, day, neighborhood, blurb)
 values ('group-uptown', 'Uptown', 'Thursday', 'Uptown', 'Come as you are.');
 insert into public.series (id, title, subtitle, blurb)
-values ('series-david', 'The Life of David', 'A man after God''s heart', 'Eight weeks.');
+values ('series-david', 'The Life of David', 'A man after God''s heart', 'Eight weeks.'),
+       -- 0055 puts a plan beside this one, so the foreign key needs it here.
+       ('series-jonah', 'Jonah', 'The prophet who ran', 'Four weeks.');
 insert into public.podcasts (id, title, description)
 values ('sermon-test', 'The Weight of a Crown', 'What David carried.');
 insert into public.guides (id, subtitle, reflection_questions)

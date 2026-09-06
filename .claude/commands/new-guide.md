@@ -98,6 +98,71 @@ cannot see yet, it stays fully readable to you.
 **Before you upsert, grep the JSON for an em-dash.** It is a hard brand rule
 and this is the last place it can be caught cheaply.
 
+## The reading plan moves itself
+
+**There is no step here.** Publishing the guide already moved it, and this
+section exists so that you know that and do not go and move it a second time.
+
+A reading plan can name the series it walks beside, `reading_plans.series_id`.
+When it does, writing a guide in that series fires a trigger that re-anchors
+the plan's `starts_on` so its week is the week of the sermon, however the
+Sundays actually fell. Migration `0055`, and the whole of it is:
+
+```
+starts_on = the latest sermon's date - (its number in the series - 1) * 7
+```
+
+Home still counts days from `starts_on` and still takes `weeks[n]` for the week
+it counted, which is what keeps the reading right on a Wednesday. This only
+moves the day it counts from.
+
+Three things follow, and all three are things not to do:
+
+- **Do not set `starts_on` or `current_week` by hand** on a plan that follows a
+  series. The next guide will overwrite them, and in the meantime Home shows
+  the week you typed rather than the week the church is on.
+- **Do not skip it for a late guide.** Publishing Tuesday's guide for Sunday's
+  sermon anchors on `preached_on`, not on today, so a guide written late lands
+  on the right week and a guide written early does not jump ahead of itself.
+- **Do not worry about a correction.** The anchor is taken from the latest
+  sermon in the series, never from the guide you happen to be writing, so
+  fixing week 1's typo in week 3 leaves the plan in week 3.
+
+What you do owe it is **one look afterwards**, because a plan silently on the
+wrong week looks exactly like a plan on the right one:
+
+```sql
+select id, series_id, starts_on, current_week, total_weeks,
+       weeks ->> (floor((current_date - starts_on) / 7)::int) as reading_now
+  from public.reading_plans where is_current;
+```
+
+The week and the reading are the last line of the confirmation below. If the
+week is right and the reading is not, the schedule in `weeks` is short or out
+of order, and that is a content fix on the plan rather than anything to do with
+the guide you just published.
+
+**Two cases where there is a step.** Both are one call, and it is idempotent,
+so running it when it was not needed costs nothing:
+
+```sql
+select * from public.hc_reading_plan_follow_series('series-jonah');
+```
+
+- **A new plan for a new series.** Create the plan row with its `series_id`,
+  `total_weeks`, and the whole schedule in `weeks`, flip the old plan's
+  `is_current` to false, then call the function once to put the new plan on the
+  week the sermons say. `0055` section 4 is a worked example of the whole
+  thing, and `supabase/README.md` has the shape of the row.
+- **A guide deleted rather than unpublished.** The trigger listens for a guide
+  being written, not for one going away. Unpublishing is a write and moves the
+  plan on its own; a delete needs the call.
+
+If the plan the church is reading has no `series_id`, none of this applies to
+it and none of it ran. That is a real choice and not an oversight: a plan
+through the Psalms in a season of topical messages should keep counting its own
+weeks off the calendar, exactly as `0024` built it to.
+
 ## The PDF
 
 Nothing new to build here. The pipeline already exists in `js/print-guide.js`.
@@ -165,14 +230,20 @@ that would cost the church per year.
 
 ## Confirm, briefly
 
-Four facts and stop. No summary of the steps, no offer of next steps:
+Five facts and stop. No summary of the steps, no offer of next steps:
 
 ```
 Published  The Slow Burn
 Stephen, August 16 2026
 guides, series-david, 7 sections, 18 questions, 14 one-liners
+Reading    week 2 of 4, Jonah 1:11 to 2:10, grace at the bottom
 Narrated   6 sections, 9.4 min, af_heart
 ```
+
+The reading line is what the check above returned, said in one line, because a
+plan that quietly stopped following its series is only visible in a week number
+somebody read out loud. Leave it off only when the current plan follows no
+series, where there is nothing to report rather than something missing.
 
 If the narration did not run, say which half is missing and what to run,
 rather than leaving the last line off:

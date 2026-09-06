@@ -125,8 +125,36 @@ again for the length of it:
 `current_week` and `this_week` are now fallbacks, for a plan missing either of
 the two above, or one running past the end of its list.
 
+**`series_id` is the third, and it is written once too.** A plan that names the
+series it walks beside stops counting the calendar and starts counting sermons:
+publishing a guide in that series re-anchors `starts_on` so the plan's week is
+the week of the sermon (0055). A guest speaker on the fifth Sunday, a week off
+at Christmas, a series that started a Sunday later than the plan's date said,
+all of them used to leave Home printing the week of the plan beside the sermon
+of a different week. Nothing is typed and nothing is remembered: the trigger on
+`guides` does it, and there is no step in `/new-guide` to forget.
+
+Null is a real answer and the common one. A plan through the Psalms in a season
+of topical messages has nothing to do with what is being preached and should
+keep counting days, which is what it does.
+
+The one thing not to do is set `starts_on` by hand on a plan that follows a
+series. The next guide overwrites it, and until then Home shows the week that
+was typed rather than the week the church is on. To move such a plan, move the
+sermons, or take `series_id` off it. To move it after a guide was **deleted**
+rather than unpublished, which is the one write the trigger does not hear:
+
+```sql
+select * from public.hc_reading_plan_follow_series('series-jonah');
+```
+
+Idempotent, and it returns the plan, the week, and the sentence Home will
+print, so it doubles as the way to ask where a plan is.
+
 Starting a new plan is a second row with `is_current` true and the old one
-flipped to false, never a deletion, so last year's plan stays on record.
+flipped to false, never a deletion, so last year's plan stays on record. Give
+it `series_id` in the same write and call the function above once, and it opens
+on the week the series is already on rather than on week 1.
 
 Writing a new plan's schedule, three ways, all equivalent:
 
