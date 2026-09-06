@@ -85,6 +85,7 @@ export const Framed = ({ screenWidth }) => {
 
       <div
         style={{
+          position: 'relative',
           width: screenWidth + bezel * 2,
           height: screenHeight + bezel * 2,
           padding: bezel,
@@ -95,8 +96,15 @@ export const Framed = ({ screenWidth }) => {
           overflow: 'hidden'
         }}
       >
+        {/* POSITION RELATIVE IS LOAD BEARING. Preview is an AbsoluteFill, so
+            it lays itself out against the nearest positioned ancestor. Without
+            this the nearest one is the composition, and the phone renders as
+            an empty slab with the app pinned to the top left corner of the
+            frame beside it. Nothing about the arrangement below says so, which
+            is why it is said here. */}
         <div
           style={{
+            position: 'relative',
             width: screenWidth,
             height: screenHeight,
             borderRadius: radius - bezel,
