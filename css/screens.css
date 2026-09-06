@@ -209,6 +209,12 @@
 }
 
 .hc-sermon__chevron {
+  /* Leads the row rather than ending it. Drawn last in the markup, because
+     the toggle's tap and its aria-expanded both read the button and not the
+     order of what is painted inside it, so `order` moves the mark without
+     touching either. The right of this row is the month rail's, and a chevron
+     against a ruler reads as one of its notches. */
+  order: -1;
   flex: 0 0 auto;
   width: 20px;
   height: 20px;
@@ -1745,6 +1751,10 @@
 }
 
 .hc-fromj__chevron {
+  /* Leads the bar, the same way every other fold in the app does now. Drawn
+     last in the markup and moved with `order`, so the toggle keeps its one
+     aria-expanded and the [aria-expanded="true"] rule below still finds it. */
+  order: -1;
   width: 16px;
   height: 16px;
   flex: 0 0 auto;

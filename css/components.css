@@ -1076,20 +1076,30 @@ a.hc-card:active { background: var(--hc-paper-sunk); }
   align-items: flex-start;
   gap: var(--hc-space-sm);
 
-  /* THE CHEVRON TAKES THE OUTER COLUMN AND THE PLAY BUTTON SITS INSIDE IT.
-     The index rail is a 34px ruler fixed to right:0 and the play button is a
-     34px disc, so with the button outermost the two shared an edge and the
-     notches read as part of the control. A chevron is a thin mark and loses
-     nothing by being the thing next to a ruler.
+  /* THE CHEVRON IS ON THE LEFT AND THE RIGHT EDGE BELONGS TO THE RAIL.
+     The index rail is a 34px ruler fixed to right:0, and a chevron sitting
+     against it read as one of the notches: you went to fold a part and put
+     your thumb on the page index instead. So the mark that folds the section
+     now leads the header from the left, where nothing else is, and the right
+     of the bar is left to the rail.
+
+     BOTH PADDINGS ARE HERE ON PURPOSE. The left one is the chevron's own
+     column. The right one is not left over: the play button is a 34px disc
+     and the rail is a 34px ruler, and without this gap the two share an edge
+     and the notches read as part of the control. Keeping it means moving the
+     chevron moved the chevron and nothing else — the play button is still
+     exactly where it was.
 
      This is padding and a position rather than a move in the markup, and the
      reason is that the chevron has to stay inside the toggle. A tap resolves
      through evt.target.closest('[data-action]') in js/app.js, which reads DOM
-     ancestry and not where a box was painted, so a chevron drawn outside its
-     button still folds the section. Moving it in the markup would have cost
-     that, and cost the [aria-expanded="true"] selector below that turns it
-     over, and put a second aria-expanded on the page to keep in step. */
+     ancestry and not where a box was painted, so a chevron drawn at the front
+     of its button still folds the section from the end of the markup. Moving
+     it in the markup would have cost that, and cost the [aria-expanded="true"]
+     selector below that turns it over, and put a second aria-expanded on the
+     page to keep in step. */
   position: relative;
+  padding-left: calc(20px + var(--hc-space-md));
   padding-right: calc(20px + var(--hc-space-md));
 }
 
@@ -1139,12 +1149,12 @@ a.hc-card:active { background: var(--hc-paper-sunk); }
 }
 
 .hc-section__chevron {
-  /* Placed against .hc-section__bar's padding, not laid out in the row. The
-     10px that was margin-top is now top: it is the same offset, still setting
-     the mark against the title's cap rather than the middle of a heading that
-     may run to two lines. */
+  /* Placed against .hc-section__bar's left padding, not laid out in the row.
+     The 10px that was margin-top is now top: it is the same offset, still
+     setting the mark against the title's cap rather than the middle of a
+     heading that may run to two lines. */
   position: absolute;
-  right: 0;
+  left: 0;
   top: 10px;
   width: 20px; height: 20px;
   stroke: var(--hc-accent-deep);
