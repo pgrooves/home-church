@@ -353,17 +353,27 @@ npm install
 npm run render      # video/out/home-church-app-store.mp4
 ```
 
-Twenty nine seconds at 1320 x 2868, H.264, silent. Six beats in the same order
-as the table above, minus the guide index, ending on the lockup so there is a
-poster frame worth holding. Upload it on the version page under Previews and
-Screenshots, 6.9 inch iPhone tab, and choose the last frame as the poster.
+29.8 seconds at 1320 x 2868, H.264, silent. **Apple takes an app preview between
+fifteen and thirty seconds**, which is the constraint the whole cut is built
+around: four things at a pace a person can follow, rather than seven at a
+gallop. In order, the guide, the group room, Sunday's worship set and the
+journal, then the church's name, service times and address. Upload it on the
+version page under Previews and Screenshots, 6.9 inch iPhone tab, and choose the
+last frame as the poster.
+
+Leader mode, Listen, Connect and Home did not fit in thirty seconds. They are in
+`npm run render:marketing`, a 48 second cut of the same scenes at the same pace,
+inside a drawn phone, for the website and the socials. Swapping what is in which
+cut is moving a name between two arrays in `video/src/scenes.js`.
 
 **It is not a slideshow of the six stills.** Remotion runs the real app inside
-the composition and drives it one frame at a time, so the folding sections, the
-sliding tab tile and the two questions ticking off are the app doing them, off
-the seed in `js/data.js`, with no network. Same argument as the stills: the
-content moves every week and the fix is to re-render. `video/README.md` has the
-rest, including the one thing that is not identical between two renders.
+the composition and drives it one frame at a time, so the unfolding sections,
+the sliding tab tile, the two questions ticking off and the host opening one
+person's answer to the room are the app doing them. Same argument as the stills:
+the content moves every week and the fix is to re-render. `video/README.md` has
+the rest, including the three things the video stages because they are not
+content the church publishes, and the one thing that is not identical between
+two renders.
 
 -----
 

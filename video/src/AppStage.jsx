@@ -34,6 +34,7 @@
 
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { cancelRender, continueRender, delayRender, staticFile } from 'remotion';
+import { stage } from './stage';
 import { PHONE } from './theme';
 
 /* Motion, off. `animation: none` rather than a zero duration on purpose: a
@@ -142,6 +143,10 @@ async function boot(el) {
      display attached is light. This is the line js/app.js runs when somebody
      taps the moon in the top bar. */
   win.HC.store.applyPreferences();
+
+  /* A room, a journal and the account both of them need. See src/stage.js for
+     what is furniture and what is the app. */
+  stage(win);
 
   /* Redraw whatever the app opened on. It painted Home before any of the above
      happened, which is a Home that greets a stranger: js/screens/home.js reads

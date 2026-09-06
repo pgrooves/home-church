@@ -1,13 +1,15 @@
 # The App Store preview
 
-Twenty nine seconds of Home Church, for the video slot on the store page.
-Built with [Remotion](https://www.remotion.dev), which renders React to video
-by drawing the composition in a browser one frame at a time.
+Thirty seconds of Home Church for the video slot on the store page, and a
+longer cut of the same thing for the website. Built with
+[Remotion](https://www.remotion.dev), which renders React to video by drawing
+the composition in a browser one frame at a time.
 
 ```bash
 cd video
 npm install
-npm run render            # out/home-church-app-store.mp4, 1320 x 2868
+npm run render              # out/home-church-app-store.mp4, 1320 x 2868, 29.8s
+npm run render:marketing    # out/home-church-marketing.mp4, 1080 x 1920, 48.2s
 ```
 
 The first render downloads a headless Chrome, once. Behind a network that will
@@ -30,11 +32,21 @@ iframe, loads the shipping `index.html` into it, and drives the running app
 with the frame number: the same HTML, the same CSS, the same JavaScript, the
 same seed in `js/data.js`, painting live inside the video.
 
-So every movement in it is the app's own. The overview folds because the guide
-reader folds it. The tab bar's lit tile slides because the bar slides it. The
-two discussion questions tick because the video clicks them and `js/app.js`
+So every movement in it is the app's own. The discussion questions unfold
+because the guide reader unfolds them. The tab bar's lit tile slides because the
+bar slides it. Two questions tick because the video clicks them and `js/app.js`
 handles the click, which is why the count above them repaints from *18 in all*
-to *1 of 18 covered* to *2 of 18 covered* as they land.
+to *1 of 18 covered* to *2 of 18 covered* as they land. Dee's answer appears in
+the room because `openedAt` was written on it and `js/screens/group.js` filters
+on exactly that field, the same way it does when a host taps a name for real.
+
+**Three things in it are furniture**, and they are all in `src/stage.js` with
+the reasoning: the group room, two journal entries, and the account both of
+those need. None of them are content the church publishes, they are things a
+person has done on their own phone, so there is nothing in `js/data.js` to draw
+and nobody signed in to draw it for. Everything that renders them is the
+shipping screen, untouched. The five names in the room are invented and so is
+every word they wrote, which is the other reason not to film a real one.
 
 **That is the point of building it this way.** A video assembled from stills is
 correct on the day it is made and quietly wrong forever after. This one cannot
@@ -43,25 +55,27 @@ discussion questions actually are, and reads the serve teams off the Connect
 screen. Change the app and re-render, and the video is about the new app. Break
 a section and the video breaks with it, visibly.
 
-## The twenty nine seconds
+## What is in it
 
 | | Frames | | |
 |---|---|---|---|
-| Opening | 0 – 66 | The lockup, assembling | |
-| The guide | 66 – 291 | Fold the overview, open the discussion questions, read down, tick two off | *Ready before your group meets* |
-| Leader mode | 291 – 408 | One question filling the screen, covered, and the next one in | *Reads across a living room* |
-| Listen | 408 – 525 | Past the latest message into the archive, one row opened for its notes | *Every message since 2024, with the notes* |
-| Connect | 525 – 621 | Down to the serve teams, one of them opened | *Find your people, and a place to serve* |
-| Home | 621 – 768 | Two flicks down the front door | *Sunday, and everything before it* |
-| Closing | 768 – 870 | It all works with no signal, then the name | |
+| Opening | 0 – 54 | The lockup, assembling | |
+| The guide | 54 – 288 | Open the discussion questions, read down them, tick two off | *Sunday's message, ready for your group* |
+| The room | 288 – 558 | The six digit code, the questions carried over, and the host opening one person's answer to the group | *Open a room and go through it together* |
+| Worship | 558 – 684 | A slow pass down Sunday's setlist | *Sunday's songs, all week* |
+| The journal | 684 – 810 | Three entries, and the line saying nobody else can see them | *Somewhere to put what you heard* |
+| Closing | 810 – 894 | The name, the service times and the address | |
 
-**The guide goes first and Home goes last, deliberately.** That is
-`SUBMISSION_KIT.md` section 4's argument for the stills, and it holds here:
-most people watch the beginning and stop, so the thing no other church app does
-well has to be in the first five seconds, and Home is the weakest thing to open
-with because it looks like every other church app until you know what is behind
-it. Last, after the guide and the room and the archive, it reads as the front
-door of a house somebody has been shown around.
+**Nine seconds of it is the room**, which is the longest scene and on purpose:
+a host opens a room, texts a six digit code to the group, everybody answers on
+their own phone, and nothing is visible until the host opens it, one answer at
+a time, as the conversation gets there. That is the thing this app does that
+nothing else does, and it takes a moment to read.
+
+**Apple caps an app preview at thirty seconds.** That is the whole reason there
+are two cuts. Four features at a pace a person can follow is worth more on a
+store page than seven at a gallop, so Leader mode, Listen, Connect and Home are
+not in the store cut. They are all in the long one, at exactly the same speed.
 
 **Each scene opens dimmed under a warm charcoal veil with one line over it,
 then the veil lifts and the app plays clean.** Three things fall out of that.
@@ -71,12 +85,22 @@ lifts on something already moving rather than on a still. And the words are set
 the way the app sets them, a tracked all-caps eyebrow over a large light line,
 which the design system calls the most recognisable thing the brand does.
 
+**The captions are written for somebody deciding whether to come on Sunday.**
+Not one of them names a capability. There is nothing in here about offline
+support or syncing or accounts, and the piece ends on when the church meets and
+where it is rather than on a feature.
+
 ## The two compositions
 
-| id | Renders at | For |
-|---|---|---|
-| `AppStorePreview` | 1320 x 2868 | The store page. The app fills the frame, no device around it. |
-| `Marketing` | 1080 x 1920 | The website and the socials. The same cut inside a drawn phone on a warm ground. |
+| id | Renders at | Runs | For |
+|---|---|---|---|
+| `AppStorePreview` | 1320 x 2868 | 29.8s | The store page. The app fills the frame, no device around it. |
+| `Marketing` | 1080 x 1920 | 48.2s | The website and the socials. Every scene, inside a drawn phone on a warm ground. |
+
+Both are built from the same scenes at the same durations, listed in
+`src/scenes.js` as `APP_STORE` and `FULL`. Moving a scene between the two cuts
+is moving its name between two arrays; nothing else has to be retimed, because
+adding a scene adds its length rather than squeezing its neighbours.
 
 Both are laid out in logical points, 440 x 956 and 360 x 640, and rasterised at
 three times that. 440 x 956 is the 6.9 inch iPhone's own coordinate space, the
@@ -93,6 +117,7 @@ wants it.
 | | |
 |---|---|
 | `prepare.mjs` | Copies the app into `public/app` so the iframe can reach it, and empties `js/config.js` on the way. Run by every npm script here. |
+| `src/stage.js` | The room, the journal entries and the account they need. What is furniture and what is the app, in its own header. |
 | `src/scenes.js` | The timeline. What happens, when, and the captions. |
 | `src/drive.js` | The hands: every function that reaches into the running app. |
 | `src/AppStage.jsx` | The iframe, and everything done to the app once it has booted. |

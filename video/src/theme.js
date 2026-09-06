@@ -26,6 +26,15 @@ export const FACE = {
   sans: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
 };
 
+/* What the closing card says. Copied from HC.data.church in js/data.js, for
+   the same reason the palette above is copied: the card is drawn outside the
+   iframe, where nothing of the app's is in reach. If the church moves or adds
+   a service, it moves here too. */
+export const CHURCH = {
+  times: 'Sundays at 8:00, 9:30 and 11:00',
+  address: '216 Giuffrias Ave, Metairie'
+};
+
 /* The phone this is shot on: 6.9 inch iPhone, 440 x 956 logical points.
    Rendered at --scale=3 that is 1320 x 2868, which is the size App Store
    Connect asks for and the same size scripts/make_screenshots.js writes. */

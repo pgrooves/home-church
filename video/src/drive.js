@@ -162,6 +162,48 @@ export function setViewShift(win, dx, opacity) {
   view.style.opacity = opacity == null ? '' : String(opacity);
 }
 
+/* --- the room ------------------------------------------------------------- */
+
+/* The host opening one person's answer to the room.
+
+   This is the feature the Group tab exists for: everybody writes at the same
+   time, nothing is visible until the host opens it, and the host opens them
+   one at a time as the conversation gets there. On a phone it is a tap on a
+   name, a row written to the database, and eight seconds later that answer is
+   on five other phones.
+
+   Here it is the same state change made locally. `openedAt` is the whole of
+   it, in both places the app keeps it: `notes`, which carries the words, and
+   `index`, which carries who wrote what. Nulled, the name wears a padlock and
+   the words are not drawn at all, which is not a trick, it is js/screens/
+   group.js filtering on exactly this field. Filled in, the name wears an eye
+   and the answer unfolds underneath.
+
+   snapshot() hands back a copy of each array holding the same row objects, so
+   writing to them writes to the room the screen is about to draw. The screen
+   is redrawn afterwards because the room repaints on a poll rather than on a
+   change, and there is no poll running here. */
+export function revealAnswer(win, noteId, open) {
+  const snap = win.HC.rooms.snapshot();
+  const rows = snap.notes.concat(snap.index).filter((n) => n.id === noteId);
+  if (!rows.length) return;
+
+  const want = open ? rows[0].createdAt || new Date().toISOString() : null;
+  const already = rows.every((r) => (r.openedAt || null) === (want || null));
+  if (already) return;
+
+  rows.forEach((r) => { r.openedAt = want; });
+  redraw(win);
+}
+
+/* Rebuild the screen that is on. The room is the one screen in the app that
+   redraws itself under you rather than on a tap, and with the poll switched
+   off nothing else will. */
+export function redraw(win) {
+  const route = win.HC.router.current();
+  if (route) win.HC.router.go(route, { force: true, animate: false, replace: true });
+}
+
 /* --- where things are ----------------------------------------------------- */
 
 /* How far down the scroller something sits, in the scroller's own coordinates.

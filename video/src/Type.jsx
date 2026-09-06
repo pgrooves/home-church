@@ -10,7 +10,7 @@
    =========================================================================== */
 
 import { AbsoluteFill, Img, staticFile } from 'remotion';
-import { FACE, HC } from './theme';
+import { CHURCH, FACE, HC } from './theme';
 import { ramp, track } from './timing';
 
 /* --------------------------------------------------------------------------
@@ -105,19 +105,20 @@ export const OpenCard = ({ t, frames }) => {
 };
 
 /* --------------------------------------------------------------------------
-   The way out. One promise, then the name and the sentence the store page
-   already leads with.
+   The way out.
+
+   The name, and then the two facts somebody who has watched this far actually
+   wants: when the church meets and where it is. It used to end on a line about
+   the app working without a connection, which is true, and which is a sentence
+   written for somebody evaluating software rather than for somebody deciding
+   whether to come on Sunday.
    -------------------------------------------------------------------------- */
 
 export const CloseCard = ({ t, frames }) => {
-  const promise = track(t, [
-    { f: 0, v: 0 },
-    { f: 10, v: 1, ease: 'lift' },
-    { f: 34, v: 1 },
-    { f: 46, v: 0, ease: 'settle' }
-  ]);
-  const sign = ramp(t, 44, 62, 0, 1, 'lift');
-  const rise = ramp(t, 44, 66, 12, 0, 'lift');
+  const mark = ramp(t, 4, 26, 0, 1, 'lift');
+  const lift = ramp(t, 0, 30, 0.96, 1, 'lift');
+  const details = ramp(t, 26, 48, 0, 1, 'lift');
+  const rise = ramp(t, 26, 52, 10, 0, 'lift');
 
   /* NO FADE OUT AT THE END. The last frame of a preview is the one that sits
      on the store page as the poster once it has played, and a poster frame
@@ -128,33 +129,6 @@ export const CloseCard = ({ t, frames }) => {
     <AbsoluteFill style={{ backgroundColor: HC.paper }}>
       <AbsoluteFill
         style={{
-          opacity: promise,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: '0 44px'
-        }}
-      >
-        <p
-          style={{
-            margin: 0,
-            fontFamily: FACE.display,
-            fontWeight: 800,
-            fontSize: 34,
-            lineHeight: '40px',
-            letterSpacing: '-0.015em',
-            color: HC.ink,
-            textAlign: 'center'
-          }}
-        >
-          It all works with no signal.
-        </p>
-      </AbsoluteFill>
-
-      <AbsoluteFill
-        style={{
-          opacity: sign,
-          transform: `translateY(${rise}px)`,
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
@@ -162,24 +136,28 @@ export const CloseCard = ({ t, frames }) => {
           padding: '0 40px'
         }}
       >
-        <Img src={staticFile('app/assets/img/logo-lockup.png')} style={{ width: 292, display: 'block' }} />
-        <Rule width={64} center />
-        <p
-          style={{
-            margin: '4px 0 0',
-            fontFamily: FACE.reading,
-            fontWeight: 400,
-            fontSize: 17,
-            lineHeight: '26px',
-            color: HC.mid,
-            textAlign: 'center'
-          }}
-        >
-          Sermons, guides, and a way in.
-        </p>
+        <Img
+          src={staticFile('app/assets/img/logo-lockup.png')}
+          style={{ width: 300, display: 'block', opacity: mark, transform: `scale(${lift})` }}
+        />
+        <div style={{ opacity: details, transform: `translateY(${rise}px)`, textAlign: 'center' }}>
+          <Rule width={64} center />
+          <p style={DETAIL}>{CHURCH.times}</p>
+          <p style={{ ...DETAIL, color: HC.mid, marginTop: 6 }}>{CHURCH.address}</p>
+        </div>
       </AbsoluteFill>
     </AbsoluteFill>
   );
+};
+
+const DETAIL = {
+  margin: 0,
+  fontFamily: FACE.reading,
+  fontWeight: 500,
+  fontSize: 16,
+  lineHeight: '24px',
+  color: HC.ink,
+  textAlign: 'center'
 };
 
 /* --------------------------------------------------------------------------

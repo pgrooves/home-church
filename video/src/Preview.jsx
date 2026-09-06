@@ -1,27 +1,34 @@
 /* ===========================================================================
    The piece itself: the app, the veil, the words, and a card at each end.
 
-   Two compositions use this. `AppStorePreview` renders it at the phone's own
-   size and fills the frame with it, which is what App Store Connect wants: an
-   app preview is the app, not a picture of a phone. `Marketing` puts the same
-   twenty nine seconds inside a device on a warm ground, for the website and
-   for anywhere a bare screen recording would read as a screenshot.
+   `Preview` renders one cut at the phone's own size. `Framed` puts the same
+   cut inside a drawn phone on a warm ground, for the website and the socials.
+   Which cut is a prop, so the store's thirty second version and the long one
+   are the same component with a different list of scenes. See src/scenes.js.
    =========================================================================== */
 
+import { useMemo } from 'react';
 import { AbsoluteFill, useCurrentFrame } from 'remotion';
 import { AppStage } from './AppStage';
 import { Caption, CloseCard, OpenCard } from './Type';
 import { loadBrandFonts } from './fonts';
 import { HC, PHONE } from './theme';
-import { applyFrame, captionAt, CLOSE_FRAMES, OPEN_FRAMES, TIMELINE } from './scenes';
+import { applyFrame, buildTimeline, captionAt, CLOSE_FRAMES, CUTS, OPEN_FRAMES } from './scenes';
 
-export const Preview = ({ scale = 1 }) => {
+export const Preview = ({ cut = 'AppStorePreview', scale = 1 }) => {
   loadBrandFonts();
 
   const frame = useCurrentFrame();
-  const caption = captionAt(frame);
+  const timeline = useMemo(() => buildTimeline(CUTS[cut]), [cut]);
+
+  const caption = captionAt(frame, timeline);
   const inOpen = frame < OPEN_FRAMES;
-  const inClose = frame >= TIMELINE.appEnd;
+  const inClose = frame >= timeline.appEnd;
+
+  const apply = useMemo(
+    () => (win, f, ctx) => applyFrame(win, f, ctx, timeline),
+    [timeline]
+  );
 
   return (
     <AbsoluteFill
@@ -32,10 +39,10 @@ export const Preview = ({ scale = 1 }) => {
         overflow: 'hidden'
       }}
     >
-      <AppStage frame={frame} apply={applyFrame} scale={scale} />
+      <AppStage frame={frame} apply={apply} scale={scale} />
 
-      {/* Everything above the glass is drawn at phone scale and then taken up
-          with the phone, so one set of numbers describes the layout whichever
+      {/* Everything above the glass is laid out at phone scale and then taken
+          up with the phone, so one set of numbers describes it whichever
           composition is rendering. */}
       <AbsoluteFill
         style={{
@@ -47,21 +54,21 @@ export const Preview = ({ scale = 1 }) => {
       >
         {caption ? <Caption {...caption} /> : null}
         {inOpen ? <OpenCard t={frame} frames={OPEN_FRAMES} /> : null}
-        {inClose ? <CloseCard t={frame - TIMELINE.appEnd} frames={CLOSE_FRAMES} /> : null}
+        {inClose ? <CloseCard t={frame - timeline.appEnd} frames={CLOSE_FRAMES} /> : null}
       </AbsoluteFill>
     </AbsoluteFill>
   );
 };
 
 /* --------------------------------------------------------------------------
-   The device, for the marketing cut.
+   The device, for the long cut.
 
    Drawn rather than photographed: a rounded slab in the app's own near-black
    with a lit edge, the same near-flat treatment the design system asks for
    everywhere else. No shadow theatre, no reflections, no hand holding it.
    -------------------------------------------------------------------------- */
 
-export const Framed = ({ screenWidth }) => {
+export const Framed = ({ cut = 'Marketing', screenWidth = 232 }) => {
   const scale = screenWidth / PHONE.width;
   const screenHeight = PHONE.height * scale;
   const bezel = Math.round(9 * scale + 4);
@@ -76,7 +83,7 @@ export const Framed = ({ screenWidth }) => {
       }}
     >
       {/* A single soft warmth behind the phone, so the ground is not a flat
-          field. Taupe at four percent, which is barely there on purpose. */}
+          field. Taupe at a tenth, which is barely there on purpose. */}
       <AbsoluteFill
         style={{
           background: 'radial-gradient(60% 42% at 50% 38%, rgba(196,181,162,0.10) 0%, rgba(196,181,162,0) 70%)'
@@ -96,12 +103,12 @@ export const Framed = ({ screenWidth }) => {
           overflow: 'hidden'
         }}
       >
-        {/* POSITION RELATIVE IS LOAD BEARING. Preview is an AbsoluteFill, so
-            it lays itself out against the nearest positioned ancestor. Without
-            this the nearest one is the composition, and the phone renders as
-            an empty slab with the app pinned to the top left corner of the
-            frame beside it. Nothing about the arrangement below says so, which
-            is why it is said here. */}
+        {/* POSITION RELATIVE IS LOAD BEARING, on this div and the one above.
+            Preview is an AbsoluteFill, so it lays itself out against the
+            nearest positioned ancestor. Without these the nearest one is the
+            composition, and the phone renders as an empty slab with the app
+            pinned to the top left corner of the frame beside it. Nothing about
+            a stack of sized divs says so, which is why it is said here. */}
         <div
           style={{
             position: 'relative',
@@ -112,7 +119,7 @@ export const Framed = ({ screenWidth }) => {
             backgroundColor: HC.paper
           }}
         >
-          <Preview scale={scale} />
+          <Preview cut={cut} scale={scale} />
         </div>
       </div>
     </AbsoluteFill>
