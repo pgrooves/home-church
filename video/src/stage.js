@@ -192,13 +192,35 @@ function stageRoom(win) {
    Two things somebody wrote down.
    -------------------------------------------------------------------------- */
 
+/* EVERY ONE OF THESE IS DATED BY HAND, and it is not decoration.
+
+   js/journal.js sorts on createdAt and returns 0 when two entries carry the
+   same one. Left to itself, create() stamps `new Date().toISOString()`, and
+   three calls in a row land in the same millisecond most of the time and
+   straddle one occasionally. So the order of two entries written a
+   microsecond apart is decided by whether the clock ticked in between, which
+   is a different answer on different runs.
+
+   That does not matter on a phone, where the journal is written over weeks.
+   It matters enormously here, because Remotion renders with several browser
+   tabs at once and each one boots its own copy of the app: two tabs get two
+   orders, and the frames they hand back are interleaved into one video. What
+   that looks like is the note text tearing back and forth between two
+   different notes, several times a second, for the length of the scene. It
+   took a while to find because every single frame is correct on its own.
+
+   Dated a few days apart, they sort the same way in every tab, and they read
+   like a journal somebody actually kept rather than three things typed at
+   once. */
 function stageJournal(win) {
   const HC = win.HC;
   if (HC.journal.count && HC.journal.count() > 0) return;
 
   const guide = HC.data.guidesByDate()[0];
+  const daysAgo = (n) => new Date(Date.now() - n * 86400000).toISOString();
 
   HC.journal.create({
+    createdAt: daysAgo(2),
     guideId: guide.id,
     bodyText:
       'Kept coming back to the line about David being alone at thirty and ' +
@@ -207,15 +229,17 @@ function stageJournal(win) {
   });
 
   HC.journal.create({
+    createdAt: daysAgo(1),
+    bodyText:
+      'Call Mom back. Ask her about the Tuesday appointment instead of waiting ' +
+      'for her to bring it up.'
+  });
+
+  HC.journal.create({
+    createdAt: daysAgo(5),
     bodyText:
       'Psalm 51 in the reading this week. Create in me a clean heart. I have ' +
       'read that a hundred times and never noticed it is a request and not a ' +
       'promise.'
-  });
-
-  HC.journal.create({
-    bodyText:
-      'Call Mom back. Ask her about the Tuesday appointment instead of waiting ' +
-      'for her to bring it up.'
   });
 }

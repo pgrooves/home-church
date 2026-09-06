@@ -125,7 +125,7 @@ wants it.
 | `src/timing.js` | Keyframes and easings. |
 | `src/theme.js` | The dark palette, copied from `css/tokens.css`. |
 
-## Three things to know before changing it
+## Four things to know before changing it
 
 **Scenes state positions, never steps.** Remotion renders with several browser
 tabs at once and a tab can be handed frame 640 as the first thing it ever does,
@@ -143,6 +143,15 @@ kills every transition and animation in the iframe, and the movements that
 matter are driven by hand instead. The collapsing sections are the nicest case:
 the app animates them from `grid-template-rows: 0fr` to `1fr`, so a fraction of
 an `fr` is a section caught halfway open.
+
+**Anything staged needs a fixed sort key.** `src/stage.js` used to let
+`HC.journal.create()` stamp its own timestamps, and three calls in a row landed
+in the same millisecond most of the time and straddled one occasionally.
+`js/journal.js` sorts on `createdAt` and returns 0 on a tie, so the order of two
+entries came down to whether the clock ticked between two lines of setup. Every
+frame was correct on its own; the video tore between two different notes several
+times a second, because Remotion renders in several browser tabs and each one
+boots the app and gets its own answer. Date anything you stage, by hand.
 
 **No sound.** App previews autoplay muted on the store page and the one Apple
 guideline that matters here is that it has to work without audio. Nothing in
