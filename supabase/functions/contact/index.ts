@@ -299,9 +299,17 @@ async function sendViaGmail(letter: Letter): Promise<string> {
     return `Gmail SMTP refused it: ${String((err as Error)?.message ?? err)}`;
   } finally {
     clearTimeout(timer);
-    /* The socket goes either way. A close that throws on an already dead
-       connection is not news and must not become the reported failure. */
-    await client.close().catch(() => {});
+    /* The socket goes either way, and this is wrapped rather than chained for
+       two reasons that both cost a production 500 to learn. denomailer's
+       close() returns void, not a promise, so `.close().catch()` reads a
+       property of undefined and throws; and a throw inside a finally replaces
+       whatever the try was returning, so that TypeError came back to the app
+       as a bare 500 instead of the honest sentence, and hid whether the send
+       had worked at all. A close that fails on an already dead connection is
+       not news and must never become the reported failure. */
+    try {
+      await client.close();
+    } catch { /* already gone */ }
   }
 }
 
