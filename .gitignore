@@ -68,13 +68,21 @@ venv/
 demo-*/*.html
 !demo-*/*.src.html
 
-# Security and oversight write-ups. THIS REPOSITORY IS PUBLIC, and a document
-# that lists where the app is weak is a document that should not be. They are
-# written to be handed to a person, not published, so they stay out of git
-# entirely rather than living here and relying on nobody looking.
+# PDFs written for a person, not for the repository. THIS REPOSITORY IS PUBLIC.
+# A document listing where the app is weak, or one naming every account the
+# church depends on, is a document that must not be in it.
 #
-# The narrow pattern is deliberate: `*.pdf` would also swallow
-# `Home Church slash commands.pdf`, which is tracked on purpose.
-/Home Church App - Oversight Briefing.pdf
-/*-security-review.pdf
-/*-oversight-briefing.pdf
+# DENY BY DEFAULT, AND THE HISTORY IS THE ARGUMENT. This started as a list of
+# specific filenames, on the reasoning that a bare `*.pdf` would also swallow
+# `Home Church slash commands.pdf`, which is tracked on purpose. That list was
+# written and then, the same afternoon, failed to catch the very next file —
+# the succession sheet, whose name nobody had thought to add yet. An ignore
+# rule that has to be extended by hand for each new sensitive file is a rule
+# that protects every file except the one you just made.
+#
+# So: every PDF at the repo root is out, and the one exception is named. A new
+# write-up is safe the moment it exists rather than the moment somebody
+# remembers this file. Anything genuinely meant to ship gets an un-ignore line
+# of its own, deliberately, which is the right way round for this trade.
+/*.pdf
+!/Home Church slash commands.pdf
