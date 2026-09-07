@@ -83,10 +83,15 @@
 
   /* Sends it. Resolves only when the church has it.
 
-     `website` is the honeypot and it is sent empty, every time, by the one
-     caller that is a person. It is on the wire rather than only in the markup
-     so that the function has something to check even when a bot posts
-     straight to the URL without ever loading the form. */
+     `homepage_url` is the honeypot and it is sent empty, every time, by the
+     one caller that is a person. It is on the wire rather than only in the
+     markup so that the function has something to check even when a bot posts
+     straight to the URL without ever loading the form.
+
+     It was called `website` until the security review. That name sat in a
+     public repository, so it has to be assumed known. The function accepts
+     either name for now, because an App Store binary is whatever version
+     somebody last updated to and the old ones still post `website`. */
   function send(draft) {
     if (!isAvailable()) {
       return Promise.reject(new Error(
@@ -101,7 +106,7 @@
       name: trimmed(draft.name, MAX_NAME),
       email: trimmed(draft.email, MAX_EMAIL),
       message: trimmed(draft.message, MAX_MESSAGE),
-      website: trimmed(draft.website, 200)
+      homepage_url: trimmed(draft.homepageUrl, 200)
     }, 'We could not get that through just now. Email the church directly and somebody will answer.')
       .then(function () { return true; });
   }

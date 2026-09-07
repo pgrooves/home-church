@@ -111,7 +111,7 @@ const GOOD = { name: 'Dee Robicheaux', email: 'dee@example.com', message: 'Where
   /* Sent empty by every real caller, and sent on purpose rather than omitted:
      the function has to have something to check when a bot posts straight at
      the URL without ever loading the form. */
-  ok('and the honeypot on it, empty', calls[0].body.website, '');
+  ok('and the honeypot on it, empty', calls[0].body.homepage_url, '');
 
   calls.length = 0;
   await contact.send({

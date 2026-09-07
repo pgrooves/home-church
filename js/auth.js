@@ -350,18 +350,28 @@
 
   /* --------------------------------------------------------- profile sync */
 
+  /* WHAT SYNCS, and it is now a short list on purpose.
+
+     Gender, birthdate, marital status and the five address columns were here
+     until the security review. Nothing in the app ever read them back except
+     the form that collected them, so they were pure liability: at several
+     hundred accounts, a directory of where church families live. See the note
+     in js/screens/profile.js, which lost the matching inputs.
+
+     THIS MAP IS THE VALVE IN BOTH DIRECTIONS. toRemote() only sends what is
+     named here, so a phone still holding an old local address cannot push it
+     up; toLocal() only reads what is named here, so a row that still has one
+     cannot pull it down. Taking a field out of this object is what actually
+     stops it travelling, which is why this is the edit that matters and the
+     form is only the half a person can see.
+
+     The columns themselves still exist and still hold what was typed before
+     today. Emptying them is a deliberate write somebody decides to run, not
+     something a screen does quietly on its own. */
   var FIELD_MAP = {
     firstName: 'first_name',
     lastName: 'last_name',
-    gender: 'gender',
-    birthdate: 'birthdate',
     campus: 'campus',
-    maritalStatus: 'marital_status',
-    street: 'street',
-    unit: 'unit',
-    city: 'city',
-    state: 'state',
-    zip: 'zip',
     photoUrl: 'photo_url'
   };
 

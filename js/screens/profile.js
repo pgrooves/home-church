@@ -136,6 +136,31 @@
         ? '<p class="hc-caption hc-profile__hint">Synced to your account.</p>'
         : '<p class="hc-caption hc-profile__hint">Saved on this phone for now. Sign in above to carry it to another device.</p>';
 
+    /* WHAT USED TO BE HERE, and why it is not.
+       Gender, birthdate, marital status and a full street address were all on
+       this screen, and all four synced to public.profiles. The security review
+       traced every read of them and found exactly one: this form, drawing them
+       back to the person who typed them. No screen, notification, or query
+       anywhere else in the app used any of it.
+
+       At a few dozen accounts that is untidy. At the several hundred this is
+       about to have, it is a list of where church families live and when their
+       children were born, held by a church app rather than by Planning Center,
+       which already has all of it and has a security team. Information never
+       collected cannot leak, and everything else in this review is damage
+       limitation by comparison.
+
+       So they are gone from the form, and gone from FIELD_MAP in js/auth.js so
+       nothing carries them up any more. Ask again when a feature needs one,
+       and let that feature say what it needs it for.
+
+       CAMPUS STAYS. It is not personal, the column has been there since 0009,
+       and it is what a second location would filter events and notifications
+       on without inventing a new idea.
+
+       ALREADY-SAVED ROWS ARE NOT TOUCHED BY THIS. The columns still exist and
+       still hold whatever people typed. Clearing them is a separate, deliberate
+       write, not a side effect of a screen losing its inputs. */
     return '' +
       c.sectionHeader('The details', 'Your information') +
       '<div class="hc-profile__fields">' +
@@ -143,24 +168,7 @@
           field('firstName', 'First name', p.firstName, 'given-name') +
           field('lastName', 'Last name', p.lastName, 'family-name') +
         '</div>' +
-        '<div class="hc-form-row">' +
-          selectField('gender', 'Gender', p.gender, [
-            ['', 'Skip this'], ['female', 'Female'], ['male', 'Male']
-          ]) +
-          dateField('birthdate', 'Birthdate', p.birthdate) +
-        '</div>' +
         field('campus', 'Campus', p.campus, 'off') +
-        selectField('maritalStatus', 'Marital status', p.maritalStatus, [
-          ['', 'Skip this'], ['single', 'Single'], ['married', 'Married'],
-          ['widowed', 'Widowed'], ['other', 'Other']
-        ]) +
-        field('street', 'Street address', p.street, 'address-line1') +
-        field('unit', 'Apt, suite, etc.', p.unit, 'address-line2') +
-        '<div class="hc-form-row hc-form-row--address">' +
-          field('city', 'City', p.city, 'address-level2') +
-          field('state', 'State', p.state, 'address-level1') +
-          field('zip', 'ZIP', p.zip, 'postal-code') +
-        '</div>' +
       '</div>' +
       note;
   }

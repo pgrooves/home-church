@@ -220,7 +220,7 @@ async function type(page, name, value) {
   console.log('\n--- the honeypot ---');
 
   const hp = await page.evaluate(() => {
-    const field = document.querySelector('[data-contact-field="website"]');
+    const field = document.querySelector('[data-contact-field="homepageUrl"]');
     if (!field) return null;
     const box = field.getBoundingClientRect();
     return {
@@ -283,7 +283,7 @@ async function type(page, name, value) {
 
   ok('the three fields went, and the honeypot with them, empty',
      sent.length === 1 && sent[0].name === 'Dee Robicheaux'
-     && sent[0].email === 'dee@example.com' && sent[0].website === '',
+     && sent[0].email === 'dee@example.com' && sent[0].homepage_url === '',
      JSON.stringify(sent));
   ok('the form is replaced by an answer that stays on screen', now.sentCard && !now.form);
   ok('and the toast says it went', /sent/i.test(now.toast), now.toast);

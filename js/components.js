@@ -168,6 +168,28 @@
     window.location.href = url;
   }
 
+  /* Every tappable thing in this app that leaves it ends up here, carrying
+     whatever was in a data-url attribute, and until the security review this
+     function opened it without ever asking what it was.
+
+     WHAT THAT WAS WORTH WORRYING ABOUT. Those addresses come from the content
+     tables, which only an admin can write, so there was no way in for a
+     member and this was never an open door. But "safe because of who can
+     write the row" is a promise every future content type has to keep, and it
+     only takes one that reads from somewhere else to break it. A `javascript:`
+     address handed to window.open or to location.href runs; the check below is
+     four lines and moves the guarantee off the writer and onto the sink.
+
+     webUrl() IS THE CHECK, and it is the one already used on the announcement
+     form, the editor's link button and the announcement screen. Reusing it is
+     the point: a link the form accepted and this refused to open would be its
+     own bug, and one reading of "is that a link" between all four callers is
+     what stops that. It returns '' for anything that is not http, https,
+     mailto or tel, and fills in https:// for a bare host.
+
+     SYSTEM_SCHEMES IS CHECKED FIRST and does not go through webUrl, because
+     `sms:` is not in webUrl's list and the "text SERVE" button needs it. That
+     branch is its own anchored allowlist, so it is already closed. */
   function openExternal(url) {
     if (!url) return;
 
@@ -176,16 +198,25 @@
       return;
     }
 
+    /* Said out loud rather than returning quietly. A button that does nothing
+       is the failure this codebase keeps arguing against, and somebody has
+       just tapped this one. */
+    var safe = webUrl(url);
+    if (!safe) {
+      toast('That link is not one this app can open.');
+      return;
+    }
+
     try {
       var p = plugins();
       if (p && p.Browser) {
-        p.Browser.open({ url: url });
+        p.Browser.open({ url: safe });
         return;
       }
-      var win = window.open(url, '_blank', 'noopener,noreferrer');
+      var win = window.open(safe, '_blank', 'noopener,noreferrer');
       if (win) win.opener = null;
     } catch (err) {
-      window.location.href = url;
+      window.location.href = safe;
     }
   }
 

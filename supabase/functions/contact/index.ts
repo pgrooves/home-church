@@ -225,8 +225,28 @@ Deno.serve(async (req: Request) => {
   /* The honeypot, first, before anything is written or checked. Answered as
      though it worked: a bot that is told it failed tries something else, and a
      bot that is told it succeeded goes away. No row, no email, no rate limit
-     entry, because none of it happened. */
-  if (text(payload.website, 200)) {
+     entry, because none of it happened.
+
+     TWO NAMES, AND BOTH ARE CHECKED. The field was called `website` until the
+     security review, and that name is published: this repository was public
+     while it was in the source, so it has to be assumed known and is no longer
+     worth anything on its own. `homepage_url` replaces it.
+
+     The old one keeps being checked, and not out of caution. The app is an App
+     Store binary, so the phone in somebody's pocket is whatever version they
+     last updated to, and that version posts `website`. Checking only the new
+     name would leave every un-updated phone with no honeypot at all until they
+     update, which for some people is never. Either field filled is a bot;
+     neither filled is a person. Drop the legacy branch when the oldest
+     supported build sends the new name, and not before.
+
+     WORTH BEING HONEST ABOUT WHAT THIS BUYS. A honeypot's only power is that
+     the filler does not know it is there, so a public repository costs it most
+     of its value and a rename does not restore that — it invalidates the name
+     anyone already scraped, which is worth doing and is not the same thing.
+     The defences that do not care who is reading are the ones below: the
+     length caps, the address shape check, and the rate limit. */
+  if (text(payload.homepage_url, 200) || text(payload.website, 200)) {
     console.log('contact: honeypot filled, dropped');
     return json({ ok: true });
   }

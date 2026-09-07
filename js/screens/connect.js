@@ -47,7 +47,7 @@
 
      Never persisted. js/contact.js says why at length: an unsent message to
      the church left on a phone is not a convenience. */
-  var contact = { name: '', email: '', message: '', website: '' };
+  var contact = { name: '', email: '', message: '', homepageUrl: '' };
   var contactBusy = false;
   var contactSent = false;
   var contactError = null;
@@ -517,9 +517,9 @@
        hidden inputs and fill visible ones; this has to look like a real field
        to something reading the markup and be unreachable to a person. */
     html += '<div class="hc-contact__hp" aria-hidden="true">' +
-      '<label for="hc-contact-website">Website</label>' +
-      '<input id="hc-contact-website" type="text" name="website" ' +
-        'data-contact-field="website" tabindex="-1" autocomplete="off">' +
+      '<label for="hc-contact-homepage">Website</label>' +
+      '<input id="hc-contact-homepage" type="text" name="homepage_url" ' +
+        'data-contact-field="homepageUrl" tabindex="-1" autocomplete="off">' +
     '</div>';
 
     /* The last failure, said where the person is looking rather than in a
@@ -830,7 +830,7 @@
      and finding the last one still in the boxes is how somebody sends the
      same thing twice. */
   function contactDone() {
-    contact = { name: '', email: '', message: '', website: '' };
+    contact = { name: '', email: '', message: '', homepageUrl: '' };
     contactBusy = false;
     contactError = null;
     contactSent = true;
