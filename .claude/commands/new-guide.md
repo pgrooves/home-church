@@ -335,6 +335,22 @@ minutes of laptop time, and re-running with unchanged text regenerates nothing
 at all. Do not swap it for a hosted TTS service without saying out loud what
 that would cost the church per year.
 
+**Never re-speak the catalogue to publish one guide.** If a run reports it is
+about to make far more sections than the guide you just wrote, something
+changed the narrator's own wording rather than a guide's, and every hash in
+the catalogue moved at once. Stop, and reseal instead:
+
+```bash
+npm run narrate:reseal                              # speaks nothing
+npm run narrate                                     # makes the new guide only
+npm run narrate:upload -- --only guide-your-slug    # sends that guide only
+```
+
+The reseal records a decision rather than checking anything, so it is the
+pastor's call and not a step to take on your own initiative. Say what moved
+and what it would cost to re-speak, then let them choose.
+`NEW_GUIDE_PROCESS.md` Step 5b has the whole of it.
+
 ## Confirm, briefly
 
 Five facts and stop, six in the one case below. No summary of the steps, no

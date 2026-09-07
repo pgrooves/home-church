@@ -35,7 +35,24 @@ const DIR = process.argv.includes('--dir')
   ? process.argv[process.argv.indexOf('--dir') + 1]
   : 'narration';
 
+/* Which guides to send. Everything in the manifest by default, which is the
+   right answer for a normal week: the files are upserts of bytes that did not
+   change and the rows are rewritten to what they already said.
+
+   --only narrows it to one guide. It is for the week the manifest holds a
+   catalogue you have deliberately left alone, after a --reseal, say, and the
+   one guide you actually made is the only thing that should be written. It
+   touches one guide's files and one guide's row, and nothing else is read,
+   sent, or patched. */
+const ONLY = process.argv.includes('--only')
+  ? process.argv[process.argv.indexOf('--only') + 1]
+  : null;
+
 function die(msg) { console.error(msg); process.exit(1); }
+
+if (ONLY && !ONLY.startsWith('guide-')) {
+  die('--only takes a guide id, like guide-boats-tarshish, not "' + ONLY + '".');
+}
 
 if (!DRY && (!URL_BASE || !KEY)) {
   die('Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY, or pass --dry-run.\n' +
@@ -91,7 +108,22 @@ async function patchGuide(guideId, sections) {
 async function main() {
   let files = 0, bytes = 0, guides = 0;
 
-  for (const guideId of Object.keys(manifest)) {
+  const wanted = Object.keys(manifest).filter((id) => !ONLY || id === ONLY);
+
+  /* Naming a guide that has no audio is a question, not a no-op, so it stops
+     here rather than reporting nought files and an exit code of zero. A guide
+     is in the manifest with no sections when build_narration.py had nothing to
+     speak or nothing to seal for it, which means it is silent, which is the
+     opposite of what somebody running this for one guide is trying to fix. */
+  if (ONLY && !wanted.some((id) => Object.keys(manifest[id] || {}).length)) {
+    die(!wanted.length
+      ? 'The manifest has nothing for ' + ONLY + '. It holds: ' +
+        Object.keys(manifest).join(', ')
+      : ONLY + ' is in the manifest with no sections, so it has no audio to\n' +
+        'upload. Run the narrate step for it first, without --reseal.');
+  }
+
+  for (const guideId of wanted) {
     const sections = manifest[guideId];
     const ids = Object.keys(sections);
     if (!ids.length) continue;
@@ -123,6 +155,10 @@ async function main() {
 
   console.log('\n' + (DRY ? 'Dry run. ' : '') +
     files + ' files, ' + (bytes / 1048576).toFixed(1) + ' MB, ' + guides + ' guides.');
+  if (ONLY) {
+    console.log('Only ' + ONLY + '. Every other guide in the manifest was ' +
+      'left exactly as it is, on disk and in Supabase.');
+  }
   if (DRY) console.log('Nothing was uploaded and no row was changed.');
 }
 

@@ -27,6 +27,7 @@
     "icons": "python3 scripts/make_icons.py",
     "practices": "node scripts/build_practices.js",
     "narrate": "node scripts/narration_text.js && sh -c 'PY=$([ -x .venv/bin/python ] && echo .venv/bin/python || echo python3); exec \"$PY\" scripts/build_narration.py \"$@\"' --",
+    "narrate:reseal": "node scripts/narration_text.js && sh -c 'PY=$([ -x .venv/bin/python ] && echo .venv/bin/python || echo python3); exec \"$PY\" scripts/build_narration.py --reseal \"$@\"' --",
     "narrate:upload": "node scripts/upload_narration.js"
   },
   "dependencies": {

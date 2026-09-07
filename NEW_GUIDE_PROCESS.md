@@ -314,12 +314,48 @@ the audio the church keeps. See `sectionText` in `scripts/narration_text.js`
 for the reasoning, and `tests/narration.test.js` for the three tests that stop
 anybody putting the title back by accident.
 
-The other side of that hash is worth knowing before it surprises you:
-**changing what the narrator says, rather than what a guide says, moves every
-hash in the catalogue and re-speaks all of it once.** Removing the title from
-the head did exactly that. It is a one time cost on the next run after such a
-change, perhaps half an hour of laptop time, and then the weekly rhythm is
-back to one guide. A big number on that run is the change working, not a bug.
+**The one day the hash works against you** is the day the narrator's own
+wording changes rather than a guide's: a heading reworded, the message's name
+taken out of the head. Every hash in the catalogue moves at once, and a normal
+run would re-speak the whole thing to hear almost the same sentences. That is
+what `--reseal` is for:
+
+```bash
+npm run narrate:reseal   # speaks nothing, restamps the manifest
+```
+
+It takes the recordings already on disk at their word, writes today's hashes
+over them, and leaves the audio untouched, so the next ordinary run sees a
+current catalogue and speaks only what genuinely has none. It needs no model,
+no venv and no ffmpeg, because it never opens the speech model at all.
+
+**It verifies nothing.** It cannot listen to an mp3. What it records is a
+decision, that the catalogue as published is accepted as it stands, so run it
+only when you know what changed and can live with the recordings. If a
+guide's own words moved, that section needs speaking, not sealing. And it is
+loud about the sections it could not seal, the ones with no audio at all,
+because a guide published silent is invisible from inside the app.
+
+The upload has the matching narrow form, because by default it sends every
+guide in the manifest and rewrites every row from it:
+
+```bash
+npm run narrate:upload -- --only guide-boats-tarshish
+```
+
+One guide's files, one guide's row, and every other guide left exactly as it
+is in Storage and in Supabase. So the whole sequence, on the day the narrator
+changed and one guide is genuinely new, is three commands:
+
+```bash
+npm run narrate:reseal                                # speaks nothing
+npm run narrate                                       # speaks the new guide only
+npm run narrate:upload -- --only guide-your-slug      # sends that guide only
+```
+
+Naming a guide that has no audio stops with an error rather than reporting
+nothing uploaded and an exit code of zero, since that is the state somebody
+running this is usually trying to fix.
 
 **Read what the first command prints.** It says where the guides came from
 and how many it found. If it says `source seed` it could not reach Supabase

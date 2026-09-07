@@ -31,6 +31,18 @@ RUN:
 
 Only sections whose text hash has changed are regenerated, so a normal week
 re-speaks one new guide and leaves the rest alone.
+
+THE ONE DAY THAT IS NOT TRUE is the day the narrator's own wording changes
+rather than a guide's: a heading reworded, the message's name taken out of the
+head. Every hash in the catalogue moves at once and a normal run would
+re-speak all of it to hear almost the same sentences. --reseal is for that
+day. It speaks nothing, accepts the recordings already on disk, and restamps
+the manifest with today's hashes so the next ordinary run leaves them alone.
+It verifies nothing, it records a decision, so only run it when you know what
+changed and can live with the audio as it is.
+
+    node scripts/narration_text.js
+    python3 scripts/build_narration.py --reseal    # no model needed
 """
 
 import argparse
@@ -103,17 +115,14 @@ def main():
     ap.add_argument("--voice", default=VOICE)
     ap.add_argument("--force", action="store_true",
                     help="regenerate every section, not only changed ones")
+    ap.add_argument("--reseal", action="store_true",
+                    help="speak nothing: accept the audio already on disk as "
+                         "current and restamp the manifest with today's hashes")
     args = ap.parse_args()
 
-    import numpy as np
-    import soundfile as sf
-    from kokoro_onnx import Kokoro
-
-    onnx = os.path.join(args.models, "kokoro-v1.0.onnx")
-    voices = os.path.join(args.models, "voices-v1.0.bin")
-    for f in (onnx, voices):
-        if not os.path.exists(f):
-            sys.exit("Missing %s. See the setup block at the top of this file." % f)
+    if args.reseal and args.force:
+        sys.exit("--reseal and --force are opposites. One speaks nothing, the "
+                 "other speaks everything.")
 
     with open(args.text) as fh:
         payload = json.load(fh)
@@ -124,12 +133,33 @@ def main():
         with open(manifest_path) as fh:
             previous = json.load(fh)
 
-    kokoro = Kokoro(onnx, voices)
-    ff = ffmpeg_exe()
+    if args.reseal and not previous:
+        sys.exit("Nothing to reseal, no %s. A first run has to actually speak."
+                 % manifest_path)
+
+    # The model, ffmpeg and their imports are only needed to speak. A reseal
+    # speaks nothing, so it runs on a machine with none of them: no venv, no
+    # 340MB download, no ffmpeg. That is deliberate, it is the run somebody
+    # does in a hurry on whatever machine is in front of them.
+    kokoro = ff = None
+    if not args.reseal:
+        import numpy as np
+        import soundfile as sf
+        from kokoro_onnx import Kokoro
+
+        onnx = os.path.join(args.models, "kokoro-v1.0.onnx")
+        voices = os.path.join(args.models, "voices-v1.0.bin")
+        for f in (onnx, voices):
+            if not os.path.exists(f):
+                sys.exit("Missing %s. See the setup block at the top of this file." % f)
+
+        kokoro = Kokoro(onnx, voices)
+        ff = ffmpeg_exe()
 
     manifest = {}
     started = time.time()
-    made, skipped, audio_seconds, total_bytes = 0, 0, 0.0, 0
+    made, skipped, sealed, audio_seconds, total_bytes = 0, 0, 0, 0.0, 0
+    missing = []
 
     for guide in payload["guides"]:
         gid = guide["guideId"]
@@ -141,6 +171,34 @@ def main():
             sid, text, digest = section["id"], section["text"], section["hash"]
             mp3 = os.path.join(gdir, sid + ".mp3")
             was = previous.get(gid, {}).get(sid)
+
+            # A reseal takes the recording on disk at its word and restamps it
+            # with today's hash, so the next ordinary run sees it as current
+            # and leaves it alone. It is for the day the narrator's own wording
+            # changes, the headings say, rather than a guide's: every hash in
+            # the catalogue moves at once, and re-speaking all of it to hear
+            # the same sentences is an hour spent for nothing.
+            #
+            # IT VERIFIES NOTHING. It cannot listen to an mp3. What it does is
+            # record a decision, that the audio already published is accepted
+            # as current, so only run it when you know what changed and that
+            # you can live with the recordings as they are. If a guide's own
+            # words moved, that section needs speaking, not sealing.
+            if args.reseal:
+                if was and os.path.exists(mp3):
+                    entry = dict(was)
+                    entry["hash"] = digest
+                    manifest[gid][sid] = entry
+                    audio_seconds += entry.get("seconds", 0)
+                    total_bytes += entry.get("bytes", 0)
+                    sealed += 1
+                    print("  seal  %-22s %s" % (gid, sid), flush=True)
+                else:
+                    # Left out of the manifest on purpose, so the next ordinary
+                    # run has no previous entry to match and speaks it.
+                    missing.append((gid, sid))
+                    print("  MISS  %-22s %-14s no audio yet" % (gid, sid), flush=True)
+                continue
 
             # Unchanged text with a file still on disk is left alone. This is
             # what makes a weekly run cheap: one new guide, not the catalogue.
@@ -190,6 +248,8 @@ def main():
 
     wall = time.time() - started
     print("\n" + "=" * 70)
+    if args.reseal:
+        print("resealed        %d sections, nothing was spoken" % sealed)
     print("generated       %d sections" % made)
     print("reused          %d sections" % skipped)
     print("audio           %.1f min" % (audio_seconds / 60))
@@ -200,6 +260,22 @@ def main():
     print("api tokens      0")
     print("manifest        %s" % manifest_path)
     print("=" * 70)
+
+    # The whole point of a reseal is that it is quiet, so the one thing it did
+    # not seal has to be loud. These are the sections with no recording at all,
+    # which is a guide published silent, and nothing in the app ever says so.
+    if missing:
+        by_guide = {}
+        for gid, sid in missing:
+            by_guide.setdefault(gid, []).append(sid)
+        print("")
+        print("  %d section%s have no audio and were left unsealed:"
+              % (len(missing), "" if len(missing) == 1 else "s"))
+        for gid in sorted(by_guide):
+            print("    %-24s %s" % (gid, ", ".join(by_guide[gid])))
+        print("")
+        print("  Run this again without --reseal to speak them. Until then")
+        print("  those sections have no play button and nothing says so.")
 
 
 if __name__ == "__main__":
