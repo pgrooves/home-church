@@ -113,6 +113,89 @@ cannot see yet, it stays fully readable to you.
 **Before you upsert, grep the JSON for an em-dash.** It is a hard brand rule
 and this is the last place it can be caught cheaply.
 
+**Then the sermon row, last.** `NEW_GUIDE_PROCESS.md` Step 3 calls it the
+sermon object; in Supabase it is a row in `podcasts`, and it goes up after the
+guide because `podcasts.guide_id` is the foreign key that points back at it.
+A guide with no sermon row renders with no name at all, since `guideTitle()`
+resolves through `sermon.title` and has nothing to fall back on:
+
+```jsonc
+{
+  "id": "sermon-your-slug",
+  "series_id": "series-jonah",
+  "guide_id": "guide-your-slug",              // the row you just wrote
+  "title": "Boats to Tarshish (Working Title)",
+  "preacher": "Stephen Daigle",
+  "preacher_short": "Stephen",
+  "preached_on": "2026-09-06",                // the Sunday, drives sort order
+  "published_on": null,                       // no episode yet, that is Tuesday
+  "duration": "35 min",
+  "passage": "Jonah 1",
+  "episode_url": null,                        // Listen reads "Audio coming soon!"
+  "platform": "Spotify",
+  "media_type": "audio",
+  "summary": [],                              // the episode notes, on Tuesday
+  "description": "One or two sentences, the hook, shown on Listen.",
+  "published": true
+}
+```
+
+```bash
+python3 scripts/hc_supabase.py upsert podcasts /tmp/sermon-your-slug.json
+```
+
+The nulls and the empty arrays are the point rather than an unfinished job.
+They are what `/new-podcast` fills in, and the app draws every one of them as
+a sensible waiting state in the meantime.
+
+## The title publishes as a working title
+
+The name of the message is not on the guide row. It is `podcasts.title` on the
+sermon row above, and on Sunday nobody knows it yet, because the episode posts
+Tuesday carrying whatever the church actually decided to call this. So the
+title you proposed publishes with `(Working Title)` after it, exactly that
+string, one space before the parenthesis:
+
+```jsonc
+"title": "Boats to Tarshish (Working Title)"
+```
+
+`NEW_GUIDE_PROCESS.md` has the reasoning under "One name per message." Three
+things it rules out, worth repeating here because this is the file that
+writes the row:
+
+- **Not in the id.** `sermon-boats-tarshish`, never
+  `sermon-boats-tarshish-working-title`. Ids are permanent, the suffix is not.
+- **Not on the guide.** `theme_title` stays `null`, `subtitle` describes the
+  guide rather than naming it. One field carries the name and one field
+  carries the marker, because they are the same field.
+- **Not hedged in the prose.** The guide's own sentences never mention that
+  the title is provisional. The suffix is the whole notice.
+
+`/new-podcast` overwrites the field with the real title on Tuesday, which
+retires the marker without anybody doing anything about it.
+
+## Check for a suffix that went stale
+
+A message that never gets an episode keeps its marker forever, and a
+`/new-podcast` run three weeks late leaves three of them stacked up. Neither
+is visible from inside the week you are working on, so look while you are
+already here:
+
+```sql
+select id, title, preached_on
+  from public.podcasts
+ where title like '%(Working Title)%'
+   and preached_on < current_date - 14
+ order by preached_on;
+```
+
+Anything it returns goes in the confirmation as one line, named, and stops
+there. Do not rewrite them. An old working title is sometimes the right
+title that simply never had an episode behind it, and choosing the church's
+words for them is not a call this command gets to make. `/edit-content` drops
+a suffix, or puts a better title on, in one sentence when you decide to.
+
 ## The reading plan moves itself
 
 **There is no step here.** Publishing the guide already moved it, and this
@@ -245,15 +328,21 @@ that would cost the church per year.
 
 ## Confirm, briefly
 
-Five facts and stop. No summary of the steps, no offer of next steps:
+Five facts and stop, six in the one case below. No summary of the steps, no
+offer of next steps:
 
 ```
-Published  The Slow Burn
+Published  The Slow Burn (Working Title)
 Stephen, August 16 2026
 guides, series-david, 7 sections, 18 questions, 14 one-liners
 Reading    week 2 of 4, Jonah 1:11 to 2:10, grace at the bottom
 Narrated   6 sections, 9.4 min, af_heart
 ```
+
+Print the title the way it went into the row, suffix included, rather than
+tidying it up for the confirmation. The line is the receipt for what the
+church will see on the Home card in a minute, and a receipt that reads
+cleaner than the row is worse than no receipt.
 
 The reading line is what the check above returned, said in one line, because a
 plan that quietly stopped following its series is only visible in a week number
@@ -266,4 +355,11 @@ rather than leaving the last line off:
 ```
 Not narrated. Run `npm run narrate && npm run narrate:upload` on the Mac,
 this session cannot reach Storage.
+```
+
+The sixth line, last, and only when the stale check found something. Name
+them and stop, no recommendation about what they should be called:
+
+```
+Still working titles  Boats to Tarshish, Aug 30. No episode yet.
 ```

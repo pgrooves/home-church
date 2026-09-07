@@ -35,6 +35,27 @@ carrying the church's own title for the message, and `/new-podcast`
 overwrites `sermon.title` with it. One field changes and the whole app
 follows. See `NEW_PODCAST_PROCESS.md`.
 
+**A provisional title says so out loud.** Publish the title you proposed with
+`(Working Title)` on the end of it, exactly that, capitalized that way, one
+space before the parenthesis:
+
+```js
+title: 'Boats to Tarshish (Working Title)'
+```
+
+It goes on `sermon.title` and nowhere else. Not in the slug, not in the
+`subtitle`, and not in `guide.themeTitle`, which stays `null` for the same
+reason it always has. Because it rides on the one field the whole app reads,
+it shows up everywhere the message's name shows up: the Home card, the Listen
+row, the top of the reader, the PDF footer, a shared one-liner. That is the
+point rather than a side effect. Between Sunday and Tuesday the name is a
+guess, and a guess that looks like a decision is how a title you invented
+from a PDF quietly becomes the church's title, because nobody reading it knew
+they were allowed to change it.
+
+`/new-podcast` takes the suffix off in the same write that puts the real title
+on, so the marker retires itself on Tuesday and never needs a step of its own.
+
 **Never rename an id.** Ids are opaque and permanent. A leader's question
 checkmarks and journal entries are stored on their phone keyed by
 `guide.id`, so renaming `guide-unsung-heroes` because the episode turned out
@@ -62,7 +83,9 @@ Extract, at minimum:
 
 - Sermon title (if the PDF doesn't give you a clean one, propose one, short,
   concrete, no churchy subtitle padding, matching the tone of "The Slow
-  Burn" or "A Seat at the Table")
+  Burn" or "A Seat at the Table"). Propose it exactly as carefully as if it
+  were final, then publish it with `(Working Title)` after it, per "One name
+  per message" above. The suffix is not a licence to hand in a worse title.
 - Preacher's full name
 - Date preached, or ask if it's not in the document
 - Primary passage(s)
@@ -167,7 +190,10 @@ are data attached to two of those six, not separate sections of their own.)
 {
   id: 'sermon-your-slug',        // kebab-case, unique
   seriesId: 'series-xxx',        // must match an id in the series array
-  title: 'The Sermon Title',
+  title: 'The Sermon Title (Working Title)',  // the suffix is required until
+                                 // /new-podcast replaces the whole string with
+                                 // the church's own title. See "One name per
+                                 // message" above.
   preacher: 'Full Name',
   preacherShort: 'First name',   // used everywhere except this one field
   preachedOn: '2026-08-16',      // YYYY-MM-DD, drives sort order everywhere
@@ -214,12 +240,21 @@ Slug convention: `sermon-` and `guide-` prefixes, then two or three words
 from the title, lowercase, hyphenated. `The Slow Burn` became
 `sermon-slow-burn` / `guide-slow-burn`.
 
+**The suffix is not part of the title for this purpose.** `Boats to Tarshish
+(Working Title)` gives you `sermon-boats-tarshish`, never
+`sermon-boats-tarshish-working-title`. Ids are permanent and that one would
+outlive the marker by years, on a phone, keyed to somebody's journal entries.
+
 -----
 
 ## Step 4: Show the draft before it goes anywhere
 
 Paste the drafted guide content back into the chat, or at minimum the
-`shortSummary` and the three `anchors`, before publishing it.
+`shortSummary` and the three `anchors`, before publishing it. Lead with the
+proposed title, suffix and all, so it is the first thing there is a chance to
+argue with. It is the one piece of the draft the whole church sees on a card
+without opening anything.
+
 This is real pastoral content going out under the church's name, a quick
 sanity check from whoever's driving the session catches a wrong name, a
 misjudged tone, or a scripture reference that needs a second look, faster

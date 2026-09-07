@@ -197,6 +197,13 @@ Saying **"new podcast"** runs **`NEW_PODCAST_PROCESS.md`**, which matches the
 episode to its Sunday by date, attaches the episode link and notes, and
 replaces the provisional title with the real one.
 
+That provisional title is not a secret while it lasts. `/new-guide` publishes
+it with `(Working Title)` after it, so from Sunday until the episode posts the
+Home card, the Listen row, the reader and the PDF all say so out loud. A name
+proposed from a PDF is a guess, and a guess that looks like a decision is how
+it becomes one. `/new-podcast` writes the church's own title over the whole
+string, marker included, which is the only thing that takes it off.
+
 That rename is one field. `sermon.title` is the only place a message's name
 is written, and the guide inherits it through `HC.data.guideTitle()`, so
 Home, the guide index, the reader, the PDF, leader mode, and every shared

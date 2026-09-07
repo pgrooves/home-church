@@ -24,8 +24,10 @@ Two things, and the second is the one people forget:
    points at the episode itself instead of falling back to the show.
 2. **Replacing the provisional title with the real one.** When the guide was
    written, nobody knew what the church would call the message, so a title
-   was proposed from the sermon content. The episode carries the actual name.
-   That name wins.
+   was proposed from the sermon content and published carrying `(Working
+   Title)` after it, which is what the app has been showing all week. The
+   episode carries the actual name. That name wins, and the marker comes off
+   with the same write.
 
 `sermon.title` is the only place a message's name is written. Home, the guide
 index, the guide reader, the PDF, leader mode, and every shared one-liner all
@@ -108,7 +110,9 @@ object in place:
 ```js
 {
   id: 'sermon-unsung-heroes',    // DO NOT TOUCH, see below
-  title: 'The Real Episode Title',   // overwrite the provisional title
+  title: 'The Real Episode Title',   // overwrite the whole string, suffix and
+                                     // all. Never edit the parenthetical off
+                                     // and keep the guessed name.
   duration: '39 min',                // from the episode, if it differs
   episodeUrl: 'https://open.spotify.com/episode/...',
   summary: [ /* episode notes, see Step 4 */ ],
@@ -128,13 +132,26 @@ guide inherit the new title automatically. Setting it to the new title would
 technically render the same thing today and re-introduce exactly the drift
 this whole design removes. Leave it alone.
 
+**Compare the names without the suffix, and write anyway.** `(Working Title)`
+means the two strings can never be equal, so "the titles already match" is a
+question about what is in front of the parenthesis:
+
+- **Different names**, the ordinary case. Write the episode's title. The old
+  one was a guess and the guess is over.
+- **Same name**, which happens when the sermon's own words were the obvious
+  ones and the church landed on them too. **Still write it.** The suffix is
+  live text on the Home card, and the row is not finished while it is there.
+  Nothing to report beyond that the church agreed with the guess.
+- **No suffix on the row at all.** Either this message came in through Step 3b
+  and never had a working title, or somebody already renamed it. Compare the
+  titles as they stand, and if they match, say so and skip the write. That is
+  the only case with nothing to do.
+
 Report the rename plainly when you're done:
 
-> `sermon-unsung-heroes` renamed: "Unsung Heroes" to "The Friends You
-> Actually Need". The guide, the Home card, the reader, and the PDF all pick
-> that up automatically.
-
-If the titles already match, say so and skip the rename. Nothing to do.
+> `sermon-unsung-heroes` renamed: "Unsung Heroes (Working Title)" to "The
+> Friends You Actually Need". The guide, the Home card, the reader, and the
+> PDF all pick that up automatically, and the working title marker is gone.
 
 -----
 
@@ -164,6 +181,11 @@ This is the better order, not the broken one. When `/new-guide` runs later
 for that Sunday, it attaches to this existing sermon rather than inventing a
 second one, and it inherits the real title for free. The disconnect never
 happens in this direction.
+
+**No `(Working Title)` here, ever.** The suffix marks a name nobody has
+decided on, and this row is being created from the episode, which is the
+decision. A guide written against this sermon later must not add one either:
+there is already a real title on the row and the guide takes it as it is.
 
 Ask for whatever the episode notes don't tell you rather than guessing at a
 preacher or a passage. Getting an attribution wrong in a published app is a
@@ -237,11 +259,57 @@ Serve the app (`python3 -m http.server` from the repo root) and check:
   reads through to `podcasts.title`, so a stale name here means something
   wrote a title into `worship_sets`, which has no column for one.
 - No console errors, no horizontal scroll at 320px or 390px.
+- The title on the row has no `(Working Title)` left on it. Check the string
+  itself rather than the card, a suffix is easy to read past once you know
+  what the message is called.
 
 If Playwright is available, drive those headlessly, it's faster and
 repeatable. Otherwise the manual pass is enough. This app has no build step
 and no test framework by design, and a fresh session doesn't need to set one
 up to add an episode.
+
+-----
+
+## Step 5b: Re-narrate the guide
+
+**The rename is audible, and this is the step that catches up with it.** Every
+guide section's recording opens by speaking the message's name, "Boats to
+Tarshish. Overview," because `scripts/narration_text.js` heads each block with
+the title it read off `podcasts.title`. The recordings made when the guide was
+published say the working title, suffix and all, out loud. Renaming the row
+does not touch an mp3.
+
+So after the rename, on a real machine:
+
+```bash
+npm run narrate          # writes the text, then speaks it
+npm run narrate:upload   # needs SUPABASE_SERVICE_ROLE_KEY in the environment
+```
+
+The title is part of what each section hashes, so the rename moves all six
+hashes on that one guide and leaves every other guide in the catalogue
+untouched. That is one guide's worth of speaking, a couple of minutes, and it
+is the only work this step does.
+
+**Read the first command's output before running the second.** `source
+supabase` is correct. `source seed` means it could not reach the project and
+fell back to the three guides frozen in `js/data.js`, which will not include
+the one you just renamed. It warns in six lines when that happens. Do not
+narrate past the warning.
+
+**Most sessions cannot do this**, and that is expected rather than a failure:
+the speech model is a 340MB local download and the upload is an HTTPS PUT to
+`supabase.co`, which the web session proxy refuses. MCP is no way around it,
+it reaches Postgres and Storage has no MCP path at all. `NEW_GUIDE_PROCESS.md`
+Step 5b has the one-time setup and the reasoning about the voice.
+
+In a web session, publish the episode, do the rename, and say plainly that the
+narration still speaks the old title with the two commands to run on the Mac.
+A guide whose audio says "Working Title" for a week is a worse look than the
+card ever was, so this does not get left silently undone.
+
+If the guide was never narrated in the first place, there is nothing to catch
+up and nothing to say. Skip it.
 
 -----
 
@@ -361,3 +429,8 @@ leaving the episode stranded on a branch nobody asked for.
 - **Don't reorder the `sermons` array.** Everything sorts by `preachedOn`
   automatically.
 - **Don't add a title field anywhere.** One message, one name, on the sermon.
+- **Don't leave `(Working Title)` on a message that now has an episode.**
+  Stripping it is not a separate step to remember, it happens because you
+  wrote the episode's title over the whole string.
+- **Don't put the suffix back**, on this row or any other, for any reason. It
+  goes on once, in `/new-guide`, and comes off here.

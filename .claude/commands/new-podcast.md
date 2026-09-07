@@ -128,16 +128,73 @@ inherits it, and `guides.theme_title` stays null so that inheritance keeps
 working. So the rename is one field, and writing the new title onto the guide
 as well is the one thing this design exists to prevent.
 
+**The old value ends in `(Working Title)` and the new one does not.**
+`/new-guide` publishes the name it proposed with that marker on it, because on
+Sunday the name is a guess, and the marker is live text on the Home card all
+week. Write the episode's title over the whole string. Do not edit the
+parenthetical off and keep the guessed name, and do not preserve it on the new
+one.
+
+Because the strings can never be equal while the suffix is there, "the titles
+already match, nothing to do" is a comparison of what sits in front of the
+parenthesis, and it does not mean skip the write:
+
+- **Different names.** The ordinary case. Write the real title.
+- **Same name**, the church landed where the sermon's own words did. Write it
+  anyway, the row is not finished while the marker is on it. Say the church
+  agreed with the guess and leave it there.
+- **No suffix on the row.** It came in through `NEW_PODCAST_PROCESS.md` Step
+  3b with a real title already, or it was renamed once. Compare as-is, and a
+  true match is the one case with nothing to write.
+
 Ids never move with a title. Leader checkmarks and journal entries live on
 people's phones keyed by the guide id.
+
+## Then re-narrate that guide
+
+The guide's recordings speak the message's name at the top of all six
+sections, so until this runs they say the working title out loud. Renaming a
+row does not touch an mp3.
+
+```bash
+npm run narrate          # writes the text, then speaks it
+npm run narrate:upload   # needs SUPABASE_SERVICE_ROLE_KEY in the environment
+```
+
+The title is part of each section's hash, so this regenerates six sections on
+one guide and nothing else, a couple of minutes. Check the first command
+printed `source supabase` before letting the second run. `source seed` means
+it never saw the guide you just renamed.
+
+**This needs a real machine, and most sessions on this app are web sessions
+from a phone.** The model is a 340MB download and the upload is an HTTPS PUT
+to `supabase.co`, which the proxy refuses, exactly as `supabase/ACCESS.md`
+describes. MCP does not help, Storage has no MCP path.
+
+So in a web session: do the rename, then say plainly that the audio still
+says the working title, and give the two commands above. Do not report the
+episode as done without saying that part is outstanding.
+`NEW_PODCAST_PROCESS.md` Step 5b has the whole of it. If the guide was never
+narrated, skip this and say nothing.
 
 ## Confirm, briefly
 
 ```
 Published  Who's In Your Corner?
 Stephen, August 9 2026
-Renamed from Unsung Heroes, linked to guide-unsung-heroes
+Renamed from Unsung Heroes (Working Title), linked to guide-unsung-heroes
 Setlist for that Sunday now points at it
+Re-narrated 6 sections, the audio said the working title until now
 ```
 
-Drop the last line when there was no setlist for that Sunday.
+Name the old title the way it actually read, marker and all, so the line says
+what changed rather than implying the church renamed its own message.
+
+Drop the setlist line when there was no setlist for that Sunday. Drop the
+narration line when the guide has no recordings, and when it has them and this
+session could not make new ones, say that instead:
+
+```
+Audio still says "Unsung Heroes (Working Title)". Run
+`npm run narrate && npm run narrate:upload` on the Mac.
+```
