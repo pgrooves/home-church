@@ -119,6 +119,16 @@ really there before promising anything, and get its size and shape:
 ls -l "<path>" && file "<path>"
 ```
 
+**Look before you decide it is not there.** An attached picture sometimes
+arrives as a real file and sometimes only as pixels in the conversation, and
+which one it is depends on the client rather than on anything anybody typed.
+Check the obvious places for something image shaped written in the last few
+minutes before falling through to D:
+
+```bash
+ls -lt . /tmp "$TMPDIR" 2>/dev/null | head -30
+```
+
 It has to be hosted somewhere the app can reach, which means Supabase Storage,
 which means the **service role key** in `.env`. If there is no `.env`, this
 route is closed in this session, so go to D rather than half-doing it.
