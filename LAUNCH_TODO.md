@@ -474,8 +474,21 @@ above, under Before submission.)*
 
 ## Supabase dashboard
 
-- [ ] **Turn on the contact form at the top of Connect.** Built and merged,
-      and deliberately quiet until you do three things: run migrations
+- [x] **Turn on the contact form at the top of Connect.** Done and verified
+      end to end: a real submission was sent through the deployed function and
+      arrived in `hello@homechurchnola.com` from
+      `Home Church app <homechurchapp@gmail.com>`, with `delivered_at` set and
+      `delivery_error` null on the row.
+
+      **The Resend backstop is not working, on purpose, for now.** It answers
+      403 because `homechurchnola.com` is still unverified in Resend, so Gmail
+      is the only path that delivers. That is a safe place to sit: if Gmail
+      ever refuses, the form fails honestly rather than quietly, exactly as it
+      did before Gmail was wired in. Verify the domain when you get to it and
+      the backstop starts working with no code change.
+
+      What was done, kept here because it is what to repeat if it ever needs
+      rebuilding: run migrations
       `0047_contact_messages.sql` and `0058_contact_delivery_comments.sql`, add
       `GMAIL_APP_PASSWORD` (and ideally `CONTACT_IP_PEPPER`) under Edge
       Function secrets, and `supabase functions deploy contact
@@ -484,8 +497,7 @@ above, under Before submission.)*
 
       Messages arrive in `hello@homechurchnola.com` **from
       `homechurchapp@gmail.com`**, sent over Gmail's SMTP with an App Password,
-      with the sender's own address in `Reply-To`. Resend sits underneath as a
-      backstop for when that fails.
+      with the sender's own address in `Reply-To`.
 
       **It does not lie in the meantime.** With none of it done, the top of
       Connect draws the church's email address and a button that opens Mail,
