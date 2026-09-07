@@ -74,17 +74,17 @@ const GUIDE = {
   scriptures: [{ reference: '2 Samuel 11:1', note: 'The setup.' }]
 };
 
-ok('a section is headed by its own name and the guide title',
-  n.sectionText(GUIDE, 'short-summary', 'A Title').split('\n\n')[0],
-  'A Title. Overview.');
+ok('a section is headed by its own name',
+  n.sectionText(GUIDE, 'short-summary').split('\n\n')[0],
+  'Overview.');
 
 ok('the summary carries its anchors',
-  n.sectionText(GUIDE, 'full-summary', 'T').indexOf('Where it went') > -1, true);
+  n.sectionText(GUIDE, 'full-summary').indexOf('Where it went') > -1, true);
 
 ok('discussion keeps its headings',
-  n.sectionText(GUIDE, 'group', 'T').indexOf('Opening.') > -1, true);
+  n.sectionText(GUIDE, 'group').indexOf('Opening.') > -1, true);
 
-ok('an unknown section is empty', n.sectionText(GUIDE, 'nope', 'T'), '');
+ok('an unknown section is empty', n.sectionText(GUIDE, 'nope'), '');
 
 /* ------------------------------------------------------------- speakability
    The head is always present, so a section is only worth recording if there
@@ -92,9 +92,9 @@ ok('an unknown section is empty', n.sectionText(GUIDE, 'nope', 'T'), '');
    which is worse than drawing no button. */
 
 ok('a section with a body is speakable',
-  n.isSpeakable(n.sectionText(GUIDE, 'oneliners', 'T')), true);
+  n.isSpeakable(n.sectionText(GUIDE, 'oneliners')), true);
 ok('a section with only a heading is not',
-  n.isSpeakable(n.sectionText({ oneLiners: [] }, 'oneliners', 'T')), false);
+  n.isSpeakable(n.sectionText({ oneLiners: [] }, 'oneliners')), false);
 
 /* ------------------------------------------------------------------- hashes
    The hash is what stops a guide reading out a question that was edited after
@@ -116,6 +116,29 @@ ok('editing a question changes that section',
   hashOf(before, 'group') === hashOf(after, 'group'), false);
 ok('and leaves every other section alone',
   hashOf(before, 'oneliners'), hashOf(after, 'oneliners'));
+
+/* --------------------------------------------------------------- the rename
+   The guide is narrated on Sunday under a working title and renamed on
+   Tuesday when the episode posts, so the recordings have to survive the one
+   field that is still a guess when they are made. Nothing spoken comes from
+   the title, so nothing hashed does either. Put the title back into the head
+   and every one of these fails, which is the point of having them. */
+
+const working = n.build(GUIDE, 'Boats to Tarshish (Working Title)');
+const renamed = n.build(GUIDE, 'When You Stop Needing God');
+
+ok('renaming the message changes no section hash',
+  n.SECTIONS.every((id) => {
+    const a = working.sections.find((s) => s.id === id);
+    const b = renamed.sections.find((s) => s.id === id);
+    return (!a && !b) || (a && b && a.hash === b.hash);
+  }), true);
+
+ok('and the title is never spoken',
+  working.sections.every((s) => s.text.indexOf('Working Title') === -1), true);
+
+ok('but the manifest still says which guide this is',
+  renamed.title, 'When You Stop Needing God');
 
 /* ------------------------------------------------------------------- build */
 

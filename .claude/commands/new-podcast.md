@@ -150,32 +150,21 @@ parenthesis, and it does not mean skip the write:
 Ids never move with a title. Leader checkmarks and journal entries live on
 people's phones keyed by the guide id.
 
-## Then re-narrate that guide
+## Do not re-narrate
 
-The guide's recordings speak the message's name at the top of all six
-sections, so until this runs they say the working title out loud. Renaming a
-row does not touch an mp3.
+The guide's audio was made on Sunday and the rename does not touch it. The
+recordings never say the message's name, only the reader's own heading for
+each section, exactly so that this command can change the title without
+invalidating six recordings made before the title existed.
 
-```bash
-npm run narrate          # writes the text, then speaks it
-npm run narrate:upload   # needs SUPABASE_SERVICE_ROLE_KEY in the environment
-```
+So the title is not part of any section's hash, `npm run narrate` after a
+rename finds nothing to do, and there is nothing to report and nothing to
+hand to the Mac. Do not run it to be safe, and do not mention narration in
+the confirmation. `NEW_PODCAST_PROCESS.md` Step 5b is the whole reasoning.
 
-The title is part of each section's hash, so this regenerates six sections on
-one guide and nothing else, a couple of minutes. Check the first command
-printed `source supabase` before letting the second run. `source seed` means
-it never saw the guide you just renamed.
-
-**This needs a real machine, and most sessions on this app are web sessions
-from a phone.** The model is a 340MB download and the upload is an HTTPS PUT
-to `supabase.co`, which the proxy refuses, exactly as `supabase/ACCESS.md`
-describes. MCP does not help, Storage has no MCP path.
-
-So in a web session: do the rename, then say plainly that the audio still
-says the working title, and give the two commands above. Do not report the
-episode as done without saying that part is outstanding.
-`NEW_PODCAST_PROCESS.md` Step 5b has the whole of it. If the guide was never
-narrated, skip this and say nothing.
+The exception is not about titles at all: if you edited the guide's own words
+while you were here, that section's hash moved and it needs a run like any
+other content edit.
 
 ## Confirm, briefly
 
@@ -184,17 +173,11 @@ Published  Who's In Your Corner?
 Stephen, August 9 2026
 Renamed from Unsung Heroes (Working Title), linked to guide-unsung-heroes
 Setlist for that Sunday now points at it
-Re-narrated 6 sections, the audio said the working title until now
 ```
 
 Name the old title the way it actually read, marker and all, so the line says
 what changed rather than implying the church renamed its own message.
 
-Drop the setlist line when there was no setlist for that Sunday. Drop the
-narration line when the guide has no recordings, and when it has them and this
-session could not make new ones, say that instead:
-
-```
-Audio still says "Unsung Heroes (Working Title)". Run
-`npm run narrate && npm run narrate:upload` on the Mac.
-```
+Drop the last line when there was no setlist for that Sunday. Four lines is
+the whole confirmation: no narration line, because there was no narration
+step.

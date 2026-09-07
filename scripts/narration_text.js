@@ -104,10 +104,25 @@ function normalize(text) {
 /* ------------------------------------------------------------ the sections
    Each returns the spoken text for one section, headed by the same words the
    reader prints above it, so somebody listening with the phone in a pocket
-   knows which part they are in. */
+   knows which part they are in.
 
-function sectionText(guide, id, title) {
-  const head = (s) => (title ? title + '. ' + s + '.\n\n' : s + '.\n\n');
+   THE HEAD DOES NOT SAY THE MESSAGE'S NAME, on purpose. It used to, and the
+   week runs in an order that makes that a trap: the guide is written and
+   narrated on Sunday, and the church's own title for the message does not
+   arrive until the episode posts on Tuesday, so /new-guide only ever has a
+   working title to speak. Speaking it meant every recording said a name that
+   was about to change, and because the title is part of what each section
+   hashes, Tuesday's rename silently invalidated all six recordings of a guide
+   that was otherwise finished.
+
+   Leaving it out costs a listener nothing. They arrived here by pressing play
+   on a named guide, on a screen showing that name. It buys the recording
+   independence from the one field on the row that is still a guess when the
+   audio is made, which is what lets /new-guide finish the job in one pass.
+   Do not put it back without reading NEW_PODCAST_PROCESS.md on the rename. */
+
+function sectionText(guide, id) {
+  const head = (s) => s + '.\n\n';
   const list = (a) => (a || []).join('\n\n');
 
   switch (id) {
@@ -163,10 +178,13 @@ function isSpeakable(text) {
   return body.length > 0;
 }
 
+/* `title` names the guide in the manifest and in what this prints, so a
+   person reading either can tell which guide is which. It is not spoken and
+   it is not hashed, which is why a rename does not regenerate anything. */
 function build(guide, title) {
   const sections = [];
   SECTIONS.forEach((id) => {
-    const raw = sectionText(guide, id, title);
+    const raw = sectionText(guide, id);
     const text = normalize(raw);
     if (!isSpeakable(text)) return;
     sections.push({ id: id, text: text, hash: hash(text), words: text.split(/\s+/).length });

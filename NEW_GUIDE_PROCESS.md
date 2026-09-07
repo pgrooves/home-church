@@ -304,6 +304,23 @@ one. `scripts/build_narration.py` speaks them with Kokoro-82M on the CPU. It
 only regenerates sections whose hash moved, so a normal week narrates the one
 new guide and leaves the catalogue alone, about four minutes.
 
+**Narrate now, under the working title, and do not wait for Tuesday.** The
+recordings do not speak the message's name. Each section is headed by the
+reader's own words for it, "Overview," "Discussion Questions," and no more,
+which is exactly why this can happen on Sunday: the title is the one field
+that is still a guess, and nothing spoken depends on it. `/new-podcast`
+renames the row without moving a single hash, so the audio you make today is
+the audio the church keeps. See `sectionText` in `scripts/narration_text.js`
+for the reasoning, and `tests/narration.test.js` for the three tests that stop
+anybody putting the title back by accident.
+
+The other side of that hash is worth knowing before it surprises you:
+**changing what the narrator says, rather than what a guide says, moves every
+hash in the catalogue and re-speaks all of it once.** Removing the title from
+the head did exactly that. It is a one time cost on the next run after such a
+change, perhaps half an hour of laptop time, and then the weekly rhythm is
+back to one guide. A big number on that run is the change working, not a bug.
+
 **Read what the first command prints.** It says where the guides came from
 and how many it found. If it says `source seed` it could not reach Supabase
 and fell back to the three guides bundled in `js/data.js`, which is not the

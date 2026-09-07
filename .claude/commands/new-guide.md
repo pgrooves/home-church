@@ -294,6 +294,15 @@ app says so, so this is part of publishing rather than an extra.
 published guide, not your draft, so the order is: upsert, read the row back,
 then narrate. Narrating first records text that may still change.
 
+**The working title is not a reason to wait for Tuesday.** The recordings do
+not say the message's name, only the reader's own heading for each section, so
+nothing spoken here is provisional and nothing here has to be redone when
+`/new-podcast` renames the row. The audio made today is the final audio.
+`scripts/narration_text.js` has the reasoning at `sectionText`, and
+`tests/narration.test.js` holds it in place: a rename moves no section's hash.
+So the guide goes out complete on Sunday, which is the whole point of doing
+this here rather than leaving a note for later.
+
 ```bash
 npm run narrate          # writes the text, then speaks it
 npm run narrate:upload   # needs SUPABASE_SERVICE_ROLE_KEY in the environment

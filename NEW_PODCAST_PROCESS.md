@@ -270,46 +270,29 @@ up to add an episode.
 
 -----
 
-## Step 5b: Re-narrate the guide
+## Step 5b: The narration is already right
 
-**The rename is audible, and this is the step that catches up with it.** Every
-guide section's recording opens by speaking the message's name, "Boats to
-Tarshish. Overview," because `scripts/narration_text.js` heads each block with
-the title it read off `podcasts.title`. The recordings made when the guide was
-published say the working title, suffix and all, out loud. Renaming the row
-does not touch an mp3.
+**There is no step here.** The guide was narrated when it was published, on
+Sunday, and the rename you just did takes nothing away from that. This section
+exists so you know that and do not go and re-record six sections for nothing.
 
-So after the rename, on a real machine:
+The recordings never say the message's name. `scripts/narration_text.js` heads
+each section with the reader's own words for it, "Overview," "Discussion
+Questions," and stops there, precisely because the audio is made on Sunday
+under a working title and the real one does not exist until today. A listener
+loses nothing: they pressed play on a named guide, on a screen showing the
+name. What the recording gains is independence from the one field on the row
+that was still a guess when it was spoken.
 
-```bash
-npm run narrate          # writes the text, then speaks it
-npm run narrate:upload   # needs SUPABASE_SERVICE_ROLE_KEY in the environment
-```
+So the title is not part of what a section hashes, and this rename moves no
+hashes. Running `npm run narrate` after it would find nothing to do, which is
+the correct outcome and not a sign that something failed.
 
-The title is part of what each section hashes, so the rename moves all six
-hashes on that one guide and leaves every other guide in the catalogue
-untouched. That is one guide's worth of speaking, a couple of minutes, and it
-is the only work this step does.
-
-**Read the first command's output before running the second.** `source
-supabase` is correct. `source seed` means it could not reach the project and
-fell back to the three guides frozen in `js/data.js`, which will not include
-the one you just renamed. It warns in six lines when that happens. Do not
-narrate past the warning.
-
-**Most sessions cannot do this**, and that is expected rather than a failure:
-the speech model is a 340MB local download and the upload is an HTTPS PUT to
-`supabase.co`, which the web session proxy refuses. MCP is no way around it,
-it reaches Postgres and Storage has no MCP path at all. `NEW_GUIDE_PROCESS.md`
-Step 5b has the one-time setup and the reasoning about the voice.
-
-In a web session, publish the episode, do the rename, and say plainly that the
-narration still speaks the old title with the two commands to run on the Mac.
-A guide whose audio says "Working Title" for a week is a worse look than the
-card ever was, so this does not get left silently undone.
-
-If the guide was never narrated in the first place, there is nothing to catch
-up and nothing to say. Skip it.
+The one case that does need a run is the ordinary one, unrelated to titles: if
+you edited the guide's own words while you were here, a question, the subtitle,
+a summary paragraph, then that section's hash moved and
+`NEW_GUIDE_PROCESS.md` Step 5b is the procedure. Renaming a message is not
+editing a guide.
 
 -----
 
