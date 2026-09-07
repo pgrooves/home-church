@@ -67,3 +67,14 @@ venv/
 # away. Keep the source, not the output.
 demo-*/*.html
 !demo-*/*.src.html
+
+# Security and oversight write-ups. THIS REPOSITORY IS PUBLIC, and a document
+# that lists where the app is weak is a document that should not be. They are
+# written to be handed to a person, not published, so they stay out of git
+# entirely rather than living here and relying on nobody looking.
+#
+# The narrow pattern is deliberate: `*.pdf` would also swallow
+# `Home Church slash commands.pdf`, which is tracked on purpose.
+/Home Church App - Oversight Briefing.pdf
+/*-security-review.pdf
+/*-oversight-briefing.pdf
