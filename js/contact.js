@@ -5,9 +5,10 @@
    a fetch, the same division js/rooms.js keeps with the Group tab.
 
    WHERE IT GOES. supabase/functions/contact, which writes the message down
-   and then asks Resend to email it to the church. That function's header is
-   where the reasoning about delivery lives; what matters here is the contract
-   it keeps, because this file's whole job is to not soften it:
+   and then emails it to the church from homechurchapp@gmail.com. That
+   function's header is where the reasoning about delivery lives; what matters
+   here is the contract it keeps, because this file's whole job is to not
+   soften it:
 
      resolves   the church has the email. Say so.
      rejects    it did not go. Say that instead, in the error's own words,

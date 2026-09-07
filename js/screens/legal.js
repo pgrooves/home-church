@@ -171,7 +171,8 @@
 
     html += list('The services this app depends on', [
       'Supabase, which stores the sermons, guides, and events the app downloads, and which stores your account if you make one. Their servers for this project are in Ohio, in the United States.',
-      'Resend, which delivers the six digit sign in code to your email address, and delivers a message you send from the form on Connect to the church. They handle the sending and nothing else.',
+      'Google, whose Gmail carries a message you send from the form on Connect to the church, in the same way it would carry an email you wrote to us yourself. They handle the sending and nothing else.',
+      'Resend, which delivers the six digit sign in code to your email address, and carries a message from the form on Connect on the occasions Gmail cannot. They handle the sending and nothing else.',
       'Apple, which delivers notifications if you have turned them on.'
     ]);
 

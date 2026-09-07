@@ -2,15 +2,15 @@
  * Home Church, the contact form at the top of Connect.
  *
  * WHAT IT DOES, in order. Takes a name, an email address and a message from
- * the app, checks them, writes the row to `contact_messages`, then asks Resend
- * to send it to the church. Row first, send second, on purpose: a message that
+ * the app, checks them, writes the row to `contact_messages`, then sends it to
+ * the church as an email. Row first, send second, on purpose: a message that
  * reaches this function is never lost, even when the sending is broken.
  *
- * BUT THE ROW IS NOT THE PROMISE. This returns ok ONLY when Resend accepts the
- * message. If the send fails, the row is already written, `delivery_error`
- * says why, and the caller gets a 502 with copy that tells the person to email
- * the church directly instead. js/screens/connect.js draws that as the mailto
- * it has always had.
+ * BUT THE ROW IS NOT THE PROMISE. This returns ok ONLY when a mail provider
+ * accepts the message. If the send fails, the row is already written,
+ * `delivery_error` says why, and the caller gets a 502 with copy that tells
+ * the person to email the church directly instead. js/screens/connect.js draws
+ * that as the mailto it has always had.
  *
  * That is not defensive coding for its own sake. Read the top of
  * js/screens/connect.js: three controls on that screen used to tell people
@@ -19,6 +19,26 @@
  * that thanks somebody over a failed send is that same bug in better clothes.
  * The rule the screen keeps is that nothing claims to have happened unless it
  * happened, and this function is where that rule is actually enforced.
+ *
+ * WHO IT COMES FROM. homechurchapp@gmail.com, over Gmail's own SMTP, using an
+ * App Password. That is a mailbox the church already owns and can open, which
+ * is the point: the sent copy is somewhere a person can see it, and the
+ * address is one they recognise rather than a no-reply nobody has ever logged
+ * into.
+ *
+ * Gmail will not let this be anything else. SMTP authenticates AS an account
+ * and Google rewrites From to that account, so a From at some other address is
+ * either rewritten or refused. The sender's own address is not attempted for
+ * the same reason it never was: see THE FROM ADDRESS below.
+ *
+ * RESEND IS STILL HERE, AS A BACKSTOP AND NOTHING ELSE. If the Gmail send
+ * fails and RESEND_API_KEY is set, the message goes out through Resend from
+ * the church's domain rather than not going out at all — an email from the
+ * wrong address beats a person being turned away. When that happens the row
+ * gets BOTH `delivered_at` and a `delivery_error` describing what Gmail did,
+ * which is the only signal that the main path is broken. Grep the logs for
+ * `contact: gmail failed` and fix it. Unset RESEND_API_KEY if you would rather
+ * the form simply fail loudly.
  *
  * WHY verify_jwt IS OFF. The form is for anybody, including somebody who has
  * never signed in, and the app carries a publishable key rather than a JWT, so
@@ -49,23 +69,30 @@
  * same as HC_NEWSLETTER_CRON_SECRET and the APNS_ values already there. The
  * whole list and where each comes from is in CONTACT_FORM_SETUP.md.
  *
- *   RESEND_API_KEY        the same Resend account that already sends the
- *                         sign in codes. An API key, `re_...`, not the SMTP
- *                         password field from the auth settings.
+ *   GMAIL_APP_PASSWORD    required. The sixteen characters Google shows once,
+ *                         at myaccount.google.com/apppasswords. NOT the
+ *                         password used to sign into the account, which SMTP
+ *                         will refuse. Spaces in it are ignored here, so it
+ *                         can be pasted exactly as Google displays it.
+ *   GMAIL_USER            optional, defaults below. The account the App
+ *                         Password belongs to, and therefore the From address.
+ *   GMAIL_FROM_NAME       optional, defaults below. The name beside it.
  *   CONTACT_TO            optional, defaults below. Where submissions go.
- *   CONTACT_FROM          optional, defaults below. MUST be at a domain
- *                         verified in Resend or every send is refused.
  *   CONTACT_IP_PEPPER     optional but wanted. Any long random string. With
  *                         no pepper set, the rate limit still works and the
  *                         hash is simply less resistant to somebody who has
  *                         both the database and a list of addresses to guess.
+ *   RESEND_API_KEY        optional. The backstop described above. If it is
+ *                         set, CONTACT_FROM overrides the address Resend
+ *                         sends from, which must be at a domain verified in
+ *                         Resend or that path is refused too.
  *
- * THE FROM ADDRESS IS NOT THE SENDER'S. It is the church's own, at a domain
- * Resend has verified, and the person who wrote the message goes in Reply-To.
- * Putting their address in From is how a contact form gets a domain's mail
- * marked as spam: it is an unauthenticated claim to send as them, and SPF and
- * DMARC exist to refuse exactly that. Hitting reply in the church's mailbox
- * still writes to the person, which is the only part anybody notices.
+ * THE FROM ADDRESS IS NOT THE SENDER'S. It is the church's own, and the person
+ * who wrote the message goes in Reply-To. Putting their address in From is how
+ * a contact form gets a domain's mail marked as spam: it is an unauthenticated
+ * claim to send as them, and SPF and DMARC exist to refuse exactly that.
+ * Hitting reply in the church's mailbox still writes to the person, which is
+ * the only part anybody notices.
  *
  * DEPLOY
  *   supabase functions deploy contact --no-verify-jwt
@@ -75,6 +102,7 @@
  */
 
 import { createClient } from 'jsr:@supabase/supabase-js@2';
+import { SMTPClient } from 'https://deno.land/x/denomailer@1.6.0/mod.ts';
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -94,11 +122,25 @@ const CORS = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
-/* Where it goes, and who it comes from. Both overridable by secret so that a
-   change of address is a dashboard edit rather than a redeploy, which is the
-   same trade the newsletter's model name makes. */
+/* Where it goes and who it comes from. Overridable by secret so that a change
+   of address is a dashboard edit rather than a redeploy, which is the same
+   trade the newsletter's model name makes. */
 const DEFAULT_TO = 'hello@homechurchnola.com';
-const DEFAULT_FROM = 'Home Church app <app@homechurchnola.com>';
+const DEFAULT_GMAIL_USER = 'homechurchapp@gmail.com';
+const DEFAULT_FROM_NAME = 'Home Church app';
+
+/* Implicit TLS from the first byte, which is the port to reach for when the
+   only question is whether the connection is encrypted. 587 and STARTTLS
+   works too and is what to try if 465 turns out to be blocked; denomailer
+   upgrades the connection itself when `tls` is false. */
+const GMAIL_HOST = 'smtp.gmail.com';
+const DEFAULT_GMAIL_PORT = 465;
+
+/* SMTP is a conversation over a socket, and a socket that nobody ever answers
+   holds this function open until the platform kills it — which the person
+   waiting on the form sees as a spinner that never stops. Twenty seconds is
+   far longer than a healthy send and far shorter than anybody's patience. */
+const SEND_TIMEOUT_MS = 20_000;
 
 /* The caps. Matched by the check constraints in migration 0047, so a caller
    that somehow got past this still cannot write a novel into the table. */
@@ -192,24 +234,123 @@ function mailBody(name: string, email: string, message: string) {
   return { plain, html };
 }
 
+interface Letter {
+  to: string;
+  replyTo: string;
+  subject: string;
+  plain: string;
+  html: string;
+}
+
+/* Both senders answer the same way: empty string when the message is gone,
+   and a sentence worth writing into `delivery_error` when it is not. Neither
+   throws, because a thrown send is indistinguishable to the caller from a
+   thrown anything else, and the caller's next move is to write the reason
+   down either way. */
+
+async function sendViaGmail(letter: Letter): Promise<string> {
+  /* Google prints an App Password in four groups of four. Stripping the
+     spaces here means a copy and paste out of that page works, rather than
+     failing authentication for a reason nobody would guess from the log. */
+  const password = (Deno.env.get('GMAIL_APP_PASSWORD') ?? '').replace(/\s+/g, '');
+  const user = (Deno.env.get('GMAIL_USER') || DEFAULT_GMAIL_USER).trim();
+  const fromName = headerSafe(Deno.env.get('GMAIL_FROM_NAME') || DEFAULT_FROM_NAME);
+  /* A typo in a dashboard field should not take the form down. Anything that
+     is not a number falls back to the default rather than dialling NaN. */
+  const configuredPort = Number(Deno.env.get('GMAIL_SMTP_PORT'));
+  const port = Number.isInteger(configuredPort) && configuredPort > 0
+    ? configuredPort
+    : DEFAULT_GMAIL_PORT;
+
+  if (!password) return 'GMAIL_APP_PASSWORD is not set';
+  if (!EMAIL.test(user)) return `GMAIL_USER is not an address: ${user}`;
+
+  const client = new SMTPClient({
+    connection: {
+      hostname: GMAIL_HOST,
+      port,
+      /* 465 is TLS from the first byte. Anything else is assumed to be 587,
+         where denomailer opens in the clear and issues STARTTLS itself. */
+      tls: port === 465,
+      auth: { username: user, password },
+    },
+  });
+
+  let timer: number | undefined;
+  try {
+    await Promise.race([
+      client.send({
+        from: `${fromName} <${user}>`,
+        to: letter.to,
+        replyTo: letter.replyTo,
+        subject: letter.subject,
+        content: letter.plain,
+        html: letter.html,
+      }),
+      new Promise((_, reject) => {
+        timer = setTimeout(
+          () => reject(new Error(`no answer from ${GMAIL_HOST}:${port} in ${SEND_TIMEOUT_MS}ms`)),
+          SEND_TIMEOUT_MS,
+        );
+      }),
+    ]);
+    return '';
+  } catch (err) {
+    return `Gmail SMTP refused it: ${String((err as Error)?.message ?? err)}`;
+  } finally {
+    clearTimeout(timer);
+    /* The socket goes either way. A close that throws on an already dead
+       connection is not news and must not become the reported failure. */
+    await client.close().catch(() => {});
+  }
+}
+
+async function sendViaResend(letter: Letter, key: string): Promise<string> {
+  try {
+    const res = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${key}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        from: Deno.env.get('CONTACT_FROM') || `${DEFAULT_FROM_NAME} <app@homechurchnola.com>`,
+        to: [letter.to],
+        reply_to: letter.replyTo,
+        subject: letter.subject,
+        text: letter.plain,
+        html: letter.html,
+      }),
+    });
+
+    if (res.ok) return '';
+    const detail = await res.text().catch(() => '');
+    return `Resend returned ${res.status}: ${detail.slice(0, 300)}`;
+  } catch (err) {
+    // DNS, TLS, a reset socket. The row is already written either way.
+    return `Could not reach Resend: ${String((err as Error)?.message ?? err)}`;
+  }
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS });
   if (req.method !== 'POST') return json({ error: 'Use POST.' }, 405);
 
   const url = Deno.env.get('SUPABASE_URL');
   const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-  const resendKey = Deno.env.get('RESEND_API_KEY');
+  const resendKey = Deno.env.get('RESEND_API_KEY') ?? '';
+  const gmailPassword = Deno.env.get('GMAIL_APP_PASSWORD') ?? '';
 
   if (!url || !serviceKey) {
     console.error('contact: platform env vars missing');
     return json({ error: 'This is not set up correctly. Please tell the church.' }, 500);
   }
 
-  /* No key means no send, and no send means no promise. Refused up front
-     rather than after writing a row nobody will read, and said in the app's
-     own voice because a person is looking at this. */
-  if (!resendKey) {
-    console.error('contact: RESEND_API_KEY is not set, so nothing can be sent');
+  /* No way to send means no promise to make. Refused up front rather than
+     after writing a row nobody will read, and said in the app's own voice
+     because a person is looking at this. */
+  if (!gmailPassword && !resendKey) {
+    console.error('contact: no GMAIL_APP_PASSWORD and no RESEND_API_KEY, so nothing can be sent');
     return json({
       error: 'The form is not connected yet. Email the church directly and somebody will answer.',
     }, 503);
@@ -310,41 +451,46 @@ Deno.serve(async (req: Request) => {
   }
 
   const body = mailBody(name, email, message);
-  const subject = headerSafe(`Contact form: ${name}`).slice(0, 200);
+  const letter: Letter = {
+    to: (Deno.env.get('CONTACT_TO') || DEFAULT_TO).trim(),
+    // Hitting reply in the church's mailbox writes to the person. See the
+    // header for why their address is not in From.
+    replyTo: headerSafe(email),
+    subject: headerSafe(`Contact form: ${name}`).slice(0, 200),
+    plain: body.plain,
+    html: body.html,
+  };
 
-  let sendFailure = '';
-  try {
-    const res = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${resendKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        from: Deno.env.get('CONTACT_FROM') || DEFAULT_FROM,
-        to: [Deno.env.get('CONTACT_TO') || DEFAULT_TO],
-        // Hitting reply in the church's mailbox writes to the person. See the
-        // header for why their address is not in From.
-        reply_to: headerSafe(email),
-        subject,
-        text: body.plain,
-        html: body.html,
-      }),
-    });
+  /* Gmail, then Resend only if Gmail could not do it. `note` is what ends up
+     in delivery_error whichever way this goes: the reason it failed, or the
+     reason the backstop had to be used. */
+  let note = '';
 
-    if (!res.ok) {
-      const detail = await res.text().catch(() => '');
-      sendFailure = `Resend returned ${res.status}: ${detail.slice(0, 300)}`;
-    }
-  } catch (err) {
-    // DNS, TLS, a reset socket. The row is already written either way.
-    sendFailure = `Could not reach Resend: ${String((err as Error).message ?? err)}`;
+  if (gmailPassword) {
+    note = await sendViaGmail(letter);
+    if (note) console.error('contact: gmail failed for', row.id, note);
+  } else {
+    note = 'GMAIL_APP_PASSWORD is not set';
   }
 
-  if (sendFailure) {
-    console.error('contact: send failed for', row.id, sendFailure);
+  if (note && resendKey) {
+    const resendFailure = await sendViaResend(letter, resendKey);
+    if (resendFailure) {
+      note = `${note}; and the Resend backstop: ${resendFailure}`;
+    } else {
+      console.log('contact: delivered', row.id, 'through the Resend backstop');
+      note = `Delivered by the Resend backstop, from the church's domain rather than Gmail. Gmail said: ${note}`;
+      await admin.from('contact_messages')
+        .update({ delivered_at: new Date().toISOString(), delivery_error: note.slice(0, 1000) })
+        .eq('id', row.id);
+      return json({ ok: true });
+    }
+  }
+
+  if (note) {
+    console.error('contact: send failed for', row.id, note);
     await admin.from('contact_messages')
-      .update({ delivery_error: sendFailure.slice(0, 1000) })
+      .update({ delivery_error: note.slice(0, 1000) })
       .eq('id', row.id);
 
     /* 502 and the honest sentence. The message is safe in the table and an
