@@ -132,21 +132,63 @@ re-read the steps above:
 
 ---
 
-## If Step 1 is a dead end
+## Step 1 was a dead end, and `/new-posts` is what happened instead
 
-If the account cannot be switched to Professional, the automatic sync is
-impossible. Instagram publishes no credential-free feed, and scraping the public
-page does not survive contact with a datacenter IP, which is what a Supabase
-function runs on.
+The church declined to switch to Professional, so the automatic sync above is
+not available. **`/new-posts` is the fallback, it is built, and it is what to
+use.** Paste the links to the posts that should be on the rail; it fetches each
+picture and caption, mirrors the bytes into the same bucket, and writes the
+same rows. Read `.claude/commands/new-posts.md` for it.
 
-The fallbacks, in order of how much they cost you:
+What that costs is somebody opening Instagram on a Sunday and copying a few
+links. What it buys is that nothing here needs a token, an app, a review, or a
+setting changed on the church's account.
 
-1. **A scraping service** (Apify and similar), roughly $20–50/month. Works, is
-   against Meta's terms, and breaks when Instagram changes their markup.
-2. **A manual command** — a `/new-post` slash command like the ones this repo
-   already has for guides and events. Free, but somebody runs it every week.
-3. **Leave the rail off.** It renders nothing and costs nothing. This is a real
+### Why the listing is the gate, and the rendering is not
+
+Worth understanding before anybody goes looking for a better answer, because
+the two halves of this problem have completely different answers:
+
+- **Listing an account's posts** without credentials does not work. Logged out
+  instagram.com serves a login wall, datacenter IPs are refused on the first
+  request, and Instagram rotates the GraphQL ids behind its own web app every
+  few weeks. A scraper is not hard to write; it is hard to keep alive.
+- **Rendering a post you already have the link for** got easier. Since **15
+  June 2026** Meta's oEmbed endpoints take no access token, no app and no App
+  Review for public content, and the embed page and the og: tags were always
+  public. That is the whole mechanism `/new-posts` runs on.
+
+So the command takes links as input because that is precisely the step no free
+and durable method covers. Note that tokenless oEmbed no longer returns
+`thumbnail_url`; Meta's own guidance is to read the post's `og:image`, which is
+what the script does.
+
+### The other routes, and why not
+
+1. **A scraping service** (Apify and similar). **The $20–50/month this file
+   used to quote here is out of date** — these are pay-per-result now, roughly
+   $0.50–$2.30 per *thousand* posts, with free monthly credit that a daily sync
+   of nine posts fits inside. Cost is no longer the objection. It still
+   violates Meta's terms, still needs an account and a token, and still puts a
+   third party between the church and its own pictures.
+2. **A feed widget** (Elfsight, SociableKIT and similar), $6–25/month. They
+   render from their servers or from Instagram's CDN, which breaks the two
+   rules this rail was built on: phones never talk to Meta, and the bytes are
+   mirrored because the CDN links are signed and expire.
+3. **Leave the rail off.** It renders nothing and costs nothing. Still a real
    option, not a failure state.
+
+**Never log in as the church to fetch any of this.** Everything `/new-posts`
+reads is what Instagram publishes to anybody. Scraping while signed in as the
+church risks their account and buys nothing.
+
+### If the church ever does switch
+
+Build the sync in Step 4 and it supersedes the command. One thing to carry
+across: `/new-posts` keys rows by the post's **shortcode**, since that is the
+only id available without the API, while Step 4 and migration `0015` specify
+Instagram's numeric media id. Migrate the ids in one pass rather than letting
+both conventions sit in the table.
 
 ---
 
@@ -161,4 +203,18 @@ Already built, merged, and live in Supabase:
   Instagram handle from `homechurchnola` to `homechurch.nola` and added X and
   TikTok to the Profile links
 
-Not built: the sync. That is Step 4.
+Also built, and what actually fills the rail today:
+
+- `scripts/fetch_instagram_posts.js`, links in, rows and mirrored pictures out
+- `.claude/commands/new-posts.md`, the `/new-posts` command around it
+- `tests/instagram-posts.test.js`, its parsers, against fixtures and no network
+
+Not built: the API sync. That is Step 4, and it stays unbuilt while the account
+is Personal.
+
+**One correction to `0015` and to the demo seed, which both say `posted_at`
+only sorts the rail.** It does not: `js/screens/connect.js:599` reads it into
+each tile's `aria-label`, so it is never drawn on screen and it is read aloud.
+That is why `/new-posts` holds a post back rather than publishing it under a
+guessed date, and why the demo rows' invented dates are worth replacing with
+real ones.
