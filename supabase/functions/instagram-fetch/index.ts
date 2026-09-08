@@ -37,9 +37,9 @@
  *
  *   It will not touch a post that is not the church's own. Every media object
  *   carries the username that posted it, and it is checked against the handle
- *   on the `church` row. The rail is the church's own feed, and this is also
- *   what keeps the blast radius of the shared secret below to nothing worth
- *   having.
+ *   on the `church_profile` row. The rail is the church's own feed, and this
+ *   is also what keeps the blast radius of the shared secret below to nothing
+ *   worth having.
  *
  *   It will not store an instagram.com URL. Their CDN links are signed and
  *   expire within days, so a stored one goes blank on its own, and pointing
@@ -168,17 +168,25 @@ Deno.serve(async (req: Request) => {
   });
 
   /* The door. The expected value lives in the vault rather than in a function
-     secret, so that it can be created and rotated from a web session. */
-  const presented = req.headers.get('x-hc-instagram-secret') ?? '';
-  const { data: secretRow, error: secretErr } = await admin
-    .schema('vault').from('decrypted_secrets')
-    .select('decrypted_secret').eq('name', 'hc_instagram_secret').maybeSingle();
+     secret, so that it can be created and rotated from a web session.
 
-  if (secretErr || !secretRow?.decrypted_secret) {
-    console.error('instagram-fetch: hc_instagram_secret is not in the vault');
+     Asked for through an RPC in `public` rather than by reading the vault
+     schema directly: the Data API serves only its exposed schemas, so
+     `.schema('vault')` is refused with a 406 before any row is read, however
+     complete service_role's grants on the view are. Migration 0060 is the
+     long version. The secret itself has not moved. */
+  const presented = req.headers.get('x-hc-instagram-secret') ?? '';
+  const { data: expected, error: secretErr } = await admin
+    .rpc('hc_instagram_secret');
+
+  if (secretErr || !expected) {
+    console.error(
+      'instagram-fetch: could not read hc_instagram_secret: ' +
+      (secretErr?.message ?? 'the vault returned nothing under that name')
+    );
     return json({ error: 'not configured' }, 500);
   }
-  if (presented !== secretRow.decrypted_secret) {
+  if (presented !== expected) {
     return json({ error: 'forbidden' }, 403);
   }
 
@@ -195,7 +203,7 @@ Deno.serve(async (req: Request) => {
      than mirrored: the rail is the church's own, and this is what keeps the
      shared secret from being worth stealing. */
   const { data: church } = await admin
-    .from('church').select('social').maybeSingle();
+    .from('church_profile').select('social').maybeSingle();
   const handleFrom = JSON.stringify(church?.social ?? '')
     .match(/instagram\.com\\?\/([A-Za-z0-9_.]+)/i);
   const handle = handleFrom ? handleFrom[1].toLowerCase() : null;
