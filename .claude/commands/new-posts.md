@@ -19,7 +19,20 @@ $ARGUMENTS
 
 ---
 
-## Why this is links and not a sync
+## It finds the posts itself now
+
+`--latest` reads the profile and takes the newest N, so the links are optional:
+
+```bash
+node scripts/fetch_instagram_posts.js --latest 9 --out /tmp/ig.json
+```
+
+And `hc_sync_instagram(9)` does the same from the SQL editor. **Migration 0061
+puts that on a six hourly schedule**, so in the normal case nobody runs this
+command at all: the rail keeps itself current and `/new-posts` is for adding a
+specific post out of order, or for putting one back after it was taken down.
+
+## Why this used to be links and not a sync
 
 `INSTAGRAM_SYNC_SETUP.md` describes an hourly job that reads the account and
 fills this table by itself. That job needs Instagram's API, the API needs a
@@ -27,10 +40,14 @@ Professional account, and the church declined to switch. This command is the
 whole of the fallback: the same table, the same bucket, the same rail, filled
 by a person on a Sunday afternoon instead of by `pg_cron` on the hour.
 
-**It cannot find the posts for you, and that is the actual limitation.**
-Listing an account's posts without credentials is the part that does not work.
-Everything downstream of a link is automatic; getting the links is somebody
-opening Instagram and tapping share.
+**That limitation is gone.** This file used to say that listing an account's
+posts without credentials was the part that does not work, and that everything
+downstream of a link was automatic. The first half was true of a browser and
+false of a crawler: asked the way a link preview crawler asks, a profile page
+lists about a dozen recent posts, each carrying its numeric media id, and an
+id converts straight to a link because the two are the same number written
+differently. Discovery still yields links rather than rows, because a profile
+carries no date and the date is the one thing never to guess.
 
 ## Step 0. Check the plumbing, and check where you are
 

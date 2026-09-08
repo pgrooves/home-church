@@ -207,8 +207,22 @@ Built, merged, and live in Supabase:
   Instagram handle from `homechurchnola` to `homechurch.nola` and added X and
   TikTok to the Profile links
 
-Two ways to fill it, both reading what Instagram serves a link preview
-crawler, neither needing a token:
+**It now keeps itself current.** Migration `0061` schedules
+`hc_sync_instagram(9)` every six hours: it reads the profile, takes the newest
+nine posts, skips the ones already stored, and mirrors the rest. Nobody has to
+open Instagram at all. `select cron.unschedule('hc-instagram-sync');` turns it
+off.
+
+That is possible because the claim this page was built on turned out to be
+half wrong. Listing an account's posts without credentials does not work *for
+a browser*. Asked as a link preview crawler, a profile page is a document
+listing about a dozen recent posts, each carrying its numeric media id, and an
+id is a shortcode written in a different base, so it converts straight to a
+link with no request at all. What a profile still does not carry is the date,
+so each discovered link is fetched for its own page.
+
+Two ways to fill it by hand as well, both reading what Instagram serves a link
+preview crawler, neither needing a token:
 
 - **From a phone**, `select public.hc_fetch_instagram(array[...])` in the SQL
   editor. `supabase/functions/instagram-fetch/index.ts` plus migrations `0059`

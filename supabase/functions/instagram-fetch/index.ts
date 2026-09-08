@@ -124,6 +124,48 @@ function extractMedia(html: string, shortcode: string): any | null {
   return null;
 }
 
+/** A post's shortcode, derived from its numeric media id. The two are the
+ *  same number: a shortcode is the id in base64 with Instagram's alphabet.
+ *  The profile page carries `pk` for every recent post and no `code` at all,
+ *  so this is what turns a page of ids into a page of links. BigInt, because
+ *  these ids are past 2^53 and Number() rounds them into a different post. */
+const ALPHABET =
+  'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
+
+function toShortcode(pk: string): string {
+  let n = BigInt(pk), out = '';
+  if (n <= 0n) return '';
+  while (n > 0n) { out = ALPHABET[Number(n % 64n)] + out; n /= 64n; }
+  return out;
+}
+
+/** Every recent post on a profile page, newest first.
+ *
+ *  Asked as a crawler, a profile is a document carrying about a dozen posts
+ *  with their ids. It carries no taken_at, so this yields shortcodes and each
+ *  one is still fetched for its own date. Do not publish straight from here.
+ *
+ *  A carousel's slides are XIGPolaris objects too, with an image and an id and
+ *  no pk; counting them as posts would put a dozen links to the same
+ *  photograph on the rail. */
+function discover(html: string): string[] {
+  const NEEDLE = '{"__typename":"XIGPolaris';
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (let at = html.indexOf(NEEDLE); at >= 0; at = html.indexOf(NEEDLE, at + 1)) {
+    const raw = sliceAt(html, at);
+    if (!raw) continue;
+    try {
+      const m = JSON.parse(raw);
+      if (!m?.pk || seen.has(String(m.pk))) continue;
+      seen.add(String(m.pk));
+      const code = toShortcode(String(m.pk));
+      if (code) out.push(code);
+    } catch { /* one unparsable candidate is not a failure */ }
+  }
+  return out;
+}
+
 /** Instagram's own numbering: 1 a photo, 2 a video, 8 a carousel. A reel is a
  *  video whose product_type is `clips`. Anything unfamiliar draws as a still,
  *  because the play badge is a promise about what a tap does. */
@@ -190,18 +232,12 @@ Deno.serve(async (req: Request) => {
     return json({ error: 'forbidden' }, 403);
   }
 
-  let body: { links?: unknown };
+  let body: { links?: unknown; limit?: unknown; force?: unknown };
   try { body = await req.json(); } catch { return json({ error: 'bad json' }, 400); }
 
-  const links = Array.isArray(body.links) ? body.links.map(String) : [];
-  if (!links.length) return json({ error: 'no links' }, 400);
-  if (links.length > MAX_LINKS) {
-    return json({ error: 'at most ' + MAX_LINKS + ' links per call' }, 400);
-  }
-
-  /* Whose feed this rail is. A link to somebody else's post is refused rather
-     than mirrored: the rail is the church's own, and this is what keeps the
-     shared secret from being worth stealing. */
+  /* Whose feed this rail is. Used twice: to find the posts when none were
+     named, and to refuse a link to somebody else's post. The second is what
+     keeps the shared secret from being worth stealing. */
   const { data: church } = await admin
     .from('church_profile').select('social').maybeSingle();
   const handleFrom = JSON.stringify(church?.social ?? '')
@@ -209,6 +245,48 @@ Deno.serve(async (req: Request) => {
   const handle = handleFrom ? handleFrom[1].toLowerCase() : null;
   if (!handle) {
     return json({ error: 'no instagram handle on the church row, so nothing to check against' }, 500);
+  }
+
+  const limit = Math.min(Number(body.limit) || 9, MAX_LINKS);
+  let links = Array.isArray(body.links) ? body.links.map(String) : [];
+  let discovered = 0;
+
+  /* No links given means find them. This is the whole difference between a
+     command somebody runs on a Sunday and a job that keeps the rail current
+     on its own: the profile page, asked for as a crawler, lists the recent
+     posts, and their ids convert straight to links. */
+  if (!links.length) {
+    const res = await fetch('https://www.instagram.com/' + handle + '/', {
+      headers: {
+        'User-Agent': UA,
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Accept': 'text/html,application/xhtml+xml'
+      }
+    });
+    if (res.status === 429 || /\/accounts\/login\//.test(res.url ?? '')) {
+      return json({ error: 'rate limited by Instagram while reading the profile' }, 503);
+    }
+    if (!res.ok) return json({ error: 'profile: HTTP ' + res.status }, 502);
+
+    const codes = discover(await res.text());
+    discovered = codes.length;
+    if (!codes.length) {
+      return json({ error: 'the profile page had no posts in it' }, 502);
+    }
+    links = codes.slice(0, limit).map((c) => 'https://www.instagram.com/p/' + c + '/');
+  }
+
+  if (links.length > MAX_LINKS) {
+    return json({ error: 'at most ' + MAX_LINKS + ' links per call' }, 400);
+  }
+
+  /* Posts already on the rail are left alone unless asked otherwise. Without
+     this a scheduled run re-downloads and re-uploads every picture every
+     time, for a table that has not changed. */
+  const already = new Set<string>();
+  if (!body.force) {
+    const { data: rows } = await admin.from('instagram_posts').select('id');
+    for (const r of rows ?? []) already.add(String(r.id));
   }
 
   const wrote: unknown[] = [];
@@ -246,6 +324,11 @@ Deno.serve(async (req: Request) => {
             ? 'the page arrived but the media object did not parse; Instagram has renamed something'
             : 'the page had no post in it'
         });
+        continue;
+      }
+
+      if (already.has(String(media.pk))) {
+        skipped.push({ shortcode, why: 'already on the rail' });
         continue;
       }
 
@@ -294,5 +377,8 @@ Deno.serve(async (req: Request) => {
     }
   }
 
-  return json({ wrote, skipped, counts: { wrote: wrote.length, skipped: skipped.length } });
+  return json({
+    handle, discovered, wrote, skipped,
+    counts: { discovered, wrote: wrote.length, skipped: skipped.length }
+  });
 });

@@ -19,14 +19,16 @@
  * shipped, so the only missing piece is something that fills the table. This
  * is that, run by a person once a week instead of by pg_cron once an hour.
  *
- * WHY NOT SCRAPE THE PROFILE. Listing an account's posts without credentials
- * is the part that does not work: a logged out profile page is the JavaScript
- * application and nothing else, and Instagram rotates the ids behind it every
- * few weeks. So this script never asks "what has the church posted lately".
- * It is told, one link at a time, and then asks for that post the way a link
- * preview crawler does, which is the one way Instagram still hands over a
- * whole post as a document. See the UA constant: it is the trick, and it is
- * the whole reason there is no token here.
+ * OR FINDS THEM ITSELF, which is what --latest does:
+ *
+ *     node scripts/fetch_instagram_posts.js --latest 9 --out /tmp/ig.json
+ *
+ * This file used to say that listing an account's posts without credentials
+ * was the part that does not work. That was true of a browser and false of a
+ * crawler, which is the same discovery the UA constant below describes. Asked
+ * as a crawler, a profile page is a document carrying about a dozen recent
+ * posts, each with its numeric id. It carries no `taken_at`, so discovery
+ * yields links and every link is still fetched for its own date.
  *
  * NOTHING IS EVER INVENTED, AND THE DATE IS WHY THIS MATTERS MORE THAN IT
  * LOOKS. `posted_at` sorts the rail, and 0015 and the demo seed both say that
@@ -58,6 +60,8 @@
  *     export SUPABASE_URL=https://xxxx.supabase.co
  *     export SUPABASE_SERVICE_ROLE_KEY=eyJ...
  *
+ *     --latest N       find the newest N posts on the profile, no stdin
+ *     --handle NAME    whose profile, default homechurch.nola
  *     --dry-run        fetch and report, upload nothing, write no file
  *     --no-upload      build rows against images already in the bucket
  *     --out FILE       write the rows here as well as to stdout
@@ -230,6 +234,77 @@ function extractMedia(html, shortcode) {
     return media;
   }
   return null;
+}
+
+/* A post's shortcode, derived from its numeric media id.
+ *
+ * The two are the same number. A shortcode is the id written in base64 with
+ * Instagram's own alphabet, so `3965350390354495018` is `DcHwSuzCUYq` and the
+ * conversion needs nothing from the network. That matters because the profile
+ * page carries `pk` for every recent post and carries no `code` at all: this
+ * is what turns a page of ids into a page of links.
+ *
+ * Checked against all five posts that were on the rail when this was written,
+ * in instagram-posts.test.js. BigInt rather than Number, because these ids are
+ * past 2^53 and floating point silently rounds them into a different post. */
+const ALPHABET =
+  'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
+
+function toShortcode(pk) {
+  let n = BigInt(pk), out = '';
+  if (n <= 0n) return '';
+  while (n > 0n) {
+    out = ALPHABET[Number(n % 64n)] + out;
+    n /= 64n;
+  }
+  return out;
+}
+
+/* Every recent post on a profile page, newest first.
+ *
+ * THIS IS THE PIECE THAT WAS MISSING, and the reason this file used to say
+ * listing an account's posts was the part that does not work. It does not work
+ * for a browser: a logged out profile is the JavaScript application and
+ * nothing else. Asked as a crawler it is a document, and it carries about a
+ * dozen posts with their ids, captions, types and pictures already in it.
+ *
+ * What it does NOT carry is `taken_at`. So this yields links rather than rows,
+ * and each one still has to be fetched for its date. Do not be tempted to
+ * publish straight from here: the date is read aloud, and the profile has
+ * none.
+ *
+ * A carousel's slides appear as objects too, so only the ones carrying `pk`
+ * are posts; the slides have an id and an image and nothing else. A pinned
+ * post appears at the top whatever its age, which does not disturb ordering
+ * because rows sort on the real date, but it does mean the newest dozen here
+ * are not always the newest dozen posted. */
+function discover(html) {
+  const text = String(html || '');
+  const NEEDLE = '{"__typename":"XIGPolaris';
+  const seen = new Set();
+  const posts = [];
+
+  for (let at = text.indexOf(NEEDLE); at >= 0; at = text.indexOf(NEEDLE, at + 1)) {
+    const raw = sliceAt(text, at);
+    if (!raw) continue;
+    let media;
+    try { media = JSON.parse(raw); } catch (e) { continue; }
+    if (!media || !media.pk || seen.has(media.pk)) continue;
+    seen.add(media.pk);
+
+    const shortcode = toShortcode(media.pk);
+    if (!shortcode) continue;
+
+    posts.push({
+      shortcode: shortcode,
+      permalink: 'https://www.instagram.com/p/' + shortcode + '/',
+      mediaHint: null,          // the post's own page decides, as ever
+      givenDate: null,
+      pinned: Boolean(media.is_timeline_pinned),
+      caption: ((media.caption || {}).text) || ''
+    });
+  }
+  return posts;
 }
 
 /* Instagram's numeric media type, which is what `0015` calls media_type and
@@ -561,13 +636,15 @@ async function look(post, opts) {
 /* --------------------------------------------------------------------- main */
 
 function parseArgs(argv) {
-  const args = { out: null, dryRun: false, upload: true, saveHtml: null };
+  const args = { out: null, dryRun: false, upload: true, saveHtml: null, latest: 0 };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === '--out') args.out = argv[++i];
     else if (a === '--dry-run') args.dryRun = true;
     else if (a === '--no-upload') args.upload = false;
     else if (a === '--save-html') args.saveHtml = argv[++i];
+    else if (a === '--latest') args.latest = Math.max(0, parseInt(argv[++i], 10) || 0);
+    else if (a === '--handle') args.handle = argv[++i];
     else if (a === '--help' || a === '-h') args.help = true;
   }
   return args;
@@ -582,6 +659,8 @@ Turn Instagram post links into instagram_posts rows, pictures and all.
   --dry-run     fetch and report, upload nothing, write no file
   --no-upload   build rows against pictures already in the bucket
   --save-html DIR  keep the pages Instagram sent, for when a selector breaks
+  --latest N       find the newest N posts on the profile instead of stdin
+  --handle NAME    whose profile --latest reads, default homechurch.nola
 
 Links go in on stdin, one per line, newest first. A post whose date cannot
 be read is held back; give it one on the line to publish it:
@@ -595,10 +674,35 @@ async function main() {
   const args = parseArgs(process.argv.slice(2));
   if (args.help) { console.log(USAGE); return 0; }
 
-  const posts = parseList(fs.readFileSync(0, 'utf8'));
-  if (!posts.length) {
-    console.error('No Instagram post links on stdin.\n' + USAGE);
-    return 1;
+  let posts;
+  if (args.latest) {
+    const handle = args.handle || 'homechurch.nola';
+    try {
+      const html = await fetchText('https://www.instagram.com/' + handle + '/');
+      const found = discover(html);
+      if (!found.length) {
+        console.error(
+          looksLikeShell(html)
+            ? 'The profile page came back with no posts in it, only Instagram\'s\n' +
+              'own JavaScript. That is the shell, not an empty account.'
+            : 'The profile page arrived but no posts parsed out of it.\n' +
+              'Instagram has most likely renamed something.'
+        );
+        return 1;
+      }
+      posts = found.slice(0, args.latest);
+      console.error('Found ' + found.length + ' posts on @' + handle +
+        ', taking the newest ' + posts.length + '.');
+    } catch (e) {
+      console.error('Could not read @' + handle + ': ' + e.message);
+      return 1;
+    }
+  } else {
+    posts = parseList(fs.readFileSync(0, 'utf8'));
+    if (!posts.length) {
+      console.error('No Instagram post links on stdin.\n' + USAGE);
+      return 1;
+    }
   }
 
   const env = { url: process.env.SUPABASE_URL, key: process.env.SUPABASE_SERVICE_ROLE_KEY };
@@ -697,6 +801,7 @@ async function main() {
 
 module.exports = {
   parseUrl, parseList, decodeEntities, sliceAt, sliceObject, extractMedia,
+  toShortcode, discover,
   looksLikeShell, fromMedia, fromOgTags, mediaTypeFor, mediaTypeOf,
   normalizeCaption, buildRow, explainOembedError
 };

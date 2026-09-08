@@ -270,6 +270,106 @@ ok('a date on the line does not overrule the post\'s own',
     F.fromMedia(MEDIA), 'x.jpg').posted_at,
   '2026-08-17T00:30:02.000Z');
 
+/* --------------------------------------------------------- finding the posts */
+
+/* The id and the shortcode are the same number. A shortcode is the media id
+   written in base64 with Instagram's alphabet, which is what turns a profile
+   page full of ids into a page of links: the profile carries `pk` for every
+   recent post and carries no `code` at all.
+
+   These five pairs are real. They are the five posts that were on the rail
+   when this was written, and every one of their ids came back from Instagram
+   alongside the shortcode it was fetched by. */
+
+console.log('\n--- the id and the shortcode are the same number ---');
+
+ok('the post this whole feature was tested against',
+  F.toShortcode('3965350390354495018'), 'DcHwSuzCUYq');
+ok('a second, in case the first was a coincidence',
+  F.toShortcode('3964308400091476566'), 'DcEDXxvjLJW');
+ok('a third', F.toShortcode('3960279698546193819'), 'Db1vWdDCXWb');
+ok('a fourth', F.toShortcode('3950145224676293832'), 'DbRvCcwCTzI');
+/* This one earns its place: it contains an underscore, which is the 63rd
+   character of the alphabet and the one an off-by-one gets wrong. */
+ok('a fifth, whose shortcode contains an underscore',
+  F.toShortcode('3945050083506620288'), 'Da_oiYwiYeA');
+
+/* The ids are past 2^53. Number() rounds them, silently, to a different post:
+   3965350390354495018 becomes ...5020 and the shortcode comes out wrong by one
+   character, which is a real link to somebody else's photograph. */
+ok('the arithmetic is BigInt, so an id past 2^53 is not rounded',
+  F.toShortcode('3965350390354495018'),
+  F.toShortcode(BigInt('3965350390354495018')));
+
+console.log('\n--- a profile page, which is where the links come from ---');
+
+/* Shaped as instagram.com actually served @homechurch.nola to a crawler: the
+   post objects carry pk, caption, media_type and is_timeline_pinned, and
+   carry neither `code` nor `taken_at`. A carousel's slides appear as their
+   own objects with an image and an id and nothing else. */
+const profilePage = (...objects) =>
+  '<html><script>{"user":{"edges":[' +
+  objects.map(o => JSON.stringify(o)).join(',') + ']}}</script></html>';
+
+const POST = (pk, caption, extra) => Object.assign({
+  __typename: 'XIGPolarisCarouselMedia',
+  __isXIGPolarisMedia: 'XIGPolarisCarouselMedia',
+  is_timeline_pinned: false,
+  pk: pk,
+  caption: { text: caption },
+  media_type: 8,
+  seo_canonical_url: null
+}, extra || {});
+
+const SLIDE_ONLY = {
+  __typename: 'XIGPolarisImageMedia',
+  image_versions2: { candidates: [{ url: 'https://x/slide.jpg' }] },
+  id: 'POLARIS_1'
+};
+
+{
+  const found = F.discover(profilePage(
+    POST('3965350390354495018', 'JESUS CHANGES EVERYTHING'),
+    SLIDE_ONLY,
+    POST('3964308400091476566', 'It’s almost time to come Home!')
+  ));
+  ok('one entry per post', found.length, 2);
+  ok('newest first, the order the page is in',
+    found.map(p => p.shortcode), ['DcHwSuzCUYq', 'DcEDXxvjLJW']);
+  ok('each one is a link that can be fetched',
+    found[0].permalink, 'https://www.instagram.com/p/DcHwSuzCUYq/');
+  ok('the caption comes along, for showing somebody before anything is written',
+    found[0].caption, 'JESUS CHANGES EVERYTHING');
+}
+
+/* The trap. A carousel's slides are XIGPolaris objects too, and counting them
+   as posts would put a dozen links to the same photograph on the rail. Only
+   the objects carrying pk are posts. */
+ok('a carousel slide is not a post',
+  F.discover(profilePage(SLIDE_ONLY, SLIDE_ONLY)).length, 0);
+
+ok('the same post twice in the page is one post',
+  F.discover(profilePage(
+    POST('3965350390354495018', 'a'),
+    POST('3965350390354495018', 'a')
+  )).length, 1);
+
+/* A pinned post sits at the top of a profile whatever its age. It is kept,
+   because rows sort on the real date and a pinned post is still a post, but
+   it is flagged so a caller can say why an old photograph turned up in "the
+   newest nine". */
+ok('a pinned post is kept and marked',
+  F.discover(profilePage(POST('3965350390354495018', 'a', { is_timeline_pinned: true })))[0].pinned,
+  true);
+
+/* Discovery yields links, never rows. The profile has no taken_at, and the
+   date is the one thing that must not be guessed. */
+ok('discovery never carries a date, so nothing can be published straight from it',
+  F.discover(profilePage(POST('3965350390354495018', 'a')))[0].givenDate, null);
+
+ok('a page with no posts in it discovers nothing rather than throwing',
+  F.discover('<html>nothing here</html>'), []);
+
 /* ------------------------------------------------- a page with nothing in it */
 
 /* The failure that cost the most to find. A datacenter IP gets HTTP 200 and
