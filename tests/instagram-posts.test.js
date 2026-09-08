@@ -247,6 +247,44 @@ ok('a date on the line does not overrule the post\'s own',
     F.fromMedia(F.extractMedia(embedPage(BLOB))), 'x.jpg').posted_at,
   '2026-08-16T00:00:00.000Z');
 
+/* ---------------------------------------------------- why a post would not */
+
+/* These are the real payloads, recorded from graph.facebook.com. The two
+   subcodes are the whole reason this diagnosis exists: a private post and a
+   deleted one look identical from the embed page and the og: tags, and only
+   this endpoint tells them apart. Getting the two the wrong way round sends
+   somebody to fix the wrong thing. */
+
+console.log('\n--- why a post did not resolve ---');
+
+ok('a private post says so, and says it is not fixable link by link',
+  F.explainOembedError({ error: {
+    message: 'Permissions error', type: 'OAuthException', code: 200,
+    error_subcode: 2207046, error_user_title: 'Private Media',
+    error_user_msg: 'The requested media is private. Only public media can be embedded.'
+  } }),
+  'Instagram says this post is private. Only public posts can be read this ' +
+  'way, by anything, so no link will resolve while the account is private.');
+
+ok('a deleted or mistyped post is a different thing entirely',
+  F.explainOembedError({ error: {
+    message: 'The requested resource does not exist', type: 'OAuthException',
+    code: 24, error_subcode: 2207045, error_user_title: 'Media Not Found',
+    error_user_msg: 'The requested media could not be embedded either because it does not exist or you don\'t have permission to embed it.'
+  } }),
+  'Instagram says there is no such post. Check the link, and whether it has been deleted.');
+
+ok('an error nobody anticipated is passed through rather than swallowed',
+  F.explainOembedError({ error: { error_user_msg: 'Something new and unhelpful' } }),
+  'Instagram says: Something new and unhelpful');
+
+ok('an error with no words at all still says something',
+  F.explainOembedError({ error: { code: 1 } }),
+  'Instagram says: no reason given');
+
+ok('a successful answer is not an error',
+  F.explainOembedError({ author_name: 'homechurch.nola', html: '<blockquote>' }), null);
+
 /* ------------------------------------------------------------------- tally */
 
 console.log('\n' + pass + ' passed, ' + fail + ' failed');

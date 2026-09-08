@@ -347,6 +347,55 @@ async function upload(objectPath, image, env) {
   if (!res.ok) throw new Error(objectPath + ': ' + res.status + ' ' + (await res.text()));
 }
 
+/* Why a post did not resolve, in Meta's own words.
+ *
+ * Only ever called after both fetches have already failed, and only to turn a
+ * useless message into a precise one. The embed page and the post page both
+ * answer a private post with something that looks exactly like a network
+ * problem or a changed selector, and the difference between "the church made
+ * this account private" and "Instagram moved the picture again" is a week of
+ * looking in the wrong place.
+ *
+ * The oEmbed endpoint says which. Since 15 June 2026 it takes no access token,
+ * no app and no App Review, and it distinguishes the two cases that matter:
+ *
+ *   2207046  Private Media    the post is real and the account is not public
+ *   2207045  Media Not Found  no such post, or it was deleted
+ *
+ * It is not used for anything else. Tokenless oEmbed no longer returns
+ * thumbnail_url, so it cannot supply a picture, and it never carried a date.
+ * This is a diagnostic, not a source. */
+function explainOembedError(body) {
+  const err = body && body.error;
+  if (!err) return null;
+  if (err.error_subcode === 2207046) {
+    return 'Instagram says this post is private. Only public posts can be ' +
+      'read this way, by anything, so no link will resolve while the ' +
+      'account is private.';
+  }
+  if (err.error_subcode === 2207045) {
+    return 'Instagram says there is no such post. Check the link, and ' +
+      'whether it has been deleted.';
+  }
+  return 'Instagram says: ' + (err.error_user_msg || err.message || 'no reason given');
+}
+
+async function diagnose(shortcode) {
+  try {
+    const res = await fetch(
+      'https://graph.facebook.com/v23.0/instagram_oembed?url=' +
+      encodeURIComponent('https://www.instagram.com/p/' + shortcode + '/') +
+      '&omitscript=true',
+      { headers: { 'User-Agent': UA } }
+    );
+    return explainOembedError(await res.json());
+  } catch (e) {
+    // The diagnosis failing is not itself worth reporting. The caller still
+    // has the real errors from the two fetches that actually matter.
+    return null;
+  }
+}
+
 /* Ask the embed first, fall back to the post page. Both are public and
    neither takes a credential. Whichever answered is reported, because "the
    blob was there" and "we scraped the preview card" are different amounts of
@@ -373,8 +422,12 @@ async function look(post) {
     attempts.push('post page: ' + e.message);
   }
 
-  const err = new Error(attempts.join('; '));
+  /* Both public routes failed, so ask Meta why before reporting a network
+     error somebody will spend the afternoon on. */
+  const why = await diagnose(post.shortcode);
+  const err = new Error(why || attempts.join('; '));
   err.attempts = attempts;
+  err.diagnosis = why;
   throw err;
 }
 
@@ -501,7 +554,8 @@ async function main() {
 
 module.exports = {
   parseUrl, parseList, decodeEntities, sliceObject, extractMedia,
-  fromMedia, fromEmbedHtml, fromOgTags, mediaTypeFor, normalizeCaption, buildRow
+  fromMedia, fromEmbedHtml, fromOgTags, mediaTypeFor, normalizeCaption, buildRow,
+  explainOembedError
 };
 
 /* process.exitCode rather than process.exit(), so stdout is flushed before

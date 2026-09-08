@@ -99,6 +99,31 @@ Exit codes: `0` every post came back whole, `2` at least one is thin or held
 back so say which, `1` nothing was written so do not publish. On `1`, a message
 about `403` from instagram.com means Step 0 — you are on a datacenter IP.
 
+### If it says the post is private
+
+```
+! DcHwSuzCUYq  nothing came back: Instagram says this post is private.
+```
+
+**Stop, and do not look for a way around it.** That sentence is Instagram's,
+via the one endpoint that distinguishes a private post from a deleted one, and
+it means the account is not public. Nothing reads a private account without
+being logged in to something with permission: not this command, not a scraping
+service, not a paid widget. The links are fine. The account is the gate.
+
+Two things follow, and **the second is the one to raise**:
+
+1. Making the account public is a much smaller change than the Professional
+   switch in `INSTAGRAM_SYNC_SETUP.md`. It is one setting, and it does not
+   touch the account type.
+2. **A private account has already decided these pictures are not public, and
+   the `instagram` bucket is public-read by design** (`0015` section 6). So
+   mirroring them there does not just put them in the app, it puts them on the
+   open internet for anyone with the URL. If the account is private on purpose,
+   which for a church it may well be, **that is a reason not to run this
+   command at all** rather than a step to work around. Ask before publishing
+   anything, and do not treat "the app needs a rail" as the deciding factor.
+
 ## Step 3. The date, which is the one thing not to guess
 
 **`posted_at` is not just a sort key, whatever `0015` and the demo seed say.**
