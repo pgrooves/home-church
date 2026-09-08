@@ -36,19 +36,37 @@ opening Instagram and tapping share.
 
 Read **`supabase/ACCESS.md`** for the two transports.
 
-**This command needs a real machine, and it is one of the few that does.**
-Two independent reasons, either of which is enough:
+**This command needs a real machine. There is a second route that does not,
+and from a phone it is the one to use.**
 
-- **Storage.** Neither transport reaches it. `ACCESS.md` is explicit: there is
-  no MCP tool for Storage and no upload verb on the script, so a web session
-  cannot put a picture in a bucket. A row without its picture is a row Connect
-  drops.
-- **The fetch.** Instagram refuses datacenter IPs, which is what a web session
-  runs on. The links will resolve from a laptop on a normal connection and
-  return nothing from a browser tab.
+The reason is Storage, and only Storage. `ACCESS.md` is explicit: no MCP tool
+reaches a bucket and the script has no upload verb, so a web session can write
+the row and not the picture, and a row without its picture is one Connect
+drops. So if `.env` is not at the repo root, **do not run this command** and
+do not write rows whose pictures never made it.
 
-So if `.env` is not at the repo root, **stop and say so** rather than writing
-rows whose pictures never made it. The rail is better empty than half drawn.
+Use the Edge Function instead, which puts the picture where the service role
+key already is:
+
+```sql
+select public.hc_fetch_instagram(array[
+  'https://www.instagram.com/p/DcHwSuzCUYq/'
+]);
+-- then, a moment later, the reply:
+select status_code, content from net._http_response where id = <the id above>;
+```
+
+It does the same job as everything below and reports per post what it wrote
+and what it skipped. `supabase/functions/instagram-fetch/index.ts` and
+migrations `0059`/`0060` are the whole of it, and it runs from the SQL editor,
+which works on a phone.
+
+**A note on a claim this file used to make.** It said Instagram refuses
+datacenter IPs, and that is wrong: it refuses *browsers* it does not want to
+serve. Asked as a link preview crawler, which is what both the script and the
+function do, Instagram served a datacenter IP and Supabase's Deno Deploy the
+complete post. Worth re-testing occasionally, since one clean run is not proof
+it holds forever, but it is not a reason to reach for a laptop.
 
 ## Step 1. Read the links
 
@@ -210,33 +228,17 @@ still unanswered. Re-run Step 2 with the answer rather than editing
 python3 scripts/hc_supabase.py upsert instagram_posts /tmp/ig.json
 ```
 
-The id is the post's **shortcode**, the `DcHwSuzCUYq` out of the permalink, so
-running this again over the same post updates it rather than adding a second
-one. That is a deliberate departure from `0015`, which specifies Instagram's
-numeric media id: the shortcode does the same job and is the only id anybody
-has without the API. The script's header says so too, so the two do not drift.
+The id is Instagram's **numeric media id**, `3965350390354495018` and the
+like, exactly as `0015` specifies. It comes out of the media object on the
+page, so re-running over the same post updates it rather than adding a second
+one, and rows written here are the same rows a future API sync would write.
 
-**The five demo rows upgrade themselves, and nothing needs deleting.**
-`demo-instagram/seed-demo-posts.sql` keyed its rows by the same shortcodes,
-because those five permalinks are real; what was invented is the captions,
-which describe the photographs rather than saying what the church wrote, and
-the dates, which were chosen only to fix the left to right order. So running
-this command over those same five links replaces all of it with the real
-thing, in place, on the same ids:
-
-```
-DcHwSuzCUYq  DcEDXxvjLJW  Db1vWdDCXWb  DbRvCcwCTzI  Da_oiYwiYeA
-```
-
-**Doing that once is the best first run of this command**, and it is worth
-offering: it turns five rows of stand-in text into five true ones without
-touching anything else.
-
-The only leftovers are the five hand named pictures in the bucket,
-`01gathering.jpg` through `05ridgewood.jpg`. Nothing points at them once the
-rows carry `DcHwSuzCUYq.jpg` and the rest, and they are a few hundred KB
-against a 1 GB free tier, so they can be tidied from the Storage browser
-whenever or left alone.
+**A post that came back without a media object has no id and no date, and is
+held back rather than keyed on its shortcode.** One table with two id
+conventions in it is worse than a rail that is one post short this week. An
+earlier draft of this command did key on shortcodes; that is why the five
+demo rows were keyed that way, and why they had to be deleted rather than
+updated when the real ones arrived.
 
 ## Step 6. Keep the rail short
 

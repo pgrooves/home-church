@@ -46,9 +46,10 @@
  * rather than keyed on its shortcode: one table with two id conventions in it
  * is worse than a rail that is one post short this week.
  *
- * The five demo rows in demo-instagram/seed-demo-posts.sql are keyed by
- * shortcode and will NOT be updated in place by this script. Delete them the
- * first time real posts are published.
+ * There were once five demo rows keyed by shortcode, from a seed file that has
+ * since been deleted along with the pictures it pointed at. They were not
+ * updated in place by this script and could not be, which is what deleting
+ * them was for. Nothing is keyed that way any more.
  *
  * WHAT IT NEEDS. The service role key, for the upload only. The bucket has a
  * public read policy and no write policy at all (0015 section 6), so the

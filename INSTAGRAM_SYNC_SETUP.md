@@ -194,23 +194,38 @@ both conventions sit in the table.
 
 ## The state of things as of this writing
 
-Already built, merged, and live in Supabase:
+**The rail is live.** It carries five real posts, mirrored from the church's
+own Instagram, with real captions and the posts' own timestamps. Nothing on
+this page is pending any more except the API sync, which is not needed.
+
+Built, merged, and live in Supabase:
 
 - `instagram_posts` table, with public read and no write policy
 - the public `instagram` Storage bucket
-- the rail on Connect, which renders nothing while the table is empty
+- the rail on Connect
 - migrations `0015_instagram_posts.sql`, and `0013`/`0014` which fixed the
   Instagram handle from `homechurchnola` to `homechurch.nola` and added X and
   TikTok to the Profile links
 
-Also built, and what actually fills the rail today:
+Two ways to fill it, both reading what Instagram serves a link preview
+crawler, neither needing a token:
 
-- `scripts/fetch_instagram_posts.js`, links in, rows and mirrored pictures out
-- `.claude/commands/new-posts.md`, the `/new-posts` command around it
-- `tests/instagram-posts.test.js`, its parsers, against fixtures and no network
+- **From a phone**, `select public.hc_fetch_instagram(array[...])` in the SQL
+  editor. `supabase/functions/instagram-fetch/index.ts` plus migrations `0059`
+  and `0060`. This is the one that works from anywhere, because the service
+  role key is injected into the function and the upload happens where the key
+  already is.
+- **From a laptop**, `/new-posts`, wrapping `scripts/fetch_instagram_posts.js`,
+  with `tests/instagram-posts.test.js` over its parsers. Better when somebody
+  is at a keyboard: it confirms before writing and can be re-run offline.
 
-Not built: the API sync. That is Step 4, and it stays unbuilt while the account
-is Personal.
+They share an extraction and it is deliberately duplicated rather than shared,
+because one is Node and the other is Deno on a different machine. **If one is
+changed, change both.** The load bearing line in each is the crawler
+User-Agent.
+
+Not built: the API sync. That is Step 4, and it stays unbuilt because it is no
+longer needed, not because it is blocked.
 
 **One correction to `0015` and to the demo seed, which both say `posted_at`
 only sorts the rail.** It does not: `js/screens/connect.js:599` reads it into
