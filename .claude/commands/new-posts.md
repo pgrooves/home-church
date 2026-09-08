@@ -96,33 +96,58 @@ phones at them would hand Meta every congregant's IP address on every visit to
 Connect. Migration `0015` is the long version.
 
 Exit codes: `0` every post came back whole, `2` at least one is thin or held
-back so say which, `1` nothing was written so do not publish. On `1`, a message
-about `403` from instagram.com means Step 0 — you are on a datacenter IP.
+back so say which, `1` nothing was written so do not publish.
 
-### If it says the post is private
+> **The extraction has never run against a real post.** Everything downstream
+> of it is tested and everything around it is confirmed, but the two shapes it
+> looks for in a page, the media blob and the embed markup, were written from
+> how Instagram has served these pages historically and could not be checked
+> from a web session, because a web session only ever gets the empty shell. So
+> **expect the first run on a laptop to need one round of selector fixing**,
+> and use `--save-html` on that run so it is a ten minute job rather than a
+> guessing game. Once it has worked once, delete this paragraph.
 
+### The three ways it fails, which need three different fixes
+
+**"Instagram sent a page with no post in it, only its own JavaScript."**
+
+You are on a datacenter IP. Instagram answers `200` with about 600KB that is
+80% script, no `og:` tags, and not one mention of the account: the post is
+fetched later by code that never runs here. This is confirmed behaviour, not a
+guess — it is what a web session gets every time, and it is why Step 0 says to
+run this from a laptop. Nothing to fix in the script. Move to a normal
+connection.
+
+**"The page had a post in it but nothing matched."**
+
+The opposite failure, and the more interesting one. Instagram sent real
+content and the selectors did not recognise it, which means they have renamed
+something. Re-run with `--save-html DIR`, keep the file, and hand it to a
+session: fixing a selector against a real page is a ten minute job, and
+guessing at one without the page is how this breaks twice.
+
+```bash
+node scripts/fetch_instagram_posts.js --dry-run --save-html /tmp/ig < links.txt
 ```
-! DcHwSuzCUYq  nothing came back: Instagram says this post is private.
-```
 
-**Stop, and do not look for a way around it.** That sentence is Instagram's,
-via the one endpoint that distinguishes a private post from a deleted one, and
-it means the account is not public. Nothing reads a private account without
-being logged in to something with permission: not this command, not a scraping
-service, not a paid widget. The links are fine. The account is the gate.
+**"The Graph API declined to embed it."**
 
-Two things follow, and **the second is the one to raise**:
+**This one means nothing on its own, and the wording is a trap.** Meta's
+literal text is "The requested media is private", and it says that about
+`@homechurch.nola`, which is a public account anyone can read in a logged out
+browser. The likeliest reading is that the Graph API will not embed posts from
+accounts that are not Professional, which is every account this command exists
+to serve. **Do not send anybody to change a privacy setting on the strength of
+it.** Open the post in a private browser window and see for yourself.
 
-1. Making the account public is a much smaller change than the Professional
-   switch in `INSTAGRAM_SYNC_SETUP.md`. It is one setting, and it does not
-   touch the account type.
-2. **A private account has already decided these pictures are not public, and
-   the `instagram` bucket is public-read by design** (`0015` section 6). So
-   mirroring them there does not just put them in the app, it puts them on the
-   open internet for anyone with the URL. If the account is private on purpose,
-   which for a church it may well be, **that is a reason not to run this
-   command at all** rather than a step to work around. Ask before publishing
-   anything, and do not treat "the app needs a rail" as the deciding factor.
+### One thing worth asking before the first run
+
+The `instagram` bucket is public-read by design (`0015` section 6), so a
+picture mirrored into it is reachable by anyone with the URL, not only by the
+app. For posts the church already published to the open internet that changes
+nothing. It is worth a sentence to whoever runs the account anyway, because
+"it is on our Instagram" and "it is on a public URL with no login at all" are
+not quite the same promise.
 
 ## Step 3. The date, which is the one thing not to guess
 

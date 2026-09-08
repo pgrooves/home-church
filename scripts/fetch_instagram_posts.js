@@ -55,9 +55,17 @@
  *     export SUPABASE_URL=https://xxxx.supabase.co
  *     export SUPABASE_SERVICE_ROLE_KEY=eyJ...
  *
- *     --dry-run     fetch and report, upload nothing, write no file
- *     --no-upload   build rows against images already in the bucket
- *     --out FILE    write the rows here as well as to stdout
+ *     --dry-run        fetch and report, upload nothing, write no file
+ *     --no-upload      build rows against images already in the bucket
+ *     --out FILE       write the rows here as well as to stdout
+ *     --save-html DIR  keep the pages Instagram sent, for a broken selector
+ *
+ * THE EXTRACTION HAS NEVER RUN AGAINST A REAL POST. The two shapes below are
+ * how Instagram has served these pages historically; they could not be checked
+ * from a web session, because a datacenter IP gets 200 and a 600KB shell with
+ * no post in it, which looksLikeShell() exists to recognise. Expect the first
+ * run on a laptop to need one round of selector fixing, and use --save-html on
+ * that run. Once it has worked once, delete this paragraph.
  *
  * Exit codes, the same shape as resolve_songs.js: 0 every post came back
  * whole, 2 at least one is thin or held back so a caller can tell "published
@@ -271,6 +279,27 @@ function fromOgTags(html) {
   };
 }
 
+/* Did Instagram send a page with a post in it, or the empty shell?
+ *
+ * These are the two failures and they need completely different fixes, so
+ * telling them apart is worth a function. A datacenter IP gets HTTP 200 and
+ * about 600KB that is 80% JavaScript, no og: tags, no media object, and not
+ * one mention of the account: the post is fetched later by script that never
+ * runs here. Reported as a parse failure it looks exactly like Instagram
+ * having renamed something, and somebody spends the afternoon rewriting
+ * selectors that were fine.
+ *
+ * The tell is a picture. Every real post page carries at least one URL for
+ * actual media, and the shell carries only its own code. static.cdninstagram
+ * .com/rsrc.php is that code, so it does not count. */
+function looksLikeShell(html) {
+  const text = String(html || '');
+  const media = text.match(
+    /https:\/\/[a-z0-9.-]*(?:cdninstagram\.com|fbcdn\.net)\/[^"'\\\s]+/gi
+  ) || [];
+  return !media.some((u) => !/\/rsrc\.php\//.test(u));
+}
+
 /* The hint from the link loses to the page, because /p/ links are handed out
    for reels too and a play badge is a promise about what a tap does. */
 function mediaTypeFor(hint, found) {
@@ -368,10 +397,17 @@ async function upload(objectPath, image, env) {
 function explainOembedError(body) {
   const err = body && body.error;
   if (!err) return null;
+  /* DO NOT REPORT THIS AS "the account is private". It says that, and it is
+     not reliable: @homechurch.nola is a public account that anyone can read in
+     a logged out browser, and all five of its posts answer 2207046 anyway.
+     The likeliest reading is that Graph oEmbed refuses posts from accounts
+     that are not Professional, which is every account this command exists to
+     serve. Acting on the literal wording sends somebody to change a privacy
+     setting that was never the problem. */
   if (err.error_subcode === 2207046) {
-    return 'Instagram says this post is private. Only public posts can be ' +
-      'read this way, by anything, so no link will resolve while the ' +
-      'account is private.';
+    return 'the Graph API declined to embed it, which it does both for ' +
+      'private accounts and for ordinary personal ones, so on its own this ' +
+      'says nothing. Open the post in a logged out browser to tell which.';
   }
   if (err.error_subcode === 2207045) {
     return 'Instagram says there is no such post. Check the link, and ' +
@@ -400,13 +436,25 @@ async function diagnose(shortcode) {
    neither takes a credential. Whichever answered is reported, because "the
    blob was there" and "we scraped the preview card" are different amounts of
    trust and the second one never carries a date. */
-async function look(post) {
+async function look(post, opts) {
   const attempts = [];
+  const pages = [];
+  const save = (opts && opts.saveHtml) || null;
+
+  const keep = (name, html) => {
+    pages.push(html);
+    if (save) {
+      const file = save.replace(/\/$/, '') + '/' + post.shortcode + '.' + name + '.html';
+      try { fs.writeFileSync(file, html); attempts.push('saved ' + file); }
+      catch (e) { attempts.push('could not save ' + file + ': ' + e.message); }
+    }
+  };
 
   try {
     const html = await fetchText(
       'https://www.instagram.com/p/' + post.shortcode + '/embed/captioned/'
     );
+    keep('embed', html);
     const found = fromMedia(extractMedia(html)) || fromEmbedHtml(html);
     if (found) return found;
     attempts.push('the embed answered with no picture in it');
@@ -415,31 +463,55 @@ async function look(post) {
   }
 
   try {
-    const found = fromOgTags(await fetchText(post.permalink));
+    const html = await fetchText(post.permalink);
+    keep('post', html);
+    const found = fromOgTags(html);
     if (found) return found;
     attempts.push('the post page had no og:image');
   } catch (e) {
     attempts.push('post page: ' + e.message);
   }
 
-  /* Both public routes failed, so ask Meta why before reporting a network
-     error somebody will spend the afternoon on. */
+  /* Both routes failed. Which of the two failures it is decides what to do
+     next, and they are not distinguishable from the messages above. */
+  if (pages.length && pages.every(looksLikeShell)) {
+    const err = new Error(
+      'Instagram sent a page with no post in it, only its own JavaScript. ' +
+      'That is what a datacenter IP gets, and what a web session gets. Run ' +
+      'this from a normal connection on a laptop.'
+    );
+    err.shell = true;
+    throw err;
+  }
+
+  if (pages.length) {
+    const err = new Error(
+      'the page had a post in it but nothing matched. Instagram has most ' +
+      'likely renamed something, so the selectors need updating: re-run with ' +
+      '--save-html DIR and keep the file.'
+    );
+    err.stale = true;
+    throw err;
+  }
+
+  /* Nothing was fetched at all, so ask Meta whether the link is even real
+     before reporting a network error somebody will spend the afternoon on. */
   const why = await diagnose(post.shortcode);
   const err = new Error(why || attempts.join('; '));
   err.attempts = attempts;
-  err.diagnosis = why;
   throw err;
 }
 
 /* --------------------------------------------------------------------- main */
 
 function parseArgs(argv) {
-  const args = { out: null, dryRun: false, upload: true };
+  const args = { out: null, dryRun: false, upload: true, saveHtml: null };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === '--out') args.out = argv[++i];
     else if (a === '--dry-run') args.dryRun = true;
     else if (a === '--no-upload') args.upload = false;
+    else if (a === '--save-html') args.saveHtml = argv[++i];
     else if (a === '--help' || a === '-h') args.help = true;
   }
   return args;
@@ -453,6 +525,7 @@ Turn Instagram post links into instagram_posts rows, pictures and all.
   --out FILE    write the rows here as well as to stdout
   --dry-run     fetch and report, upload nothing, write no file
   --no-upload   build rows against pictures already in the bucket
+  --save-html DIR  keep the pages Instagram sent, for when a selector breaks
 
 Links go in on stdin, one per line, newest first. A post whose date cannot
 be read is held back; give it one on the line to publish it:
@@ -489,7 +562,7 @@ async function main() {
   for (const post of posts) {
     let found;
     try {
-      found = await look(post);
+      found = await look(post, { saveHtml: args.saveHtml });
     } catch (e) {
       console.error('  ! ' + post.shortcode + '  nothing came back: ' + e.message);
       thin++;
@@ -553,7 +626,7 @@ async function main() {
 }
 
 module.exports = {
-  parseUrl, parseList, decodeEntities, sliceObject, extractMedia,
+  parseUrl, parseList, decodeEntities, sliceObject, extractMedia, looksLikeShell,
   fromMedia, fromEmbedHtml, fromOgTags, mediaTypeFor, normalizeCaption, buildRow,
   explainOembedError
 };

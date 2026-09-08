@@ -247,6 +247,44 @@ ok('a date on the line does not overrule the post\'s own',
     F.fromMedia(F.extractMedia(embedPage(BLOB))), 'x.jpg').posted_at,
   '2026-08-16T00:00:00.000Z');
 
+/* ------------------------------------------------- a page with nothing in it */
+
+/* The failure that cost the most to find. A datacenter IP gets HTTP 200 and
+   about 600KB of Instagram's own JavaScript, with no og: tags, no media
+   object, and not one mention of the account: the post is fetched later by
+   script that never runs. Read as a parse failure it looks exactly like
+   Instagram having renamed something, which is an afternoon spent rewriting
+   selectors that were fine.
+
+   The snippets below are trimmed from the page instagram.com actually
+   returned for /p/DcHwSuzCUYq/embed/captioned/ from a datacenter IP. */
+
+console.log('\n--- the shell, versus a page with a post in it ---');
+
+ok('Instagram\'s own bundles are not a picture',
+  F.looksLikeShell(
+    '<script src="https://static.cdninstagram.com/rsrc.php/v4/yW/r/ln1CsbucD2C.js"></script>' +
+    '<link href="https://static.cdninstagram.com/rsrc.php/v5/yC/l/0,cross/fgQe914.css">'),
+  true);
+
+ok('a real photo means a real page',
+  F.looksLikeShell(
+    '<img src="https://scontent-iad3-1.cdninstagram.com/v/t51.2885-15/123_n.jpg">'),
+  false);
+
+ok('so does a photo on fbcdn, which is the other host they serve from',
+  F.looksLikeShell(
+    '<img src="https://scontent-lga3-2.xx.fbcdn.net/v/t51.2885-15/456_n.jpg">'),
+  false);
+
+ok('bundles alongside a photo is a real page, not a shell',
+  F.looksLikeShell(
+    '<script src="https://static.cdninstagram.com/rsrc.php/v4/yW/r/x.js"></script>' +
+    '<img src="https://scontent.cdninstagram.com/v/t51/789_n.jpg">'),
+  false);
+
+ok('an empty page is a shell', F.looksLikeShell(''), true);
+
 /* ---------------------------------------------------- why a post would not */
 
 /* These are the real payloads, recorded from graph.facebook.com. The two
@@ -257,14 +295,19 @@ ok('a date on the line does not overrule the post\'s own',
 
 console.log('\n--- why a post did not resolve ---');
 
-ok('a private post says so, and says it is not fixable link by link',
+/* Meta's wording here is "The requested media is private", and repeating it
+   is a trap. @homechurch.nola is public, readable in any logged out browser,
+   and all five of its posts answer 2207046 anyway. So this must not send
+   anybody to change a privacy setting that was never the problem. */
+ok('a refusal to embed is reported as inconclusive, not as "it is private"',
   F.explainOembedError({ error: {
     message: 'Permissions error', type: 'OAuthException', code: 200,
     error_subcode: 2207046, error_user_title: 'Private Media',
     error_user_msg: 'The requested media is private. Only public media can be embedded.'
   } }),
-  'Instagram says this post is private. Only public posts can be read this ' +
-  'way, by anything, so no link will resolve while the account is private.');
+  'the Graph API declined to embed it, which it does both for private ' +
+  'accounts and for ordinary personal ones, so on its own this says ' +
+  'nothing. Open the post in a logged out browser to tell which.');
 
 ok('a deleted or mistyped post is a different thing entirely',
   F.explainOembedError({ error: {
