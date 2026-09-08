@@ -20,14 +20,13 @@
  * is that, run by a person once a week instead of by pg_cron once an hour.
  *
  * WHY NOT SCRAPE THE PROFILE. Listing an account's posts without credentials
- * is the part that does not work: logged out instagram.com serves a login
- * wall, datacenter IPs are refused on the first request, and Instagram rotates
- * the GraphQL ids behind the web app every few weeks. So this script never
- * asks "what has the church posted lately". It is told, one link at a time,
- * and then only fetches things Instagram publishes to anyone: the embed that
- * exists to be put on other people's websites, and the og: tags that exist to
- * be read by every link preview on the internet. That is the whole trick, and
- * it is why there is no token here and nothing to keep working.
+ * is the part that does not work: a logged out profile page is the JavaScript
+ * application and nothing else, and Instagram rotates the ids behind it every
+ * few weeks. So this script never asks "what has the church posted lately".
+ * It is told, one link at a time, and then asks for that post the way a link
+ * preview crawler does, which is the one way Instagram still hands over a
+ * whole post as a document. See the UA constant: it is the trick, and it is
+ * the whole reason there is no token here.
  *
  * NOTHING IS EVER INVENTED, AND THE DATE IS WHY THIS MATTERS MORE THAN IT
  * LOOKS. `posted_at` sorts the rail, and 0015 and the demo seed both say that
@@ -39,14 +38,17 @@
  *
  *     https://www.instagram.com/p/DcHwSuzCUYq/   2026-08-16
  *
- * THE ID IS THE SHORTCODE, NOT INSTAGRAM'S MEDIA ID. 0015 specifies the media
- * id, and the reason it gives is that a re-run should update a post rather
- * than duplicate it. The shortcode does that identically: it is stable, it is
- * unique, and unlike the numeric media id it is visible in the permalink,
- * which is the only thing anybody has here. Rows written by this script and
- * rows written by a future API sync would therefore not recognise each other.
- * If the church ever does switch, migrate the ids in one pass rather than
- * letting both conventions sit in the table.
+ * THE ID IS INSTAGRAM'S MEDIA ID, exactly as 0015 specifies. The crawler's
+ * copy of the page carries the media object with `pk` in it, so there is no
+ * need for the shortcode substitute an earlier draft of this file used, and
+ * rows written here are the same rows a future API sync would write. That is
+ * also why a post that resolves only as far as its og: tags is held back
+ * rather than keyed on its shortcode: one table with two id conventions in it
+ * is worse than a rail that is one post short this week.
+ *
+ * The five demo rows in demo-instagram/seed-demo-posts.sql are keyed by
+ * shortcode and will NOT be updated in place by this script. Delete them the
+ * first time real posts are published.
  *
  * WHAT IT NEEDS. The service role key, for the upload only. The bucket has a
  * public read policy and no write policy at all (0015 section 6), so the
@@ -60,13 +62,6 @@
  *     --out FILE       write the rows here as well as to stdout
  *     --save-html DIR  keep the pages Instagram sent, for a broken selector
  *
- * THE EXTRACTION HAS NEVER RUN AGAINST A REAL POST. The two shapes below are
- * how Instagram has served these pages historically; they could not be checked
- * from a web session, because a datacenter IP gets 200 and a 600KB shell with
- * no post in it, which looksLikeShell() exists to recognise. Expect the first
- * run on a laptop to need one round of selector fixing, and use --save-html on
- * that run. Once it has worked once, delete this paragraph.
- *
  * Exit codes, the same shape as resolve_songs.js: 0 every post came back
  * whole, 2 at least one is thin or held back so a caller can tell "published
  * with gaps" from "published whole", 1 nothing was written so do not publish.
@@ -76,12 +71,26 @@
 
 const fs = require('fs');
 
-/* A real browser's User-Agent. Not a disguise: the embed and the og: tags are
-   public either way, but Instagram answers a bare fetch with a stub page that
-   has neither, and a stub parsed for a picture that is not there looks exactly
-   like a post with no picture. */
-const UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) ' +
-  'AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36';
+/* A link preview crawler's User-Agent, and this is the single most important
+   line in the file.
+ *
+ * Ask instagram.com for a post as a browser and you get their JavaScript
+ * application: HTTP 200, about 600KB, 81% script, no og: tags, no media object
+ * and not one mention of the account. The post is fetched later by code that
+ * never runs outside a browser, so there is nothing in that page to parse and
+ * it looks exactly like an empty or private post.
+ *
+ * Ask as a crawler and Instagram server renders the whole thing, because that
+ * is how a link posted to Facebook or WhatsApp gets a preview. Their own name
+ * for the flag is `if_is_crawler`, which appears in the response. You get the
+ * og: tags and, better, a complete media object with the numeric id, the real
+ * timestamp, the type and the caption.
+ *
+ * This is not a disguise or a way past anything. It is the difference between
+ * asking for the page as an application shell and asking for it as a document,
+ * and only the second has ever had the post in it. Change this line to a
+ * browser string and the command stops working entirely. */
+const UA = 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)';
 
 const BUCKET = 'instagram';
 
@@ -170,12 +179,8 @@ function decodeEntities(s) {
    `key`. A regex cannot do this: captions contain braces, and the blob these
    pages carry is thousands of nested objects long. Strings and their escapes
    are tracked so a `}` inside a caption does not end the scan early. */
-function sliceObject(html, key) {
-  const at = html.indexOf(key);
-  if (at < 0) return null;
-  const start = html.indexOf('{', at + key.length);
-  if (start < 0) return null;
-
+function sliceAt(html, start) {
+  if (html[start] !== '{') return null;
   let depth = 0, inString = false, escaped = false;
   for (let i = start; i < html.length; i++) {
     const ch = html[i];
@@ -192,67 +197,88 @@ function sliceObject(html, key) {
   return null;
 }
 
-/* The best source, when it is there. The embed page carries the same media
-   object the web app renders from, which has the picture, the caption, the
-   real timestamp and the type all together and already decoded. */
-function extractMedia(html) {
-  const raw = sliceObject(String(html || ''), '"shortcode_media"');
-  if (!raw) return null;
-  try { return JSON.parse(raw); } catch (e) { return null; }
+function sliceObject(html, key) {
+  const at = html.indexOf(key);
+  if (at < 0) return null;
+  const start = html.indexOf('{', at + key.length);
+  return start < 0 ? null : sliceAt(html, start);
+}
+
+/* The media object Instagram server renders for crawlers.
+ *
+ * Every one of these objects opens with its own type, so `{"__typename":
+ * "XIGPolaris` is a literal object boundary rather than something to search
+ * near, and each can be sliced and parsed on its own.
+ *
+ * The catch is that a carousel post contains a dozen more of them, one per
+ * picture, each with its own `code`. Taking the first match would key the row
+ * to a single slide of the post rather than the post. So every candidate is
+ * parsed and the one whose `code` is the shortcode that was actually asked for
+ * wins, and it must carry the two fields the row cannot be built without. */
+function extractMedia(html, shortcode) {
+  const text = String(html || '');
+  const NEEDLE = '{"__typename":"XIGPolaris';
+
+  for (let at = text.indexOf(NEEDLE); at >= 0; at = text.indexOf(NEEDLE, at + 1)) {
+    const raw = sliceAt(text, at);
+    if (!raw) continue;
+    let media;
+    try { media = JSON.parse(raw); } catch (e) { continue; }
+    if (!media || !media.pk || !media.taken_at) continue;
+    if (shortcode && media.code !== shortcode) continue;
+    return media;
+  }
+  return null;
+}
+
+/* Instagram's numeric media type, which is what `0015` calls media_type and
+   is not the same numbering as anything else here.
+
+     1  a single photo        8  a carousel
+     2  a video, and product_type says which kind: `clips` is a reel */
+function mediaTypeOf(media) {
+  if (media.media_type === 8 || media.product_type === 'carousel_container') {
+    return 'CAROUSEL_ALBUM';
+  }
+  if (media.media_type === 2 || media.product_type === 'clips') return 'VIDEO';
+  return 'IMAGE';
 }
 
 function fromMedia(media) {
-  if (!media || !media.display_url) return null;
-  const caption =
-    ((((media.edge_media_to_caption || {}).edges || [])[0] || {}).node || {}).text;
+  if (!media) return null;
+
+  /* `display_uri` is the post's own picture at full size. A carousel's is its
+     first slide, which is the right one: the rail draws one tile per post, and
+     the first slide is what Instagram itself shows in the grid. */
+  const image = media.display_uri ||
+    (((media.image_versions2 || {}).candidates || [])[0] || {}).url;
+  if (!image) return null;
+
   return {
-    source: 'embed json',
-    imageUrl: media.display_url,
-    caption: caption || '',
-    postedAt: media.taken_at_timestamp
-      ? new Date(media.taken_at_timestamp * 1000).toISOString()
-      : null,
-    mediaType: media.__typename === 'GraphSidecar' ? 'CAROUSEL_ALBUM'
-      : (media.__typename === 'GraphVideo' || media.is_video) ? 'VIDEO'
-      : 'IMAGE'
+    source: 'media json',
+    // Instagram's own numeric id, which is what 0015 asks the row to be keyed
+    // by. Only this path has it, which is why only this path can publish.
+    mediaId: String(media.pk),
+    imageUrl: decodeEntities(image),
+    caption: ((media.caption || {}).text) || '',
+    postedAt: media.taken_at ? new Date(media.taken_at * 1000).toISOString() : null,
+    mediaType: mediaTypeOf(media)
   };
 }
 
-/* The embed page's rendered markup, for when the blob is not there but the
-   iframe still drew something. No timestamp lives here, which is the whole
-   reason this is second and not first. */
-function fromEmbedHtml(html) {
-  const text = String(html || '');
-  const img = text.match(/class="EmbeddedMediaImage"[^>]*\ssrc="([^"]+)"/) ||
-              text.match(/<img[^>]+class="[^"]*EmbeddedMediaImage[^"]*"[^>]*src="([^"]+)"/);
-  if (!img) return null;
-
-  // The caption block carries the username as its own link first, which is
-  // not part of what the church wrote.
-  let caption = '';
-  const cap = text.match(/<div class="Caption">([\s\S]*?)<\/div>/);
-  if (cap) {
-    caption = cap[1]
-      .replace(/<a[^>]*class="CaptionUsername"[\s\S]*?<\/a>/g, '')
-      .replace(/<[^>]+>/g, '')
-      .trim();
-  }
-
-  return {
-    source: 'embed html',
-    imageUrl: decodeEntities(img[1]),
-    caption: decodeEntities(caption),
-    postedAt: null,
-    mediaType: /class="EmbedVideo|videoSpritePlayButton/.test(text) ? 'VIDEO' : null
-  };
-}
-
-/* The last resort, and the one thing Instagram cannot take away without
-   breaking every link preview on the internet. og:title reads
-
-     Home Church on Instagram: "the caption, in quotes"
-
-   so the caption is what sits inside the quotes, and there is no date. */
+/* The og: tags, which every link preview on the internet reads.
+ *
+ * NOT A SOURCE A POST CAN BE PUBLISHED FROM, and it is worth being clear why
+ * rather than leaving it looking like a fallback that was never finished.
+ * These tags carry a picture and a caption and nothing else: no timestamp, so
+ * the date would have to be guessed, and no numeric id, so the row would have
+ * to be keyed differently from every row the media object produces. Two id
+ * conventions in one table is the drift this file exists to avoid.
+ *
+ * So it is a diagnosis. Tags but no media object means the page was served,
+ * the post is real and public, and the media object has been renamed: a
+ * precise thing to fix, and a completely different message from the two other
+ * ways this fails. */
 function fromOgTags(html) {
   const text = String(html || '');
   const pick = (prop) => {
@@ -300,8 +326,10 @@ function looksLikeShell(html) {
   return !media.some((u) => !/\/rsrc\.php\//.test(u));
 }
 
-/* The hint from the link loses to the page, because /p/ links are handed out
-   for reels too and a play badge is a promise about what a tap does. */
+/* The page's own answer wins, because /p/ links are handed out for reels too
+   and a play badge is a promise about what a tap does. The hint from the link
+   only stands in when the page did not say, which now means it never does on a
+   post that gets published. */
 function mediaTypeFor(hint, found) {
   return found || hint || 'IMAGE';
 }
@@ -318,9 +346,14 @@ function normalizeCaption(s) {
     .slice(0, 2200);
 }
 
+/* The id is Instagram's numeric media id, exactly as `0015` specifies, and it
+   comes from the media object rather than from the link. A post that resolved
+   only far enough to give a picture has no id and no date, and is held back
+   rather than keyed on its shortcode: one table with two id conventions in it
+   is worse than a rail that is one post short this week. */
 function buildRow(post, found, imagePath) {
   return {
-    id: post.shortcode,
+    id: (found && found.mediaId) || null,
     permalink: post.permalink,
     image_path: imagePath || null,
     media_type: mediaTypeFor(post.mediaHint, found && found.mediaType),
@@ -341,6 +374,35 @@ async function fetchText(url) {
       Accept: 'text/html,application/xhtml+xml'
     }
   });
+  /* 429 is the one status worth its own sentence. It means the asking was too
+     quick, not that anything is wrong with the link or the account, and the
+     fix is to wait rather than to change anything. Reported as a bare status
+     it reads like a block. */
+  if (res.status === 429) {
+    const err = new Error(
+      'Instagram is rate limiting this connection. Nothing is wrong with the ' +
+      'link or the account: wait a few minutes and run it again.'
+    );
+    err.rateLimited = true;
+    throw err;
+  }
+
+  /* The same throttle, one stage further on. Keep asking after a 429 and
+     Instagram stops answering 429 and starts redirecting to the login page
+     instead, with `is_from_rle` in the query: rate limit exceeded. It looks
+     like a login wall, and being read as one sends somebody off to make the
+     account public or to find a way to sign in, when the fix is to stop
+     asking for a while. */
+  if (/\/accounts\/login\//.test(res.url || '')) {
+    const err = new Error(
+      'Instagram redirected to its login page' +
+      (/is_from_rle/.test(res.url) ? ', flagged as rate limit exceeded' : '') +
+      '. This is the throttle, not the account: it means too many requests ' +
+      'from this connection recently. Leave it an hour and run it again.'
+    );
+    err.rateLimited = true;
+    throw err;
+  }
   if (!res.ok) throw new Error(res.status + ' from ' + url);
   return res.text();
 }
@@ -432,48 +494,49 @@ async function diagnose(shortcode) {
   }
 }
 
-/* Ask the embed first, fall back to the post page. Both are public and
-   neither takes a credential. Whichever answered is reported, because "the
-   blob was there" and "we scraped the preview card" are different amounts of
-   trust and the second one never carries a date. */
+/* One fetch, of the post's own page, asked for as a crawler.
+ *
+ * There used to be two, the /embed/captioned/ endpoint first and this second,
+ * on the understanding that the embed was the richer source. With the crawler
+ * User-Agent that is backwards: the post page server renders the complete
+ * media object, and the embed endpoint returns less. So the embed request was
+ * removed rather than left in as a fallback that could only ever produce a row
+ * this one would have produced better. */
 async function look(post, opts) {
   const attempts = [];
   const pages = [];
   const save = (opts && opts.saveHtml) || null;
 
-  const keep = (name, html) => {
+  try {
+    const html = await fetchText(post.permalink);
     pages.push(html);
     if (save) {
-      const file = save.replace(/\/$/, '') + '/' + post.shortcode + '.' + name + '.html';
+      const file = save.replace(/\/$/, '') + '/' + post.shortcode + '.html';
       try { fs.writeFileSync(file, html); attempts.push('saved ' + file); }
       catch (e) { attempts.push('could not save ' + file + ': ' + e.message); }
     }
-  };
 
-  try {
-    const html = await fetchText(
-      'https://www.instagram.com/p/' + post.shortcode + '/embed/captioned/'
-    );
-    keep('embed', html);
-    const found = fromMedia(extractMedia(html)) || fromEmbedHtml(html);
+    const found = fromMedia(extractMedia(html, post.shortcode));
     if (found) return found;
-    attempts.push('the embed answered with no picture in it');
-  } catch (e) {
-    attempts.push('embed: ' + e.message);
-  }
 
-  try {
-    const html = await fetchText(post.permalink);
-    keep('post', html);
-    const found = fromOgTags(html);
-    if (found) return found;
-    attempts.push('the post page had no og:image');
+    /* A picture in the og: tags but no media object is its own diagnosis: the
+       page arrived, the post is real and public, and the shape has changed. */
+    if (fromOgTags(html)) {
+      const err = new Error(
+        'the page has the post in it, and its og: tags read fine, but the ' +
+        'media object did not. That object carries the id and the date, so ' +
+        'the post cannot be published without it. Instagram has renamed ' +
+        'something: re-run with --save-html DIR and keep the file.'
+      );
+      err.stale = true;
+      throw err;
+    }
+    attempts.push('the post page had neither a media object nor og:image');
   } catch (e) {
+    if (e.stale || e.rateLimited) throw e;
     attempts.push('post page: ' + e.message);
   }
 
-  /* Both routes failed. Which of the two failures it is decides what to do
-     next, and they are not distinguishable from the messages above. */
   if (pages.length && pages.every(looksLikeShell)) {
     const err = new Error(
       'Instagram sent a page with no post in it, only its own JavaScript. ' +
@@ -484,20 +547,12 @@ async function look(post, opts) {
     throw err;
   }
 
-  if (pages.length) {
-    const err = new Error(
-      'the page had a post in it but nothing matched. Instagram has most ' +
-      'likely renamed something, so the selectors need updating: re-run with ' +
-      '--save-html DIR and keep the file.'
-    );
-    err.stale = true;
-    throw err;
-  }
-
   /* Nothing was fetched at all, so ask Meta whether the link is even real
      before reporting a network error somebody will spend the afternoon on. */
   const why = await diagnose(post.shortcode);
-  const err = new Error(why || attempts.join('; '));
+  const err = new Error(
+    why ? why + ' What was tried: ' + attempts.join('; ') : attempts.join('; ')
+  );
   err.attempts = attempts;
   throw err;
 }
@@ -559,7 +614,13 @@ async function main() {
   const rows = [];
   let thin = 0;
 
-  for (const post of posts) {
+  /* A pause between posts, because nine links in nine milliseconds is what
+     trips Instagram's rate limiter, and a 429 halfway through a run is worse
+     than a run that takes twenty seconds. */
+  const pause = (ms) => new Promise((r) => setTimeout(r, ms));
+
+  for (const [index, post] of posts.entries()) {
+    if (index) await pause(2000);
     let found;
     try {
       found = await look(post, { saveHtml: args.saveHtml });
@@ -571,9 +632,17 @@ async function main() {
 
     const row = buildRow(post, found, null);
 
-    /* Held back rather than published on a guess. See the header: this date is
-       read aloud to screen reader users, so a plausible one is worse than
-       none. */
+    /* Held back rather than published wrong. Both of these come from the media
+       object, so in practice they fail together, and both are worth their own
+       sentence: the date because connect.js reads it aloud, so a plausible one
+       is worse than none, and the id because keying this row differently from
+       every other row is a mess that outlives the week it was convenient. */
+    if (!row.id) {
+      console.error('  ! ' + post.shortcode + '  no media object, so no id ' +
+        'and no date, via ' + found.source + '. Not published.');
+      thin++;
+      continue;
+    }
     if (!row.posted_at) {
       console.error('  ! ' + post.shortcode + '  no date, via ' + found.source +
         '. Add one on the line to publish it.');
@@ -581,11 +650,11 @@ async function main() {
       continue;
     }
 
-    const objectPath = post.shortcode + '.jpg';
+    const objectPath = row.id + '.jpg';
     if (uploading) {
       try {
         const image = await fetchImage(found.imageUrl);
-        const named = post.shortcode + '.' + image.ext;
+        const named = row.id + '.' + image.ext;
         await upload(named, image, env);
         row.image_path = named;
         console.error('  ok ' + post.shortcode + '  ' + row.media_type.toLowerCase() +
@@ -626,9 +695,9 @@ async function main() {
 }
 
 module.exports = {
-  parseUrl, parseList, decodeEntities, sliceObject, extractMedia, looksLikeShell,
-  fromMedia, fromEmbedHtml, fromOgTags, mediaTypeFor, normalizeCaption, buildRow,
-  explainOembedError
+  parseUrl, parseList, decodeEntities, sliceAt, sliceObject, extractMedia,
+  looksLikeShell, fromMedia, fromOgTags, mediaTypeFor, mediaTypeOf,
+  normalizeCaption, buildRow, explainOembedError
 };
 
 /* process.exitCode rather than process.exit(), so stdout is flushed before

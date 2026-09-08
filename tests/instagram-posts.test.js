@@ -116,64 +116,85 @@ ok('no blob is null', F.sliceObject('<html>nothing here</html>', '"shortcode_med
 ok('an unterminated object is null, not a half one',
   F.sliceObject('"shortcode_media":{"a":1', '"shortcode_media"'), null);
 
-console.log('\n--- the embed blob, which is the good source ---');
+console.log('\n--- the media object, which is the only source a row can come from ---');
 
-const BLOB = {
-  __typename: 'GraphImage',
-  display_url: 'https://scontent.cdninstagram.com/v/t51/photo.jpg',
-  taken_at_timestamp: 1786838400,   // 2026-08-16T00:00:00Z
-  edge_media_to_caption: { edges: [{ node: { text: 'Sunday morning.' } }] }
+/* Trimmed from the object instagram.com actually served for /p/DcHwSuzCUYq/
+   when asked as a crawler. Field names, the numeric media_type and the string
+   pk are all as they really arrive. */
+const MEDIA = {
+  __typename: 'XIGPolarisCarouselMedia',
+  __isXIGPolarisMedia: 'XIGPolarisCarouselMedia',
+  pk: '3965350390354495018',
+  code: 'DcHwSuzCUYq',
+  taken_at: 1786926602,               // 2026-08-17T00:30:02Z
+  media_type: 8,
+  product_type: 'carousel_container',
+  caption: { text: 'JESUS CHANGES EVERYTHING' },
+  display_uri: 'https://scontent-ord5-2.cdninstagram.com/v/t51/774407877_n.jpg',
+  image_versions2: { candidates: [{ url: 'https://scontent-ord5-2.cdninstagram.com/v/t51/alt.jpg' }] }
 };
-const embedPage = (media) =>
-  '<html><script>window.__additionalDataLoaded(\'extra\',' +
-  '{"shortcode_media":' + JSON.stringify(media) + '});</script></html>';
+const page = (...media) =>
+  '<html><script>{"items":[' + media.map(m => JSON.stringify(m)).join(',') + ']}</script></html>';
 
 {
-  const got = F.fromMedia(F.extractMedia(embedPage(BLOB)));
-  ok('the picture', got.imageUrl, 'https://scontent.cdninstagram.com/v/t51/photo.jpg');
-  ok('the caption', got.caption, 'Sunday morning.');
-  ok('the real date, which is the whole reason to prefer this source',
-    got.postedAt, '2026-08-16T00:00:00.000Z');
-  ok('and it says where it came from', got.source, 'embed json');
+  const got = F.fromMedia(F.extractMedia(page(MEDIA), 'DcHwSuzCUYq'));
+  ok('Instagram\'s own numeric id, which is what 0015 asks the row to be keyed by',
+    got.mediaId, '3965350390354495018');
+  ok('the picture', got.imageUrl,
+    'https://scontent-ord5-2.cdninstagram.com/v/t51/774407877_n.jpg');
+  ok('the caption', got.caption, 'JESUS CHANGES EVERYTHING');
+  ok('the real date, which only this source carries',
+    got.postedAt, '2026-08-17T00:30:02.000Z');
+  ok('and it says where it came from', got.source, 'media json');
 }
 
-ok('GraphSidecar is a carousel',
-  F.fromMedia(F.extractMedia(embedPage(
-    Object.assign({}, BLOB, { __typename: 'GraphSidecar' })))).mediaType,
-  'CAROUSEL_ALBUM');
-ok('GraphVideo is a video',
-  F.fromMedia(F.extractMedia(embedPage(
-    Object.assign({}, BLOB, { __typename: 'GraphVideo' })))).mediaType,
-  'VIDEO');
-ok('is_video counts even when the typename does not say',
-  F.fromMedia(F.extractMedia(embedPage(
-    Object.assign({}, BLOB, { is_video: true })))).mediaType,
-  'VIDEO');
-ok('a post with no caption is a post with no caption, not an invented one',
-  F.fromMedia(F.extractMedia(embedPage(
-    Object.assign({}, BLOB, { edge_media_to_caption: { edges: [] } })))).caption,
-  '');
-ok('a blob with no picture in it is not a source',
-  F.fromMedia(F.extractMedia(embedPage(
-    Object.assign({}, BLOB, { display_url: undefined })))),
+/* The trap this cost the most to get right. A carousel post embeds one media
+   object per slide, each with its own code, so matching the first XIGPolaris
+   object in the page keys the row to a single photograph instead of the post. */
+console.log('\n--- a carousel, which contains a dozen decoys ---');
+
+const SLIDE = {
+  __typename: 'XIGPolarisImageMedia',
+  pk: '9999999999999999999',
+  code: 'DcHdvLmCSRF',
+  taken_at: 1786926602,
+  media_type: 1,
+  display_uri: 'https://scontent-ord5-2.cdninstagram.com/v/t51/slide.jpg'
+};
+
+ok('the post is picked out of its own slides, by the code that was asked for',
+  F.fromMedia(F.extractMedia(page(SLIDE, MEDIA), 'DcHwSuzCUYq')).mediaId,
+  '3965350390354495018');
+ok('and a slide is returned when a slide is what was asked for',
+  F.fromMedia(F.extractMedia(page(SLIDE, MEDIA), 'DcHdvLmCSRF')).mediaId,
+  '9999999999999999999');
+ok('a code that is in no object on the page is not a source',
+  F.extractMedia(page(SLIDE, MEDIA), 'NotOnThisPage'), null);
+ok('an object with no id is skipped rather than half used',
+  F.extractMedia(page({ __typename: 'XIGPolarisImageMedia', code: 'X', taken_at: 1 }), 'X'),
+  null);
+ok('an object with no date is skipped too, because the row needs one',
+  F.extractMedia(page({ __typename: 'XIGPolarisImageMedia', code: 'X', pk: '1' }), 'X'),
   null);
 
-console.log('\n--- the embed markup, when the blob is gone ---');
+console.log('\n--- what kind of post, by Instagram\'s own numbering ---');
 
-const EMBED_HTML =
-  '<div class="Caption"><a class="CaptionUsername" href="/homechurch.nola/">' +
-  'homechurch.nola</a> Come and see. &amp; bring someone</div>' +
-  '<img class="EmbeddedMediaImage" src="https://scontent.cdninstagram.com/v/t51/e.jpg">';
+ok('media_type 8 is a carousel', F.mediaTypeOf(MEDIA), 'CAROUSEL_ALBUM');
+ok('media_type 1 is a photo', F.mediaTypeOf({ media_type: 1 }), 'IMAGE');
+ok('media_type 2 is a video', F.mediaTypeOf({ media_type: 2 }), 'VIDEO');
+ok('a reel is a video by its product_type',
+  F.mediaTypeOf({ media_type: 2, product_type: 'clips' }), 'VIDEO');
+ok('an unfamiliar type draws as a still, because a play badge is a promise',
+  F.mediaTypeOf({ media_type: 99 }), 'IMAGE');
 
-{
-  const got = F.fromEmbedHtml(EMBED_HTML);
-  ok('the picture', got.imageUrl, 'https://scontent.cdninstagram.com/v/t51/e.jpg');
-  ok('the username is not part of what the church wrote',
-    got.caption, 'Come and see. & bring someone');
-  ok('and there is no date here, which is why it is second',
-    got.postedAt, null);
-}
-ok('markup with no image is not a source', F.fromEmbedHtml('<div>nope</div>'), null);
+ok('a post with no caption is a post with no caption, not an invented one',
+  F.fromMedia(Object.assign({}, MEDIA, { caption: null })).caption, '');
+ok('image_versions2 stands in when display_uri is missing',
+  F.fromMedia(Object.assign({}, MEDIA, { display_uri: null })).imageUrl,
+  'https://scontent-ord5-2.cdninstagram.com/v/t51/alt.jpg');
+ok('an object with no picture at all is not a source',
+  F.fromMedia(Object.assign({}, MEDIA, { display_uri: null, image_versions2: null })),
+  null);
 
 console.log('\n--- og tags, the last resort ---');
 
@@ -221,12 +242,12 @@ console.log('\n--- the row, and the date that is read aloud ---');
 const post = F.parseUrl('https://www.instagram.com/p/DcHwSuzCUYq/');
 
 {
-  const row = F.buildRow(post, F.fromMedia(F.extractMedia(embedPage(BLOB))), 'DcHwSuzCUYq.jpg');
-  ok('the id is the shortcode, so a re-run updates rather than duplicates',
-    row.id, 'DcHwSuzCUYq');
+  const row = F.buildRow(post, F.fromMedia(MEDIA), '3965350390354495018.jpg');
+  ok('the id is Instagram\'s media id, which is what 0015 specifies',
+    row.id, '3965350390354495018');
   ok('the path is in the bucket, never a URL on instagram.com',
-    row.image_path, 'DcHwSuzCUYq.jpg');
-  ok('the date is the post\'s own', row.posted_at, '2026-08-16T00:00:00.000Z');
+    row.image_path, '3965350390354495018.jpg');
+  ok('the date is the post\'s own', row.posted_at, '2026-08-17T00:30:02.000Z');
   ok('and it is published', row.published, true);
 }
 
@@ -234,18 +255,20 @@ const post = F.parseUrl('https://www.instagram.com/p/DcHwSuzCUYq/');
    into the aria-label, so a guess here is announced as fact to exactly the
    people who cannot see the picture and check it. Null is what makes the
    caller hold the post back. */
-ok('a post whose date could not be found gets no date',
+ok('a post that only reached its og: tags gets no date',
   F.buildRow(post, F.fromOgTags(OG_PAGE), 'x.jpg').posted_at, null);
 
-ok('a date given on the line is used, which is how such a post is published',
-  F.buildRow(F.parseUrl('https://www.instagram.com/p/DcHwSuzCUYq/  2026-08-16'),
-    F.fromOgTags(OG_PAGE), 'x.jpg').posted_at,
-  '2026-08-16T12:00:00Z');
+/* And no id either, which is the harder half. og: tags carry no numeric id,
+   so such a row could only be keyed on its shortcode, and a table holding two
+   id conventions is worse than a rail one post short. A null id is what makes
+   the caller hold it back. */
+ok('and no id, which is the other reason it cannot be published',
+  F.buildRow(post, F.fromOgTags(OG_PAGE), 'x.jpg').id, null);
 
 ok('a date on the line does not overrule the post\'s own',
   F.buildRow(F.parseUrl('https://www.instagram.com/p/DcHwSuzCUYq/  2001-01-01'),
-    F.fromMedia(F.extractMedia(embedPage(BLOB))), 'x.jpg').posted_at,
-  '2026-08-16T00:00:00.000Z');
+    F.fromMedia(MEDIA), 'x.jpg').posted_at,
+  '2026-08-17T00:30:02.000Z');
 
 /* ------------------------------------------------- a page with nothing in it */
 
