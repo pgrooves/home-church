@@ -1,0 +1,1159 @@
+<title>Guide Hint Studies</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@200..800&family=Poppins:wght@800&display=swap">
+
+<style>
+/* ==========================================================================
+   Guide hint studies
+   Five ways to say "the words can be kept", drawn on the real thing.
+
+   Two token sets live in this page and they must never mix. The chrome
+   around the phone is this document's own; everything inside .phone is
+   lifted unedited from css/tokens.css and carried on [data-hc] so the page
+   cannot move the phone and the phone cannot move the page.
+   ========================================================================== */
+
+/* --- the bench, this page's own palette ---------------------------------- */
+:root {
+  --bench:      #E9E4DA;
+  --panel:      #F4EFE7;
+  --bench-ink:  #23201D;
+  --bench-mid:  #6B645C;
+  --bench-rule: #D2C9B9;
+  --bench-line: #BFB4A0;
+  --bench-gold: #8A6A22;
+  --bench-live: #7A5F2A;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bench:      #161514;
+    --panel:      #201E1C;
+    --bench-ink:  #EDE7DD;
+    --bench-mid:  #9A938A;
+    --bench-rule: #34302B;
+    --bench-line: #4A443C;
+    --bench-gold: #D7BA85;
+    --bench-live: #E2C89A;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bench:      #161514;
+  --panel:      #201E1C;
+  --bench-ink:  #EDE7DD;
+  --bench-mid:  #9A938A;
+  --bench-rule: #34302B;
+  --bench-line: #4A443C;
+  --bench-gold: #D7BA85;
+  --bench-live: #E2C89A;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bench);
+  color: var(--bench-ink);
+  font-family: "Manrope", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+.wrap {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 28px 20px 64px;
+}
+
+/* --- masthead ------------------------------------------------------------- */
+.mast { border-bottom: 1px solid var(--bench-rule); padding-bottom: 18px; }
+.mast__eyebrow {
+  font-size: 11px; font-weight: 700; letter-spacing: 0.14em;
+  text-transform: uppercase; color: var(--bench-gold); margin: 0;
+}
+.mast__h {
+  font-family: "Poppins", -apple-system, BlinkMacSystemFont, sans-serif;
+  font-weight: 800; font-size: clamp(26px, 4.4vw, 40px); line-height: 1.08;
+  letter-spacing: -0.02em; margin: 8px 0 0; text-wrap: balance;
+}
+.mast__sub {
+  margin: 10px 0 0; max-width: 62ch; color: var(--bench-mid); font-size: 15px;
+}
+.mast__sub b { color: var(--bench-ink); font-weight: 600; }
+
+/* --- the two column bench ------------------------------------------------- */
+.bench {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 28px;
+  align-items: start;
+  margin-top: 26px;
+}
+@media (max-width: 900px) {
+  .bench { grid-template-columns: minmax(0, 1fr); }
+}
+
+.left { display: flex; flex-direction: column; align-items: center; gap: 16px; }
+
+/* --- the phone ------------------------------------------------------------ */
+.stage {
+  width: 390px;
+  max-width: 100%;
+  border-radius: 42px;
+  padding: 10px;
+  background: linear-gradient(170deg, #56504A, #23211E);
+  box-shadow: 0 30px 60px rgba(0,0,0,0.30), 0 2px 0 rgba(255,255,255,0.14) inset;
+}
+
+.phone {
+  position: relative;
+  height: 748px;
+  border-radius: 33px;
+  overflow: hidden;
+  background: var(--hc-paper);
+  color: var(--hc-ink);
+  font-family: var(--hc-serif);
+  display: flex;
+  flex-direction: column;
+}
+
+/* ---- the shipped tokens, unedited from css/tokens.css -------------------- */
+.stage[data-hc] {
+  --hc-paper:#F7F4EF; --hc-paper-sunk:#EFEAE2; --hc-cream:#EDE8DF;
+  --hc-ink:#111111; --hc-dark:#1A1918; --hc-mid:#6D6864; --hc-rule:#C8C0B0;
+  --hc-accent:#B5A898; --hc-accent-deep:#71675A; --hc-on-dark:#F7F4EF;
+  --hc-serif:"Manrope",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  --hc-sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  --hc-sans-display:"Poppins",-apple-system,BlinkMacSystemFont,sans-serif;
+  --hc-eyebrow:11px; --hc-eyebrow-line:14px;
+  --hc-body-serif:16px; --hc-body-serif-line:25px;
+  --hc-caption:13px; --hc-caption-line:18px;
+  --hc-track-eyebrow:0.12em;
+  --hc-text-scale:1;
+  --hc-space-xs:4px; --hc-space-sm:8px; --hc-space-md:12px; --hc-space-base:16px;
+  --hc-space-lg:24px; --hc-space-xl:32px;
+  --hc-screen-pad:20px;
+  --hc-radius-sm:8px; --hc-radius-md:10px; --hc-radius-lg:12px; --hc-radius-pill:999px;
+  --hc-hairline:0.5px; --hc-edge-rule:1.5px;
+  --hc-ease:cubic-bezier(0.4,0,0.2,1); --hc-ease-enter:cubic-bezier(0,0,0.2,1);
+  --hc-dur-fast:200ms; --hc-dur-base:300ms;
+  --hc-header-h:52px; --hc-tabbar-h:56px; --hc-tap-min:44px;
+  --hc-tabbar-inset:12px; --hc-tabbar-pad:6px;
+  --hc-tabbar-space:calc(var(--hc-tabbar-h) + (var(--hc-tabbar-pad) * 2) + (var(--hc-tabbar-inset) * 2));
+  --hc-tabbar-skin:linear-gradient(178deg, rgba(255,253,250,0.94), rgba(238,233,225,0.92));
+  --hc-tabbar-edge:rgba(122,110,95,0.28);
+  --hc-tabbar-shadow:0 14px 34px rgba(26,25,24,0.18), 0 2px 8px rgba(26,25,24,0.08),
+                     inset 0 1px 0 rgba(255,255,255,0.70), inset 0 -1px 0 rgba(26,25,24,0.05);
+  --hc-tabbar-tile:linear-gradient(180deg, rgba(255,255,255,0.96), rgba(247,244,239,0.86));
+  --hc-tabbar-tile-edge:rgba(122,110,95,0.18);
+  --hc-gold:#D7BA85;
+}
+.stage[data-hc="dark"] {
+  --hc-paper:#1A1918; --hc-paper-sunk:#201E1D; --hc-cream:#232120;
+  --hc-ink:#F2EEE7; --hc-dark:#F2EEE7; --hc-mid:#9A938A; --hc-rule:#3A3633;
+  --hc-accent:#C4B5A2; --hc-accent-deep:#CFC1AE; --hc-on-dark:#1A1918;
+  --hc-tabbar-skin:linear-gradient(178deg, rgba(58,54,51,0.88), rgba(26,25,24,0.86));
+  --hc-tabbar-edge:rgba(196,181,162,0.20);
+  --hc-tabbar-shadow:0 16px 36px rgba(0,0,0,0.52), inset 0 1px 0 rgba(242,238,231,0.10),
+                     inset 0 -1px 0 rgba(0,0,0,0.30);
+  --hc-tabbar-tile:linear-gradient(180deg, rgba(247,244,239,0.15), rgba(247,244,239,0.055));
+  --hc-tabbar-tile-edge:rgba(207,193,174,0.30);
+  --hc-gold:#CBAC74;
+}
+
+/* ---- app chrome ---------------------------------------------------------- */
+.hc-bar {
+  flex: 0 0 auto;
+  height: var(--hc-header-h);
+  display: flex; align-items: center; gap: var(--hc-space-md);
+  padding: 0 var(--hc-screen-pad);
+  border-bottom: var(--hc-hairline) solid var(--hc-rule);
+  background: var(--hc-paper);
+  position: relative; z-index: 3;
+}
+.hc-bar__back {
+  width: 34px; height: 34px; border: 0; padding: 0; background: transparent;
+  color: var(--hc-accent-deep); display: grid; place-items: center; cursor: pointer;
+}
+.hc-bar__back svg { width: 20px; height: 20px; fill: none; stroke: currentColor;
+  stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+.hc-bar__title {
+  font-family: var(--hc-sans); font-size: var(--hc-caption); color: var(--hc-mid);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+.hc-scroll {
+  position: relative;
+  flex: 1 1 auto;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  padding: var(--hc-space-lg) var(--hc-screen-pad) 130px;
+}
+
+/* the index rail's notches, so the right edge is the right edge */
+.hc-rail {
+  position: absolute; top: var(--hc-header-h); bottom: 0; right: 0; width: 34px;
+  display: flex; flex-direction: column; justify-content: center; align-items: center;
+  gap: 10px; pointer-events: none; z-index: 2;
+}
+.hc-rail span { display: block; width: 11px; height: 1px; background: var(--hc-rule); }
+.hc-rail span.on { width: 17px; background: var(--hc-accent-deep); }
+
+/* ---- guide type ---------------------------------------------------------- */
+.hc-eyebrow {
+  font-family: var(--hc-sans); font-weight: 600;
+  font-size: var(--hc-eyebrow); line-height: var(--hc-eyebrow-line);
+  letter-spacing: var(--hc-track-eyebrow); text-transform: uppercase;
+  color: var(--hc-accent-deep);
+}
+.hc-guide-title {
+  font-family: var(--hc-sans-display); font-weight: 800;
+  font-size: 29px; line-height: 1.12; letter-spacing: -0.015em;
+  margin: 8px 0 0; color: var(--hc-ink); text-wrap: balance;
+}
+.hc-guide-sub {
+  font-family: var(--hc-sans); font-size: var(--hc-caption);
+  line-height: var(--hc-caption-line); color: var(--hc-mid); margin: 10px 0 0;
+}
+
+.hc-section {
+  border-top: var(--hc-hairline) solid var(--hc-rule);
+  padding-top: var(--hc-space-lg);
+  margin-top: var(--hc-space-lg);
+}
+.hc-section__bar {
+  position: relative;
+  display: flex; align-items: flex-start; gap: var(--hc-space-sm);
+  padding-left: calc(20px + var(--hc-space-md));
+  padding-right: calc(20px + var(--hc-space-md));
+}
+.hc-section__toggle {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  gap: var(--hc-space-md); width: 100%; text-align: left;
+  min-height: var(--hc-tap-min); padding: 0;
+  background: transparent; border: 0; cursor: pointer; color: inherit;
+  font: inherit;
+}
+.hc-section__title {
+  display: block; margin-top: 8px;
+  font-family: var(--hc-sans-display); font-weight: 800;
+  font-size: 25px; line-height: 1.2; letter-spacing: -0.01em; color: var(--hc-ink);
+}
+.hc-section__rule {
+  display: block; margin-top: 12px; width: 22%; min-width: 56px;
+  height: 0.75px; background: var(--hc-accent);
+}
+.hc-section__chevron {
+  position: absolute; left: 0; top: 10px; width: 20px; height: 20px;
+  fill: none; stroke: var(--hc-accent-deep); stroke-width: 1.5;
+  stroke-linecap: round; stroke-linejoin: round;
+  transition: transform var(--hc-dur-base) var(--hc-ease);
+}
+.hc-section__toggle[aria-expanded="true"] .hc-section__chevron { transform: rotate(180deg); }
+.hc-section__panel {
+  overflow: hidden; display: grid; grid-template-rows: 0fr;
+  transition: grid-template-rows var(--hc-dur-base) var(--hc-ease);
+}
+.hc-section__panel[data-open="true"] { grid-template-rows: 1fr; }
+.hc-section__panel > div { min-height: 0; }
+.hc-section__panel[data-open="true"] > div { padding-top: var(--hc-space-base); }
+
+.hc-body-serif {
+  font-family: var(--hc-serif); font-weight: 400;
+  font-size: calc(var(--hc-body-serif) * var(--hc-text-scale));
+  line-height: var(--hc-body-serif-line); color: var(--hc-ink);
+}
+.hc-prose p { margin: 0; }
+.hc-prose p + p { margin-top: var(--hc-space-base); }
+.hc-caption {
+  font-family: var(--hc-sans); font-size: var(--hc-caption);
+  line-height: var(--hc-caption-line); color: var(--hc-mid);
+}
+
+/* an existing highlight, so the wash is not the only one on the page */
+.hc-hl {
+  background: linear-gradient(to top,
+    color-mix(in srgb, var(--hc-accent) 42%, transparent) 0.55em,
+    transparent 0.55em);
+  border-radius: 2px;
+}
+
+/* ---- the floating tab bar ------------------------------------------------ */
+.hc-tabbar {
+  position: absolute; z-index: 4;
+  left: var(--hc-tabbar-inset); right: var(--hc-tabbar-inset);
+  bottom: var(--hc-tabbar-inset);
+  padding: var(--hc-tabbar-pad);
+  border-radius: 22px;
+  background: var(--hc-tabbar-skin);
+  border: var(--hc-hairline) solid var(--hc-tabbar-edge);
+  box-shadow: var(--hc-tabbar-shadow);
+  display: grid; grid-template-columns: repeat(5, 1fr); gap: 2px;
+}
+.hc-tab {
+  height: var(--hc-tabbar-h);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 5px; border-radius: 16px;
+  font-family: var(--hc-sans); font-size: 11px; line-height: 14px; font-weight: 500;
+  color: var(--hc-mid); background: transparent; border: 0; cursor: pointer;
+}
+.hc-tab svg { width: 21px; height: 21px; fill: none; stroke: currentColor;
+  stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+.hc-tab[aria-current="true"] {
+  color: var(--hc-ink);
+  background: var(--hc-tabbar-tile);
+  border: var(--hc-hairline) solid var(--hc-tabbar-tile-edge);
+}
+
+/* ==========================================================================
+   THE HINT LAYER
+   pointer-events: none on the layer and every child, per HINTS.md §3a.
+   Every moving part below is transform or opacity, never a background.
+   ========================================================================== */
+.hint-layer, .hint-layer * { pointer-events: none !important; }
+.hint-layer {
+  position: absolute; top: 0; left: 0; right: 0; height: 0;
+  z-index: 6;
+}
+
+/* the wash, one box per line box of the sentence, scaled from its left edge */
+.hint-wash {
+  position: absolute;
+  transform: scaleX(0);
+  transform-origin: left center;
+  border-radius: 2px;
+  background: linear-gradient(to top,
+    color-mix(in srgb, var(--hc-accent) 46%, transparent) 9px,
+    transparent 9px);
+  transition: transform 420ms var(--hc-ease-enter), opacity 200ms var(--hc-ease);
+}
+.hint-wash.in { transform: scaleX(1); }
+.hint-wash.out { opacity: 0; }
+
+/* the words, in four dresses */
+.hint-say {
+  position: absolute;
+  opacity: 0;
+  transform: translateY(4px);
+  transition: opacity 260ms var(--hc-ease-enter), transform 260ms var(--hc-ease-enter);
+}
+.hint-say.in { opacity: 1; transform: none; }
+.hint-say.out { opacity: 0; transform: none; }
+
+/* B, a line of caption type on bare paper */
+.say--line {
+  font-family: var(--hc-sans); font-size: var(--hc-caption);
+  line-height: var(--hc-caption-line); color: var(--hc-accent-deep);
+  display: flex; align-items: center; gap: 7px;
+}
+.say--line svg { width: 13px; height: 13px; flex: 0 0 auto; }
+
+/* C, the signature left edge card from the guides */
+.say--card {
+  background: var(--hc-cream);
+  border-radius: var(--hc-radius-lg);
+  box-shadow: inset var(--hc-edge-rule) 0 0 var(--hc-accent);
+  padding: 11px 14px 11px 15px;
+  display: flex; align-items: center; gap: 9px;
+  font-family: var(--hc-sans); font-size: var(--hc-caption);
+  line-height: var(--hc-caption-line); color: var(--hc-ink);
+}
+.say--card svg { width: 14px; height: 14px; flex: 0 0 auto; color: var(--hc-accent-deep); }
+
+/* D, the bubble with a tail, the literal reading of the brief */
+.say--bubble {
+  position: relative;
+  background: var(--hc-dark);
+  color: var(--hc-on-dark);
+  border-radius: 14px;
+  padding: 10px 14px;
+  display: flex; align-items: center; gap: 9px;
+  font-family: var(--hc-sans); font-size: var(--hc-caption); line-height: var(--hc-caption-line);
+  box-shadow: 0 6px 20px rgba(26,25,24,0.22);
+}
+.say--bubble svg { width: 14px; height: 14px; flex: 0 0 auto; }
+.say--bubble::before {
+  content: ""; position: absolute; top: -6px; left: 50%; margin-left: -6.5px;
+  width: 13px; height: 7px;
+  background: var(--hc-dark);
+  clip-path: polygon(50% 0, 100% 100%, 0 100%);
+}
+
+/* E, the real docked bar, ghosted */
+.say--bar {
+  display: flex; align-items: stretch;
+  border-radius: var(--hc-radius-pill);
+  background: var(--hc-ink);
+  box-shadow: 0 6px 20px rgba(26,25,24,0.28);
+  padding: 0 var(--hc-space-xs);
+  opacity: 0;
+}
+.say--bar.in { opacity: 0.92; }
+.say--bar .btn {
+  display: inline-flex; align-items: center; gap: var(--hc-space-xs);
+  min-height: var(--hc-tap-min); padding: 0 var(--hc-space-base);
+  color: var(--hc-paper); font-family: var(--hc-sans); font-weight: 500;
+  font-size: var(--hc-caption); white-space: nowrap;
+}
+.stage[data-hc="dark"] .say--bar { background: #0F0E0D; }
+.stage[data-hc="dark"] .say--bar .btn { color: #F2EEE7; }
+.say--bar svg { width: 14px; height: 14px; }
+.say--bar .rule { width: 0.5px; margin: var(--hc-space-sm) 0; background: var(--hc-paper); opacity: 0.3; }
+.say--bar-wrap {
+  position: absolute; left: 0; right: 0;
+  display: flex; justify-content: center;
+}
+
+.hint-say svg, .say--line svg, .say--card svg, .say--bubble svg, .say--bar svg {
+  fill: none; stroke: currentColor; stroke-width: 1.6;
+  stroke-linecap: round; stroke-linejoin: round;
+}
+
+/* the footprint, not a shipping style */
+.footprint .hint-say > * , .footprint .hint-wash {
+  outline: 1px dashed color-mix(in srgb, var(--hc-accent-deep) 70%, transparent);
+  outline-offset: 2px;
+}
+
+/* Reduce Motion: the wash is simply there, and the words simply there */
+.phone[data-motion="reduce"] .hint-wash { transition: opacity 200ms linear; }
+.phone[data-motion="reduce"] .hint-say { transition: opacity 200ms linear; transform: none; }
+@media (prefers-reduced-motion: reduce) {
+  .hint-wash, .hint-say { transition-duration: 1ms !important; }
+}
+
+/* ==========================================================================
+   Your account, Display. The switch this whole thing hangs off.
+   ========================================================================== */
+.hc-settings { display: none; }
+.phone[data-view="settings"] .hc-settings { display: block; }
+.phone[data-view="settings"] .hc-guide { display: none; }
+
+.hc-section-header { margin-top: 34px; }
+.hc-section-header:first-child { margin-top: 0; }
+.hc-section-header__title {
+  font-family: var(--hc-sans-display); font-weight: 800; font-size: 25px;
+  line-height: 1.2; letter-spacing: -0.01em; margin: 6px 0 0;
+}
+.hc-section-header__rule {
+  display: block; margin-top: 10px; width: 22%; min-width: 56px;
+  height: 0.75px; background: var(--hc-accent);
+}
+.hc-filters__label { display: block; margin: 22px 0 8px; }
+.hc-pills { display: flex; flex-wrap: wrap; gap: var(--hc-space-sm); }
+.hc-pill {
+  min-height: 36px; padding: 0 var(--hc-space-base);
+  border-radius: var(--hc-radius-pill);
+  border: var(--hc-hairline) solid var(--hc-rule);
+  background: transparent; color: var(--hc-mid);
+  font-family: var(--hc-sans); font-size: var(--hc-caption); cursor: pointer;
+}
+.hc-pill[aria-pressed="true"] {
+  border-color: var(--hc-accent-deep); color: var(--hc-ink);
+}
+.hc-switch-row {
+  display: flex; align-items: center; gap: var(--hc-space-base);
+  width: 100%; text-align: left; min-height: var(--hc-tap-min);
+  padding: var(--hc-space-md) 0;
+  border-top: var(--hc-hairline) solid var(--hc-rule);
+  background: transparent; border-left: 0; border-right: 0; border-bottom: 0;
+  cursor: pointer; color: inherit;
+}
+.hc-switch-row:last-of-type { border-bottom: var(--hc-hairline) solid var(--hc-rule); }
+.hc-switch-row__text { flex: 1 1 auto; min-width: 0; }
+.hc-switch-row__title {
+  display: block; font-family: var(--hc-sans); font-size: 16px; color: var(--hc-ink);
+}
+.hc-switch-row__sub { display: block; margin-top: 2px; }
+.hc-switch {
+  flex: 0 0 auto; width: 50px; height: 30px; border-radius: var(--hc-radius-pill);
+  background: var(--hc-paper-sunk); border: var(--hc-hairline) solid var(--hc-rule);
+  padding: 2px; display: flex; align-items: center;
+  transition: background var(--hc-dur-fast) var(--hc-ease),
+              border-color var(--hc-dur-fast) var(--hc-ease);
+}
+.hc-switch__knob {
+  width: 24px; height: 24px; border-radius: var(--hc-radius-pill);
+  background: var(--hc-paper); border: var(--hc-hairline) solid var(--hc-rule);
+  transform: translateX(0); transition: transform var(--hc-dur-fast) var(--hc-ease);
+}
+.hc-switch[aria-checked="true"] { background: var(--hc-accent-deep); border-color: var(--hc-accent-deep); }
+.hc-switch[aria-checked="true"] .hc-switch__knob { transform: translateX(20px); }
+.hc-settings__note { margin-top: var(--hc-space-base); }
+
+/* ==========================================================================
+   The rail: the switches, and the log that says what happened
+   ========================================================================== */
+.rail { display: flex; flex-direction: column; gap: 18px; }
+.card {
+  background: var(--panel);
+  border: 1px solid var(--bench-rule);
+  border-radius: 14px;
+  padding: 16px;
+}
+.card__h {
+  margin: 0 0 12px;
+  font-size: 11px; font-weight: 700; letter-spacing: 0.13em; text-transform: uppercase;
+  color: var(--bench-gold);
+}
+.grp { margin-bottom: 14px; }
+.grp:last-child { margin-bottom: 0; }
+.grp__label {
+  display: block; margin-bottom: 6px;
+  font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--bench-mid);
+}
+.opts { display: flex; flex-wrap: wrap; gap: 6px; }
+.opt {
+  font: inherit; font-size: 12.5px;
+  padding: 7px 11px; border-radius: 999px; cursor: pointer;
+  background: transparent; color: var(--bench-mid);
+  border: 1px solid var(--bench-rule);
+  transition: color 150ms, border-color 150ms, background 150ms;
+}
+.opt:hover { color: var(--bench-ink); border-color: var(--bench-line); }
+.opt[aria-pressed="true"] {
+  color: var(--bench-ink); border-color: var(--bench-live);
+  background: color-mix(in srgb, var(--bench-gold) 14%, transparent);
+  font-weight: 600;
+}
+.opt:focus-visible { outline: 2px solid var(--bench-live); outline-offset: 2px; }
+
+.studies { display: flex; flex-direction: column; gap: 4px; }
+.study {
+  display: grid; grid-template-columns: 20px minmax(0,1fr); gap: 10px;
+  align-items: baseline;
+  text-align: left; font: inherit; cursor: pointer;
+  padding: 9px 10px; border-radius: 10px;
+  background: transparent; border: 1px solid transparent; color: var(--bench-mid);
+}
+.study:hover { border-color: var(--bench-rule); color: var(--bench-ink); }
+.study[aria-pressed="true"] {
+  border-color: var(--bench-live);
+  background: color-mix(in srgb, var(--bench-gold) 12%, transparent);
+  color: var(--bench-ink);
+}
+.study b { font-weight: 700; font-size: 13px; color: var(--bench-gold); }
+.study[aria-pressed="true"] b { color: var(--bench-live); }
+.study span { display: block; font-size: 13px; }
+.study em { display: block; font-style: normal; font-size: 12px; color: var(--bench-mid); margin-top: 2px; }
+
+.log {
+  margin: 0; padding: 0; list-style: none;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11.5px; line-height: 1.55;
+  max-height: 232px; overflow-y: auto;
+  display: flex; flex-direction: column-reverse; gap: 2px;
+}
+.log li { display: grid; grid-template-columns: 52px minmax(0,1fr); gap: 8px; color: var(--bench-mid); }
+.log li b { color: var(--bench-ink); font-weight: 600; }
+.log li.end b { color: var(--bench-live); }
+.log time { color: var(--bench-line); font-variant-numeric: tabular-nums; }
+
+.cue {
+  font-size: 12.5px; color: var(--bench-mid); text-align: center; max-width: 390px;
+}
+.cue b { color: var(--bench-ink); font-weight: 600; }
+
+/* --- the notes under the bench -------------------------------------------- */
+.notes { margin-top: 40px; border-top: 1px solid var(--bench-rule); padding-top: 26px; }
+.notes__grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(258px, 1fr)); gap: 22px;
+}
+.note h3 {
+  margin: 0 0 7px; font-size: 13px; font-weight: 700;
+  letter-spacing: 0.02em; color: var(--bench-ink);
+}
+.note p { margin: 0 0 9px; font-size: 13.5px; color: var(--bench-mid); }
+.note p:last-child { margin-bottom: 0; }
+.note code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px;
+  color: var(--bench-ink);
+}
+.note strong { color: var(--bench-ink); font-weight: 600; }
+</style>
+
+<div class="wrap">
+
+  <header class="mast">
+    <p class="mast__eyebrow">Home Church &middot; hint studies</p>
+    <h1 class="mast__h">Five ways to say the words can be kept</h1>
+    <p class="mast__sub">The first hint fires the first time somebody opens a folded section in a guide. A sentence
+      highlights itself, and something says why. All five are drawn on the shipping tokens, the real geometry, and
+      real guide text, so what the hint has to sit next to is what it will really have to sit next to.
+      <b>Tap a section header on the phone.</b></p>
+  </header>
+
+  <div class="bench">
+
+    <div class="left">
+      <div class="stage" data-hc="light" id="stage">
+        <div class="phone" data-view="guide" data-motion="full" id="phone">
+
+          <div class="hc-bar">
+            <button type="button" class="hc-bar__back" data-log="the back arrow" aria-label="Back">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
+            </button>
+            <span class="hc-bar__title" id="barTitle">The Table of Grace &middot; Nov 3</span>
+          </div>
+
+          <div class="hc-scroll" id="scroll">
+
+            <!-- ------------------------------------------------ the guide -->
+            <div class="hc-guide" id="guideView">
+              <p class="hc-eyebrow">2 Samuel 9</p>
+              <h1 class="hc-guide-title">The Seat at the Table</h1>
+              <p class="hc-guide-sub">What a forgotten grandson of a dead king teaches us about grace</p>
+
+              <section class="hc-section">
+                <div class="hc-section__bar">
+                  <svg class="hc-section__chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+                  <h2 style="flex:1 1 auto;min-width:0;margin:0">
+                    <button type="button" class="hc-section__toggle" aria-expanded="true"
+                            data-section="short" data-log="the Overview header">
+                      <span style="flex:1 1 auto;min-width:0;display:block">
+                        <span class="hc-eyebrow" style="display:block">Short Summary</span>
+                        <span class="hc-section__title">Overview</span>
+                        <span class="hc-section__rule" aria-hidden="true"></span>
+                      </span>
+                    </button>
+                  </h2>
+                </div>
+                <div class="hc-section__panel" data-open="true">
+                  <div>
+                    <div class="hc-prose hc-body-serif">
+                      <p data-log="a paragraph of the Overview">David finally has everything, and in the middle of it
+                        he asks a question nobody asked him to ask. <mark class="hc-hl">Is there anyone left of
+                        Saul&rsquo;s house I can show kindness to?</mark></p>
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+              <section class="hc-section">
+                <div class="hc-section__bar">
+                  <svg class="hc-section__chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+                  <h2 style="flex:1 1 auto;min-width:0;margin:0">
+                    <button type="button" class="hc-section__toggle" aria-expanded="false"
+                            data-section="full" data-log="the Sermon Summary header">
+                      <span style="flex:1 1 auto;min-width:0;display:block">
+                        <span class="hc-eyebrow" style="display:block">Full Summary</span>
+                        <span class="hc-section__title">Sermon Summary</span>
+                        <span class="hc-section__rule" aria-hidden="true"></span>
+                      </span>
+                    </button>
+                  </h2>
+                </div>
+                <div class="hc-section__panel" data-open="false" data-panel="full">
+                  <div>
+                    <div class="hc-prose hc-body-serif">
+                      <p data-log="the first paragraph of the Sermon Summary">Second Samuel 9 opens on a rare moment of
+                        calm. <span id="hintTarget">David has come through the cave years, the civil war, and the
+                        consolidation of the kingdom.</span> He is secure. And security usually makes people
+                        protective, not generous.</p>
+                      <p data-log="the second paragraph of the Sermon Summary">His question is the hinge of the whole
+                        story. Is there still anyone left of the house of Saul, that I may show him kindness for
+                        Jonathan&rsquo;s sake? The word behind kindness is hesed, the covenant loyalty of God, the
+                        stubborn love that keeps showing up after the relationship has given it every reason to quit.</p>
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+              <section class="hc-section">
+                <div class="hc-section__bar">
+                  <svg class="hc-section__chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+                  <h2 style="flex:1 1 auto;min-width:0;margin:0">
+                    <button type="button" class="hc-section__toggle" aria-expanded="false"
+                            data-section="group" data-log="the Discussion Questions header">
+                      <span style="flex:1 1 auto;min-width:0;display:block">
+                        <span class="hc-eyebrow" style="display:block">For the Group</span>
+                        <span class="hc-section__title">Discussion Questions</span>
+                        <span class="hc-section__rule" aria-hidden="true"></span>
+                      </span>
+                    </button>
+                  </h2>
+                </div>
+                <div class="hc-section__panel" data-open="false">
+                  <div>
+                    <div class="hc-prose hc-body-serif">
+                      <p data-log="a discussion question">Think about the last time somebody was kind to you and you had
+                        not done a single thing to earn it. What did you do with it?</p>
+                    </div>
+                  </div>
+                </div>
+              </section>
+            </div>
+
+            <!-- --------------------------------------------- your account -->
+            <div class="hc-settings" id="settingsView">
+              <div class="hc-section-header">
+                <span class="hc-eyebrow">Display</span>
+                <h2 class="hc-section-header__title">Easier to read</h2>
+                <span class="hc-section-header__rule" aria-hidden="true"></span>
+              </div>
+
+              <span class="hc-eyebrow hc-filters__label">Text size</span>
+              <div class="hc-pills">
+                <button type="button" class="hc-pill" data-log="a text size pill">Smaller</button>
+                <button type="button" class="hc-pill" aria-pressed="true" data-log="a text size pill">Standard</button>
+                <button type="button" class="hc-pill" data-log="a text size pill">Larger</button>
+                <button type="button" class="hc-pill" data-log="a text size pill">Largest</button>
+              </div>
+
+              <div style="margin-top:24px"></div>
+
+              <button type="button" class="hc-switch-row" role="switch" aria-checked="true"
+                      id="hintsSwitch" data-log="the Hints switch">
+                <span class="hc-switch-row__text">
+                  <span class="hc-switch-row__title">Hints</span>
+                  <span class="hc-caption hc-switch-row__sub" id="hintsSub">Quiet pointers to the things that are easy to miss</span>
+                </span>
+                <span class="hc-switch" aria-hidden="true" aria-checked="true"><span class="hc-switch__knob"></span></span>
+              </button>
+
+              <button type="button" class="hc-switch-row" role="switch" aria-checked="false"
+                      id="darkSwitch" data-log="the Dark mode switch">
+                <span class="hc-switch-row__text">
+                  <span class="hc-switch-row__title">Dark mode</span>
+                  <span class="hc-caption hc-switch-row__sub">Warm charcoal, not black</span>
+                </span>
+                <span class="hc-switch" aria-hidden="true" aria-checked="false"><span class="hc-switch__knob"></span></span>
+              </button>
+
+              <p class="hc-caption hc-settings__note">Turning hints off stops every one of them, everywhere, and puts
+                away whatever is on the glass right now. Turning them back on does not re-offer what you already
+                found.</p>
+            </div>
+
+            <div class="hint-layer" id="hintLayer" aria-hidden="true"></div>
+          </div>
+
+          <div class="hc-rail" aria-hidden="true">
+            <span></span><span class="on"></span><span></span><span></span><span></span><span></span>
+          </div>
+
+          <nav class="hc-tabbar" aria-label="Tabs">
+            <button type="button" class="hc-tab" data-log="the Home tab">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>Home</button>
+            <button type="button" class="hc-tab" data-log="the Listen tab">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 14v-3a8 8 0 0 1 16 0v3"/><rect x="2" y="13" width="5" height="7" rx="2"/><rect x="17" y="13" width="5" height="7" rx="2"/></svg>Listen</button>
+            <button type="button" class="hc-tab" aria-current="true" data-log="the Guide tab">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5a2 2 0 0 1 2-2h13v18H6a2 2 0 0 1-2-2z"/><path d="M9 8h7M9 12h7"/></svg>Guide</button>
+            <button type="button" class="hc-tab" data-log="the Cal tab">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 11h18"/></svg>Cal</button>
+            <button type="button" class="hc-tab" data-log="the ••• tile">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="19" cy="12" r="1.4"/></svg>More</button>
+          </nav>
+
+        </div>
+      </div>
+
+      <p class="cue" id="cue"><b>Tap Sermon Summary</b> to open it. The hint runs a beat after the panel settles, and
+        every tap you make lands on whatever is under it.</p>
+    </div>
+
+    <!-- ------------------------------------------------------------- rail -->
+    <div class="rail">
+
+      <section class="card">
+        <h2 class="card__h">The study</h2>
+        <div class="studies" id="studies">
+          <button type="button" class="study" data-study="A"><b>A</b><span>The wash alone<em>No words. The sentence lights and lets go.</em></span></button>
+          <button type="button" class="study" data-study="B"><b>B</b><span>A line under it<em>Caption type on bare paper. Nothing drawn.</em></span></button>
+          <button type="button" class="study" data-study="C" aria-pressed="true"><b>C</b><span>A paper card<em>The guides&rsquo; left edge rule. A bubble in this app&rsquo;s hand.</em></span></button>
+          <button type="button" class="study" data-study="D"><b>D</b><span>A bubble with a tail<em>The literal reading. Ink, caret, pointing at the line.</em></span></button>
+          <button type="button" class="study" data-study="E"><b>E</b><span>The real bar, ghosted<em>Shows where the offer actually lands.</em></span></button>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2 class="card__h">The words</h2>
+        <div class="grp">
+          <div class="opts" id="words">
+            <button type="button" class="opt" data-w="0" aria-pressed="true">Hold a line to keep it.</button>
+            <button type="button" class="opt" data-w="1">Anything here can be kept.</button>
+            <button type="button" class="opt" data-w="2">Hold a line, and it is yours.</button>
+            <button type="button" class="opt" data-w="3">Your notes can start on any line.</button>
+          </div>
+        </div>
+        <div class="grp">
+          <span class="grp__label">The phone</span>
+          <div class="opts" id="theme">
+            <button type="button" class="opt" data-theme="light" aria-pressed="true">Light</button>
+            <button type="button" class="opt" data-theme="dark">Dark</button>
+          </div>
+        </div>
+        <div class="grp">
+          <span class="grp__label">Motion</span>
+          <div class="opts" id="motion">
+            <button type="button" class="opt" data-motion="full" aria-pressed="true">Full</button>
+            <button type="button" class="opt" data-motion="reduce">Reduce Motion</button>
+          </div>
+        </div>
+        <div class="grp">
+          <span class="grp__label">Show me</span>
+          <div class="opts">
+            <button type="button" class="opt" id="replay">Replay</button>
+            <button type="button" class="opt" id="foot">Its footprint</button>
+            <button type="button" class="opt" id="viewToggle">The switch in Your account</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2 class="card__h">What happened</h2>
+        <ul class="log" id="log"></ul>
+      </section>
+
+    </div>
+  </div>
+
+  <section class="notes">
+    <div class="notes__grid">
+      <div class="note">
+        <h3>Why the sentence highlights itself</h3>
+        <p>Highlighting is the least discoverable thing in the app. The bar that offers <strong>Note this</strong> is
+          docked above the tab bar and only exists once something is already selected, so there is nothing on screen
+          to find. Nothing can be pointed at, so the hint performs it instead.</p>
+        <p>The wash is the app's own <code>.hc-hl</code> treatment, drawn line by line from the left, the way a thumb
+          would drag it.</p>
+      </div>
+      <div class="note">
+        <h3>It never takes a tap</h3>
+        <p><code>pointer-events: none</code> on the layer and every child. Tap the words under the card and the words
+          get the tap; the log says what it landed on. There is no <strong>Got it</strong>, no x, and nothing to
+          dismiss, because going on with what you were doing is how this app puts things away.</p>
+        <p>Any pointerdown ends it, any scroll ends it, and it ends itself after six seconds.</p>
+      </div>
+      <div class="note">
+        <h3>Reduce Motion degrades, never refuses</h3>
+        <p>This hint is information, not decoration, so stillness must not cost it. Under Reduce Motion the wash is
+          simply present, the words simply present, held a beat longer because there is no movement to catch the eye.
+          Switch it in the rail and replay.</p>
+      </div>
+      <div class="note">
+        <h3>The switch, and why it says so</h3>
+        <p>One switch in <strong>Your account &rarr; Display</strong> for every hint there will ever be. Turn it off in
+          the phone and open a section: the log says <em>Hints is off</em> rather than saying nothing.</p>
+        <p>A hint that fails to appear looks exactly like a hint that is switched off, which is what cost the last
+          attempt at this a revert. The app should always be able to say which.</p>
+      </div>
+      <div class="note">
+        <h3>What is faked here</h3>
+        <p>The guide is three sections rather than six, the tab bar does not navigate, and the sentence the hint picks
+          is fixed. Everything else is the real thing: the tokens, the 20px gutter, the 52px bar, the fold animation,
+          the wash, and the docked bar's true position above the plinth.</p>
+      </div>
+      <div class="note">
+        <h3>What this cannot settle</h3>
+        <p>Whether the beat after the fold is right, and whether six seconds is. Both feel different in a hand, at
+          arm's length, in the sun, held by somebody who has not seen the app. The last attempt at hints was green in
+          a headless browser and wrong on a phone. Open this on the phone before picking.</p>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  var WORDS = [
+    'Hold a line to keep it.',
+    'Anything here can be kept.',
+    'Hold a line, and it is yours.',
+    'Your notes can start on any line.'
+  ];
+
+  var PENCIL = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"/>' +
+               '<path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>';
+  var MARKER = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h16"/>' +
+               '<path d="M14.5 4.5a2 2 0 0 1 3 3L9 16l-4 1 1-4z"/></svg>';
+
+  var state = { study: 'C', words: 0, footprint: false, on: true, running: false };
+
+  var phone     = document.getElementById('phone');
+  var stage     = document.getElementById('stage');
+  var scroll    = document.getElementById('scroll');
+  var layer     = document.getElementById('hintLayer');
+  var target    = document.getElementById('hintTarget');
+  var logEl     = document.getElementById('log');
+  var cue       = document.getElementById('cue');
+  var t0        = 0;
+  var timers    = [];
+
+  /* ------------------------------------------------------------------ log */
+
+  function log(msg, isEnd) {
+    var li = document.createElement('li');
+    var ms = t0 ? Date.now() - t0 : 0;
+    li.innerHTML = '<time>' + (t0 ? '+' + (ms / 1000).toFixed(1) + 's' : '&mdash;') + '</time>' +
+      '<span>' + msg + '</span>';
+    if (isEnd) li.className = 'end';
+    logEl.insertBefore(li, logEl.firstChild);
+    while (logEl.children.length > 40) logEl.removeChild(logEl.lastChild);
+  }
+
+  function after(ms, fn) { timers.push(setTimeout(fn, ms)); }
+  function clearTimers() { timers.forEach(clearTimeout); timers = []; }
+
+  /* --------------------------------------------------------- the drawing */
+
+  function reduce() { return phone.getAttribute('data-motion') === 'reduce'; }
+
+  function clearHint(reason) {
+    clearTimers();
+    if (!state.running) { layer.innerHTML = ''; return; }
+    state.running = false;
+    Array.prototype.forEach.call(layer.children, function (el) { el.classList.add('out'); });
+    var kill = layer;
+    setTimeout(function () { if (!state.running) kill.innerHTML = ''; }, 240);
+    if (reason) log('<b>Ended</b> on ' + reason, true);
+  }
+
+  /* One box per line box of the sentence, positioned in the scroller's own
+     coordinates so it travels with the page. Transform only. */
+  function washes() {
+    var sr = scroll.getBoundingClientRect();
+    var rects = target.getClientRects();
+    var out = [];
+    for (var i = 0; i < rects.length; i++) {
+      var r = rects[i];
+      if (r.width < 2) continue;
+      var el = document.createElement('div');
+      el.className = 'hint-wash';
+      el.style.left   = (r.left - sr.left) + 'px';
+      el.style.top    = (r.top - sr.top + scroll.scrollTop - 1) + 'px';
+      el.style.width  = r.width + 'px';
+      el.style.height = (r.height + 3) + 'px';
+      layer.appendChild(el);
+      out.push(el);
+    }
+    return { els: out, rects: rects, sr: sr };
+  }
+
+  function saySkin() {
+    var w = WORDS[state.words];
+    if (state.study === 'B') return '<div class="say--line">' + MARKER + '<span>' + w + '</span></div>';
+    if (state.study === 'C') return '<div class="say--card">' + PENCIL + '<span>' + w + '</span></div>';
+    if (state.study === 'D') return '<div class="say--bubble">' + PENCIL + '<span>' + w + '</span></div>';
+    return '';
+  }
+
+  function run() {
+    clearHint();
+    if (!state.on) {
+      t0 = 0;
+      log('Hint held: <b>Hints is off</b> in Your account &rarr; Display');
+      return;
+    }
+    t0 = Date.now();
+    state.running = true;
+    layer.innerHTML = '';
+    log('Armed on the first block of the Sermon Summary');
+
+    var w = washes();
+    var still = reduce();
+    var step = still ? 0 : 110;
+    var draw = still ? 0 : 420;
+
+    w.els.forEach(function (el, i) {
+      after(20 + i * step, function () { el.classList.add('in'); });
+    });
+    log(w.els.length === 1 ? 'The wash draws across one line' :
+        'The wash draws across ' + w.els.length + ' lines' + (still ? ', at once' : ', in order'));
+
+    var lastRect = w.rects[w.rects.length - 1];
+    var lineEnd  = 20 + (w.els.length - 1) * step + draw;
+
+    /* E puts the real bar where the real bar goes. Everything else sits
+       under the sentence it is about. */
+    var say = document.createElement('div');
+    say.className = 'hint-say';
+
+    if (state.study === 'E') {
+      say.className = 'hint-say say--bar-wrap';
+      say.style.top = (scroll.scrollTop + scroll.clientHeight - 136) + 'px';
+      say.innerHTML =
+        '<div class="say--bar"><span class="btn">' + PENCIL + 'Note this</span>' +
+        '<span class="rule"></span><span class="btn">' + MARKER + 'Highlight</span></div>';
+    } else if (state.study !== 'A') {
+      say.style.left = '0px';
+      say.style.right = '0px';
+      say.style.top = (lastRect.bottom - w.sr.top + scroll.scrollTop + (state.study === 'D' ? 14 : 10)) + 'px';
+      say.innerHTML = '<div style="display:flex;position:relative;justify-content:' +
+        (state.study === 'D' ? 'center' : 'flex-start') + '">' + saySkin() + '</div>';
+    }
+
+    if (state.study !== 'A') {
+      layer.appendChild(say);
+      after(lineEnd + (still ? 0 : 240), function () {
+        say.classList.add('in');
+        var bar = say.querySelector('.say--bar');
+        if (bar) bar.classList.add('in');
+        log(state.study === 'E' ? 'The bar arrives where it really lives, above the plinth'
+                                : 'The words arrive under the line');
+      });
+    }
+
+    var hold = still ? 7500 : 6000;
+    after(lineEnd + hold, function () { clearHint('its own timer, ' + (hold / 1000) + 's'); });
+  }
+
+  /* ------------------------------------------------------- the death list */
+
+  document.addEventListener('pointerdown', function (e) {
+    var inPhone = phone.contains(e.target);
+    if (!state.running) return;
+    var named = e.target.closest ? e.target.closest('[data-log]') : null;
+    clearHint('a pointerdown');
+    if (inPhone) {
+      log('&hellip; and the tap landed on ' + (named ? named.getAttribute('data-log') : 'the page') +
+          ', which is what it would have done anyway');
+    }
+  }, true);
+
+  scroll.addEventListener('scroll', function () {
+    if (state.running) clearHint('a scroll');
+  }, { passive: true });
+
+  document.addEventListener('visibilitychange', function () {
+    if (document.hidden && state.running) clearHint('the app going to the background');
+  });
+
+  /* --------------------------------------------------------- the sections */
+
+  Array.prototype.forEach.call(document.querySelectorAll('.hc-section__toggle'), function (btn) {
+    btn.addEventListener('click', function () {
+      var open = btn.getAttribute('aria-expanded') === 'true';
+      btn.setAttribute('aria-expanded', open ? 'false' : 'true');
+      var panel = btn.closest('.hc-section').querySelector('.hc-section__panel');
+      panel.setAttribute('data-open', open ? 'false' : 'true');
+      log((open ? 'Folded ' : 'Opened ') + '<b>' + btn.querySelector('.hc-section__title').textContent + '</b>');
+      if (!open && btn.getAttribute('data-section') === 'full') {
+        cue.innerHTML = 'Tap anywhere while it is up. <b>The tap lands on what is under it</b>, ' +
+          'and the log says what that was.';
+        after(340, bring);               // the fold settles
+        after(600, run);                 // then a beat, then the hint
+      }
+    });
+  });
+
+  /* --------------------------------------------------------- the switches */
+
+  function press(group, attr, value) {
+    Array.prototype.forEach.call(group.querySelectorAll('[' + attr + ']'), function (b) {
+      b.setAttribute('aria-pressed', b.getAttribute(attr) === value ? 'true' : 'false');
+    });
+  }
+
+  document.getElementById('studies').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-study]');
+    if (!b) return;
+    state.study = b.getAttribute('data-study');
+    press(this, 'data-study', state.study);
+    log('Study <b>' + state.study + '</b>');
+    if (openAlready()) after(60, run);
+  });
+
+  document.getElementById('words').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-w]');
+    if (!b) return;
+    state.words = +b.getAttribute('data-w');
+    press(this, 'data-w', b.getAttribute('data-w'));
+    if (openAlready()) after(60, run);
+  });
+
+  document.getElementById('theme').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-theme]');
+    if (!b) return;
+    setTheme(b.getAttribute('data-theme'));
+  });
+
+  function setTheme(t) {
+    stage.setAttribute('data-hc', t);
+    press(document.getElementById('theme'), 'data-theme', t);
+    var sw = document.getElementById('darkSwitch');
+    sw.setAttribute('aria-checked', t === 'dark' ? 'true' : 'false');
+    sw.querySelector('.hc-switch').setAttribute('aria-checked', t === 'dark' ? 'true' : 'false');
+  }
+
+  document.getElementById('motion').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-motion]');
+    if (!b) return;
+    phone.setAttribute('data-motion', b.getAttribute('data-motion'));
+    press(this, 'data-motion', b.getAttribute('data-motion'));
+    log('Motion: <b>' + (b.getAttribute('data-motion') === 'reduce' ? 'Reduce Motion' : 'full') + '</b>');
+    if (openAlready()) after(60, run);
+  });
+
+  document.getElementById('foot').addEventListener('click', function () {
+    state.footprint = !state.footprint;
+    phone.classList.toggle('footprint', state.footprint);
+    this.setAttribute('aria-pressed', state.footprint ? 'true' : 'false');
+  });
+
+  document.getElementById('replay').addEventListener('click', function () {
+    openSection();
+    after(60, run);
+  });
+
+  document.getElementById('viewToggle').addEventListener('click', function () {
+    var settings = phone.getAttribute('data-view') === 'settings';
+    phone.setAttribute('data-view', settings ? 'guide' : 'settings');
+    this.setAttribute('aria-pressed', settings ? 'false' : 'true');
+    this.textContent = settings ? 'The switch in Your account' : 'Back to the guide';
+    document.getElementById('barTitle').innerHTML = settings
+      ? 'The Table of Grace &middot; Nov 3' : 'Your account';
+    scroll.scrollTop = 0;
+    clearHint();
+  });
+
+  var hintsSwitch = document.getElementById('hintsSwitch');
+  hintsSwitch.addEventListener('click', function () {
+    state.on = !state.on;
+    hintsSwitch.setAttribute('aria-checked', state.on ? 'true' : 'false');
+    hintsSwitch.querySelector('.hc-switch').setAttribute('aria-checked', state.on ? 'true' : 'false');
+    t0 = 0;
+    log('Hints turned <b>' + (state.on ? 'on' : 'off') + '</b>' +
+        (state.on ? '' : ', and whatever was on the glass went away'));
+  });
+
+  document.getElementById('darkSwitch').addEventListener('click', function () {
+    setTheme(stage.getAttribute('data-hc') === 'dark' ? 'light' : 'dark');
+  });
+
+  /* ------------------------------------------------------------- helpers */
+
+  function sectionBtn() { return document.querySelector('[data-section="full"]'); }
+  function openAlready() { return sectionBtn().getAttribute('aria-expanded') === 'true'; }
+  function openSection() {
+    var btn = sectionBtn();
+    btn.setAttribute('aria-expanded', 'true');
+    document.querySelector('[data-panel="full"]').setAttribute('data-open', 'true');
+    bring();
+  }
+
+  /* Put the section under the bar before the hint runs, never while it is up:
+     a scroll is one of the deaths, and the study would end itself. */
+  function bring() {
+    var sec = sectionBtn().closest('.hc-section');
+    var sr = scroll.getBoundingClientRect();
+    scroll.scrollTop += sec.getBoundingClientRect().top - sr.top - 12;
+  }
+
+  /* Open at rest showing what the page is about, then let it die on its own. */
+  log('The guide is open, and nothing has been hinted yet');
+  setTimeout(function () {
+    openSection();
+    log('Opened <b>Sermon Summary</b>');
+    setTimeout(run, 520);
+  }, 700);
+})();
+</script>
