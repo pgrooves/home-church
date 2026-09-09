@@ -6,18 +6,33 @@ machinery that has to exist before that question has a good answer.
 This started as a map, became the record of what got built from it, and is now
 also the record of that being taken back out.
 
-**REVERTED, AND NOTHING HERE IS IN THE APP.** Every runtime change was undone
-on `main`: `js/hints.js`, the shapes in `css/components.css`, the
-registrations in `js/app.js`, the store fields, the switch in Your account,
-the script tag, and `tests/hints.test.js`. The app is byte for byte what it
-was before any of it shipped. This document and `demo-hint/` stay, because the
-thinking is worth keeping and the code is one `git revert` away in the
-history.
+**REVERTED ONCE, AND ONE HINT IS BACK.** The whole of the first attempt was
+undone on `main`, for the reasons in §12. What has since shipped is one hint
+and nothing else: the guide highlighting hint from Tier 1 of §8, in
+`js/hints.js`, with the switch in Your account, `tests/hints.test.js` and
+`tests/e2e/hints.js`. **The account hint in §1 to §6 of this document is still
+not built**, and neither is the registry, the scheduler, the budget or the
+catalogue. Read those sections as the map they were rather than as a
+description of the app.
 
-**Why.** It was slower on a real phone and the hints were not appearing, and
-neither of those reproduced in a headless browser on a desktop, which is the
-whole lesson. See §12 for what is actually suspected and what would have to
-be true before any of this goes back.
+**What shipped, and what it changed.**
+
+| | |
+|---|---|
+| `js/hints.js` | One hint, no registry. A sentence marks itself the first time somebody scrolls onto a section they just opened, a card says what that means, and the docked bar appears ghosted where the real one lands. |
+| The trigger | Opening a section arms it; the scroll settling on the words fires it. Not the tap: a hint drawn under the thumb that opened the panel is a hint nobody is looking at. |
+| How often | Once per launch, from a variable that dies with the launch. Nothing is stored and nothing is counted, so §5's happiest consequence survives. |
+| How long | Two seconds after the words land, then a soft fade. Any tap ends it sooner and still lands on whatever was under it. |
+| The switch | Your account → Display → Hints. One switch for every hint there will ever be, asked first in `shouldShow()` so nothing can route around it. `hints: true` is the only thing added to the stored profile. |
+| `.hc-hl` | **Changed for everybody.** The kept-text treatment was a wash in the bottom of the line, which read as an underline. It is a marker behind the words now, at a strength per theme. Every highlight anybody had already made is redrawn by this. |
+
+**Why this one and why alone.** §12 asked for one hint at a time, watched.
+This is the one Tier 1 calls the app's most undiscoverable feature, it is the
+only one whose absence a person can feel, and it is deliberately a single file
+with no framework in it. The second hint is when the registry earns itself.
+
+`demo-guide-hint/` is where its seven candidate drawings were argued out
+before any of it was built, and it still runs.
 
 Read `Home Church app design system.md` §2b (voice), §3g (motion) and §7
 (accessibility) alongside it. The precedent in code is `js/index-rail.js`,
@@ -837,3 +852,42 @@ it was silent.
 was fine three separate times. It is a good check for logic and a poor one
 for whether an app feels right, and it should never again be the last word
 before something touching every screen goes to `main`.
+
+---
+
+## 13. What the one shipped hint did about all that
+
+Against the five conditions in §12, honestly:
+
+1. **Not profiled on a phone.** This is the one still owed. What can be said
+   is narrower and checkable: nothing it draws animates a background, the
+   marks are `transform` and `opacity` on three or four small boxes, and the
+   only thing drawn over the plinth is the ghosted bar, which does not move.
+   That is a shape argument, not a measurement.
+2. **`travel` is not built.** The shape §12 blamed does not exist here.
+3. **It can say why it is quiet.** `HC.hints.explain()` in a console returns
+   the first rule that said no, by name: the switch, already spent, the wrong
+   route, a sheet, Edit mode, the background, nothing armed, not scrolled onto
+   yet. That is the thing whose absence cost a revert.
+4. **One hint, alone.** Tier 1 was six at once on top of a scheduler rewrite.
+   This is one, with no scheduler under it.
+5. **Reduce Motion is in the drawing and in the test matrix.** It degrades
+   rather than refuses, per §4: nothing draws itself, the marker and the words
+   are simply there, held a beat longer because there is no movement to catch
+   the eye.
+
+**Two things this build found that reading would not have.**
+
+*A hint layer with a `z-index` cannot blend with the page.* The marks sit over
+the words and use `mix-blend-mode` so ink stays ink; blending happens only
+inside a stacking context, and the layer's own `z-index` is one, so the marks
+blended against an empty box and came out as a translucent film that dimmed
+the text. It looked close enough to right in a screenshot to pass a review.
+The marks now live in a layer with no `z-index` at all, and the note on
+`.hc-hint-marks` in `css/components.css` says why so nobody tidies it.
+
+*A ghost of the bar has to read the same tokens the bar does.* `--hc-ink` and
+`--hc-paper` turn over with the theme, so the real selection bar is dark in
+the light and light in the dark. The first draft of the ghost had a
+hand-picked near black in it, which would have taught a dark pill in the one
+theme where the real one is light.

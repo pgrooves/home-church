@@ -377,6 +377,18 @@
       on: isDark
     }) + '</div>';
 
+    /* One switch for every hint there will ever be, rather than one per hint.
+       Somebody who does not want to be shown things does not want to say so
+       nine times, and js/hints.js asks this before anything else so nothing
+       can route around it. Not editable, like the other switches on this
+       screen: the church does not get to reword what its own settings do. */
+    html += switchRow({
+      title: 'Hints',
+      sub: 'Quiet pointers to what is easy to miss',
+      action: 'toggle-hints',
+      on: p.hints !== false
+    });
+
     /* THERE IS NO LEADER MODE ON THIS SCREEN, and there should not be one
        again. Somebody is a member, a leader or an admin, an admin sets which
        under Manage users, and nobody sets their own. A screen whose whole job

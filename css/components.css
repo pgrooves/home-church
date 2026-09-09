@@ -2442,28 +2442,41 @@ a.hc-card:active { background: var(--hc-paper-sunk); }
 
 /* --------------------------------------------------------------------------
    Highlighting
-   A wash under the words, not a stripe over them. One treatment, plus a
-   heavier one for the ones that carry a note, because a rack of highlighter
-   colours would be the loudest thing in a calm two-palette app.
+   A marker behind the words. One treatment, plus a heavier one for the ones
+   that carry a note, because a rack of highlighter colours would be the
+   loudest thing in a calm two-palette app.
+
+   IT USED TO BE A WASH UNDER THE WORDS, a gradient filling the bottom 0.55em
+   of the line. That is a real marker's shape on paper, where the ink soaks
+   and the top of the stroke fades. On a phone, at a glance, it read as an
+   underline: kept text looked like a link rather than like something somebody
+   had gone back and marked. The block behind the words is louder and says the
+   true thing, and it is the shape the hint in js/hints.js draws to teach it,
+   so the two have to agree.
+
+   The strength is a token per theme, --hc-hl-wash, because dark cannot carry
+   what light can. See the note in css/tokens.css.
    -------------------------------------------------------------------------- */
 
 .hc-hl {
-  background: linear-gradient(to top,
-    color-mix(in srgb, var(--hc-accent) 42%, transparent) 0.55em,
-    transparent 0.55em);
+  background: var(--hc-hl-wash);
   color: inherit;
   border-radius: 2px;
   cursor: pointer;
-  /* The words are the tap target. No padding, or the wash starts creeping
+  /* The words are the tap target. No padding, or the marker starts creeping
      out past the sentence it belongs to. */
   padding: 0;
+  /* A marker stroke overshoots the line a little. box-shadow rather than
+     padding, because padding would move the text. */
+  box-shadow: 0 1px 0 1px var(--hc-hl-wash), 0 -1px 0 1px var(--hc-hl-wash);
 }
 
 /* One that has been written about. Same hue, more of it, and a dog-ear so it
    is still distinguishable with no colour vision at all. */
 .hc-hl--noted {
-  background: color-mix(in srgb, var(--hc-accent) 34%, transparent);
-  box-shadow: inset 2px 0 0 var(--hc-accent-deep);
+  background: var(--hc-hl-noted);
+  box-shadow: 0 1px 0 1px var(--hc-hl-noted), 0 -1px 0 1px var(--hc-hl-noted),
+              inset 2px 0 0 var(--hc-accent-deep);
 }
 
 .hc-hl:focus-visible {
@@ -2472,7 +2485,7 @@ a.hc-card:active { background: var(--hc-paper-sunk); }
 }
 
 @supports not (color: color-mix(in srgb, red 50%, transparent)) {
-  .hc-hl { background: var(--hc-cream); }
+  .hc-hl { background: var(--hc-cream); box-shadow: none; }
   .hc-hl--noted { background: var(--hc-cream); box-shadow: inset 2px 0 0 var(--hc-accent-deep); }
 }
 
@@ -2540,6 +2553,192 @@ a.hc-card:active { background: var(--hc-paper-sunk); }
   margin: var(--hc-space-sm) 0;
   background: var(--hc-paper);
   opacity: 0.3;
+}
+
+/* --------------------------------------------------------------------------
+   The hint that teaches it
+   Drawn by js/hints.js the first time somebody scrolls onto a section they
+   just opened. A sentence marks itself, a card says what that means, and the
+   bar it is about shows up where the bar really lives.
+
+   IT NEVER TAKES A TAP. pointer-events: none on the layer and every child,
+   and that line is the whole promise: there is no Got it, no x, and nothing
+   to dismiss, because tapping through it is how it goes away. Any softening
+   of this makes it a modal.
+
+   EVERY MOVING PART IS transform OR opacity. HINTS.md §12 blames the stutter
+   that got the last attempt at hints reverted on a shape that animated
+   background-position over the blurred plinth. Nothing here animates a
+   background, and nothing here is drawn over the plinth except the ghosted
+   bar, which does not move.
+   -------------------------------------------------------------------------- */
+
+.hc-hint, .hc-hint *,
+.hc-hint-marks, .hc-hint-marks * { pointer-events: none; }
+
+.hc-hint {
+  position: fixed;
+  inset: 0;
+  z-index: 48;   /* under the sheets at 55 and the toast at 60 */
+}
+
+/* THE MARKS ARE IN A LAYER OF THEIR OWN, AND IT HAS NO z-index ON PURPOSE.
+
+   They blend with the page (see below), and mix-blend-mode only blends within
+   the nearest stacking context. .hc-hint above is position: fixed with a
+   z-index, which is a stacking context twice over, so marks parked in there
+   blend against an empty transparent box and nothing happens: the words come
+   out dimmed by a translucent taupe instead of highlighted by a marker. It
+   looks close enough to right in a screenshot to survive a review and is
+   wrong in the hand.
+
+   position: absolute with z-index auto makes no stacking context, so these
+   blend against #app, which is where the guide is drawn. That also means they
+   sit under the sheets and the toast without asking, because a positioned
+   element with no z-index still yields to one with a high one. */
+.hc-hint-marks {
+  position: absolute;
+  inset: 0;
+}
+
+/* One box per line box of the sentence, grown from its left edge the way a
+   thumb would drag a marker.
+
+   THE BLEND MODE IS WHAT KEEPS THE WORDS READABLE. This layer is over the
+   page rather than under it, so a solid wash would grey the text out.
+   multiply leaves near black ink near black and turns the paper behind it
+   taupe, which is what a real marker does; the dark theme screens instead,
+   because multiplying charcoal only makes charcoal. */
+.hc-hint__mark {
+  position: absolute;
+  border-radius: 3px;
+  background: var(--hc-hl-wash);
+  mix-blend-mode: multiply;
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform 420ms var(--hc-ease-enter), opacity 200ms var(--hc-ease);
+}
+
+:root[data-theme="dark"] .hc-hint__mark { mix-blend-mode: screen; }
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .hc-hint__mark { mix-blend-mode: screen; }
+}
+
+.hc-hint__mark[data-in="true"] { transform: scaleX(1); }
+
+/* The words, and the bar. Both arrive the way the toast does: a short rise
+   and a fade, nothing springy. */
+.hc-hint__say {
+  position: absolute;
+  opacity: 0;
+  transform: translateY(4px);
+  transition: opacity 260ms var(--hc-ease-enter), transform 260ms var(--hc-ease-enter);
+}
+
+.hc-hint__say[data-in="true"] { opacity: 1; transform: none; }
+
+/* Going away on its own clock is not the same as being put away by a tap. A
+   tap is an answer, so the hint gets out of its way at once; a clock nobody
+   set leaves slowly enough to be seen leaving. */
+.hc-hint[data-going="soft"] .hc-hint__say,
+.hc-hint-marks[data-going="soft"] .hc-hint__mark { transition: opacity 450ms var(--hc-ease); }
+
+.hc-hint[data-going] .hc-hint__say,
+.hc-hint-marks[data-going] .hc-hint__mark { opacity: 0; }
+
+/* The card. The guides' signature left edge rule, so it reads as a piece of
+   this app rather than as a tooltip. No nub and no caret: proximity and the
+   marker do the work, and a nub is one more thing to get wrong against a
+   line that wrapped. */
+.hc-hint__card {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  max-width: 100%;
+  padding: 11px 14px 11px 15px;
+  border-radius: var(--hc-radius-lg);
+  background: var(--hc-cream);
+  box-shadow: inset var(--hc-edge-rule) 0 0 var(--hc-accent),
+              0 6px 18px rgba(26, 25, 24, 0.10);
+  font-family: var(--hc-sans);
+  font-size: var(--hc-caption);
+  line-height: var(--hc-caption-line);
+  color: var(--hc-ink);
+}
+
+.hc-hint__icon {
+  width: 14px;
+  height: 14px;
+  flex: 0 0 auto;
+  color: var(--hc-accent-deep);
+}
+
+/* The real bar, ghosted, in the band it really occupies. Not a picture of the
+   bar somewhere convenient: the whole point of drawing it is that this is
+   where the answer will appear. Kept in step with .hc-hlbar above. */
+.hc-hint__bar {
+  position: fixed;
+  left: var(--hc-tabbar-inset);
+  right: var(--hc-tabbar-inset);
+  bottom: calc(var(--hc-tabbar-space) + env(safe-area-inset-bottom));
+  display: flex;
+  justify-content: center;
+}
+
+.hc-hint__pill {
+  display: flex;
+  align-items: stretch;
+  padding: 0 var(--hc-space-xs);
+  border-radius: var(--hc-radius-pill);
+  background: var(--hc-ink);
+  box-shadow: 0 6px 20px rgba(26, 25, 24, 0.28);
+  opacity: 0.92;
+}
+
+.hc-hint__pill span {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--hc-space-xs);
+  min-height: var(--hc-tap-min);
+  padding: 0 var(--hc-space-base);
+  color: var(--hc-paper);
+  font-family: var(--hc-sans);
+  font-weight: 500;
+  font-size: var(--hc-caption);
+  white-space: nowrap;
+}
+
+/* NO DARK OVERRIDE HERE, AND THAT IS THE POINT. --hc-ink and --hc-paper both
+   turn over with the theme, so the real bar in js/highlight.js is ink on
+   paper in the light and a paper coloured pill with dark type in the dark.
+   The ghost reads the same two tokens and turns over with it. A ghost that is
+   not quite the bar teaches the wrong bar, and the first draft of this had a
+   hand-picked near black here that would have been a dark pill in a theme
+   where the real one is light. */
+
+/* Scoped past .hc-hint__pill span above, which would otherwise give the
+   divider that rule's 16px of padding and a 44px height and draw it as a grey
+   block between the two labels rather than as a hairline. */
+.hc-hint__pill .hc-hint__rule {
+  width: var(--hc-hairline);
+  min-height: 0;
+  padding: 0;
+  margin: var(--hc-space-sm) 0;
+  background: var(--hc-paper);
+  opacity: 0.3;
+}
+
+/* Reduce Motion degrades this rather than refusing it, which is the opposite
+   of the call js/index-rail.js makes about its own hint. That one is
+   decoration and this one is information: taking it away from somebody who
+   asked for stillness would be taking away the only thing in the app that
+   says the words can be kept. So nothing draws itself, and it is simply
+   there, held a beat longer by js/hints.js because there is no movement to
+   catch the eye. */
+@media (prefers-reduced-motion: reduce) {
+  .hc-hint__mark { transition: opacity 200ms linear; transform: scaleX(1); }
+  .hc-hint__say { transition: opacity 200ms linear; transform: none; }
 }
 
 /* The note sheet. The quotation on top, the writing surface under it. */

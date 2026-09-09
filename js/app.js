@@ -2485,6 +2485,11 @@
          handled in there rather than here. */
       if (HC.narration) HC.narration.sectionToggled(el.closest('.hc-section'), !open);
 
+      /* Opening a section in a guide arms the one hint this app has, which
+         then waits for the scroll onto the words it is about. Arming is not
+         showing and nothing is drawn here: see js/hints.js. */
+      if (HC.hints && !open) HC.hints.sectionOpened(el.closest('.hc-section'));
+
       /* The room is the one screen that redraws itself under you, so the DOM
          cannot be where it remembers which question chunks are open. Nothing
          is repainted here: the fold has already happened, and this only makes
@@ -2859,6 +2864,20 @@
       paintThemeToggle();
       var row = document.querySelector('[data-action="toggle-theme"][role="switch"]');
       if (row) setSwitch(row, !dark);
+    },
+
+    /* Hints, all of them, present and future. Turning it off puts away
+       whatever is on the glass at that moment, which matters because the
+       switch and a hint can be on screen together only in one direction:
+       somebody who has just been shown something and did not want it goes
+       looking for the switch, and finding it should end the thing that sent
+       them. Turning it back on resets nothing. */
+    'toggle-hints': function (el) {
+      var on = el.getAttribute('aria-checked') !== 'true';
+      HC.store.updateProfile({ hints: on });
+      HC.native.tap('Light');
+      setSwitch(el, on);
+      if (HC.hints) HC.hints.switched(on);
     },
 
     /* --------------------------------------------------------------- search */
@@ -4479,6 +4498,11 @@
         data: HC.screens.data
       }
     });
+
+    /* The one hint starts listening. Nothing is armed and nothing is drawn
+       until somebody opens a section in a guide and scrolls onto it, and the
+       once-per-launch flag it keeps lives and dies with this launch. */
+    if (HC.hints) HC.hints.listen();
 
     /* Home is on the glass. The greeting in front of it can start leaving,
        which it does on its own schedule: it holds until its own sequence has
