@@ -413,6 +413,42 @@ body {
   background: var(--hc-dark);
   clip-path: polygon(50% 0, 100% 100%, 0 100%);
 }
+/* over the line instead of under it, so the tail points down */
+.say--bubble.tail-down::before {
+  top: auto; bottom: -6px;
+  clip-path: polygon(50% 100%, 100% 0, 0 0);
+}
+
+/* --------------------------------------------------------------------------
+   The marker on its own, moving. No words: the sweep is the whole hint.
+
+   A band inside an overflow: hidden box, translated. Never a moving
+   background — that is the one shape HINTS.md §12 could name as the cause of
+   the stutter that got the last attempt reverted.
+   -------------------------------------------------------------------------- */
+.sweep-line {
+  position: absolute;
+  overflow: hidden;
+  border-radius: 3px;
+  opacity: 0;
+  transition: opacity 200ms var(--hc-ease);
+}
+.sweep-line.lit { opacity: 1; }
+.sweep-line.out { opacity: 0; }
+
+.sweep-band {
+  position: absolute; top: 0; bottom: 0; left: 0;
+  transform: translateX(-140%);
+  background: linear-gradient(90deg,
+    transparent 0%,
+    var(--hint-wash) 26%,
+    var(--hint-wash) 74%,
+    transparent 100%);
+}
+.sweep-band.go {
+  transform: translateX(240%);
+  transition: transform 1000ms var(--hc-ease);
+}
 
 /* E, the real docked bar, ghosted */
 .say--bar {
@@ -572,6 +608,11 @@ body {
 .study span { display: block; font-size: 13px; }
 .study em { display: block; font-style: normal; font-size: 12px; color: var(--bench-mid); margin-top: 2px; }
 
+.card__foot {
+  margin: 12px 0 0; font-size: 12px; color: var(--bench-mid);
+  border-top: 1px solid var(--bench-rule); padding-top: 10px;
+}
+
 .log {
   margin: 0; padding: 0; list-style: none;
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
@@ -611,11 +652,11 @@ body {
 
   <header class="mast">
     <p class="mast__eyebrow">Home Church &middot; hint studies</p>
-    <h1 class="mast__h">Four ways to say the words can be kept</h1>
+    <h1 class="mast__h">Seven ways to say the words can be kept</h1>
     <p class="mast__sub">Every launch, the first time a folded section in a guide is opened, a sentence highlights
-      itself and says why. It stays until you tap, or until Hints is switched off in Your account. All four are
-      drawn on the shipping tokens, the real geometry, and real guide text, so what the hint has to sit next to is
-      what it will really have to sit next to. <b>Tap a section header on the phone.</b></p>
+      itself. Four studies then say why in words and wait for a tap. Three say nothing at all: the marker rolls
+      across the line and goes, and the movement is the whole hint. All seven are drawn on the shipping tokens, the
+      real geometry, and real guide text. <b>Tap a section header on the phone.</b></p>
   </header>
 
   <div class="bench">
@@ -795,13 +836,32 @@ body {
     <div class="rail">
 
       <section class="card">
-        <h2 class="card__h">The study</h2>
+        <h2 class="card__h">The marker, and words</h2>
         <div class="studies" id="studies">
-          <button type="button" class="study" data-study="A"><b>A</b><span>A line under it<em>Caption type on bare paper. Nothing drawn around it.</em></span></button>
+          <button type="button" class="study" data-study="A"><b>A</b><span>A line of type<em>Caption type on bare paper. Nothing drawn around it.</em></span></button>
           <button type="button" class="study" data-study="B" aria-pressed="true"><b>B</b><span>A paper card<em>The guides&rsquo; left edge rule. A bubble in this app&rsquo;s hand.</em></span></button>
           <button type="button" class="study" data-study="C"><b>C</b><span>A bubble with a tail<em>The literal reading. Ink, caret, pointing at the line.</em></span></button>
           <button type="button" class="study" data-study="D"><b>D</b><span>The card and the bar<em>Says what, and shows where the offer lands.</em></span></button>
         </div>
+        <div class="grp" style="margin-top:12px">
+          <span class="grp__label">Where the words go</span>
+          <div class="opts" id="place">
+            <button type="button" class="opt" data-place="above">Above the line</button>
+            <button type="button" class="opt" data-place="below" aria-pressed="true">Below it</button>
+          </div>
+        </div>
+        <p class="card__foot">These stay until you tap.</p>
+      </section>
+
+      <section class="card">
+        <h2 class="card__h">The marker alone, moving</h2>
+        <div class="studies" id="sweeps">
+          <button type="button" class="study" data-study="E"><b>E</b><span>Drawn on, lifted off<em>Rolls on from the left, and straight back off.</em></span></button>
+          <button type="button" class="study" data-study="F"><b>F</b><span>A band passes over<em>A soft band travels the line and leaves nothing.</em></span></button>
+          <button type="button" class="study" data-study="G"><b>G</b><span>On, held, then off<em>Rolls on, sits a second, wipes away.</em></span></button>
+        </div>
+        <p class="card__foot">No words. These play once and go, so whether they
+          mean anything is the whole question.</p>
       </section>
 
       <section class="card">
@@ -882,6 +942,15 @@ body {
           it</strong> and no x: going on with what you were doing is how this app puts things away.</p>
       </div>
       <div class="note">
+        <h3>What the sweeps trade away</h3>
+        <p>E, F and G have no words, so there is nothing to wait for a tap: they play once and are gone. That is the
+          appeal and it is also the cost. A person looking at the heading they just tapped can miss the whole thing,
+          and a marker that ran while they were looking elsewhere leaves no trace that it ever ran.</p>
+        <p>It is also the one shape <strong>Reduce Motion cannot carry</strong>. There is no still version of a
+          movement. Switch Reduce Motion on with a sweep selected and watch what is left: the marker simply appears
+          and goes, which is a different hint wearing the same name.</p>
+      </div>
+      <div class="note">
         <h3>Reduce Motion degrades, never refuses</h3>
         <p>This hint is information, not decoration, so stillness must not cost it. Under Reduce Motion the marker is
           simply present and the words simply present, with nothing drawing itself. Same words, same place, no
@@ -927,7 +996,7 @@ body {
   var MARKER = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h16"/>' +
                '<path d="M14.5 4.5a2 2 0 0 1 3 3L9 16l-4 1 1-4z"/></svg>';
 
-  var state = { study: 'B', words: 0, footprint: false, on: true, running: false };
+  var state = { study: 'B', words: 0, place: 'below', footprint: false, on: true, running: false };
 
   var phone     = document.getElementById('phone');
   var stage     = document.getElementById('stage');
@@ -972,31 +1041,51 @@ body {
     if (reason) log('<b>Ended</b> on ' + reason, true);
   }
 
-  /* One box per line box of the sentence, positioned in the scroller's own
-     coordinates so it travels with the page. Transform only. */
-  function washes() {
+  /* Where the sentence actually sits, one box per line box of it, in the
+     scroller's own coordinates so anything drawn there travels with the page. */
+  function lines() {
     var sr = scroll.getBoundingClientRect();
-    var rects = target.getClientRects();
+    var all = target.getClientRects();
     var out = [];
-    for (var i = 0; i < rects.length; i++) {
-      var r = rects[i];
-      if (r.width < 2) continue;
-      var el = document.createElement('div');
-      el.className = 'hint-wash';
-      el.style.left   = (r.left - sr.left - 2) + 'px';
-      el.style.top    = (r.top - sr.top + scroll.scrollTop - 3) + 'px';
-      el.style.width  = (r.width + 4) + 'px';
-      el.style.height = (r.height + 6) + 'px';
-      washLayer.appendChild(el);
-      out.push(el);
+    for (var i = 0; i < all.length; i++) {
+      if (all[i].width < 2) continue;
+      var r = all[i];
+      out.push({
+        left: r.left - sr.left - 2,
+        top: r.top - sr.top + scroll.scrollTop - 3,
+        width: r.width + 4,
+        height: r.height + 6,
+        bottom: r.bottom - sr.top + scroll.scrollTop + 3
+      });
     }
-    return { els: out, rects: rects, sr: sr };
+    return { boxes: out, sr: sr };
   }
 
-  function saySkin() {
+  function place(el, box) {
+    el.style.left   = box.left + 'px';
+    el.style.top    = box.top + 'px';
+    el.style.width  = box.width + 'px';
+    el.style.height = box.height + 'px';
+  }
+
+  /* One box per line, scaled up from the left edge. Transform only. */
+  function washes(boxes) {
+    return boxes.map(function (box) {
+      var el = document.createElement('div');
+      el.className = 'hint-wash';
+      place(el, box);
+      washLayer.appendChild(el);
+      return el;
+    });
+  }
+
+  function saySkin(above) {
     var w = WORDS[state.words];
     if (state.study === 'A') return '<div class="say--line">' + MARKER + '<span>' + w + '</span></div>';
-    if (state.study === 'C') return '<div class="say--bubble">' + PENCIL + '<span>' + w + '</span></div>';
+    if (state.study === 'C') {
+      return '<div class="say--bubble' + (above ? ' tail-down' : '') + '">' +
+        PENCIL + '<span>' + w + '</span></div>';
+    }
     return '<div class="say--card">' + PENCIL + '<span>' + w + '</span></div>';   // B and D
   }
 
@@ -1018,31 +1107,46 @@ body {
     washLayer.innerHTML = '';
     log('Armed on the first block of the Sermon Summary');
 
-    var w = washes();
-    var still = reduce();
-    var step = still ? 0 : 110;
-    var draw = still ? 0 : 420;
+    var geo = lines();
+    if (!geo.boxes.length) { log('Nothing to draw on: the sentence has no box'); return; }
 
-    w.els.forEach(function (el, i) {
+    if (state.study >= 'E') sweep(geo);
+    else                    say(geo);
+  }
+
+  /* ---------------------------------------------- the marker, and the words */
+
+  function say(geo) {
+    var boxes = geo.boxes;
+    var els   = washes(boxes);
+    var still = reduce();
+    var step  = still ? 0 : 110;
+    var draw  = still ? 0 : 420;
+
+    els.forEach(function (el, i) {
       after(20 + i * step, function () { el.classList.add('in'); });
     });
-    log(w.els.length === 1 ? 'The marker draws across one line' :
-        'The marker draws across ' + w.els.length + ' lines' + (still ? ', at once' : ', in order'));
+    log(els.length === 1 ? 'The marker draws across one line' :
+        'The marker draws across ' + els.length + ' lines' + (still ? ', at once' : ', in order'));
 
-    var lastRect = w.rects[w.rects.length - 1];
-    var lineEnd  = 20 + (w.els.length - 1) * step + draw;
+    var lineEnd = 20 + (els.length - 1) * step + draw;
+    var above   = state.place === 'above';
+    var bubble  = state.study === 'C';
 
-    /* The words. Always, in every study: something has to say what the
-       marker means. D adds the real bar underneath, where it really lands. */
-    var say = document.createElement('div');
-    say.className = 'hint-say';
-    say.style.left = '0px';
-    say.style.right = '0px';
-    say.style.top = (lastRect.bottom - w.sr.top + scroll.scrollTop +
-                     (state.study === 'C' ? 14 : 10)) + 'px';
-    say.innerHTML = '<div style="display:flex;position:relative;justify-content:' +
-      (state.study === 'C' ? 'center' : 'flex-start') + '">' + saySkin() + '</div>';
-    layer.appendChild(say);
+    var words = document.createElement('div');
+    words.className = 'hint-say';
+    words.style.left = '0px';
+    words.style.right = '0px';
+    words.innerHTML = '<div style="display:flex;position:relative;justify-content:' +
+      (bubble ? 'center' : 'flex-start') + '">' + saySkin(above) + '</div>';
+    layer.appendChild(words);
+
+    /* Measured after it is in the page, because "above" needs its height and
+       a card's height depends on whether the line wrapped. */
+    var gap = bubble ? 14 : 10;
+    words.style.top = above
+      ? (boxes[0].top - words.offsetHeight - gap) + 'px'
+      : (boxes[boxes.length - 1].bottom + gap) + 'px';
 
     var bar = null;
     if (state.study === 'D') {
@@ -1054,8 +1158,8 @@ body {
     }
 
     after(lineEnd + (still ? 0 : 240), function () {
-      say.classList.add('in');
-      log('The words arrive under the line');
+      words.classList.add('in');
+      log('The words arrive ' + (above ? 'above' : 'under') + ' the line');
       if (bar) {
         bar.classList.add('in');
         bar.querySelector('.say--bar').classList.add('in');
@@ -1065,17 +1169,96 @@ body {
     });
   }
 
+  /* ------------------------------------------- the marker alone, moving
+
+     No words at all: the movement is the whole hint, and it goes away by
+     itself because there is nothing left on the glass to answer. */
+
+  function sweep(geo) {
+    var still = reduce();
+
+    if (still) {
+      /* Reduce Motion has no sweep to show, and this is the finding rather
+         than a shortcut: a hint made only of movement has nothing to say to
+         somebody who asked for stillness. The marker simply appears. */
+      var flat = washes(geo.boxes);
+      flat.forEach(function (el) { el.classList.add('in'); });
+      log('Reduce Motion: nothing can slide, so the marker is simply there');
+      after(2500, function () { clearHint('its own timer, with no sweep to run'); });
+      return;
+    }
+
+    if (state.study === 'F') return band(geo);
+
+    /* E and G: drawn on from the left, then lifted off to the right. */
+    var hold = state.study === 'G' ? 1200 : 220;
+    var els  = washes(geo.boxes);
+    var last = 0;
+
+    els.forEach(function (el, i) {
+      var on = 20 + i * 110;
+      after(on, function () { el.classList.add('in'); });
+      after(on + 520 + hold, function () {
+        el.style.transformOrigin = 'right center';
+        el.classList.remove('in');
+      });
+      last = on + 520 + hold + 460;
+    });
+
+    log(state.study === 'G'
+      ? 'The marker rolls on, sits for a moment, and wipes away'
+      : 'The marker rolls on from the left and straight back off');
+    after(last, function () { clearHint('itself, with nothing left to answer'); });
+  }
+
+  /* F: a soft band travels the line and leaves nothing behind. Twice, because
+     one pass is over before somebody looking at the heading has looked down. */
+  function band(geo) {
+    var last = 0;
+
+    geo.boxes.forEach(function (box, i) {
+      var wrap = document.createElement('div');
+      wrap.className = 'sweep-line lit';
+      place(wrap, box);
+
+      var strip = document.createElement('div');
+      strip.className = 'sweep-band';
+      strip.style.width = Math.max(70, box.width * 0.45) + 'px';
+      wrap.appendChild(strip);
+      washLayer.appendChild(wrap);
+
+      var start = 40 + i * 150;
+      after(start, function () { strip.classList.add('go'); });
+
+      // the second pass, rewound with the transition off so it does not
+      // travel backwards on the way to its mark
+      after(start + 1000 + 280, function () {
+        strip.style.transition = 'none';
+        strip.classList.remove('go');
+        void strip.offsetWidth;
+        strip.style.transition = '';
+        strip.classList.add('go');
+      });
+      last = start + 1000 + 280 + 1000 + 200;
+    });
+
+    log('A band passes over the line, twice, and leaves nothing');
+    after(last, function () { clearHint('itself, with nothing left to answer'); });
+  }
+
   /* ------------------------------------------------------- the death list */
 
-  document.addEventListener('pointerdown', function (e) {
-    var inPhone = phone.contains(e.target);
+  /* ONLY INSIDE THE PHONE, and the reason is worth keeping. This listener was
+     on the whole document, which is right in the app, where the document IS
+     the app. Here it meant the touch that scrolls this page on a phone ended
+     the hint before anybody had seen it, so the words looked as though they
+     never came. In the app the equivalent listener stays on document. */
+  phone.addEventListener('pointerdown', function (e) {
     if (!state.running) return;
     var named = e.target.closest ? e.target.closest('[data-log]') : null;
     clearHint('a pointerdown');
-    if (inPhone) {
-      log('&hellip; and the tap landed on ' + (named ? named.getAttribute('data-log') : 'the page') +
-          ', which is what it would have done anyway');
-    }
+    log('&hellip; and the tap landed on ' + (named ? named.getAttribute('data-log') : 'the page') +
+        ', which is what it would have done anyway');
   }, true);
 
   /* A scroll does NOT end it any more. The marker and the words are drawn in
@@ -1097,8 +1280,11 @@ body {
       panel.setAttribute('data-open', open ? 'false' : 'true');
       log((open ? 'Folded ' : 'Opened ') + '<b>' + btn.querySelector('.hc-section__title').textContent + '</b>');
       if (!open && btn.getAttribute('data-section') === 'full') {
-        cue.innerHTML = 'It waits there now. <b>Tap anywhere and the tap lands on what is under it</b>, ' +
-          'and the log says what that was.';
+        cue.innerHTML = state.study >= 'E'
+          ? 'That was all of it. <b>Replay</b> is in the rail, and it is worth asking how many ' +
+            'times you would have missed it entirely.'
+          : 'It waits there now. <b>Tap anywhere and the tap lands on what is under it</b>, ' +
+            'and the log says what that was.';
         after(340, bring);               // the fold settles
         after(600, run);                 // then a beat, then the hint
       }
@@ -1113,13 +1299,18 @@ body {
     });
   }
 
-  document.getElementById('studies').addEventListener('click', function (e) {
-    var b = e.target.closest('[data-study]');
-    if (!b) return;
-    state.study = b.getAttribute('data-study');
-    press(this, 'data-study', state.study);
-    log('Study <b>' + state.study + '</b>');
-    if (openAlready()) after(60, run);
+  /* Both racks are one choice: picking a sweep lets go of the words, and
+     picking words lets go of the sweep. */
+  ['studies', 'sweeps'].forEach(function (id) {
+    document.getElementById(id).addEventListener('click', function (e) {
+      var b = e.target.closest('[data-study]');
+      if (!b) return;
+      state.study = b.getAttribute('data-study');
+      press(document.getElementById('studies'), 'data-study', state.study);
+      press(document.getElementById('sweeps'), 'data-study', state.study);
+      log('Study <b>' + state.study + '</b>');
+      if (openAlready()) after(60, run);
+    });
   });
 
   document.getElementById('words').addEventListener('click', function (e) {
@@ -1143,6 +1334,14 @@ body {
     sw.setAttribute('aria-checked', t === 'dark' ? 'true' : 'false');
     sw.querySelector('.hc-switch').setAttribute('aria-checked', t === 'dark' ? 'true' : 'false');
   }
+
+  document.getElementById('place').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-place]');
+    if (!b) return;
+    state.place = b.getAttribute('data-place');
+    press(this, 'data-place', state.place);
+    if (openAlready()) after(60, run);
+  });
 
   document.getElementById('hlstyle').addEventListener('click', function (e) {
     var b = e.target.closest('[data-hl]');
