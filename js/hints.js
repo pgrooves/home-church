@@ -15,6 +15,12 @@
    under your thumb is a hint you are looking away from. Scrolling onto the
    words is the moment they have started reading them.
 
+   And if no scroll comes, a moment later anyway, provided the words are on
+   screen. Every section in a guide is folded now, Overview included, so the
+   likeliest first tap in the app opens the section at the top of the page and
+   leaves its first paragraph sitting there with nothing to scroll to. See the
+   note in sectionOpened().
+
    HOW OFTEN. Once per launch. Not once per section, not once per guide, and
    not once ever: closing the app and opening it again offers it again. There
    is nothing stored anywhere, which is deliberate, and it is why this file
@@ -66,6 +72,7 @@
   var HOLD         = 2000;  // ms the words sit there once they have landed
   var STILL_HOLD   = 3200;  // the same, under Reduce Motion, with no movement
   var SETTLE       = 140;   // ms of no scrolling that counts as having stopped
+  var NO_SCROLL    = 1100;  // ms to wait for a scroll that may never come
 
   var spent = false;        // has the one hint of this launch been used
   var armed = null;         // the block a scroll would fire the hint on
@@ -75,6 +82,7 @@
   var scrolledFrom = 0;     // where the page was when it was drawn
   var timers = [];
   var settleTimer = null;
+  var waiting = null;       // the scroll that may never come: see sectionOpened
 
   /* ------------------------------------------------------------- the policy
 
@@ -185,10 +193,34 @@
     var block = section.querySelector('[data-hl-path]');
     if (!block) return;      // Discussion Questions and the reflection prompts
     armed = block;
+
+    /* A SCROLL THAT MAY NEVER COME. The trigger is scrolling onto the words,
+       because that is the moment somebody has started reading them rather
+       than the moment the panel is still growing under their thumb. But a
+       section opened near the top of the page puts its first paragraph on
+       screen with nothing left to scroll to, and Overview is exactly that:
+       it is the first section in every guide and it is now folded like the
+       rest, so the most likely first tap in the app is the one that needs no
+       scroll at all.
+
+       So the scroll is given a moment to arrive, and if it does not, the same
+       question is asked anyway. shouldShow() still decides, and inView is
+       still part of it, so this only fires for prose somebody can actually
+       see. The wait is longer than the fold and longer than a thumb takes to
+       start moving, which is what keeps this from beating a real scroll to
+       it. */
+    if (waiting) clearTimeout(waiting);
+    waiting = setTimeout(function () {
+      waiting = null;
+      if (!armed || layer) return;
+      if (shouldShow(context(armed))) show(armed);
+    }, NO_SCROLL);
   }
 
   function onScroll() {
     if (!armed || spent || layer) return;
+    // A real scroll beats the fallback above to it.
+    if (waiting) { clearTimeout(waiting); waiting = null; }
     if (settleTimer) clearTimeout(settleTimer);
     /* Not during the fling. A marker drawn under a moving page is a smear,
        and the moment worth teaching is the one where somebody has stopped on
@@ -377,6 +409,7 @@
 
   function end(why) {
     if (settleTimer) { clearTimeout(settleTimer); settleTimer = null; }
+    if (waiting) { clearTimeout(waiting); waiting = null; }
     timers.forEach(clearTimeout);
     timers = [];
     if (!layer && !markLayer) return;

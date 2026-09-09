@@ -100,33 +100,42 @@ async function intoAGuide(page, base) {
   await page.waitForTimeout(400);
 }
 
-/* The section that is closed on arrival: Overview is open by default, so the
-   one worth opening is the next one with prose in it. */
+/* Open the nth still-folded section that has prose in it, and mark it, so
+   that what gets scrolled to afterwards is the section that was actually
+   opened rather than whichever one the layout happens to put there. Every
+   section in a guide is folded on arrival, so the first one is Overview. */
 async function openASection(page, which = 0) {
   const opened = await page.evaluate((n) => {
     const shut = Array.from(document.querySelectorAll('.hc-section'))
       .filter(s => s.querySelector('[data-hl-path]'))
       .filter(s => s.querySelector('.hc-section__toggle').getAttribute('aria-expanded') === 'false');
     if (!shut[n]) return null;
+    Array.from(document.querySelectorAll('[data-opened]'))
+      .forEach(el => el.removeAttribute('data-opened'));
+    shut[n].setAttribute('data-opened', 'true');
     shut[n].querySelector('.hc-section__toggle').click();
-    return shut[n].querySelector('[data-hl-path]') ? true : null;
+    return true;
   }, which);
   await page.waitForTimeout(450);   // the fold
   return opened;
 }
 
-/* Scroll the opened prose into view, the way a thumb would, and let it
-   settle. */
-async function scrollOnto(page, which = 0) {
-  await page.evaluate((n) => {
-    const shut = Array.from(document.querySelectorAll('.hc-section'))
-      .filter(s => s.querySelector('[data-hl-path]'));
-    const block = shut[n + 1] && shut[n + 1].querySelector('[data-hl-path]');
-    const el = block || document.querySelectorAll('[data-hl-path]')[1];
+/* Scroll the prose of the section that was just opened into view, the way a
+   thumb would, and let it settle. */
+async function scrollOnto(page) {
+  await page.evaluate(() => {
+    const el = document.querySelector('[data-opened] [data-hl-path]');
     const scroller = document.getElementById('hc-scroll');
     scroller.scrollTop += el.getBoundingClientRect().top - 160;
-  }, which);
+  });
   await page.waitForTimeout(1400);   // settle, draw, and the words
+}
+
+/* The other way in: open a section whose prose is already on screen and never
+   scroll at all. This is what tapping Overview does, and before the fallback
+   in js/hints.js existed it showed nothing. */
+async function justWait(page) {
+  await page.waitForTimeout(2000);   // the fallback, the draw, and the words
 }
 
 const marks = page => page.evaluate(() => document.querySelectorAll('.hc-hint__mark').length);
@@ -213,7 +222,7 @@ const said  = page => page.evaluate(() => {
 
     /* ------------------------------------------------------- once a launch */
     await openASection(page, 0);
-    await scrollOnto(page, 1);
+    await scrollOnto(page);
     ok('a second section this launch gets nothing', await marks(page), 0);
 
     /* ---------------------------------------------------- and again on a relaunch */
@@ -222,6 +231,23 @@ const said  = page => page.evaluate(() => {
     await scrollOnto(page);
     ok('a relaunch offers it again', await marks(page) > 0, true);
     await page.waitForTimeout(2800);   // let it go on its own; a tap will not
+
+    /* ------------------------------------------- the scroll that never comes */
+    /* Overview is the first section in every guide and it is folded like the
+       rest, so the likeliest first tap in the app opens a section whose prose
+       is already on screen with nothing left to scroll to. Wiring the trigger
+       to the scroll alone meant that person saw nothing, ever. Found by
+       folding Overview, not by reading the code. */
+    await intoAGuide(page, base);
+    await page.evaluate(() => { document.getElementById('hc-scroll').scrollTop = 0; });
+    await openASection(page);
+    ok('the first section is on screen without scrolling', await page.evaluate(() => {
+      const r = document.querySelector('[data-opened] [data-hl-path]').getBoundingClientRect();
+      return r.top < window.innerHeight && r.bottom > 0;
+    }), true);
+    await justWait(page);
+    ok('and it shows anyway, with no scroll at all', await marks(page) > 0, true);
+    await page.waitForTimeout(2600);
 
     /* ---------------------------------------------------------- the switch */
     await page.evaluate(() => {
