@@ -22,9 +22,27 @@ description of the app.
 | `js/hints.js` | One hint, no registry. A sentence marks itself the first time somebody scrolls onto a section they just opened, a card says what that means, and the docked bar appears ghosted where the real one lands. |
 | The trigger | Opening a section arms it; the scroll settling on the words fires it. Not the tap: a hint drawn under the thumb that opened the panel is a hint nobody is looking at. |
 | How often | Once per launch, from a variable that dies with the launch. Nothing is stored and nothing is counted, so §5's happiest consequence survives. |
-| How long | Two seconds after the words land, then a soft fade. Any tap ends it sooner and still lands on whatever was under it. |
+| How long | Two seconds after the words land, then a soft fade, and that is very nearly the only way it goes. **A tap does not end it**, and §3b no longer describes what ships: see below. |
 | The switch | Your account → Display → Hints. One switch for every hint there will ever be, asked first in `shouldShow()` so nothing can route around it. `hints: true` is the only thing added to the stored profile. |
 | `.hc-hl` | **Changed for everybody.** The kept-text treatment was a wash in the bottom of the line, which read as an underline. It is a marker behind the words now, at a strength per theme. Every highlight anybody had already made is redrawn by this. |
+
+**§3a still holds and §3b does not.** They were always two rules wearing one
+sentence, and shipping separated them. *The layer never takes a tap* is
+untouched and is not negotiable: `pointer-events: none` on the layer and every
+child, so every tap during those two seconds lands on whatever is under it
+exactly as it would have. *Any pointerdown ends it* is gone. That rule was
+written for a hint with no clock on it, where going on with what you were
+doing had to be the way it went away. This one has a clock, and ending on the
+first touch as well meant the touch that scrolled onto the words could end it
+before it had finished arriving, which is a hint nobody sees. There is nothing
+to dismiss, because it is already leaving.
+
+A scroll no longer ends it either. It is drawn in viewport coordinates, so the
+two boxes that belong to the page are translated by however far the page has
+moved, and the marker stays on its words while somebody reads on. The one
+thing that still cuts it short is starting a selection, which is not a
+dismissal: it is the thing the hint was asking for, and the real bar needs the
+band the ghost is standing in.
 
 **Why this one and why alone.** §12 asked for one hint at a time, watched.
 This is the one Tier 1 calls the app's most undiscoverable feature, it is the

@@ -2563,8 +2563,13 @@ a.hc-card:active { background: var(--hc-paper-sunk); }
 
    IT NEVER TAKES A TAP. pointer-events: none on the layer and every child,
    and that line is the whole promise: there is no Got it, no x, and nothing
-   to dismiss, because tapping through it is how it goes away. Any softening
-   of this makes it a modal.
+   to dismiss. Every tap during the two seconds it is up lands on whatever is
+   under it, exactly as it would have if the hint had not been there. Any
+   softening of this makes it a modal.
+
+   IT IS ALSO NOT ENDED BY THAT TAP. It has a clock instead: it arrives, it
+   sits for two seconds, it fades. See the note where the tap listener used to
+   be in js/hints.js.
 
    EVERY MOVING PART IS transform OR opacity. HINTS.md §12 blames the stutter
    that got the last attempt at hints reverted on a shape that animated
@@ -2626,6 +2631,13 @@ a.hc-card:active { background: var(--hc-paper-sunk); }
 }
 
 .hc-hint__mark[data-in="true"] { transform: scaleX(1); }
+
+/* The box the card rides in, so that following a scroll and arriving are two
+   transforms on two elements rather than one fighting the other. */
+.hc-hint__follow {
+  position: absolute;
+  inset: 0;
+}
 
 /* The words, and the bar. Both arrive the way the toast does: a short rise
    and a fade, nothing springy. */
