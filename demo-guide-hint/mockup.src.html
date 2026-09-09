@@ -151,6 +151,12 @@ body {
   --hc-tabbar-tile:linear-gradient(180deg, rgba(255,255,255,0.96), rgba(247,244,239,0.86));
   --hc-tabbar-tile-edge:rgba(122,110,95,0.18);
   --hc-gold:#D7BA85;
+
+  /* The highlight itself. Not a token in the app today: the app draws
+     .hc-hl as a gradient in the bottom of the line, and this is what a
+     marker behind the whole word looks like instead. Ink on paper stays
+     ink, because the wash is painted under the text and not over it. */
+  --hint-wash: color-mix(in srgb, var(--hc-accent) 78%, transparent);
 }
 .stage[data-hc="dark"] {
   --hc-paper:#1A1918; --hc-paper-sunk:#201E1D; --hc-cream:#232120;
@@ -163,6 +169,10 @@ body {
   --hc-tabbar-tile:linear-gradient(180deg, rgba(247,244,239,0.15), rgba(247,244,239,0.055));
   --hc-tabbar-tile-edge:rgba(207,193,174,0.30);
   --hc-gold:#CBAC74;
+
+  /* Lighter in the dark, and much less of it. Paper text over a full
+     strength taupe on charcoal is a contrast failure, not a highlight. */
+  --hint-wash: color-mix(in srgb, var(--hc-accent) 34%, transparent);
 }
 
 /* ---- app chrome ---------------------------------------------------------- */
@@ -311,29 +321,49 @@ body {
 }
 
 /* ==========================================================================
-   THE HINT LAYER
-   pointer-events: none on the layer and every child, per HINTS.md §3a.
-   Every moving part below is transform or opacity, never a background.
+   THE HINT
+   Two layers, and which side of the words they are on is the whole point.
+
+   The wash is UNDER the prose, so the words sit on top of it the way ink
+   sits on a marker stripe. The words of the hint are OVER everything. Both
+   are pointer-events: none, per HINTS.md §3a, so neither can take a tap.
+
+   Every moving part is transform or opacity, never a background.
    ========================================================================== */
-.hint-layer, .hint-layer * { pointer-events: none !important; }
+.hint-layer, .hint-layer *,
+.wash-layer, .wash-layer * { pointer-events: none !important; }
+
+.wash-layer {
+  position: absolute; top: 0; left: 0; right: 0; height: 0;
+  z-index: 0;
+}
 .hint-layer {
   position: absolute; top: 0; left: 0; right: 0; height: 0;
   z-index: 6;
 }
+/* the page rides above the wash and below the words */
+.hc-guide, .hc-settings { position: relative; z-index: 1; }
 
 /* the wash, one box per line box of the sentence, scaled from its left edge */
 .hint-wash {
   position: absolute;
   transform: scaleX(0);
   transform-origin: left center;
-  border-radius: 2px;
-  background: linear-gradient(to top,
-    color-mix(in srgb, var(--hc-accent) 46%, transparent) 9px,
-    transparent 9px);
+  border-radius: 3px;
+  background: var(--hint-wash);
   transition: transform 420ms var(--hc-ease-enter), opacity 200ms var(--hc-ease);
 }
 .hint-wash.in { transform: scaleX(1); }
 .hint-wash.out { opacity: 0; }
+
+/* The comparison: what the app's highlight looks like today. A wash in the
+   bottom half of the line rather than a block behind the whole of it. */
+.phone[data-hlstyle="wash"] .hint-wash {
+  background: linear-gradient(to top,
+    color-mix(in srgb, var(--hc-accent) 42%, transparent) 11px,
+    transparent 11px);
+}
+.phone[data-hlstyle="block"] .hc-hl { background: var(--hint-wash); }
 
 /* the words, in four dresses */
 .hint-say {
@@ -581,18 +611,18 @@ body {
 
   <header class="mast">
     <p class="mast__eyebrow">Home Church &middot; hint studies</p>
-    <h1 class="mast__h">Five ways to say the words can be kept</h1>
-    <p class="mast__sub">The first hint fires the first time somebody opens a folded section in a guide. A sentence
-      highlights itself, and something says why. All five are drawn on the shipping tokens, the real geometry, and
-      real guide text, so what the hint has to sit next to is what it will really have to sit next to.
-      <b>Tap a section header on the phone.</b></p>
+    <h1 class="mast__h">Four ways to say the words can be kept</h1>
+    <p class="mast__sub">Every launch, the first time a folded section in a guide is opened, a sentence highlights
+      itself and says why. It stays until you tap, or until Hints is switched off in Your account. All four are
+      drawn on the shipping tokens, the real geometry, and real guide text, so what the hint has to sit next to is
+      what it will really have to sit next to. <b>Tap a section header on the phone.</b></p>
   </header>
 
   <div class="bench">
 
     <div class="left">
       <div class="stage" data-hc="light" id="stage">
-        <div class="phone" data-view="guide" data-motion="full" id="phone">
+        <div class="phone" data-view="guide" data-motion="full" data-hlstyle="block" id="phone">
 
           <div class="hc-bar">
             <button type="button" class="hc-bar__back" data-log="the back arrow" aria-label="Back">
@@ -602,6 +632,10 @@ body {
           </div>
 
           <div class="hc-scroll" id="scroll">
+
+            <!-- Under the words, so the words sit on the marker rather than
+                 behind a film of it. -->
+            <div class="wash-layer" id="washLayer" aria-hidden="true"></div>
 
             <!-- ------------------------------------------------ the guide -->
             <div class="hc-guide" id="guideView">
@@ -753,8 +787,8 @@ body {
         </div>
       </div>
 
-      <p class="cue" id="cue"><b>Tap Sermon Summary</b> to open it. The hint runs a beat after the panel settles, and
-        every tap you make lands on whatever is under it.</p>
+      <p class="cue" id="cue"><b>Tap Sermon Summary</b> to open it. The hint runs a beat after the panel settles and
+        then waits, and every tap you make lands on whatever is under it.</p>
     </div>
 
     <!-- ------------------------------------------------------------- rail -->
@@ -763,11 +797,10 @@ body {
       <section class="card">
         <h2 class="card__h">The study</h2>
         <div class="studies" id="studies">
-          <button type="button" class="study" data-study="A"><b>A</b><span>The wash alone<em>No words. The sentence lights and lets go.</em></span></button>
-          <button type="button" class="study" data-study="B"><b>B</b><span>A line under it<em>Caption type on bare paper. Nothing drawn.</em></span></button>
-          <button type="button" class="study" data-study="C" aria-pressed="true"><b>C</b><span>A paper card<em>The guides&rsquo; left edge rule. A bubble in this app&rsquo;s hand.</em></span></button>
-          <button type="button" class="study" data-study="D"><b>D</b><span>A bubble with a tail<em>The literal reading. Ink, caret, pointing at the line.</em></span></button>
-          <button type="button" class="study" data-study="E"><b>E</b><span>The real bar, ghosted<em>Shows where the offer actually lands.</em></span></button>
+          <button type="button" class="study" data-study="A"><b>A</b><span>A line under it<em>Caption type on bare paper. Nothing drawn around it.</em></span></button>
+          <button type="button" class="study" data-study="B" aria-pressed="true"><b>B</b><span>A paper card<em>The guides&rsquo; left edge rule. A bubble in this app&rsquo;s hand.</em></span></button>
+          <button type="button" class="study" data-study="C"><b>C</b><span>A bubble with a tail<em>The literal reading. Ink, caret, pointing at the line.</em></span></button>
+          <button type="button" class="study" data-study="D"><b>D</b><span>The card and the bar<em>Says what, and shows where the offer lands.</em></span></button>
         </div>
       </section>
 
@@ -779,6 +812,13 @@ body {
             <button type="button" class="opt" data-w="1">Anything here can be kept.</button>
             <button type="button" class="opt" data-w="2">Hold a line, and it is yours.</button>
             <button type="button" class="opt" data-w="3">Your notes can start on any line.</button>
+          </div>
+        </div>
+        <div class="grp">
+          <span class="grp__label">The highlight</span>
+          <div class="opts" id="hlstyle">
+            <button type="button" class="opt" data-hl="block" aria-pressed="true">Behind the words</button>
+            <button type="button" class="opt" data-hl="wash">The app&rsquo;s today</button>
           </div>
         </div>
         <div class="grp">
@@ -820,21 +860,32 @@ body {
         <p>Highlighting is the least discoverable thing in the app. The bar that offers <strong>Note this</strong> is
           docked above the tab bar and only exists once something is already selected, so there is nothing on screen
           to find. Nothing can be pointed at, so the hint performs it instead.</p>
-        <p>The wash is the app's own <code>.hc-hl</code> treatment, drawn line by line from the left, the way a thumb
-          would drag it.</p>
+        <p>The marker is drawn line by line from the left, the way a thumb would drag it, and it is painted
+          <strong>under</strong> the prose so the words sit on top of it rather than behind a film of it.</p>
       </div>
       <div class="note">
-        <h3>It never takes a tap</h3>
-        <p><code>pointer-events: none</code> on the layer and every child. Tap the words under the card and the words
-          get the tap; the log says what it landed on. There is no <strong>Got it</strong>, no x, and nothing to
-          dismiss, because going on with what you were doing is how this app puts things away.</p>
-        <p>Any pointerdown ends it, any scroll ends it, and it ends itself after six seconds.</p>
+        <h3>This changes the app's real highlight</h3>
+        <p>What the app draws today is the second option in <strong>The highlight</strong>: a wash in the bottom of
+          the line, closer to an underline than a marker. Switch between them and watch the existing highlight in the
+          Overview change with it.</p>
+        <p>Making the hint a block behind the words means changing <code>.hc-hl</code> in
+          <code>css/components.css</code>, which restyles <strong>every highlight anybody has already made</strong>.
+          Worth doing, probably, but it is a change to the app and not to the hint.</p>
+      </div>
+      <div class="note">
+        <h3>It stays, and it never takes a tap</h3>
+        <p>Every launch, on the first folded section opened, it shows and then waits. No timer. Scrolling does not
+          put it away either, because it is drawn in the page's own coordinates and travels with the sentence.
+          A tap ends it, and switching Hints off ends it.</p>
+        <p><code>pointer-events: none</code> on both layers and every child, so the tap that ends it also lands on
+          whatever was under it. Tap the words through the card and the log says so. There is no <strong>Got
+          it</strong> and no x: going on with what you were doing is how this app puts things away.</p>
       </div>
       <div class="note">
         <h3>Reduce Motion degrades, never refuses</h3>
-        <p>This hint is information, not decoration, so stillness must not cost it. Under Reduce Motion the wash is
-          simply present, the words simply present, held a beat longer because there is no movement to catch the eye.
-          Switch it in the rail and replay.</p>
+        <p>This hint is information, not decoration, so stillness must not cost it. Under Reduce Motion the marker is
+          simply present and the words simply present, with nothing drawing itself. Same words, same place, no
+          movement. Switch it in the rail and replay.</p>
       </div>
       <div class="note">
         <h3>The switch, and why it says so</h3>
@@ -876,12 +927,13 @@ body {
   var MARKER = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h16"/>' +
                '<path d="M14.5 4.5a2 2 0 0 1 3 3L9 16l-4 1 1-4z"/></svg>';
 
-  var state = { study: 'C', words: 0, footprint: false, on: true, running: false };
+  var state = { study: 'B', words: 0, footprint: false, on: true, running: false };
 
   var phone     = document.getElementById('phone');
   var stage     = document.getElementById('stage');
   var scroll    = document.getElementById('scroll');
   var layer     = document.getElementById('hintLayer');
+  var washLayer = document.getElementById('washLayer');
   var target    = document.getElementById('hintTarget');
   var logEl     = document.getElementById('log');
   var cue       = document.getElementById('cue');
@@ -909,11 +961,14 @@ body {
 
   function clearHint(reason) {
     clearTimers();
-    if (!state.running) { layer.innerHTML = ''; return; }
+    if (!state.running) { layer.innerHTML = ''; washLayer.innerHTML = ''; return; }
     state.running = false;
-    Array.prototype.forEach.call(layer.children, function (el) { el.classList.add('out'); });
-    var kill = layer;
-    setTimeout(function () { if (!state.running) kill.innerHTML = ''; }, 240);
+    [layer, washLayer].forEach(function (l) {
+      Array.prototype.forEach.call(l.children, function (el) { el.classList.add('out'); });
+    });
+    setTimeout(function () {
+      if (!state.running) { layer.innerHTML = ''; washLayer.innerHTML = ''; }
+    }, 240);
     if (reason) log('<b>Ended</b> on ' + reason, true);
   }
 
@@ -928,11 +983,11 @@ body {
       if (r.width < 2) continue;
       var el = document.createElement('div');
       el.className = 'hint-wash';
-      el.style.left   = (r.left - sr.left) + 'px';
-      el.style.top    = (r.top - sr.top + scroll.scrollTop - 1) + 'px';
-      el.style.width  = r.width + 'px';
-      el.style.height = (r.height + 3) + 'px';
-      layer.appendChild(el);
+      el.style.left   = (r.left - sr.left - 2) + 'px';
+      el.style.top    = (r.top - sr.top + scroll.scrollTop - 3) + 'px';
+      el.style.width  = (r.width + 4) + 'px';
+      el.style.height = (r.height + 6) + 'px';
+      washLayer.appendChild(el);
       out.push(el);
     }
     return { els: out, rects: rects, sr: sr };
@@ -940,10 +995,14 @@ body {
 
   function saySkin() {
     var w = WORDS[state.words];
-    if (state.study === 'B') return '<div class="say--line">' + MARKER + '<span>' + w + '</span></div>';
-    if (state.study === 'C') return '<div class="say--card">' + PENCIL + '<span>' + w + '</span></div>';
-    if (state.study === 'D') return '<div class="say--bubble">' + PENCIL + '<span>' + w + '</span></div>';
-    return '';
+    if (state.study === 'A') return '<div class="say--line">' + MARKER + '<span>' + w + '</span></div>';
+    if (state.study === 'C') return '<div class="say--bubble">' + PENCIL + '<span>' + w + '</span></div>';
+    return '<div class="say--card">' + PENCIL + '<span>' + w + '</span></div>';   // B and D
+  }
+
+  function barSkin() {
+    return '<div class="say--bar"><span class="btn">' + PENCIL + 'Note this</span>' +
+           '<span class="rule"></span><span class="btn">' + MARKER + 'Highlight</span></div>';
   }
 
   function run() {
@@ -956,6 +1015,7 @@ body {
     t0 = Date.now();
     state.running = true;
     layer.innerHTML = '';
+    washLayer.innerHTML = '';
     log('Armed on the first block of the Sermon Summary');
 
     var w = washes();
@@ -966,44 +1026,43 @@ body {
     w.els.forEach(function (el, i) {
       after(20 + i * step, function () { el.classList.add('in'); });
     });
-    log(w.els.length === 1 ? 'The wash draws across one line' :
-        'The wash draws across ' + w.els.length + ' lines' + (still ? ', at once' : ', in order'));
+    log(w.els.length === 1 ? 'The marker draws across one line' :
+        'The marker draws across ' + w.els.length + ' lines' + (still ? ', at once' : ', in order'));
 
     var lastRect = w.rects[w.rects.length - 1];
     var lineEnd  = 20 + (w.els.length - 1) * step + draw;
 
-    /* E puts the real bar where the real bar goes. Everything else sits
-       under the sentence it is about. */
+    /* The words. Always, in every study: something has to say what the
+       marker means. D adds the real bar underneath, where it really lands. */
     var say = document.createElement('div');
     say.className = 'hint-say';
+    say.style.left = '0px';
+    say.style.right = '0px';
+    say.style.top = (lastRect.bottom - w.sr.top + scroll.scrollTop +
+                     (state.study === 'C' ? 14 : 10)) + 'px';
+    say.innerHTML = '<div style="display:flex;position:relative;justify-content:' +
+      (state.study === 'C' ? 'center' : 'flex-start') + '">' + saySkin() + '</div>';
+    layer.appendChild(say);
 
-    if (state.study === 'E') {
-      say.className = 'hint-say say--bar-wrap';
-      say.style.top = (scroll.scrollTop + scroll.clientHeight - 136) + 'px';
-      say.innerHTML =
-        '<div class="say--bar"><span class="btn">' + PENCIL + 'Note this</span>' +
-        '<span class="rule"></span><span class="btn">' + MARKER + 'Highlight</span></div>';
-    } else if (state.study !== 'A') {
-      say.style.left = '0px';
-      say.style.right = '0px';
-      say.style.top = (lastRect.bottom - w.sr.top + scroll.scrollTop + (state.study === 'D' ? 14 : 10)) + 'px';
-      say.innerHTML = '<div style="display:flex;position:relative;justify-content:' +
-        (state.study === 'D' ? 'center' : 'flex-start') + '">' + saySkin() + '</div>';
+    var bar = null;
+    if (state.study === 'D') {
+      bar = document.createElement('div');
+      bar.className = 'hint-say say--bar-wrap';
+      bar.style.top = (scroll.scrollTop + scroll.clientHeight - 136) + 'px';
+      bar.innerHTML = barSkin();
+      layer.appendChild(bar);
     }
 
-    if (state.study !== 'A') {
-      layer.appendChild(say);
-      after(lineEnd + (still ? 0 : 240), function () {
-        say.classList.add('in');
-        var bar = say.querySelector('.say--bar');
-        if (bar) bar.classList.add('in');
-        log(state.study === 'E' ? 'The bar arrives where it really lives, above the plinth'
-                                : 'The words arrive under the line');
-      });
-    }
-
-    var hold = still ? 7500 : 6000;
-    after(lineEnd + hold, function () { clearHint('its own timer, ' + (hold / 1000) + 's'); });
+    after(lineEnd + (still ? 0 : 240), function () {
+      say.classList.add('in');
+      log('The words arrive under the line');
+      if (bar) {
+        bar.classList.add('in');
+        bar.querySelector('.say--bar').classList.add('in');
+        log('The bar shows where the offer really lands, above the plinth');
+      }
+      after(400, function () { log('It stays. Only a tap puts it away.'); });
+    });
   }
 
   /* ------------------------------------------------------- the death list */
@@ -1019,9 +1078,10 @@ body {
     }
   }, true);
 
-  scroll.addEventListener('scroll', function () {
-    if (state.running) clearHint('a scroll');
-  }, { passive: true });
+  /* A scroll does NOT end it any more. The marker and the words are drawn in
+     the scroller's own coordinates, so they travel with the sentence they are
+     about, and reading down the page does not put away something you have not
+     answered yet. Only a tap does, and turning Hints off. */
 
   document.addEventListener('visibilitychange', function () {
     if (document.hidden && state.running) clearHint('the app going to the background');
@@ -1037,7 +1097,7 @@ body {
       panel.setAttribute('data-open', open ? 'false' : 'true');
       log((open ? 'Folded ' : 'Opened ') + '<b>' + btn.querySelector('.hc-section__title').textContent + '</b>');
       if (!open && btn.getAttribute('data-section') === 'full') {
-        cue.innerHTML = 'Tap anywhere while it is up. <b>The tap lands on what is under it</b>, ' +
+        cue.innerHTML = 'It waits there now. <b>Tap anywhere and the tap lands on what is under it</b>, ' +
           'and the log says what that was.';
         after(340, bring);               // the fold settles
         after(600, run);                 // then a beat, then the hint
@@ -1083,6 +1143,15 @@ body {
     sw.setAttribute('aria-checked', t === 'dark' ? 'true' : 'false');
     sw.querySelector('.hc-switch').setAttribute('aria-checked', t === 'dark' ? 'true' : 'false');
   }
+
+  document.getElementById('hlstyle').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-hl]');
+    if (!b) return;
+    phone.setAttribute('data-hlstyle', b.getAttribute('data-hl'));
+    press(this, 'data-hl', b.getAttribute('data-hl'));
+    log('The highlight: <b>' + (b.getAttribute('data-hl') === 'block'
+      ? 'behind the words' : 'the wash the app draws today') + '</b>');
+  });
 
   document.getElementById('motion').addEventListener('click', function (e) {
     var b = e.target.closest('[data-motion]');
