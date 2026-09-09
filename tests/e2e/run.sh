@@ -71,6 +71,13 @@ node "$(dirname "$0")/swipe.js" || exit 1
 # counted rather than made, because what it needs a browser for is a finger.
 node "$(dirname "$0")/pull.js" || exit 1
 
+# The one hint, which is a rectangle on the glass at a moment and therefore
+# cannot be asked about any other way. tests/hints.test.js covers the policy;
+# what is here is whether it is armed by the right thing, drawn on the right
+# words, and gone through rather than tapped. See HINTS.md §12 for why a hint
+# that fails silently is the failure this file exists to make loud.
+node "$(dirname "$0")/hints.js" || exit 1
+
 # Search and the two discs in the top bar. Same terms again, and here for the
 # same reason: what is left over once tests/search.test.js has asked
 # everything that can be asked without a page is all layout and traffic.

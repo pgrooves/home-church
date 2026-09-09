@@ -144,7 +144,20 @@
     role: 'member',
     // Face ID in front of the Journal. Off by default, and only offered on a
     // phone that can actually do it. See js/native.js and js/journal.js.
-    lockJournal: false
+    lockJournal: false,
+    /* The small pointers to the things in this app that nothing else
+       announces. One switch for all of them, present and future, because
+       somebody who does not want to be shown things does not want to say so
+       nine times. On by default: the one hint there is points at the least
+       discoverable feature in the app, and a person who has already found it
+       will see it once and never again.
+
+       IT IS THE WHOLE OF THE STORED STATE. How many times a hint has run,
+       which ones have been seen and which are retired are all deliberately
+       not here. See the note at the top of js/hints.js: the one hint is once
+       per launch, held in a variable that dies with the launch, and nothing
+       counts anything. */
+    hints: true
   };
 
   var state = {
