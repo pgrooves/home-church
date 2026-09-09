@@ -183,7 +183,7 @@
     return MODULE_ROUTES.indexOf(name) !== -1;
   }
 
-  var mount, scroller, topbar, tabbar, totop, backdisc, pinbar;
+  var mount, scroller, topbar, tabbar, totop, backdisc, pinbar, jlink;
   var sheet, sheetGrid, sheetScrim, sheetGrab;
 
   /* ------------------------------------------------------------- the shell */
@@ -314,6 +314,13 @@
         '</svg>' +
       '</button>' +
 
+      /* And the third thing on that row, between them. Empty until
+         paintJournalLink() fills it, which is on a view change and nowhere
+         else: what it says depends on where you are, and where you are does
+         not change while you scroll. */
+      '<button type="button" class="hc-jlink" id="hc-jlink" ' +
+          'data-show="false" data-mode="" aria-hidden="true" tabindex="-1"></button>' +
+
       /* The overflow sheet, and the paper behind it. Both live in the shell
          rather than in a screen, for the same reason the tab bar does: they
          belong to the app, not to whatever is currently on. See the block
@@ -354,6 +361,7 @@
     tabbar = document.getElementById('hc-tabbar');
     totop = document.getElementById('hc-totop');
     backdisc = document.getElementById('hc-back');
+    jlink = document.getElementById('hc-jlink');
     pinbar = document.getElementById('hc-pinbar');
     sheet = document.getElementById('hc-oversheet');
     sheetGrid = document.getElementById('hc-oversheet-grid');
@@ -637,6 +645,10 @@
     // it was left. Either way the discs belong to this view and not the last
     // one, and the scroll handler picks them up from here.
     paintDiscs();
+
+    // The pill between them says where you are, so it is settled here and not
+    // on the scroll: a view change is the only thing that can move it.
+    paintJournalLink();
 
     paintAvatar();
 
@@ -1020,6 +1032,69 @@
     setDisc(backdisc, !chromeless && !HC.router.isStop(route));
   }
 
+  /* ------------------------------------------------------- the journal pill
+
+     The third thing on the disc row. Two states and one element:
+
+       in a guide      MY JOURNAL      →   your entries for that guide
+       in the journal  ← BACK TO GUIDE     the guide you came from
+
+     THE SECOND ONE IS NOT A MODE THIS FILE REMEMBERS. It is the route: a
+     journal reached from a guide is `{ name: 'journal', id: guideId }`, and
+     the Journal opened from ••• has no id on it. So the pill appears exactly
+     when you got there from a guide and never otherwise, the address says
+     which guide, and a reload or a shared link lands in the same place. The
+     alternative was a variable in here saying where somebody came from, which
+     would have had to be cleared on every other way out of the Journal and
+     would have been wrong the first time one was missed.
+
+     IT IS UP THE WHOLE TIME, not past a scroll like the back to top disc. It
+     is the way to something rather than a way back up, and a link that has to
+     be scrolled into existence is a link nobody finds. */
+  function paintJournalLink() {
+    if (!jlink) return;
+
+    var route = HC.router.current();
+    var chromeless = !route || route.name === 'present';
+    var mode = '';
+    var guideId = '';
+
+    if (!chromeless && route.name === 'guide-reader' && HC.data.getGuide(route.id)) {
+      mode = 'to-journal';
+      guideId = route.id;
+    } else if (!chromeless && route.name === 'journal' && route.id && HC.data.getGuide(route.id)) {
+      mode = 'to-guide';
+      guideId = route.id;
+    }
+
+    // Same rule as a disc that is down: out of the reading order and out of
+    // the tab order, so there is no button here for anybody to reach.
+    setDisc(jlink, !!mode);
+
+    // Nothing else to do when it says what it already said. This runs on
+    // every view change, and rewriting the same markup would restart the
+    // arrow's own transition for no reason.
+    if (jlink.getAttribute('data-mode') === mode && jlink.getAttribute('data-id') === guideId) return;
+    jlink.setAttribute('data-mode', mode);
+    jlink.setAttribute('data-id', guideId);
+    if (!mode) { jlink.innerHTML = ''; return; }
+
+    var toJournal = mode === 'to-journal';
+
+    /* The arrow leads on the way back and follows on the way out, which is
+       the way every other back and forward in this app is drawn, and the way
+       a sentence reads. */
+    jlink.setAttribute('data-action', toJournal ? 'guide-journal' : 'journal-guide');
+    jlink.setAttribute('aria-label', toJournal
+      ? 'Your journal for this guide'
+      : 'Back to the guide');
+    jlink.innerHTML = toJournal
+      ? '<span class="hc-jlink__text">My journal</span>' +
+        c.icon('arrowRight', 'hc-jlink__icon')
+      : c.icon('arrowLeft', 'hc-jlink__icon') +
+        '<span class="hc-jlink__text">Back to guide</span>';
+  }
+
   function watchScroll() {
     var ticking = false;
     scroller.addEventListener('scroll', function () {
@@ -1107,6 +1182,24 @@
 
     'go-guide': function () {
       HC.router.go({ name: 'guide' });
+    },
+
+    /* --------------------------------------------------- the journal pill
+
+       Both halves of the round trip between a guide and what you wrote about
+       it. The guide's id rides on the route in both directions: it is what
+       scopes the Journal on the way there, and what names the guide to come
+       back to. See paintJournalLink().
+
+       restore:true on the way back, so a guide you had read half of opens
+       where you left it rather than at the masthead. The Journal keeps its
+       own place the same way when you go out to an entry and return. */
+    'guide-journal': function (el) {
+      HC.router.go({ name: 'journal', id: el.getAttribute('data-id') });
+    },
+
+    'journal-guide': function (el) {
+      HC.router.go({ name: 'guide-reader', id: el.getAttribute('data-id'), restore: true });
     },
 
     'go-leader': function () {
@@ -4550,6 +4643,13 @@
          look at every row. A pin toggled on the third announcement in the
          table is exactly the change it would miss. */
       paintPinBar();
+
+      /* Same argument, different chrome. The journal pill asks HC.data
+         whether the guide named on the address actually exists, and a phone
+         opened cold on a link to a guide asks that before the catalogue has
+         landed. Without this the pill would be missing on exactly the arrival
+         that has no other way to the journal. */
+      paintJournalLink();
 
       var route = HC.router.current();
       if (route && route.name === 'profile') {

@@ -1972,6 +1972,155 @@ a.hc-card:active { background: var(--hc-paper-sunk); }
   .hc-disc:active { transform: none; }
 }
 
+
+/* --------------------------------------------------------------------------
+   The journal pill. The third thing on the disc row, and the only one of the
+   three that says what it does in words.
+
+   In a guide it says MY JOURNAL and goes to what you have written about that
+   guide. In the journal you got to that way it says BACK TO GUIDE and takes
+   you back, arrow the other way round. One element, painted by
+   paintJournalLink() in js/app.js, because two would eventually disagree
+   about where they sit.
+
+   THE SAME MATERIAL AS THE DISCS, DELIBERATELY. The gold skin, the hairline
+   edge, the sheen and the blur, so the row above the plinth reads as one set
+   of three objects rather than as two arrows with a caption between them.
+   The ink is --hc-gold-ink, which is what the arrows in the discs are drawn
+   in: gold is the surface here, never the type. Type set in --hc-gold on
+   this app's paper measures 1.70:1 and fails at any size, which is why the
+   words are dark on gold rather than gold on paper.
+
+   ON THE HEIGHT, AND WHY IT IS TWO RECTANGLES. The capsule is 34px because
+   that is what looks right beside a 44px disc. The button is 44px, which is
+   --hc-tap-min, so the paint is drawn on ::before and the target is the
+   element. Shrinking the button instead loses ten pixels of target with
+   nothing on screen looking wrong.
+
+   CENTRED ON ITS OWN, NOT IN A BAND. left: 50% and a translate rather than a
+   full width strip with the pill inside it: a strip spanning the gap between
+   the discs is a rectangle of dead pointer events over live guide prose, and
+   this app has been bitten by an invisible layer eating taps before.
+   -------------------------------------------------------------------------- */
+
+.hc-jlink {
+  position: fixed;
+  left: 50%;
+  bottom: calc(var(--hc-tabbar-space) + env(safe-area-inset-bottom));
+  z-index: 45;                    /* beside the discs, under the toast */
+
+  /* Clear of both discs at every width: the inset each one floats on, its
+     44px, and a space between. On the narrowest phone this leaves 172px. */
+  max-width: calc(100% - ((var(--hc-tabbar-inset) + var(--hc-tap-min) + var(--hc-space-sm)) * 2));
+
+  height: var(--hc-tap-min);
+  padding: 0 16px;
+  margin: 0;
+  border: 0;
+  background: transparent;
+  color: var(--hc-gold-ink);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  isolation: isolate;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+
+  font-family: var(--hc-sans);
+  font-weight: 650;
+  font-size: 10px;
+  line-height: 13px;
+  letter-spacing: var(--hc-track-eyebrow);
+  text-transform: uppercase;
+  white-space: nowrap;
+
+  /* Down by default, like the discs, and for the same reason: everything
+     that puts it up is in the state below. */
+  opacity: 0;
+  transform: translate(-50%, 10px);
+  pointer-events: none;
+  transition: opacity var(--hc-dur-fast) var(--hc-ease),
+              transform var(--hc-dur-fast) var(--hc-ease-enter);
+}
+
+/* The capsule, and the sheen over it. Both inset five pixels top and bottom
+   off a 44px button, which is the 34px pill. */
+.hc-jlink::before,
+.hc-jlink::after {
+  content: "";
+  position: absolute;
+  inset: 5px 0;
+  border-radius: var(--hc-radius-pill);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.hc-jlink::before {
+  border: var(--hc-hairline) solid var(--hc-gold-edge);
+  background: var(--hc-gold-skin);
+  box-shadow: var(--hc-gold-shadow);
+}
+
+@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+  .hc-jlink::before {
+    background: var(--hc-gold-skin-lens);
+    backdrop-filter: blur(20px) saturate(1.7);
+    -webkit-backdrop-filter: blur(20px) saturate(1.7);
+  }
+}
+
+.hc-jlink::after { background: var(--hc-gold-sheen); }
+
+/* The words and the arrow ride over both. */
+.hc-jlink__text,
+.hc-jlink__icon {
+  position: relative;
+  z-index: 1;
+}
+
+/* A long guide title never gets in here, but a long label might, and caps
+   sliding under a disc reads as a broken layout rather than as a label that
+   does not fit. */
+.hc-jlink__text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.hc-jlink__icon {
+  width: 13px;
+  height: 13px;
+  flex: 0 0 auto;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.9;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  /* The same halo the disc puts behind its arrow, for the same reason: this
+     one is drawn on gold rather than on whatever is scrolling past, but it
+     keeps the two arrows looking like the same arrow. */
+  filter: drop-shadow(0 0 2px var(--hc-gold-halo));
+}
+
+.hc-jlink[data-show="true"] {
+  opacity: 1;
+  transform: translate(-50%, 0);
+  pointer-events: auto;
+}
+
+.hc-jlink:active { transform: translate(-50%, 0) scale(0.96); }
+
+.hc-jlink:focus-visible {
+  outline: 2px solid var(--hc-ink);
+  outline-offset: 3px;
+  border-radius: var(--hc-radius-pill);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hc-jlink { transition: opacity 1ms linear; }
+  .hc-jlink:active { transform: translate(-50%, 0); }
+}
+
 /* --------------------------------------------------------------------------
    Toast. Quiet confirmation, bottom of the screen, fades out.
    -------------------------------------------------------------------------- */
@@ -2518,10 +2667,21 @@ a.hc-card:active { background: var(--hc-paper-sunk); }
 /* The discs stand down while it is up. The band is 44px tall and holds one
    thing: a back arrow the guide is not going anywhere without, and a way to
    the top that a scroll will offer again, both of which can wait for the
-   answer to a question the person is being asked right now. */
+   answer to a question the person is being asked right now.
+
+   The journal pill goes with them, and it is the one that would have been
+   worst to leave: it sits dead centre of this band, which is exactly where
+   Note this / Highlight lands, and the two would be drawn on top of each
+   other over the one question in the app most likely to be asked. */
 #app[data-hlbar="true"] .hc-disc {
   opacity: 0;
   transform: translateY(10px) scale(0.86);
+  pointer-events: none;
+}
+
+#app[data-hlbar="true"] .hc-jlink {
+  opacity: 0;
+  transform: translate(-50%, 10px);
   pointer-events: none;
 }
 

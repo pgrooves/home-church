@@ -326,6 +326,15 @@
     share: '<path d="M12 15V4M8.5 7.5 12 4l3.5 3.5"/><path d="M5 13v6a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-6"/>',
     pin: '<path d="M12 21s7-5.5 7-11a7 7 0 1 0-14 0c0 5.5 7 11 7 11z"/><circle cx="12" cy="10" r="2.6"/>',
     arrowOut: '<path d="M14 4h6v6"/><path d="M20 4 10 14"/><path d="M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/>',
+
+    /* THE SAME ARROW THE BACK DISC DRAWS, both ways round. The shaft and the
+       head are lifted line for line from the disc in js/app.js rather than
+       redrawn, because the one place these are used is the journal pill that
+       floats between the two discs: an arrow beside an arrow either matches
+       exactly or looks like a mistake. Whoever changes the disc's arrow has
+       to change these with it. */
+    arrowRight: '<path d="M5 12h14"/><path d="m12.5 5.5 6.5 6.5-6.5 6.5"/>',
+    arrowLeft:  '<path d="M19 12H5"/><path d="m11.5 5.5-6.5 6.5 6.5 6.5"/>',
     book: '<path d="M4 5.5A1.5 1.5 0 0 1 5.5 4H11v16H5.5A1.5 1.5 0 0 1 4 18.5z"/><path d="M20 5.5A1.5 1.5 0 0 0 18.5 4H13v16h5.5a1.5 1.5 0 0 0 1.5-1.5z"/>',
     plus: '<path d="M12 5v14M5 12h14"/>',
 

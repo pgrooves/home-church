@@ -5,7 +5,28 @@ takes you from a guide to your entries for that guide. Seven drawings of it on
 the real thing, side by side, made to be looked at and tapped before anything
 in `js/` or `css/` is touched.
 
-**Not built, and nothing is chosen yet.** This is the page to pick from.
+**Chosen: C, and built.** The gold pill, in `MY JOURNAL` at 10px with a drawn
+arrow, up the whole time you are in a guide. The page is left as it was rather
+than trimmed to the winner, because the argument for C is only legible next to
+the six that lost: what it settles is that gold is the surface here and never
+the type.
+
+**What shipped differs from this study in three ways.**
+
+- **The words are `MY JOURNAL`**, not `TO MY JOURNAL`. Shorter reads quieter
+  between two arrows, and the arrow already says *to*.
+- **The arrow is drawn, not a chevron**, and it is the back disc's own arrow
+  reversed rather than a new drawing. `arrowRight` and `arrowLeft` are in
+  `js/components.js` now, with a note that they are copies of the disc's and
+  have to move with it.
+- **There is a second one**, which this study never drew. The Journal you
+  reach this way carries the same pill saying `BACK TO GUIDE`, arrow the other
+  way round and leading rather than following. See §"Where it goes" below for
+  what that turned out to need.
+
+The gold switch is inert for C and was left in the page: the pill's ink is
+`--hc-gold-ink`, exactly like the arrows in the discs, so it takes the same
+value whichever gold is picked for the studies that set type in it.
 
 ## What it shows
 
@@ -97,7 +118,35 @@ which is `--hc-tap-min`. The first draft shrank the button instead and lost
 10px of target without anything looking wrong, which is exactly why the
 footprint switch is in the page.
 
-## What building it actually costs
+## What building it actually cost
+
+Written after the fact, replacing the estimate this section used to carry.
+Four of the five items were as guessed; the fifth was the one that mattered.
+
+1. **The chrome.** One button in the shell in `js/app.js` and
+   `paintJournalLink()` beside `paintDiscs()`, painted on a view change and
+   again when the catalogue lands, because a phone opened cold on a link to a
+   guide asks whether that guide exists before there is an answer.
+2. **`.hc-jlink`** in `css/components.css`, directly under the discs it is
+   made of.
+3. **The tap**, both ways: `guide-journal` and `journal-guide` in the action
+   table, with `restore: true` on the way back so a half-read guide opens
+   where it was left.
+4. **The landing**, which is `scope` in `js/screens/journal.js`: read off the
+   route on every draw, never remembered anywhere, so a reload, a shared link
+   and the back button cannot disagree about which journal you are looking at.
+   The filter row gains **This guide** at the front, exactly as JOURNAL_TAB.md
+   §4 drew it, and it is always shown while scoped even on a journal with two
+   entries in it, because a narrowed list with no visible way to widen looks
+   broken to the person whose writing it is hiding.
+5. **The one this study did not see coming.** The pill sits dead centre of the
+   44px band above the plinth, which is exactly where Note this / Highlight
+   lands when you select a line of a guide. The discs already stand down for
+   that bar; the pill had to be added to the same rule or the two would have
+   been drawn on top of each other over the most-used gesture in the app.
+   `tests/e2e/journal-link.js` holds that one down.
+
+## What it was estimated to cost
 
 1. **The reader draws it.** One element in `js/screens/guide.js`, or in the
    chrome in `js/app.js` beside the discs if it should survive a re-render the
@@ -114,6 +163,12 @@ footprint switch is in the page.
    entries exist. A guide you have not written in is the common case on
    Sunday afternoon, and the link either goes quiet, or goes anyway and lands
    on an empty group. That is a real decision and this page does not make it.
+
+   *Settled in the build:* it goes anyway, and says
+   *"Nothing from this guide yet. Highlight a line while you read it, answer a
+   take home question, or start one here."* A link that disappears when there
+   is nothing behind it teaches people it is unreliable, and the empty case is
+   the one where saying what to do next is worth most.
 
 ## What is faked
 

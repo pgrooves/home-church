@@ -28,6 +28,8 @@
   var NO_MATCHES = 'Nothing matches that. Try fewer words.';
   var NOTHING_YET = 'Nothing here yet. Highlight something in a guide, or start ' +
     'with a blank page. Both count.';
+  var NOTHING_HERE = 'Nothing from this guide yet. Highlight a line while you read ' +
+    'it, answer a take home question, or start one here.';
 
   /* Local to this screen, like the drafts in js/screens/group.js. A filter is
      not worth persisting and a person who leaves the tab and comes back is
@@ -35,6 +37,18 @@
   var filter = 'all';
   var search = '';
   var draft = null;      // { bodyText, guideId } while a new entry is unsaved
+
+  /* The guide this screen is scoped to, or null for the whole journal.
+
+     READ OFF THE ROUTE ON EVERY DRAW, never set from anywhere else. Arriving
+     from a guide is `{ name: 'journal', id: guideId }`, which is what the
+     pill above the plinth navigates to; the Journal opened from ••• has no
+     id and lands on everything, the way it always has. Keeping it on the
+     address rather than in a variable here is what makes a reload, a shared
+     link and the back button all agree about which journal you are looking
+     at. See paintJournalLink() in js/app.js, which draws the pill from the
+     same fact. */
+  var scope = null;
 
   var FILTERS = [
     { id: 'all', label: 'All' },
@@ -46,9 +60,38 @@
 
   function query() {
     var opts = { search: search.trim() };
+    if (filter === 'guide' && scope) opts.guideId = scope;
     if (filter === 'highlight') opts.kind = 'highlight';
     if (filter === 'scripture') opts.withScripture = true;
     return HC.journal.all(opts);
+  }
+
+  /* The filters this screen has, which is three plus one. "This guide" only
+     exists while there is a guide to mean, and it goes first because it is
+     the one somebody arriving from a guide is already looking at.
+
+     JOURNAL_TAB.md §4 wrote this row as All · This guide · Highlights ·
+     Scripture. It is in that order here with This guide leading, because in
+     the doc it was a filter you might choose and here it is the state you
+     arrived in. */
+  function filters() {
+    if (!scope) return FILTERS;
+    return [{ id: 'guide', label: 'This guide' }].concat(FILTERS);
+  }
+
+  /* Which filter a draw starts on. Arriving with a guide means that guide,
+     and arriving without one can never leave the screen on a filter whose
+     subject has gone: a stale 'guide' with nothing scoped would query the
+     whole journal while a pill claimed it was narrowed. */
+  function settle(route) {
+    var next = route && route.id ? route.id : null;
+    if (next !== scope) {
+      scope = next;
+      filter = scope ? 'guide' : 'all';
+      search = '';
+    } else if (!scope && filter === 'guide') {
+      filter = 'all';
+    }
   }
 
   // A card's first line. The quote when there is one, because that is what
@@ -137,7 +180,7 @@
   function filterRow() {
     // hc-pills is the row Connect already uses for exactly this.
     var html = '<div class="hc-pills hc-journal__filters" role="group" aria-label="Filter your journal">';
-    FILTERS.forEach(function (f) {
+    filters().forEach(function (f) {
       html += '<button type="button" class="hc-pill" data-action="journal-filter" ' +
         'data-value="' + f.id + '" aria-pressed="' + (filter === f.id ? 'true' : 'false') + '">' +
         c.esc(f.label) + '</button>';
@@ -170,10 +213,12 @@
 
   /* ------------------------------------------------------------- the list */
 
-  function list() {
+  function list(route) {
     if (HC.journal.isLocked()) return locked();
+    settle(route);
     var entries = query();
     var everything = HC.journal.count();
+    var narrowed = filter === 'guide' && scope;
 
     var html = '<div class="hc-screen hc-journal">';
 
@@ -198,7 +243,12 @@
 
     // The search box and the filters are worth their space once there is
     // something to sift. On an empty journal they are furniture.
-    if (everything > 2) {
+    //
+    // A scoped journal always gets the row whatever the count, because the
+    // list it is showing is not the whole list and All is the way back to it.
+    // A narrowed screen with no visible way to widen is a screen that looks
+    // broken to the person who wrote the entries it is hiding.
+    if (everything > 2 || scope) {
       html += '<label class="hc-field hc-journal__search">' +
         '<span class="hc-visually-hidden">Search what you have written</span>' +
         '<input class="hc-input" type="search" data-journal-search placeholder="Search your journal" ' +
@@ -208,18 +258,30 @@
     }
 
     if (!entries.length) {
-      /* Two different empty states and only one of them is the church
-         talking. "Nothing matches that" is about a search somebody just
-         typed, so it is wrapped too, but the one that matters is the second:
-         it is the sentence a person sees the first time they open the
-         Journal. */
-      var slot = everything ? 'journal.no-matches' : 'journal.empty';
-      var line = HC.data.copy(slot, everything ? NO_MATCHES : NOTHING_YET);
+      /* Three empty states now, and only one of them is the church talking.
+         "Nothing matches that" is about a search somebody just typed. The
+         third is new and it is the common one on a Sunday afternoon: you
+         tapped My journal from a guide you have not written in yet. It says
+         what to do next rather than reporting a count of zero, and it is not
+         the same sentence as an empty Journal, because the Journal is not
+         empty, this corner of it is. */
+      var slot, line, label;
+      if (narrowed && !search.trim()) {
+        slot = 'journal.none-here';
+        line = HC.data.copy(slot, NOTHING_HERE);
+        label = 'what a guide you have not written in yet says';
+      } else if (everything) {
+        slot = 'journal.no-matches';
+        line = HC.data.copy(slot, NO_MATCHES);
+        label = 'what a search with no results says';
+      } else {
+        slot = 'journal.empty';
+        line = HC.data.copy(slot, NOTHING_YET);
+        label = 'what an empty Journal says';
+      }
       html += HC.edit.wrap(
         line ? c.emptyState(line) : '',
-        { slot: slot, value: line,
-          label: everything ? 'what a search with no results says'
-                            : 'what an empty Journal says', rows: 4 }
+        { slot: slot, value: line, label: label, rows: 4 }
       );
     } else {
       html += grouped(entries);
@@ -361,12 +423,14 @@
     if (route.name === 'journal') {
       var mount = document.querySelector('.hc-journal');
       if (!mount || !mount.parentNode) return;
-      mount.parentNode.replaceChild(c.el(list()), mount);
+      // The same route the screen was built from, so a repaint after a filter
+      // tap or a keystroke cannot quietly lose the guide it is scoped to.
+      mount.parentNode.replaceChild(c.el(list(route)), mount);
     }
   }
 
   HC.screens = HC.screens || {};
-  HC.screens.journal = function () { return c.el(list()); };
+  HC.screens.journal = function (route) { return c.el(list(route)); };
   HC.screens.journalEntry = function (route) { return c.el(entryScreen(route)); };
 
   HC.screens.journalHelpers = {
