@@ -61,6 +61,15 @@
  * Unlike `hc_send_push` this is not fire and forget: pg_net returns a request
  * id, and the reply lands in `net._http_response`, because the whole point of
  * a run is knowing which posts made it.
+ *
+ * AND EVERY RUN WRITES ITS OWN OUTCOME to `instagram_sync_runs`, which is not
+ * belt and braces. pg_net hands pg_cron a request id the moment the request is
+ * queued, so pg_cron records this job as `succeeded` whatever happens next,
+ * and has already done so through a 503: the 00:17 run on 9 September is
+ * logged green and its reply, 61ms later, was `rate limited by Instagram while
+ * reading the profile`. cron.job_run_details is not a health signal for this
+ * job, it is a lie about one, and net._http_response holds barely an hour. The
+ * table added in migration 0062 is the only honest record.
  */
 
 import { createClient } from 'jsr:@supabase/supabase-js@2';
@@ -166,6 +175,18 @@ function discover(html: string): string[] {
   return out;
 }
 
+/** Did Instagram send a page with content, or the empty shell? A datacenter
+ *  IP asking as a browser gets 200 and ~600KB that is 80% JavaScript with no
+ *  post in it. Reported as a parse failure that looks like a renamed field,
+ *  which is a completely different fix, so the two are told apart on whether
+ *  the page carries any media URL that is not Instagram's own bundles. */
+function looksLikeShell(html: string): boolean {
+  const media = html.match(
+    /https:\/\/[a-z0-9.-]*(?:cdninstagram\.com|fbcdn\.net)\/[^"'\\\s]+/gi
+  ) || [];
+  return !media.some((u) => !/\/rsrc\.php\//.test(u));
+}
+
 /** Instagram's own numbering: 1 a photo, 2 a video, 8 a carousel. A reel is a
  *  video whose product_type is `clips`. Anything unfamiliar draws as a still,
  *  because the play badge is a promise about what a tap does. */
@@ -217,6 +238,31 @@ Deno.serve(async (req: Request) => {
      `.schema('vault')` is refused with a 406 before any row is read, however
      complete service_role's grants on the view are. Migration 0060 is the
      long version. The secret itself has not moved. */
+  /* Every exit from here on writes one row to instagram_sync_runs.
+   *
+   * Not belt and braces: pg_net hands pg_cron a request id the moment the
+   * request is queued, so the cron layer records this job as succeeded
+   * whatever happens next, and has already done so through a 503. This table
+   * is the only place a failure is visible. Migration 0062. */
+  const started = Date.now();
+  // deno-lint-ignore no-explicit-any
+  const finish = async (ok: boolean, body: any, status = 200) => {
+    try {
+      await admin.from('instagram_sync_runs').insert({
+        ok,
+        trigger: body?.trigger ?? 'cron',
+        discovered: body?.counts?.discovered ?? 0,
+        wrote: body?.counts?.wrote ?? 0,
+        skipped: body?.counts?.skipped ?? 0,
+        error: ok ? null : String(body?.error ?? 'unknown')
+      });
+    } catch (e) {
+      // A log write that fails must not turn a good run into a bad response.
+      console.error('instagram-fetch: could not write the run log: ' + String(e));
+    }
+    return json(body, status);
+  };
+
   const presented = req.headers.get('x-hc-instagram-secret') ?? '';
   const { data: expected, error: secretErr } = await admin
     .rpc('hc_instagram_secret');
@@ -244,7 +290,8 @@ Deno.serve(async (req: Request) => {
     .match(/instagram\.com\\?\/([A-Za-z0-9_.]+)/i);
   const handle = handleFrom ? handleFrom[1].toLowerCase() : null;
   if (!handle) {
-    return json({ error: 'no instagram handle on the church row, so nothing to check against' }, 500);
+    return await finish(false,
+      { error: 'no instagram handle on the church_profile row to check against' }, 500);
   }
 
   const limit = Math.min(Number(body.limit) || 9, MAX_LINKS);
@@ -256,28 +303,52 @@ Deno.serve(async (req: Request) => {
      on its own: the profile page, asked for as a crawler, lists the recent
      posts, and their ids convert straight to links. */
   if (!links.length) {
-    const res = await fetch('https://www.instagram.com/' + handle + '/', {
-      headers: {
-        'User-Agent': UA,
-        'Accept-Language': 'en-US,en;q=0.9',
-        'Accept': 'text/html,application/xhtml+xml'
-      }
-    });
-    if (res.status === 429 || /\/accounts\/login\//.test(res.url ?? '')) {
-      return json({ error: 'rate limited by Instagram while reading the profile' }, 503);
-    }
-    if (!res.ok) return json({ error: 'profile: HTTP ' + res.status }, 502);
+    /* Two attempts, forty seconds apart.
+     *
+     * The profile endpoint is throttled far harder than post pages: the same
+     * IP in the same second gets 302 for a profile and 200 for a post. It is
+     * also intermittent rather than sticky, so a second try often lands where
+     * the first did not, and a tick that gives up on one 503 wastes six hours
+     * for want of forty seconds. Post fetches are not retried, because they
+     * have not been the thing that fails. */
+    let html: string | null = null;
+    let why = '';
 
-    const codes = discover(await res.text());
+    for (let attempt = 1; attempt <= 2 && html === null; attempt++) {
+      if (attempt > 1) await new Promise((r) => setTimeout(r, 40000));
+      const res = await fetch('https://www.instagram.com/' + handle + '/', {
+        headers: {
+          'User-Agent': UA,
+          'Accept-Language': 'en-US,en;q=0.9',
+          'Accept': 'text/html,application/xhtml+xml'
+        }
+      });
+      if (res.status === 429 || /\/accounts\/login\//.test(res.url ?? '')) {
+        why = 'rate limited by Instagram while reading the profile';
+        continue;
+      }
+      if (!res.ok) { why = 'profile: HTTP ' + res.status; continue; }
+      html = await res.text();
+    }
+
+    if (html === null) {
+      return await finish(false, { error: why + ' (two attempts)' }, 503);
+    }
+
+    const codes = discover(html);
     discovered = codes.length;
     if (!codes.length) {
-      return json({ error: 'the profile page had no posts in it' }, 502);
+      return await finish(false, {
+        error: looksLikeShell(html)
+          ? 'the profile page had no posts in it, only Instagram\'s own JavaScript'
+          : 'the profile page arrived but no posts parsed out of it'
+      }, 502);
     }
     links = codes.slice(0, limit).map((c) => 'https://www.instagram.com/p/' + c + '/');
   }
 
   if (links.length > MAX_LINKS) {
-    return json({ error: 'at most ' + MAX_LINKS + ' links per call' }, 400);
+    return await finish(false, { error: 'at most ' + MAX_LINKS + ' links per call' }, 400);
   }
 
   /* Posts already on the rail are left alone unless asked otherwise. Without
@@ -377,8 +448,10 @@ Deno.serve(async (req: Request) => {
     }
   }
 
-  return json({
+  return await finish(true, {
     handle, discovered, wrote, skipped,
-    counts: { discovered, wrote: wrote.length, skipped: skipped.length }
+    trigger: discovered ? 'cron' : 'links',
+    counts: { discovered, wrote: wrote.length, skipped: skipped.length },
+    ms: Date.now() - started
   });
 });
