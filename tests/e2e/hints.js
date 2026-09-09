@@ -28,10 +28,19 @@
      the marker is on the words     Measured against the real line boxes of
                                     the real sentence, not a guess.
 
-     it never takes a tap           The tap that ends it lands on what was
-                                    under it. This is the promise in HINTS.md
-                                    §3a and the one that turns this into a
-                                    modal if it ever softens.
+     it never takes a tap           A tap on the card lands on the prose
+                                    underneath. This is the promise in
+                                    HINTS.md §3a and the one that turns this
+                                    into a modal if it ever softens.
+
+     and a tap does not end it      Two different claims, both worth holding.
+                                    It has a clock rather than a dismissal,
+                                    and the touch that scrolled onto the words
+                                    must not be able to end it before it has
+                                    finished arriving.
+
+     it goes on its own             Two seconds after the words land, and then
+                                    nothing is left in the page.
 
      once a launch                  A second section, scrolled onto, gets
                                     nothing. A reload gets it again.
@@ -175,10 +184,32 @@ const said  = page => page.evaluate(() => {
       return !!hit && !hit.closest('.hc-hint');
     }), true);
 
-    /* ------------------------------------------------------ and it goes away */
+    /* --------------------------------------------- and a tap does not end it */
+    /* The rule that replaced "any pointerdown ends it". The touch that
+       scrolled onto the words is a pointerdown too, and under the old rule it
+       could end the hint before it had finished arriving. */
     await page.mouse.click(200, 300);
-    await page.waitForTimeout(400);
-    ok('a tap ends it', await marks(page), 0);
+    await page.waitForTimeout(250);
+    ok('a tap does not end it', await marks(page) > 0, true);
+    ok('and the words are still there', await said(page), 'Hold a line to keep it.');
+
+    /* A scroll carries it rather than ending it, so the marker stays on the
+       words it is about while the page moves under it. */
+    const before = await page.evaluate(() =>
+      document.querySelector('.hc-hint__mark').getBoundingClientRect().top);
+    await page.evaluate(() => { document.getElementById('hc-scroll').scrollTop += 40; });
+    await page.waitForTimeout(120);
+    ok('a scroll does not end it either', await marks(page) > 0, true);
+    ok('and the marker travels with the words', await page.evaluate((was) => {
+      const now = document.querySelector('.hc-hint__mark').getBoundingClientRect().top;
+      return Math.abs((was - now) - 40) < 4;
+    }, before), true);
+
+    /* ------------------------------------------------------ it goes on its own */
+    await page.waitForTimeout(2600);
+    ok('two seconds later it has gone', await marks(page), 0);
+    ok('and nothing of it is left in the page',
+       await page.evaluate(() => document.querySelectorAll('.hc-hint, .hc-hint-marks').length), 0);
 
     /* ------------------------------------------------------- once a launch */
     await openASection(page, 0);
@@ -190,8 +221,7 @@ const said  = page => page.evaluate(() => {
     await openASection(page);
     await scrollOnto(page);
     ok('a relaunch offers it again', await marks(page) > 0, true);
-    await page.mouse.click(200, 300);
-    await page.waitForTimeout(300);
+    await page.waitForTimeout(2800);   // let it go on its own; a tap will not
 
     /* ---------------------------------------------------------- the switch */
     await page.evaluate(() => {

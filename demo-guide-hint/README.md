@@ -5,10 +5,15 @@ A sentence highlights itself, and something says why. Seven drawings of the
 "something", side by side on the real thing, made to be looked at and tapped
 before anything in `js/` or `css/` is touched.
 
-**Chosen: D, at two seconds.** The card under the line plus the docked bar
-ghosted in where the offer really lands, held two seconds after the words
-arrive and then faded, or ended sooner by a tap. The page opens on it. The
-other six stay because the argument for D is only legible next to them.
+**Chosen: D, at two seconds, and built.** The card under the line plus the
+docked bar ghosted in where the offer really lands, held two seconds after the
+words arrive and then faded. The page opens on it, and the other six stay
+because the argument for D is only legible next to them.
+
+**What ships differs from this study in one way**, and the study is left as it
+was rather than quietly corrected: here a tap ends the hint early, and in the
+app it does not. The layer still never takes a tap in either. See `HINTS.md`
+for why the two rules came apart.
 
 **Not built.** `HINTS.md` at the repo root is the map this belongs to, and
 §12 of it is why nothing here has shipped. `demo-hint/` is the same exercise

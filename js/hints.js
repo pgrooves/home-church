@@ -20,14 +20,21 @@
    is nothing stored anywhere, which is deliberate, and it is why this file
    has no persistence and js/store.js gained one boolean rather than a record.
 
-   WHAT ENDS IT. A tap anywhere, a scroll, leaving the screen, the app going
-   to the background, the switch in Your account, and two seconds. Whichever
-   comes first.
+   WHAT ENDS IT. Two seconds, and then it fades. That is the ordinary way and
+   very nearly the only way: leaving the screen, the app going to the
+   background, a rotation, the switch in Your account, and starting a
+   selection, which is not a dismissal but the thing it was asking for.
 
-   IT NEVER TAKES A TAP. The layer and every child are pointer-events: none in
-   css/components.css. There is no Got it and no x. Tapping through it is how
-   it goes away, and the tap lands on whatever was under it, which is what it
-   would have done anyway.
+   A TAP DOES NOT END IT, AND THE LAYER STILL NEVER TAKES ONE. Those are two
+   different sentences and both are true. The layer and every child are
+   pointer-events: none in css/components.css, so every tap during those two
+   seconds lands on whatever is under it, exactly as it would have. The hint
+   simply does not react to it. There is no Got it and no x, because there is
+   nothing to dismiss: it is already leaving.
+
+   SCROLLING CARRIES IT rather than ending it. It is measured in viewport
+   coordinates, so the two boxes that belong to the page are translated by
+   however far the page has moved. See travel().
 
    WHY THIS FILE IS NOT A FRAMEWORK. HINTS.md maps a registry, a scheduler and
    a catalogue of about thirty. All of that was built once and reverted: the
@@ -64,6 +71,8 @@
   var armed = null;         // the block a scroll would fire the hint on
   var layer = null;         // the words and the bar, while they are up
   var markLayer = null;     // the marks, which live apart: see components.css
+  var follow = null;        // the card's own box, which travels with the page
+  var scrolledFrom = 0;     // where the page was when it was drawn
   var timers = [];
   var settleTimer = null;
 
@@ -245,7 +254,14 @@
     say.className = 'hc-hint__say';
     say.innerHTML =
       '<div class="hc-hint__card">' + icon('pencil') + '<span>' + WORDS + '</span></div>';
-    layer.appendChild(say);
+
+    /* The card rides in a box of its own so that following a scroll and
+       arriving are two different transforms on two different elements. Put
+       both on the card and the arrival slides it back to where it started. */
+    follow = document.createElement('div');
+    follow.className = 'hc-hint__follow';
+    follow.appendChild(say);
+    layer.appendChild(follow);
 
     var bar = document.createElement('div');
     bar.className = 'hc-hint__say hc-hint__bar';
@@ -262,6 +278,9 @@
     var app = document.getElementById('app');
     app.appendChild(markLayer);
     app.appendChild(layer);
+
+    var scroller = document.getElementById('hc-scroll');
+    scrolledFrom = scroller ? scroller.scrollTop : 0;
 
     /* Measured once it is in the page, because the card's height depends on
        whether its one line wrapped, which depends on the text size somebody
@@ -340,6 +359,22 @@
 
   /* ------------------------------------------------------------------ end */
 
+  /* It is measured in viewport coordinates and drawn in a fixed layer, so a
+     page that moves under it would leave the marker sitting on the wrong
+     words. Rather than measuring again on every scroll event, the two boxes
+     that belong to the page are translated by however far the page has gone:
+     one property on two elements, on the compositor, no layout read past
+     scrollTop. The bar is left out on purpose. It is docked to the band above
+     the tab bar, which does not move, and that is the whole of what it is
+     there to say. */
+  function travel(scroller) {
+    if (!layer) return;
+    var dy = scrolledFrom - scroller.scrollTop;
+    var move = 'translateY(' + dy + 'px)';
+    markLayer.style.transform = move;
+    follow.style.transform = move;
+  }
+
   function end(why) {
     if (settleTimer) { clearTimeout(settleTimer); settleTimer = null; }
     timers.forEach(clearTimeout);
@@ -350,6 +385,7 @@
     var going = [layer, markLayer];
     layer = null;
     markLayer = null;
+    follow = null;
 
     going.forEach(function (el) {
       if (el) el.setAttribute('data-going', soft ? 'soft' : 'tap');
@@ -377,14 +413,24 @@
     var scroller = document.getElementById('hc-scroll');
     if (scroller) {
       scroller.addEventListener('scroll', function () {
-        if (layer) end('scroll');
+        if (layer) travel(scroller);
         else onScroll();
       }, { passive: true });
     }
 
-    document.addEventListener('pointerdown', function () {
-      if (layer) end('tap');
-    }, true);
+    /* THERE IS NO TAP LISTENER HERE, AND THAT IS DELIBERATE.
+
+       It used to end on any pointerdown, capture phase, the way HINTS.md §3b
+       describes. That rule was written for a hint with no clock on it, where
+       going on with what you were doing had to be the way it went away. This
+       one has a clock: two seconds and it is gone. Ending it on the first
+       touch as well meant the touch that scrolled onto the words could end it
+       before it had finished arriving, which is a hint nobody sees.
+
+       The layer still never takes a tap. pointer-events: none in
+       css/components.css is untouched and is not negotiable: every tap during
+       those two seconds lands on whatever is under it, exactly as it would
+       have. What went away is the hint reacting to that tap at all. */
 
     document.addEventListener('visibilitychange', function () {
       if (document.hidden) end('hidden');
@@ -393,6 +439,17 @@
     window.addEventListener('resize', function () {
       // The measurement is stale and re-measuring is not worth the code.
       if (layer) end('resize');
+    });
+
+    /* The one thing that still ends it early, and it is not a dismissal: they
+       have started doing the thing. Selecting a line puts the real bar up in
+       the same band the ghost is drawn in, and two bars in one place reads as
+       a glitch rather than as an offer. The ghost gets out of the way of the
+       thing it was pointing at. */
+    document.addEventListener('selectionchange', function () {
+      if (!layer) return;
+      var sel = window.getSelection();
+      if (sel && !sel.isCollapsed && String(sel).trim()) end('a selection');
     });
 
     /* Anything floating over a screen belongs to that screen, which is the
