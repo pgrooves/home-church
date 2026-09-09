@@ -356,6 +356,11 @@ body {
 .hint-wash.in { transform: scaleX(1); }
 .hint-wash.out { opacity: 0; }
 
+/* going away on its own clock rather than being put away by a tap */
+.soft .hint-wash, .soft .hint-say, .soft .sweep-line {
+  transition: opacity 450ms var(--hc-ease) !important;
+}
+
 /* The comparison: what the app's highlight looks like today. A wash in the
    bottom half of the line rather than a block behind the whole of it. */
 .phone[data-hlstyle="wash"] .hint-wash {
@@ -654,9 +659,10 @@ body {
     <p class="mast__eyebrow">Home Church &middot; hint studies</p>
     <h1 class="mast__h">Seven ways to say the words can be kept</h1>
     <p class="mast__sub">Every launch, the first time a folded section in a guide is opened, a sentence highlights
-      itself. Four studies then say why in words and wait for a tap. Three say nothing at all: the marker rolls
-      across the line and goes, and the movement is the whole hint. All seven are drawn on the shipping tokens, the
-      real geometry, and real guide text. <b>Tap a section header on the phone.</b></p>
+      itself. Four studies then say why in words, and fade off two seconds later or the moment you tap, whichever
+      comes first. Three say nothing at all: the
+      marker rolls across the line and goes, and the movement is the whole hint. All seven are drawn on the shipping
+      tokens, the real geometry, and real guide text. <b>Tap a section header on the phone.</b></p>
   </header>
 
   <div class="bench">
@@ -828,8 +834,8 @@ body {
         </div>
       </div>
 
-      <p class="cue" id="cue"><b>Tap Sermon Summary</b> to open it. The hint runs a beat after the panel settles and
-        then waits, and every tap you make lands on whatever is under it.</p>
+      <p class="cue" id="cue"><b>Tap Sermon Summary</b> to open it. The hint runs a beat after the panel settles,
+        holds two seconds, and fades. Tap sooner and it goes sooner, and the tap still lands on what is under it.</p>
     </div>
 
     <!-- ------------------------------------------------------------- rail -->
@@ -839,9 +845,9 @@ body {
         <h2 class="card__h">The marker, and words</h2>
         <div class="studies" id="studies">
           <button type="button" class="study" data-study="A"><b>A</b><span>A line of type<em>Caption type on bare paper. Nothing drawn around it.</em></span></button>
-          <button type="button" class="study" data-study="B" aria-pressed="true"><b>B</b><span>A paper card<em>The guides&rsquo; left edge rule. A bubble in this app&rsquo;s hand.</em></span></button>
+          <button type="button" class="study" data-study="B"><b>B</b><span>A paper card<em>The guides&rsquo; left edge rule. A bubble in this app&rsquo;s hand.</em></span></button>
           <button type="button" class="study" data-study="C"><b>C</b><span>A bubble with a tail<em>The literal reading. Ink, caret, pointing at the line.</em></span></button>
-          <button type="button" class="study" data-study="D"><b>D</b><span>The card and the bar<em>Says what, and shows where the offer lands.</em></span></button>
+          <button type="button" class="study" data-study="D" aria-pressed="true"><b>D</b><span>The card and the bar<em>Says what, and shows where the offer lands.</em></span></button>
         </div>
         <div class="grp" style="margin-top:12px">
           <span class="grp__label">Where the words go</span>
@@ -850,7 +856,17 @@ body {
             <button type="button" class="opt" data-place="below" aria-pressed="true">Below it</button>
           </div>
         </div>
-        <p class="card__foot">These stay until you tap.</p>
+        <div class="grp">
+          <span class="grp__label">How long it stays</span>
+          <div class="opts" id="hold">
+            <button type="button" class="opt" data-hold="2000" aria-pressed="true">2s</button>
+            <button type="button" class="opt" data-hold="3000">3s</button>
+            <button type="button" class="opt" data-hold="4500">4.5s</button>
+            <button type="button" class="opt" data-hold="0">Until tapped</button>
+          </div>
+        </div>
+        <p class="card__foot">Counted from the moment the words land, not from the
+          tap: the marker takes about a second to draw before that.</p>
       </section>
 
       <section class="card">
@@ -933,13 +949,22 @@ body {
           Worth doing, probably, but it is a change to the app and not to the hint.</p>
       </div>
       <div class="note">
-        <h3>It stays, and it never takes a tap</h3>
-        <p>Every launch, on the first folded section opened, it shows and then waits. No timer. Scrolling does not
-          put it away either, because it is drawn in the page's own coordinates and travels with the sentence.
-          A tap ends it, and switching Hints off ends it.</p>
+        <h3>Two seconds, and it never takes a tap</h3>
+        <p>The clock starts when the words land, not when you tap the header, so the whole thing is about three
+          seconds end to end. A tap ends it early, and switching Hints off ends it. Scrolling does not: it is
+          drawn in the page's own coordinates and travels with the sentence it is about.</p>
         <p><code>pointer-events: none</code> on both layers and every child, so the tap that ends it also lands on
           whatever was under it. Tap the words through the card and the log says so. There is no <strong>Got
           it</strong> and no x: going on with what you were doing is how this app puts things away.</p>
+      </div>
+      <div class="note">
+        <h3>Is two seconds enough</h3>
+        <p>D asks for two readings in that window, in two places: the card says what to do, and the bar at the
+          bottom of the screen says where the answer will appear. Two seconds is comfortable for the card and tight
+          for the round trip down to the bar and back, and somebody who glanced away at the wrong moment gets
+          nothing, with no way to ask for it back until the next launch.</p>
+        <p>The dial in the rail runs 2s, 3s, 4.5s and until tapped, so this is settled on a phone rather than here.
+          For scale: <code>HINTS.md</code> §3c opened at six seconds for a hint with one line and no bar.</p>
       </div>
       <div class="note">
         <h3>What the sweeps trade away</h3>
@@ -996,7 +1021,10 @@ body {
   var MARKER = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h16"/>' +
                '<path d="M14.5 4.5a2 2 0 0 1 3 3L9 16l-4 1 1-4z"/></svg>';
 
-  var state = { study: 'B', words: 0, place: 'below', footprint: false, on: true, running: false };
+  /* hold: how long the words sit there once they have landed, in ms.
+     0 means it waits for a tap and never goes on its own. */
+  var state = { study: 'D', words: 0, place: 'below', hold: 2000,
+                footprint: false, on: true, running: false };
 
   var phone     = document.getElementById('phone');
   var stage     = document.getElementById('stage');
@@ -1028,16 +1056,23 @@ body {
 
   function reduce() { return phone.getAttribute('data-motion') === 'reduce'; }
 
-  function clearHint(reason) {
+  /* soft is the difference between being put away and going away. A tap is an
+     answer and the hint should get out of its way at once; a timer nobody
+     asked for should leave the way the toast does, unhurried. */
+  function clearHint(reason, soft) {
     clearTimers();
     if (!state.running) { layer.innerHTML = ''; washLayer.innerHTML = ''; return; }
     state.running = false;
     [layer, washLayer].forEach(function (l) {
+      l.classList.toggle('soft', !!soft);
       Array.prototype.forEach.call(l.children, function (el) { el.classList.add('out'); });
     });
     setTimeout(function () {
-      if (!state.running) { layer.innerHTML = ''; washLayer.innerHTML = ''; }
-    }, 240);
+      if (!state.running) {
+        layer.innerHTML = ''; washLayer.innerHTML = '';
+        layer.classList.remove('soft'); washLayer.classList.remove('soft');
+      }
+    }, soft ? 520 : 240);
     if (reason) log('<b>Ended</b> on ' + reason, true);
   }
 
@@ -1165,7 +1200,15 @@ body {
         bar.querySelector('.say--bar').classList.add('in');
         log('The bar shows where the offer really lands, above the plinth');
       }
-      after(400, function () { log('It stays. Only a tap puts it away.'); });
+
+      if (!state.hold) {
+        after(400, function () { log('It stays. Only a tap puts it away.'); });
+        return;
+      }
+      log('It sits for ' + (state.hold / 1000) + 's, unless a tap comes first');
+      after(state.hold, function () {
+        clearHint('its own clock, ' + (state.hold / 1000) + 's after the words landed', true);
+      });
     });
   }
 
@@ -1283,8 +1326,11 @@ body {
         cue.innerHTML = state.study >= 'E'
           ? 'That was all of it. <b>Replay</b> is in the rail, and it is worth asking how many ' +
             'times you would have missed it entirely.'
-          : 'It waits there now. <b>Tap anywhere and the tap lands on what is under it</b>, ' +
-            'and the log says what that was.';
+          : (state.hold
+              ? 'It fades on its own in ' + (state.hold / 1000) + 's. <b>Tap before then and the tap still ' +
+                'lands on what is under it</b>, which the log says out loud.'
+              : 'It waits there now. <b>Tap anywhere and the tap lands on what is under it</b>, ' +
+                'and the log says what that was.');
         after(340, bring);               // the fold settles
         after(600, run);                 // then a beat, then the hint
       }
@@ -1334,6 +1380,16 @@ body {
     sw.setAttribute('aria-checked', t === 'dark' ? 'true' : 'false');
     sw.querySelector('.hc-switch').setAttribute('aria-checked', t === 'dark' ? 'true' : 'false');
   }
+
+  document.getElementById('hold').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-hold]');
+    if (!b) return;
+    state.hold = +b.getAttribute('data-hold');
+    press(this, 'data-hold', b.getAttribute('data-hold'));
+    log(state.hold ? 'It will sit for <b>' + (state.hold / 1000) + 's</b>'
+                   : 'It will <b>wait for a tap</b>');
+    if (openAlready()) after(60, run);
+  });
 
   document.getElementById('place').addEventListener('click', function (e) {
     var b = e.target.closest('[data-place]');
