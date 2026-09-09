@@ -304,6 +304,56 @@ after changing the prompt.
 
 ---
 
+## When an announcement has a date and the calendar does not
+
+**Baby Blessing Sign-Up 9/20** is the card this section is named after. It came
+through the reader on the 4th of September looking perfect — the words, the
+bullets, the sign-up button — and with nothing at all in the Cal tab behind it.
+The model had read the date correctly; it set the card to come down on the
+21st, which is the 20th plus one. It just declined to call it an event, because
+the rule it had been given said a sign-up and a link to a form are not events.
+It *is* a sign-up. What is being signed up for happens on a Sunday morning in
+September, and that Sunday morning is what somebody wanted in their phone.
+
+That failure is worth naming because of how it fails. A card with no date
+attached is not flagged anywhere. It does not appear in the dates queue, it
+does not look wrong on Home, and nobody finds out until they go looking for a
+date that was never written. So there are now two answers to it:
+
+- **The prompt says the opposite of what it used to.** A sign-up for a dated
+  thing is that dated thing, on the day the thing happens rather than the day
+  the sign-up closes. `event` is left out only when the email names no day at
+  all.
+- **And the code no longer depends on the model agreeing.** When no event comes
+  back, the reader works the day out of the announcement's own words: the date
+  printed in the title ("9/20", "September 20"), and failing that the retire
+  date minus one, since that field is *defined* as the day after the thing
+  happens. `eventDateFor` in the function is where this lives, and
+  `tests/newsletter-dates.test.js` is where it is pinned down.
+
+**The cost, so it is not a surprise.** A card whose only date is a deadline —
+sign-ups close on the 30th for something not yet scheduled — now proposes a
+date on the 30th. That is one row in **Dates to review** and one tap to
+discard. Nothing here publishes anything: every event the reader writes is
+unpublished and pending, exactly as before, and a person still approves it
+before it reaches anybody's calendar. An extra proposal is visible; a missing
+one is not.
+
+**For announcements already posted without their date**, the backfill pass
+picks them up, and it now uses the same three sources:
+
+```bash
+curl -X POST https://ibqkumxfltfiuqevviji.supabase.co/functions/v1/newsletter-intake \
+  -H "x-hc-cron-secret: <the secret>" -H "Content-Type: application/json" \
+  -d '{"backfill": true, "limit": 25}'
+```
+
+It only looks at announcements with no event yet, so it is safe to run more
+than once, and everything it finds lands in the dates queue rather than on the
+calendar.
+
+---
+
 ## When the calendar has one night in it twice
 
 The same three emails carry a date each, so the Cal tab ends up with

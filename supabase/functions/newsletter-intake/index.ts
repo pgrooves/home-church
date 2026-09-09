@@ -69,10 +69,12 @@
  *                       it becomes rows.
  *   {"backfill": true}  ignores the mailbox entirely and gives announcements
  *                       that already exist the event they would have got if
- *                       0040 had existed when they were parsed. One model call
- *                       for the batch; `limit` caps how many it looks at,
- *                       default 25. Safe to run more than once: it only
- *                       considers announcements with no event yet.
+ *                       0040 had existed when they were parsed, and the one the
+ *                       parse should have made and did not. One model call for
+ *                       the batch; `limit` caps how many it looks at, default
+ *                       25. Safe to run more than once: it only considers
+ *                       announcements with no event yet, and every event it
+ *                       writes waits in the dates queue for a person.
  *
  * DEPLOY
  *   supabase functions deploy newsletter-intake --no-verify-jwt
@@ -773,15 +775,28 @@ function prompt(
     '   2026-09-12 takes ends_on 2026-09-13, or the card vanishes on the morning of the',
     '   thing it is announcing. Leave it out for anything with no end: an ongoing need',
     '   for volunteers, a standing invitation, a change that is simply true from now on.',
-    '   Do not guess an end date for something that has none.',
+    '   Do not guess an end date for something that has none. And if you do give one,',
+    '   you are saying something happens the day before it — so that same thing must',
+    '   also appear in `event` below. The two answers have to agree.',
     '9. image_url: choose ONLY from the candidate images below, copied exactly, or leave',
     '   it out.',
-    '10. event: include this ONLY when the announcement is about something that happens',
-    '   at a particular time in a particular place — a gathering, a service, a serve',
-    '   day, a meeting, a class. "Homecoming on Friday, October 23" is an event. An',
-    '   ongoing need for volunteers, a sign-up that is open for weeks, a policy change,',
-    '   or a link to a form is NOT an event, and guessing one puts a wrong date in',
-    '   somebody\'s phone. When in doubt, leave it out.',
+    '10. event: the day the thing actually HAPPENS, whenever the email names one. A',
+    '   gathering, a service, a serve day, a meeting, a class, a party, a blessing at a',
+    '   Sunday service: if a reader could sensibly put it in their calendar, it belongs',
+    '   here. "Homecoming on Friday, October 23" is an event.',
+    '   A SIGN-UP FOR A DATED THING IS STILL THAT DATED THING. "Baby Blessing Sign-Up',
+    '   9/20" and "Register for the retreat, October 3-5" are events, on the day of the',
+    '   blessing and on the first day of the retreat. The form is how a person gets in;',
+    '   the date is what they wanted in their calendar. Never give the day the sign-up',
+    '   closes instead of the day the thing happens.',
+    '   The date is very often in the TITLE ("9/20", "September 20") as well as in the',
+    '   body — read both, and work it out however it is written: "Friday, October 23",',
+    '   "Oct 4", "10/12", "this Wednesday". For a range use the first day. A DATE WITH',
+    '   NO TIME IS STILL AN EVENT.',
+    '   Leave event out ONLY when the email names no day at all: an ongoing need for',
+    '   volunteers, a standing invitation, a policy change, a sign-up for something',
+    '   whose date has not been announced yet. Never invent a day that is not there;',
+    '   when a day IS there, always give it.',
     '     date      strict YYYY-MM-DD, the day it happens. Required.',
     '     hour      0-23, the start hour, church local. "8am" is 8, "7pm" is 19. Omit',
     '               entirely when the email gives no time. A date with no time is still',
@@ -792,7 +807,7 @@ function prompt(
     '               even when the same address also appears in details: details are',
     '               read on the card, and this is what goes into the calendar entry on',
     '               somebody\'s phone, where it becomes the directions they tap.',
-    '10. If the email contains no real announcements, return an empty array.',
+    '11. If the email contains no real announcements, return an empty array.',
     '',
     'CANDIDATE LINKS (copy urls exactly; the link text is what the reader saw)',
     links.length
@@ -895,6 +910,13 @@ async function askGemini(
    and a URL that was never in the email both arrive looking perfectly valid.
    ===================================================================== */
 
+/* @@ dates:start
+   Everything between these two markers is evalled by
+   tests/newsletter-dates.test.js, so it has to stay self-contained: no imports,
+   no Deno, nothing from further up this file. The markers are what let a node
+   test check date arithmetic that otherwise could only be checked by sending
+   a real newsletter through a real model and waiting to see what came out. */
+
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
 function cleanDate(value: unknown): string | null {
@@ -906,6 +928,135 @@ function cleanDate(value: unknown): string | null {
   if (Number.isNaN(d.getTime())) return null;
   return d.toISOString().slice(0, 10) === text ? text : null;
 }
+
+function shiftDate(iso: string, days: number): string {
+  const d = new Date(`${iso}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
+/* A date sitting in an announcement's own title.
+
+   RULE 3 PUTS IT THERE. The model is asked to write titles like "City Serve
+   Day, September 12" and "Baby Blessing Sign-Up 9/20", so by the time anything
+   reaches this file the day is very often printed on the front of the card,
+   in the church's own words, whatever the model then decided about `event`.
+   Reading it back is the cheapest second opinion there is, and unlike the
+   model it gives the same answer every time.
+
+   MONTH NAMES AND SLASHES, and nothing else. "Sept 8-10" takes the 8th, the
+   way the backfill prompt has always asked for a range. Hyphens are not read
+   as separators for exactly that reason: in a title "9-20" is very often a
+   range of somethings and "9/20" is a day. */
+const MONTH_NAMES: Record<string, number> = {
+  jan: 1, january: 1, feb: 2, february: 2, mar: 3, march: 3,
+  apr: 4, april: 4, may: 5, jun: 6, june: 6, jul: 7, july: 7,
+  aug: 8, august: 8, sep: 9, sept: 9, september: 9, oct: 10, october: 10,
+  nov: 11, november: 11, dec: 12, december: 12,
+};
+
+const TITLE_MONTH_DAY =
+  /\b(jan|january|feb|february|mar|march|apr|april|may|jun|june|jul|july|aug|august|sep|sept|september|oct|october|nov|november|dec|december)\.?\s+(\d{1,2})(?:\s*,\s*(\d{4}))?/i;
+
+const TITLE_SLASHED = /\b(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?\b/;
+
+/* WHICH YEAR, when the title does not say — and titles almost never say.
+   "9/20" in a newsletter sent on the 4th of September is this September, and
+   "January 5" in one sent in December is next January. So the year is the one
+   that puts the day nearest the newsletter without landing it well in the
+   past: anything more than a fortnight behind the email is read as next year.
+   A fortnight rather than a day because a newsletter does sometimes look back
+   at last Sunday, and reading that as thirteen months away would be worse. */
+function resolveYear(month: number, day: number, reference: string): string | null {
+  const refYear = Number(reference.slice(0, 4));
+  if (!Number.isInteger(refYear)) return null;
+
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const iso = (y: number) => `${y}-${pad(month)}-${pad(day)}`;
+
+  const thisYear = cleanDate(iso(refYear));
+  if (thisYear && thisYear >= shiftDate(reference, -14)) return thisYear;
+  return cleanDate(iso(refYear + 1)) ?? thisYear;
+}
+
+function titleDate(title: unknown, reference: string): string | null {
+  const text = String(title ?? '');
+  if (!cleanDate(reference)) return null;
+
+  const named = TITLE_MONTH_DAY.exec(text);
+  if (named) {
+    const month = MONTH_NAMES[named[1].toLowerCase()];
+    const day = Number(named[2]);
+    if (month && day >= 1 && day <= 31) {
+      return named[3]
+        ? cleanDate(`${named[3]}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`)
+        : resolveYear(month, day, reference);
+    }
+  }
+
+  const slashed = TITLE_SLASHED.exec(text);
+  if (slashed) {
+    const month = Number(slashed[1]);
+    const day = Number(slashed[2]);
+    if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+      if (!slashed[3]) return resolveYear(month, day, reference);
+      const year = slashed[3].length === 2 ? 2000 + Number(slashed[3]) : Number(slashed[3]);
+      return cleanDate(`${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`);
+    }
+  }
+
+  return null;
+}
+
+/* THE DAY THIS ANNOUNCEMENT IS ABOUT, from whichever of three sources knows.
+
+   WHY THIS EXISTS. "Baby Blessing Sign-Up 9/20" went through this function's
+   predecessor and came out with no event. The model had read the date
+   perfectly — it set ends_on to the 21st, which is the 20th plus one — and
+   then declined to fill in `event`, because the rule it was given said a
+   sign-up and a link to a form are not events. It is a sign-up, and the thing
+   being signed up for happens on a Sunday morning in September, and the
+   calendar entry somebody wanted was the blessing.
+
+   The prompt is fixed too, and the prompt is the part that will be right most
+   often. But a prompt is a request and this is the guarantee, because the
+   failure it prevents is silent: an announcement parsed with no event is not
+   flagged, does not appear in the dates queue, and reads as correct on every
+   screen in the app. Nobody finds out until somebody goes looking for a date
+   that was never there.
+
+   THREE SOURCES, MOST TRUSTWORTHY FIRST.
+     stated    what the model put in `event.date`. A day it was willing to
+               name outright.
+     title     rule 3 asks for the date on the front of the card, so it is
+               usually there, and it is the church's own wording.
+     ends_on   rule 8 defines it as the day AFTER the thing happens, so an
+               ends_on with no event is the model contradicting itself, and
+               the day before it is the day it meant.
+
+   WHAT IT COSTS. A card whose only date is a deadline — "sign-ups close the
+   30th" for something not yet scheduled — now proposes an event on the 30th.
+   That is a row in the dates queue and one tap to discard, and it is the side
+   of the trade worth being on: an extra proposal is visible and a missing one
+   is not. Nothing here publishes anything. Every event this produces is
+   written unpublished with review_state 'pending', exactly like a stated one,
+   and a person still approves it before it reaches anybody's calendar. */
+function eventDateFor(
+  stated: string | null,
+  title: unknown,
+  endsOn: string | null,
+  reference: string,
+): string | null {
+  if (stated) return stated;
+
+  const fromTitle = titleDate(title, reference);
+  if (fromTitle) return fromTitle;
+
+  const end = cleanDate(endsOn);
+  return end ? shiftDate(end, -1) : null;
+}
+
+/* @@ dates:end */
 
 /* Today, where the church is. Not UTC: an announcement retires at midnight in
    Metairie, which is the same reason hc_admin_send_announcement reads
@@ -1141,6 +1292,7 @@ interface BackfillRow {
   body: string | null;
   published: boolean;
   written: string;
+  endsOn: string | null;
 }
 
 function backfillPrompt(rows: BackfillRow[]): string {
@@ -1162,6 +1314,11 @@ function backfillPrompt(rows: BackfillRow[]): string {
     'A DATE WITH NO TIME IS STILL AN EVENT. Give the date and leave time out.',
     'For a range ("Sept 8-10") use the first day. For something recurring ("every',
     'Tuesday") use the first occurrence.',
+    '',
+    'A SIGN-UP FOR A DATED THING IS STILL THAT DATED THING. "Baby Blessing Sign-Up',
+    '9/20" is an event on the 20th: the form is how a person gets in, and the date is',
+    'what they wanted in their calendar. Give the day the thing happens, never the day',
+    'the sign-up closes.',
     '',
     'Set has_event false, with no date, for an announcement with genuinely no day',
     'attached: an ongoing need for volunteers, a standing invitation, a policy change.',
@@ -1191,7 +1348,7 @@ async function runBackfill(
 ): Promise<Record<string, unknown>> {
   const { data, error } = await admin
     .from('announcements')
-    .select('id, title, body, published, created_at, review_state')
+    .select('id, title, body, published, created_at, review_state, ends_on')
     .is('event_id', null)
     .neq('review_state', 'discarded')
     .order('created_at', { ascending: false })
@@ -1205,6 +1362,7 @@ async function runBackfill(
     body: (r.body as string | null) ?? null,
     published: r.published === true,
     written: String(r.created_at ?? '').slice(0, 10),
+    endsOn: (r.ends_on as string | null) ?? null,
   }));
 
   if (!rows.length) return { ok: true, backfill: true, looked_at: 0, events: 0 };
@@ -1239,9 +1397,18 @@ async function runBackfill(
   if (!raw) throw new Error('Gemini returned nothing to parse.');
 
   const parsed = JSON.parse(raw)?.results ?? [];
-  const found = (parsed as Array<Record<string, unknown>>)
-    .filter((r) => r?.has_event === true);
-  const byId = new Map(rows.map((r) => [r.id, r]));
+
+  /* WHAT THE MODEL SAID ABOUT EACH ROW, keyed on the id it was given, rather
+     than the list of rows it said yes to. The loop below walks the
+     announcements this function actually read instead of the model's answers,
+     because a row it labelled has_event false can still be a dated thing —
+     that is exactly how "Baby Blessing Sign-Up 9/20" lost its calendar entry
+     on the way in — and eventDateFor gets the second and third look at it. */
+  const said = new Map<string, Record<string, unknown>>();
+  for (const r of parsed as Array<Record<string, unknown>>) {
+    const id = String(r?.id ?? '');
+    if (id) said.set(id, r);
+  }
 
   const { data: existingEvents } = await admin.from('events').select('id');
   const takenEvents = new Set((existingEvents ?? []).map((r) => r.id as string));
@@ -1249,10 +1416,17 @@ async function runBackfill(
   let made = 0;
   const madeFor: string[] = [];
 
-  for (const item of found) {
-    const row = byId.get(String(item.id ?? ''));
-    const date = cleanDate(item.date);
-    if (!row || !date) continue;
+  for (const row of rows) {
+    const answer: Record<string, unknown> = said.get(row.id) ?? {};
+
+    /* The time is only read off an answer that named a day. An hour attached
+       to a has_event false row is the model's leftovers, and pinning an
+       inferred date to it would be a guess resting on a guess. */
+    const stated = answer.has_event === true ? cleanDate(answer.date) : null;
+    const item: Record<string, unknown> = stated ? answer : {};
+
+    const date = eventDateFor(stated, row.title, row.endsOn, row.written);
+    if (!date) continue;
 
     const eventId = uniqueId(row.title, takenEvents, 'event');
     const at = churchInstant(date, item.hour, item.minute);
@@ -1576,9 +1750,13 @@ Deno.serve(async (req: Request) => {
           ledger.status = 'empty';
           ledger.note = 'The email had no readable text in it.';
         } else {
+          // The day the newsletter was sent, which is what every relative date
+          // in it is relative to — the model is told it, and eventDateFor
+          // resolves "9/20" against the same day so the two cannot disagree.
+          const emailDay = (sentAt ?? new Date().toISOString()).slice(0, 10);
+
           const items = await askGemini(
-            geminiKey!, model, text, links, images,
-            (sentAt ?? new Date().toISOString()).slice(0, 10),
+            geminiKey!, model, text, links, images, emailDay,
           );
 
           const allowedLinks = links.map((l) => l.url);
@@ -1633,7 +1811,17 @@ Deno.serve(async (req: Request) => {
                Without that label the Connect card would print "9:00 AM" as
                though the church had said so, which is a guess wearing the
                clothes of a fact. */
-            const eventDate = item.event ? cleanDate(item.event.date) : null;
+            /* WHICH DAY, from the model's answer if it gave one and from the
+               announcement's own words if it did not. See eventDateFor: the
+               date it works out from a title or from ends_on is the fix for a
+               real card that came through with its date read correctly and its
+               calendar entry dropped anyway. */
+            const eventDate = eventDateFor(
+              item.event ? cleanDate(item.event.date) : null,
+              title,
+              cleanDate(item.ends_on),
+              emailDay,
+            );
             const eventRow = eventDate
               ? {
                 id: uniqueId(title, takenEvents, 'event'),
