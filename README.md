@@ -747,6 +747,17 @@ mid-sentence; when it has not, the frame is rebuilt with the sound on and
 `start` set to where the video had got to. One of the two always works, which is
 the whole reason both are there.
 
+**The handshake is only asked for on an http or https origin, and error 153 is
+why.** The packaged app runs on `capacitor://localhost`, which YouTube cannot
+check and which carries no referrer a player can read; ask that origin for the
+JS API with `enablejsapi=1` and the player does not degrade, it refuses — the
+frame becomes *Video player configuration error. Error 153* over a button that
+leaves for the YouTube app. That shipped once: the web build was fine and the
+phone was not. So the API is asked for where it can be granted, with the
+`origin` parameter beside it, and everywhere else the frame is a plain embed of
+exactly the shape the Practices, Alpha and announcement players have always
+had, with the pill's rebuild path doing the whole job on its own.
+
 This is the first iframe on Home, and migration `0026` says out loud that an
 announcement's YouTube link is drawn as a link out rather than embedded, for
 exactly the reason worth weighing here. The trade is different because the ask

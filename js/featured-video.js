@@ -50,6 +50,24 @@
    outcome here. When there was no answer, the frame is rebuilt with the
    sound on and `start` set to where the video had got to, which always works
    and costs a reload nobody asked for. One of the two is always available.
+
+   ERROR 153, AND WHY THE API IS NOT ALWAYS ASKED FOR. The packaged app does
+   not run on https. It runs on `capacitor://localhost`, which is not an
+   origin YouTube can check and which carries no referrer a player can read.
+   Ask that origin for the JS API, with `enablejsapi=1`, and the player
+   refuses to configure itself at all: the frame becomes "Video player
+   configuration error. Error 153" over two buttons, one of which is Watch on
+   YouTube. A block whose whole purpose is a video that plays here, ending as
+   a door out to the YouTube app, is the worst version of this feature that
+   could ship, and it shipped: the web build was fine and the phone was not.
+
+   So the API is asked for only where it can be granted, which is an http or
+   https origin, and it is asked for with the `origin` parameter it is
+   supposed to carry. Everywhere else the frame is a plain embed — the same
+   shape as the players on Practices, Alpha and an announcement, which have
+   always run in the packaged app — and the pill's rebuild path does the
+   whole job on its own. One parameter's difference, and it is the difference
+   between a video and an error message.
    -------------------------------------------------------------------------- */
 
 (function (HC) {
@@ -84,8 +102,23 @@
     return /\/shorts\//i.test(link());
   }
 
+  /* The origin to hand the player, or '' when there is not one worth handing
+     it. See ERROR 153 in the header: `capacitor://localhost` is the packaged
+     app's origin and asking for the API from there breaks the player
+     outright, so the question this answers is not "is this a phone" but "is
+     this an origin YouTube can check", which is the thing that actually
+     decides it. Guarded for a location object that is not there at all,
+     because tests/featured-video.test.js runs this file with no page under
+     it. */
+  function apiOrigin() {
+    var loc = window.location;
+    if (!loc || (loc.protocol !== 'https:' && loc.protocol !== 'http:')) return '';
+    return loc.origin || '';
+  }
+
   function src(id, opts) {
     opts = opts || {};
+    var origin = apiOrigin();
     return ORIGIN + '/embed/' + id +
       '?autoplay=1' +
       '&mute=' + (opts.sound ? '0' : '1') +
@@ -94,8 +127,9 @@
       // to would read as the app having opened into a video player.
       '&playsinline=1' +
       '&rel=0&modestbranding=1' +
-      // The handshake below is only possible with this on.
-      '&enablejsapi=1' +
+      // The handshake below is only possible with this on, and only safe to
+      // ask for where the origin beside it is real.
+      (origin ? '&enablejsapi=1&origin=' + encodeURIComponent(origin) : '') +
       (opts.start ? '&start=' + opts.start : '');
   }
 
@@ -168,6 +202,9 @@
      what an unanswered handshake falls through to. */
   function listen() {
     stop();
+    // No API was asked for, so nobody is going to answer. The pill's rebuild
+    // path is the whole mechanism here, and it needs no handshake.
+    if (!apiOrigin()) return;
     pokes = 0;
     poker = window.setInterval(function () {
       pokes += 1;

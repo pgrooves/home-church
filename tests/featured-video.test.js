@@ -53,10 +53,16 @@ const read = (...p) => fs.readFileSync(path.join(__dirname, '..', ...p), 'utf8')
    HC.data and HC.store are the two things the module reaches for at load, and
    both are one method deep here. `undefined` for the setting means the row has
    never arrived, which is what makes the fallback testable. */
-function boot(value) {
+function boot(value, origin) {
   const sandbox = { console };
   sandbox.window = sandbox;
   sandbox.document = { querySelector: () => null };
+  // The page under the module. `null` is no page at all, which is this test
+  // harness itself and has to not throw.
+  if (origin !== null) {
+    const url = origin || 'https://pgrooves.github.io';
+    sandbox.location = { origin: url, protocol: url.split(':')[0] + ':' };
+  }
   sandbox.addEventListener = () => {};
   sandbox.setInterval = () => 0;
   sandbox.clearInterval = () => {};
@@ -131,6 +137,8 @@ function main() {
       html.indexOf('playsinline=1') !== -1);
     okTrue('and can be spoken to, which is how the sound goes on',
       html.indexOf('enablejsapi=1') !== -1);
+    okTrue('with the origin the API is supposed to be given',
+      html.indexOf('origin=https%3A%2F%2Fpgrooves.github.io') !== -1);
     okTrue('and the iframe is allowed to autoplay by the page as well',
       /allow="[^"]*autoplay/.test(html));
 
@@ -141,6 +149,39 @@ function main() {
       html.indexOf('aria-label="Play the video with sound"') !== -1);
     ok('and it starts in the muted state, like the player',
       html.indexOf('data-sound="false"') !== -1, true);
+  }
+
+  console.log('\n--- the packaged app, where error 153 came from ---');
+  {
+    /* THE BUG THIS IS HERE FOR. The web build runs on https and the packaged
+       app runs on capacitor://localhost. Asking that origin for the JS API
+       does not degrade, it replaces the whole player with "Video player
+       configuration error. Error 153" and a button out to the YouTube app.
+       So the API is asked for where it can be granted and nowhere else. */
+    const native = boot('https://youtu.be/' + ID, 'capacitor://localhost');
+    const html = native.block();
+
+    okTrue('the video is still embedded', html.indexOf('/embed/' + ID) !== -1);
+    okTrue('still muted', html.indexOf('mute=1') !== -1);
+    okTrue('still starts on its own', html.indexOf('autoplay=1') !== -1);
+    ok('but the API is not asked for, because it cannot be granted there',
+      html.indexOf('enablejsapi') !== -1, false);
+    ok('and no origin is handed over either',
+      html.indexOf('origin=') !== -1, false);
+
+    /* The pill has to be there and has to mean something. Without the API it
+       is the rebuild path alone, which needs nothing from YouTube. */
+    okTrue('and the pill is still on the frame',
+      html.indexOf('data-action="featured-sound"') !== -1);
+
+    // file:// is the same question with a different answer nobody wants.
+    ok('a file:// page is treated the same way',
+      boot('https://youtu.be/' + ID, 'file://').block().indexOf('enablejsapi') !== -1,
+      false);
+
+    // The harness itself: a module loaded with no page under it must not throw.
+    okTrue('and a page that does not exist at all still builds a frame',
+      boot('https://youtu.be/' + ID, null).block().indexOf('/embed/' + ID) !== -1);
   }
 
   console.log('\n--- no words around it, which is what was asked for ---');
