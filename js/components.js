@@ -346,7 +346,17 @@
   function embedBase() {
     var base = EMBED_BASE;
     if (HC.data && HC.data.setting) base = HC.data.setting('home_embed_base', EMBED_BASE);
-    base = String(base || '').trim().replace(/\/+$/, '');
+    base = String(base || '').trim()
+      /* Angle brackets first, because a URL reaches this row by being pasted,
+         and half the places a person copies one from wrap it: <https://...>
+         is what a chat client, a mail client and a markdown editor all hand
+         over. The app would refuse the whole value and fall back, so video
+         would go on working in a browser and go on failing on phones, which
+         is the hardest version of this to notice. Nobody who pasted a link
+         meant the brackets. */
+      .replace(/^<+/, '').replace(/>+$/, '')
+      .trim()
+      .replace(/\/+$/, '');
     // https only. A wrapper on http would be a mixed content frame, and a
     // wrapper on anything else has the problem it exists to solve.
     return /^https:\/\/[^\s"'<>]+$/.test(base) ? base : EMBED_BASE;

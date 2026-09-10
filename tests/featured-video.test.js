@@ -221,6 +221,16 @@ function main() {
         'https://ibqkumxfltfiuqevviji.supabase.co/storage/v1/object/public/app/embed.html'
       ) !== -1);
 
+    /* The shape a pasted URL actually arrives in. A chat client, a mail
+       client and a markdown editor all wrap one in angle brackets, and the
+       box this row is edited in is a text field on a pastor's phone. Refusing
+       the value would fall back to the constant and look like nothing
+       happened, on phones only. */
+    okTrue('angle brackets round a pasted URL are not part of it',
+      boot('https://youtu.be/' + ID, 'capacitor://localhost',
+        '<https://ibqkumxfltfiuqevviji.supabase.co/x>').block()
+        .indexOf('https://ibqkumxfltfiuqevviji.supabase.co/x/embed.html') !== -1);
+
     okTrue('a trailing slash does not double up',
       boot('https://youtu.be/' + ID, 'capacitor://localhost',
         'https://pgrooves.github.io/home-church/').block()
