@@ -2291,8 +2291,13 @@
 
       HC.native.tap('Light');
 
-      var src = 'https://www.youtube.com/embed/videoseries?list=' + list +
-        '&autoplay=1&playsinline=1&rel=0&modestbranding=1';
+      /* Through c.youtubeEmbedUrl() rather than built here, which is what
+         puts this player on the same footing as every other one in the app:
+         on a phone it is framed through embed.html, because a YouTube player
+         asked for directly from capacitor://localhost is error 153. See the
+         note over that function. */
+      var src = c.youtubeEmbedUrl({ list: list, sound: true });
+      if (!src) { c.toast('That series is unavailable.'); return; }
 
       poster.outerHTML = '' +
         '<div class="hc-video__frame">' +
@@ -2332,13 +2337,19 @@
       /* playsinline is the one parameter that is not a preference on either
          provider. Without it iOS takes the video full screen the instant it
          starts, which is the same experience as leaving the app wearing a
-         different coat. */
+         different coat.
+
+         The YouTube half goes through c.youtubeEmbedUrl(), which on a phone
+         frames embed.html instead of youtube.com: a player asked for directly
+         from capacitor://localhost has no referrer to show and answers with
+         error 153 rather than a video. Vimeo has never had that problem and
+         is still built here. */
       var src = provider === 'vimeo'
         ? 'https://player.vimeo.com/video/' + id +
             (hash ? '?h=' + hash + '&' : '?') +
             'autoplay=1&playsinline=1&title=0&byline=0&portrait=0&dnt=1'
-        : 'https://www.youtube.com/embed/' + id +
-            '?autoplay=1&playsinline=1&rel=0&modestbranding=1';
+        : c.youtubeEmbedUrl({ id: id, sound: true });
+      if (!src) { c.toast('That video is unavailable.'); return; }
 
       poster.outerHTML = '' +
         '<div class="hc-video__frame">' +

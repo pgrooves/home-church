@@ -747,16 +747,44 @@ mid-sentence; when it has not, the frame is rebuilt with the sound on and
 `start` set to where the video had got to. One of the two always works, which is
 the whole reason both are there.
 
-**The handshake is only asked for on an http or https origin, and error 153 is
-why.** The packaged app runs on `capacitor://localhost`, which YouTube cannot
-check and which carries no referrer a player can read; ask that origin for the
-JS API with `enablejsapi=1` and the player does not degrade, it refuses — the
-frame becomes *Video player configuration error. Error 153* over a button that
-leaves for the YouTube app. That shipped once: the web build was fine and the
-phone was not. So the API is asked for where it can be granted, with the
-`origin` parameter beside it, and everywhere else the frame is a plain embed of
-exactly the shape the Practices, Alpha and announcement players have always
-had, with the pill's rebuild path doing the whole job on its own.
+### Error 153, and the page that fixed it
+
+**On a phone, every YouTube player in this app was an error message.** Not only
+Home's featured frame: the Practices sessions, the Alpha video, an
+announcement's video, all of them, all at once — *Video player configuration
+error. Error 153*, over a button offering to leave for the YouTube app. The web
+build played every one of them perfectly, which is what made it hard to see.
+
+The cause is the origin. A packaged Capacitor app does not run on https, it
+runs on `capacitor://localhost`, and the Referrer Policy spec says a document
+on a scheme that is not http or https sends no referrer at all. YouTube's
+embedded player will not configure itself without one. **Nothing in the app's
+own JavaScript can fix that** — no referrer policy can invent an https
+referrer, and iOS will not serve a bundled app over https either, because
+WKWebView reserves that scheme and Capacitor cannot register a handler for it.
+
+So the player moved to a page that has an https origin: **`embed.html`, at the
+repo root, published by the same GitHub Pages build the web version runs on.**
+The app frames that page and that page frames YouTube, which then sees the same
+referrer it has always seen on the web. It takes a video id or a playlist id,
+checks both against the same anchored patterns `js/app.js` checks them against,
+and relays one message so the sound pill still turns the sound on in place.
+
+`c.youtubeEmbedUrl()` is the one call every player in the app now goes through,
+and it picks by asking what origin the app is on rather than what device it is:
+already on https, frame YouTube directly, unchanged; anything else, frame the
+wrapper. `home_embed_base` in `app_settings` names the folder the wrapper is
+published in, so it can move without a submission — within `frame-src`, which
+ships with the app and today names GitHub Pages and this project's Supabase. A
+wrapper that never answers is not fatal either: after eight seconds the app
+frames YouTube directly, which is error 153 again on a phone and an honest
+error rather than a black rectangle.
+
+**Two things must stay true, or video goes quiet in every installed copy at
+once**: `embed.html` stays at the repo root, and GitHub Pages keeps serving the
+default branch. Both are already true of how this project is published; neither
+is obvious from inside the app, which is why they are written down here and in
+the header of that file.
 
 This is the first iframe on Home, and migration `0026` says out loud that an
 announcement's YouTube link is drawn as a link out rather than embedded, for

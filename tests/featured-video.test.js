@@ -53,7 +53,7 @@ const read = (...p) => fs.readFileSync(path.join(__dirname, '..', ...p), 'utf8')
    HC.data and HC.store are the two things the module reaches for at load, and
    both are one method deep here. `undefined` for the setting means the row has
    never arrived, which is what makes the fallback testable. */
-function boot(value, origin) {
+function boot(value, origin, base) {
   const sandbox = { console };
   sandbox.window = sandbox;
   sandbox.document = { querySelector: () => null };
@@ -70,13 +70,32 @@ function boot(value, origin) {
   vm.createContext(sandbox);
 
   vm.runInContext(read('js', 'components.js'), sandbox);
+  /* Keyed by name rather than answering every setting with the same string.
+     That is not tidiness: js/components.js reads `home_embed_base` through
+     this same call, and a fake that handed it the video's link would point
+     the wrapper at youtu.be and pass anyway. */
   sandbox.HC.data = {
-    setting: (key, fallback) => (value === undefined ? fallback : value)
+    setting: (key, fallback) => {
+      if (key === 'home_featured_video') return value === undefined ? fallback : value;
+      if (key === 'home_embed_base') return base === undefined ? fallback : base;
+      return fallback;
+    }
   };
   sandbox.HC.store = { on: () => {} };
   vm.runInContext(read('js', 'featured-video.js'), sandbox);
 
   return sandbox.HC.featuredVideo;
+}
+
+// components.js alone, on a named origin, for the URL builder every player in
+// the app shares.
+function componentsAt(origin) {
+  const sandbox = { console };
+  sandbox.window = sandbox;
+  sandbox.location = { origin: origin, protocol: origin.split(':')[0] + ':' };
+  vm.createContext(sandbox);
+  vm.runInContext(read('js', 'components.js'), sandbox);
+  return sandbox.HC.components;
 }
 
 const ID = 'p8aqXrP4wws';
@@ -153,35 +172,103 @@ function main() {
 
   console.log('\n--- the packaged app, where error 153 came from ---');
   {
-    /* THE BUG THIS IS HERE FOR. The web build runs on https and the packaged
-       app runs on capacitor://localhost. Asking that origin for the JS API
-       does not degrade, it replaces the whole player with "Video player
-       configuration error. Error 153" and a button out to the YouTube app.
-       So the API is asked for where it can be granted and nowhere else. */
+    /* THE BUG THIS IS HERE FOR, and it was every YouTube player in the app,
+       not only this one. The web build runs on https and the packaged app
+       runs on capacitor://localhost, where a document sends no referrer at
+       all; YouTube answers a player request with no referrer with "Video
+       player configuration error. Error 153" and a button out to the YouTube
+       app. Nothing in the page can fix that, so on that origin the frame
+       holds embed.html, which is published on https and holds YouTube. */
     const native = boot('https://youtu.be/' + ID, 'capacitor://localhost');
     const html = native.block();
 
-    okTrue('the video is still embedded', html.indexOf('/embed/' + ID) !== -1);
-    okTrue('still muted', html.indexOf('mute=1') !== -1);
-    okTrue('still starts on its own', html.indexOf('autoplay=1') !== -1);
-    ok('but the API is not asked for, because it cannot be granted there',
-      html.indexOf('enablejsapi') !== -1, false);
-    ok('and no origin is handed over either',
-      html.indexOf('origin=') !== -1, false);
+    ok('YouTube is not framed directly, because it cannot work there',
+      html.indexOf('youtube.com/embed') !== -1, false);
+    okTrue('the wrapper is framed instead',
+      html.indexOf('https://pgrooves.github.io/home-church/embed.html') !== -1);
+    okTrue('and it is told which video', html.indexOf('v=' + ID) !== -1);
+    okTrue('and to start muted', html.indexOf('mute=1') !== -1);
 
-    /* The pill has to be there and has to mean something. Without the API it
-       is the rebuild path alone, which needs nothing from YouTube. */
+    /* The pill has to be there and has to mean something. Through the wrapper
+       it is one message further away and still one tap. */
     okTrue('and the pill is still on the frame',
       html.indexOf('data-action="featured-sound"') !== -1);
 
-    // file:// is the same question with a different answer nobody wants.
-    ok('a file:// page is treated the same way',
-      boot('https://youtu.be/' + ID, 'file://').block().indexOf('enablejsapi') !== -1,
-      false);
+    // file:// is the same question with the same answer: no referrer either.
+    okTrue('a file:// page is wrapped too',
+      boot('https://youtu.be/' + ID, 'file://').block().indexOf('embed.html') !== -1);
 
     // The harness itself: a module loaded with no page under it must not throw.
     okTrue('and a page that does not exist at all still builds a frame',
-      boot('https://youtu.be/' + ID, null).block().indexOf('/embed/' + ID) !== -1);
+      boot('https://youtu.be/' + ID, null).block().indexOf('embed.html') !== -1);
+
+    // A Short is still a Short on the way through the wrapper.
+    okTrue('the upright shape survives the wrapper',
+      boot('https://www.youtube.com/shorts/' + ID, 'capacitor://localhost')
+        .block().indexOf('hc-featured--tall') !== -1);
+  }
+
+  console.log('\n--- moving the wrapper without a build ---');
+  {
+    /* The URL of a page published somewhere else is the one part of this that
+       can be wrong from inside a shipped app, so it is a row. What must not
+       happen is a bad row taking video down: anything that is not an https
+       URL falls back to the constant rather than being pasted into a src. */
+    const moved = boot('https://youtu.be/' + ID, 'capacitor://localhost',
+      'https://ibqkumxfltfiuqevviji.supabase.co/storage/v1/object/public/app');
+    okTrue('a row that names another folder is followed',
+      moved.block().indexOf(
+        'https://ibqkumxfltfiuqevviji.supabase.co/storage/v1/object/public/app/embed.html'
+      ) !== -1);
+
+    okTrue('a trailing slash does not double up',
+      boot('https://youtu.be/' + ID, 'capacitor://localhost',
+        'https://pgrooves.github.io/home-church/').block()
+        .indexOf('home-church/embed.html') !== -1);
+
+    [['an empty row', ''], ['http, which would be mixed content', 'http://example.com'],
+     ['a sentence', 'wherever the video lives'],
+     ['something with a quote in it', 'https://x/"><img onerror=x']].forEach(bad => {
+      okTrue('falls back to the built-in wrapper on ' + bad[0],
+        boot('https://youtu.be/' + ID, 'capacitor://localhost', bad[1]).block()
+          .indexOf('https://pgrooves.github.io/home-church/embed.html') !== -1);
+    });
+  }
+
+  console.log('\n--- the one URL builder every player in the app uses ---');
+  {
+    /* c.youtubeEmbedUrl() is shared with the Practices sessions, Alpha and an
+       announcement's video through js/app.js, which is the whole point: they
+       all had error 153 and they all get the same answer. */
+    const web = componentsAt('https://pgrooves.github.io');
+    const app = componentsAt('capacitor://localhost');
+
+    okTrue('a tapped video plays with sound on the web',
+      web.youtubeEmbedUrl({ id: ID, sound: true }).indexOf('mute=0') !== -1);
+    okTrue('and with sound through the wrapper too',
+      app.youtubeEmbedUrl({ id: ID, sound: true }).indexOf('mute=0') !== -1);
+
+    okTrue('a playlist is a playlist on the web',
+      web.youtubeEmbedUrl({ list: 'PLabcdefghij', sound: true })
+        .indexOf('/embed/videoseries?list=PLabcdefghij') !== -1);
+    okTrue('and is handed to the wrapper as one',
+      app.youtubeEmbedUrl({ list: 'PLabcdefghij', sound: true })
+        .indexOf('embed.html?list=PLabcdefghij') !== -1);
+
+    ok('a playlist pasted as a video id is still refused',
+      web.youtubeEmbedUrl({ id: 'videoseries' }), '');
+    ok('and so is a made up id', web.youtubeEmbedUrl({ id: 'nope' }), '');
+    ok('and so is nothing at all', web.youtubeEmbedUrl({}), '');
+
+    /* The fallback the featured frame uses when the wrapper never answers:
+       YouTube directly, which is the player this started with. */
+    okTrue('direct skips the wrapper even where the wrapper would be used',
+      app.youtubeEmbedUrl({ id: ID, direct: true })
+        .indexOf('https://www.youtube.com/embed/' + ID) === 0);
+
+    okTrue('and picking up mid video survives both paths',
+      web.youtubeEmbedUrl({ id: ID, start: 42 }).indexOf('start=42') !== -1 &&
+      app.youtubeEmbedUrl({ id: ID, start: 42 }).indexOf('start=42') !== -1);
   }
 
   console.log('\n--- no words around it, which is what was asked for ---');

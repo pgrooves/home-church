@@ -51,23 +51,30 @@
    sound on and `start` set to where the video had got to, which always works
    and costs a reload nobody asked for. One of the two is always available.
 
-   ERROR 153, AND WHY THE API IS NOT ALWAYS ASKED FOR. The packaged app does
-   not run on https. It runs on `capacitor://localhost`, which is not an
-   origin YouTube can check and which carries no referrer a player can read.
-   Ask that origin for the JS API, with `enablejsapi=1`, and the player
-   refuses to configure itself at all: the frame becomes "Video player
+   ERROR 153, AND WHY THERE ARE TWO FRAMES. The packaged app does not run on
+   https. It runs on `capacitor://localhost`, and a document on a scheme that
+   is not http or https sends no referrer, by specification. YouTube's player
+   will not configure itself without one: the frame becomes "Video player
    configuration error. Error 153" over two buttons, one of which is Watch on
    YouTube. A block whose whole purpose is a video that plays here, ending as
    a door out to the YouTube app, is the worst version of this feature that
-   could ship, and it shipped: the web build was fine and the phone was not.
+   could ship, and it shipped. It was not this block's fault and not this
+   block's alone: every YouTube player in the app had it, on every phone,
+   while the web build played all of them perfectly.
 
-   So the API is asked for only where it can be granted, which is an http or
-   https origin, and it is asked for with the `origin` parameter it is
-   supposed to carry. Everywhere else the frame is a plain embed — the same
-   shape as the players on Practices, Alpha and an announcement, which have
-   always run in the packaged app — and the pill's rebuild path does the
-   whole job on its own. One parameter's difference, and it is the difference
-   between a video and an error message.
+   Nothing in this file could fix that, because no referrer policy can invent
+   an https referrer and iOS will not serve a bundled app over https. So the
+   player moved to a page that has an https origin of its own: embed.html at
+   the repo root, published by the same GitHub Pages build the web version
+   runs on. On a phone this frame holds that page and that page holds
+   YouTube. c.youtubeEmbedUrl() decides which, by asking what origin the app
+   is on rather than what device it is, and every other player in the app now
+   goes through the same call.
+
+   THE SOUND SURVIVED THE MOVE. The wrapper holds the YouTube API on an
+   origin where the API works, so the pill's message goes one hop further and
+   the video unmutes in place exactly as it does on the web. The rebuild path
+   is still underneath both, for a frame that answers nothing.
    -------------------------------------------------------------------------- */
 
 (function (HC) {
@@ -102,35 +109,20 @@
     return /\/shorts\//i.test(link());
   }
 
-  /* The origin to hand the player, or '' when there is not one worth handing
-     it. See ERROR 153 in the header: `capacitor://localhost` is the packaged
-     app's origin and asking for the API from there breaks the player
-     outright, so the question this answers is not "is this a phone" but "is
-     this an origin YouTube can check", which is the thing that actually
-     decides it. Guarded for a location object that is not there at all,
-     because tests/featured-video.test.js runs this file with no page under
-     it. */
-  function apiOrigin() {
-    var loc = window.location;
-    if (!loc || (loc.protocol !== 'https:' && loc.protocol !== 'http:')) return '';
-    return loc.origin || '';
-  }
-
+  /* Both players in one call, and which one it is depends on the origin this
+     app is running on rather than on the phone. See the note over
+     c.youtubeEmbedUrl(): on https it is YouTube directly, on
+     capacitor://localhost it is embed.html, which is the only way a player
+     ever gets a referrer to show. `direct` forces the first, which is what
+     this file falls back to if the wrapper never answers. */
   function src(id, opts) {
     opts = opts || {};
-    var origin = apiOrigin();
-    return ORIGIN + '/embed/' + id +
-      '?autoplay=1' +
-      '&mute=' + (opts.sound ? '0' : '1') +
-      // playsinline is not a preference on iOS. Without it the video goes
-      // full screen the instant it starts, which on the screen the app opens
-      // to would read as the app having opened into a video player.
-      '&playsinline=1' +
-      '&rel=0&modestbranding=1' +
-      // The handshake below is only possible with this on, and only safe to
-      // ask for where the origin beside it is real.
-      (origin ? '&enablejsapi=1&origin=' + encodeURIComponent(origin) : '') +
-      (opts.start ? '&start=' + opts.start : '');
+    return c.youtubeEmbedUrl({
+      id: id,
+      sound: !!opts.sound,
+      start: opts.start,
+      direct: !!opts.direct
+    });
   }
 
   /* ------------------------------------------------------------- the markup */
@@ -174,19 +166,42 @@
      when a new render puts a new frame there. */
 
   var frame = null;      // the iframe on screen
-  var ready = false;     // it answered the handshake, so commands will land
+  var wrapped = false;   // it is embed.html rather than YouTube itself
+  var ready = false;     // somebody is listening, so a command will land
   var sound = false;     // what the button currently says
   var reported = null;   // what the player last said about its own sound
   var at = 0;            // the last position it reported, in seconds
   var since = 0;         // when this frame was created, the fallback clock
   var pokes = 0;
   var poker = null;
+  var rescue = null;     // the wrapper has this long to say it is there
 
-  function post(func, args) {
+  /* Ask for the sound, in whichever language the frame speaks.
+
+     Through the wrapper it is one message, because embed.html is holding the
+     YouTube API on an origin where the API works and is doing the talking.
+     Direct, it is YouTube's own postMessage commands. Either way this only
+     reaches a player that is listening; the rebuild below is what covers the
+     case where none is. */
+  function askSound(on) {
     if (!frame || !frame.contentWindow) return;
     try {
+      if (wrapped) {
+        frame.contentWindow.postMessage({ hc: 'sound', on: !!on }, c.embedOrigin());
+        return;
+      }
       frame.contentWindow.postMessage(JSON.stringify({
-        event: 'command', func: func, args: args || []
+        event: 'command', func: on ? 'unMute' : 'mute', args: []
+      }), ORIGIN);
+      if (on) {
+        frame.contentWindow.postMessage(JSON.stringify({
+          event: 'command', func: 'setVolume', args: [100]
+        }), ORIGIN);
+      }
+      // A muted autoplay a browser refused is a player sitting still. The
+      // same tap that asks for sound asks it to start.
+      frame.contentWindow.postMessage(JSON.stringify({
+        event: 'command', func: 'playVideo', args: []
       }), ORIGIN);
     } catch (err) {
       // A frame that has gone away mid tap. The reload path still works.
@@ -199,12 +214,13 @@
      it never will. Ten tries is two and a half seconds, which is longer than
      an embed takes to boot on a bad connection and short enough that the
      first tap on the pill is never waiting on it: the reload path below is
-     what an unanswered handshake falls through to. */
+     what an unanswered handshake falls through to.
+
+     Not run for the wrapper, which does this handshake itself, on its own
+     origin, and reports what it hears. */
   function listen() {
     stop();
-    // No API was asked for, so nobody is going to answer. The pill's rebuild
-    // path is the whole mechanism here, and it needs no handshake.
-    if (!apiOrigin()) return;
+    if (wrapped || !c.embedOrigin || !ownOrigin()) return;
     pokes = 0;
     poker = window.setInterval(function () {
       pokes += 1;
@@ -223,18 +239,53 @@
   function stop() {
     if (poker) window.clearInterval(poker);
     poker = null;
+    if (rescue) window.clearTimeout(rescue);
+    rescue = null;
   }
 
-  /* Anything the player says about itself. Two things are worth keeping: where
-     it has got to, which is what makes a rebuilt frame pick up rather than
-     start over, and whether it is muted, which is the only honest source for
-     what the pill should say. Somebody unmuting from YouTube's own controls
-     comes through here too, and the pill follows them. */
+  function ownOrigin() {
+    var loc = window.location;
+    if (!loc || (loc.protocol !== 'https:' && loc.protocol !== 'http:')) return '';
+    return loc.origin || '';
+  }
+
+  /* Anything the frame says about itself. Two things are worth keeping: where
+     the video has got to, which is what makes a rebuilt frame pick up rather
+     than start over, and whether it is muted, which is the only honest source
+     for what the pill should say. Somebody unmuting from YouTube's own
+     controls comes through here too, and the pill follows them.
+
+     Two dialects, because there are two frames. embed.html speaks in plain
+     objects with an `hc` on them; YouTube speaks in JSON strings. The origin
+     is not the test -- the wrapper's origin is wherever it is published, and
+     an app on a custom scheme cannot always say what its own is -- so what is
+     checked is that this came from the window we put on the glass, which
+     nothing else can claim. */
   function onMessage(evt) {
-    if (evt.origin !== ORIGIN) return;
     if (!frame || evt.source !== frame.contentWindow) return;
 
-    var data;
+    var data = evt.data;
+
+    // The wrapper.
+    if (data && typeof data === 'object' && data.hc) {
+      if (data.hc === 'here' || data.hc === 'ready') {
+        // It exists, so the fallback to a direct frame is called off.
+        if (rescue) { window.clearTimeout(rescue); rescue = null; }
+        if (data.hc === 'ready') ready = true;
+        return;
+      }
+      if (data.hc === 'state') {
+        if (typeof data.time === 'number') at = data.time;
+        if (typeof data.sound === 'boolean') {
+          reported = data.sound;
+          paint(reported);
+        }
+      }
+      return;
+    }
+
+    // YouTube itself.
+    if (evt.origin !== ORIGIN) return;
     try {
       data = JSON.parse(evt.data);
     } catch (err) {
@@ -276,7 +327,12 @@
     var id = videoId();
     if (!id || !frame) return;
     var start = elapsed();
-    frame.src = src(id, { sound: withSound, start: start });
+    /* `direct` follows whatever this frame already is, rather than asking the
+       question again. It matters after a fallback: the wrapper was not there
+       four seconds ago, and a rebuild that quietly went back to it would take
+       a working YouTube error message and make it a black rectangle, one tap
+       after the person asked for sound. */
+    frame.src = src(id, { sound: withSound, start: start, direct: !wrapped });
     ready = false;
     reported = null;
     at = 0;
@@ -302,11 +358,7 @@
       return;
     }
 
-    post(want ? 'unMute' : 'mute');
-    if (want) post('setVolume', [100]);
-    // A muted autoplay that a browser refused is a player sitting at zero.
-    // The same tap that asks for sound asks it to start.
-    post('playVideo');
+    askSound(want);
 
     /* The player is meant to answer within a frame or two, and it says what
        it is now doing rather than what it was asked to do. If it has not
@@ -331,13 +383,45 @@
     }
     if (found === frame) return;
 
+    stop();
     frame = found;
+    wrapped = c.embedIsWrapped();
     ready = false;
     reported = null;
     sound = false;
     at = 0;
     since = Date.now();
     listen();
+
+    /* THE ONE THING THAT CANNOT BE TESTED FROM A DESK. The wrapper is a page
+       at a URL, published somewhere else, and a URL can be wrong: Pages off,
+       the repo renamed, `home_embed_base` pointed at a folder that has no
+       embed.html in it. A frame like that is a black rectangle at the top of
+       Home that says nothing at all.
+
+       embed.html announces itself the moment it runs, so silence here means
+       it is not there, and silence is answered by framing YouTube directly.
+       That is the player this started with, error 153 and all -- which is a
+       poor video and still a better one than a black box, because it says
+       what is wrong and offers a way to watch.
+
+       EIGHT SECONDS, WHICH IS LONGER THAN IT SOUNDS. The wrapper is seven
+       kilobytes and speaks before it has fetched anything else, so this is
+       not waiting on YouTube. It is waiting on a church car park's worth of
+       signal, and cutting it short would turn a slow video into a broken one
+       for the person with two bars. Nothing is waiting on this timer: the
+       video is already loading behind it and the pill already works. */
+    if (!wrapped) return;
+    rescue = window.setTimeout(function () {
+      rescue = null;
+      if (!frame) return;
+      var id = videoId();
+      if (!id) return;
+      wrapped = false;
+      frame.src = src(id, { direct: true });
+      since = Date.now();
+      listen();
+    }, 8000);
   }
 
   window.addEventListener('message', onMessage);

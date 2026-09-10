@@ -1818,7 +1818,11 @@
        this switch's fallback everywhere, and leave no way back to on from
        inside the app: the switch that puts the Group tab back would be the
        switch that had just been thrown away. */
-    group_mode_on: true
+    group_mode_on: true,
+    /* 0066. Read by name in js/components.js, and it is the URL of the page
+       every YouTube player in the app is framed through on a phone. Deleting
+       it would take the video with it. See embed.html. */
+    home_embed_base: true
   };
 
   /* The Group tab's switch, as the app knows it rather than as the database

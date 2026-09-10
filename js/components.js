@@ -308,6 +308,113 @@
     return id ? 'https://i.ytimg.com/vi/' + id + '/hqdefault.jpg' : '';
   }
 
+  /* ------------------------------------------------------ what a video plays in
+
+     ERROR 153, WHICH IS THE WHOLE REASON THIS IS NOT ONE STRING IN ONE FILE.
+     The packaged app runs on `capacitor://localhost`. A document on a scheme
+     that is not http or https sends no referrer, by specification, and
+     YouTube's embedded player will not configure itself without one: it draws
+     "Video player configuration error. Error 153" over a button offering to
+     leave for the YouTube app. That was every YouTube video in this app on a
+     phone -- Home, Practices, Alpha, an announcement -- while the same code
+     served over https played perfectly. No referrer policy can invent an
+     https referrer, and iOS will not serve a bundled app over https either,
+     because WKWebView reserves that scheme and Capacitor cannot register a
+     handler for it. There is no way to fix it inside the page.
+
+     So the player moves to a page that does have an https origin. embed.html
+     at the repo root is published by the same GitHub Pages build the web
+     version runs on, and it frames YouTube from there; the app frames it. See
+     the header of that file.
+
+     WHICH OF THE TWO IS USED IS A QUESTION ABOUT THE ORIGIN, not about the
+     phone. An app already on http or https has nothing to solve and keeps
+     framing YouTube directly, which is the path that has always worked and
+     the one a browser test here exercises. Anything else -- capacitor://,
+     file:// -- goes through the wrapper.
+
+     WHERE THE WRAPPER LIVES IS DATA, because a shipped app cannot be told a
+     new URL without a submission. `home_embed_base` in app_settings names the
+     folder, the constant below is the floor under it, and index.html's
+     frame-src has to name the host either way. A wrapper that cannot be
+     reached is not fatal: the caller falls back to framing YouTube directly,
+     which is exactly where this started.
+     ---------------------------------------------------------------------- */
+
+  var EMBED_BASE = 'https://pgrooves.github.io/home-church';
+
+  function embedBase() {
+    var base = EMBED_BASE;
+    if (HC.data && HC.data.setting) base = HC.data.setting('home_embed_base', EMBED_BASE);
+    base = String(base || '').trim().replace(/\/+$/, '');
+    // https only. A wrapper on http would be a mixed content frame, and a
+    // wrapper on anything else has the problem it exists to solve.
+    return /^https:\/\/[^\s"'<>]+$/.test(base) ? base : EMBED_BASE;
+  }
+
+  function ownOrigin() {
+    var loc = window.location;
+    if (!loc || (loc.protocol !== 'https:' && loc.protocol !== 'http:')) return '';
+    return loc.origin || '';
+  }
+
+  /* One URL for every YouTube player in the app. opts:
+
+       id     one video, eleven characters of base64url
+       list   one playlist, instead of id
+       sound  true for a tap that means "play this", false for the muted
+              autoplay on Home
+       start  seconds in, for a frame being rebuilt where the last one was
+       direct true to skip the wrapper and frame YouTube itself, which is what
+              a caller falls back to when the wrapper never answered
+
+     Answers '' for anything that is not one of the two shapes, so a caller
+     can treat an empty string as "there is nothing to play here". */
+  function youtubeEmbedUrl(opts) {
+    opts = opts || {};
+    var id = String(opts.id || '');
+    var list = String(opts.list || '');
+
+    var okId = /^[A-Za-z0-9_-]{11}$/.test(id) && id !== 'videoseries';
+    var okList = /^(PL|UU|OL|FL|RD)[A-Za-z0-9_-]{10,48}$/.test(list);
+    if (!okId && !okList) return '';
+
+    var start = parseInt(opts.start, 10);
+    var origin = ownOrigin();
+
+    if (!origin && !opts.direct) {
+      return embedBase() + '/embed.html' +
+        '?' + (okId ? 'v=' + id : 'list=' + list) +
+        '&mute=' + (opts.sound ? '0' : '1') +
+        (start > 0 ? '&start=' + start : '');
+    }
+
+    return 'https://www.youtube.com/embed/' + (okId ? id : 'videoseries') +
+      '?' + (okId ? '' : 'list=' + list + '&') +
+      'autoplay=1' +
+      '&mute=' + (opts.sound ? '0' : '1') +
+      // Not a preference on iOS. Without it the video goes full screen the
+      // instant it starts.
+      '&playsinline=1' +
+      '&rel=0&modestbranding=1' +
+      // Only where there is an origin to hand over with it. See above: this
+      // pair is what a capacitor:// origin cannot have.
+      (origin ? '&enablejsapi=1&origin=' + encodeURIComponent(origin) : '') +
+      (start > 0 ? '&start=' + start : '');
+  }
+
+  // The origin of whatever youtubeEmbedUrl() just built, for a caller that
+  // has to postMessage at it.
+  function embedOrigin() {
+    return ownOrigin() ? 'https://www.youtube.com' : embedBase().replace(/^(https:\/\/[^/]+).*$/, '$1');
+  }
+
+  // True when the URL above went through embed.html rather than straight to
+  // YouTube, which decides which conversation a caller is in.
+  function embedIsWrapped() {
+    return !ownOrigin();
+  }
+
   /* ----------------------------------------------------------------- icons
      Thin line icons, 1.5 stroke, rounded caps, drawn on a 24 grid.
      ---------------------------------------------------------------------- */
@@ -1195,6 +1302,10 @@
     urlHost: urlHost,
     youtubeId: youtubeId,
     youtubeThumb: youtubeThumb,
+    youtubeEmbedUrl: youtubeEmbedUrl,
+    embedIsWrapped: embedIsWrapped,
+    embedOrigin: embedOrigin,
+    embedBase: embedBase,
 
     sectionHeader: sectionHeader,
     quoteCard: quoteCard,
