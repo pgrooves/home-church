@@ -56,7 +56,8 @@ function router(stops, past) {
    church running group rooms, so Group is in it. Whether it is in it at all
    is a switch, and tests/group-mode.test.js is where that lives; this file
    only cares that a row of this length lands where it should. */
-const MODULES = ['group', 'journal', 'worship', 'practices', 'alpha', 'give'];
+const MODULES = ['group', 'journal', 'worship', 'when-where', 'practices',
+                 'alpha', 'give'];
 const admin = router(MODULES.concat(['admin']), ['profile']);
 const member = router(MODULES, ['profile']);
 

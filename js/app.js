@@ -103,6 +103,18 @@
       title: 'Worship',
       sub: 'The songs from Sunday, and where to hear them again.'
     },
+    /* The church's Sunday: what time, and where. Fourth, straight after
+       Worship, because the three above it are things somebody already here
+       opens during their week and this is the one somebody who has never been
+       here opens first. Above the two courses rather than below them for the
+       same reason: "what time do you meet" is a shorter question than "should
+       I do Alpha", and the shorter question goes first. */
+    {
+      route: 'when-where',
+      icon: 'pin',
+      title: 'When & Where',
+      sub: 'Sunday times, the address, and a button to the map.'
+    },
     {
       route: 'practices',
       icon: 'practiceSabbath',
@@ -174,8 +186,9 @@
      more reach that route than they can reach the tile. Its four sections
      share the route name, so the tile stays lit down inside Manage users the
      way it stays lit inside a practice. */
-  var MODULE_ROUTES = ['more', 'worship', 'group', 'practices', 'practice', 'alpha',
-                       'journal', 'journal-entry', 'give', 'admin'];
+  var MODULE_ROUTES = ['more', 'worship', 'group', 'when-where', 'practices',
+                       'practice', 'alpha', 'journal', 'journal-entry', 'give',
+                       'admin'];
 
   var TITLES = {
     home: 'Home',
@@ -185,6 +198,10 @@
     connect: 'Connect',
     more: 'More',
     worship: 'Worship',
+    // The tile says When & Where and the screen's own header says Sunday
+    // Gatherings, which is the church's name for it on their website. This is
+    // the one the bar carries, because it is the one somebody tapped.
+    'when-where': 'When & Where',
     // The month grid and the church's own dates under it. Still "Cal" now
     // that it is the second tile: the tile's label and this table have to
     // agree, and the short name is what fits under the icon.
@@ -4629,6 +4646,7 @@
         connect: HC.screens.connect,
         more: HC.screens.more,
         worship: HC.screens.worship,
+        'when-where': HC.screens.whenWhere,
         cal: HC.screens.cal,
         practices: HC.screens.practices,
         practice: HC.screens.practice,

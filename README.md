@@ -478,6 +478,52 @@ button must not disappear because somebody tidied that list.
 
 -----
 
+## When & Where
+
+**The fourth stop behind •••, and the one a person who has never been here
+opens first.** It is the church's Sunday Gatherings block from
+homechurchnola.com brought into the app: the two paragraphs, then the service
+times, then the address, then three photographs off the church's own Instagram.
+The tile says *When & Where*, because that is what somebody looks for in a
+menu; the screen's own header says *Sunday Gatherings*, because that is what the
+church calls it.
+
+**Nothing on it is typed into a source file.** The times, the day, the street,
+the town and the map link are `church_profile.service_day`, `service_times`,
+`address_*` and `maps_url` — the same row Home's gathering card reads. That is
+the whole argument for the page being here rather than a link out to the
+website: the Sunday a service moves, both screens move with it and nobody ships
+a build. The two paragraphs are a `content_pages` row, `page-when-where`,
+written from **Admin → Content** or rewritten in place from Edit mode, and the
+words that ship in `js/screens/whenwhere.js` are what a phone with no signal
+draws.
+
+**Get directions is the one thing the page it came from cannot do.** A website
+can print an address; a phone can open it, in Apple Maps on iOS and the web map
+everywhere else. No `maps_url` on file means no button rather than a button that
+opens nothing.
+
+**The photographs are the newest three Instagram posts**, already mirrored into
+the `instagram` bucket by the sync job for the rail on Connect, so there is no
+second place to keep three pictures up to date. They are decoration here rather
+than a rail: no captions, no taps, nothing to open, because Connect is where
+those posts are content. **Three or none** — two in a grid built for three is a
+hole, and a page that ends on the address is a perfectly good page, which is
+also what a project with no Instagram sync draws.
+
+**Two things are deliberately not the website.** The site sets this section in
+white on near-black; this app has one paper and one dark theme and they follow
+the phone, so the page wears whichever the reader is already in. And **Home
+keeps its gathering card** — same times, same Directions button, still on the
+first screen. This is the fuller answer for somebody who went looking, not a
+replacement for the one on the way past.
+
+See `js/screens/whenwhere.js`, the `When & Where` block in `css/screens.css`,
+`supabase/migrations/0065_when_where_page.sql`, `tests/when-where.test.js`, and
+`demo-when-where/`, which is the drawing it was decided from.
+
+-----
+
 ## Publishing content without an App Store build
 
 Guides, events, podcast episodes, and future content types have a home in
@@ -723,9 +769,9 @@ with one fewer tile on the next content refresh rather than waiting for a cold
 start.
 
 **Hiding is a filter, not a hole.** The tiles under Group move up a slot, so
-the row behind ••• reads Journal, Worship, Practices, Alpha, Give, then Admin
-on the phones that have it, then Settings. With group mode on it is the same
-row with Group at the front of it.
+the row behind ••• reads Journal, Worship, When & Where, Practices, Alpha,
+Give, then Admin on the phones that have it, then Settings. With group mode on
+it is the same row with Group at the front of it.
 
 **Nothing is deleted when it goes off.** Every room, every answer and every
 prayer request stays in its table untouched; this is a switch over what the app

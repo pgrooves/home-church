@@ -825,6 +825,98 @@
 }
 
 /* ==========================================================================
+   When & Where
+
+   NO CARDS ON THIS SCREEN, AND THAT IS THE DESIGN. The two facts on it are a
+   time and an address, which is two labelled lines in one column of prose,
+   not two objects. A cream box around each would spend a border, a fill and a
+   radius saying "these are separate things to look at" about a page whose
+   whole job is to be read straight down and left. The eyebrow over each block
+   and the hairline above it do the work, which is the move the section header
+   at the top of the screen already makes twice.
+   ========================================================================== */
+
+.hc-ww__lede {
+  margin-top: var(--hc-space-lg);
+  font-size: calc(19px * var(--hc-text-scale));
+  line-height: 1.55;
+}
+
+/* Bold on the website, bold here. It is the line the paragraph above it is
+   building to, and the one somebody who reads nothing else should read. */
+.hc-ww__welcome {
+  margin-top: var(--hc-space-base);
+  font-weight: 700;
+}
+
+.hc-ww__block {
+  display: block;
+  margin-top: var(--hc-space-xl);
+  padding-top: var(--hc-space-lg);
+  border-top: var(--hc-hairline) solid var(--hc-rule);
+}
+
+.hc-ww__when,
+.hc-ww__where { margin-top: 6px; }
+
+/* Laid out exactly like the times on Home's gathering card, down to the
+   hairline between them, because they are the same three times: a person who
+   has seen one and then the other should not have to check that they agree. */
+.hc-ww__times {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--hc-space-sm) var(--hc-space-base);
+  margin-top: var(--hc-space-md);
+  list-style: none;
+}
+
+.hc-ww__time {
+  color: var(--hc-ink);
+  font-family: var(--hc-sans);
+  font-weight: 600;
+  font-size: calc(var(--hc-body-sans) * var(--hc-text-scale));
+  font-variant-numeric: tabular-nums;
+}
+
+.hc-ww__time + .hc-ww__time {
+  padding-left: var(--hc-space-base);
+  border-left: var(--hc-hairline) solid var(--hc-rule);
+}
+
+.hc-ww__town { margin-top: var(--hc-space-xs); color: var(--hc-mid); }
+.hc-ww__action { margin-top: var(--hc-space-lg); }
+
+/* Three photographs off the church's own Instagram, arranged the way the
+   website arranges them: one tall on the left, one wide above a smaller one on
+   the right. Explicit rows rather than aspect-ratio on the frames, so three
+   pictures of three different shapes cannot push the grid around between one
+   sync and the next. */
+.hc-ww__photos {
+  margin-top: var(--hc-space-xxl);
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: repeat(3, 72px);
+  gap: var(--hc-space-sm);
+}
+
+.hc-ww__frame {
+  overflow: hidden;
+  border-radius: var(--hc-radius-sm);
+  background: var(--hc-paper-sunk);
+}
+
+.hc-ww__frame--1 { grid-column: 1; grid-row: 2 / span 2; }
+.hc-ww__frame--2 { grid-column: 2; grid-row: 1 / span 2; }
+.hc-ww__frame--3 { grid-column: 2; grid-row: 3; }
+
+.hc-ww__photo {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* ==========================================================================
    Profile
    ========================================================================== */
 

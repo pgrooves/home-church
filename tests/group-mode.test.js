@@ -17,10 +17,11 @@
       with Group away the row starts at Journal and everything else shifts one
       slot toward the front. That is the order the sheet draws, the order a
       drag runs, and the order the More screen lists, all at once.
-   3. THE ORDER ITSELF. Group, Journal, Worship, Practices, Alpha, Give, and
-      it is a decision rather than an accident: the most-opened thing behind
-      ••• is first and the once-a-month thing is last. A reorder should have
-      to come here and say so.
+   3. THE ORDER ITSELF. Group, Journal, Worship, When & Where, Practices,
+      Alpha, Give, and it is a decision rather than an accident: the
+      most-opened thing behind ••• is first, the one a visitor opens first is
+      in the middle where the church's own week ends, and the once-a-month
+      thing is last. A reorder should have to come here and say so.
 
    No browser. js/app.js only touches the document from inside its boot
    listener, which nothing here fires, so a stub with two methods on it is
@@ -69,7 +70,7 @@ function modules(settings) {
   return sandbox.window.HC.modules().map((m) => m.route);
 }
 
-const WITHOUT = ['journal', 'worship', 'practices', 'alpha', 'give'];
+const WITHOUT = ['journal', 'worship', 'when-where', 'practices', 'alpha', 'give'];
 const WITH = ['group'].concat(WITHOUT);
 
 /* ------------------------------------------------------------------- off */
@@ -105,8 +106,8 @@ console.log('\n--- the order, which is a decision ---\n');
 ok('Group leads, then what you wrote in it, then Sunday',
    modules({ group_mode_on: true }).slice(0, 3), ['group', 'journal', 'worship']);
 
-ok('the two courses sit together, and Give is last',
-   modules({ group_mode_on: true }).slice(3), ['practices', 'alpha', 'give']);
+ok('When & Where before the two courses, and Give last',
+   modules({ group_mode_on: true }).slice(3), ['when-where', 'practices', 'alpha', 'give']);
 
 ok('hiding Group moves Journal into the first slot rather than leaving a gap',
    modules({})[0], 'journal');
