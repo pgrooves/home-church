@@ -102,7 +102,7 @@
           '<label class="hc-field">' +
             '<span class="hc-field__label">The code</span>' +
             '<input class="hc-input" type="text" inputmode="numeric" autocomplete="one-time-code" ' +
-              'name="code" placeholder="6 digit code">' +
+              'name="code" placeholder="8 digit code">' +
           '</label>' +
           c.button('Verify and sign in', { action: 'auth-verify' }) +
         '</form>' +

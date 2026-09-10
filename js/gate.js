@@ -117,7 +117,7 @@
           '<label class="hc-gate__label" for="hc-gate-code">Your code</label>' +
           '<input class="hc-input" id="hc-gate-code" name="code" type="text" ' +
             'inputmode="numeric" autocomplete="one-time-code" ' +
-            'placeholder="6 digit code">' +
+            'placeholder="8 digit code">' +
           '<p class="hc-gate__note" data-sent>We sent you a code. It can take a minute ' +
             'to land.</p>' +
           '<p class="hc-gate__error" data-error hidden></p>' +
