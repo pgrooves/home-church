@@ -38,6 +38,95 @@
   letter-spacing: -0.01em;
 }
 
+/* ------------------------------------------------------ the featured video
+
+   The frame between the greeting and Announcements. It carries no heading, no
+   eyebrow and no caption, so the only thing that separates it from the two
+   blocks around it is air, and it gets the same lg gap the greeting already
+   puts under itself. See js/featured-video.js. */
+
+.hc-featured {
+  position: relative;
+  margin-bottom: var(--hc-space-lg);
+}
+
+.hc-featured__frame {
+  position: relative;
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: var(--hc-radius-lg);
+  overflow: hidden;
+  /* The same cream every other piece of missing art in the app shows while
+     it loads, so a slow embed is a warm rectangle rather than a black one. */
+  background: var(--hc-cream);
+}
+
+/* A Short, filmed on a phone held upright. Capped the way the carousel's tall
+   slides are, for the same reason: one video should not take the whole screen
+   and push Sunday off the bottom of it. */
+.hc-featured--tall .hc-featured__frame {
+  aspect-ratio: 9 / 16;
+  max-height: 62vh;
+}
+
+.hc-featured__player {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+/* Top right, which is the one corner of a YouTube embed with nothing of its
+   own in it: the controls run along the bottom and the title sits top left. */
+.hc-featured__sound {
+  position: absolute;
+  top: var(--hc-space-md);
+  right: var(--hc-space-md);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: var(--hc-radius-pill);
+  /* Its own ink rather than a token, both appearances. This sits on a
+     photograph rather than on the page, so it has to hold against whatever
+     the video is showing rather than against the paper behind it. */
+  background: rgba(17, 17, 17, 0.62);
+  -webkit-backdrop-filter: blur(8px) saturate(120%);
+  backdrop-filter: blur(8px) saturate(120%);
+  color: #FFFCF7;
+  font-family: var(--hc-sans);
+  font-size: calc(13px * var(--hc-text-scale));
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  line-height: 1;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* The 44pt target the rest of the app keeps, without a 44px pill sitting on
+   the video. The button is 36 high and the finger's half of it reaches past
+   the edges, which is what ::before is for everywhere else in this app. */
+.hc-featured__sound::before {
+  content: '';
+  position: absolute;
+  inset: -4px;
+}
+
+.hc-featured__sound:active { opacity: 0.85; }
+
+.hc-featured__soundicon {
+  width: 17px;
+  height: 17px;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
 .hc-gathering__when { margin-top: 6px; }
 
 .hc-gathering__times {

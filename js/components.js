@@ -371,6 +371,18 @@
     lock: '<rect x="4.5" y="10.5" width="15" height="9.5" rx="2.2"/>' +
           '<path d="M8 10.5V8a4 4 0 0 1 8 0v2.5"/>',
 
+    /* The pill on the featured video at the top of Home, both states.
+
+       One speaker, drawn as a cone rather than a box with a triangle on it,
+       and the difference between the two glyphs is the two waves coming off
+       it: on, and struck through. Same construction as `eye` and `eyeOff`
+       above, and for the same reason: the pair has to be one glyph telling
+       you which way it is set, not two unrelated drawings swapping places. */
+    sound: '<path d="M11 5.5 6.5 9H3.8a.8.8 0 0 0-.8.8v4.4a.8.8 0 0 0 .8.8h2.7L11 18.5z"/>' +
+           '<path d="M15.2 9.2a4 4 0 0 1 0 5.6M18 6.4a8 8 0 0 1 0 11.2"/>',
+    soundOff: '<path d="M11 5.5 6.5 9H3.8a.8.8 0 0 0-.8.8v4.4a.8.8 0 0 0 .8.8h2.7L11 18.5z"/>' +
+              '<path d="m16 10 5 4M21 10l-5 4"/>',
+
     /* Admin. A shield with a check in it: what the church trusted somebody
        with, rather than a cog, which would read as settings, and this is not
        where anybody changes their text size. Not `lock` either, which is

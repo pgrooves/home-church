@@ -1808,7 +1808,11 @@
   var SEEDED = {
     home_banner_on: true,
     home_banner_message: true,
-    announcement_push_default: true
+    announcement_push_default: true,
+    // 0063. Read by name in js/featured-video.js, so it is not offered for
+    // deletion either: emptying the box is how the video comes off Home, and
+    // it leaves the box there to paste the next link into.
+    home_featured_video: true
   };
 
   /* Rows this screen deliberately does not draw, because another screen draws

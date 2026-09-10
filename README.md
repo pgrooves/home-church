@@ -498,7 +498,7 @@ See "The admin dashboard" below. **`events` is the fourth and it is a different
 shape**: it still has no write policy for any client role, and an admin reaches
 it only through the named functions in `0042_event_admin_writes.sql`, which are
 what the + , the pencil and the x on the Cal tab call. Six columns, checked
-inside, and nothing else on the table can be touched from a phone. Eight slash
+inside, and nothing else on the table can be touched from a phone. Nine slash
 commands drive the rest:
 
 | Command | Does |
@@ -509,6 +509,7 @@ commands drive the rest:
 | `/new-worship` | Sunday's songs to `worship_sets`, with their art, their links and their lyrics |
 | `/new-announcement` | The announcement card on Home, dated so it retires itself |
 | `/new-image` | A series' artwork to `series.art_url`, which is the tile on Listen, Guide and Home |
+| `/new-video` | A YouTube link to `app_settings.home_featured_video`, the frame under the greeting on Home |
 | `/edit-content` | Plain language fix to any row, current versus proposed, writes after you confirm |
 | `/new-content-type` | Scaffolds another content type, table and command |
 
@@ -576,7 +577,7 @@ Three sections.
 |---|---|
 | **Announcements** | Write, edit, delete the cards on Home. Title, the words in a rich text editor with bold, italic, underline, lists, hyperlinks and the scripture button, as many pictures as it needs, a YouTube link that plays inside the app, a link with a thumbnail, and the dates it goes up and comes down. Posting can send a push notification to everybody, and can pin the announcement as a banner. |
 | **Users** | Everybody who has signed in, with their name, email and role. Promote to admin, demote to member, remove an account entirely. |
-| **App settings** | The switch for **Edit mode**, below, and then the switches and short messages that change the whole app, drawn as real toggles and text fields rather than as JSON. Ships with a pinned Home banner and its message, and a default for whether posting an announcement offers to notify. |
+| **App settings** | The switch for **Edit mode**, below, and then the switches and short messages that change the whole app, drawn as real toggles and text fields rather than as JSON. Ships with a pinned Home banner and its message, a default for whether posting an announcement offers to notify, and the **featured video**, below. |
 
 **Content is hidden.** There was a fourth section, a form over `content_pages`
 holding one paragraph on Give, and Edit mode does that job in the place the
@@ -678,6 +679,35 @@ The migrations are `0025_admin_role.sql`, `0026_admin_content.sql`,
 `0027_announcement_push.sql`, `0028_announcement_pin.sql`,
 `0033_announcement_media.sql`, `0043_admin_review_push.sql` and
 `0045_announcement_authors.sql`, each with the full reasoning in its header.
+
+### The featured video on Home
+
+**One video, between the greeting and Announcements, playing on mute the moment
+the app opens.** No heading over it, no caption under it, nothing but the frame:
+the pill in its top right corner is the only text in the block, and one tap on
+it turns the sound on. The whole feature is one row in `app_settings`,
+`home_featured_video`, holding a YouTube link in any shape somebody arrives
+with — a share link, a watch link, a Short, a bare id — so changing the video is
+changing one text box. `/new-video <link>` writes it; so does **App settings →
+Featured video** on an admin's own phone. **Emptying the box is how it comes off
+Home**, and the gap closes as though the block had never been there.
+
+Muted is not a preference, it is the only autoplay a phone will honor, and it is
+also the only one that is polite in a room with other people in it. What the
+pill does about that depends on what the player is willing to hear: when
+YouTube's embedded player has answered the handshake, the sound simply comes on
+mid-sentence; when it has not, the frame is rebuilt with the sound on and
+`start` set to where the video had got to. One of the two always works, which is
+the whole reason both are there.
+
+This is the first iframe on Home, and migration `0026` says out loud that an
+announcement's YouTube link is drawn as a link out rather than embedded, for
+exactly the reason worth weighing here. The trade is different because the ask
+is: a featured video that opens the YouTube app is not a featured video, it is a
+way out of this one. It is one frame, on one screen, from a link an admin typed,
+under the same `frame-src` the Practices and Alpha players have always had. See
+`js/featured-video.js`, `supabase/migrations/0063_home_featured_video.sql` and
+`tests/featured-video.test.js`.
 
 ### An announcement's own page
 

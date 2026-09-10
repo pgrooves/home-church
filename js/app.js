@@ -2260,6 +2260,14 @@
         '</div>';
     },
 
+    /* The pill on the featured video at the top of Home. Everything it does
+       is in js/featured-video.js: this is the tap, routed like every other
+       tap in the app rather than through a listener that file would have to
+       re-attach on every repaint of Home. */
+    'featured-sound': function (el) {
+      HC.featuredVideo.toggleSound(el);
+    },
+
     'go-journal': function () {
       HC.router.go({ name: 'journal' });
     },

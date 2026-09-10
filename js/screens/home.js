@@ -666,6 +666,17 @@
     // The mark now lives in the top bar, so Home does not repeat it.
     html += '<h1 class="hc-display-l hc-home__greeting">' + c.esc(greetingLine()) + '</h1>';
 
+    /* The featured video, between the greeting and Announcements, and the one
+       block on this screen with nothing written around it: no section header
+       over it, no eyebrow on it, no caption under it. It is a video, and a
+       video that has already started playing says what it is faster than any
+       line above it could.
+
+       Empty when the church has no featured video, exactly like every other
+       block here, so Home closes back up to what it was. Everything about it
+       lives in js/featured-video.js, including the link and the sound. */
+    html += HC.featuredVideo.block();
+
     /* Announcements sit here now, directly under the greeting, rather than
        below Service times and Latest sermon where they used to. They are the
        only thing on this screen that is genuinely new information: the
