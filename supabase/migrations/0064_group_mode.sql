@@ -1,6 +1,14 @@
 -- ===========================================================================
 -- Home Church, group mode becomes a switch the church holds
 --
+-- THIS FILE IS A CONVENIENCE, NOT A PREREQUISITE. The App settings screen
+-- draws the Group mode switch by name whether or not this has ever been run,
+-- and the first tap upserts exactly the row below, label and help included.
+-- That is deliberate: a church that cannot find the switch cannot turn the
+-- feature on, and "run this SQL first" is not an answer anybody at a church
+-- should need. Running this only means the row is there, explicitly off, from
+-- day one rather than from the first tap. See saveSwitch in js/admin.js.
+--
 -- ONE ROW, AND THE TAB IS BEHIND IT. `group_mode_on` decides whether the
 -- Group tab exists at all: its tile in the ••• sheet, its stop on the
 -- sideways swipe, its row on the More screen, and the screen itself. Off, and

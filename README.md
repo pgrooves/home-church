@@ -758,15 +758,26 @@ under the same `frame-src` the Practices and Alpha players have always had. See
 
 ### Group mode, the switch that adds and removes a tab
 
-**The Group tab ships off, and one switch in App settings brings it back for
-the whole church at once.** `app_settings.group_mode_on` is the whole feature:
+**The Group tab ships off, and one switch brings it back for the whole church
+at once.** It is at **Settings → Admin → App settings**, under *The Group tab*,
+directly below Edit mode. `app_settings.group_mode_on` is the whole feature:
 off, and there is no Group anywhere in the app — no tile in the ••• sheet, no
 stop on the sideways swipe, no row on the More screen, no result in search, and
 the route itself draws a short "not right now" rather than a room. On, and
-everything is exactly as it was. **App settings → Group mode** is where an
-admin flips it, and it reaches phones that are already open: the sheet redraws
-with one fewer tile on the next content refresh rather than waiting for a cold
-start.
+everything is exactly as it was. It reaches phones that are already open: the
+sheet redraws with one fewer tile on the next content refresh rather than
+waiting for a cold start.
+
+**The switch is on the screen whether or not the row exists.** Every other row
+under *Switches and messages* is a list of what happens to be in `app_settings`,
+seeded by a migration. This one is the app saying "here is a thing you can turn
+on", drawn by name, and **the first tap is what creates the row** — an upsert
+carrying the same label and help text the migration seeds, so a church that
+flips the switch and a church that runs the SQL end up in the same place.
+Nobody at a church should have to run SQL to find a switch the app told them
+about. `supabase/migrations/0064_group_mode.sql` is therefore a convenience
+rather than a prerequisite: run it and the row is there, explicitly off, from
+day one.
 
 **Hiding is a filter, not a hole.** The tiles under Group move up a slot, so
 the row behind ••• reads Journal, Worship, When & Where, Practices, Alpha,

@@ -2061,6 +2061,29 @@
       adminRun('setting:' + key, HC.admin.saveSetting(key, 'boolean', !row.value_bool));
     },
 
+    /* The Group tab, on or off for the whole church.
+
+       NO `if (!row) return`, WHICH IS THE DIFFERENCE from the handler above.
+       That one is editing a row somebody is looking at in a list, so no row
+       means nothing to edit. This switch is drawn whether or not its row
+       exists, and the first tap on a project that has never run 0064 is what
+       creates it, so bailing on a missing row would be bailing on precisely
+       the tap that matters. js/screens/admin.js carries what to write and
+       HC.admin.saveSwitch upserts it. */
+    'admin-group-mode-toggle': function (el) {
+      var meta = HC.screens.adminHelpers.groupMode();
+      var next = !HC.screens.adminHelpers.groupModeOn();
+
+      // Moved on screen first, saved after, same as every other switch here:
+      // a switch that waits on the network to move feels broken on a bad
+      // connection, and the repaint at the end of adminRun puts it back if
+      // the write is refused.
+      setSwitch(el, next);
+      HC.native.tap('Light');
+
+      adminRun('setting:' + meta.key, HC.admin.saveSwitch(meta, next));
+    },
+
     'admin-setting-delete': function (el) {
       var key = el.getAttribute('data-id');
       var row = HC.admin.settings().filter(function (s) { return s.key === key; })[0];

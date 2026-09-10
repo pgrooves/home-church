@@ -1821,14 +1821,91 @@
     group_mode_on: true
   };
 
-  /* Rows this screen deliberately does not draw, because another screen draws
-     them where they mean something. Skipped rather than moved: the row is an
-     ordinary app_settings row that admin-setting-toggle writes the same way
-     from either screen, so the only thing that changes is which list it
-     appears in. A key here must be a key SEEDED knows, or the App settings
-     screen would hide a row an admin added and could not then get back to. */
+  /* The Group tab's switch, as the app knows it rather than as the database
+     happens to have it.
+
+     WHY THE APP CARRIES THE WHOLE ROW AND NOT JUST THE KEY. This section is
+     drawn whether or not anybody has run 0064, so on a project with no row
+     yet there is nothing to read a label or a help line off. The first tap
+     writes exactly this, which is also what the migration seeds, so a church
+     that flips the switch and a church that runs the SQL end up with the same
+     row either way. See saveSwitch in js/admin.js. */
+  var GROUP_MODE = {
+    key: 'group_mode_on',
+    label: 'Group mode',
+    help: 'Off hides the Group tab from everybody, leaders included: its icon ' +
+      'leaves the ••• menu and the rest move up a slot. Nothing is deleted — ' +
+      'rooms, answers and prayer requests stay where they are and come back ' +
+      'exactly as they were when this goes on again.',
+    sortOrder: 30
+  };
+
+  /* What the switch is showing, and it has two sources on purpose.
+
+     The row this screen fetched is the fresher of the two and is what a tap
+     writes against, so it wins. HC.data is the content layer, which is what
+     the rest of the app actually obeys, and it is the answer before the admin
+     fetch has landed and on a project where there is no row to fetch. Both
+     fall back to off, which is what every other reader of this switch does.
+     See migration 0064. */
+  function groupModeOn() {
+    var row = HC.admin.settings().filter(function (s) {
+      return s.key === GROUP_MODE.key;
+    })[0];
+    if (row) return !!row.value_bool;
+    return HC.data.setting(GROUP_MODE.key, false) === true;
+  }
+
+  /* Its own section, above the list.
+
+     A SWITCH THAT ADDS AND REMOVES A TAB IS NOT A ROW IN A LIST. Everything
+     under "Switches and messages" changes what a screen says. This one
+     changes which screens there are, so it gets a header, a sentence about
+     what happens when it moves, and the space to be read before it is
+     touched.
+
+     DRAWN EVEN WITH NO ROW BEHIND IT, which is the one thing this section
+     does that nothing else on this screen does, and the reason it exists at
+     all. The rows below are a list of what is in app_settings; this is the
+     app saying "here is a thing you can turn on", and the first tap is what
+     creates the row. A church should never have to run SQL to find a switch
+     the app told them about. */
+  function groupModeSection() {
+    var on = groupModeOn();
+
+    var html = c.sectionHeader('', 'The Group tab');
+    html += switchRow({
+      title: 'Group mode',
+      sub: on
+        ? 'On. Group is the first tile behind the ••• button, for everybody.'
+        : 'Off. There is no Group tab in the app, for anybody, and the tiles behind ••• move up a slot.',
+      action: 'admin-group-mode-toggle',
+      id: GROUP_MODE.key,
+      on: on
+    });
+    html += '<p class="hc-caption hc-admin__loading">' +
+      'This is the whole church at once, leaders included, and it reaches phones ' +
+      'that are already open. Nothing is deleted when it goes off: every room, ' +
+      'answer and prayer request stays where it is and comes back exactly as it ' +
+      'was left. Who can open a room is separate, and is set per person under ' +
+      'Manage users.</p>';
+
+    return html;
+  }
+
+  /* Rows this screen deliberately does not draw in the list, because they are
+     already drawn somewhere they mean more: the push default belongs on the
+     Announcements screen, and Group mode is a section of its own a few inches
+     above, since a switch that adds and removes a whole tab should not be
+     the fourth row in a list of banner text.
+
+     Skipped rather than moved: every one is an ordinary app_settings row and
+     the only thing that changes is which list it appears in. A key here must
+     be a key SEEDED knows, or this screen would hide a row an admin added and
+     could not then get back to. */
   var DRAWN_ELSEWHERE = {};
   DRAWN_ELSEWHERE[PUSH_DEFAULT_KEY] = true;
+  DRAWN_ELSEWHERE[GROUP_MODE.key] = true;
 
   function settingsSection() {
     var html = '<div class="hc-screen hc-admin">';
@@ -1838,6 +1915,11 @@
     // admin came here to flip. It needs nothing fetched, which is also why it
     // can draw while the rows below are still loading.
     html += editModeSection();
+
+    // Then the one switch on this screen that changes which screens there are.
+    // Also drawn before anything has been fetched, and for a second reason:
+    // there may be nothing to fetch. See groupModeSection.
+    html += groupModeSection();
 
     var rows = HC.admin.settings().filter(function (s) {
       return !DRAWN_ELSEWHERE[s.key];
@@ -1973,7 +2055,14 @@
     clearGroupBox: function () { groupBox = null; },
 
     setBusy: function (value) { busy = value || ''; },
-    setUploading: function (value) { uploading = !!value; }
+    setUploading: function (value) { uploading = !!value; },
+
+    /* The Group tab's switch: what to write, and what it is showing. Both are
+       read by the tap handler in js/app.js, which needs them together — the
+       row to upsert and the value to move away from — and neither belongs in
+       that file, because this screen is what draws the switch. */
+    groupMode: function () { return GROUP_MODE; },
+    groupModeOn: groupModeOn
   };
 
 })(window.HC = window.HC || {});
