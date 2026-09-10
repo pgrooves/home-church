@@ -342,6 +342,22 @@ which is honest and is accepted. If you want the last few percent of fidelity,
 retake them in the iOS simulator following the same order and captions. Do not
 ship a mix of both, the tonal difference shows.
 
+### If a slot asks for 6.5 inch
+
+You should not normally need this. Apple scales the 6.9 set down for every
+smaller device, and its scaler is as good as ours. The exception is a slot that
+is already populated with older images and will not accept the 6.9 set, which
+is the one case worth a second upload:
+
+```bash
+python3 scripts/resize_screenshots.py 6.5 screenshots/*.png -o screenshots/6.5
+```
+
+That writes 1242 x 2688, no alpha, same order and same captions. The two specs
+differ by 0.4% in aspect, so it fills the frame and crops eleven rows total
+rather than showing bars. Treat the result as a copy, not a source: regenerate
+`screenshots/` first, then re-run this, or the second set goes stale on its own.
+
 -----
 
 ## 5. App Privacy questionnaire, filled in
