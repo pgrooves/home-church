@@ -527,8 +527,9 @@
       name: str(r.name),
       tagline: str(r.tagline),
       pastors: str(r.pastors),
-      // Nested, because Home and Profile read church.address.city directly.
-      // Flattening it here would mean touching four screens for no gain.
+      // Nested, because Home and When and where read church.address.city
+      // directly. Flattening it here would mean touching three screens for
+      // no gain.
       address: {
         line1: str(r.address_line1),
         city: str(r.address_city),

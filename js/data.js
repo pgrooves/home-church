@@ -26,7 +26,7 @@
   'use strict';
 
   /* ------------------------------------------------------------------ church
-     Seed only. The live values are the one row in `church_profile`. Four
+     Seed only. The live values are the one row in `church_profile`. Three
      screens read church.address.* without checking, so content.js never
      clears this from an empty table, it only overwrites it from a real row. */
 

@@ -255,13 +255,13 @@
     html += accountSection();
     html += identitySection(p);
 
-    html += c.row({
-      title: HC.data.church.address.line1,
-      sub: HC.data.church.address.city + ', ' + HC.data.church.address.state,
-      action: 'open-url',
-      url: HC.data.church.mapsUrl,
-      chevron: true
-    });
+    /* The church's street address used to sit here, directly under Your
+       information, which read as though it were part of somebody's own
+       details rather than the church's. Where we meet, and how to get
+       directions to it, is what When and where is for, and Home carries the
+       same address with the service times beside it. Two places to open the
+       map is enough; a third under a form about your own name was one too
+       many. */
 
     // Notifications
     html += c.sectionHeader('When we reach out', 'Notifications');
