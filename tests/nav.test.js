@@ -49,9 +49,14 @@ function router(stops, past) {
   return r;
 }
 
-// What syncModules hands over on a phone signed in as an admin, and on
-// everybody else's, which has no Admin tile.
-const MODULES = ['worship', 'group', 'practices', 'alpha', 'journal', 'give'];
+/* What syncModules hands over on a phone signed in as an admin, and on
+   everybody else's, which has no Admin tile.
+
+   THE LONGEST ROW THERE IS, which is the one worth pinning here: this is a
+   church running group rooms, so Group is in it. Whether it is in it at all
+   is a switch, and tests/group-mode.test.js is where that lives; this file
+   only cares that a row of this length lands where it should. */
+const MODULES = ['group', 'journal', 'worship', 'practices', 'alpha', 'give'];
 const admin = router(MODULES.concat(['admin']), ['profile']);
 const member = router(MODULES, ['profile']);
 

@@ -99,9 +99,18 @@
       order: 'sort_order.asc,title.asc' },
 
     /* App-wide switches. Read with the publishable key like everything else
-       here, which is what lets a signed out phone see the pinned banner. */
+       here, which is what lets a signed out phone see the pinned banner.
+
+       `whole` for the same reason text_overrides has it, and it is newly
+       needed. The cheap fingerprint below is a row count and the size of the
+       first row, and what changes in this table is one boolean in the middle
+       of it: `true` to `false` is one character in one row nobody counts.
+       That was survivable while these rows only decided what a banner said,
+       and is not now that one of them decides whether the Group tab exists —
+       an admin flipping it would have reached other phones on their next cold
+       start and not before. Eight short rows are cheap to fingerprint whole. */
     { table: 'app_settings', target: 'appSettings', map: mapAppSetting,
-      order: 'sort_order.asc,label.asc' },
+      order: 'sort_order.asc,label.asc', whole: true },
 
     /* Sentences an admin rewrote in place, from Edit mode. Read like every
        other table here, with no session, because a rewritten caption is not

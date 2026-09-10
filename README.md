@@ -286,8 +286,9 @@ settles it.
 
 The fourth tile in the bar, between Guide and Connect: a month you can walk
 through, the day you tapped underneath it, and the church's upcoming events
-under that. It swapped places with Group, which is behind the ••• menu now,
-next to Worship, in the slot Cal used to hold.
+under that. It swapped places with Group, which is behind the ••• menu now, at
+the front of it on the seasons the church is running rooms and not drawn at all
+on the seasons it is not — see **Group mode** below.
 
 **It is where the events from the Connect tab went.** They were the fourth
 section of Connect, below the group finder and the serve teams, which is a
@@ -708,6 +709,36 @@ way out of this one. It is one frame, on one screen, from a link an admin typed,
 under the same `frame-src` the Practices and Alpha players have always had. See
 `js/featured-video.js`, `supabase/migrations/0063_home_featured_video.sql` and
 `tests/featured-video.test.js`.
+
+### Group mode, the switch that adds and removes a tab
+
+**The Group tab ships off, and one switch in App settings brings it back for
+the whole church at once.** `app_settings.group_mode_on` is the whole feature:
+off, and there is no Group anywhere in the app — no tile in the ••• sheet, no
+stop on the sideways swipe, no row on the More screen, no result in search, and
+the route itself draws a short "not right now" rather than a room. On, and
+everything is exactly as it was. **App settings → Group mode** is where an
+admin flips it, and it reaches phones that are already open: the sheet redraws
+with one fewer tile on the next content refresh rather than waiting for a cold
+start.
+
+**Hiding is a filter, not a hole.** The tiles under Group move up a slot, so
+the row behind ••• reads Journal, Worship, Practices, Alpha, Give, then Admin
+on the phones that have it, then Settings. With group mode on it is the same
+row with Group at the front of it.
+
+**Nothing is deleted when it goes off.** Every room, every answer and every
+prayer request stays in its table untouched; this is a switch over what the app
+draws, not a teardown, so a season later it comes back exactly as it was left.
+It is also not the same question as who may *host* a room, which is still
+`can_host` per person under **Manage users** — see migration `0036`. This one
+decides whether the room exists at all; that one decides who can open one.
+
+The fallback is `false` everywhere it is read, which is what a phone that has
+never reached Supabase assumes. That is deliberate: a tile leading to a room
+nobody can join is the worse of the two mistakes. See
+`supabase/migrations/0064_group_mode.sql`, `visibleModules()` in `js/app.js`,
+and `tests/group-mode.test.js`.
 
 ### An announcement's own page
 

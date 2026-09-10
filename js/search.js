@@ -378,7 +378,11 @@
     }
 
     ((HC.router && HC.router.TABS) || []).forEach(function (n) { add(n); });
-    (HC.modules || []).forEach(function (m) { add(m.route, m.sub); });
+    /* Called rather than read, so a module the church has switched off is not
+       findable by typing its name either. A search result is a door, and a
+       door to a screen that is not in this app for this person is worse than
+       no result at all. */
+    (HC.modules ? HC.modules() : []).forEach(function (m) { add(m.route, m.sub); });
     ['profile', 'privacy', 'terms', 'data'].forEach(function (n) { add(n); });
 
     return out.map(function (p) {

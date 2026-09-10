@@ -59,28 +59,49 @@
      They are stops, not pushed views. Swiping left off Guide, the last of the
      five, brings the first one in exactly the way Guide arrives from Listen,
      which is the whole reason the ••• tile stopped pushing a screen. */
+  /* THE ORDER CHANGED, AND THE FIRST THREE ARE THE ARGUMENT. This used to run
+     Worship, Group, Practices, Alpha, Journal, Give, chosen when a drag left
+     off Guide was the only way in and the first slot wanted Sunday's songs
+     next to Sunday's message. The sheet is how people actually get here, and
+     read top to bottom it should run from the thing somebody opens weekly to
+     the thing they open once: your group, then what you wrote in it, then
+     Sunday, then the two courses, then Give. Nothing entered or left the list
+     in the move.
+
+     GROUP IS FIRST AND USUALLY IS NOT HERE AT ALL, which is the second half
+     of the change. See visibleModules() below: when group mode is off the row
+     starts at Journal and everything under it moves up a slot, which is the
+     whole of what "hidden" means here. */
   var MODULES = [
-    /* First in the row, and the position is the argument. A drag left off
-       Guide brings in the first module, and Worship is the one of these
-       that belongs to Sunday morning the way Listen and Guide do: it is the
-       songs from the same service as the message two tabs to its left. The
-       three below it are things you do during the week. */
+    /* First, and gated. When the church is running rooms this is the tile
+       somebody opens on a Thursday night, which is the most-opened thing
+       behind ••• and belongs at the top of it. When it is not, it is not
+       drawn: `gate` is what says so, and the row simply starts at Journal. */
+    {
+      route: 'group',
+      icon: 'group',
+      title: 'Group',
+      sub: 'Your room, the guide it is reading, and who is in it.',
+      gate: groupModeOn
+    },
+    /* Straight after Group, because it is the other half of the same evening:
+       the room is where you answer out loud and this is where what you wrote
+       down ends up, from a guide or on your own. */
+    {
+      route: 'journal',
+      icon: 'journal',
+      title: 'Journal',
+      sub: 'Everything you have written down, from a guide or on your own.'
+    },
+    /* Sunday. Kept next to the two tiles above rather than pushed down with
+       the courses: Listen and Guide are the last two tabs in the bar, and a
+       drag off the end of them reaching the songs from the same service is
+       worth more than the slot it costs. */
     {
       route: 'worship',
       icon: 'worship',
       title: 'Worship',
       sub: 'The songs from Sunday, and where to hear them again.'
-    },
-    /* Second, next to Worship, in the slot Cal held before the two swapped.
-       It keeps that slot for the same reason Cal had it: these two are the
-       church's own Sunday, the songs the band played and the room the guide
-       is read in, and a drag left off the bar reaches both of them together.
-       Nothing else about the Group tab changed in the move. */
-    {
-      route: 'group',
-      icon: 'group',
-      title: 'Group',
-      sub: 'Your room, the guide it is reading, and who is in it.'
     },
     {
       route: 'practices',
@@ -100,12 +121,6 @@
       sub: 'Dinner, a short film, and any question you want to ask.'
     },
     {
-      route: 'journal',
-      icon: 'journal',
-      title: 'Journal',
-      sub: 'Everything you have written down, from a guide or on your own.'
-    },
-    {
       route: 'give',
       icon: 'give',
       title: 'Give',
@@ -113,9 +128,39 @@
     }
   ];
 
-  // The More screen still exists at ?v=more so an old link or a restored
-  // history entry lands somewhere real. Nothing in the app opens it any more.
-  HC.modules = MODULES;
+  /* Is the church running group rooms this season.
+
+     ONE ROW IN app_settings, READ LIVE, and every consumer reads it through
+     here rather than keeping its own answer, so the sheet, the swipe, the
+     More screen, the search index and the screen itself can never disagree
+     about whether the Group tab exists.
+
+     THE FALLBACK IS false AND IT IS LOAD BEARING. This is read like all other
+     content, which means it has to answer on a phone that has never reached
+     Supabase, and off is the answer the church asked for: a room somebody
+     cannot join is worse than a missing tile. See migration 0064. */
+  function groupModeOn() {
+    return HC.data.setting('group_mode_on', false) === true;
+  }
+
+  /* MODULES minus whatever the church has switched off. A module with no
+     `gate` is always there; one with a gate is there when its gate says so,
+     and a gate that says no takes the tile out of the list rather than
+     greying it, so everything under it moves up a slot on its own.
+
+     RECOMPUTED, NEVER CACHED. A refresh landing with the switch flipped has
+     to change the sheet under somebody's thumb, so this is called again on
+     every paint rather than resolved once at boot. */
+  function visibleModules() {
+    return MODULES.filter(function (m) { return !m.gate || m.gate(); });
+  }
+
+  /* The More screen still exists at ?v=more so an old link or a restored
+     history entry lands somewhere real. Nothing in the app opens it any more.
+     A function rather than the array it used to be, because what is behind
+     ••• is now a question with a live answer: js/screens/more.js and
+     js/search.js both call it, and both get the same list the sheet drew. */
+  HC.modules = visibleModules;
 
   /* Routes that light the ••• tile. A module is somewhere you are, not a menu
      you got lost in, so the raised tile stays under the sixth tile the whole
@@ -579,7 +624,11 @@
        eight seconds, and arriving pulls once straight away rather than
        showing a stale room until the next tick. */
     if (HC.rooms) {
-      if (route.name === 'group') {
+      // Group mode off means there is no room to poll, whatever route somebody
+      // has arrived on: the screen draws its "not right now" state and asking
+      // Supabase for a room every eight seconds behind it would be work with
+      // nowhere to land.
+      if (route.name === 'group' && groupModeOn()) {
         HC.rooms.startPolling();
         HC.rooms.refresh();
       } else {
@@ -746,14 +795,15 @@
      lists and the order a drag runs are the same order by construction rather
      than by two people remembering to edit both.
 
-     Recomputed rather than built once at boot, so signing in, signing out, or
-     a promotion arriving on the next session refresh changes both the sheet
-     and the row. Whether the tile is there at all is presentation and nothing
+     Recomputed rather than built once at boot, so signing in, signing out, a
+     promotion arriving on the next session refresh, or an admin turning group
+     mode off in another room changes both the sheet and the row. Whether the
+     tile is there at all is presentation and nothing
      more, the same as the Admin row in js/screens/profile.js: every button
      behind it is checked live by the database, so a member who forged the tile
      would find a screen where nothing works. See the header of js/admin.js. */
   function sheetTiles() {
-    var tiles = MODULES.map(function (m) {
+    var tiles = visibleModules().map(function (m) {
       return { route: m.route, icon: m.icon, title: m.title, action: 'go-module', id: m.route };
     });
 
@@ -4658,6 +4708,21 @@
          landed. Without this the pill would be missing on exactly the arrival
          that has no other way to the journal. */
       paintJournalLink();
+
+      /* And the ••• sheet, for the same reason as both of those: it is shell
+         chrome the router's redraw never reaches, and one of the rows that
+         just landed decides whether the Group tile is in it. An admin turning
+         group mode off in the church office has to reach the phone in
+         somebody's pocket without them relaunching the app, and this pair of
+         calls is what does it: the sheet redraws with one fewer tile, and the
+         row a sideways drag runs gets the same list on the same tick, so the
+         two cannot disagree even for a moment.
+
+         Unconditional, like paintPinBar above. Both are cheap, and asking
+         js/content.js whether anything changed would be trusting the
+         fingerprint that missed this in the first place. */
+      syncModules();
+      paintSheet();
 
       var route = HC.router.current();
       if (route && route.name === 'profile') {

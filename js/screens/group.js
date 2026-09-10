@@ -1005,6 +1005,24 @@
   }
 
   function build() {
+    /* Group mode is off for the whole church. Nothing in the app offers this
+       route while that is true, so getting here means an old history entry, a
+       shared link, or an admin flipping the switch while somebody had the
+       screen open. Not an error page, the same answer Leader mode and Admin
+       give somebody who lands on a screen the church has not given them: the
+       app simply does not have this one right now.
+
+       NOTHING BEHIND IT IS TOUCHED. The room, its answers and its prayer
+       requests are all still in Supabase; this is a screen the church has put
+       away, not a room it has closed. See migration 0064. */
+    if (!HC.data.setting('group_mode_on', false)) {
+      return '<div class="hc-screen hc-group">' +
+        c.sectionHeader('Your group', 'Not right now', { flush: true, tag: 'h1' }) +
+        c.emptyState('Group rooms are switched off for the church at the moment. ' +
+          'When they come back, Group is the first thing behind the ••• button.') +
+      '</div>';
+    }
+
     var snap = HC.rooms.snapshot();
     var state = screenState(snap);
 

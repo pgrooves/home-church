@@ -26,8 +26,11 @@
   var WHERE_SETTINGS_ARE = 'Your account, notifications, and text size are under the ' +
     'circle at the top right of every screen.';
 
+  /* A call, not a read. What is behind ••• depends on a switch the church can
+     flip between one opening of this screen and the next, so js/app.js hands
+     over the question rather than an answer. See visibleModules() there. */
   function modules() {
-    return HC.modules || [];
+    return HC.modules ? HC.modules() : [];
   }
 
   /* The line under each module's name is a description of what is behind the

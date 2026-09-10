@@ -1812,7 +1812,13 @@
     // 0063. Read by name in js/featured-video.js, so it is not offered for
     // deletion either: emptying the box is how the video comes off Home, and
     // it leaves the box there to paste the next link into.
-    home_featured_video: true
+    home_featured_video: true,
+    /* 0064. Read by name in js/app.js, and the one row on this screen that
+       adds and removes a tab. Deleting it would fall back to off, which is
+       this switch's fallback everywhere, and leave no way back to on from
+       inside the app: the switch that puts the Group tab back would be the
+       switch that had just been thrown away. */
+    group_mode_on: true
   };
 
   /* Rows this screen deliberately does not draw, because another screen draws
