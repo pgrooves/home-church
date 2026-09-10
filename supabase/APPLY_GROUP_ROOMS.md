@@ -136,7 +136,7 @@ Do not "fix" these. If the count ever drops, something was taken out.
   while `service_role` bypasses it, which is how the slur list stays closed.
   Also flagged on `public.push_log`, pre-existing.
 - `auth_leaked_password_protection` (WARN). HaveIBeenPwned checking is off.
-  **This app has no passwords.** Sign in is an emailed six digit code, start to
+  **This app has no passwords.** Sign in is an emailed eight digit code, start to
   finish — see `requestCode` and `verifyCode` in `js/auth.js`. The setting
   guards a code path nothing here uses. Turn it on if you like, one toggle in
   the dashboard, but nothing in this app changes either way.

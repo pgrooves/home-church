@@ -998,7 +998,7 @@ phone is not signed in, the greeting does not leave when it is finished. The
 house and "Welcome home." climb, and two buttons come up underneath them: **Log
 in with email** and **Continue as guest**. Choosing the first slides them off
 to the left and brings the address panel in from the right edge, and sending
-the code slides that one away for the panel the six digits are typed into. The
+the code slides that one away for the panel the eight digits are typed into. The
 code that arrives is the same code the Profile screen has always asked for,
 from the same `requestCode` in `js/auth.js`. Signing in ends with light coming
 out from behind the mark and the greeting changing its mind: *You're in!*
@@ -1022,7 +1022,7 @@ wrong code, guest, and Reduce Motion.
 ### The sign in email has to be edited by hand
 
 `js/auth.js` asks Supabase for a one time code and the Profile screen asks the
-person to type six digits. Out of the box Supabase emails a **magic link**
+person to type eight digits. Out of the box Supabase emails a **magic link**
 instead. Nothing is wrong with the request, email OTP and magic link are the
 same endpoint and the same token, the only difference is what the email says,
 and the default templates say it with a link. So the app waits for a code that
@@ -1089,7 +1089,7 @@ Do not chase this by rewriting the email repeatedly. It reads as churn to the
 filters and the first item is doing most of the work.
 
 Putting the code in the subject line is the part people notice. It is what
-lets a phone show the six digits on the lock screen, and it is why iOS offers
+lets a phone show the eight digits on the lock screen, and it is why iOS offers
 to autofill them, which is what the `autocomplete="one-time-code"` on the
 Profile form is waiting for.
 

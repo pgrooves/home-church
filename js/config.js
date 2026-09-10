@@ -18,7 +18,7 @@
    token, the only difference is what the email says. In Authentication ->
    Emails, edit both the "Magic Link" template (returning members) and the
    "Confirm signup" template (first time signing in) to print {{ .Token }},
-   the six digits, and drop {{ .ConfirmationURL }} entirely. The link is not
+   the eight digits, and drop {{ .ConfirmationURL }} entirely. The link is not
    just redundant here, it is broken, nothing in the app handles the redirect
    it lands on. See README, "Accounts", for the templates to paste.
 

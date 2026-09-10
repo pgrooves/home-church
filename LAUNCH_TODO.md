@@ -75,7 +75,7 @@ neither is a defect:
       calls it from Your account and from Your data.
 
 - [x] **The sign in email templates send a code, not a link.** Done. The app
-      asks for six digits and Supabase's stock templates emailed a magic link
+      asks for eight digits and Supabase's stock templates emailed a magic link
       whose redirect no screen here handles, so sign in was broken end to end
       until both **Magic Link** and **Confirm signup** were rewritten to print
       `{{ .Token }}` and drop `{{ .ConfirmationURL }}`. Both, not one: Supabase
@@ -538,7 +538,7 @@ above, under Before submission.)*
       not run on that origin, it runs on `capacitor://localhost`, and Site URL
       and Redirect URLs in the Supabase Auth dashboard have to know about it.
 
-      Your six digit code flow is more forgiving here than a magic link would
+      Your eight digit code flow is more forgiving here than a magic link would
       be, because typing a code back into the app needs no redirect at all, so
       there is a good chance this just works. **Do not take that on faith.**
       This is the classic failure where everything is fine in your home screen

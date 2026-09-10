@@ -126,7 +126,7 @@ blanks in it and a reviewer with no way to check the Guideline 1.2 controls.
 
 - [ ] In Supabase, **Authentication → Sign In / Providers → Email**, add two
       **test OTPs**: one address for the host, one for the member, each with
-      a fixed six digit code. A test OTP means the code always works and no
+      a fixed eight digit code. A test OTP means the code always works and no
       email is sent, so a reviewer is never waiting on an inbox we control.
       Use addresses that read as what they are, `applereview.host@` and
       `applereview.member@` on the church domain.
@@ -517,7 +517,7 @@ so the church grants it to the people who lead a group instead of leaving it
 as a switch anybody can turn on. We have supplied an account below that has
 it, so everything in it is one sign-in away.
 
-Signing in has no password. We send a six digit code to an email address and
+Signing in has no password. We send an eight digit code to an email address and
 the account is created on first use, so you can sign in with any address you
 control. The two demo accounts below are configured so the codes never change
 and no email is sent.

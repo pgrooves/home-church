@@ -185,6 +185,23 @@
      towards whatever it is over, and a fixed arrow colour fails contrast on
      one side or the other. The halo is what keeps it legible on the one
      surface that can be any colour at all, a photograph. */
+  /* The highlight, and the hint that teaches it.
+
+     A MARKER BEHIND THE WORDS, NOT A LINE UNDER THEM. This was a gradient
+     filling the bottom 0.55em of the line, which is a real highlighter's
+     shape on paper and reads on a phone as an underline: at a glance the
+     words did not look kept, they looked linked. It is a block behind the
+     whole of them now.
+
+     The two values are a percentage of --hc-accent, so each theme gets the
+     one it can carry. Light lays 62% of taupe over paper and near black ink
+     sits on it at about 11:1. Dark cannot take that much: --hc-accent lifts
+     to #C4B5A2 there, and 62% of it under paper coloured text is a block you
+     read off rather than through, so it drops to 30% and the text holds
+     around 8:1. Whoever changes one of these has to check the other. */
+  --hc-hl-wash:  color-mix(in srgb, var(--hc-accent) 62%, transparent);
+  --hc-hl-noted: color-mix(in srgb, var(--hc-accent) 78%, transparent);
+
   --hc-gold:        #D7BA85;
   --hc-gold-ink:    #1A1918;
   --hc-gold-halo:   rgba(255,252,246,0.55);
@@ -252,6 +269,10 @@
   /* The disc in the dark. The gold deepens so it glows against charcoal
      instead of glaring, and the arrow inverts to paper for the same reason
      the light theme's is ink. */
+  /* See the note in :root. Much less of it here, for the reason given. */
+  --hc-hl-wash:  color-mix(in srgb, var(--hc-accent) 30%, transparent);
+  --hc-hl-noted: color-mix(in srgb, var(--hc-accent) 42%, transparent);
+
   --hc-gold:        #CBAC74;
   --hc-gold-ink:    #F4EFE6;
   --hc-gold-halo:   rgba(12,11,10,0.55);
@@ -2552,6 +2573,155 @@ a.hc-card:active { background: var(--hc-paper-sunk); }
   .hc-disc:active { transform: none; }
 }
 
+
+/* --------------------------------------------------------------------------
+   The journal pill. The third thing on the disc row, and the only one of the
+   three that says what it does in words.
+
+   In a guide it says MY JOURNAL and goes to what you have written about that
+   guide. In the journal you got to that way it says BACK TO GUIDE and takes
+   you back, arrow the other way round. One element, painted by
+   paintJournalLink() in js/app.js, because two would eventually disagree
+   about where they sit.
+
+   THE SAME MATERIAL AS THE DISCS, DELIBERATELY. The gold skin, the hairline
+   edge, the sheen and the blur, so the row above the plinth reads as one set
+   of three objects rather than as two arrows with a caption between them.
+   The ink is --hc-gold-ink, which is what the arrows in the discs are drawn
+   in: gold is the surface here, never the type. Type set in --hc-gold on
+   this app's paper measures 1.70:1 and fails at any size, which is why the
+   words are dark on gold rather than gold on paper.
+
+   ON THE HEIGHT, AND WHY IT IS TWO RECTANGLES. The capsule is 34px because
+   that is what looks right beside a 44px disc. The button is 44px, which is
+   --hc-tap-min, so the paint is drawn on ::before and the target is the
+   element. Shrinking the button instead loses ten pixels of target with
+   nothing on screen looking wrong.
+
+   CENTRED ON ITS OWN, NOT IN A BAND. left: 50% and a translate rather than a
+   full width strip with the pill inside it: a strip spanning the gap between
+   the discs is a rectangle of dead pointer events over live guide prose, and
+   this app has been bitten by an invisible layer eating taps before.
+   -------------------------------------------------------------------------- */
+
+.hc-jlink {
+  position: fixed;
+  left: 50%;
+  bottom: calc(var(--hc-tabbar-space) + env(safe-area-inset-bottom));
+  z-index: 45;                    /* beside the discs, under the toast */
+
+  /* Clear of both discs at every width: the inset each one floats on, its
+     44px, and a space between. On the narrowest phone this leaves 172px. */
+  max-width: calc(100% - ((var(--hc-tabbar-inset) + var(--hc-tap-min) + var(--hc-space-sm)) * 2));
+
+  height: var(--hc-tap-min);
+  padding: 0 16px;
+  margin: 0;
+  border: 0;
+  background: transparent;
+  color: var(--hc-gold-ink);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  isolation: isolate;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+
+  font-family: var(--hc-sans);
+  font-weight: 650;
+  font-size: 10px;
+  line-height: 13px;
+  letter-spacing: var(--hc-track-eyebrow);
+  text-transform: uppercase;
+  white-space: nowrap;
+
+  /* Down by default, like the discs, and for the same reason: everything
+     that puts it up is in the state below. */
+  opacity: 0;
+  transform: translate(-50%, 10px);
+  pointer-events: none;
+  transition: opacity var(--hc-dur-fast) var(--hc-ease),
+              transform var(--hc-dur-fast) var(--hc-ease-enter);
+}
+
+/* The capsule, and the sheen over it. Both inset five pixels top and bottom
+   off a 44px button, which is the 34px pill. */
+.hc-jlink::before,
+.hc-jlink::after {
+  content: "";
+  position: absolute;
+  inset: 5px 0;
+  border-radius: var(--hc-radius-pill);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.hc-jlink::before {
+  border: var(--hc-hairline) solid var(--hc-gold-edge);
+  background: var(--hc-gold-skin);
+  box-shadow: var(--hc-gold-shadow);
+}
+
+@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+  .hc-jlink::before {
+    background: var(--hc-gold-skin-lens);
+    backdrop-filter: blur(20px) saturate(1.7);
+    -webkit-backdrop-filter: blur(20px) saturate(1.7);
+  }
+}
+
+.hc-jlink::after { background: var(--hc-gold-sheen); }
+
+/* The words and the arrow ride over both. */
+.hc-jlink__text,
+.hc-jlink__icon {
+  position: relative;
+  z-index: 1;
+}
+
+/* A long guide title never gets in here, but a long label might, and caps
+   sliding under a disc reads as a broken layout rather than as a label that
+   does not fit. */
+.hc-jlink__text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.hc-jlink__icon {
+  width: 13px;
+  height: 13px;
+  flex: 0 0 auto;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.9;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  /* The same halo the disc puts behind its arrow, for the same reason: this
+     one is drawn on gold rather than on whatever is scrolling past, but it
+     keeps the two arrows looking like the same arrow. */
+  filter: drop-shadow(0 0 2px var(--hc-gold-halo));
+}
+
+.hc-jlink[data-show="true"] {
+  opacity: 1;
+  transform: translate(-50%, 0);
+  pointer-events: auto;
+}
+
+.hc-jlink:active { transform: translate(-50%, 0) scale(0.96); }
+
+.hc-jlink:focus-visible {
+  outline: 2px solid var(--hc-ink);
+  outline-offset: 3px;
+  border-radius: var(--hc-radius-pill);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hc-jlink { transition: opacity 1ms linear; }
+  .hc-jlink:active { transform: translate(-50%, 0); }
+}
+
 /* --------------------------------------------------------------------------
    Toast. Quiet confirmation, bottom of the screen, fades out.
    -------------------------------------------------------------------------- */
@@ -3022,28 +3192,41 @@ a.hc-card:active { background: var(--hc-paper-sunk); }
 
 /* --------------------------------------------------------------------------
    Highlighting
-   A wash under the words, not a stripe over them. One treatment, plus a
-   heavier one for the ones that carry a note, because a rack of highlighter
-   colours would be the loudest thing in a calm two-palette app.
+   A marker behind the words. One treatment, plus a heavier one for the ones
+   that carry a note, because a rack of highlighter colours would be the
+   loudest thing in a calm two-palette app.
+
+   IT USED TO BE A WASH UNDER THE WORDS, a gradient filling the bottom 0.55em
+   of the line. That is a real marker's shape on paper, where the ink soaks
+   and the top of the stroke fades. On a phone, at a glance, it read as an
+   underline: kept text looked like a link rather than like something somebody
+   had gone back and marked. The block behind the words is louder and says the
+   true thing, and it is the shape the hint in js/hints.js draws to teach it,
+   so the two have to agree.
+
+   The strength is a token per theme, --hc-hl-wash, because dark cannot carry
+   what light can. See the note in css/tokens.css.
    -------------------------------------------------------------------------- */
 
 .hc-hl {
-  background: linear-gradient(to top,
-    color-mix(in srgb, var(--hc-accent) 42%, transparent) 0.55em,
-    transparent 0.55em);
+  background: var(--hc-hl-wash);
   color: inherit;
   border-radius: 2px;
   cursor: pointer;
-  /* The words are the tap target. No padding, or the wash starts creeping
+  /* The words are the tap target. No padding, or the marker starts creeping
      out past the sentence it belongs to. */
   padding: 0;
+  /* A marker stroke overshoots the line a little. box-shadow rather than
+     padding, because padding would move the text. */
+  box-shadow: 0 1px 0 1px var(--hc-hl-wash), 0 -1px 0 1px var(--hc-hl-wash);
 }
 
 /* One that has been written about. Same hue, more of it, and a dog-ear so it
    is still distinguishable with no colour vision at all. */
 .hc-hl--noted {
-  background: color-mix(in srgb, var(--hc-accent) 34%, transparent);
-  box-shadow: inset 2px 0 0 var(--hc-accent-deep);
+  background: var(--hc-hl-noted);
+  box-shadow: 0 1px 0 1px var(--hc-hl-noted), 0 -1px 0 1px var(--hc-hl-noted),
+              inset 2px 0 0 var(--hc-accent-deep);
 }
 
 .hc-hl:focus-visible {
@@ -3052,7 +3235,7 @@ a.hc-card:active { background: var(--hc-paper-sunk); }
 }
 
 @supports not (color: color-mix(in srgb, red 50%, transparent)) {
-  .hc-hl { background: var(--hc-cream); }
+  .hc-hl { background: var(--hc-cream); box-shadow: none; }
   .hc-hl--noted { background: var(--hc-cream); box-shadow: inset 2px 0 0 var(--hc-accent-deep); }
 }
 
@@ -3085,10 +3268,21 @@ a.hc-card:active { background: var(--hc-paper-sunk); }
 /* The discs stand down while it is up. The band is 44px tall and holds one
    thing: a back arrow the guide is not going anywhere without, and a way to
    the top that a scroll will offer again, both of which can wait for the
-   answer to a question the person is being asked right now. */
+   answer to a question the person is being asked right now.
+
+   The journal pill goes with them, and it is the one that would have been
+   worst to leave: it sits dead centre of this band, which is exactly where
+   Note this / Highlight lands, and the two would be drawn on top of each
+   other over the one question in the app most likely to be asked. */
 #app[data-hlbar="true"] .hc-disc {
   opacity: 0;
   transform: translateY(10px) scale(0.86);
+  pointer-events: none;
+}
+
+#app[data-hlbar="true"] .hc-jlink {
+  opacity: 0;
+  transform: translate(-50%, 10px);
   pointer-events: none;
 }
 
@@ -3120,6 +3314,204 @@ a.hc-card:active { background: var(--hc-paper-sunk); }
   margin: var(--hc-space-sm) 0;
   background: var(--hc-paper);
   opacity: 0.3;
+}
+
+/* --------------------------------------------------------------------------
+   The hint that teaches it
+   Drawn by js/hints.js the first time somebody scrolls onto a section they
+   just opened. A sentence marks itself, a card says what that means, and the
+   bar it is about shows up where the bar really lives.
+
+   IT NEVER TAKES A TAP. pointer-events: none on the layer and every child,
+   and that line is the whole promise: there is no Got it, no x, and nothing
+   to dismiss. Every tap during the two seconds it is up lands on whatever is
+   under it, exactly as it would have if the hint had not been there. Any
+   softening of this makes it a modal.
+
+   IT IS ALSO NOT ENDED BY THAT TAP. It has a clock instead: it arrives, it
+   sits for two seconds, it fades. See the note where the tap listener used to
+   be in js/hints.js.
+
+   EVERY MOVING PART IS transform OR opacity. HINTS.md §12 blames the stutter
+   that got the last attempt at hints reverted on a shape that animated
+   background-position over the blurred plinth. Nothing here animates a
+   background, and nothing here is drawn over the plinth except the ghosted
+   bar, which does not move.
+   -------------------------------------------------------------------------- */
+
+.hc-hint, .hc-hint *,
+.hc-hint-marks, .hc-hint-marks * { pointer-events: none; }
+
+.hc-hint {
+  position: fixed;
+  inset: 0;
+  z-index: 48;   /* under the sheets at 55 and the toast at 60 */
+}
+
+/* THE MARKS ARE IN A LAYER OF THEIR OWN, AND IT HAS NO z-index ON PURPOSE.
+
+   They blend with the page (see below), and mix-blend-mode only blends within
+   the nearest stacking context. .hc-hint above is position: fixed with a
+   z-index, which is a stacking context twice over, so marks parked in there
+   blend against an empty transparent box and nothing happens: the words come
+   out dimmed by a translucent taupe instead of highlighted by a marker. It
+   looks close enough to right in a screenshot to survive a review and is
+   wrong in the hand.
+
+   position: absolute with z-index auto makes no stacking context, so these
+   blend against #app, which is where the guide is drawn. That also means they
+   sit under the sheets and the toast without asking, because a positioned
+   element with no z-index still yields to one with a high one. */
+.hc-hint-marks {
+  position: absolute;
+  inset: 0;
+}
+
+/* One box per line box of the sentence, grown from its left edge the way a
+   thumb would drag a marker.
+
+   THE BLEND MODE IS WHAT KEEPS THE WORDS READABLE. This layer is over the
+   page rather than under it, so a solid wash would grey the text out.
+   multiply leaves near black ink near black and turns the paper behind it
+   taupe, which is what a real marker does; the dark theme screens instead,
+   because multiplying charcoal only makes charcoal. */
+.hc-hint__mark {
+  position: absolute;
+  border-radius: 3px;
+  background: var(--hc-hl-wash);
+  mix-blend-mode: multiply;
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform 420ms var(--hc-ease-enter), opacity 200ms var(--hc-ease);
+}
+
+:root[data-theme="dark"] .hc-hint__mark { mix-blend-mode: screen; }
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .hc-hint__mark { mix-blend-mode: screen; }
+}
+
+.hc-hint__mark[data-in="true"] { transform: scaleX(1); }
+
+/* The box the card rides in, so that following a scroll and arriving are two
+   transforms on two elements rather than one fighting the other. */
+.hc-hint__follow {
+  position: absolute;
+  inset: 0;
+}
+
+/* The words, and the bar. Both arrive the way the toast does: a short rise
+   and a fade, nothing springy. */
+.hc-hint__say {
+  position: absolute;
+  opacity: 0;
+  transform: translateY(4px);
+  transition: opacity 260ms var(--hc-ease-enter), transform 260ms var(--hc-ease-enter);
+}
+
+.hc-hint__say[data-in="true"] { opacity: 1; transform: none; }
+
+/* Going away on its own clock is not the same as being put away by a tap. A
+   tap is an answer, so the hint gets out of its way at once; a clock nobody
+   set leaves slowly enough to be seen leaving. */
+.hc-hint[data-going="soft"] .hc-hint__say,
+.hc-hint-marks[data-going="soft"] .hc-hint__mark { transition: opacity 450ms var(--hc-ease); }
+
+.hc-hint[data-going] .hc-hint__say,
+.hc-hint-marks[data-going] .hc-hint__mark { opacity: 0; }
+
+/* The card. The guides' signature left edge rule, so it reads as a piece of
+   this app rather than as a tooltip. No nub and no caret: proximity and the
+   marker do the work, and a nub is one more thing to get wrong against a
+   line that wrapped. */
+.hc-hint__card {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  max-width: 100%;
+  padding: 11px 14px 11px 15px;
+  border-radius: var(--hc-radius-lg);
+  background: var(--hc-cream);
+  box-shadow: inset var(--hc-edge-rule) 0 0 var(--hc-accent),
+              0 6px 18px rgba(26, 25, 24, 0.10);
+  font-family: var(--hc-sans);
+  font-size: var(--hc-caption);
+  line-height: var(--hc-caption-line);
+  color: var(--hc-ink);
+}
+
+.hc-hint__icon {
+  width: 14px;
+  height: 14px;
+  flex: 0 0 auto;
+  color: var(--hc-accent-deep);
+}
+
+/* The real bar, ghosted, in the band it really occupies. Not a picture of the
+   bar somewhere convenient: the whole point of drawing it is that this is
+   where the answer will appear. Kept in step with .hc-hlbar above. */
+.hc-hint__bar {
+  position: fixed;
+  left: var(--hc-tabbar-inset);
+  right: var(--hc-tabbar-inset);
+  bottom: calc(var(--hc-tabbar-space) + env(safe-area-inset-bottom));
+  display: flex;
+  justify-content: center;
+}
+
+.hc-hint__pill {
+  display: flex;
+  align-items: stretch;
+  padding: 0 var(--hc-space-xs);
+  border-radius: var(--hc-radius-pill);
+  background: var(--hc-ink);
+  box-shadow: 0 6px 20px rgba(26, 25, 24, 0.28);
+  opacity: 0.92;
+}
+
+.hc-hint__pill span {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--hc-space-xs);
+  min-height: var(--hc-tap-min);
+  padding: 0 var(--hc-space-base);
+  color: var(--hc-paper);
+  font-family: var(--hc-sans);
+  font-weight: 500;
+  font-size: var(--hc-caption);
+  white-space: nowrap;
+}
+
+/* NO DARK OVERRIDE HERE, AND THAT IS THE POINT. --hc-ink and --hc-paper both
+   turn over with the theme, so the real bar in js/highlight.js is ink on
+   paper in the light and a paper coloured pill with dark type in the dark.
+   The ghost reads the same two tokens and turns over with it. A ghost that is
+   not quite the bar teaches the wrong bar, and the first draft of this had a
+   hand-picked near black here that would have been a dark pill in a theme
+   where the real one is light. */
+
+/* Scoped past .hc-hint__pill span above, which would otherwise give the
+   divider that rule's 16px of padding and a 44px height and draw it as a grey
+   block between the two labels rather than as a hairline. */
+.hc-hint__pill .hc-hint__rule {
+  width: var(--hc-hairline);
+  min-height: 0;
+  padding: 0;
+  margin: var(--hc-space-sm) 0;
+  background: var(--hc-paper);
+  opacity: 0.3;
+}
+
+/* Reduce Motion degrades this rather than refusing it, which is the opposite
+   of the call js/index-rail.js makes about its own hint. That one is
+   decoration and this one is information: taking it away from somebody who
+   asked for stillness would be taking away the only thing in the app that
+   says the words can be kept. So nothing draws itself, and it is simply
+   there, held a beat longer by js/hints.js because there is no movement to
+   catch the eye. */
+@media (prefers-reduced-motion: reduce) {
+  .hc-hint__mark { transition: opacity 200ms linear; transform: scaleX(1); }
+  .hc-hint__say { transition: opacity 200ms linear; transform: none; }
 }
 
 /* The note sheet. The quotation on top, the writing surface under it. */
@@ -4082,6 +4474,95 @@ a.hc-card:active { background: var(--hc-paper-sunk); }
   letter-spacing: -0.01em;
 }
 
+/* ------------------------------------------------------ the featured video
+
+   The frame between the greeting and Announcements. It carries no heading, no
+   eyebrow and no caption, so the only thing that separates it from the two
+   blocks around it is air, and it gets the same lg gap the greeting already
+   puts under itself. See js/featured-video.js. */
+
+.hc-featured {
+  position: relative;
+  margin-bottom: var(--hc-space-lg);
+}
+
+.hc-featured__frame {
+  position: relative;
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: var(--hc-radius-lg);
+  overflow: hidden;
+  /* The same cream every other piece of missing art in the app shows while
+     it loads, so a slow embed is a warm rectangle rather than a black one. */
+  background: var(--hc-cream);
+}
+
+/* A Short, filmed on a phone held upright. Capped the way the carousel's tall
+   slides are, for the same reason: one video should not take the whole screen
+   and push Sunday off the bottom of it. */
+.hc-featured--tall .hc-featured__frame {
+  aspect-ratio: 9 / 16;
+  max-height: 62vh;
+}
+
+.hc-featured__player {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+/* Top right, which is the one corner of a YouTube embed with nothing of its
+   own in it: the controls run along the bottom and the title sits top left. */
+.hc-featured__sound {
+  position: absolute;
+  top: var(--hc-space-md);
+  right: var(--hc-space-md);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: var(--hc-radius-pill);
+  /* Its own ink rather than a token, both appearances. This sits on a
+     photograph rather than on the page, so it has to hold against whatever
+     the video is showing rather than against the paper behind it. */
+  background: rgba(17, 17, 17, 0.62);
+  -webkit-backdrop-filter: blur(8px) saturate(120%);
+  backdrop-filter: blur(8px) saturate(120%);
+  color: #FFFCF7;
+  font-family: var(--hc-sans);
+  font-size: calc(13px * var(--hc-text-scale));
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  line-height: 1;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* The 44pt target the rest of the app keeps, without a 44px pill sitting on
+   the video. The button is 36 high and the finger's half of it reaches past
+   the edges, which is what ::before is for everywhere else in this app. */
+.hc-featured__sound::before {
+  content: '';
+  position: absolute;
+  inset: -4px;
+}
+
+.hc-featured__sound:active { opacity: 0.85; }
+
+.hc-featured__soundicon {
+  width: 17px;
+  height: 17px;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
 .hc-gathering__when { margin-top: 6px; }
 
 .hc-gathering__times {
@@ -4777,6 +5258,98 @@ a.hc-card:active { background: var(--hc-paper-sunk); }
 .hc-give__note {
   margin-top: var(--hc-space-md);
   text-align: center;
+}
+
+/* ==========================================================================
+   When & Where
+
+   NO CARDS ON THIS SCREEN, AND THAT IS THE DESIGN. The two facts on it are a
+   time and an address, which is two labelled lines in one column of prose,
+   not two objects. A cream box around each would spend a border, a fill and a
+   radius saying "these are separate things to look at" about a page whose
+   whole job is to be read straight down and left. The eyebrow over each block
+   and the hairline above it do the work, which is the move the section header
+   at the top of the screen already makes twice.
+   ========================================================================== */
+
+.hc-ww__lede {
+  margin-top: var(--hc-space-lg);
+  font-size: calc(19px * var(--hc-text-scale));
+  line-height: 1.55;
+}
+
+/* Bold on the website, bold here. It is the line the paragraph above it is
+   building to, and the one somebody who reads nothing else should read. */
+.hc-ww__welcome {
+  margin-top: var(--hc-space-base);
+  font-weight: 700;
+}
+
+.hc-ww__block {
+  display: block;
+  margin-top: var(--hc-space-xl);
+  padding-top: var(--hc-space-lg);
+  border-top: var(--hc-hairline) solid var(--hc-rule);
+}
+
+.hc-ww__when,
+.hc-ww__where { margin-top: 6px; }
+
+/* Laid out exactly like the times on Home's gathering card, down to the
+   hairline between them, because they are the same three times: a person who
+   has seen one and then the other should not have to check that they agree. */
+.hc-ww__times {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--hc-space-sm) var(--hc-space-base);
+  margin-top: var(--hc-space-md);
+  list-style: none;
+}
+
+.hc-ww__time {
+  color: var(--hc-ink);
+  font-family: var(--hc-sans);
+  font-weight: 600;
+  font-size: calc(var(--hc-body-sans) * var(--hc-text-scale));
+  font-variant-numeric: tabular-nums;
+}
+
+.hc-ww__time + .hc-ww__time {
+  padding-left: var(--hc-space-base);
+  border-left: var(--hc-hairline) solid var(--hc-rule);
+}
+
+.hc-ww__town { margin-top: var(--hc-space-xs); color: var(--hc-mid); }
+.hc-ww__action { margin-top: var(--hc-space-lg); }
+
+/* Three photographs off the church's own Instagram, arranged the way the
+   website arranges them: one tall on the left, one wide above a smaller one on
+   the right. Explicit rows rather than aspect-ratio on the frames, so three
+   pictures of three different shapes cannot push the grid around between one
+   sync and the next. */
+.hc-ww__photos {
+  margin-top: var(--hc-space-xxl);
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: repeat(3, 72px);
+  gap: var(--hc-space-sm);
+}
+
+.hc-ww__frame {
+  overflow: hidden;
+  border-radius: var(--hc-radius-sm);
+  background: var(--hc-paper-sunk);
+}
+
+.hc-ww__frame--1 { grid-column: 1; grid-row: 2 / span 2; }
+.hc-ww__frame--2 { grid-column: 2; grid-row: 1 / span 2; }
+.hc-ww__frame--3 { grid-column: 2; grid-row: 3; }
+
+.hc-ww__photo {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 /* ==========================================================================
@@ -7308,7 +7881,7 @@ body { background: var(--hc-paper); }
 </head>
 <body>
 <main class="hc-page">
-<div class="hc-screen hc-legal hc-view-enter"><header class="hc-section-header hc-section-header--flush"><span class="hc-eyebrow hc-section-header__eyebrow">The fine print</span><h1 class="hc-section-header__title">Privacy policy</h1><div class="hc-section-header__rule" aria-hidden="true"></div></header><p class="hc-caption hc-legal__date">Effective October 1, 2026</p><section class="hc-legal__block"><h2 class="hc-legal__heading">The short version</h2><p class="hc-body-serif hc-legal__p">Almost everything you do in this app stays on your phone. We do not track you, there is no analytics, there is no advertising, and we do not sell your information to anyone. That is not a promise we are making for now. It is how the app is built.</p><p class="hc-body-serif hc-legal__p">Four things leave, and all four are things you choose. Signing in, which puts your email address and whatever you have filled in under Your information on our server so they follow you to another phone. Your journal, once you are signed in, so what you write follows you too. Writing in a group room, which is the point of a room: what you write there is read by the people in it. And writing to us from the form at the top of Connect, which becomes an email to the church office. You can delete the first three from inside the app whenever you like, and the fourth is an email you sent us, which we will delete if you ask.</p></section><section class="hc-legal__block"><h2 class="hc-legal__heading">What stays on your phone, and only on your phone</h2><ul class="hc-legal__list"><li class="hc-body-serif hc-legal__item">Which questions you have checked off in a guide.</li><li class="hc-body-serif hc-legal__item">Your group roster, who was there, and any private notes you keep about the people in it.</li><li class="hc-body-serif hc-legal__item">Prayer requests you write down in Leader mode.</li><li class="hc-body-serif hc-legal__item">Reminders you set yourself about an event on the calendar. Your phone holds them and sends them to itself. The church is not told which events you asked about, or that you asked.</li><li class="hc-body-serif hc-legal__item">Dark mode and text size.</li><li class="hc-body-serif hc-legal__item">Your journal, for as long as you are not signed in.</li></ul></section><section class="hc-legal__block"><h2 class="hc-legal__heading"></h2><p class="hc-body-serif hc-legal__p">None of that is sent anywhere. The app keeps it on your device. Delete the app and it goes with it, and you can clear it yourself at any time from Your data. We do not have a copy, which means we cannot read it, hand it over, or lose it.</p></section><section class="hc-legal__block"><h2 class="hc-legal__heading">Your journal</h2><p class="hc-body-serif hc-legal__p">Anything you write in the Journal, and any note you attach to something you highlighted in a guide, is yours. Signed out, it never leaves your phone. Signed in, a copy is kept on our server so it is still there when you open the app on a new phone, and so that losing your phone does not lose what you wrote.</p><p class="hc-body-serif hc-legal__p">No other account can read it. That is not a setting we chose and could change by accident, it is enforced by the database itself: a request for somebody else’s journal comes back empty, and there is no screen anywhere in this app, or in anything the church runs, that shows one person another person’s writing.</p><p class="hc-body-serif hc-legal__p">Here is the part that would be easy to leave out. Your journal is stored as ordinary text, which means whoever administers our database could read it if they went looking, the same way it is true of your email at any company. We are not going to pretend otherwise by saying it is encrypted so that not even we can read it. That would need a key, and signing in here is a code sent to you rather than a password, so there is nothing to build a key from that would not either live on one phone, defeating the point of it following you, or be held by us, defeating the point of the key.</p><p class="hc-body-serif hc-legal__p">What we can tell you is what we actually do: nobody at this church reads journals, there is no screen that would show one, and deleting an entry deletes it from our server too. If you would rather keep it all on your phone, do not sign in. Everything in the Journal works either way.</p><p class="hc-body-serif hc-legal__p">There is a switch under Your account that puts Face ID, Touch ID, or your passcode in front of the Journal. It is worth having and it is worth being precise about what it does: it stops somebody who picks up your unlocked phone from reading what you wrote. It is not encryption, and it does not change anything in the three paragraphs above.</p></section><section class="hc-legal__block"><h2 class="hc-legal__heading">Group rooms, where writing is the point</h2><p class="hc-body-serif hc-legal__p">A group room is a room your small group joins with a six digit code. What you write in one is stored on our server, because everybody else in the room has to be able to read it. Nothing else in this app works that way.</p><p class="hc-body-serif hc-legal__p">What is stored is what you wrote, your first name from Your information, which room, and when. Answers are held back until whoever hosts the room opens them, and until that moment the only person who can read one is you, which is enforced by the database rather than by the screen.</p><p class="hc-body-serif hc-legal__p">Everybody in that room can read what has been opened. Nobody else can, and neither can somebody who is signed out and merely knows the code. We do not read rooms, and there is no dashboard anywhere that shows them to the church.</p><p class="hc-body-serif hc-legal__p">You can edit or delete anything you wrote, whenever you like. Whoever hosts the room can take anything down for everybody. Deleting your account takes everything you wrote in every room with it, and if you hosted a room, it takes that room down too, including what everybody else wrote in it.</p></section><section class="hc-legal__block"><h2 class="hc-legal__heading">Signing in, which is the one part that does leave</h2><p class="hc-body-serif hc-legal__p">Signing in is optional. Everything above works whether you sign in or not, and the app never asks you to. What signing in buys you is that Your information follows you to a new phone instead of starting over.</p><p class="hc-body-serif hc-legal__p">To sign in you give us an email address. We send a six digit code to it, and once you type the code back in you have an account. There is no password to forget or for us to lose.</p><p class="hc-body-serif hc-legal__p">From that point on, whatever you have filled in under Your information is stored on our server as well as on your phone, so it can be there when you sign in somewhere else. That is your name, and any of these you chose to fill in: your birthday, your campus, your marital status, and your address. If you left a field blank it stays blank, and none of it is required to use the app.</p></section><section class="hc-legal__block"><h2 class="hc-legal__heading"></h2><p class="hc-body-serif hc-legal__p">We use it to know who you are when you sign in, and for nothing else. It is not sold, not rented, not shared with anybody, and not used to advertise to you. Nobody outside the church staff sees it, and you can delete the whole account, and everything in it, from inside the app at any time.</p></section><section class="hc-legal__block"><h2 class="hc-legal__heading">What actually leaves your phone</h2><p class="hc-body-serif hc-legal__p">Content. The app downloads sermons, guides, events, and the church’s own details so you always have this week’s material, and keeps a copy so it still works when you have no signal. That is an ordinary web request, and like any web request it includes your device’s network address. We do not use it to work out who you are and we do not build a profile from it.</p><p class="hc-body-serif hc-legal__p">Notifications, if you turn them on. Apple gives us an anonymous token for your device, and we keep it alongside which of the switches you turned on, so we know what to send and what not to. None of it is attached to your name, your email, or your account: a row here says that some phone wants the Monday guide notice, never whose phone it is. Turning the switches off stops the sending, and we retire the token when your phone tells Apple the app is gone.</p><p class="hc-body-serif hc-legal__p">There is one exception, and it applies to the few people who run the app for the church. An admin can be notified that something is waiting for them to approve, and a notification like that has to go to a person rather than to whoever asked, so on an admin’s own phone that token does carry their account. It is set when they turn those two switches on, it comes off when they sign out or switch them back off, and it says nothing about them the church did not already know. If you are not an admin, this paragraph is not about you and your token stays anonymous.</p></section><section class="hc-legal__block"><h2 class="hc-legal__heading">Writing to us from Connect</h2><p class="hc-body-serif hc-legal__p">At the top of Connect there is a form. What you type into it, your name, your email address and your message, is sent to our server and becomes an email to the church office. That is the whole point of it, and it is the only reason we hold any of it.</p><p class="hc-body-serif hc-legal__p">A copy is kept on our server as well, so that a message cannot be lost if the email fails to send. Nobody but an admin can read it, it is not attached to your account, and it is deleted after a hundred and eighty days. The email in the church’s mailbox is the part that lasts, in the same way any email you sent us would.</p><p class="hc-body-serif hc-legal__p">One thing we do record, and we would rather say it than have you find it. Along with the message we keep a scrambled fingerprint of the network address it came from, so that the form cannot be used to send thousands of messages at once. It is put through a one way function with a secret we hold, which means it cannot be turned back into an address, and it is compared only against other messages from the last hour. We do not use it to work out who you are, and nothing else in this app records anything like it.</p><p class="hc-body-serif hc-legal__p">If you would rather not use the form, the church’s email address is on the same screen and in this policy, and it reaches the same people.</p></section><section class="hc-legal__block"><h2 class="hc-legal__heading">When the app hands you off to somebody else</h2><p class="hc-body-serif hc-legal__p">Some things here are not ours. Giving opens Overflow. Messages open our podcast host or Spotify. Scripture opens BibleGateway. Baptism and Alpha open Church Center. Hosting a group opens Group Vitals. Sending us a prayer request opens a Google form. The email list opens Flodesk.</p><p class="hc-body-serif hc-legal__p">Each of those opens in your phone’s own browser, and once you are there you are on their site and under their privacy policy, not ours. Anything you type into one of their forms goes to them and to the church. It does not pass through this app, and we only ever see what you chose to send.</p></section><section class="hc-legal__block"><h2 class="hc-legal__heading">The services this app depends on</h2><ul class="hc-legal__list"><li class="hc-body-serif hc-legal__item">Supabase, which stores the sermons, guides, and events the app downloads, and which stores your account if you make one. Their servers for this project are in Ohio, in the United States.</li><li class="hc-body-serif hc-legal__item">Google, whose Gmail carries a message you send from the form on Connect to the church, in the same way it would carry an email you wrote to us yourself. They handle the sending and nothing else.</li><li class="hc-body-serif hc-legal__item">Resend, which delivers the six digit sign in code to your email address, and carries a message from the form on Connect on the occasions Gmail cannot. They handle the sending and nothing else.</li><li class="hc-body-serif hc-legal__item">Apple, which delivers notifications if you have turned them on.</li></ul></section><section class="hc-legal__block"><h2 class="hc-legal__heading"></h2><p class="hc-body-serif hc-legal__p">We do not sell or rent anything about you to anybody, and we never will.</p></section><section class="hc-legal__block"><h2 class="hc-legal__heading">How long we keep it</h2><p class="hc-body-serif hc-legal__p">Whatever is on your phone stays there until you remove it. If you have an account, what is in it stays until you delete the account, and then it is gone from our server rather than hidden or marked inactive.</p><p class="hc-body-serif hc-legal__p">Group rooms are the exception, and they delete themselves. Ninety days after a room is opened, the room and everything written in it is removed. Long enough that a group can look back at a night, short enough that a hard season somebody wrote about in March is not still sitting on a server in December.</p><p class="hc-body-serif hc-legal__p">Our copy of a message sent from the form on Connect goes the same way, after a hundred and eighty days. That copy is a safety net under the email, not a record we keep; the email itself sits in the church’s mailbox like any other, and we will delete that too if you ask.</p><p class="hc-body-serif hc-legal__p">One thing that ninety days does not reach. If whoever hosted a room sent the night out as a document, that file is on the phones it went to, and we cannot delete it for you. It is worth asking them.</p></section><section class="hc-legal__block"><h2 class="hc-legal__heading">Getting rid of it</h2><p class="hc-body-serif hc-legal__p">Open Your account and choose Your data. There are two buttons and they do different things. One erases everything this app has stored on this phone. The other deletes your account and everything synced to it, for good, and you do not have to email anybody or visit a website to do it.</p><p class="hc-body-serif hc-legal__p">If you would rather ask us to do something about information you have sent the church another way, through a signup or a prayer request form, email us and we will take care of it.</p></section><section class="hc-legal__block"><h2 class="hc-legal__heading">Children</h2><p class="hc-body-serif hc-legal__p">This app is for a whole church, and families use it. It is not aimed at children and we do not advertise to anybody.</p><p class="hc-body-serif hc-legal__p">We do not knowingly create an account for a child under 13. If your child has made one, email us and we will delete it and everything in it. Parents, the notes, rosters, and prayer requests a child might write in the app never leave their phone at all, so there is nothing on our side to ask us about.</p></section><section class="hc-legal__block"><h2 class="hc-legal__heading">If this changes</h2><p class="hc-body-serif hc-legal__p">We will change the date at the top, and if the change is one you would want to know about, we will say so in the app rather than hoping you check.</p></section><section class="hc-legal__block"><h2 class="hc-legal__heading">Reaching us</h2><p class="hc-body-serif hc-legal__p">Home Church<br>216 Giuffrias Ave<br>Metairie, LA 70001</p><a class="hc-btn hc-btn--secondary" href="mailto:hello@homechurchnola.com"><span>Email the church</span></a></section></div>
+<div class="hc-screen hc-legal hc-view-enter"><header class="hc-section-header hc-section-header--flush"><span class="hc-eyebrow hc-section-header__eyebrow">The fine print</span><h1 class="hc-section-header__title">Privacy policy</h1><div class="hc-section-header__rule" aria-hidden="true"></div></header><p class="hc-caption hc-legal__date">Effective October 1, 2026</p><section class="hc-legal__block"><h2 class="hc-legal__heading">The short version</h2><p class="hc-body-serif hc-legal__p">Almost everything you do in this app stays on your phone. We do not track you, there is no analytics, there is no advertising, and we do not sell your information to anyone. That is not a promise we are making for now. It is how the app is built.</p><p class="hc-body-serif hc-legal__p">Four things leave, and all four are things you choose. Signing in, which puts your email address and whatever you have filled in under Your information on our server so they follow you to another phone. Your journal, once you are signed in, so what you write follows you too. Writing in a group room, which is the point of a room: what you write there is read by the people in it. And writing to us from the form at the top of Connect, which becomes an email to the church office. You can delete the first three from inside the app whenever you like, and the fourth is an email you sent us, which we will delete if you ask.</p></section><section class="hc-legal__block"><h2 class="hc-legal__heading">What stays on your phone, and only on your phone</h2><ul class="hc-legal__list"><li class="hc-body-serif hc-legal__item">Which questions you have checked off in a guide.</li><li class="hc-body-serif hc-legal__item">Your group roster, who was there, and any private notes you keep about the people in it.</li><li class="hc-body-serif hc-legal__item">Prayer requests you write down in Leader mode.</li><li class="hc-body-serif hc-legal__item">Reminders you set yourself about an event on the calendar. Your phone holds them and sends them to itself. The church is not told which events you asked about, or that you asked.</li><li class="hc-body-serif hc-legal__item">Dark mode and text size.</li><li class="hc-body-serif hc-legal__item">Your journal, for as long as you are not signed in.</li></ul></section><section class="hc-legal__block"><h2 class="hc-legal__heading"></h2><p class="hc-body-serif hc-legal__p">None of that is sent anywhere. The app keeps it on your device. Delete the app and it goes with it, and you can clear it yourself at any time from Your data. We do not have a copy, which means we cannot read it, hand it over, or lose it.</p></section><section class="hc-legal__block"><h2 class="hc-legal__heading">Your journal</h2><p class="hc-body-serif hc-legal__p">Anything you write in the Journal, and any note you attach to something you highlighted in a guide, is yours. Signed out, it never leaves your phone. Signed in, a copy is kept on our server so it is still there when you open the app on a new phone, and so that losing your phone does not lose what you wrote.</p><p class="hc-body-serif hc-legal__p">No other account can read it. That is not a setting we chose and could change by accident, it is enforced by the database itself: a request for somebody else’s journal comes back empty, and there is no screen anywhere in this app, or in anything the church runs, that shows one person another person’s writing.</p><p class="hc-body-serif hc-legal__p">Here is the part that would be easy to leave out. Your journal is stored as ordinary text, which means whoever administers our database could read it if they went looking, the same way it is true of your email at any company. We are not going to pretend otherwise by saying it is encrypted so that not even we can read it. That would need a key, and signing in here is a code sent to you rather than a password, so there is nothing to build a key from that would not either live on one phone, defeating the point of it following you, or be held by us, defeating the point of the key.</p><p class="hc-body-serif hc-legal__p">What we can tell you is what we actually do: nobody at this church reads journals, there is no screen that would show one, and deleting an entry deletes it from our server too. If you would rather keep it all on your phone, do not sign in. Everything in the Journal works either way.</p><p class="hc-body-serif hc-legal__p">There is a switch under Your account that puts Face ID, Touch ID, or your passcode in front of the Journal. It is worth having and it is worth being precise about what it does: it stops somebody who picks up your unlocked phone from reading what you wrote. It is not encryption, and it does not change anything in the three paragraphs above.</p></section><section class="hc-legal__block"><h2 class="hc-legal__heading">Group rooms, where writing is the point</h2><p class="hc-body-serif hc-legal__p">A group room is a room your small group joins with a six digit code. What you write in one is stored on our server, because everybody else in the room has to be able to read it. Nothing else in this app works that way.</p><p class="hc-body-serif hc-legal__p">What is stored is what you wrote, your first name from Your information, which room, and when. Answers are held back until whoever hosts the room opens them, and until that moment the only person who can read one is you, which is enforced by the database rather than by the screen.</p><p class="hc-body-serif hc-legal__p">Everybody in that room can read what has been opened. Nobody else can, and neither can somebody who is signed out and merely knows the code. We do not read rooms, and there is no dashboard anywhere that shows them to the church.</p><p class="hc-body-serif hc-legal__p">You can edit or delete anything you wrote, whenever you like. Whoever hosts the room can take anything down for everybody. Deleting your account takes everything you wrote in every room with it, and if you hosted a room, it takes that room down too, including what everybody else wrote in it.</p></section><section class="hc-legal__block"><h2 class="hc-legal__heading">Signing in, which is the one part that does leave</h2><p class="hc-body-serif hc-legal__p">Signing in is optional. Everything above works whether you sign in or not, and the app never asks you to. What signing in buys you is that Your information follows you to a new phone instead of starting over.</p><p class="hc-body-serif hc-legal__p">To sign in you give us an email address. We send an eight digit code to it, and once you type the code back in you have an account. There is no password to forget or for us to lose.</p><p class="hc-body-serif hc-legal__p">From that point on, whatever you have filled in under Your information is stored on our server as well as on your phone, so it can be there when you sign in somewhere else. That is your name, and any of these you chose to fill in: your birthday, your campus, your marital status, and your address. If you left a field blank it stays blank, and none of it is required to use the app.</p></section><section class="hc-legal__block"><h2 class="hc-legal__heading"></h2><p class="hc-body-serif hc-legal__p">We use it to know who you are when you sign in, and for nothing else. It is not sold, not rented, not shared with anybody, and not used to advertise to you. Nobody outside the church staff sees it, and you can delete the whole account, and everything in it, from inside the app at any time.</p></section><section class="hc-legal__block"><h2 class="hc-legal__heading">What actually leaves your phone</h2><p class="hc-body-serif hc-legal__p">Content. The app downloads sermons, guides, events, and the church’s own details so you always have this week’s material, and keeps a copy so it still works when you have no signal. That is an ordinary web request, and like any web request it includes your device’s network address. We do not use it to work out who you are and we do not build a profile from it.</p><p class="hc-body-serif hc-legal__p">Notifications, if you turn them on. Apple gives us an anonymous token for your device, and we keep it alongside which of the switches you turned on, so we know what to send and what not to. None of it is attached to your name, your email, or your account: a row here says that some phone wants the Monday guide notice, never whose phone it is. Turning the switches off stops the sending, and we retire the token when your phone tells Apple the app is gone.</p><p class="hc-body-serif hc-legal__p">There is one exception, and it applies to the few people who run the app for the church. An admin can be notified that something is waiting for them to approve, and a notification like that has to go to a person rather than to whoever asked, so on an admin’s own phone that token does carry their account. It is set when they turn those two switches on, it comes off when they sign out or switch them back off, and it says nothing about them the church did not already know. If you are not an admin, this paragraph is not about you and your token stays anonymous.</p></section><section class="hc-legal__block"><h2 class="hc-legal__heading">Writing to us from Connect</h2><p class="hc-body-serif hc-legal__p">At the top of Connect there is a form. What you type into it, your name, your email address and your message, is sent to our server and becomes an email to the church office. That is the whole point of it, and it is the only reason we hold any of it.</p><p class="hc-body-serif hc-legal__p">A copy is kept on our server as well, so that a message cannot be lost if the email fails to send. Nobody but an admin can read it, it is not attached to your account, and it is deleted after a hundred and eighty days. The email in the church’s mailbox is the part that lasts, in the same way any email you sent us would.</p><p class="hc-body-serif hc-legal__p">One thing we do record, and we would rather say it than have you find it. Along with the message we keep a scrambled fingerprint of the network address it came from, so that the form cannot be used to send thousands of messages at once. It is put through a one way function with a secret we hold, which means it cannot be turned back into an address, and it is compared only against other messages from the last hour. We do not use it to work out who you are, and nothing else in this app records anything like it.</p><p class="hc-body-serif hc-legal__p">If you would rather not use the form, the church’s email address is on the same screen and in this policy, and it reaches the same people.</p></section><section class="hc-legal__block"><h2 class="hc-legal__heading">When the app hands you off to somebody else</h2><p class="hc-body-serif hc-legal__p">Some things here are not ours. Giving opens Overflow. Messages open our podcast host or Spotify. Scripture opens BibleGateway. Baptism and Alpha open Church Center. Hosting a group opens Group Vitals. Sending us a prayer request opens a Google form. The email list opens Flodesk.</p><p class="hc-body-serif hc-legal__p">Each of those opens in your phone’s own browser, and once you are there you are on their site and under their privacy policy, not ours. Anything you type into one of their forms goes to them and to the church. It does not pass through this app, and we only ever see what you chose to send.</p></section><section class="hc-legal__block"><h2 class="hc-legal__heading">The services this app depends on</h2><ul class="hc-legal__list"><li class="hc-body-serif hc-legal__item">Supabase, which stores the sermons, guides, and events the app downloads, and which stores your account if you make one. Their servers for this project are in Ohio, in the United States.</li><li class="hc-body-serif hc-legal__item">Google, whose Gmail carries a message you send from the form on Connect to the church, in the same way it would carry an email you wrote to us yourself. They handle the sending and nothing else.</li><li class="hc-body-serif hc-legal__item">Resend, which delivers the eight digit sign in code to your email address, and carries a message from the form on Connect on the occasions Gmail cannot. They handle the sending and nothing else.</li><li class="hc-body-serif hc-legal__item">Apple, which delivers notifications if you have turned them on.</li></ul></section><section class="hc-legal__block"><h2 class="hc-legal__heading"></h2><p class="hc-body-serif hc-legal__p">We do not sell or rent anything about you to anybody, and we never will.</p></section><section class="hc-legal__block"><h2 class="hc-legal__heading">How long we keep it</h2><p class="hc-body-serif hc-legal__p">Whatever is on your phone stays there until you remove it. If you have an account, what is in it stays until you delete the account, and then it is gone from our server rather than hidden or marked inactive.</p><p class="hc-body-serif hc-legal__p">Group rooms are the exception, and they delete themselves. Ninety days after a room is opened, the room and everything written in it is removed. Long enough that a group can look back at a night, short enough that a hard season somebody wrote about in March is not still sitting on a server in December.</p><p class="hc-body-serif hc-legal__p">Our copy of a message sent from the form on Connect goes the same way, after a hundred and eighty days. That copy is a safety net under the email, not a record we keep; the email itself sits in the church’s mailbox like any other, and we will delete that too if you ask.</p><p class="hc-body-serif hc-legal__p">One thing that ninety days does not reach. If whoever hosted a room sent the night out as a document, that file is on the phones it went to, and we cannot delete it for you. It is worth asking them.</p></section><section class="hc-legal__block"><h2 class="hc-legal__heading">Getting rid of it</h2><p class="hc-body-serif hc-legal__p">Open Your account and choose Your data. There are two buttons and they do different things. One erases everything this app has stored on this phone. The other deletes your account and everything synced to it, for good, and you do not have to email anybody or visit a website to do it.</p><p class="hc-body-serif hc-legal__p">If you would rather ask us to do something about information you have sent the church another way, through a signup or a prayer request form, email us and we will take care of it.</p></section><section class="hc-legal__block"><h2 class="hc-legal__heading">Children</h2><p class="hc-body-serif hc-legal__p">This app is for a whole church, and families use it. It is not aimed at children and we do not advertise to anybody.</p><p class="hc-body-serif hc-legal__p">We do not knowingly create an account for a child under 13. If your child has made one, email us and we will delete it and everything in it. Parents, the notes, rosters, and prayer requests a child might write in the app never leave their phone at all, so there is nothing on our side to ask us about.</p></section><section class="hc-legal__block"><h2 class="hc-legal__heading">If this changes</h2><p class="hc-body-serif hc-legal__p">We will change the date at the top, and if the change is one you would want to know about, we will say so in the app rather than hoping you check.</p></section><section class="hc-legal__block"><h2 class="hc-legal__heading">Reaching us</h2><p class="hc-body-serif hc-legal__p">Home Church<br>216 Giuffrias Ave<br>Metairie, LA 70001</p><a class="hc-btn hc-btn--secondary" href="mailto:hello@homechurchnola.com"><span>Email the church</span></a></section></div>
 </main>
 </body>
 </html>

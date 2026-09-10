@@ -18,7 +18,7 @@
 
      choose   Log in with email, or continue as guest
      email    where to send the code
-     code     the six digits that came back
+     code     the eight digits that came back
 
    WHY THERE IS AN EMAIL STEP AT ALL. The code has to be sent somewhere.
    requestCode in js/auth.js is the same one Your account uses and it needs an
