@@ -304,6 +304,66 @@ after changing the prompt.
 
 ---
 
+## When the reader chokes on an email
+
+**The 11th of September is the one this section is named after.** The weekly
+newsletter arrived, the reader handed it to Gemini, and the answer came back
+cut off in the middle of the JSON — the model ran out of output budget before
+it closed the array. The parse threw, the intake wrote `status = 'failed'`,
+marked the email read, and moved on. The ledger then did exactly what it is for
+and skipped that email on every run afterwards. One newsletter, five
+announcements, silently gone, and the screen said *"Newsletter checked 3
+minutes ago"* in ordinary grey.
+
+Three things changed so that cannot happen again.
+
+**A truncated answer is now a retry, not a verdict.** Nothing returned,
+unfinished JSON, or no announcements array all mean "try again next tick"
+rather than "this email is unreadable". All three happen before anything is
+written, so a second attempt cannot duplicate anything — there is nothing yet
+to duplicate.
+
+**The retrying is bounded and recorded.** The ledger gained two states and a
+counter:
+
+| status | what it means |
+|---|---|
+| `parsing` | a run has claimed it and is working on it right now |
+| `deferred` | an attempt failed in a way worth retrying; the email is deliberately still unread |
+| `parsed` | drafts were written |
+| `empty` | read fine, nothing in it looked like an announcement |
+| `failed` | settled as unreadable, either outright or after the retries ran out |
+
+Four attempts, twenty minutes apart — about an hour of trying — and then the
+row settles as `failed` and the Admin screen says so. A model that truncates
+every single time costs four calls, not one every twenty minutes forever.
+
+`parsing` is also what stops the twenty minute tick and the **Fetch
+Announcements** button parsing the same newsletter twice. A claim is an insert
+or a compare-and-swap on the attempt count, so the second run finds the count
+already moved and steps aside. A claim whose run died goes stale after fifteen
+minutes and another run may take it.
+
+**Failures are no longer silent.** A run that could not read an email carries
+it in the run note, and the notice at the top of the Admin section draws any
+note on a successful run as a warning. Before this, a failed email was recorded
+only in `newsletter_emails`, which no screen in the app reads.
+
+The output ceiling that caused it went from 8,192 tokens to 32,768. It was
+never measured; it was the first number that worked.
+
+**To put a buried email back in front of the reader** — one an older version
+settled as failed — there is `hc_admin_retry_newsletter_email(message_id)`. It
+refuses an email that already produced drafts, and one older than the fortnight
+the mailbox search covers, because resetting either would promise a retry that
+cannot happen or write a second set of drafts over the first.
+
+Migration `0069_newsletter_retry.sql` is that half, and
+`tests/newsletter-retry.test.js` pins the claim rules down without a mailbox or
+a model.
+
+---
+
 ## When an announcement has a date and the calendar does not
 
 **Baby Blessing Sign-Up 9/20** is the card this section is named after. It came
