@@ -1091,13 +1091,26 @@
       if (opts.url) attrs.push('data-url="' + esc(opts.url) + '"');
     }
     var value = opts.value ? '<span class="hc-row__value">' + esc(opts.value) + '</span>' : '';
-    var chevron = opts.chevron ? icon('chevronRight', 'hc-row__chevron') : '';
+    /* opts.external swaps the chevron for the box and arrow, which is the
+       same mark scriptureRow draws and means the same thing both places: the
+       tap leaves the app. Still .hc-row__chevron, because the class is the
+       slot at the end of a row and not the name of the glyph in it. */
+    var chevron = opts.chevron
+      ? icon(opts.external ? 'arrowOut' : 'chevronRight', 'hc-row__chevron')
+      : '';
     var sub = opts.sub ? '<p class="hc-caption">' + esc(opts.sub) + '</p>' : '';
     var titleCls = opts.serif ? 'hc-row__title' : 'hc-row__label';
+    /* A row with no title is a row that is all subtitle, the way Home's
+       giving row is one verse and nothing else. Leave the span out rather
+       than drawing an empty one, so nothing is left to wonder about in the
+       markup. */
+    var title = opts.title
+      ? '<span class="' + titleCls + '">' + esc(opts.title) + '</span>'
+      : '';
     return '' +
       '<' + tag + ' ' + attrs.join(' ') + '>' +
         '<span class="hc-row__body">' +
-          '<span class="' + titleCls + '">' + esc(opts.title) + '</span>' +
+          title +
           sub +
         '</span>' +
         value + chevron +

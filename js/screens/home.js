@@ -687,8 +687,12 @@
      It goes to the Give screen rather than straight out to Overflow. That
      screen exists to say thank you in the church's own voice before handing
      anybody off, and skipping it to save a tap would be skipping the point. */
-  /* The line under it is 2 Corinthians 9:7, reference first and then the verse,
-     with a blank line between them. c.row() escapes the text and puts it in one
+  /* The row is the verse and nothing else. The section header over it already
+     says Give, and the word a second time, an inch under itself, read as the
+     app stammering rather than as a title.
+
+     The line is 2 Corinthians 9:7, reference first and then the verse, with a
+     blank line between them. c.row() escapes the text and puts it in one
      paragraph, so the break is a real newline in the string and
      `white-space: pre-line` on .hc-home__give is what draws it. Two paragraphs
      would have meant a second row shape for one screen's sake. */
@@ -701,11 +705,11 @@
     return '' +
       '<div class="hc-home__give">' +
         c.row({
-          title: 'Give',
           sub: GIVING_LINE,
           action: 'go-module',
           id: 'give',
           chevron: true,
+          external: true,
           serif: true
         }) +
       '</div>';
