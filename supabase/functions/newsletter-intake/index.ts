@@ -184,10 +184,17 @@ class ImapError extends Error {}
    never comes back. The whole feature silently does nothing that week, and the
    only clue is a note nobody is looking at.
 
-   So a transient failure writes NO ledger row and does NOT mark the email
-   read. The email stays exactly as it was and the next tick, twenty minutes
-   later, tries it again. That is why the classification lives in its own type
-   rather than in a string match at the catch site. */
+   So a transient failure does NOT mark the email read. The email stays exactly
+   as it was in the mailbox and the next tick, twenty minutes later, tries it
+   again. That is why the classification lives in its own type rather than in a
+   string match at the catch site.
+
+   SINCE 0069 IT WRITES A ROW ALL THE SAME, marked `deferred` and carrying a
+   count. Leaving no trace at all made the retry free and the counting
+   impossible, and an answer that arrives truncated every single time would
+   then be re-read every twenty minutes for as long as the fortnight search
+   could see it, with nothing anywhere saying so. The row is what bounds that
+   and what makes it visible. */
 class TransientError extends Error {}
 
 class Imap {
@@ -841,12 +848,19 @@ async function askGemini(
           contents: [{ role: 'user', parts: [{ text: prompt(text, links, images, emailDate) }] }],
           generationConfig: {
             temperature: 0.2,
-            // Generous, and it is the thinking that spends it rather than the
-            // answer: four announcements came back as 456 tokens of JSON after
-            // 2,268 tokens of thought. A model that hits this ceiling stops
-            // mid-JSON and the parse below fails, which is the failure
-            // gemini-3-flash-preview produced every time.
-            maxOutputTokens: 8192,
+            /* Generous, and it is the thinking that spends it rather than the
+               answer: four announcements came back as 456 tokens of JSON after
+               2,268 tokens of thought. A model that hits this ceiling stops
+               mid-JSON and the parse below fails, which is the failure
+               gemini-3-flash-preview produced every time.
+
+               RAISED FROM 8,192 AFTER IT COST A REAL NEWSLETTER. The 11th of
+               September carried five items with long detail lists, and the
+               answer was cut off mid-array on the configured model, not on a
+               preview one. 8,192 was never measured, it was the first number
+               that worked; this is four times the headroom for a job that runs
+               once a week, and the tokens are only spent if they are used. */
+            maxOutputTokens: 32768,
             responseMimeType: 'application/json',
             responseSchema: SCHEMA,
           },
@@ -884,21 +898,48 @@ async function askGemini(
      is also correct for a long answer split across parts. */
   const parts = payload?.candidates?.[0]?.content?.parts ?? [];
   const raw = parts.map((p: { text?: string }) => p?.text ?? '').join('').trim();
+  const finish = String(payload?.candidates?.[0]?.finishReason ?? 'no reason given');
 
+  /* EVERY FAILURE BELOW IS TRANSIENT, and that is the fix for a week that went
+     missing rather than a loosening of the rules.
+
+     On the 11th of September this function asked for five announcements and
+     got back JSON that stopped mid-array: the model spent its output budget
+     before it finished writing. JSON.parse threw, the throw was a plain Error,
+     a plain Error meant "this email cannot be read", and the ledger buried the
+     newsletter for good. Nobody was told, because one email failing is not the
+     run failing.
+
+     But a truncated answer says nothing about the email. It is the same kind
+     of event as a 503 — the next attempt may simply work, and with the ceiling
+     above raised it usually will. So all three of these defer instead: no
+     ledger verdict, no \Seen, and the next tick tries again. The retrying is
+     bounded in main by MAX_PARSE_ATTEMPTS, which is what keeps "try again"
+     from becoming a model call every twenty minutes forever.
+
+     Nothing has been written to the database at this point in the run, which
+     is what makes a retry safe by construction rather than by argument: there
+     are no drafts to duplicate, because there are none yet. */
   if (!raw) {
-    const reason = payload?.candidates?.[0]?.finishReason ?? 'no reason given';
-    throw new Error(`Gemini returned nothing to parse (${reason}).`);
+    throw new TransientError(`Gemini returned nothing to parse (${finish}). Trying again next run.`);
   }
 
   let parsed: unknown;
   try {
     parsed = JSON.parse(raw);
   } catch {
-    throw new Error(`Gemini did not return JSON: ${raw.slice(0, 200)}`);
+    // MAX_TOKENS is the one worth naming outright: it is the answer being too
+    // long rather than the model misbehaving, and it is what a five item
+    // newsletter does to a budget that was set for four.
+    throw new TransientError(
+      `Gemini did not finish its JSON (${finish}). Trying again next run. It began: ${raw.slice(0, 120)}`,
+    );
   }
 
   const list = (parsed as { announcements?: unknown })?.announcements;
-  if (!Array.isArray(list)) throw new Error('Gemini returned no announcements array.');
+  if (!Array.isArray(list)) {
+    throw new TransientError(`Gemini returned no announcements array (${finish}). Trying again next run.`);
+  }
   return list as Parsed[];
 }
 
@@ -1057,6 +1098,146 @@ function eventDateFor(
 }
 
 /* @@ dates:end */
+
+/* @@ retry:start
+   Fenced like the dates above, and evalled by tests/newsletter-retry.test.js,
+   so it has to stay self-contained: no imports, no Deno, no Supabase client.
+   The two constants live in here rather than up with the other settings for
+   exactly that reason — the test has to see the same numbers the function
+   uses, or it is testing a copy. */
+
+/* How many times one email may be claimed before the reader gives up on it.
+   Four attempts twenty minutes apart is about an hour of trying, which is long
+   enough to ride out a busy model and short enough that a genuinely
+   unreadable email is settled and reported the same morning. */
+const MAX_PARSE_ATTEMPTS = 4;
+
+/* How long a claim may sit before another run may take it.
+   An Edge Function invocation cannot outlive its own timeout, so a row still
+   marked `parsing` a quarter of an hour later is not a run in progress — it is
+   a run that died holding the email. Without this, one crash at the wrong
+   moment would bury a newsletter exactly the way the old permanent-failure
+   rule did, which is the bug this whole change is about. */
+const CLAIM_STALE_MINUTES = 15;
+
+interface LedgerState {
+  status?: string;
+  attempts?: number;
+  attempted_at?: string | null;
+}
+
+/* What this run may do with an email, given what the ledger already says about
+   it. Pure, because it is the one piece of this feature whose corner cases are
+   worth checking without a mailbox: settled means settled, a stuck claim has
+   to come back, and neither of those may depend on the model or the network.
+
+     new      no ledger row at all. Parse it.
+     retry    a previous attempt deferred. Parse it again.
+     reclaim  someone claimed it and never came back. Take it.
+     skip     settled, or being worked on right now, or out of attempts. */
+function claimDecision(row: LedgerState | null | undefined, nowMs: number): 'new' | 'retry' | 'reclaim' | 'skip' {
+  if (!row) return 'new';
+
+  const status = String(row.status ?? '');
+  const attempts = Number(row.attempts ?? 0);
+  const spent = !Number.isFinite(attempts) || attempts >= MAX_PARSE_ATTEMPTS;
+
+  if (status === 'deferred') return spent ? 'skip' : 'retry';
+
+  if (status === 'parsing') {
+    const started = Date.parse(String(row.attempted_at ?? ''));
+    /* A claim with no clock on it is from a version of this function that did
+       not set one, or a write that half happened. Either way nothing is coming
+       back for it, so it is stale by definition rather than by arithmetic. */
+    if (!Number.isFinite(started)) return spent ? 'skip' : 'reclaim';
+    if (nowMs - started < CLAIM_STALE_MINUTES * 60 * 1000) return 'skip';
+    return spent ? 'skip' : 'reclaim';
+  }
+
+  // parsed, empty, failed. Settled, and 0038's whole point.
+  return 'skip';
+}
+
+/* @@ retry:end */
+
+/* Taking an email, so that exactly one run parses it.
+
+   WHAT THIS REPLACES. 0038 got mutual exclusion from a single insert against a
+   unique index: the loser got a 23505 and skipped, and that was airtight for
+   as long as an email could only ever be parsed once. A retry breaks it,
+   because the second legitimate attempt looks exactly like the duplicate the
+   index was there to refuse. Both halves matter here — the twenty minute tick
+   and the Fetch Announcements button really do overlap, three taps inside four
+   minutes is a thing that happens, and two runs parsing one newsletter is two
+   sets of drafts and two calendar entries for one evening.
+
+   So a claim is one of two atomic writes, and never a read followed by a
+   write. A new email is an insert, which the unique index still arbitrates
+   exactly as before. A retry or a reclaim is an update guarded on the attempt
+   count we read a moment ago — a compare-and-swap — so if another run got
+   there first the count has already moved, the update matches no rows, and
+   this run steps aside. Returns the ledger row id on success and null when
+   somebody else has it.
+
+   The row is written BEFORE the model is called rather than after, which is
+   the same ordering 0038 chose for the drafts and for the same reason: of the
+   two ways this can fail, an email recorded as claimed and never finished is
+   recoverable — the staleness rule above brings it back — and an email parsed
+   twice is a mess a person has to clean up by hand. */
+async function claimEmail(
+  admin: ReturnType<typeof createClient>,
+  how: 'new' | 'retry' | 'reclaim',
+  envelope: Record<string, unknown>,
+  attempts: number,
+): Promise<number | null> {
+  const claim = {
+    ...envelope,
+    status: 'parsing',
+    attempts,
+    attempted_at: new Date().toISOString(),
+    note: null as string | null,
+  };
+
+  if (how === 'new') {
+    const { data, error } = await admin
+      .from('newsletter_emails').insert(claim).select('id').single();
+
+    if (error) {
+      // 23505 is the race, and it is the correct outcome rather than a fault:
+      // another run inserted between our read of the ledger and now.
+      if (error.code === '23505') return null;
+      throw new Error(`Could not claim the email: ${error.message}`);
+    }
+    return data.id as number;
+  }
+
+  const { data, error } = await admin
+    .from('newsletter_emails')
+    .update(claim)
+    .eq('message_id', String(envelope.message_id))
+    .eq('attempts', attempts - 1)     // the compare half of the swap
+    .select('id');
+
+  if (error) throw new Error(`Could not claim the email: ${error.message}`);
+  return data && data.length ? (data[0].id as number) : null;
+}
+
+/* How a claim ends. Always called, whichever way the email went, so no row is
+   left in `parsing` by a run that is still alive.
+
+   A failure to write the outcome is logged and swallowed on purpose. The work
+   is already done by this point — the drafts are in the table or they are not
+   — and throwing here would turn a good parse into a failed run. A row left
+   marked parsing is picked up again in a quarter of an hour by the staleness
+   rule, which is the whole reason that rule exists. */
+async function settleEmail(
+  admin: ReturnType<typeof createClient>,
+  id: number,
+  patch: Record<string, unknown>,
+): Promise<void> {
+  const { error } = await admin.from('newsletter_emails').update(patch).eq('id', id);
+  if (error) console.error(`newsletter-intake: could not settle email ${id}:`, error.message);
+}
 
 /* Today, where the church is. Not UTC: an announcement retires at midnight in
    Metairie, which is the same reason hc_admin_send_announcement reads
@@ -1376,7 +1557,10 @@ async function runBackfill(
         contents: [{ role: 'user', parts: [{ text: backfillPrompt(rows) }] }],
         generationConfig: {
           temperature: 0.2,
-          maxOutputTokens: 8192,
+          // Twenty-five rows of id, date and location, and the same truncation
+          // risk as the parse above: one row short of the end is a date that
+          // silently never gets made.
+          maxOutputTokens: 16384,
           responseMimeType: 'application/json',
           responseSchema: BACKFILL_SCHEMA,
         },
@@ -1631,6 +1815,15 @@ Deno.serve(async (req: Request) => {
   // no newsletter.
   let deferred = 0;
   let deferredNote: string | null = null;
+  /* Emails this run settled as unreadable, which is the other half of what the
+     note has to carry. Before 0069 a failed email was recorded in a table no
+     screen reads and the run stayed silent: on the 11th of September the whole
+     newsletter was lost and the Admin screen said "Newsletter checked 3
+     minutes ago" in the ordinary grey. A failure nobody is told about is the
+     failure this feature keeps having, so it goes in the note, which that
+     screen draws as a warning. */
+  let failedCount = 0;
+  let failedNote: string | null = null;
 
   try {
     await imap.connect(host, port);
@@ -1677,13 +1870,29 @@ Deno.serve(async (req: Request) => {
     const ids = candidates.map((c) => c.messageId);
     const { data: known, error: knownError } = await admin
       .from('newsletter_emails')
-      .select('message_id')
+      .select('message_id, status, attempts, attempted_at')
       .in('message_id', ids.length ? ids : ['']);
 
     if (knownError) throw new Error(`Could not read the ledger: ${knownError.message}`);
 
-    const seen = new Set((known ?? []).map((r) => r.message_id as string));
-    const fresh = candidates.filter((c) => !seen.has(c.messageId)).slice(0, MAX_EMAILS_PER_RUN);
+    /* What the ledger already knows about each of them, which since 0069 is
+       more than "seen or not": an email can be mid-parse in another run, or
+       waiting on a retry after an attempt that deferred. claimDecision holds
+       the rules and is tested on its own. */
+    const ledgerState = new Map<string, LedgerState>();
+    for (const row of known ?? []) {
+      ledgerState.set(row.message_id as string, row as LedgerState);
+    }
+
+    const now = Date.now();
+    const fresh = candidates
+      .map((c) => ({ ...c, how: claimDecision(ledgerState.get(c.messageId), now) }))
+      .filter((c) => c.how !== 'skip')
+      .slice(0, MAX_EMAILS_PER_RUN) as Array<{
+        uid: number;
+        messageId: string;
+        how: 'new' | 'retry' | 'reclaim';
+      }>;
 
     if (!fresh.length) {
       await imap.close();
@@ -1703,7 +1912,7 @@ Deno.serve(async (req: Request) => {
 
     const preview: unknown[] = [];
 
-    for (const { uid, messageId } of fresh) {
+    for (const { uid, messageId, how } of fresh) {
       const raw = await imap.fetchRaw(uid);
       const envelope = splitHeaders(raw);
       const subject = decodeHeaderWords(envelope.headers['subject'] ?? '').slice(0, 300);
@@ -1713,19 +1922,36 @@ Deno.serve(async (req: Request) => {
         ? new Date(dateHeader).toISOString()
         : null;
 
+      // Which attempt this is. The claim below only succeeds if the ledger is
+      // still one short of it, so two runs cannot both be attempt three.
+      const attempt = Number(ledgerState.get(messageId)?.attempts ?? 0) + 1;
+
       /* Everything the ledger will say about this email, whichever way it
-         goes. Built up as we learn, written once at the end, so an email is
-         recorded exactly once no matter which branch it takes. */
+         goes. Built up as we learn and written when the claim settles, so an
+         email is recorded exactly once no matter which branch it takes. */
       const ledger: Record<string, unknown> = {
-        message_id: messageId,
-        imap_uid: uid,
-        subject,
-        from_addr: fromAddr,
-        sent_at: sentAt,
         status: 'parsed',
         drafts: 0,
         note: null as string | null,
       };
+
+      /* THE CLAIM, before the model is called and before anything is written.
+         A dry run claims nothing: it is a person reading the answer, it must
+         leave the mailbox exactly as it found it, and taking a claim would
+         make the next real run skip the email it was rehearsing. */
+      let claimId: number | null = null;
+      if (!dryRun) {
+        claimId = await claimEmail(admin, how, {
+          message_id: messageId,
+          imap_uid: uid,
+          subject,
+          from_addr: fromAddr,
+          sent_at: sentAt,
+        }, attempt);
+
+        // Another run has it. Not an error, and not ours to report.
+        if (claimId === null) continue;
+      }
 
       try {
         const parts = textParts(raw);
@@ -1907,21 +2133,18 @@ Deno.serve(async (req: Request) => {
             preview.push({ subject, drafts: rows });
             draftCount += rows.length;
           } else {
-            /* The ledger row goes in FIRST, so the announcements can point at
-               it and so a crash between the two leaves an email marked seen
-               with no drafts rather than drafts that arrive twice. Of the two
-               ways this can fail, a missing draft is recoverable by hand and a
-               duplicated one is a mess in the review queue. */
-            ledger.drafts = rows.length;
-            const { data: emailRow, error: ledgerError } = await admin
-              .from('newsletter_emails').insert(ledger).select('id').single();
+            /* The ledger row is already there — the claim above wrote it
+               before the model was called, which is the ordering 0038 chose
+               for this insert and 0069 generalised. The announcements point at
+               it by id, and a crash between here and the end leaves an email
+               marked claimed with no drafts rather than drafts that arrive
+               twice. Of the two ways this can fail, a missing draft is
+               recoverable and a duplicated one is a mess in the review queue.
 
-            if (ledgerError) {
-              // 23505 is the race: another run claimed this email between our
-              // read of the ledger and now. Nothing to do and nothing wrong.
-              if (ledgerError.code === '23505') continue;
-              throw new Error(`Could not write the ledger: ${ledgerError.message}`);
-            }
+               A claim that comes back with nothing to parse is not possible
+               here: claimId is only null on a dry run, and a dry run never
+               reaches this branch. */
+            const emailId = claimId as number;
 
             /* Events first, for the foreign key. An event landing with no
                announcement pointing at it is the harmless direction to fail:
@@ -1932,9 +2155,6 @@ Deno.serve(async (req: Request) => {
             if (events.length) {
               const { error: eventError } = await admin.from('events').insert(events);
               if (eventError) {
-                await admin.from('newsletter_emails')
-                  .update({ status: 'failed', drafts: 0, note: `Events would not save: ${eventError.message}`.slice(0, 500) })
-                  .eq('id', emailRow.id);
                 throw new Error(`Could not write the events: ${eventError.message}`);
               }
               // Counted after the insert returned, never before it. Nobody is
@@ -1942,14 +2162,15 @@ Deno.serve(async (req: Request) => {
               newEvents += events.length;
             }
 
-            const withSource = rows.map((r) => ({ ...r, source_email_id: emailRow.id }));
+            const withSource = rows.map((r) => ({ ...r, source_email_id: emailId }));
             const { error: insertError } = await admin.from('announcements').insert(withSource);
             if (insertError) {
-              await admin.from('newsletter_emails')
-                .update({ status: 'failed', drafts: 0, note: `Drafts would not save: ${insertError.message}`.slice(0, 500) })
-                .eq('id', emailRow.id);
               throw new Error(`Could not write the drafts: ${insertError.message}`);
             }
+
+            await settleEmail(admin, emailId, {
+              status: 'parsed', drafts: rows.length, note: null,
+            });
 
             draftCount += rows.length;
             newDrafts += rows.length;
@@ -1960,14 +2181,47 @@ Deno.serve(async (req: Request) => {
           }
         }
       } catch (err) {
-        /* Transient: leave absolutely no trace. No ledger row, no \Seen, no
-           draft. The email is still unread and still unknown, so the next tick
-           picks it up as though this run never happened. This is the branch
-           that stops a busy model from costing the church a week. */
+        /* Transient: the email is NOT marked read, so the next tick picks it
+           up and tries again. This is the branch that stops a busy model —
+           or, since 0069, an answer that arrived truncated — from costing the
+           church a week.
+
+           WHAT CHANGED AT 0069. This used to leave absolutely no trace, which
+           made the retry free and the counting impossible: an email that
+           deferred every single time would be re-read every twenty minutes for
+           as long as the mailbox search could see it, and nothing anywhere
+           said so. Now the claim is already in the ledger, so the outcome is
+           written onto it — deferred while there are attempts left, failed
+           when they run out — and the email is settled and reported rather
+           than quietly retried forever.
+
+           Still no \Seen either way, until it is genuinely settled. */
         if (err instanceof TransientError) {
-          deferred += 1;
-          deferredNote = String(err.message).slice(0, 300);
-          console.warn(`newsletter-intake: deferring ${messageId}: ${err.message}`);
+          const reason = String(err.message).slice(0, 400);
+          const spent = attempt >= MAX_PARSE_ATTEMPTS;
+
+          if (claimId !== null) {
+            await settleEmail(admin, claimId, {
+              status: spent ? 'failed' : 'deferred',
+              drafts: 0,
+              note: spent
+                ? `Gave up after ${MAX_PARSE_ATTEMPTS} attempts. ${reason}`.slice(0, 500)
+                : reason,
+            });
+          }
+
+          if (spent) {
+            failedCount += 1;
+            failedNote = reason;
+            // Settled, so it stops being found. Without this the fortnight
+            // search would keep handing it back to a claim that now refuses.
+            if (!dryRun) await imap.markSeen(uid);
+            console.error(`newsletter-intake: giving up on ${messageId} after ${attempt}: ${err.message}`);
+          } else {
+            deferred += 1;
+            deferredNote = reason;
+            console.warn(`newsletter-intake: deferring ${messageId} (attempt ${attempt}): ${err.message}`);
+          }
           continue;
         }
 
@@ -1977,21 +2231,26 @@ Deno.serve(async (req: Request) => {
            dropped. Straight out to the run-level handler. */
         if (err instanceof ImapError) throw err;
 
-        // Permanent: one email failing is not the run failing. Record it
-        // against the email, so it is not retried every twenty minutes
-        // forever, and carry on to the next one.
+        /* Permanent, and since 0069 that means something narrower than it used
+           to: a failure that happened AFTER rows were written, or one that has
+           nothing to do with the model. Reading the email again would write a
+           second set of drafts over the first, so these settle where they
+           fall, and the run note below says so out loud. */
         ledger.status = 'failed';
         ledger.drafts = 0;
         ledger.note = String((err as Error).message ?? err).slice(0, 500);
+        failedCount += 1;
+        failedNote = String(ledger.note);
         console.error(`newsletter-intake: ${messageId} failed:`, err);
       }
 
-      if (!dryRun) {
-        const { error } = await admin.from('newsletter_emails').insert(ledger);
-        if (!error || error.code === '23505') {
-          parsedCount += 1;
-          await imap.markSeen(uid);
-        }
+      /* The outcome of a claim that did not write drafts: empty, or failed.
+         The drafts branch settles itself above and continues, because it has a
+         count to record that this does not. */
+      if (!dryRun && claimId !== null) {
+        await settleEmail(admin, claimId, ledger);
+        parsedCount += 1;
+        await imap.markSeen(uid);
       }
     }
 
@@ -2006,9 +2265,17 @@ Deno.serve(async (req: Request) => {
        a note, and the Admin screen draws the newest run's note whether or not
        it is ok, which is what keeps "Gemini has been busy for two days" from
        being indistinguishable from "no newsletter arrived". */
-    const note = deferred
-      ? `${deferred} email${deferred === 1 ? '' : 's'} left for the next run. ${deferredNote ?? ''}`.trim().slice(0, 500)
-      : null;
+    const lines: string[] = [];
+    if (deferred) {
+      lines.push(`${deferred} email${deferred === 1 ? '' : 's'} left for the next run. ${deferredNote ?? ''}`.trim());
+    }
+    if (failedCount) {
+      lines.push(
+        `${failedCount} email${failedCount === 1 ? ' could not be read' : 's could not be read'} and ` +
+        `${failedCount === 1 ? 'was' : 'were'} not turned into drafts. ${failedNote ?? ''}`.trim(),
+      );
+    }
+    const note = lines.length ? lines.join(' ').slice(0, 500) : null;
 
     /* After the mailbox is closed and before the run is written, which is the
        one moment where everything this run was going to write is written and
