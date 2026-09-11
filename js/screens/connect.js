@@ -407,6 +407,14 @@
      it from; if one is ever added, all three should read it. */
   var CHURCH_EMAIL = 'hello@homechurchnola.com';
 
+  /* What the "I'm new here" next step, at the foot of this same screen, jumps
+     to. On the section header rather than on the form, because the form is
+     not the whole answer: without a Supabase project behind it, and after a
+     message has gone, the same spot holds the church's address and the sent
+     card instead. Whichever of the three is drawn, "Get in touch" is over it.
+     Read by the go-contact handler in js/app.js through connectHelpers. */
+  var CONTACT_ANCHOR = 'hc-contact-top';
+
   var CONTACT_BLURB = 'Questions, prayer, a hard week, or you are new and not ' +
     'sure where to start. Write to us here and a real person answers.';
   var CONTACT_NOTE = 'Goes to the church office. Nobody else sees it.';
@@ -474,6 +482,7 @@
 
   function contactForm() {
     var html = c.sectionHeader('Talk to us', 'Get in touch', {
+      id: CONTACT_ANCHOR,
       eyebrowSlot: 'connect.contact-eyebrow'
     });
 
@@ -681,6 +690,37 @@
      button that does nothing.
      ------------------------------------------------------------------- */
 
+  /* The steps whose destination is inside the app rather than out on the web.
+     The url column holds a sentinel instead of an address, and this object is
+     the whole list of them: anything not named here is a link and is opened
+     the way every other link on this screen is.
+
+     WHY A SENTINEL RATHER THAN A COLUMN OF ITS OWN. next_steps rows are
+     edited in Supabase and synced down by js/content.js, so a step that has
+     to start working on a phone already in somebody's pocket has to arrive
+     through a column that is already there. 'app:' is not a scheme anything
+     would try to follow, so a row carrying one can never reach openExternal()
+     by accident: it either matches here and becomes an in-app button, or it
+     matches nothing and the step draws as a description, which is what it
+     did before.
+
+     'app:contact' is the contact form at the top of THIS screen, which is
+     where "I'm new here" was always pointing. It had no url at all until now,
+     because the church had no seventh system to send it to; the answer turned
+     out to be a few hundred pixels up the page. */
+  var INTERNAL_STEPS = {
+    'app:contact': { action: 'go-contact', icon: 'connect' }
+  };
+
+  function stepNote() {
+    var note = HC.data.copy('connect.step-note', STEP_NOTE);
+    return HC.edit.wrap(
+      note ? '<p class="hc-caption hc-step__note">' + c.esc(note) + '</p>' : '',
+      { slot: 'connect.step-note', value: note,
+        label: 'the note under a next step button' }
+    );
+  }
+
   function nextStep(step) {
     /* The one on this screen that goes stale fastest, and the reason edit
        mode exists. Migration 0006 shipped "The next one is August 23" in the
@@ -694,27 +734,27 @@
     );
 
     if (step.url) {
+      var inApp = INTERNAL_STEPS[step.url];
+
       /* The button's words are the church's, in a column of its own, so they
          are edited as a row rather than as a slot. Where it goes is not
          editable: a relabelled button still opens the same link. */
-      var note = HC.data.copy('connect.step-note', STEP_NOTE);
+      var press = inApp
+        ? { action: inApp.action, icon: inApp.icon }
+        : { action: 'open-url', url: step.url, icon: 'arrowOut' };
+
       body += '<div class="hc-step__action">' +
         HC.edit.mark(
-          c.button(step.ctaLabel || 'Open', {
-            action: 'open-url',
-            url: step.url,
-            icon: 'arrowOut'
-          }),
+          c.button(step.ctaLabel || 'Open', press),
           { table: 'next_steps', id: step.id, column: 'cta_label',
             target: step, field: 'ctaLabel',
             value: step.ctaLabel || 'Open',
             label: step.title + ', the words on the button', rows: 2 }
         ) +
-        HC.edit.wrap(
-          note ? '<p class="hc-caption hc-step__note">' + c.esc(note) + '</p>' : '',
-          { slot: 'connect.step-note', value: note,
-            label: 'the note under a next step button' }
-        ) +
+        /* "Opens in your browser" is a warning about leaving, so a step that
+           does not leave does not carry it, and the slot's pencil goes with
+           it: there is nothing here to edit. */
+        (inApp ? '' : stepNote()) +
       '</div>';
     }
 
@@ -864,6 +904,12 @@
 
     setFilter: setFilter,
     repaintGroups: repaintGroups,
+
+    /* Where the go-contact handler in js/app.js scrolls to. Exported as the
+       id rather than hardcoded there, so the anchor and the thing that jumps
+       to it cannot drift apart. */
+    contactAnchor: CONTACT_ANCHOR,
+
     getContact: getContact,
     setContactField: setContactField,
     setContactBusy: setContactBusy,

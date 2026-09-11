@@ -692,10 +692,15 @@ The short list:
 Neither of these blocks anything. Both render honestly as they are, they are
 just quieter than they could be.
 
-- [ ] **A destination for "I'm new here."** The only next step with no link.
-      It shows as a description with no button, which is honest, but it is the
-      one a first time visitor is most likely to tap. Is there a Church Center
-      connect card for it?
+- [x] **A destination for "I'm new here."** It was the only next step with no
+      link, and it showed as a description with nothing under it, which was
+      honest but empty for the one step a first time visitor is most likely to
+      tap. It now goes to the contact form at the top of the same screen: the
+      row carries `app:contact` in its `url`, the button says "Tell us you're
+      here", and the church office gets the message. If a Church Center
+      connect card ever exists, put its address in the same column and the
+      step will open that instead. See
+      `supabase/migrations/0068_new_here_goes_to_the_form.sql`.
 
 - [ ] **What happens when someone wants to join a group, not host one?** The
       Group Vitals link you sent is the leader form. Group cards are

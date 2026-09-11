@@ -2315,12 +2315,19 @@
   /* ------------------------------------------------------------- next steps */
 
   /* url is what turns a step into an action. A step without one renders as a
-     description and stops there, which is the honest shape for 'I'm new here'
-     until the church picks a destination for it. */
+     description and stops there, which is the honest shape for a step with
+     nowhere to send anybody.
+
+     'app:contact' is not an address, it is a destination inside the app: the
+     contact form at the top of Connect, which is the screen these are drawn
+     on. 'I'm new here' is the one step the church runs no outside system for,
+     and it spent a year as a description with nothing under it while the
+     thing it was asking for sat a few hundred pixels up the same page. See
+     INTERNAL_STEPS in js/screens/connect.js. */
   var nextSteps = [
     { id: 'step-new', title: 'I’m new here',
       blurb: 'Tell us a little about yourself and we will find you on Sunday.',
-      url: null, ctaLabel: '' },
+      url: 'app:contact', ctaLabel: 'Tell us you’re here' },
     { id: 'step-baptism', title: 'I want to be baptized',
       blurb: 'We will walk you through it, start to finish.',
       url: 'https://homechurchnola.churchcenter.com/people/forms/953766',

@@ -743,6 +743,48 @@
            window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   }
 
+  /* Put the contact form at the top of Connect on the screen. The move half of
+     the go-contact action, kept here rather than on the screen because the
+     scroller and the chrome hanging over it are this file's, not a screen's.
+
+     MEASURED, NOT scrollIntoView(). The top bar is fixed and the pinned
+     announcement strip sits under it, so the top of the scroller is not the
+     top of what a person can see. Landing the header at zero would land it
+     behind both. Every screen clears the same two with its own padding, and
+     this reads the same two heights off the glass rather than keeping a third
+     copy of the number.
+
+     FOCUS MOVES, and it moves to the heading rather than into the first box.
+     A scroll is nothing at all to somebody using VoiceOver: without this, the
+     button says "Tell us you're here" and then, as far as the screen reader
+     is concerned, nothing happens. The heading is the honest announcement of
+     where they have landed, and it does not raise the keyboard over a scroll
+     that is still running, which putting the cursor in a field would. The
+     cursor stays theirs to place, the same as it is for anybody scrolling
+     here by thumb. */
+  function revealContact() {
+    var anchor = document.getElementById(HC.screens.connectHelpers.contactAnchor);
+    if (!anchor || !scroller) return;
+
+    var chrome = (topbar ? topbar.getBoundingClientRect().height : 0) +
+      ((pinbar && !pinbar.hidden) ? pinbar.getBoundingClientRect().height : 0);
+    var base = scroller.getBoundingClientRect().top - scroller.scrollTop;
+    var top = anchor.getBoundingClientRect().top - base - chrome - 12;
+
+    scroller.scrollTo({
+      top: Math.max(top, 0),
+      behavior: prefersReducedMotion() ? 'auto' : 'smooth'
+    });
+
+    /* tabindex is put on here rather than drawn into the markup: it exists
+       only to receive this, and a heading that answers the tab key on a
+       screen nobody jumped to is one more stop on the way down the page.
+       preventScroll so the focus does not haul the page somewhere the line
+       above already decided. */
+    anchor.setAttribute('tabindex', '-1');
+    anchor.focus({ preventScroll: true });
+  }
+
   /* ------------------------------------------------------ the overflow sheet
 
      What ••• does now. It used to push the More list and you had to come back
@@ -2907,6 +2949,27 @@
     'contact-reset': function () {
       HC.screens.connectHelpers.contactAgain();
       repaintView();
+    },
+
+    /* "I'm new here", at the foot of Connect, and the only next step whose
+       destination is inside the app. Every other one hands a person to a
+       system the church already runs; this one had nowhere to go at all and
+       drew a description with nothing under it. What it wanted was already on
+       the screen, a few hundred pixels up: the contact form. See
+       INTERNAL_STEPS in js/screens/connect.js for how a step says so.
+
+       Written to survive being tapped from somewhere that is not Connect,
+       even though nothing draws next steps anywhere else today. render() is
+       synchronous, so the form is on the glass by the time the scroll below
+       goes looking for it. */
+    'go-contact': function () {
+      HC.native.tap('Light');
+      if (HC.overflow.isOpen()) HC.overflow.close();
+
+      var here = HC.router.current();
+      if (!here || here.name !== 'connect') HC.router.go({ name: 'connect' });
+
+      revealContact();
     },
 
     /* ---------------------------------------------------------- leader mode */
