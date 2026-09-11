@@ -600,18 +600,25 @@
     return true;
   }
 
-  /* Has this phone put this announcement away? The x on the card on Home is
-     one tap, has no confirm, and until now had no way back at all: the only
-     caller of undismiss() was tapping the pinned strip. So a thumb that
-     caught the x while scrolling took a card off Home for good, on that phone
-     only — which from the Admin screen looked exactly like an announcement
-     that was live, movable, and mysteriously not there.
+  /* Has this phone put this announcement away? The corner of the card on Home
+     is one tap and has no confirm, which for a long time meant a thumb that
+     caught it while scrolling took a card off Home for good, on that phone
+     only — and from the Admin screen that looked exactly like an announcement
+     that was live, movable, and mysteriously not there. This row is what said
+     otherwise.
+
+     IT IS NO LONGER THE ONLY WAY BACK, and it stays anyway. The corner is an
+     archive box now and js/screens/announcement-archive.js is where it puts
+     things, so anybody can restore their own card without being an admin. What
+     this still answers is the question only this screen asks: why an
+     announcement the church is publishing today is not on the Home of the
+     person looking at the list of them.
 
      It is a fact about this phone and not about the announcement, which is
      why it is read from js/store.js here rather than being anything the
      church can see. Everybody else still has the card. */
   function isPutAway(row) {
-    return isLiveNow(row) && HC.store.isDismissed(row.id);
+    return isLiveNow(row) && HC.store.isArchived(row.id);
   }
 
   /* One row in the list. The status line is generated rather than typed, so a
@@ -1450,10 +1457,17 @@
             : '') +
           c.button('Edit', { action: 'admin-announcement-edit', id: row.id,
             variant: 'secondary', small: true }) +
-          /* The way back from the x on Home, and the only one there was ever
-             going to be: dismissing is remembered on the phone, so the undo
-             has to be on the phone that did it, and this is the screen that is
+          /* A way back from the archive box on Home, on the screen that is
              already showing every announcement whether it drew a card or not.
+             Archiving is remembered on the phone, so the undo has to be on the
+             phone that did it; that is why it is here and not a write.
+
+             The other way back, and the one everybody has, is the archive
+             itself: js/screens/announcement-archive.js, off the line under the
+             last card on Home. This one stays because an admin who has just
+             noticed a live announcement missing from their own Home is already
+             standing in front of the row, and sending them to another screen
+             to fix what this one just told them about is a worse answer.
 
              Drawn only when there is something to undo. A button that says
              "put it back" beside a card that is already there is a button that

@@ -2836,6 +2836,78 @@
   fill: none;
 }
 
+/* --------------------------------------------------------------------------
+   The announcement archive
+
+   Where the archive box in the corner of a card on Home puts it, and the way
+   back out. See js/screens/announcement-archive.js.
+
+   Nothing here is a new visual language. The rows are the same .hc-banner card
+   Home draws, the tick box is the one a guide's coverage boxes use, and both
+   links are the .hc-inline-link Connect and the Add to calendar row already
+   carry. What this section adds is only the spacing around them, and the one
+   rule that makes an archived card read as put away rather than as news.
+   -------------------------------------------------------------------------- */
+
+/* The line under the last announcement on Home. In brackets, in the caption
+   size, sitting under the list rather than in it: it is a footnote to the
+   announcements above and not a sixth thing on the front door. Underlined
+   because it is the only place on Home where a run of plain-looking words is
+   a destination, and nothing else in that column is. */
+.hc-home__archive-line {
+  margin-top: var(--hc-space-md);
+}
+
+.hc-archive-link {
+  min-height: auto;
+  padding: var(--hc-space-sm) 0;
+  font-weight: 500;
+  color: var(--hc-mid);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.hc-archive-link:active { opacity: 0.7; }
+
+/* What archiving is, said once under the heading. The one thing somebody
+   opening this screen might reasonably fear is that they have done something
+   to the church's announcements rather than to their own copy of them. */
+.hc-archive__blurb {
+  margin-top: var(--hc-space-sm);
+  color: var(--hc-mid);
+}
+
+/* Above the top row, and hidden by the `hidden` attribute until something is
+   ticked. Not removed from the markup: a tick has to show this line without
+   rebuilding the list under the thumb that is ticking. */
+.hc-archive__restore-line {
+  margin-top: var(--hc-space-lg);
+  padding-bottom: var(--hc-space-sm);
+  border-bottom: var(--hc-hairline) solid var(--hc-rule);
+}
+
+.hc-archive__restore {
+  min-height: var(--hc-tap-min);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.hc-archive__restore:active { opacity: 0.7; }
+
+.hc-archive__list { margin-top: var(--hc-space-base); }
+
+/* An archived card, which is the same card with its voice down. The accent
+   rule down its left edge is what makes an announcement on Home read as
+   something the church is saying today, and a list of things somebody has
+   already put away should not say that twelve times over. The rule stays,
+   because it is the shape of the card, and it goes grey. */
+.hc-banner--archived {
+  border-left-color: var(--hc-rule);
+  background: var(--hc-paper-sunk);
+}
+
+.hc-banner--archived .hc-banner__cue { color: var(--hc-mid); }
+
 /* The looping band of film at the head of a practice page. Sized like a wide
    strip rather than a 16:9 block, because it is a header and not something
    anybody is meant to sit and watch. Pointer events off: there is nothing to

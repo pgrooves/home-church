@@ -393,8 +393,60 @@
      See js/data.js, and js/app.js for the strip. */
   function liveAnnouncements() {
     return HC.data.liveAnnouncements().filter(function (a) {
-      return !HC.store.isDismissed(a.id);
+      return !HC.store.isArchived(a.id);
     });
+  }
+
+  /* ------------------------------------------------------------ the archive
+
+     THE CORNER OF THE CARD USED TO BE A TRAPDOOR. One tap on an x, no confirm,
+     and the card was gone from this phone for good; the only way back was a
+     "Put it back" button on the Admin screen, which members cannot reach and
+     admins had no reason to look at. A thumb catching that x while scrolling
+     lost an announcement silently.
+
+     So the tap puts the card somewhere rather than ending it, and this line is
+     where somewhere is. It sits under the last card, in brackets and in the
+     caption size, because it is a footnote to the list above it and not a
+     sixth thing on the front door.
+
+     DRAWN WHENEVER THIS PHONE HAS ARCHIVED ANYTHING, including on the week
+     every live announcement has been archived and there are no cards left over
+     it. That is exactly the week somebody needs the way back, and hanging the
+     link off the presence of a card above it would be the week it disappears.
+
+     IT COUNTS WHAT IS IN HC.data, not what is in the store's map. An id in
+     that map whose announcement the church has since deleted is not an
+     announcement any more, and a link promising an archive that opens on an
+     empty screen is worse than no link. */
+  function archivedAnnouncements() {
+    var archived = {};
+    HC.store.archivedIds().forEach(function (id) { archived[id] = true; });
+
+    return (HC.data.announcements || []).filter(function (a) {
+      return archived[a.id] === true;
+    });
+  }
+
+  var ARCHIVE_LINK = '(Announcement Archive)';
+
+  function archiveLink() {
+    var n = archivedAnnouncements().length;
+    if (!n) return '';
+
+    return '' +
+      '<p class="hc-home__archive-line">' +
+        '<button type="button" class="hc-inline-link hc-archive-link" ' +
+            'data-action="open-announcement-archive">' +
+          c.esc(ARCHIVE_LINK) +
+          /* The count is said to a screen reader and not drawn, so the line
+             on screen stays the three words the church asked for while the
+             announcement a screen reader makes is worth listening to. */
+          '<span class="hc-visually-hidden">, ' + n +
+            (n === 1 ? ' archived announcement' : ' archived announcements') +
+          '</span>' +
+        '</button>' +
+      '</p>';
   }
 
   /* THE CARD IS A DOOR NOW, which is the one thing about it that changed.
@@ -441,17 +493,20 @@
             c.icon('chevronRight', 'hc-banner__chev') +
           '</span>' +
         '</button>' +
-        '<button type="button" class="hc-banner__dismiss" data-action="dismiss-banner" ' +
-          'data-id="' + c.esc(a.id) + '" aria-label="Dismiss">' +
-          c.icon('close') +
+        /* The corner. It was an x and it is an archive box, and the label
+           names the announcement rather than saying the bare word: a screen
+           reader moving through four cards otherwise hears "Archive" four
+           times with no way to tell which card it is on. */
+        '<button type="button" class="hc-banner__archive" data-action="archive-banner" ' +
+          'data-id="' + c.esc(a.id) + '" ' +
+          'aria-label="Archive “' + c.esc(a.title) + '”">' +
+          c.icon('archive') +
         '</button>' +
       '</div>';
   }
 
   function announcements() {
-    var list = liveAnnouncements();
-    if (!list.length) return '';
-    return list.map(announcementCard).join('');
+    return liveAnnouncements().map(announcementCard).join('');
   }
 
   /* ------------------------------------------------------- the pinned line
@@ -686,11 +741,17 @@
        change.
 
        Same rule as every other block here, though: no announcements, no
-       header. An empty heading over nothing reads as a bug. */
+       header. An empty heading over nothing reads as a bug.
+
+       The archive line counts as something under the header, which is the one
+       place that rule bends. A phone that has archived every live card has
+       nothing to show and still has somewhere to go, and the heading over that
+       one line is what says which archive it is the way back to. */
     var ann = announcements();
-    if (ann) {
+    var archive = archiveLink();
+    if (ann || archive) {
       html += c.sectionHeader('', 'Announcements');
-      html += '<div class="hc-home__announcement">' + ann + '</div>';
+      html += '<div class="hc-home__announcement">' + ann + archive + '</div>';
     }
 
     /* Between the greeting and the gathering card. Renders nothing until
@@ -761,7 +822,15 @@
      tests/reading-plan.test.js. */
   HC.screens.homeHelpers = {
     planWeek: planWeek,
-    planReading: planReading
+    planReading: planReading,
+
+    /* The two halves of the announcement list, out where a test can reach
+       them without a DOM. Both are pure functions of HC.data and the archive
+       map in js/store.js, and both go wrong quietly: a card that stays on Home
+       after it was archived, or an archive link over an archive that has
+       nothing in it. tests/announcement-archive.test.js. */
+    liveAnnouncements: liveAnnouncements,
+    archivedAnnouncements: archivedAnnouncements
   };
 
 })(window.HC = window.HC || {});

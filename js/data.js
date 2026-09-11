@@ -2835,11 +2835,29 @@
         ('0' + (d.getMonth() + 1)).slice(-2) + '-' +
         ('0' + d.getDate()).slice(-2);
 
-      return (announcements || []).filter(function (a) {
+      return this.sortAnnouncements((announcements || []).filter(function (a) {
         if (a.startsOn && today < a.startsOn) return false;
         if (a.endsOn && today >= a.endsOn) return false;
         return true;
-      }).sort(function (x, y) {
+      }));
+    },
+
+    /* The order above, on its own, for a list that is not today's.
+
+       ONE CALLER AND IT IS THE ARCHIVE. The archive screen holds whatever this
+       phone has put away, which is not the same set as what the church is
+       saying today: an announcement can be archived and then run out of dates,
+       and it stays in the archive because archiving is a fact about the phone
+       and the window is a fact about the church. What it must not do is come
+       back in a different order than it went away in, which is what would
+       happen the moment somebody wrote the three comparisons out a second
+       time and got the tie-break wrong.
+
+       A copy, not a sort in place. The archive builds its list by filtering
+       HC.data.announcements, and sorting the caller's array is a side effect
+       nobody asks a function called "sort..." for twice in a row. */
+    sortAnnouncements: function (list) {
+      return (list || []).slice().sort(function (x, y) {
         var px = x.priority || 0;
         var py = y.priority || 0;
         if (px !== py) return py - px;

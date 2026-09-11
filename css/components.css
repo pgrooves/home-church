@@ -1775,7 +1775,12 @@ a.hc-card:active { background: var(--hc-paper-sunk); }
 }
 
 /* --------------------------------------------------------------------------
-   Banner. At most one, and always dismissible.
+   Banner. The announcement card, on Home and in the archive behind it.
+
+   It used to be at most one of these and it is a list now, for the reasons
+   announcementCard() in js/screens/home.js sets out. Always archivable rather
+   than always dismissible: the corner puts the card in a list of its own
+   rather than ending it, and the same card is what that list is made of.
    -------------------------------------------------------------------------- */
 
 .hc-banner {
@@ -1844,6 +1849,24 @@ a.hc-card:active { background: var(--hc-paper-sunk); }
 
 .hc-banner__open:active { opacity: 0.85; }
 
+/* The corner. Three of them, one shape.
+
+   --archive is what an announcement card on Home carries, where the x used to
+   be, and it puts the card in the archive rather than ending it.
+   --select is what the same card carries in that archive, where it is a tick
+   box instead: the thing you do to a card in there is choose it, and the
+   restore link above the list is what acts on what you chose.
+   --dismiss is the original x, and it is still here because it is still the
+   right drawing somewhere else: js/screens/leader.js borrows it for removing
+   a prayer request, which is a removal and not a filing.
+
+   One set of box rules for all three, because they are the same corner of the
+   same kind of card, and a corner that moved four pixels between two screens
+   would read as the card having been redrawn. What differs is only what is
+   inside: a 16px glyph, or the 22px tick box every other checkable thing in
+   this app already uses. See js/screens/announcement-archive.js. */
+.hc-banner__archive,
+.hc-banner__select,
 .hc-banner__dismiss {
   flex: 0 0 auto;
   width: var(--hc-tap-min);
@@ -1855,12 +1878,28 @@ a.hc-card:active { background: var(--hc-paper-sunk); }
   color: var(--hc-mid);
 }
 
+/* stroke-linejoin is new beside the two rules the x needed. An x is two
+   straight lines and has no joins; the archive box has corners, and without
+   this they come to a point at 16px. */
+.hc-banner__archive svg,
 .hc-banner__dismiss svg {
   width: 16px; height: 16px;
   stroke: currentColor;
   stroke-width: 1.5;
   stroke-linecap: round;
+  stroke-linejoin: round;
 }
+
+/* The tick box is borrowed whole from .hc-check above, which is what a guide's
+   coverage boxes are drawn with, so a tick in this app is one drawing. The
+   aria-pressed selector is the one thing that has to be repeated: the rule up
+   there is written against .hc-check, and this button is not one. */
+.hc-banner__select[aria-pressed="true"] .hc-check__box {
+  background: var(--hc-accent-deep);
+  border-color: var(--hc-accent-deep);
+}
+
+.hc-banner__select[aria-pressed="true"] .hc-check__tick { opacity: 1; }
 
 
 /* --------------------------------------------------------------------------

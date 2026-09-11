@@ -877,6 +877,42 @@ allowlist in `js/richtext.js` twice, once when it is saved and once before it
 reaches the page, and only four schemes survive: `http`, `https`, `mailto` and
 `tel`.
 
+### The announcement archive
+
+**The corner of a card on Home is an archive box, and there is a list behind
+it.** It was an x: one tap, no confirm, and the card was off that phone for
+good, with the only way back a **Put it back** button on the Admin screen that
+members cannot reach. A thumb catching it while scrolling lost an announcement
+silently. The tap now files the card rather than ending it, and the line
+**(Announcement Archive)** under the last announcement on Home is where it
+files it to.
+
+That line is drawn whenever this phone has archived anything, including the
+week every live card has been archived and there is nothing above it. That is
+the week somebody needs the way back most, and hanging the link off the
+presence of a card would be the week it disappeared.
+
+**The archive restores in bulk.** Every row carries a tick box in the same
+corner the archive box is in on Home, and **Restore selected announcements**
+appears above the top row the moment anything is ticked. It is one write to
+`localStorage` and one repaint for a selection of any size, not one per card,
+which is what `unarchiveAll()` in `js/store.js` exists for. Rows are still
+doors: tapping one opens that announcement's own page.
+
+Two things are deliberately not filtered out of the list. **An announcement
+that has run out of dates stays in it**, and its row says *Came down on
+October 5* instead of pretending otherwise, because archiving is a fact about
+the phone and the date window is a fact about the church. **An archived id
+whose announcement the church has since deleted draws nothing**, because a row
+nobody can restore to anywhere is worse than no row.
+
+**It is only this phone.** Archiving writes to `localStorage` and reaches no
+server; everybody else still has the card, the church cannot see what anybody
+has archived, and **Delete everything** in Your account empties the archive
+with the rest. The screen says so under its own heading. Nothing about it is a
+migration. See `js/screens/announcement-archive.js`,
+`tests/announcement-archive.test.js` and `tests/e2e/announcement-archive.js`.
+
 ### Edit mode
 
 **Admin → App settings → Edit mode**, the first switch on that screen, turns

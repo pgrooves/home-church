@@ -344,16 +344,66 @@
     return Object.keys(guideBucket(guideId).journal).length;
   }
 
-  /* ------------------------------------------------------------ dismissed */
+  /* ------------------------------------------------------------- archived
 
-  function isDismissed(id) {
+     WHAT THIS MAP IS NOW. It was "dismissed": the x on a card on Home, one
+     tap, no confirm, and no way back except a button buried on the Admin
+     screen. The same tap is an archive now, the card goes to a list of its
+     own, and the way back is on that list. Nothing about the storage changed,
+     which is the point of keeping the key: a phone that put three cards away
+     last week opens this build with three cards already in its archive rather
+     than with three cards it was done with back on the front door.
+
+     `dismiss`, `undismiss` and `isDismissed` are still exported under those
+     names at the bottom of this file. Two callers outside Home read them, and
+     the old word is the right one in both places: the pinned strip in the
+     shell is dismissed and not archived, and the Admin screen's "Put it back"
+     is asking a question about this phone rather than about the archive.
+
+     KEYED ON THE ANNOUNCEMENT ID, which is permanent, so an id in here that
+     no longer names anything in HC.data is not an error. It is an
+     announcement the church has since deleted, and the archive screen simply
+     has nothing to draw for it rather than drawing an empty card. */
+
+  function isArchived(id) {
     return state.dismissed[id] === true;
   }
 
-  function dismiss(id) {
+  function archive(id) {
     state.dismissed[id] = true;
     storage.set('dismissed', state.dismissed);
     emit('dismissed', state.dismissed);
+  }
+
+  /* Every id this phone has put away, in no particular order. The archive
+     screen is the one caller: it has the announcements and this has the ids,
+     and the order the screen draws them in is the church's order, decided by
+     HC.data, not the order localStorage happened to serialise them in. */
+  function archivedIds() {
+    return Object.keys(state.dismissed).filter(function (id) {
+      return state.dismissed[id] === true;
+    });
+  }
+
+  /* Put several back in one write rather than one write each.
+
+     The archive screen restores a selection, and a selection of six calling
+     unarchive() six times would be six writes to localStorage and six repaints
+     driven off six 'dismissed' events, which on a slow phone is visible. This
+     is the same operation once. It answers with how many actually moved, so
+     the toast can say a true number when part of a selection had already been
+     restored in another tab. */
+  function unarchiveAll(idList) {
+    var moved = 0;
+    (idList || []).forEach(function (id) {
+      if (!state.dismissed[id]) return;
+      delete state.dismissed[id];
+      moved += 1;
+    });
+    if (!moved) return 0;
+    storage.set('dismissed', state.dismissed);
+    emit('dismissed', state.dismissed);
+    return moved;
   }
 
   /* The pinned strip across the top of every tab is dismissed separately from
@@ -361,17 +411,16 @@
      permanent announcement id.
 
      Two maps rather than one, because they are two answers to two different
-     questions. Putting the card away on Home means "I have read this"; taking
+     questions. Archiving the card on Home means "I have read this"; taking
      the strip down means "stop following me between tabs about it". Somebody
      who dismisses the strip should still find the announcement where the
      church put it, and somebody who has read the card should not have the
      strip vanish out from under the tap they were about to make. Sharing one
      map would make each of those dismiss the other.
 
-     Undismissing exists for exactly one caller: tapping the strip. It takes
-     you to the card, and a tap that navigates to a card this phone has
-     already put away would arrive at a screen with nothing on it. See
-     'open-pinned' in js/app.js. */
+     The strip has no archive of its own and wants none: it is one line that
+     retires with the announcement behind it, and a list of lines somebody has
+     swiped away is not a thing anybody goes looking for. */
   function isPinDismissed(id) {
     return state.dismissedPins[id] === true;
   }
@@ -382,7 +431,11 @@
     emit('dismissed', state.dismissed);
   }
 
-  function undismiss(id) {
+  /* One card back onto Home. Two callers: tapping the pinned strip, which
+     takes you to a card this phone may have archived and would otherwise
+     arrive at a Home with nothing on it, and "Put it back" on the Admin
+     screen. The archive screen restores in bulk through unarchiveAll above. */
+  function unarchive(id) {
     if (!state.dismissed[id]) return;
     delete state.dismissed[id];
     storage.set('dismissed', state.dismissed);
@@ -656,9 +709,21 @@
     setJournal: setJournal,
     journalCount: journalCount,
 
-    isDismissed: isDismissed,
-    dismiss: dismiss,
-    undismiss: undismiss,
+    /* The archive. The five below are what the card on Home and the archive
+       screen call it; the three after them are three of the same functions
+       again under the word the rest of the app still uses, and the note on
+       isArchived() above says why both spellings are correct rather than one
+       being a leftover. */
+    isArchived: isArchived,
+    archive: archive,
+    unarchive: unarchive,
+    archivedIds: archivedIds,
+    unarchiveAll: unarchiveAll,
+
+    isDismissed: isArchived,
+    dismiss: archive,
+    undismiss: unarchive,
+
     isPinDismissed: isPinDismissed,
     dismissPin: dismissPin,
 

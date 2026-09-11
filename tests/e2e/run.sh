@@ -98,6 +98,12 @@ node "$(dirname "$0")/contact.js" || exit 1
 # database, so it belongs up here with the cheap ones.
 node "$(dirname "$0")/reminders.js" || exit 1
 
+# The archive box in the corner of an announcement on Home, and the list it
+# puts things in. Same terms as the cheap ones above: the bundled seed, no
+# database. What it needs a browser for is the promise the corner makes, which
+# is that a card is somewhere and there is a way back to it.
+node "$(dirname "$0")/announcement-archive.js" || exit 1
+
 # The database, built the same way the migration tests build it. Doing it
 # through that script rather than by hand means this can never run against a
 # schema the migration tests have not also seen.

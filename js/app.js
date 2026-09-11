@@ -222,6 +222,18 @@
     // journal entry: the arrow and this word in the bar, the back disc by the
     // thumb, and no sideways drag. The card on Home is what opens it.
     announcement: 'Announcement',
+    /* Where the archive box in the corner of a card on Home puts it, and the
+       way back out. Another pushed view, opened from the line under the last
+       announcement. See js/screens/announcement-archive.js.
+
+       ONE WORD IN THE BAR AND TWO ON THE SCREEN, which is the same split
+       When & Where above makes and for a plainer reason: "Announcement
+       Archive" is wider than the bar has between the arrow and the three
+       discs, and a bar that reads "Announcement A…" is worse than one that
+       reads Archive. The screen's own heading, two lines below it, says the
+       whole name, and nobody arrives here except by tapping a link that said
+       it too. */
+    'announcement-archive': 'Archive',
     // The box in the top bar. A pushed view like Your account: the arrow and
     // this word in the bar, and no sideways drag out of it.
     search: 'Search',
@@ -1821,13 +1833,15 @@
       }));
     },
 
-    /* Put it back, which undoes the x on the card on Home.
+    /* Put it back, which undoes the archive box on the card on Home. The other
+       way to undo it, and the one everybody has, is the archive screen itself;
+       see the note on isPutAway() in js/screens/admin.js for why this stayed.
 
        NOT A WRITE, and that is the whole of what makes it different from
        Restore directly above. Nothing about the announcement changed and
        nothing about it is going to: the church has had this card all along.
        What changed is one key in this phone's localStorage, which is why
-       there is no adminRun, no busy state and no network — undismiss() and a
+       there is no adminRun, no busy state and no network — unarchive() and a
        repaint, and the card is on Home again by the time you get there.
 
        No confirm, for the same reason Restore has none: this is the tap that
@@ -2752,11 +2766,40 @@
       HC.router.go({ name: 'announcement', id: el.getAttribute('data-id') });
     },
 
-    'dismiss-banner': function (el) {
-      var id = el.getAttribute('data-id');
-      HC.store.dismiss(id);
-      var banner = document.querySelector('[data-banner="' + id + '"]');
-      if (banner && banner.parentNode) banner.parentNode.removeChild(banner);
+    /* The corner of that card. It was an x and it is an archive box: the card
+       moves to a list of its own rather than being gone from this phone for
+       good, and the line under the last announcement is the way to that list.
+       See js/screens/announcement-archive.js.
+
+       A REPAINT AND NOT A removeChild, which is what this used to do. Lifting
+       the element out was right while archiving changed nothing else on the
+       screen; it now has to put the "(Announcement Archive)" line under the
+       list, and on the archive of the very first card there is no such line to
+       put anything under. Home renders from the archive map in one pass, so
+       drawing it again is the whole update, and restore:true is what keeps a
+       thumb at the same point down a long Home. */
+    'archive-banner': function (el) {
+      HC.store.archive(el.getAttribute('data-id'));
+      HC.native.tap('Light');
+      repaintView();
+    },
+
+    /* The line under the last announcement, tapped. */
+    'open-announcement-archive': function () {
+      HC.native.tap('Light');
+      HC.router.go({ name: 'announcement-archive' });
+    },
+
+    /* The two things you can do on that screen: tick a row, and put back
+       everything ticked. Both are held in the screen's own module state, which
+       is where a selection belongs; see the note on `selected` there. */
+    'archive-select': function (el) {
+      HC.screens.archiveHelpers.toggle(el.getAttribute('data-id'));
+      HC.native.tap('Light');
+    },
+
+    'archive-restore': function () {
+      HC.screens.archiveHelpers.restoreSelected();
     },
 
     /* The pinned strip, both halves of it.
@@ -4692,6 +4735,7 @@
         profile: HC.screens.profile,
         admin: HC.screens.admin,
         announcement: HC.screens.announcement,
+        'announcement-archive': HC.screens.announcementArchive,
         page: HC.screens.page,
         leader: HC.screens.leader,
         'guide-reader': HC.screens.guideReader,
@@ -4856,6 +4900,18 @@
     HC.store.on('journal', function () {
       var route = HC.router.current();
       if (route && route.name === 'journal') HC.screens.journalHelpers.repaint();
+    });
+
+    /* Leaving the announcement archive empties whatever was ticked on it. A
+       selection is what somebody is doing right now, and one that survived the
+       trip out to an announcement and back would be six rows silently ticked
+       on a screen that looks freshly opened. Here rather than inside that
+       screen so the order of the script tags cannot decide whether it is
+       wired. See js/screens/announcement-archive.js. */
+    HC.store.on('view', function (route) {
+      if (!route || route.name !== 'announcement-archive') {
+        HC.screens.archiveHelpers.forget();
+      }
     });
 
     HC.rooms.init();

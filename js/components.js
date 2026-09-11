@@ -562,6 +562,23 @@
     leaf: '<path d="M20 4C10 4 4 9 4 16v4"/><path d="M20 4c0 9-5 13-11 13H4"/>',
     download: '<path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/>',
 
+    /* The corner of an announcement card on Home, where the x used to be.
+
+       A LID AND A BOX, which is the one archive glyph nobody has to be taught.
+       It was an x, and an x on a card means the card is gone: there is a list
+       to go to now, so the corner has to say "this is being put somewhere"
+       rather than "this is being thrown away". A downward arrow into a tray
+       was the other candidate and it collides with `download` directly above,
+       which already means "this is coming to your phone".
+
+       The lid is a separate rounded rect rather than part of the outline so
+       the two shapes stay readable when the glyph is drawn at the 16px the
+       card's corner uses. The short rule across the middle is the handle, and
+       it is what stops the box reading as an empty window at that size. */
+    archive: '<rect x="3" y="4" width="18" height="4.6" rx="1.5"/>' +
+             '<path d="M5.2 8.6v9.9A1.5 1.5 0 0 0 6.7 20h10.6a1.5 1.5 0 0 0 1.5-1.5V8.6"/>' +
+             '<path d="M10 12.2h4"/>',
+
     /* FILLED, not stroked, which breaks the rule every other icon here
        follows. A play triangle drawn as a 1.5 stroke outline at 16px is
        mostly hole, and next to a solid pause it reads as a different weight
