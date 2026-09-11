@@ -709,7 +709,6 @@
           action: 'go-module',
           id: 'give',
           chevron: true,
-          external: true,
           serif: true
         }) +
       '</div>';
