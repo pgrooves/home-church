@@ -10,7 +10,7 @@
    them carries a date. Confusing them is not a crash: it is a rail that looks
    right and announces the wrong day to the only people who cannot see it.
 
-   THE DATE. connect.js:599 reads posted_at into the tile's aria-label. A post
+   THE DATE. connect.js:608 reads posted_at into the tile's aria-label. A post
    with no findable date is held back for that reason, and the test that says
    so is the point of this file rather than a detail in it.
 

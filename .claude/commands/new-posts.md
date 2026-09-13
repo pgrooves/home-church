@@ -27,10 +27,17 @@ $ARGUMENTS
 node scripts/fetch_instagram_posts.js --latest 9 --out /tmp/ig.json
 ```
 
-And `hc_sync_instagram(9)` does the same from the SQL editor. **Migration 0061
-puts that on a six hourly schedule**, so in the normal case nobody runs this
+And `hc_sync_instagram(9)` does the same from the SQL editor. **Migration 0070
+puts that on an hourly schedule**, so in the normal case nobody runs this
 command at all: the rail keeps itself current and `/new-posts` is for adding a
 specific post out of order, or for putting one back after it was taken down.
+
+Discovery reads the profile page first and **falls back to the newest post
+already on the rail**, because a post page lists two dozen others from the
+same account and, unlike the profile, is not throttled. That fallback is the
+difference between a sync that stops for a week and one that does not: the
+six-hourly version depended on the profile alone and sat idle from 6 to 13
+September while two posts went unseen.
 
 ## Why this used to be links and not a sync
 
@@ -117,12 +124,15 @@ The rows go to stdout and to `--out`; a line per post goes to stderr. Add
 `--dry-run` to see what it would do without uploading anything, which is the
 right first move when somebody is not sure the links are the ones they meant.
 
-It asks two public things, in order, and **needs no token for either**:
+It asks for each post's own page **as a link preview crawler**, which is the
+whole mechanism and needs no token. That page carries a media object with the
+numeric id, the real timestamp, the type and the caption. The og: tags on the
+same page are read only as a diagnosis: tags but no media object means the
+page arrived and the shape changed.
 
-1. **the embed page**, the one that exists to be put on other people's
-   websites. It carries the picture, the caption, the type and the real date.
-2. **the post's og: tags**, the ones every link preview on the internet reads.
-   Picture and caption, and **no date**, which is what Step 3 is about.
+The `/embed/captioned/` endpoint an earlier version used is gone. With the
+crawler User-Agent the post page is strictly richer, so a second request could
+only have produced a worse row.
 
 Then it downloads each picture and puts it in the `instagram` bucket. **The
 bucket is the point, not an optimisation.** Instagram's CDN links are signed
@@ -133,14 +143,6 @@ Connect. Migration `0015` is the long version.
 Exit codes: `0` every post came back whole, `2` at least one is thin or held
 back so say which, `1` nothing was written so do not publish.
 
-> **The extraction has never run against a real post.** Everything downstream
-> of it is tested and everything around it is confirmed, but the two shapes it
-> looks for in a page, the media blob and the embed markup, were written from
-> how Instagram has served these pages historically and could not be checked
-> from a web session, because a web session only ever gets the empty shell. So
-> **expect the first run on a laptop to need one round of selector fixing**,
-> and use `--save-html` on that run so it is a ten minute job rather than a
-> guessing game. Once it has worked once, delete this paragraph.
 
 ### The three ways it fails, which need three different fixes
 
@@ -187,7 +189,7 @@ not quite the same promise.
 ## Step 3. The date, which is the one thing not to guess
 
 **`posted_at` is not just a sort key, whatever `0015` and the demo seed say.**
-`js/screens/connect.js:599` reads it into the tile's `aria-label`. It is never
+`js/screens/connect.js:608` reads it into the tile's `aria-label`. It is never
 drawn on screen and it is read aloud, as fact, to exactly the people who cannot
 see the picture and check it.
 

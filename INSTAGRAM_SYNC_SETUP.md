@@ -242,7 +242,7 @@ Not built: the API sync. That is Step 4, and it stays unbuilt because it is no
 longer needed, not because it is blocked.
 
 **One correction to `0015` and to the demo seed, which both say `posted_at`
-only sorts the rail.** It does not: `js/screens/connect.js:599` reads it into
+only sorts the rail.** It does not: `js/screens/connect.js:608` reads it into
 each tile's `aria-label`, so it is never drawn on screen and it is read aloud.
 That is why `/new-posts` holds a post back rather than publishing it under a
 guessed date, and why the demo rows' invented dates are worth replacing with

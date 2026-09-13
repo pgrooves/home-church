@@ -32,7 +32,7 @@
  *
  * NOTHING IS EVER INVENTED, AND THE DATE IS WHY THIS MATTERS MORE THAN IT
  * LOOKS. `posted_at` sorts the rail, and 0015 and the demo seed both say that
- * is all it does. That is no longer true: connect.js:599 reads it into the
+ * is all it does. That is no longer true: connect.js:608 reads it into the
  * tile's aria-label, so a made up date is read aloud, as fact, to exactly the
  * people who cannot see the picture and check. So a post whose real timestamp
  * could not be found is held back with `! no date` rather than published on a
