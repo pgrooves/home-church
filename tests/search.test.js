@@ -80,7 +80,9 @@ function boot(over) {
                 cal: 'Cal', group: 'Group', connect: 'Connect', give: 'Give',
                 profile: 'Your account', privacy: 'Privacy policy',
                 terms: 'Terms of use', data: 'Your data' };
-  HC.modules = [{ route: 'give', sub: 'Through Overflow, in your own browser.' }];
+  // A function, the way js/app.js hands it over: what is behind ••• depends on
+  // a switch the church can flip, so the list is asked for rather than held.
+  HC.modules = () => [{ route: 'give', sub: 'Through Overflow, in your own browser.' }];
 
   HC.data = Object.assign({
     sermons: [],

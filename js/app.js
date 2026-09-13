@@ -59,28 +59,61 @@
      They are stops, not pushed views. Swiping left off Guide, the last of the
      five, brings the first one in exactly the way Guide arrives from Listen,
      which is the whole reason the ••• tile stopped pushing a screen. */
+  /* THE ORDER CHANGED, AND THE FIRST THREE ARE THE ARGUMENT. This used to run
+     Worship, Group, Practices, Alpha, Journal, Give, chosen when a drag left
+     off Guide was the only way in and the first slot wanted Sunday's songs
+     next to Sunday's message. The sheet is how people actually get here, and
+     read top to bottom it should run from the thing somebody opens weekly to
+     the thing they open once: your group, then what you wrote in it, then
+     Sunday, then the two courses, then Give. Nothing entered or left the list
+     in the move.
+
+     GROUP IS FIRST AND USUALLY IS NOT HERE AT ALL, which is the second half
+     of the change. See visibleModules() below: when group mode is off the row
+     starts at Journal and everything under it moves up a slot, which is the
+     whole of what "hidden" means here. */
   var MODULES = [
-    /* First in the row, and the position is the argument. A drag left off
-       Guide brings in the first module, and Worship is the one of these
-       that belongs to Sunday morning the way Listen and Guide do: it is the
-       songs from the same service as the message two tabs to its left. The
-       three below it are things you do during the week. */
+    /* First, and gated. When the church is running rooms this is the tile
+       somebody opens on a Thursday night, which is the most-opened thing
+       behind ••• and belongs at the top of it. When it is not, it is not
+       drawn: `gate` is what says so, and the row simply starts at Journal. */
+    {
+      route: 'group',
+      icon: 'group',
+      title: 'Group',
+      sub: 'Your room, the guide it is reading, and who is in it.',
+      gate: groupModeOn
+    },
+    /* Straight after Group, because it is the other half of the same evening:
+       the room is where you answer out loud and this is where what you wrote
+       down ends up, from a guide or on your own. */
+    {
+      route: 'journal',
+      icon: 'journal',
+      title: 'Journal',
+      sub: 'Everything you have written down, from a guide or on your own.'
+    },
+    /* Sunday. Kept next to the two tiles above rather than pushed down with
+       the courses: Listen and Guide are the last two tabs in the bar, and a
+       drag off the end of them reaching the songs from the same service is
+       worth more than the slot it costs. */
     {
       route: 'worship',
       icon: 'worship',
       title: 'Worship',
       sub: 'The songs from Sunday, and where to hear them again.'
     },
-    /* Second, next to Worship, in the slot Cal held before the two swapped.
-       It keeps that slot for the same reason Cal had it: these two are the
-       church's own Sunday, the songs the band played and the room the guide
-       is read in, and a drag left off the bar reaches both of them together.
-       Nothing else about the Group tab changed in the move. */
+    /* The church's Sunday: what time, and where. Fourth, straight after
+       Worship, because the three above it are things somebody already here
+       opens during their week and this is the one somebody who has never been
+       here opens first. Above the two courses rather than below them for the
+       same reason: "what time do you meet" is a shorter question than "should
+       I do Alpha", and the shorter question goes first. */
     {
-      route: 'group',
-      icon: 'group',
-      title: 'Group',
-      sub: 'Your room, the guide it is reading, and who is in it.'
+      route: 'when-where',
+      icon: 'pin',
+      title: 'When & Where',
+      sub: 'Sunday times, the address, and a button to the map.'
     },
     {
       route: 'practices',
@@ -100,12 +133,6 @@
       sub: 'Dinner, a short film, and any question you want to ask.'
     },
     {
-      route: 'journal',
-      icon: 'journal',
-      title: 'Journal',
-      sub: 'Everything you have written down, from a guide or on your own.'
-    },
-    {
       route: 'give',
       icon: 'give',
       title: 'Give',
@@ -113,9 +140,39 @@
     }
   ];
 
-  // The More screen still exists at ?v=more so an old link or a restored
-  // history entry lands somewhere real. Nothing in the app opens it any more.
-  HC.modules = MODULES;
+  /* Is the church running group rooms this season.
+
+     ONE ROW IN app_settings, READ LIVE, and every consumer reads it through
+     here rather than keeping its own answer, so the sheet, the swipe, the
+     More screen, the search index and the screen itself can never disagree
+     about whether the Group tab exists.
+
+     THE FALLBACK IS false AND IT IS LOAD BEARING. This is read like all other
+     content, which means it has to answer on a phone that has never reached
+     Supabase, and off is the answer the church asked for: a room somebody
+     cannot join is worse than a missing tile. See migration 0064. */
+  function groupModeOn() {
+    return HC.data.setting('group_mode_on', false) === true;
+  }
+
+  /* MODULES minus whatever the church has switched off. A module with no
+     `gate` is always there; one with a gate is there when its gate says so,
+     and a gate that says no takes the tile out of the list rather than
+     greying it, so everything under it moves up a slot on its own.
+
+     RECOMPUTED, NEVER CACHED. A refresh landing with the switch flipped has
+     to change the sheet under somebody's thumb, so this is called again on
+     every paint rather than resolved once at boot. */
+  function visibleModules() {
+    return MODULES.filter(function (m) { return !m.gate || m.gate(); });
+  }
+
+  /* The More screen still exists at ?v=more so an old link or a restored
+     history entry lands somewhere real. Nothing in the app opens it any more.
+     A function rather than the array it used to be, because what is behind
+     ••• is now a question with a live answer: js/screens/more.js and
+     js/search.js both call it, and both get the same list the sheet drew. */
+  HC.modules = visibleModules;
 
   /* Routes that light the ••• tile. A module is somewhere you are, not a menu
      you got lost in, so the raised tile stays under the sixth tile the whole
@@ -129,8 +186,9 @@
      more reach that route than they can reach the tile. Its four sections
      share the route name, so the tile stays lit down inside Manage users the
      way it stays lit inside a practice. */
-  var MODULE_ROUTES = ['more', 'worship', 'group', 'practices', 'practice', 'alpha',
-                       'journal', 'journal-entry', 'give', 'admin'];
+  var MODULE_ROUTES = ['more', 'worship', 'group', 'when-where', 'practices',
+                       'practice', 'alpha', 'journal', 'journal-entry', 'give',
+                       'admin'];
 
   var TITLES = {
     home: 'Home',
@@ -140,6 +198,10 @@
     connect: 'Connect',
     more: 'More',
     worship: 'Worship',
+    // The tile says When & Where and the screen's own header says Sunday
+    // Gatherings, which is the church's name for it on their website. This is
+    // the one the bar carries, because it is the one somebody tapped.
+    'when-where': 'When & Where',
     // The month grid and the church's own dates under it. Still "Cal" now
     // that it is the second tile: the tile's label and this table have to
     // agree, and the short name is what fits under the icon.
@@ -160,6 +222,18 @@
     // journal entry: the arrow and this word in the bar, the back disc by the
     // thumb, and no sideways drag. The card on Home is what opens it.
     announcement: 'Announcement',
+    /* Where the archive box in the corner of a card on Home puts it, and the
+       way back out. Another pushed view, opened from the line under the last
+       announcement. See js/screens/announcement-archive.js.
+
+       ONE WORD IN THE BAR AND TWO ON THE SCREEN, which is the same split
+       When & Where above makes and for a plainer reason: "Announcement
+       Archive" is wider than the bar has between the arrow and the three
+       discs, and a bar that reads "Announcement A…" is worse than one that
+       reads Archive. The screen's own heading, two lines below it, says the
+       whole name, and nobody arrives here except by tapping a link that said
+       it too. */
+    'announcement-archive': 'Archive',
     // The box in the top bar. A pushed view like Your account: the arrow and
     // this word in the bar, and no sideways drag out of it.
     search: 'Search',
@@ -183,7 +257,7 @@
     return MODULE_ROUTES.indexOf(name) !== -1;
   }
 
-  var mount, scroller, topbar, tabbar, totop, backdisc, pinbar;
+  var mount, scroller, topbar, tabbar, totop, backdisc, pinbar, jlink;
   var sheet, sheetGrid, sheetScrim, sheetGrab;
 
   /* ------------------------------------------------------------- the shell */
@@ -314,6 +388,13 @@
         '</svg>' +
       '</button>' +
 
+      /* And the third thing on that row, between them. Empty until
+         paintJournalLink() fills it, which is on a view change and nowhere
+         else: what it says depends on where you are, and where you are does
+         not change while you scroll. */
+      '<button type="button" class="hc-jlink" id="hc-jlink" ' +
+          'data-show="false" data-mode="" aria-hidden="true" tabindex="-1"></button>' +
+
       /* The overflow sheet, and the paper behind it. Both live in the shell
          rather than in a screen, for the same reason the tab bar does: they
          belong to the app, not to whatever is currently on. See the block
@@ -354,6 +435,7 @@
     tabbar = document.getElementById('hc-tabbar');
     totop = document.getElementById('hc-totop');
     backdisc = document.getElementById('hc-back');
+    jlink = document.getElementById('hc-jlink');
     pinbar = document.getElementById('hc-pinbar');
     sheet = document.getElementById('hc-oversheet');
     sheetGrid = document.getElementById('hc-oversheet-grid');
@@ -571,7 +653,11 @@
        eight seconds, and arriving pulls once straight away rather than
        showing a stale room until the next tick. */
     if (HC.rooms) {
-      if (route.name === 'group') {
+      // Group mode off means there is no room to poll, whatever route somebody
+      // has arrived on: the screen draws its "not right now" state and asking
+      // Supabase for a room every eight seconds behind it would be work with
+      // nowhere to land.
+      if (route.name === 'group' && groupModeOn()) {
         HC.rooms.startPolling();
         HC.rooms.refresh();
       } else {
@@ -638,6 +724,10 @@
     // one, and the scroll handler picks them up from here.
     paintDiscs();
 
+    // The pill between them says where you are, so it is settled here and not
+    // on the scroll: a view change is the only thing that can move it.
+    paintJournalLink();
+
     paintAvatar();
 
     /* The strip carries across, which is the point of it, so this is not
@@ -651,6 +741,48 @@
   function prefersReducedMotion() {
     return window.matchMedia &&
            window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  }
+
+  /* Put the contact form at the top of Connect on the screen. The move half of
+     the go-contact action, kept here rather than on the screen because the
+     scroller and the chrome hanging over it are this file's, not a screen's.
+
+     MEASURED, NOT scrollIntoView(). The top bar is fixed and the pinned
+     announcement strip sits under it, so the top of the scroller is not the
+     top of what a person can see. Landing the header at zero would land it
+     behind both. Every screen clears the same two with its own padding, and
+     this reads the same two heights off the glass rather than keeping a third
+     copy of the number.
+
+     FOCUS MOVES, and it moves to the heading rather than into the first box.
+     A scroll is nothing at all to somebody using VoiceOver: without this, the
+     button says "Tell us you're here" and then, as far as the screen reader
+     is concerned, nothing happens. The heading is the honest announcement of
+     where they have landed, and it does not raise the keyboard over a scroll
+     that is still running, which putting the cursor in a field would. The
+     cursor stays theirs to place, the same as it is for anybody scrolling
+     here by thumb. */
+  function revealContact() {
+    var anchor = document.getElementById(HC.screens.connectHelpers.contactAnchor);
+    if (!anchor || !scroller) return;
+
+    var chrome = (topbar ? topbar.getBoundingClientRect().height : 0) +
+      ((pinbar && !pinbar.hidden) ? pinbar.getBoundingClientRect().height : 0);
+    var base = scroller.getBoundingClientRect().top - scroller.scrollTop;
+    var top = anchor.getBoundingClientRect().top - base - chrome - 12;
+
+    scroller.scrollTo({
+      top: Math.max(top, 0),
+      behavior: prefersReducedMotion() ? 'auto' : 'smooth'
+    });
+
+    /* tabindex is put on here rather than drawn into the markup: it exists
+       only to receive this, and a heading that answers the tab key on a
+       screen nobody jumped to is one more stop on the way down the page.
+       preventScroll so the focus does not haul the page somewhere the line
+       above already decided. */
+    anchor.setAttribute('tabindex', '-1');
+    anchor.focus({ preventScroll: true });
   }
 
   /* ------------------------------------------------------ the overflow sheet
@@ -734,14 +866,15 @@
      lists and the order a drag runs are the same order by construction rather
      than by two people remembering to edit both.
 
-     Recomputed rather than built once at boot, so signing in, signing out, or
-     a promotion arriving on the next session refresh changes both the sheet
-     and the row. Whether the tile is there at all is presentation and nothing
+     Recomputed rather than built once at boot, so signing in, signing out, a
+     promotion arriving on the next session refresh, or an admin turning group
+     mode off in another room changes both the sheet and the row. Whether the
+     tile is there at all is presentation and nothing
      more, the same as the Admin row in js/screens/profile.js: every button
      behind it is checked live by the database, so a member who forged the tile
      would find a screen where nothing works. See the header of js/admin.js. */
   function sheetTiles() {
-    var tiles = MODULES.map(function (m) {
+    var tiles = visibleModules().map(function (m) {
       return { route: m.route, icon: m.icon, title: m.title, action: 'go-module', id: m.route };
     });
 
@@ -1020,6 +1153,69 @@
     setDisc(backdisc, !chromeless && !HC.router.isStop(route));
   }
 
+  /* ------------------------------------------------------- the journal pill
+
+     The third thing on the disc row. Two states and one element:
+
+       in a guide      MY JOURNAL      →   your entries for that guide
+       in the journal  ← BACK TO GUIDE     the guide you came from
+
+     THE SECOND ONE IS NOT A MODE THIS FILE REMEMBERS. It is the route: a
+     journal reached from a guide is `{ name: 'journal', id: guideId }`, and
+     the Journal opened from ••• has no id on it. So the pill appears exactly
+     when you got there from a guide and never otherwise, the address says
+     which guide, and a reload or a shared link lands in the same place. The
+     alternative was a variable in here saying where somebody came from, which
+     would have had to be cleared on every other way out of the Journal and
+     would have been wrong the first time one was missed.
+
+     IT IS UP THE WHOLE TIME, not past a scroll like the back to top disc. It
+     is the way to something rather than a way back up, and a link that has to
+     be scrolled into existence is a link nobody finds. */
+  function paintJournalLink() {
+    if (!jlink) return;
+
+    var route = HC.router.current();
+    var chromeless = !route || route.name === 'present';
+    var mode = '';
+    var guideId = '';
+
+    if (!chromeless && route.name === 'guide-reader' && HC.data.getGuide(route.id)) {
+      mode = 'to-journal';
+      guideId = route.id;
+    } else if (!chromeless && route.name === 'journal' && route.id && HC.data.getGuide(route.id)) {
+      mode = 'to-guide';
+      guideId = route.id;
+    }
+
+    // Same rule as a disc that is down: out of the reading order and out of
+    // the tab order, so there is no button here for anybody to reach.
+    setDisc(jlink, !!mode);
+
+    // Nothing else to do when it says what it already said. This runs on
+    // every view change, and rewriting the same markup would restart the
+    // arrow's own transition for no reason.
+    if (jlink.getAttribute('data-mode') === mode && jlink.getAttribute('data-id') === guideId) return;
+    jlink.setAttribute('data-mode', mode);
+    jlink.setAttribute('data-id', guideId);
+    if (!mode) { jlink.innerHTML = ''; return; }
+
+    var toJournal = mode === 'to-journal';
+
+    /* The arrow leads on the way back and follows on the way out, which is
+       the way every other back and forward in this app is drawn, and the way
+       a sentence reads. */
+    jlink.setAttribute('data-action', toJournal ? 'guide-journal' : 'journal-guide');
+    jlink.setAttribute('aria-label', toJournal
+      ? 'Your journal for this guide'
+      : 'Back to the guide');
+    jlink.innerHTML = toJournal
+      ? '<span class="hc-jlink__text">My journal</span>' +
+        c.icon('arrowRight', 'hc-jlink__icon')
+      : c.icon('arrowLeft', 'hc-jlink__icon') +
+        '<span class="hc-jlink__text">Back to guide</span>';
+  }
+
   function watchScroll() {
     var ticking = false;
     scroller.addEventListener('scroll', function () {
@@ -1107,6 +1303,24 @@
 
     'go-guide': function () {
       HC.router.go({ name: 'guide' });
+    },
+
+    /* --------------------------------------------------- the journal pill
+
+       Both halves of the round trip between a guide and what you wrote about
+       it. The guide's id rides on the route in both directions: it is what
+       scopes the Journal on the way there, and what names the guide to come
+       back to. See paintJournalLink().
+
+       restore:true on the way back, so a guide you had read half of opens
+       where you left it rather than at the masthead. The Journal keeps its
+       own place the same way when you go out to an entry and return. */
+    'guide-journal': function (el) {
+      HC.router.go({ name: 'journal', id: el.getAttribute('data-id') });
+    },
+
+    'journal-guide': function (el) {
+      HC.router.go({ name: 'guide-reader', id: el.getAttribute('data-id'), restore: true });
     },
 
     'go-leader': function () {
@@ -1661,13 +1875,15 @@
       }));
     },
 
-    /* Put it back, which undoes the x on the card on Home.
+    /* Put it back, which undoes the archive box on the card on Home. The other
+       way to undo it, and the one everybody has, is the archive screen itself;
+       see the note on isPutAway() in js/screens/admin.js for why this stayed.
 
        NOT A WRITE, and that is the whole of what makes it different from
        Restore directly above. Nothing about the announcement changed and
        nothing about it is going to: the church has had this card all along.
        What changed is one key in this phone's localStorage, which is why
-       there is no adminRun, no busy state and no network — undismiss() and a
+       there is no adminRun, no busy state and no network — unarchive() and a
        repaint, and the card is on Home again by the time you get there.
 
        No confirm, for the same reason Restore has none: this is the tap that
@@ -1901,6 +2117,29 @@
       adminRun('setting:' + key, HC.admin.saveSetting(key, 'boolean', !row.value_bool));
     },
 
+    /* The Group tab, on or off for the whole church.
+
+       NO `if (!row) return`, WHICH IS THE DIFFERENCE from the handler above.
+       That one is editing a row somebody is looking at in a list, so no row
+       means nothing to edit. This switch is drawn whether or not its row
+       exists, and the first tap on a project that has never run 0064 is what
+       creates it, so bailing on a missing row would be bailing on precisely
+       the tap that matters. js/screens/admin.js carries what to write and
+       HC.admin.saveSwitch upserts it. */
+    'admin-group-mode-toggle': function (el) {
+      var meta = HC.screens.adminHelpers.groupMode();
+      var next = !HC.screens.adminHelpers.groupModeOn();
+
+      // Moved on screen first, saved after, same as every other switch here:
+      // a switch that waits on the network to move feels broken on a bad
+      // connection, and the repaint at the end of adminRun puts it back if
+      // the write is refused.
+      setSwitch(el, next);
+      HC.native.tap('Light');
+
+      adminRun('setting:' + meta.key, HC.admin.saveSwitch(meta, next));
+    },
+
     'admin-setting-delete': function (el) {
       var key = el.getAttribute('data-id');
       var row = HC.admin.settings().filter(function (s) { return s.key === key; })[0];
@@ -2108,8 +2347,13 @@
 
       HC.native.tap('Light');
 
-      var src = 'https://www.youtube.com/embed/videoseries?list=' + list +
-        '&autoplay=1&playsinline=1&rel=0&modestbranding=1';
+      /* Through c.youtubeEmbedUrl() rather than built here, which is what
+         puts this player on the same footing as every other one in the app:
+         on a phone it is framed through embed.html, because a YouTube player
+         asked for directly from capacitor://localhost is error 153. See the
+         note over that function. */
+      var src = c.youtubeEmbedUrl({ list: list, sound: true });
+      if (!src) { c.toast('That series is unavailable.'); return; }
 
       poster.outerHTML = '' +
         '<div class="hc-video__frame">' +
@@ -2149,13 +2393,19 @@
       /* playsinline is the one parameter that is not a preference on either
          provider. Without it iOS takes the video full screen the instant it
          starts, which is the same experience as leaving the app wearing a
-         different coat. */
+         different coat.
+
+         The YouTube half goes through c.youtubeEmbedUrl(), which on a phone
+         frames embed.html instead of youtube.com: a player asked for directly
+         from capacitor://localhost has no referrer to show and answers with
+         error 153 rather than a video. Vimeo has never had that problem and
+         is still built here. */
       var src = provider === 'vimeo'
         ? 'https://player.vimeo.com/video/' + id +
             (hash ? '?h=' + hash + '&' : '?') +
             'autoplay=1&playsinline=1&title=0&byline=0&portrait=0&dnt=1'
-        : 'https://www.youtube.com/embed/' + id +
-            '?autoplay=1&playsinline=1&rel=0&modestbranding=1';
+        : c.youtubeEmbedUrl({ id: id, sound: true });
+      if (!src) { c.toast('That video is unavailable.'); return; }
 
       poster.outerHTML = '' +
         '<div class="hc-video__frame">' +
@@ -2165,6 +2415,14 @@
             'allowfullscreen referrerpolicy="strict-origin-when-cross-origin" ' +
             'loading="lazy"></iframe>' +
         '</div>';
+    },
+
+    /* The pill on the featured video at the top of Home. Everything it does
+       is in js/featured-video.js: this is the tap, routed like every other
+       tap in the app rather than through a listener that file would have to
+       re-attach on every repaint of Home. */
+    'featured-sound': function (el) {
+      HC.featuredVideo.toggleSound(el);
     },
 
     'go-journal': function () {
@@ -2485,6 +2743,11 @@
          handled in there rather than here. */
       if (HC.narration) HC.narration.sectionToggled(el.closest('.hc-section'), !open);
 
+      /* Opening a section in a guide arms the one hint this app has, which
+         then waits for the scroll onto the words it is about. Arming is not
+         showing and nothing is drawn here: see js/hints.js. */
+      if (HC.hints && !open) HC.hints.sectionOpened(el.closest('.hc-section'));
+
       /* The room is the one screen that redraws itself under you, so the DOM
          cannot be where it remembers which question chunks are open. Nothing
          is repainted here: the fold has already happened, and this only makes
@@ -2545,11 +2808,40 @@
       HC.router.go({ name: 'announcement', id: el.getAttribute('data-id') });
     },
 
-    'dismiss-banner': function (el) {
-      var id = el.getAttribute('data-id');
-      HC.store.dismiss(id);
-      var banner = document.querySelector('[data-banner="' + id + '"]');
-      if (banner && banner.parentNode) banner.parentNode.removeChild(banner);
+    /* The corner of that card. It was an x and it is an archive box: the card
+       moves to a list of its own rather than being gone from this phone for
+       good, and the line under the last announcement is the way to that list.
+       See js/screens/announcement-archive.js.
+
+       A REPAINT AND NOT A removeChild, which is what this used to do. Lifting
+       the element out was right while archiving changed nothing else on the
+       screen; it now has to put the "(Announcement Archive)" line under the
+       list, and on the archive of the very first card there is no such line to
+       put anything under. Home renders from the archive map in one pass, so
+       drawing it again is the whole update, and restore:true is what keeps a
+       thumb at the same point down a long Home. */
+    'archive-banner': function (el) {
+      HC.store.archive(el.getAttribute('data-id'));
+      HC.native.tap('Light');
+      repaintView();
+    },
+
+    /* The line under the last announcement, tapped. */
+    'open-announcement-archive': function () {
+      HC.native.tap('Light');
+      HC.router.go({ name: 'announcement-archive' });
+    },
+
+    /* The two things you can do on that screen: tick a row, and put back
+       everything ticked. Both are held in the screen's own module state, which
+       is where a selection belongs; see the note on `selected` there. */
+    'archive-select': function (el) {
+      HC.screens.archiveHelpers.toggle(el.getAttribute('data-id'));
+      HC.native.tap('Light');
+    },
+
+    'archive-restore': function () {
+      HC.screens.archiveHelpers.restoreSelected();
     },
 
     /* The pinned strip, both halves of it.
@@ -2657,6 +2949,27 @@
     'contact-reset': function () {
       HC.screens.connectHelpers.contactAgain();
       repaintView();
+    },
+
+    /* "I'm new here", at the foot of Connect, and the only next step whose
+       destination is inside the app. Every other one hands a person to a
+       system the church already runs; this one had nowhere to go at all and
+       drew a description with nothing under it. What it wanted was already on
+       the screen, a few hundred pixels up: the contact form. See
+       INTERNAL_STEPS in js/screens/connect.js for how a step says so.
+
+       Written to survive being tapped from somewhere that is not Connect,
+       even though nothing draws next steps anywhere else today. render() is
+       synchronous, so the form is on the glass by the time the scroll below
+       goes looking for it. */
+    'go-contact': function () {
+      HC.native.tap('Light');
+      if (HC.overflow.isOpen()) HC.overflow.close();
+
+      var here = HC.router.current();
+      if (!here || here.name !== 'connect') HC.router.go({ name: 'connect' });
+
+      revealContact();
     },
 
     /* ---------------------------------------------------------- leader mode */
@@ -2859,6 +3172,20 @@
       paintThemeToggle();
       var row = document.querySelector('[data-action="toggle-theme"][role="switch"]');
       if (row) setSwitch(row, !dark);
+    },
+
+    /* Hints, all of them, present and future. Turning it off puts away
+       whatever is on the glass at that moment, which matters because the
+       switch and a hint can be on screen together only in one direction:
+       somebody who has just been shown something and did not want it goes
+       looking for the switch, and finding it should end the thing that sent
+       them. Turning it back on resets nothing. */
+    'toggle-hints': function (el) {
+      var on = el.getAttribute('aria-checked') !== 'true';
+      HC.store.updateProfile({ hints: on });
+      HC.native.tap('Light');
+      setSwitch(el, on);
+      if (HC.hints) HC.hints.switched(on);
     },
 
     /* --------------------------------------------------------------- search */
@@ -4459,6 +4786,7 @@
         connect: HC.screens.connect,
         more: HC.screens.more,
         worship: HC.screens.worship,
+        'when-where': HC.screens.whenWhere,
         cal: HC.screens.cal,
         practices: HC.screens.practices,
         practice: HC.screens.practice,
@@ -4470,6 +4798,7 @@
         profile: HC.screens.profile,
         admin: HC.screens.admin,
         announcement: HC.screens.announcement,
+        'announcement-archive': HC.screens.announcementArchive,
         page: HC.screens.page,
         leader: HC.screens.leader,
         'guide-reader': HC.screens.guideReader,
@@ -4479,6 +4808,11 @@
         data: HC.screens.data
       }
     });
+
+    /* The one hint starts listening. Nothing is armed and nothing is drawn
+       until somebody opens a section in a guide and scrolls onto it, and the
+       once-per-launch flag it keeps lives and dies with this launch. */
+    if (HC.hints) HC.hints.listen();
 
     /* Home is on the glass. The greeting in front of it can start leaving,
        which it does on its own schedule: it holds until its own sequence has
@@ -4526,6 +4860,28 @@
          look at every row. A pin toggled on the third announcement in the
          table is exactly the change it would miss. */
       paintPinBar();
+
+      /* Same argument, different chrome. The journal pill asks HC.data
+         whether the guide named on the address actually exists, and a phone
+         opened cold on a link to a guide asks that before the catalogue has
+         landed. Without this the pill would be missing on exactly the arrival
+         that has no other way to the journal. */
+      paintJournalLink();
+
+      /* And the ••• sheet, for the same reason as both of those: it is shell
+         chrome the router's redraw never reaches, and one of the rows that
+         just landed decides whether the Group tile is in it. An admin turning
+         group mode off in the church office has to reach the phone in
+         somebody's pocket without them relaunching the app, and this pair of
+         calls is what does it: the sheet redraws with one fewer tile, and the
+         row a sideways drag runs gets the same list on the same tick, so the
+         two cannot disagree even for a moment.
+
+         Unconditional, like paintPinBar above. Both are cheap, and asking
+         js/content.js whether anything changed would be trusting the
+         fingerprint that missed this in the first place. */
+      syncModules();
+      paintSheet();
 
       var route = HC.router.current();
       if (route && route.name === 'profile') {
@@ -4607,6 +4963,18 @@
     HC.store.on('journal', function () {
       var route = HC.router.current();
       if (route && route.name === 'journal') HC.screens.journalHelpers.repaint();
+    });
+
+    /* Leaving the announcement archive empties whatever was ticked on it. A
+       selection is what somebody is doing right now, and one that survived the
+       trip out to an announcement and back would be six rows silently ticked
+       on a screen that looks freshly opened. Here rather than inside that
+       screen so the order of the script tags cannot decide whether it is
+       wired. See js/screens/announcement-archive.js. */
+    HC.store.on('view', function (route) {
+      if (!route || route.name !== 'announcement-archive') {
+        HC.screens.archiveHelpers.forget();
+      }
     });
 
     HC.rooms.init();

@@ -69,10 +69,12 @@
  *                       it becomes rows.
  *   {"backfill": true}  ignores the mailbox entirely and gives announcements
  *                       that already exist the event they would have got if
- *                       0040 had existed when they were parsed. One model call
- *                       for the batch; `limit` caps how many it looks at,
- *                       default 25. Safe to run more than once: it only
- *                       considers announcements with no event yet.
+ *                       0040 had existed when they were parsed, and the one the
+ *                       parse should have made and did not. One model call for
+ *                       the batch; `limit` caps how many it looks at, default
+ *                       25. Safe to run more than once: it only considers
+ *                       announcements with no event yet, and every event it
+ *                       writes waits in the dates queue for a person.
  *
  * DEPLOY
  *   supabase functions deploy newsletter-intake --no-verify-jwt
@@ -182,10 +184,17 @@ class ImapError extends Error {}
    never comes back. The whole feature silently does nothing that week, and the
    only clue is a note nobody is looking at.
 
-   So a transient failure writes NO ledger row and does NOT mark the email
-   read. The email stays exactly as it was and the next tick, twenty minutes
-   later, tries it again. That is why the classification lives in its own type
-   rather than in a string match at the catch site. */
+   So a transient failure does NOT mark the email read. The email stays exactly
+   as it was in the mailbox and the next tick, twenty minutes later, tries it
+   again. That is why the classification lives in its own type rather than in a
+   string match at the catch site.
+
+   SINCE 0069 IT WRITES A ROW ALL THE SAME, marked `deferred` and carrying a
+   count. Leaving no trace at all made the retry free and the counting
+   impossible, and an answer that arrives truncated every single time would
+   then be re-read every twenty minutes for as long as the fortnight search
+   could see it, with nothing anywhere saying so. The row is what bounds that
+   and what makes it visible. */
 class TransientError extends Error {}
 
 class Imap {
@@ -773,15 +782,28 @@ function prompt(
     '   2026-09-12 takes ends_on 2026-09-13, or the card vanishes on the morning of the',
     '   thing it is announcing. Leave it out for anything with no end: an ongoing need',
     '   for volunteers, a standing invitation, a change that is simply true from now on.',
-    '   Do not guess an end date for something that has none.',
+    '   Do not guess an end date for something that has none. And if you do give one,',
+    '   you are saying something happens the day before it — so that same thing must',
+    '   also appear in `event` below. The two answers have to agree.',
     '9. image_url: choose ONLY from the candidate images below, copied exactly, or leave',
     '   it out.',
-    '10. event: include this ONLY when the announcement is about something that happens',
-    '   at a particular time in a particular place — a gathering, a service, a serve',
-    '   day, a meeting, a class. "Homecoming on Friday, October 23" is an event. An',
-    '   ongoing need for volunteers, a sign-up that is open for weeks, a policy change,',
-    '   or a link to a form is NOT an event, and guessing one puts a wrong date in',
-    '   somebody\'s phone. When in doubt, leave it out.',
+    '10. event: the day the thing actually HAPPENS, whenever the email names one. A',
+    '   gathering, a service, a serve day, a meeting, a class, a party, a blessing at a',
+    '   Sunday service: if a reader could sensibly put it in their calendar, it belongs',
+    '   here. "Homecoming on Friday, October 23" is an event.',
+    '   A SIGN-UP FOR A DATED THING IS STILL THAT DATED THING. "Baby Blessing Sign-Up',
+    '   9/20" and "Register for the retreat, October 3-5" are events, on the day of the',
+    '   blessing and on the first day of the retreat. The form is how a person gets in;',
+    '   the date is what they wanted in their calendar. Never give the day the sign-up',
+    '   closes instead of the day the thing happens.',
+    '   The date is very often in the TITLE ("9/20", "September 20") as well as in the',
+    '   body — read both, and work it out however it is written: "Friday, October 23",',
+    '   "Oct 4", "10/12", "this Wednesday". For a range use the first day. A DATE WITH',
+    '   NO TIME IS STILL AN EVENT.',
+    '   Leave event out ONLY when the email names no day at all: an ongoing need for',
+    '   volunteers, a standing invitation, a policy change, a sign-up for something',
+    '   whose date has not been announced yet. Never invent a day that is not there;',
+    '   when a day IS there, always give it.',
     '     date      strict YYYY-MM-DD, the day it happens. Required.',
     '     hour      0-23, the start hour, church local. "8am" is 8, "7pm" is 19. Omit',
     '               entirely when the email gives no time. A date with no time is still',
@@ -792,7 +814,7 @@ function prompt(
     '               even when the same address also appears in details: details are',
     '               read on the card, and this is what goes into the calendar entry on',
     '               somebody\'s phone, where it becomes the directions they tap.',
-    '10. If the email contains no real announcements, return an empty array.',
+    '11. If the email contains no real announcements, return an empty array.',
     '',
     'CANDIDATE LINKS (copy urls exactly; the link text is what the reader saw)',
     links.length
@@ -826,12 +848,19 @@ async function askGemini(
           contents: [{ role: 'user', parts: [{ text: prompt(text, links, images, emailDate) }] }],
           generationConfig: {
             temperature: 0.2,
-            // Generous, and it is the thinking that spends it rather than the
-            // answer: four announcements came back as 456 tokens of JSON after
-            // 2,268 tokens of thought. A model that hits this ceiling stops
-            // mid-JSON and the parse below fails, which is the failure
-            // gemini-3-flash-preview produced every time.
-            maxOutputTokens: 8192,
+            /* Generous, and it is the thinking that spends it rather than the
+               answer: four announcements came back as 456 tokens of JSON after
+               2,268 tokens of thought. A model that hits this ceiling stops
+               mid-JSON and the parse below fails, which is the failure
+               gemini-3-flash-preview produced every time.
+
+               RAISED FROM 8,192 AFTER IT COST A REAL NEWSLETTER. The 11th of
+               September carried five items with long detail lists, and the
+               answer was cut off mid-array on the configured model, not on a
+               preview one. 8,192 was never measured, it was the first number
+               that worked; this is four times the headroom for a job that runs
+               once a week, and the tokens are only spent if they are used. */
+            maxOutputTokens: 32768,
             responseMimeType: 'application/json',
             responseSchema: SCHEMA,
           },
@@ -869,21 +898,48 @@ async function askGemini(
      is also correct for a long answer split across parts. */
   const parts = payload?.candidates?.[0]?.content?.parts ?? [];
   const raw = parts.map((p: { text?: string }) => p?.text ?? '').join('').trim();
+  const finish = String(payload?.candidates?.[0]?.finishReason ?? 'no reason given');
 
+  /* EVERY FAILURE BELOW IS TRANSIENT, and that is the fix for a week that went
+     missing rather than a loosening of the rules.
+
+     On the 11th of September this function asked for five announcements and
+     got back JSON that stopped mid-array: the model spent its output budget
+     before it finished writing. JSON.parse threw, the throw was a plain Error,
+     a plain Error meant "this email cannot be read", and the ledger buried the
+     newsletter for good. Nobody was told, because one email failing is not the
+     run failing.
+
+     But a truncated answer says nothing about the email. It is the same kind
+     of event as a 503 — the next attempt may simply work, and with the ceiling
+     above raised it usually will. So all three of these defer instead: no
+     ledger verdict, no \Seen, and the next tick tries again. The retrying is
+     bounded in main by MAX_PARSE_ATTEMPTS, which is what keeps "try again"
+     from becoming a model call every twenty minutes forever.
+
+     Nothing has been written to the database at this point in the run, which
+     is what makes a retry safe by construction rather than by argument: there
+     are no drafts to duplicate, because there are none yet. */
   if (!raw) {
-    const reason = payload?.candidates?.[0]?.finishReason ?? 'no reason given';
-    throw new Error(`Gemini returned nothing to parse (${reason}).`);
+    throw new TransientError(`Gemini returned nothing to parse (${finish}). Trying again next run.`);
   }
 
   let parsed: unknown;
   try {
     parsed = JSON.parse(raw);
   } catch {
-    throw new Error(`Gemini did not return JSON: ${raw.slice(0, 200)}`);
+    // MAX_TOKENS is the one worth naming outright: it is the answer being too
+    // long rather than the model misbehaving, and it is what a five item
+    // newsletter does to a budget that was set for four.
+    throw new TransientError(
+      `Gemini did not finish its JSON (${finish}). Trying again next run. It began: ${raw.slice(0, 120)}`,
+    );
   }
 
   const list = (parsed as { announcements?: unknown })?.announcements;
-  if (!Array.isArray(list)) throw new Error('Gemini returned no announcements array.');
+  if (!Array.isArray(list)) {
+    throw new TransientError(`Gemini returned no announcements array (${finish}). Trying again next run.`);
+  }
   return list as Parsed[];
 }
 
@@ -895,6 +951,13 @@ async function askGemini(
    and a URL that was never in the email both arrive looking perfectly valid.
    ===================================================================== */
 
+/* @@ dates:start
+   Everything between these two markers is evalled by
+   tests/newsletter-dates.test.js, so it has to stay self-contained: no imports,
+   no Deno, nothing from further up this file. The markers are what let a node
+   test check date arithmetic that otherwise could only be checked by sending
+   a real newsletter through a real model and waiting to see what came out. */
+
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
 function cleanDate(value: unknown): string | null {
@@ -905,6 +968,275 @@ function cleanDate(value: unknown): string | null {
   const d = new Date(`${text}T00:00:00Z`);
   if (Number.isNaN(d.getTime())) return null;
   return d.toISOString().slice(0, 10) === text ? text : null;
+}
+
+function shiftDate(iso: string, days: number): string {
+  const d = new Date(`${iso}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
+/* A date sitting in an announcement's own title.
+
+   RULE 3 PUTS IT THERE. The model is asked to write titles like "City Serve
+   Day, September 12" and "Baby Blessing Sign-Up 9/20", so by the time anything
+   reaches this file the day is very often printed on the front of the card,
+   in the church's own words, whatever the model then decided about `event`.
+   Reading it back is the cheapest second opinion there is, and unlike the
+   model it gives the same answer every time.
+
+   MONTH NAMES AND SLASHES, and nothing else. "Sept 8-10" takes the 8th, the
+   way the backfill prompt has always asked for a range. Hyphens are not read
+   as separators for exactly that reason: in a title "9-20" is very often a
+   range of somethings and "9/20" is a day. */
+const MONTH_NAMES: Record<string, number> = {
+  jan: 1, january: 1, feb: 2, february: 2, mar: 3, march: 3,
+  apr: 4, april: 4, may: 5, jun: 6, june: 6, jul: 7, july: 7,
+  aug: 8, august: 8, sep: 9, sept: 9, september: 9, oct: 10, october: 10,
+  nov: 11, november: 11, dec: 12, december: 12,
+};
+
+const TITLE_MONTH_DAY =
+  /\b(jan|january|feb|february|mar|march|apr|april|may|jun|june|jul|july|aug|august|sep|sept|september|oct|october|nov|november|dec|december)\.?\s+(\d{1,2})(?:\s*,\s*(\d{4}))?/i;
+
+const TITLE_SLASHED = /\b(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?\b/;
+
+/* WHICH YEAR, when the title does not say — and titles almost never say.
+   "9/20" in a newsletter sent on the 4th of September is this September, and
+   "January 5" in one sent in December is next January. So the year is the one
+   that puts the day nearest the newsletter without landing it well in the
+   past: anything more than a fortnight behind the email is read as next year.
+   A fortnight rather than a day because a newsletter does sometimes look back
+   at last Sunday, and reading that as thirteen months away would be worse. */
+function resolveYear(month: number, day: number, reference: string): string | null {
+  const refYear = Number(reference.slice(0, 4));
+  if (!Number.isInteger(refYear)) return null;
+
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const iso = (y: number) => `${y}-${pad(month)}-${pad(day)}`;
+
+  const thisYear = cleanDate(iso(refYear));
+  if (thisYear && thisYear >= shiftDate(reference, -14)) return thisYear;
+  return cleanDate(iso(refYear + 1)) ?? thisYear;
+}
+
+function titleDate(title: unknown, reference: string): string | null {
+  const text = String(title ?? '');
+  if (!cleanDate(reference)) return null;
+
+  const named = TITLE_MONTH_DAY.exec(text);
+  if (named) {
+    const month = MONTH_NAMES[named[1].toLowerCase()];
+    const day = Number(named[2]);
+    if (month && day >= 1 && day <= 31) {
+      return named[3]
+        ? cleanDate(`${named[3]}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`)
+        : resolveYear(month, day, reference);
+    }
+  }
+
+  const slashed = TITLE_SLASHED.exec(text);
+  if (slashed) {
+    const month = Number(slashed[1]);
+    const day = Number(slashed[2]);
+    if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+      if (!slashed[3]) return resolveYear(month, day, reference);
+      const year = slashed[3].length === 2 ? 2000 + Number(slashed[3]) : Number(slashed[3]);
+      return cleanDate(`${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`);
+    }
+  }
+
+  return null;
+}
+
+/* THE DAY THIS ANNOUNCEMENT IS ABOUT, from whichever of three sources knows.
+
+   WHY THIS EXISTS. "Baby Blessing Sign-Up 9/20" went through this function's
+   predecessor and came out with no event. The model had read the date
+   perfectly — it set ends_on to the 21st, which is the 20th plus one — and
+   then declined to fill in `event`, because the rule it was given said a
+   sign-up and a link to a form are not events. It is a sign-up, and the thing
+   being signed up for happens on a Sunday morning in September, and the
+   calendar entry somebody wanted was the blessing.
+
+   The prompt is fixed too, and the prompt is the part that will be right most
+   often. But a prompt is a request and this is the guarantee, because the
+   failure it prevents is silent: an announcement parsed with no event is not
+   flagged, does not appear in the dates queue, and reads as correct on every
+   screen in the app. Nobody finds out until somebody goes looking for a date
+   that was never there.
+
+   THREE SOURCES, MOST TRUSTWORTHY FIRST.
+     stated    what the model put in `event.date`. A day it was willing to
+               name outright.
+     title     rule 3 asks for the date on the front of the card, so it is
+               usually there, and it is the church's own wording.
+     ends_on   rule 8 defines it as the day AFTER the thing happens, so an
+               ends_on with no event is the model contradicting itself, and
+               the day before it is the day it meant.
+
+   WHAT IT COSTS. A card whose only date is a deadline — "sign-ups close the
+   30th" for something not yet scheduled — now proposes an event on the 30th.
+   That is a row in the dates queue and one tap to discard, and it is the side
+   of the trade worth being on: an extra proposal is visible and a missing one
+   is not. Nothing here publishes anything. Every event this produces is
+   written unpublished with review_state 'pending', exactly like a stated one,
+   and a person still approves it before it reaches anybody's calendar. */
+function eventDateFor(
+  stated: string | null,
+  title: unknown,
+  endsOn: string | null,
+  reference: string,
+): string | null {
+  if (stated) return stated;
+
+  const fromTitle = titleDate(title, reference);
+  if (fromTitle) return fromTitle;
+
+  const end = cleanDate(endsOn);
+  return end ? shiftDate(end, -1) : null;
+}
+
+/* @@ dates:end */
+
+/* @@ retry:start
+   Fenced like the dates above, and evalled by tests/newsletter-retry.test.js,
+   so it has to stay self-contained: no imports, no Deno, no Supabase client.
+   The two constants live in here rather than up with the other settings for
+   exactly that reason — the test has to see the same numbers the function
+   uses, or it is testing a copy. */
+
+/* How many times one email may be claimed before the reader gives up on it.
+   Four attempts twenty minutes apart is about an hour of trying, which is long
+   enough to ride out a busy model and short enough that a genuinely
+   unreadable email is settled and reported the same morning. */
+const MAX_PARSE_ATTEMPTS = 4;
+
+/* How long a claim may sit before another run may take it.
+   An Edge Function invocation cannot outlive its own timeout, so a row still
+   marked `parsing` a quarter of an hour later is not a run in progress — it is
+   a run that died holding the email. Without this, one crash at the wrong
+   moment would bury a newsletter exactly the way the old permanent-failure
+   rule did, which is the bug this whole change is about. */
+const CLAIM_STALE_MINUTES = 15;
+
+interface LedgerState {
+  status?: string;
+  attempts?: number;
+  attempted_at?: string | null;
+}
+
+/* What this run may do with an email, given what the ledger already says about
+   it. Pure, because it is the one piece of this feature whose corner cases are
+   worth checking without a mailbox: settled means settled, a stuck claim has
+   to come back, and neither of those may depend on the model or the network.
+
+     new      no ledger row at all. Parse it.
+     retry    a previous attempt deferred. Parse it again.
+     reclaim  someone claimed it and never came back. Take it.
+     skip     settled, or being worked on right now, or out of attempts. */
+function claimDecision(row: LedgerState | null | undefined, nowMs: number): 'new' | 'retry' | 'reclaim' | 'skip' {
+  if (!row) return 'new';
+
+  const status = String(row.status ?? '');
+  const attempts = Number(row.attempts ?? 0);
+  const spent = !Number.isFinite(attempts) || attempts >= MAX_PARSE_ATTEMPTS;
+
+  if (status === 'deferred') return spent ? 'skip' : 'retry';
+
+  if (status === 'parsing') {
+    const started = Date.parse(String(row.attempted_at ?? ''));
+    /* A claim with no clock on it is from a version of this function that did
+       not set one, or a write that half happened. Either way nothing is coming
+       back for it, so it is stale by definition rather than by arithmetic. */
+    if (!Number.isFinite(started)) return spent ? 'skip' : 'reclaim';
+    if (nowMs - started < CLAIM_STALE_MINUTES * 60 * 1000) return 'skip';
+    return spent ? 'skip' : 'reclaim';
+  }
+
+  // parsed, empty, failed. Settled, and 0038's whole point.
+  return 'skip';
+}
+
+/* @@ retry:end */
+
+/* Taking an email, so that exactly one run parses it.
+
+   WHAT THIS REPLACES. 0038 got mutual exclusion from a single insert against a
+   unique index: the loser got a 23505 and skipped, and that was airtight for
+   as long as an email could only ever be parsed once. A retry breaks it,
+   because the second legitimate attempt looks exactly like the duplicate the
+   index was there to refuse. Both halves matter here — the twenty minute tick
+   and the Fetch Announcements button really do overlap, three taps inside four
+   minutes is a thing that happens, and two runs parsing one newsletter is two
+   sets of drafts and two calendar entries for one evening.
+
+   So a claim is one of two atomic writes, and never a read followed by a
+   write. A new email is an insert, which the unique index still arbitrates
+   exactly as before. A retry or a reclaim is an update guarded on the attempt
+   count we read a moment ago — a compare-and-swap — so if another run got
+   there first the count has already moved, the update matches no rows, and
+   this run steps aside. Returns the ledger row id on success and null when
+   somebody else has it.
+
+   The row is written BEFORE the model is called rather than after, which is
+   the same ordering 0038 chose for the drafts and for the same reason: of the
+   two ways this can fail, an email recorded as claimed and never finished is
+   recoverable — the staleness rule above brings it back — and an email parsed
+   twice is a mess a person has to clean up by hand. */
+async function claimEmail(
+  admin: ReturnType<typeof createClient>,
+  how: 'new' | 'retry' | 'reclaim',
+  envelope: Record<string, unknown>,
+  attempts: number,
+): Promise<number | null> {
+  const claim = {
+    ...envelope,
+    status: 'parsing',
+    attempts,
+    attempted_at: new Date().toISOString(),
+    note: null as string | null,
+  };
+
+  if (how === 'new') {
+    const { data, error } = await admin
+      .from('newsletter_emails').insert(claim).select('id').single();
+
+    if (error) {
+      // 23505 is the race, and it is the correct outcome rather than a fault:
+      // another run inserted between our read of the ledger and now.
+      if (error.code === '23505') return null;
+      throw new Error(`Could not claim the email: ${error.message}`);
+    }
+    return data.id as number;
+  }
+
+  const { data, error } = await admin
+    .from('newsletter_emails')
+    .update(claim)
+    .eq('message_id', String(envelope.message_id))
+    .eq('attempts', attempts - 1)     // the compare half of the swap
+    .select('id');
+
+  if (error) throw new Error(`Could not claim the email: ${error.message}`);
+  return data && data.length ? (data[0].id as number) : null;
+}
+
+/* How a claim ends. Always called, whichever way the email went, so no row is
+   left in `parsing` by a run that is still alive.
+
+   A failure to write the outcome is logged and swallowed on purpose. The work
+   is already done by this point — the drafts are in the table or they are not
+   — and throwing here would turn a good parse into a failed run. A row left
+   marked parsing is picked up again in a quarter of an hour by the staleness
+   rule, which is the whole reason that rule exists. */
+async function settleEmail(
+  admin: ReturnType<typeof createClient>,
+  id: number,
+  patch: Record<string, unknown>,
+): Promise<void> {
+  const { error } = await admin.from('newsletter_emails').update(patch).eq('id', id);
+  if (error) console.error(`newsletter-intake: could not settle email ${id}:`, error.message);
 }
 
 /* Today, where the church is. Not UTC: an announcement retires at midnight in
@@ -1141,6 +1473,7 @@ interface BackfillRow {
   body: string | null;
   published: boolean;
   written: string;
+  endsOn: string | null;
 }
 
 function backfillPrompt(rows: BackfillRow[]): string {
@@ -1162,6 +1495,11 @@ function backfillPrompt(rows: BackfillRow[]): string {
     'A DATE WITH NO TIME IS STILL AN EVENT. Give the date and leave time out.',
     'For a range ("Sept 8-10") use the first day. For something recurring ("every',
     'Tuesday") use the first occurrence.',
+    '',
+    'A SIGN-UP FOR A DATED THING IS STILL THAT DATED THING. "Baby Blessing Sign-Up',
+    '9/20" is an event on the 20th: the form is how a person gets in, and the date is',
+    'what they wanted in their calendar. Give the day the thing happens, never the day',
+    'the sign-up closes.',
     '',
     'Set has_event false, with no date, for an announcement with genuinely no day',
     'attached: an ongoing need for volunteers, a standing invitation, a policy change.',
@@ -1191,7 +1529,7 @@ async function runBackfill(
 ): Promise<Record<string, unknown>> {
   const { data, error } = await admin
     .from('announcements')
-    .select('id, title, body, published, created_at, review_state')
+    .select('id, title, body, published, created_at, review_state, ends_on')
     .is('event_id', null)
     .neq('review_state', 'discarded')
     .order('created_at', { ascending: false })
@@ -1205,6 +1543,7 @@ async function runBackfill(
     body: (r.body as string | null) ?? null,
     published: r.published === true,
     written: String(r.created_at ?? '').slice(0, 10),
+    endsOn: (r.ends_on as string | null) ?? null,
   }));
 
   if (!rows.length) return { ok: true, backfill: true, looked_at: 0, events: 0 };
@@ -1218,7 +1557,10 @@ async function runBackfill(
         contents: [{ role: 'user', parts: [{ text: backfillPrompt(rows) }] }],
         generationConfig: {
           temperature: 0.2,
-          maxOutputTokens: 8192,
+          // Twenty-five rows of id, date and location, and the same truncation
+          // risk as the parse above: one row short of the end is a date that
+          // silently never gets made.
+          maxOutputTokens: 16384,
           responseMimeType: 'application/json',
           responseSchema: BACKFILL_SCHEMA,
         },
@@ -1239,9 +1581,18 @@ async function runBackfill(
   if (!raw) throw new Error('Gemini returned nothing to parse.');
 
   const parsed = JSON.parse(raw)?.results ?? [];
-  const found = (parsed as Array<Record<string, unknown>>)
-    .filter((r) => r?.has_event === true);
-  const byId = new Map(rows.map((r) => [r.id, r]));
+
+  /* WHAT THE MODEL SAID ABOUT EACH ROW, keyed on the id it was given, rather
+     than the list of rows it said yes to. The loop below walks the
+     announcements this function actually read instead of the model's answers,
+     because a row it labelled has_event false can still be a dated thing —
+     that is exactly how "Baby Blessing Sign-Up 9/20" lost its calendar entry
+     on the way in — and eventDateFor gets the second and third look at it. */
+  const said = new Map<string, Record<string, unknown>>();
+  for (const r of parsed as Array<Record<string, unknown>>) {
+    const id = String(r?.id ?? '');
+    if (id) said.set(id, r);
+  }
 
   const { data: existingEvents } = await admin.from('events').select('id');
   const takenEvents = new Set((existingEvents ?? []).map((r) => r.id as string));
@@ -1249,10 +1600,17 @@ async function runBackfill(
   let made = 0;
   const madeFor: string[] = [];
 
-  for (const item of found) {
-    const row = byId.get(String(item.id ?? ''));
-    const date = cleanDate(item.date);
-    if (!row || !date) continue;
+  for (const row of rows) {
+    const answer: Record<string, unknown> = said.get(row.id) ?? {};
+
+    /* The time is only read off an answer that named a day. An hour attached
+       to a has_event false row is the model's leftovers, and pinning an
+       inferred date to it would be a guess resting on a guess. */
+    const stated = answer.has_event === true ? cleanDate(answer.date) : null;
+    const item: Record<string, unknown> = stated ? answer : {};
+
+    const date = eventDateFor(stated, row.title, row.endsOn, row.written);
+    if (!date) continue;
 
     const eventId = uniqueId(row.title, takenEvents, 'event');
     const at = churchInstant(date, item.hour, item.minute);
@@ -1457,6 +1815,15 @@ Deno.serve(async (req: Request) => {
   // no newsletter.
   let deferred = 0;
   let deferredNote: string | null = null;
+  /* Emails this run settled as unreadable, which is the other half of what the
+     note has to carry. Before 0069 a failed email was recorded in a table no
+     screen reads and the run stayed silent: on the 11th of September the whole
+     newsletter was lost and the Admin screen said "Newsletter checked 3
+     minutes ago" in the ordinary grey. A failure nobody is told about is the
+     failure this feature keeps having, so it goes in the note, which that
+     screen draws as a warning. */
+  let failedCount = 0;
+  let failedNote: string | null = null;
 
   try {
     await imap.connect(host, port);
@@ -1503,13 +1870,29 @@ Deno.serve(async (req: Request) => {
     const ids = candidates.map((c) => c.messageId);
     const { data: known, error: knownError } = await admin
       .from('newsletter_emails')
-      .select('message_id')
+      .select('message_id, status, attempts, attempted_at')
       .in('message_id', ids.length ? ids : ['']);
 
     if (knownError) throw new Error(`Could not read the ledger: ${knownError.message}`);
 
-    const seen = new Set((known ?? []).map((r) => r.message_id as string));
-    const fresh = candidates.filter((c) => !seen.has(c.messageId)).slice(0, MAX_EMAILS_PER_RUN);
+    /* What the ledger already knows about each of them, which since 0069 is
+       more than "seen or not": an email can be mid-parse in another run, or
+       waiting on a retry after an attempt that deferred. claimDecision holds
+       the rules and is tested on its own. */
+    const ledgerState = new Map<string, LedgerState>();
+    for (const row of known ?? []) {
+      ledgerState.set(row.message_id as string, row as LedgerState);
+    }
+
+    const now = Date.now();
+    const fresh = candidates
+      .map((c) => ({ ...c, how: claimDecision(ledgerState.get(c.messageId), now) }))
+      .filter((c) => c.how !== 'skip')
+      .slice(0, MAX_EMAILS_PER_RUN) as Array<{
+        uid: number;
+        messageId: string;
+        how: 'new' | 'retry' | 'reclaim';
+      }>;
 
     if (!fresh.length) {
       await imap.close();
@@ -1529,7 +1912,7 @@ Deno.serve(async (req: Request) => {
 
     const preview: unknown[] = [];
 
-    for (const { uid, messageId } of fresh) {
+    for (const { uid, messageId, how } of fresh) {
       const raw = await imap.fetchRaw(uid);
       const envelope = splitHeaders(raw);
       const subject = decodeHeaderWords(envelope.headers['subject'] ?? '').slice(0, 300);
@@ -1539,19 +1922,36 @@ Deno.serve(async (req: Request) => {
         ? new Date(dateHeader).toISOString()
         : null;
 
+      // Which attempt this is. The claim below only succeeds if the ledger is
+      // still one short of it, so two runs cannot both be attempt three.
+      const attempt = Number(ledgerState.get(messageId)?.attempts ?? 0) + 1;
+
       /* Everything the ledger will say about this email, whichever way it
-         goes. Built up as we learn, written once at the end, so an email is
-         recorded exactly once no matter which branch it takes. */
+         goes. Built up as we learn and written when the claim settles, so an
+         email is recorded exactly once no matter which branch it takes. */
       const ledger: Record<string, unknown> = {
-        message_id: messageId,
-        imap_uid: uid,
-        subject,
-        from_addr: fromAddr,
-        sent_at: sentAt,
         status: 'parsed',
         drafts: 0,
         note: null as string | null,
       };
+
+      /* THE CLAIM, before the model is called and before anything is written.
+         A dry run claims nothing: it is a person reading the answer, it must
+         leave the mailbox exactly as it found it, and taking a claim would
+         make the next real run skip the email it was rehearsing. */
+      let claimId: number | null = null;
+      if (!dryRun) {
+        claimId = await claimEmail(admin, how, {
+          message_id: messageId,
+          imap_uid: uid,
+          subject,
+          from_addr: fromAddr,
+          sent_at: sentAt,
+        }, attempt);
+
+        // Another run has it. Not an error, and not ours to report.
+        if (claimId === null) continue;
+      }
 
       try {
         const parts = textParts(raw);
@@ -1576,9 +1976,13 @@ Deno.serve(async (req: Request) => {
           ledger.status = 'empty';
           ledger.note = 'The email had no readable text in it.';
         } else {
+          // The day the newsletter was sent, which is what every relative date
+          // in it is relative to — the model is told it, and eventDateFor
+          // resolves "9/20" against the same day so the two cannot disagree.
+          const emailDay = (sentAt ?? new Date().toISOString()).slice(0, 10);
+
           const items = await askGemini(
-            geminiKey!, model, text, links, images,
-            (sentAt ?? new Date().toISOString()).slice(0, 10),
+            geminiKey!, model, text, links, images, emailDay,
           );
 
           const allowedLinks = links.map((l) => l.url);
@@ -1633,7 +2037,17 @@ Deno.serve(async (req: Request) => {
                Without that label the Connect card would print "9:00 AM" as
                though the church had said so, which is a guess wearing the
                clothes of a fact. */
-            const eventDate = item.event ? cleanDate(item.event.date) : null;
+            /* WHICH DAY, from the model's answer if it gave one and from the
+               announcement's own words if it did not. See eventDateFor: the
+               date it works out from a title or from ends_on is the fix for a
+               real card that came through with its date read correctly and its
+               calendar entry dropped anyway. */
+            const eventDate = eventDateFor(
+              item.event ? cleanDate(item.event.date) : null,
+              title,
+              cleanDate(item.ends_on),
+              emailDay,
+            );
             const eventRow = eventDate
               ? {
                 id: uniqueId(title, takenEvents, 'event'),
@@ -1719,21 +2133,18 @@ Deno.serve(async (req: Request) => {
             preview.push({ subject, drafts: rows });
             draftCount += rows.length;
           } else {
-            /* The ledger row goes in FIRST, so the announcements can point at
-               it and so a crash between the two leaves an email marked seen
-               with no drafts rather than drafts that arrive twice. Of the two
-               ways this can fail, a missing draft is recoverable by hand and a
-               duplicated one is a mess in the review queue. */
-            ledger.drafts = rows.length;
-            const { data: emailRow, error: ledgerError } = await admin
-              .from('newsletter_emails').insert(ledger).select('id').single();
+            /* The ledger row is already there — the claim above wrote it
+               before the model was called, which is the ordering 0038 chose
+               for this insert and 0069 generalised. The announcements point at
+               it by id, and a crash between here and the end leaves an email
+               marked claimed with no drafts rather than drafts that arrive
+               twice. Of the two ways this can fail, a missing draft is
+               recoverable and a duplicated one is a mess in the review queue.
 
-            if (ledgerError) {
-              // 23505 is the race: another run claimed this email between our
-              // read of the ledger and now. Nothing to do and nothing wrong.
-              if (ledgerError.code === '23505') continue;
-              throw new Error(`Could not write the ledger: ${ledgerError.message}`);
-            }
+               A claim that comes back with nothing to parse is not possible
+               here: claimId is only null on a dry run, and a dry run never
+               reaches this branch. */
+            const emailId = claimId as number;
 
             /* Events first, for the foreign key. An event landing with no
                announcement pointing at it is the harmless direction to fail:
@@ -1744,9 +2155,6 @@ Deno.serve(async (req: Request) => {
             if (events.length) {
               const { error: eventError } = await admin.from('events').insert(events);
               if (eventError) {
-                await admin.from('newsletter_emails')
-                  .update({ status: 'failed', drafts: 0, note: `Events would not save: ${eventError.message}`.slice(0, 500) })
-                  .eq('id', emailRow.id);
                 throw new Error(`Could not write the events: ${eventError.message}`);
               }
               // Counted after the insert returned, never before it. Nobody is
@@ -1754,14 +2162,15 @@ Deno.serve(async (req: Request) => {
               newEvents += events.length;
             }
 
-            const withSource = rows.map((r) => ({ ...r, source_email_id: emailRow.id }));
+            const withSource = rows.map((r) => ({ ...r, source_email_id: emailId }));
             const { error: insertError } = await admin.from('announcements').insert(withSource);
             if (insertError) {
-              await admin.from('newsletter_emails')
-                .update({ status: 'failed', drafts: 0, note: `Drafts would not save: ${insertError.message}`.slice(0, 500) })
-                .eq('id', emailRow.id);
               throw new Error(`Could not write the drafts: ${insertError.message}`);
             }
+
+            await settleEmail(admin, emailId, {
+              status: 'parsed', drafts: rows.length, note: null,
+            });
 
             draftCount += rows.length;
             newDrafts += rows.length;
@@ -1772,14 +2181,47 @@ Deno.serve(async (req: Request) => {
           }
         }
       } catch (err) {
-        /* Transient: leave absolutely no trace. No ledger row, no \Seen, no
-           draft. The email is still unread and still unknown, so the next tick
-           picks it up as though this run never happened. This is the branch
-           that stops a busy model from costing the church a week. */
+        /* Transient: the email is NOT marked read, so the next tick picks it
+           up and tries again. This is the branch that stops a busy model —
+           or, since 0069, an answer that arrived truncated — from costing the
+           church a week.
+
+           WHAT CHANGED AT 0069. This used to leave absolutely no trace, which
+           made the retry free and the counting impossible: an email that
+           deferred every single time would be re-read every twenty minutes for
+           as long as the mailbox search could see it, and nothing anywhere
+           said so. Now the claim is already in the ledger, so the outcome is
+           written onto it — deferred while there are attempts left, failed
+           when they run out — and the email is settled and reported rather
+           than quietly retried forever.
+
+           Still no \Seen either way, until it is genuinely settled. */
         if (err instanceof TransientError) {
-          deferred += 1;
-          deferredNote = String(err.message).slice(0, 300);
-          console.warn(`newsletter-intake: deferring ${messageId}: ${err.message}`);
+          const reason = String(err.message).slice(0, 400);
+          const spent = attempt >= MAX_PARSE_ATTEMPTS;
+
+          if (claimId !== null) {
+            await settleEmail(admin, claimId, {
+              status: spent ? 'failed' : 'deferred',
+              drafts: 0,
+              note: spent
+                ? `Gave up after ${MAX_PARSE_ATTEMPTS} attempts. ${reason}`.slice(0, 500)
+                : reason,
+            });
+          }
+
+          if (spent) {
+            failedCount += 1;
+            failedNote = reason;
+            // Settled, so it stops being found. Without this the fortnight
+            // search would keep handing it back to a claim that now refuses.
+            if (!dryRun) await imap.markSeen(uid);
+            console.error(`newsletter-intake: giving up on ${messageId} after ${attempt}: ${err.message}`);
+          } else {
+            deferred += 1;
+            deferredNote = reason;
+            console.warn(`newsletter-intake: deferring ${messageId} (attempt ${attempt}): ${err.message}`);
+          }
           continue;
         }
 
@@ -1789,21 +2231,26 @@ Deno.serve(async (req: Request) => {
            dropped. Straight out to the run-level handler. */
         if (err instanceof ImapError) throw err;
 
-        // Permanent: one email failing is not the run failing. Record it
-        // against the email, so it is not retried every twenty minutes
-        // forever, and carry on to the next one.
+        /* Permanent, and since 0069 that means something narrower than it used
+           to: a failure that happened AFTER rows were written, or one that has
+           nothing to do with the model. Reading the email again would write a
+           second set of drafts over the first, so these settle where they
+           fall, and the run note below says so out loud. */
         ledger.status = 'failed';
         ledger.drafts = 0;
         ledger.note = String((err as Error).message ?? err).slice(0, 500);
+        failedCount += 1;
+        failedNote = String(ledger.note);
         console.error(`newsletter-intake: ${messageId} failed:`, err);
       }
 
-      if (!dryRun) {
-        const { error } = await admin.from('newsletter_emails').insert(ledger);
-        if (!error || error.code === '23505') {
-          parsedCount += 1;
-          await imap.markSeen(uid);
-        }
+      /* The outcome of a claim that did not write drafts: empty, or failed.
+         The drafts branch settles itself above and continues, because it has a
+         count to record that this does not. */
+      if (!dryRun && claimId !== null) {
+        await settleEmail(admin, claimId, ledger);
+        parsedCount += 1;
+        await imap.markSeen(uid);
       }
     }
 
@@ -1818,9 +2265,17 @@ Deno.serve(async (req: Request) => {
        a note, and the Admin screen draws the newest run's note whether or not
        it is ok, which is what keeps "Gemini has been busy for two days" from
        being indistinguishable from "no newsletter arrived". */
-    const note = deferred
-      ? `${deferred} email${deferred === 1 ? '' : 's'} left for the next run. ${deferredNote ?? ''}`.trim().slice(0, 500)
-      : null;
+    const lines: string[] = [];
+    if (deferred) {
+      lines.push(`${deferred} email${deferred === 1 ? '' : 's'} left for the next run. ${deferredNote ?? ''}`.trim());
+    }
+    if (failedCount) {
+      lines.push(
+        `${failedCount} email${failedCount === 1 ? ' could not be read' : 's could not be read'} and ` +
+        `${failedCount === 1 ? 'was' : 'were'} not turned into drafts. ${failedNote ?? ''}`.trim(),
+      );
+    }
+    const note = lines.length ? lines.join(' ').slice(0, 500) : null;
 
     /* After the mailbox is closed and before the run is written, which is the
        one moment where everything this run was going to write is written and

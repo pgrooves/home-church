@@ -26,7 +26,7 @@
   'use strict';
 
   /* ------------------------------------------------------------------ church
-     Seed only. The live values are the one row in `church_profile`. Four
+     Seed only. The live values are the one row in `church_profile`. Three
      screens read church.address.* without checking, so content.js never
      clears this from an empty table, it only overwrites it from a real row. */
 
@@ -2315,12 +2315,19 @@
   /* ------------------------------------------------------------- next steps */
 
   /* url is what turns a step into an action. A step without one renders as a
-     description and stops there, which is the honest shape for 'I'm new here'
-     until the church picks a destination for it. */
+     description and stops there, which is the honest shape for a step with
+     nowhere to send anybody.
+
+     'app:contact' is not an address, it is a destination inside the app: the
+     contact form at the top of Connect, which is the screen these are drawn
+     on. 'I'm new here' is the one step the church runs no outside system for,
+     and it spent a year as a description with nothing under it while the
+     thing it was asking for sat a few hundred pixels up the same page. See
+     INTERNAL_STEPS in js/screens/connect.js. */
   var nextSteps = [
     { id: 'step-new', title: 'I’m new here',
       blurb: 'Tell us a little about yourself and we will find you on Sunday.',
-      url: null, ctaLabel: '' },
+      url: 'app:contact', ctaLabel: 'Tell us you’re here' },
     { id: 'step-baptism', title: 'I want to be baptized',
       blurb: 'We will walk you through it, start to finish.',
       url: 'https://homechurchnola.churchcenter.com/people/forms/953766',
@@ -2835,11 +2842,29 @@
         ('0' + (d.getMonth() + 1)).slice(-2) + '-' +
         ('0' + d.getDate()).slice(-2);
 
-      return (announcements || []).filter(function (a) {
+      return this.sortAnnouncements((announcements || []).filter(function (a) {
         if (a.startsOn && today < a.startsOn) return false;
         if (a.endsOn && today >= a.endsOn) return false;
         return true;
-      }).sort(function (x, y) {
+      }));
+    },
+
+    /* The order above, on its own, for a list that is not today's.
+
+       ONE CALLER AND IT IS THE ARCHIVE. The archive screen holds whatever this
+       phone has put away, which is not the same set as what the church is
+       saying today: an announcement can be archived and then run out of dates,
+       and it stays in the archive because archiving is a fact about the phone
+       and the window is a fact about the church. What it must not do is come
+       back in a different order than it went away in, which is what would
+       happen the moment somebody wrote the three comparisons out a second
+       time and got the tie-break wrong.
+
+       A copy, not a sort in place. The archive builds its list by filtering
+       HC.data.announcements, and sorting the caller's array is a side effect
+       nobody asks a function called "sort..." for twice in a row. */
+    sortAnnouncements: function (list) {
+      return (list || []).slice().sort(function (x, y) {
         var px = x.priority || 0;
         var py = y.priority || 0;
         if (px !== py) return py - px;

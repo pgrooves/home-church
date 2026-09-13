@@ -1306,6 +1306,50 @@
     });
   }
 
+  /* A switch the app knows by name, saved whether or not its row exists yet.
+
+     WHY THIS IS NOT saveSetting ABOVE. That one PATCHes a row by its key, and
+     a PATCH that matches nothing is a 204 with no rows touched: it succeeds,
+     silently, and the switch springs back on the next repaint with nothing
+     anywhere saying why. Every row it writes was seeded by a migration, so
+     that was fine.
+
+     It is not fine for a switch the app draws by name. The Group tab's switch
+     is on the App settings screen whether or not anybody has run
+     supabase/migrations/0064_group_mode.sql, because a church that cannot
+     find the switch cannot turn the feature on, and "run this SQL first" is
+     not an answer anybody at a church should need. So the first tap on a
+     phone whose project has no row writes one, with the label and the help
+     the app knows it should carry, and every tap after that updates it.
+
+     ONE REQUEST, NOT TWO. `resolution=merge-duplicates` is PostgREST's
+     upsert: insert, or update the row that collides on the primary key, which
+     for app_settings is `key`. A read-then-write would be two round trips and
+     a race between two admins on two phones on the same Tuesday.
+
+     THE LABEL AND HELP ARE REWRITTEN EVERY TIME, which is deliberate and
+     harmless: neither is editable from this screen for a boolean row, so the
+     only thing that can be in the database is what some version of this app
+     put there, and the app's own copy is the newer of the two. */
+  function saveSwitch(row, on) {
+    return HC.auth.restFetch('/app_settings', {
+      method: 'POST',
+      headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
+      body: {
+        key: row.key,
+        label: row.label,
+        help: row.help || null,
+        kind: 'boolean',
+        value_bool: !!on,
+        value_text: null,
+        sort_order: row.sortOrder == null ? 100 : row.sortOrder
+      }
+    }).then(function () {
+      invalidate('settings');
+      HC.content.refresh();
+    });
+  }
+
   /* Adding a setting from the app, which is what keeps this a settings screen
      rather than a settings screen that needs a migration every time. The key
      is slugified from the label for the same reason announcement ids are:
@@ -1419,6 +1463,7 @@
     settings: function () { return list('settings'); },
     loadSettings: loadSettings,
     saveSetting: saveSetting,
+    saveSwitch: saveSwitch,
     createSetting: createSetting,
     deleteSetting: deleteSetting
   };

@@ -71,6 +71,13 @@ node "$(dirname "$0")/swipe.js" || exit 1
 # counted rather than made, because what it needs a browser for is a finger.
 node "$(dirname "$0")/pull.js" || exit 1
 
+# The one hint, which is a rectangle on the glass at a moment and therefore
+# cannot be asked about any other way. tests/hints.test.js covers the policy;
+# what is here is whether it is armed by the right thing, drawn on the right
+# words, and gone through rather than tapped. See HINTS.md §12 for why a hint
+# that fails silently is the failure this file exists to make loud.
+node "$(dirname "$0")/hints.js" || exit 1
+
 # Search and the two discs in the top bar. Same terms again, and here for the
 # same reason: what is left over once tests/search.test.js has asked
 # everything that can be asked without a page is all layout and traffic.
@@ -90,6 +97,12 @@ node "$(dirname "$0")/contact.js" || exit 1
 # the operating system's to hold and a browser has none. Still local, still no
 # database, so it belongs up here with the cheap ones.
 node "$(dirname "$0")/reminders.js" || exit 1
+
+# The archive box in the corner of an announcement on Home, and the list it
+# puts things in. Same terms as the cheap ones above: the bundled seed, no
+# database. What it needs a browser for is the promise the corner makes, which
+# is that a card is somewhere and there is a way back to it.
+node "$(dirname "$0")/announcement-archive.js" || exit 1
 
 # The database, built the same way the migration tests build it. Doing it
 # through that script rather than by hand means this can never run against a

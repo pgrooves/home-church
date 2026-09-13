@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Home Church video</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<!--
+  ===========================================================================
+  Home Church, the video wrapper
+  One page, one job: hold a YouTube player on an https origin so that the
+  packaged app can show one.
+  ===========================================================================
+
+  WHY THIS FILE EXISTS. The app in the App Store does not run on https. It
+  runs on `capacitor://localhost`, which is the origin WKWebView gives a
+  bundled app, and the Referrer Policy spec says a document on a scheme that
+  is not http or https sends no referrer at all. YouTube's embedded player
+  will not configure itself without one: every video in the app -- the
+  featured frame on Home, the Practices sessions, Alpha, an announcement's
+  video -- came up as "Video player configuration error. Error 153" over a
+  button offering to leave for the YouTube app. On the web build, served over
+  https, the same code played perfectly. Nothing in the app's own JavaScript
+  can fix that, because no referrer policy can invent an https referrer, and
+  iOS will not let a bundled app be served over https either: WKWebView
+  reserves that scheme and Capacitor cannot register a handler for it.
+
+  So the player is moved to a page that does have an https origin. The app
+  frames THIS file, served from the same GitHub Pages build the web version
+  runs on, and this file frames YouTube. The inner player sees a referrer of
+  https://<pages host>/home-church/embed.html, which is exactly what it sees
+  on the web build that has always worked, and it plays.
+
+  THIS FILE IS PUBLISHED, NOT BUNDLED. It has to answer over https from a
+  real host, so it lives at the repo root and reaches the phone through
+  GitHub Pages rather than through www/ and the App Store. Moving or renaming
+  it breaks video in every shipped copy of the app, because the URL is what
+  those copies hold. `home_embed_base` in app_settings is the escape hatch:
+  it names the folder this file sits in, and an app that cannot reach this
+  page falls back to framing YouTube directly, which is no worse than not
+  having this file at all.
+
+  WHAT IT ACCEPTS. `v` (one video id) or `list` (one playlist id), plus
+  `mute` and `start`. Both ids are checked against the same anchored patterns
+  js/app.js checks them against, and anything else draws nothing: this page is
+  framed by URL, so without that check it would be a way to put any page
+  anybody liked inside the church's app.
+
+  WHAT IT SAYS BACK. The parent gets {hc:'ready'} once, and {hc:'state'} with
+  the sound and the position whenever the player mentions them. It takes
+  {hc:'sound', on:true|false} and turns the sound on or off in place, which is
+  what the pill on Home does. Replies go to '*' on purpose: a document on a
+  custom scheme reports its origin as "null", so there is no origin to name,
+  and what is being said is which second of a public video is playing.
+
+  No dependencies, no build step, nothing loaded from anywhere. Same rules as
+  the rest of the project.
+  ===========================================================================
+-->
+<style>
+  html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+  iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+  /* Only ever seen if the link that got here was not a video. Deliberately
+     quiet: this page is inside somebody's app, and a loud error would be a
+     rectangle shouting at a congregation. */
+  p { position: absolute; inset: 0; display: flex; align-items: center;
+      justify-content: center; margin: 0; color: #8b8b8b; font: 13px -apple-system,
+      BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+</style>
+</head>
+<body>
+<script>
+(function () {
+  'use strict';
+
+  var YT = 'https://www.youtube.com';
+
+  /* Hand rolled rather than URLSearchParams, for the same reason the app is
+     written the way it is: this file has to keep working on whatever browser
+     is in front of it, and it has no build step to smooth anything over. */
+  function param(name) {
+    var m = new RegExp('[?&]' + name + '=([^&]*)').exec(window.location.search);
+    return m ? decodeURIComponent(m[1].replace(/\+/g, ' ')) : '';
+  }
+
+  var id = param('v');
+  var list = param('list');
+  var muted = param('mute') !== '0';
+  var start = parseInt(param('start'), 10);
+
+  /* The same two guards as js/app.js, and here for a stronger reason: this
+     page is addressed by URL from outside, so these are what stop it being a
+     frame that will show anything at all. "videoseries" is refused by name
+     because it is a real eleven character id and it is YouTube's playlist
+     path. */
+  var okId = /^[A-Za-z0-9_-]{11}$/.test(id) && id !== 'videoseries';
+  var okList = /^(PL|UU|OL|FL|RD)[A-Za-z0-9_-]{10,48}$/.test(list);
+
+  if (!okId && !okList) {
+    document.body.innerHTML = '<p>No video.</p>';
+    return;
+  }
+
+  var src = YT + '/embed/' + (okId ? id : 'videoseries') +
+    '?' + (okId ? '' : 'list=' + list + '&') +
+    'autoplay=1' +
+    '&mute=' + (muted ? '1' : '0') +
+    // Without this iOS takes the video full screen the instant it starts.
+    '&playsinline=1' +
+    '&rel=0&modestbranding=1' +
+    // The whole point of this page: here, enablejsapi is asked for from an
+    // origin YouTube can check, so it is granted rather than refused.
+    '&enablejsapi=1&origin=' + encodeURIComponent(window.location.origin) +
+    (start > 0 ? '&start=' + start : '');
+
+  var frame = document.createElement('iframe');
+  frame.setAttribute('allow',
+    'accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture');
+  frame.setAttribute('allowfullscreen', '');
+  frame.setAttribute('title', 'Video');
+  frame.src = src;
+  document.body.appendChild(frame);
+
+  /* ------------------------------------------------------- the two sides */
+
+  function toPlayer(func, args) {
+    try {
+      frame.contentWindow.postMessage(JSON.stringify({
+        event: 'command', func: func, args: args || []
+      }), YT);
+    } catch (err) { /* the frame is mid-navigation. The next tap still works. */ }
+  }
+
+  function toParent(msg) {
+    if (window.parent === window) return;
+    try {
+      window.parent.postMessage(msg, '*');
+    } catch (err) { /* nothing to be done about a parent that will not listen */ }
+  }
+
+  /* YouTube's player answers a page that has said it is listening and stays
+     silent until then. Same handshake js/featured-video.js used to run on the
+     web build, run here instead, where it is allowed to succeed. */
+  var ready = false;
+  var pokes = 0;
+  var poker = window.setInterval(function () {
+    pokes += 1;
+    if (ready || pokes > 20) { window.clearInterval(poker); return; }
+    try {
+      frame.contentWindow.postMessage(JSON.stringify({
+        event: 'listening', id: 'hc-embed', channel: 'widget'
+      }), YT);
+    } catch (err) { window.clearInterval(poker); }
+  }, 250);
+
+  window.addEventListener('message', function (evt) {
+    // From the player.
+    if (evt.source === frame.contentWindow) {
+      var data;
+      try { data = JSON.parse(evt.data); } catch (e) { return; }
+      if (!data) return;
+
+      if (!ready && (data.event === 'onReady' || data.event === 'initialDelivery' ||
+                     data.event === 'infoDelivery')) {
+        ready = true;
+        toParent({ hc: 'ready' });
+      }
+
+      var info = data.info || {};
+      if (typeof info.muted === 'boolean' || typeof info.currentTime === 'number') {
+        if (typeof info.muted === 'boolean') muted = info.muted;
+        toParent({
+          hc: 'state',
+          sound: !muted,
+          time: typeof info.currentTime === 'number' ? info.currentTime : 0
+        });
+      }
+      return;
+    }
+
+    // From the app. Only the parent gets to say anything, and only this.
+    if (evt.source !== window.parent) return;
+    var msg = evt.data;
+    if (!msg || msg.hc !== 'sound') return;
+
+    if (msg.on) {
+      toPlayer('unMute');
+      toPlayer('setVolume', [100]);
+    } else {
+      toPlayer('mute');
+    }
+    // A muted autoplay a browser refused is a player sitting still. The tap
+    // that asked for sound asks it to start, too.
+    toPlayer('playVideo');
+  });
+
+  // Said early as well as on the handshake, so a parent watching for this
+  // page to exist at all does not have to wait for YouTube to boot.
+  toParent({ hc: 'here' });
+}());
+</script>
+</body>
+</html>

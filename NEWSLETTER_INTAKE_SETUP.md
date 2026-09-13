@@ -304,6 +304,116 @@ after changing the prompt.
 
 ---
 
+## When the reader chokes on an email
+
+**The 11th of September is the one this section is named after.** The weekly
+newsletter arrived, the reader handed it to Gemini, and the answer came back
+cut off in the middle of the JSON — the model ran out of output budget before
+it closed the array. The parse threw, the intake wrote `status = 'failed'`,
+marked the email read, and moved on. The ledger then did exactly what it is for
+and skipped that email on every run afterwards. One newsletter, five
+announcements, silently gone, and the screen said *"Newsletter checked 3
+minutes ago"* in ordinary grey.
+
+Three things changed so that cannot happen again.
+
+**A truncated answer is now a retry, not a verdict.** Nothing returned,
+unfinished JSON, or no announcements array all mean "try again next tick"
+rather than "this email is unreadable". All three happen before anything is
+written, so a second attempt cannot duplicate anything — there is nothing yet
+to duplicate.
+
+**The retrying is bounded and recorded.** The ledger gained two states and a
+counter:
+
+| status | what it means |
+|---|---|
+| `parsing` | a run has claimed it and is working on it right now |
+| `deferred` | an attempt failed in a way worth retrying; the email is deliberately still unread |
+| `parsed` | drafts were written |
+| `empty` | read fine, nothing in it looked like an announcement |
+| `failed` | settled as unreadable, either outright or after the retries ran out |
+
+Four attempts, twenty minutes apart — about an hour of trying — and then the
+row settles as `failed` and the Admin screen says so. A model that truncates
+every single time costs four calls, not one every twenty minutes forever.
+
+`parsing` is also what stops the twenty minute tick and the **Fetch
+Announcements** button parsing the same newsletter twice. A claim is an insert
+or a compare-and-swap on the attempt count, so the second run finds the count
+already moved and steps aside. A claim whose run died goes stale after fifteen
+minutes and another run may take it.
+
+**Failures are no longer silent.** A run that could not read an email carries
+it in the run note, and the notice at the top of the Admin section draws any
+note on a successful run as a warning. Before this, a failed email was recorded
+only in `newsletter_emails`, which no screen in the app reads.
+
+The output ceiling that caused it went from 8,192 tokens to 32,768. It was
+never measured; it was the first number that worked.
+
+**To put a buried email back in front of the reader** — one an older version
+settled as failed — there is `hc_admin_retry_newsletter_email(message_id)`. It
+refuses an email that already produced drafts, and one older than the fortnight
+the mailbox search covers, because resetting either would promise a retry that
+cannot happen or write a second set of drafts over the first.
+
+Migration `0069_newsletter_retry.sql` is that half, and
+`tests/newsletter-retry.test.js` pins the claim rules down without a mailbox or
+a model.
+
+---
+
+## When an announcement has a date and the calendar does not
+
+**Baby Blessing Sign-Up 9/20** is the card this section is named after. It came
+through the reader on the 4th of September looking perfect — the words, the
+bullets, the sign-up button — and with nothing at all in the Cal tab behind it.
+The model had read the date correctly; it set the card to come down on the
+21st, which is the 20th plus one. It just declined to call it an event, because
+the rule it had been given said a sign-up and a link to a form are not events.
+It *is* a sign-up. What is being signed up for happens on a Sunday morning in
+September, and that Sunday morning is what somebody wanted in their phone.
+
+That failure is worth naming because of how it fails. A card with no date
+attached is not flagged anywhere. It does not appear in the dates queue, it
+does not look wrong on Home, and nobody finds out until they go looking for a
+date that was never written. So there are now two answers to it:
+
+- **The prompt says the opposite of what it used to.** A sign-up for a dated
+  thing is that dated thing, on the day the thing happens rather than the day
+  the sign-up closes. `event` is left out only when the email names no day at
+  all.
+- **And the code no longer depends on the model agreeing.** When no event comes
+  back, the reader works the day out of the announcement's own words: the date
+  printed in the title ("9/20", "September 20"), and failing that the retire
+  date minus one, since that field is *defined* as the day after the thing
+  happens. `eventDateFor` in the function is where this lives, and
+  `tests/newsletter-dates.test.js` is where it is pinned down.
+
+**The cost, so it is not a surprise.** A card whose only date is a deadline —
+sign-ups close on the 30th for something not yet scheduled — now proposes a
+date on the 30th. That is one row in **Dates to review** and one tap to
+discard. Nothing here publishes anything: every event the reader writes is
+unpublished and pending, exactly as before, and a person still approves it
+before it reaches anybody's calendar. An extra proposal is visible; a missing
+one is not.
+
+**For announcements already posted without their date**, the backfill pass
+picks them up, and it now uses the same three sources:
+
+```bash
+curl -X POST https://ibqkumxfltfiuqevviji.supabase.co/functions/v1/newsletter-intake \
+  -H "x-hc-cron-secret: <the secret>" -H "Content-Type: application/json" \
+  -d '{"backfill": true, "limit": 25}'
+```
+
+It only looks at announcements with no event yet, so it is safe to run more
+than once, and everything it finds lands in the dates queue rather than on the
+calendar.
+
+---
+
 ## When the calendar has one night in it twice
 
 The same three emails carry a date each, so the Cal tab ends up with

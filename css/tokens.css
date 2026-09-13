@@ -170,6 +170,23 @@
      towards whatever it is over, and a fixed arrow colour fails contrast on
      one side or the other. The halo is what keeps it legible on the one
      surface that can be any colour at all, a photograph. */
+  /* The highlight, and the hint that teaches it.
+
+     A MARKER BEHIND THE WORDS, NOT A LINE UNDER THEM. This was a gradient
+     filling the bottom 0.55em of the line, which is a real highlighter's
+     shape on paper and reads on a phone as an underline: at a glance the
+     words did not look kept, they looked linked. It is a block behind the
+     whole of them now.
+
+     The two values are a percentage of --hc-accent, so each theme gets the
+     one it can carry. Light lays 62% of taupe over paper and near black ink
+     sits on it at about 11:1. Dark cannot take that much: --hc-accent lifts
+     to #C4B5A2 there, and 62% of it under paper coloured text is a block you
+     read off rather than through, so it drops to 30% and the text holds
+     around 8:1. Whoever changes one of these has to check the other. */
+  --hc-hl-wash:  color-mix(in srgb, var(--hc-accent) 62%, transparent);
+  --hc-hl-noted: color-mix(in srgb, var(--hc-accent) 78%, transparent);
+
   --hc-gold:        #D7BA85;
   --hc-gold-ink:    #1A1918;
   --hc-gold-halo:   rgba(255,252,246,0.55);
@@ -237,6 +254,10 @@
   /* The disc in the dark. The gold deepens so it glows against charcoal
      instead of glaring, and the arrow inverts to paper for the same reason
      the light theme's is ink. */
+  /* See the note in :root. Much less of it here, for the reason given. */
+  --hc-hl-wash:  color-mix(in srgb, var(--hc-accent) 30%, transparent);
+  --hc-hl-noted: color-mix(in srgb, var(--hc-accent) 42%, transparent);
+
   --hc-gold:        #CBAC74;
   --hc-gold-ink:    #F4EFE6;
   --hc-gold-halo:   rgba(12,11,10,0.55);

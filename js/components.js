@@ -308,6 +308,123 @@
     return id ? 'https://i.ytimg.com/vi/' + id + '/hqdefault.jpg' : '';
   }
 
+  /* ------------------------------------------------------ what a video plays in
+
+     ERROR 153, WHICH IS THE WHOLE REASON THIS IS NOT ONE STRING IN ONE FILE.
+     The packaged app runs on `capacitor://localhost`. A document on a scheme
+     that is not http or https sends no referrer, by specification, and
+     YouTube's embedded player will not configure itself without one: it draws
+     "Video player configuration error. Error 153" over a button offering to
+     leave for the YouTube app. That was every YouTube video in this app on a
+     phone -- Home, Practices, Alpha, an announcement -- while the same code
+     served over https played perfectly. No referrer policy can invent an
+     https referrer, and iOS will not serve a bundled app over https either,
+     because WKWebView reserves that scheme and Capacitor cannot register a
+     handler for it. There is no way to fix it inside the page.
+
+     So the player moves to a page that does have an https origin. embed.html
+     at the repo root is published by the same GitHub Pages build the web
+     version runs on, and it frames YouTube from there; the app frames it. See
+     the header of that file.
+
+     WHICH OF THE TWO IS USED IS A QUESTION ABOUT THE ORIGIN, not about the
+     phone. An app already on http or https has nothing to solve and keeps
+     framing YouTube directly, which is the path that has always worked and
+     the one a browser test here exercises. Anything else -- capacitor://,
+     file:// -- goes through the wrapper.
+
+     WHERE THE WRAPPER LIVES IS DATA, because a shipped app cannot be told a
+     new URL without a submission. `home_embed_base` in app_settings names the
+     folder, the constant below is the floor under it, and index.html's
+     frame-src has to name the host either way. A wrapper that cannot be
+     reached is not fatal: the caller falls back to framing YouTube directly,
+     which is exactly where this started.
+     ---------------------------------------------------------------------- */
+
+  var EMBED_BASE = 'https://pgrooves.github.io/home-church';
+
+  function embedBase() {
+    var base = EMBED_BASE;
+    if (HC.data && HC.data.setting) base = HC.data.setting('home_embed_base', EMBED_BASE);
+    base = String(base || '').trim()
+      /* Angle brackets first, because a URL reaches this row by being pasted,
+         and half the places a person copies one from wrap it: <https://...>
+         is what a chat client, a mail client and a markdown editor all hand
+         over. The app would refuse the whole value and fall back, so video
+         would go on working in a browser and go on failing on phones, which
+         is the hardest version of this to notice. Nobody who pasted a link
+         meant the brackets. */
+      .replace(/^<+/, '').replace(/>+$/, '')
+      .trim()
+      .replace(/\/+$/, '');
+    // https only. A wrapper on http would be a mixed content frame, and a
+    // wrapper on anything else has the problem it exists to solve.
+    return /^https:\/\/[^\s"'<>]+$/.test(base) ? base : EMBED_BASE;
+  }
+
+  function ownOrigin() {
+    var loc = window.location;
+    if (!loc || (loc.protocol !== 'https:' && loc.protocol !== 'http:')) return '';
+    return loc.origin || '';
+  }
+
+  /* One URL for every YouTube player in the app. opts:
+
+       id     one video, eleven characters of base64url
+       list   one playlist, instead of id
+       sound  true for a tap that means "play this", false for the muted
+              autoplay on Home
+       start  seconds in, for a frame being rebuilt where the last one was
+       direct true to skip the wrapper and frame YouTube itself, which is what
+              a caller falls back to when the wrapper never answered
+
+     Answers '' for anything that is not one of the two shapes, so a caller
+     can treat an empty string as "there is nothing to play here". */
+  function youtubeEmbedUrl(opts) {
+    opts = opts || {};
+    var id = String(opts.id || '');
+    var list = String(opts.list || '');
+
+    var okId = /^[A-Za-z0-9_-]{11}$/.test(id) && id !== 'videoseries';
+    var okList = /^(PL|UU|OL|FL|RD)[A-Za-z0-9_-]{10,48}$/.test(list);
+    if (!okId && !okList) return '';
+
+    var start = parseInt(opts.start, 10);
+    var origin = ownOrigin();
+
+    if (!origin && !opts.direct) {
+      return embedBase() + '/embed.html' +
+        '?' + (okId ? 'v=' + id : 'list=' + list) +
+        '&mute=' + (opts.sound ? '0' : '1') +
+        (start > 0 ? '&start=' + start : '');
+    }
+
+    return 'https://www.youtube.com/embed/' + (okId ? id : 'videoseries') +
+      '?' + (okId ? '' : 'list=' + list + '&') +
+      'autoplay=1' +
+      '&mute=' + (opts.sound ? '0' : '1') +
+      // Not a preference on iOS. Without it the video goes full screen the
+      // instant it starts.
+      '&playsinline=1' +
+      '&rel=0&modestbranding=1' +
+      // Only where there is an origin to hand over with it. See above: this
+      // pair is what a capacitor:// origin cannot have.
+      (origin ? '&enablejsapi=1&origin=' + encodeURIComponent(origin) : '') +
+      (start > 0 ? '&start=' + start : '');
+  }
+
+  // The origin of whatever youtubeEmbedUrl() just built, for a caller that
+  // has to postMessage at it.
+  function embedOrigin() {
+    return ownOrigin() ? 'https://www.youtube.com' : embedBase().replace(/^(https:\/\/[^/]+).*$/, '$1');
+  }
+
+  // True when the URL above went through embed.html rather than straight to
+  // YouTube, which decides which conversation a caller is in.
+  function embedIsWrapped() {
+    return !ownOrigin();
+  }
+
   /* ----------------------------------------------------------------- icons
      Thin line icons, 1.5 stroke, rounded caps, drawn on a 24 grid.
      ---------------------------------------------------------------------- */
@@ -326,6 +443,15 @@
     share: '<path d="M12 15V4M8.5 7.5 12 4l3.5 3.5"/><path d="M5 13v6a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-6"/>',
     pin: '<path d="M12 21s7-5.5 7-11a7 7 0 1 0-14 0c0 5.5 7 11 7 11z"/><circle cx="12" cy="10" r="2.6"/>',
     arrowOut: '<path d="M14 4h6v6"/><path d="M20 4 10 14"/><path d="M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/>',
+
+    /* THE SAME ARROW THE BACK DISC DRAWS, both ways round. The shaft and the
+       head are lifted line for line from the disc in js/app.js rather than
+       redrawn, because the one place these are used is the journal pill that
+       floats between the two discs: an arrow beside an arrow either matches
+       exactly or looks like a mistake. Whoever changes the disc's arrow has
+       to change these with it. */
+    arrowRight: '<path d="M5 12h14"/><path d="m12.5 5.5 6.5 6.5-6.5 6.5"/>',
+    arrowLeft:  '<path d="M19 12H5"/><path d="m11.5 5.5-6.5 6.5 6.5 6.5"/>',
     book: '<path d="M4 5.5A1.5 1.5 0 0 1 5.5 4H11v16H5.5A1.5 1.5 0 0 1 4 18.5z"/><path d="M20 5.5A1.5 1.5 0 0 0 18.5 4H13v16h5.5a1.5 1.5 0 0 0 1.5-1.5z"/>',
     plus: '<path d="M12 5v14M5 12h14"/>',
 
@@ -361,6 +487,18 @@
             '<path d="M6.4 8.1A17 17 0 0 0 2 12s3.8 6.4 10 6.4a10 10 0 0 0 3.6-.7"/>',
     lock: '<rect x="4.5" y="10.5" width="15" height="9.5" rx="2.2"/>' +
           '<path d="M8 10.5V8a4 4 0 0 1 8 0v2.5"/>',
+
+    /* The pill on the featured video at the top of Home, both states.
+
+       One speaker, drawn as a cone rather than a box with a triangle on it,
+       and the difference between the two glyphs is the two waves coming off
+       it: on, and struck through. Same construction as `eye` and `eyeOff`
+       above, and for the same reason: the pair has to be one glyph telling
+       you which way it is set, not two unrelated drawings swapping places. */
+    sound: '<path d="M11 5.5 6.5 9H3.8a.8.8 0 0 0-.8.8v4.4a.8.8 0 0 0 .8.8h2.7L11 18.5z"/>' +
+           '<path d="M15.2 9.2a4 4 0 0 1 0 5.6M18 6.4a8 8 0 0 1 0 11.2"/>',
+    soundOff: '<path d="M11 5.5 6.5 9H3.8a.8.8 0 0 0-.8.8v4.4a.8.8 0 0 0 .8.8h2.7L11 18.5z"/>' +
+              '<path d="m16 10 5 4M21 10l-5 4"/>',
 
     /* Admin. A shield with a check in it: what the church trusted somebody
        with, rather than a cog, which would read as settings, and this is not
@@ -423,6 +561,23 @@
           '<path d="M10.2 19.4a2 2 0 0 0 3.6 0"/>',
     leaf: '<path d="M20 4C10 4 4 9 4 16v4"/><path d="M20 4c0 9-5 13-11 13H4"/>',
     download: '<path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/>',
+
+    /* The corner of an announcement card on Home, where the x used to be.
+
+       A LID AND A BOX, which is the one archive glyph nobody has to be taught.
+       It was an x, and an x on a card means the card is gone: there is a list
+       to go to now, so the corner has to say "this is being put somewhere"
+       rather than "this is being thrown away". A downward arrow into a tray
+       was the other candidate and it collides with `download` directly above,
+       which already means "this is coming to your phone".
+
+       The lid is a separate rounded rect rather than part of the outline so
+       the two shapes stay readable when the glyph is drawn at the 16px the
+       card's corner uses. The short rule across the middle is the handle, and
+       it is what stops the box reading as an empty window at that size. */
+    archive: '<rect x="3" y="4" width="18" height="4.6" rx="1.5"/>' +
+             '<path d="M5.2 8.6v9.9A1.5 1.5 0 0 0 6.7 20h10.6a1.5 1.5 0 0 0 1.5-1.5V8.6"/>' +
+             '<path d="M10 12.2h4"/>',
 
     /* FILLED, not stroked, which breaks the rule every other icon here
        follows. A play triangle drawn as a 1.5 stroke outline at 16px is
@@ -939,10 +1094,17 @@
     var chevron = opts.chevron ? icon('chevronRight', 'hc-row__chevron') : '';
     var sub = opts.sub ? '<p class="hc-caption">' + esc(opts.sub) + '</p>' : '';
     var titleCls = opts.serif ? 'hc-row__title' : 'hc-row__label';
+    /* A row with no title is a row that is all subtitle, the way Home's
+       giving row is one verse and nothing else. Leave the span out rather
+       than drawing an empty one, so nothing is left to wonder about in the
+       markup. */
+    var title = opts.title
+      ? '<span class="' + titleCls + '">' + esc(opts.title) + '</span>'
+      : '';
     return '' +
       '<' + tag + ' ' + attrs.join(' ') + '>' +
         '<span class="hc-row__body">' +
-          '<span class="' + titleCls + '">' + esc(opts.title) + '</span>' +
+          title +
           sub +
         '</span>' +
         value + chevron +
@@ -1174,6 +1336,10 @@
     urlHost: urlHost,
     youtubeId: youtubeId,
     youtubeThumb: youtubeThumb,
+    youtubeEmbedUrl: youtubeEmbedUrl,
+    embedIsWrapped: embedIsWrapped,
+    embedOrigin: embedOrigin,
+    embedBase: embedBase,
 
     sectionHeader: sectionHeader,
     quoteCard: quoteCard,

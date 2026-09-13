@@ -128,13 +128,22 @@
       body += prose(guide, 'shortSummary.' + i, p);
     });
     body += '</div>';
+    /* EVERY SECTION IS FOLDED ON ARRIVAL, INCLUDING THIS ONE. Overview used
+       to be the exception, opened so that a guide never landed as a page of
+       nothing but headings. The exception is gone: a guide now opens as its
+       own table of contents, every part shut, and the first thing anybody
+       does is choose where to start.
+
+       What it costs is the one paragraph that used to be readable without a
+       tap. What it buys is that the six sections read as six equal parts of a
+       guide rather than as one page with five appendices, and that the fold
+       is discovered on the way in rather than found later. */
     return c.collapsible({
       id: 'short-summary',
       eyebrow: 'Short Summary',
       title: 'Overview',
       body: body,
-      audio: audioFor(guide, 'short-summary'),
-      open: true    // the only section open by default
+      audio: audioFor(guide, 'short-summary')
     });
   }
 

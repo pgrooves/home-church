@@ -102,7 +102,7 @@
           '<label class="hc-field">' +
             '<span class="hc-field__label">The code</span>' +
             '<input class="hc-input" type="text" inputmode="numeric" autocomplete="one-time-code" ' +
-              'name="code" placeholder="6 digit code">' +
+              'name="code" placeholder="8 digit code">' +
           '</label>' +
           c.button('Verify and sign in', { action: 'auth-verify' }) +
         '</form>' +
@@ -255,13 +255,13 @@
     html += accountSection();
     html += identitySection(p);
 
-    html += c.row({
-      title: HC.data.church.address.line1,
-      sub: HC.data.church.address.city + ', ' + HC.data.church.address.state,
-      action: 'open-url',
-      url: HC.data.church.mapsUrl,
-      chevron: true
-    });
+    /* The church's street address used to sit here, directly under Your
+       information, which read as though it were part of somebody's own
+       details rather than the church's. Where we meet, and how to get
+       directions to it, is what When and where is for, and Home carries the
+       same address with the service times beside it. Two places to open the
+       map is enough; a third under a form about your own name was one too
+       many. */
 
     // Notifications
     html += c.sectionHeader('When we reach out', 'Notifications');
@@ -376,6 +376,18 @@
       action: 'toggle-theme',
       on: isDark
     }) + '</div>';
+
+    /* One switch for every hint there will ever be, rather than one per hint.
+       Somebody who does not want to be shown things does not want to say so
+       nine times, and js/hints.js asks this before anything else so nothing
+       can route around it. Not editable, like the other switches on this
+       screen: the church does not get to reword what its own settings do. */
+    html += switchRow({
+      title: 'Hints',
+      sub: 'Quiet pointers to what is easy to miss',
+      action: 'toggle-hints',
+      on: p.hints !== false
+    });
 
     /* THERE IS NO LEADER MODE ON THIS SCREEN, and there should not be one
        again. Somebody is a member, a leader or an admin, an admin sets which

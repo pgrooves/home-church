@@ -38,6 +38,95 @@
   letter-spacing: -0.01em;
 }
 
+/* ------------------------------------------------------ the featured video
+
+   The frame between the greeting and Announcements. It carries no heading, no
+   eyebrow and no caption, so the only thing that separates it from the two
+   blocks around it is air, and it gets the same lg gap the greeting already
+   puts under itself. See js/featured-video.js. */
+
+.hc-featured {
+  position: relative;
+  margin-bottom: var(--hc-space-lg);
+}
+
+.hc-featured__frame {
+  position: relative;
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: var(--hc-radius-lg);
+  overflow: hidden;
+  /* The same cream every other piece of missing art in the app shows while
+     it loads, so a slow embed is a warm rectangle rather than a black one. */
+  background: var(--hc-cream);
+}
+
+/* A Short, filmed on a phone held upright. Capped the way the carousel's tall
+   slides are, for the same reason: one video should not take the whole screen
+   and push Sunday off the bottom of it. */
+.hc-featured--tall .hc-featured__frame {
+  aspect-ratio: 9 / 16;
+  max-height: 62vh;
+}
+
+.hc-featured__player {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+/* Top right, which is the one corner of a YouTube embed with nothing of its
+   own in it: the controls run along the bottom and the title sits top left. */
+.hc-featured__sound {
+  position: absolute;
+  top: var(--hc-space-md);
+  right: var(--hc-space-md);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: var(--hc-radius-pill);
+  /* Its own ink rather than a token, both appearances. This sits on a
+     photograph rather than on the page, so it has to hold against whatever
+     the video is showing rather than against the paper behind it. */
+  background: rgba(17, 17, 17, 0.62);
+  -webkit-backdrop-filter: blur(8px) saturate(120%);
+  backdrop-filter: blur(8px) saturate(120%);
+  color: #FFFCF7;
+  font-family: var(--hc-sans);
+  font-size: calc(13px * var(--hc-text-scale));
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  line-height: 1;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* The 44pt target the rest of the app keeps, without a 44px pill sitting on
+   the video. The button is 36 high and the finger's half of it reaches past
+   the edges, which is what ::before is for everywhere else in this app. */
+.hc-featured__sound::before {
+  content: '';
+  position: absolute;
+  inset: -4px;
+}
+
+.hc-featured__sound:active { opacity: 0.85; }
+
+.hc-featured__soundicon {
+  width: 17px;
+  height: 17px;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
 .hc-gathering__when { margin-top: 6px; }
 
 .hc-gathering__times {
@@ -733,6 +822,98 @@
 .hc-give__note {
   margin-top: var(--hc-space-md);
   text-align: center;
+}
+
+/* ==========================================================================
+   When & Where
+
+   NO CARDS ON THIS SCREEN, AND THAT IS THE DESIGN. The two facts on it are a
+   time and an address, which is two labelled lines in one column of prose,
+   not two objects. A cream box around each would spend a border, a fill and a
+   radius saying "these are separate things to look at" about a page whose
+   whole job is to be read straight down and left. The eyebrow over each block
+   and the hairline above it do the work, which is the move the section header
+   at the top of the screen already makes twice.
+   ========================================================================== */
+
+.hc-ww__lede {
+  margin-top: var(--hc-space-lg);
+  font-size: calc(19px * var(--hc-text-scale));
+  line-height: 1.55;
+}
+
+/* Bold on the website, bold here. It is the line the paragraph above it is
+   building to, and the one somebody who reads nothing else should read. */
+.hc-ww__welcome {
+  margin-top: var(--hc-space-base);
+  font-weight: 700;
+}
+
+.hc-ww__block {
+  display: block;
+  margin-top: var(--hc-space-xl);
+  padding-top: var(--hc-space-lg);
+  border-top: var(--hc-hairline) solid var(--hc-rule);
+}
+
+.hc-ww__when,
+.hc-ww__where { margin-top: 6px; }
+
+/* Laid out exactly like the times on Home's gathering card, down to the
+   hairline between them, because they are the same three times: a person who
+   has seen one and then the other should not have to check that they agree. */
+.hc-ww__times {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--hc-space-sm) var(--hc-space-base);
+  margin-top: var(--hc-space-md);
+  list-style: none;
+}
+
+.hc-ww__time {
+  color: var(--hc-ink);
+  font-family: var(--hc-sans);
+  font-weight: 600;
+  font-size: calc(var(--hc-body-sans) * var(--hc-text-scale));
+  font-variant-numeric: tabular-nums;
+}
+
+.hc-ww__time + .hc-ww__time {
+  padding-left: var(--hc-space-base);
+  border-left: var(--hc-hairline) solid var(--hc-rule);
+}
+
+.hc-ww__town { margin-top: var(--hc-space-xs); color: var(--hc-mid); }
+.hc-ww__action { margin-top: var(--hc-space-lg); }
+
+/* Three photographs off the church's own Instagram, arranged the way the
+   website arranges them: one tall on the left, one wide above a smaller one on
+   the right. Explicit rows rather than aspect-ratio on the frames, so three
+   pictures of three different shapes cannot push the grid around between one
+   sync and the next. */
+.hc-ww__photos {
+  margin-top: var(--hc-space-xxl);
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: repeat(3, 72px);
+  gap: var(--hc-space-sm);
+}
+
+.hc-ww__frame {
+  overflow: hidden;
+  border-radius: var(--hc-radius-sm);
+  background: var(--hc-paper-sunk);
+}
+
+.hc-ww__frame--1 { grid-column: 1; grid-row: 2 / span 2; }
+.hc-ww__frame--2 { grid-column: 2; grid-row: 1 / span 2; }
+.hc-ww__frame--3 { grid-column: 2; grid-row: 3; }
+
+.hc-ww__photo {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 /* ==========================================================================
@@ -2654,6 +2835,78 @@
   stroke-linejoin: round;
   fill: none;
 }
+
+/* --------------------------------------------------------------------------
+   The announcement archive
+
+   Where the archive box in the corner of a card on Home puts it, and the way
+   back out. See js/screens/announcement-archive.js.
+
+   Nothing here is a new visual language. The rows are the same .hc-banner card
+   Home draws, the tick box is the one a guide's coverage boxes use, and both
+   links are the .hc-inline-link Connect and the Add to calendar row already
+   carry. What this section adds is only the spacing around them, and the one
+   rule that makes an archived card read as put away rather than as news.
+   -------------------------------------------------------------------------- */
+
+/* The line under the last announcement on Home. In brackets, in the caption
+   size, sitting under the list rather than in it: it is a footnote to the
+   announcements above and not a sixth thing on the front door. Underlined
+   because it is the only place on Home where a run of plain-looking words is
+   a destination, and nothing else in that column is. */
+.hc-home__archive-line {
+  margin-top: var(--hc-space-md);
+}
+
+.hc-archive-link {
+  min-height: auto;
+  padding: var(--hc-space-sm) 0;
+  font-weight: 500;
+  color: var(--hc-mid);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.hc-archive-link:active { opacity: 0.7; }
+
+/* What archiving is, said once under the heading. The one thing somebody
+   opening this screen might reasonably fear is that they have done something
+   to the church's announcements rather than to their own copy of them. */
+.hc-archive__blurb {
+  margin-top: var(--hc-space-sm);
+  color: var(--hc-mid);
+}
+
+/* Above the top row, and hidden by the `hidden` attribute until something is
+   ticked. Not removed from the markup: a tick has to show this line without
+   rebuilding the list under the thumb that is ticking. */
+.hc-archive__restore-line {
+  margin-top: var(--hc-space-lg);
+  padding-bottom: var(--hc-space-sm);
+  border-bottom: var(--hc-hairline) solid var(--hc-rule);
+}
+
+.hc-archive__restore {
+  min-height: var(--hc-tap-min);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.hc-archive__restore:active { opacity: 0.7; }
+
+.hc-archive__list { margin-top: var(--hc-space-base); }
+
+/* An archived card, which is the same card with its voice down. The accent
+   rule down its left edge is what makes an announcement on Home read as
+   something the church is saying today, and a list of things somebody has
+   already put away should not say that twelve times over. The rule stays,
+   because it is the shape of the card, and it goes grey. */
+.hc-banner--archived {
+  border-left-color: var(--hc-rule);
+  background: var(--hc-paper-sunk);
+}
+
+.hc-banner--archived .hc-banner__cue { color: var(--hc-mid); }
 
 /* The looping band of film at the head of a practice page. Sized like a wide
    strip rather than a 16:9 block, because it is a header and not something

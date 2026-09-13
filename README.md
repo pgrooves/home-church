@@ -286,8 +286,9 @@ settles it.
 
 The fourth tile in the bar, between Guide and Connect: a month you can walk
 through, the day you tapped underneath it, and the church's upcoming events
-under that. It swapped places with Group, which is behind the ••• menu now,
-next to Worship, in the slot Cal used to hold.
+under that. It swapped places with Group, which is behind the ••• menu now, at
+the front of it on the seasons the church is running rooms and not drawn at all
+on the seasons it is not — see **Group mode** below.
 
 **It is where the events from the Connect tab went.** They were the fourth
 section of Connect, below the group finder and the serve teams, which is a
@@ -477,6 +478,52 @@ button must not disappear because somebody tidied that list.
 
 -----
 
+## When & Where
+
+**The fourth stop behind •••, and the one a person who has never been here
+opens first.** It is the church's Sunday Gatherings block from
+homechurchnola.com brought into the app: the two paragraphs, then the service
+times, then the address, then three photographs off the church's own Instagram.
+The tile says *When & Where*, because that is what somebody looks for in a
+menu; the screen's own header says *Sunday Gatherings*, because that is what the
+church calls it.
+
+**Nothing on it is typed into a source file.** The times, the day, the street,
+the town and the map link are `church_profile.service_day`, `service_times`,
+`address_*` and `maps_url` — the same row Home's gathering card reads. That is
+the whole argument for the page being here rather than a link out to the
+website: the Sunday a service moves, both screens move with it and nobody ships
+a build. The two paragraphs are a `content_pages` row, `page-when-where`,
+written from **Admin → Content** or rewritten in place from Edit mode, and the
+words that ship in `js/screens/whenwhere.js` are what a phone with no signal
+draws.
+
+**Get directions is the one thing the page it came from cannot do.** A website
+can print an address; a phone can open it, in Apple Maps on iOS and the web map
+everywhere else. No `maps_url` on file means no button rather than a button that
+opens nothing.
+
+**The photographs are the newest three Instagram posts**, already mirrored into
+the `instagram` bucket by the sync job for the rail on Connect, so there is no
+second place to keep three pictures up to date. They are decoration here rather
+than a rail: no captions, no taps, nothing to open, because Connect is where
+those posts are content. **Three or none** — two in a grid built for three is a
+hole, and a page that ends on the address is a perfectly good page, which is
+also what a project with no Instagram sync draws.
+
+**Two things are deliberately not the website.** The site sets this section in
+white on near-black; this app has one paper and one dark theme and they follow
+the phone, so the page wears whichever the reader is already in. And **Home
+keeps its gathering card** — same times, same Directions button, still on the
+first screen. This is the fuller answer for somebody who went looking, not a
+replacement for the one on the way past.
+
+See `js/screens/whenwhere.js`, the `When & Where` block in `css/screens.css`,
+`supabase/migrations/0065_when_where_page.sql`, `tests/when-where.test.js`, and
+`demo-when-where/`, which is the drawing it was decided from.
+
+-----
+
 ## Publishing content without an App Store build
 
 Guides, events, podcast episodes, and future content types have a home in
@@ -498,7 +545,7 @@ See "The admin dashboard" below. **`events` is the fourth and it is a different
 shape**: it still has no write policy for any client role, and an admin reaches
 it only through the named functions in `0042_event_admin_writes.sql`, which are
 what the + , the pencil and the x on the Cal tab call. Six columns, checked
-inside, and nothing else on the table can be touched from a phone. Eight slash
+inside, and nothing else on the table can be touched from a phone. Nine slash
 commands drive the rest:
 
 | Command | Does |
@@ -509,6 +556,7 @@ commands drive the rest:
 | `/new-worship` | Sunday's songs to `worship_sets`, with their art, their links and their lyrics |
 | `/new-announcement` | The announcement card on Home, dated so it retires itself |
 | `/new-image` | A series' artwork to `series.art_url`, which is the tile on Listen, Guide and Home |
+| `/new-video` | A YouTube link to `app_settings.home_featured_video`, the frame under the greeting on Home |
 | `/edit-content` | Plain language fix to any row, current versus proposed, writes after you confirm |
 | `/new-content-type` | Scaffolds another content type, table and command |
 
@@ -576,7 +624,7 @@ Three sections.
 |---|---|
 | **Announcements** | Write, edit, delete the cards on Home. Title, the words in a rich text editor with bold, italic, underline, lists, hyperlinks and the scripture button, as many pictures as it needs, a YouTube link that plays inside the app, a link with a thumbnail, and the dates it goes up and comes down. Posting can send a push notification to everybody, and can pin the announcement as a banner. |
 | **Users** | Everybody who has signed in, with their name, email and role. Promote to admin, demote to member, remove an account entirely. |
-| **App settings** | The switch for **Edit mode**, below, and then the switches and short messages that change the whole app, drawn as real toggles and text fields rather than as JSON. Ships with a pinned Home banner and its message, and a default for whether posting an announcement offers to notify. |
+| **App settings** | The switch for **Edit mode**, below, and then the switches and short messages that change the whole app, drawn as real toggles and text fields rather than as JSON. Ships with a pinned Home banner and its message, a default for whether posting an announcement offers to notify, and the **featured video**, below. |
 
 **Content is hidden.** There was a fourth section, a form over `content_pages`
 holding one paragraph on Give, and Edit mode does that job in the place the
@@ -679,6 +727,115 @@ The migrations are `0025_admin_role.sql`, `0026_admin_content.sql`,
 `0033_announcement_media.sql`, `0043_admin_review_push.sql` and
 `0045_announcement_authors.sql`, each with the full reasoning in its header.
 
+### The featured video on Home
+
+**One video, between the greeting and Announcements, playing on mute the moment
+the app opens.** No heading over it, no caption under it, nothing but the frame:
+the pill in its top right corner is the only text in the block, and one tap on
+it turns the sound on. The whole feature is one row in `app_settings`,
+`home_featured_video`, holding a YouTube link in any shape somebody arrives
+with — a share link, a watch link, a Short, a bare id — so changing the video is
+changing one text box. `/new-video <link>` writes it; so does **App settings →
+Featured video** on an admin's own phone. **Emptying the box is how it comes off
+Home**, and the gap closes as though the block had never been there.
+
+Muted is not a preference, it is the only autoplay a phone will honor, and it is
+also the only one that is polite in a room with other people in it. What the
+pill does about that depends on what the player is willing to hear: when
+YouTube's embedded player has answered the handshake, the sound simply comes on
+mid-sentence; when it has not, the frame is rebuilt with the sound on and
+`start` set to where the video had got to. One of the two always works, which is
+the whole reason both are there.
+
+### Error 153, and the page that fixed it
+
+**On a phone, every YouTube player in this app was an error message.** Not only
+Home's featured frame: the Practices sessions, the Alpha video, an
+announcement's video, all of them, all at once — *Video player configuration
+error. Error 153*, over a button offering to leave for the YouTube app. The web
+build played every one of them perfectly, which is what made it hard to see.
+
+The cause is the origin. A packaged Capacitor app does not run on https, it
+runs on `capacitor://localhost`, and the Referrer Policy spec says a document
+on a scheme that is not http or https sends no referrer at all. YouTube's
+embedded player will not configure itself without one. **Nothing in the app's
+own JavaScript can fix that** — no referrer policy can invent an https
+referrer, and iOS will not serve a bundled app over https either, because
+WKWebView reserves that scheme and Capacitor cannot register a handler for it.
+
+So the player moved to a page that has an https origin: **`embed.html`, at the
+repo root, published by the same GitHub Pages build the web version runs on.**
+The app frames that page and that page frames YouTube, which then sees the same
+referrer it has always seen on the web. It takes a video id or a playlist id,
+checks both against the same anchored patterns `js/app.js` checks them against,
+and relays one message so the sound pill still turns the sound on in place.
+
+`c.youtubeEmbedUrl()` is the one call every player in the app now goes through,
+and it picks by asking what origin the app is on rather than what device it is:
+already on https, frame YouTube directly, unchanged; anything else, frame the
+wrapper. `home_embed_base` in `app_settings` names the folder the wrapper is
+published in, so it can move without a submission — within `frame-src`, which
+ships with the app and today names GitHub Pages and this project's Supabase. A
+wrapper that never answers is not fatal either: after eight seconds the app
+frames YouTube directly, which is error 153 again on a phone and an honest
+error rather than a black rectangle.
+
+**Two things must stay true, or video goes quiet in every installed copy at
+once**: `embed.html` stays at the repo root, and GitHub Pages keeps serving the
+default branch. Both are already true of how this project is published; neither
+is obvious from inside the app, which is why they are written down here and in
+the header of that file.
+
+This is the first iframe on Home, and migration `0026` says out loud that an
+announcement's YouTube link is drawn as a link out rather than embedded, for
+exactly the reason worth weighing here. The trade is different because the ask
+is: a featured video that opens the YouTube app is not a featured video, it is a
+way out of this one. It is one frame, on one screen, from a link an admin typed,
+under the same `frame-src` the Practices and Alpha players have always had. See
+`js/featured-video.js`, `supabase/migrations/0063_home_featured_video.sql` and
+`tests/featured-video.test.js`.
+
+### Group mode, the switch that adds and removes a tab
+
+**The Group tab ships off, and one switch brings it back for the whole church
+at once.** It is at **Settings → Admin → App settings**, under *The Group tab*,
+directly below Edit mode. `app_settings.group_mode_on` is the whole feature:
+off, and there is no Group anywhere in the app — no tile in the ••• sheet, no
+stop on the sideways swipe, no row on the More screen, no result in search, and
+the route itself draws a short "not right now" rather than a room. On, and
+everything is exactly as it was. It reaches phones that are already open: the
+sheet redraws with one fewer tile on the next content refresh rather than
+waiting for a cold start.
+
+**The switch is on the screen whether or not the row exists.** Every other row
+under *Switches and messages* is a list of what happens to be in `app_settings`,
+seeded by a migration. This one is the app saying "here is a thing you can turn
+on", drawn by name, and **the first tap is what creates the row** — an upsert
+carrying the same label and help text the migration seeds, so a church that
+flips the switch and a church that runs the SQL end up in the same place.
+Nobody at a church should have to run SQL to find a switch the app told them
+about. `supabase/migrations/0064_group_mode.sql` is therefore a convenience
+rather than a prerequisite: run it and the row is there, explicitly off, from
+day one.
+
+**Hiding is a filter, not a hole.** The tiles under Group move up a slot, so
+the row behind ••• reads Journal, Worship, When & Where, Practices, Alpha,
+Give, then Admin on the phones that have it, then Settings. With group mode on
+it is the same row with Group at the front of it.
+
+**Nothing is deleted when it goes off.** Every room, every answer and every
+prayer request stays in its table untouched; this is a switch over what the app
+draws, not a teardown, so a season later it comes back exactly as it was left.
+It is also not the same question as who may *host* a room, which is still
+`can_host` per person under **Manage users** — see migration `0036`. This one
+decides whether the room exists at all; that one decides who can open one.
+
+The fallback is `false` everywhere it is read, which is what a phone that has
+never reached Supabase assumes. That is deliberate: a tile leading to a room
+nobody can join is the worse of the two mistakes. See
+`supabase/migrations/0064_group_mode.sql`, `visibleModules()` in `js/app.js`,
+and `tests/group-mode.test.js`.
+
 ### An announcement's own page
 
 **A card on Home opens the announcement it summarises.** The card carries the
@@ -719,6 +876,42 @@ link in this app goes through. Markup somebody typed is sanitized against the
 allowlist in `js/richtext.js` twice, once when it is saved and once before it
 reaches the page, and only four schemes survive: `http`, `https`, `mailto` and
 `tel`.
+
+### The announcement archive
+
+**The corner of a card on Home is an archive box, and there is a list behind
+it.** It was an x: one tap, no confirm, and the card was off that phone for
+good, with the only way back a **Put it back** button on the Admin screen that
+members cannot reach. A thumb catching it while scrolling lost an announcement
+silently. The tap now files the card rather than ending it, and the line
+**(Announcement Archive)** under the last announcement on Home is where it
+files it to.
+
+That line is drawn whenever this phone has archived anything, including the
+week every live card has been archived and there is nothing above it. That is
+the week somebody needs the way back most, and hanging the link off the
+presence of a card would be the week it disappeared.
+
+**The archive restores in bulk.** Every row carries a tick box in the same
+corner the archive box is in on Home, and **Restore selected announcements**
+appears above the top row the moment anything is ticked. It is one write to
+`localStorage` and one repaint for a selection of any size, not one per card,
+which is what `unarchiveAll()` in `js/store.js` exists for. Rows are still
+doors: tapping one opens that announcement's own page.
+
+Two things are deliberately not filtered out of the list. **An announcement
+that has run out of dates stays in it**, and its row says *Came down on
+October 5* instead of pretending otherwise, because archiving is a fact about
+the phone and the date window is a fact about the church. **An archived id
+whose announcement the church has since deleted draws nothing**, because a row
+nobody can restore to anywhere is worse than no row.
+
+**It is only this phone.** Archiving writes to `localStorage` and reaches no
+server; everybody else still has the card, the church cannot see what anybody
+has archived, and **Delete everything** in Your account empties the archive
+with the rest. The screen says so under its own heading. Nothing about it is a
+migration. See `js/screens/announcement-archive.js`,
+`tests/announcement-archive.test.js` and `tests/e2e/announcement-archive.js`.
 
 ### Edit mode
 

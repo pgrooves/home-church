@@ -1,0 +1,651 @@
+<title>Home Church, When &amp; Where</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@200..800&family=Poppins:wght@600;800&display=swap">
+
+<style>
+/* ==========================================================================
+   When & Where — mockup
+
+   A standalone drawing of the proposed page, made to be looked at before
+   anything in js/ or css/ is touched. Nothing here is wired into the app.
+
+   Two token sets live in this page and they must never mix. The bench around
+   the phone is this document's own; everything inside .phone is lifted from
+   css/tokens.css unedited and carried on [data-hc], so the page cannot move
+   the phone and the phone cannot move the page. Same bargain the other demo-
+   folders make, and the same reason.
+
+   EVERY VALUE ON THE SCREEN IS A COLUMN. The times, the street, the town and
+   the map link are church_profile.service_times, address_line1, address_city
+   / state / zip and maps_url — the row Home already reads for its gathering
+   card. Nothing on this page is typed into a source file, so the Sunday a
+   service moves, this page moves with it.
+   ========================================================================== */
+
+/* --- the bench, this page's own palette ---------------------------------- */
+:root {
+  --bench:      #E9E4DA;
+  --panel:      #F4EFE7;
+  --bench-ink:  #23201D;
+  --bench-mid:  #6B645C;
+  --bench-rule: #D2C9B9;
+  --bench-line: #BFB4A0;
+  --bench-live: #7A5F2A;
+  color-scheme: light;
+}
+
+/* The bench is a drawing board and stays one in either host theme. Only the
+   phone has a dark mode, because only the phone ships. */
+:root:not([data-theme="light"]) { }
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bench);
+  color: var(--bench-ink);
+  font-family: "Manrope", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-size: 15px;
+  line-height: 1.55;
+  padding: 32px 20px 64px;
+}
+
+.wrap { max-width: 1080px; margin: 0 auto; }
+
+.masthead { max-width: 62ch; }
+.masthead__eyebrow {
+  font-size: 11px; font-weight: 700; letter-spacing: 0.14em;
+  text-transform: uppercase; color: var(--bench-live); margin: 0;
+}
+.masthead__title {
+  font-family: "Poppins", -apple-system, BlinkMacSystemFont, sans-serif;
+  font-weight: 800; font-size: clamp(28px, 5vw, 38px); line-height: 1.12;
+  letter-spacing: -0.02em; margin: 10px 0 0; text-wrap: balance;
+}
+.masthead__sub { margin: 12px 0 0; color: var(--bench-mid); }
+
+.rule { border: 0; border-top: 1px solid var(--bench-rule); margin: 28px 0; }
+
+.bench {
+  display: grid;
+  grid-template-columns: minmax(0, 390px) minmax(0, 1fr);
+  gap: 40px;
+  align-items: start;
+}
+@media (max-width: 880px) {
+  .bench { grid-template-columns: minmax(0, 1fr); justify-items: center; }
+}
+
+.left { display: flex; flex-direction: column; align-items: center; gap: 16px; width: 100%; }
+
+/* --- the controls --------------------------------------------------------- */
+.controls { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+.controls button {
+  font: inherit; font-size: 13px; font-weight: 600;
+  padding: 8px 14px; min-height: 40px;
+  border-radius: 999px; cursor: pointer;
+  border: 1px solid var(--bench-line);
+  background: transparent; color: var(--bench-ink);
+}
+.controls button[aria-pressed="true"] {
+  background: var(--bench-ink); color: var(--panel); border-color: var(--bench-ink);
+}
+.controls button:focus-visible { outline: 2px solid var(--bench-live); outline-offset: 2px; }
+
+/* --- the phone ------------------------------------------------------------ */
+.stage {
+  width: 390px;
+  max-width: 100%;
+  border-radius: 42px;
+  padding: 10px;
+  background: linear-gradient(170deg, #56504A, #23211E);
+  box-shadow: 0 30px 60px rgba(0,0,0,0.26), 0 2px 0 rgba(255,255,255,0.14) inset;
+}
+
+.phone {
+  position: relative;
+  height: 748px;
+  border-radius: 33px;
+  overflow: hidden;
+  background: var(--hc-paper);
+  color: var(--hc-ink);
+  font-family: var(--hc-serif);
+  display: flex;
+  flex-direction: column;
+}
+
+/* ---- the shipped tokens, unedited from css/tokens.css -------------------- */
+.stage[data-hc] {
+  --hc-paper:#F7F4EF; --hc-paper-sunk:#EFEAE2; --hc-cream:#EDE8DF;
+  --hc-ink:#111111; --hc-dark:#1A1918; --hc-mid:#6D6864; --hc-rule:#C8C0B0;
+  --hc-accent:#B5A898; --hc-accent-deep:#71675A; --hc-on-dark:#F7F4EF;
+  --hc-serif:"Manrope",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  --hc-sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  --hc-sans-display:"Poppins",-apple-system,BlinkMacSystemFont,sans-serif;
+  --hc-eyebrow:11px; --hc-eyebrow-line:14px;
+  --hc-display-m:23px;
+  --hc-body-serif:16px; --hc-body-sans:16px;
+  --hc-caption:13px; --hc-button:16px; --hc-button-line:20px; --hc-tab:11px;
+  --hc-track-eyebrow:0.12em; --hc-track-button:0.02em;
+  --hc-text-scale:1;
+  --hc-space-xs:4px; --hc-space-sm:8px; --hc-space-md:12px; --hc-space-base:16px;
+  --hc-space-lg:24px; --hc-space-xl:32px;
+  --hc-screen-pad:20px; --hc-card-pad:20px; --hc-card-gap:12px; --hc-section-top:40px;
+  --hc-radius-sm:8px; --hc-radius-md:10px; --hc-radius-lg:12px; --hc-radius-pill:999px;
+  --hc-hairline:0.5px; --hc-edge-rule:1.5px;
+  --hc-header-h:52px; --hc-tabbar-h:56px; --hc-tap-min:44px;
+  --hc-tabbar-inset:12px; --hc-tabbar-pad:6px;
+  --hc-tabbar-skin:linear-gradient(178deg, rgba(255,253,250,0.94), rgba(238,233,225,0.92));
+  --hc-tabbar-edge:rgba(122,110,95,0.28);
+  --hc-tabbar-shadow:0 14px 34px rgba(26,25,24,0.18), 0 2px 8px rgba(26,25,24,0.08),
+                     inset 0 1px 0 rgba(255,255,255,0.70), inset 0 -1px 0 rgba(26,25,24,0.05);
+  --hc-tabbar-tile:linear-gradient(180deg, rgba(255,255,255,0.96), rgba(247,244,239,0.86));
+  --hc-tabbar-tile-edge:rgba(122,110,95,0.18);
+}
+.stage[data-hc="dark"] {
+  --hc-paper:#1A1918; --hc-paper-sunk:#201E1D; --hc-cream:#232120;
+  --hc-ink:#F2EEE7; --hc-dark:#F2EEE7; --hc-mid:#9A938A; --hc-rule:#3A3633;
+  --hc-accent:#C4B5A2; --hc-accent-deep:#CFC1AE; --hc-on-dark:#1A1918;
+  --hc-tabbar-skin:linear-gradient(178deg, rgba(58,54,51,0.88), rgba(26,25,24,0.86));
+  --hc-tabbar-edge:rgba(196,181,162,0.20);
+  --hc-tabbar-shadow:0 16px 36px rgba(0,0,0,0.52), inset 0 1px 0 rgba(242,238,231,0.10),
+                     inset 0 -1px 0 rgba(0,0,0,0.30);
+  --hc-tabbar-tile:linear-gradient(180deg, rgba(247,244,239,0.15), rgba(247,244,239,0.055));
+  --hc-tabbar-tile-edge:rgba(207,193,174,0.30);
+}
+
+/* ---- app chrome ---------------------------------------------------------- */
+.hc-bar {
+  flex: 0 0 auto;
+  height: var(--hc-header-h);
+  display: flex; align-items: center; justify-content: space-between;
+  gap: var(--hc-space-md);
+  padding: 0 var(--hc-screen-pad);
+  background: var(--hc-paper);
+  position: relative; z-index: 3;
+}
+.hc-bar__mark {
+  font-family: var(--hc-sans-display); font-weight: 800;
+  font-size: 12px; letter-spacing: 0.16em; text-transform: uppercase;
+  color: var(--hc-ink);
+}
+.hc-bar__disc {
+  width: 30px; height: 30px; border-radius: 999px;
+  background: var(--hc-cream); border: var(--hc-hairline) solid var(--hc-rule);
+  display: grid; place-items: center;
+  font-family: var(--hc-sans); font-size: 11px; font-weight: 700; letter-spacing: 0.04em;
+  color: var(--hc-accent-deep);
+}
+
+.hc-scroll {
+  flex: 1 1 auto;
+  overflow: hidden;
+  padding: var(--hc-space-lg) var(--hc-screen-pad) 0;
+}
+
+/* ---- type, from css/base.css --------------------------------------------- */
+.hc-eyebrow {
+  font-family: var(--hc-sans); font-weight: 600;
+  font-size: var(--hc-eyebrow); line-height: var(--hc-eyebrow-line);
+  letter-spacing: var(--hc-track-eyebrow); text-transform: uppercase;
+  color: var(--hc-accent-deep);
+  margin: 0;
+}
+.hc-eyebrow--ornament { color: var(--hc-accent); }
+.hc-display-m {
+  font-family: var(--hc-serif); font-weight: 500;
+  font-size: calc(var(--hc-display-m) * var(--hc-text-scale));
+  line-height: 1.155; letter-spacing: -0.015em; color: var(--hc-ink);
+  margin: 0;
+}
+.hc-body-serif {
+  font-family: var(--hc-serif); font-weight: 400;
+  font-size: calc(var(--hc-body-serif) * var(--hc-text-scale));
+  line-height: 1.53; color: var(--hc-ink); margin: 0;
+}
+.hc-body-sans {
+  font-family: var(--hc-sans); font-weight: 400;
+  font-size: calc(var(--hc-body-sans) * var(--hc-text-scale));
+  line-height: 1.5; color: var(--hc-ink); margin: 0;
+}
+.hc-caption {
+  font-family: var(--hc-sans); font-weight: 400;
+  font-size: var(--hc-caption); line-height: 1.38; color: var(--hc-mid);
+  margin: 0;
+}
+
+/* ---- section header ------------------------------------------------------ */
+.hc-section-header { margin-top: 0; }
+.hc-section-header__title {
+  margin: 8px 0 0;
+  font-family: var(--hc-sans-display); font-weight: 800;
+  font-size: calc(25px * var(--hc-text-scale));
+  line-height: 1.2; letter-spacing: -0.01em; color: var(--hc-ink);
+}
+.hc-section-header__rule {
+  margin: 12px 0 0; width: 22%; min-width: 56px; height: 0.75px;
+  background: var(--hc-accent); border: 0;
+}
+.hc-section-header + * { margin-top: var(--hc-space-base); }
+
+/* ---- cards --------------------------------------------------------------- */
+.hc-card {
+  background: var(--hc-cream);
+  border-radius: var(--hc-radius-lg);
+  padding: var(--hc-card-pad);
+  color: var(--hc-ink);
+}
+.hc-card--edge {
+  border-left: var(--hc-edge-rule) solid var(--hc-accent);
+  border-top-left-radius: 4px; border-bottom-left-radius: 4px;
+}
+.hc-card--quiet { background: transparent; border: var(--hc-hairline) solid var(--hc-rule); }
+.hc-card + .hc-card { margin-top: var(--hc-card-gap); }
+.hc-card__title {
+  font-family: var(--hc-serif); font-weight: 500;
+  font-size: calc(22px * var(--hc-text-scale));
+  line-height: 1.2; letter-spacing: -0.015em; color: var(--hc-ink);
+  margin: 0;
+}
+
+/* ---- the page itself ------------------------------------------------------
+   No cards. The website sets this as one column of prose with two labelled
+   facts in it, and a cream box around each fact would turn two sentences into
+   two objects to look at. The eyebrow and the taupe hairline do the work a
+   card would have done, which is what the section header already does two
+   inches above. */
+.ww__intro { margin-top: var(--hc-space-base); }
+.ww__welcome { margin-top: var(--hc-space-md); font-weight: 700; }
+
+.ww__block {
+  margin-top: var(--hc-space-xl);
+  padding-top: var(--hc-space-lg);
+  border-top: var(--hc-hairline) solid var(--hc-rule);
+}
+.ww__when, .ww__where { margin-top: 10px; }
+
+.ww__times {
+  list-style: none; margin: 10px 0 0; padding: 0;
+  display: flex; flex-wrap: wrap; gap: 6px 10px;
+}
+.ww__time {
+  font-family: var(--hc-sans); font-weight: 600;
+  font-size: calc(var(--hc-body-sans) * var(--hc-text-scale));
+  line-height: 1.5;
+  font-variant-numeric: tabular-nums;
+  color: var(--hc-ink);
+}
+.ww__time + .ww__time { padding-left: 11px; position: relative; }
+.ww__time + .ww__time::before {
+  content: ""; position: absolute; left: 0; top: 0.35em; bottom: 0.35em;
+  width: var(--hc-hairline); background: var(--hc-rule);
+}
+.ww__address { margin-top: 4px; color: var(--hc-mid); }
+.ww__action { margin-top: var(--hc-space-base); }
+
+/* Three photographs, the way the website stacks them. Empty frames here
+   because the pictures live in Supabase Storage, not in this drawing. */
+.ww__collage {
+  margin-top: var(--hc-space-xl);
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: repeat(3, 44px);
+  gap: 8px;
+}
+.ww__frame {
+  border-radius: 6px;
+  background:
+    repeating-linear-gradient(135deg,
+      var(--hc-paper-sunk) 0 8px,
+      var(--hc-cream) 8px 16px);
+  border: var(--hc-hairline) solid var(--hc-rule);
+}
+.ww__frame--tall { grid-column: 1; grid-row: 2 / span 2; }
+.ww__frame--wide { grid-column: 2; grid-row: 1 / span 2; }
+.ww__frame--kids { grid-column: 2; grid-row: 3; }
+
+.hc-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  gap: var(--hc-space-sm);
+  width: 100%; min-height: 52px; padding: 0 var(--hc-space-lg);
+  border: 0; border-radius: var(--hc-radius-md);
+  font-family: var(--hc-sans); font-weight: 600;
+  font-size: var(--hc-button); line-height: var(--hc-button-line);
+  letter-spacing: var(--hc-track-button);
+  cursor: pointer;
+}
+.hc-btn--secondary {
+  background: transparent; border: 1px solid var(--hc-rule); color: var(--hc-ink);
+}
+.hc-btn svg { width: 20px; height: 20px; fill: none; stroke: currentColor;
+  stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+
+/* ---- the tab bar --------------------------------------------------------- */
+.hc-tabbar {
+  flex: 0 0 auto;
+  margin: 0 var(--hc-tabbar-inset) var(--hc-tabbar-inset);
+  padding: var(--hc-tabbar-pad);
+  border-radius: 26px;
+  background: var(--hc-tabbar-skin);
+  border: var(--hc-hairline) solid var(--hc-tabbar-edge);
+  box-shadow: var(--hc-tabbar-shadow);
+  display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 2px;
+}
+.hc-tab {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 3px; min-height: var(--hc-tabbar-h);
+  border: var(--hc-hairline) solid transparent; border-radius: 20px;
+  background: transparent; color: var(--hc-mid);
+  font-family: var(--hc-sans); font-size: var(--hc-tab); font-weight: 600;
+  letter-spacing: 0.02em;
+}
+.hc-tab[aria-current="page"] {
+  background: var(--hc-tabbar-tile);
+  border-color: var(--hc-tabbar-tile-edge);
+  color: var(--hc-ink);
+}
+.hc-tab svg { width: 22px; height: 22px; fill: none; stroke: currentColor;
+  stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+.hc-tab svg circle[fill="currentColor"] { fill: currentColor; stroke: none; }
+
+/* --- the annotation column ------------------------------------------------ */
+.notes { display: flex; flex-direction: column; gap: 22px; max-width: 62ch; }
+
+.note { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 14px; }
+.note__tag {
+  font-size: 10px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--bench-live);
+  border: 1px solid var(--bench-line); border-radius: 999px;
+  padding: 4px 10px; height: fit-content; white-space: nowrap;
+}
+.note__body h3 {
+  font-family: "Poppins", sans-serif; font-weight: 600;
+  font-size: 16px; letter-spacing: -0.01em; margin: 0 0 4px;
+}
+.note__body p { margin: 0 0 8px; color: var(--bench-mid); }
+.note__body p:last-child { margin-bottom: 0; }
+.note__body code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.88em; color: var(--bench-ink);
+  background: var(--panel); border: 1px solid var(--bench-rule);
+  border-radius: 4px; padding: 1px 5px;
+}
+
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--bench-rule);
+  border-radius: 12px;
+  padding: 20px 22px;
+}
+.panel h3 {
+  font-family: "Poppins", sans-serif; font-weight: 600; font-size: 15px;
+  letter-spacing: 0.02em; margin: 0 0 10px;
+}
+.panel ol, .panel ul { margin: 0; padding-left: 20px; color: var(--bench-mid); }
+.panel li { margin-bottom: 6px; }
+.panel li:last-child { margin-bottom: 0; }
+.panel strong { color: var(--bench-ink); }
+
+.slots { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.slots li {
+  display: grid; grid-template-columns: 26px minmax(0, 1fr); gap: 10px;
+  align-items: baseline; color: var(--bench-mid);
+}
+.slots b {
+  font-variant-numeric: tabular-nums; color: var(--bench-ink);
+  font-size: 12px; font-weight: 700;
+}
+.slots em { font-style: normal; color: var(--bench-ink); font-weight: 600; }
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation: none !important; transition: none !important; }
+}
+</style>
+
+<div class="wrap">
+
+  <header class="masthead">
+    <p class="masthead__eyebrow">Built — this is the drawing it was decided from</p>
+    <h1 class="masthead__title">When &amp; Where</h1>
+    <p class="masthead__sub">
+      The Sunday Gatherings block from homechurchnola.com, brought over as a
+      fourth stop behind •••. Same words, same two labelled facts, set in the
+      app's own type instead of the website's.
+    </p>
+  </header>
+
+  <hr class="rule">
+
+  <div class="bench">
+    <div class="left">
+      <div class="controls">
+        <button type="button" id="theme-light" aria-pressed="true">Light</button>
+        <button type="button" id="theme-dark" aria-pressed="false">Dark</button>
+      </div>
+
+      <div class="stage" id="stage" data-hc="light">
+        <div class="phone">
+
+          <div class="hc-bar">
+            <span class="hc-bar__mark">Home Church</span>
+            <span class="hc-bar__disc">TG</span>
+          </div>
+
+          <div class="hc-scroll">
+
+            <div class="hc-section-header">
+              <p class="hc-eyebrow">When &amp; Where</p>
+              <h1 class="hc-section-header__title">Sunday Gatherings</h1>
+              <hr class="hc-section-header__rule">
+            </div>
+
+            <p class="hc-body-serif ww__intro">
+              Sunday gatherings are at the heart of our community — where we come
+              together to worship, learn from Scripture, pray for one another,
+              and make room to hear from the Spirit. It’s a time to praise,
+              connect, and grow in a space that feels like home.
+            </p>
+
+            <p class="hc-body-serif ww__welcome">Everyone is welcome. Everyone is family.</p>
+
+            <div class="ww__block">
+              <p class="hc-eyebrow">Service times</p>
+              <p class="hc-display-m ww__when">Every Sunday</p>
+              <ul class="ww__times">
+                <li class="ww__time">8:00 AM</li>
+                <li class="ww__time">9:30 AM</li>
+                <li class="ww__time">11:00 AM</li>
+              </ul>
+            </div>
+
+            <div class="ww__block">
+              <p class="hc-eyebrow">Location</p>
+              <p class="hc-display-m ww__where">216 Giuffrias Ave.</p>
+              <p class="hc-body-sans ww__address">Metairie, LA 70001</p>
+              <div class="ww__action">
+                <button type="button" class="hc-btn hc-btn--secondary">
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M12 21s7-5.5 7-11a7 7 0 1 0-14 0c0 5.5 7 11 7 11z"></path>
+                    <circle cx="12" cy="10" r="2.6"></circle>
+                  </svg>
+                  Get directions
+                </button>
+              </div>
+            </div>
+
+            <div class="ww__collage" aria-hidden="true">
+              <div class="ww__frame ww__frame--tall"></div>
+              <div class="ww__frame ww__frame--wide"></div>
+              <div class="ww__frame ww__frame--kids"></div>
+            </div>
+
+          </div>
+
+          <nav class="hc-tabbar" aria-label="Main">
+            <span class="hc-tab">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10.2 12 3l9 7.2V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"></path></svg>
+              Home
+            </span>
+            <span class="hc-tab">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15.5" rx="3"></rect><path d="M3.5 9.6h17"></path><path d="M8 3.2v3.4M16 3.2v3.4"></path><circle cx="12" cy="14.8" r="1.3" fill="currentColor"></circle></svg>
+              Cal
+            </span>
+            <span class="hc-tab">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3.2"></circle><path d="M3 20c0-3.2 2.7-5.2 6-5.2s6 2 6 5.2"></path><path d="M16 5.4a3.2 3.2 0 0 1 0 6.2M18 14.6c2 .7 3 2.5 3 5"></path></svg>
+              Connect
+            </span>
+            <span class="hc-tab">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 15v-3a8 8 0 0 1 16 0v3"></path><path d="M4 14h2a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2H5a1 1 0 0 1-1-1z"></path><path d="M20 14h-2a2 2 0 0 0-2 2v2a2 2 0 0 0 2 2h1a1 1 0 0 0 1-1z"></path></svg>
+              Listen
+            </span>
+            <span class="hc-tab">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4.5A1.5 1.5 0 0 1 5.5 3H19v15H5.5A1.5 1.5 0 0 0 4 19.5z"></path><path d="M4 19.5A1.5 1.5 0 0 1 5.5 18H19v3H5.5A1.5 1.5 0 0 1 4 19.5z"></path><path d="M8 8h7M8 11.5h5"></path></svg>
+              Guide
+            </span>
+            <span class="hc-tab" aria-current="page">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.5" fill="currentColor"></circle><circle cx="12" cy="12" r="1.5" fill="currentColor"></circle><circle cx="19" cy="12" r="1.5" fill="currentColor"></circle></svg>
+              More
+            </span>
+          </nav>
+
+        </div>
+      </div>
+    </div>
+
+    <div class="notes">
+
+      <div class="note">
+        <span class="note__tag">The header</span>
+        <div class="note__body">
+          <h3>Sunday Gatherings, under a When &amp; Where eyebrow</h3>
+          <p>
+            The website's own heading, kept. The tile behind ••• still says
+            <em>When &amp; Where</em>, because that is what somebody is looking
+            for in a menu, and the eyebrow over the title is where the two
+            names meet — the same move every section header in the app makes.
+          </p>
+        </div>
+      </div>
+
+      <div class="note">
+        <span class="note__tag">The paragraph</span>
+        <div class="note__body">
+          <p>
+            Both sentences are the church's, lifted from the site word for
+            word, and both are editable slots: turn on Edit mode and tap them.
+            <em>Everyone is welcome. Everyone is family.</em> is bold on the
+            site and stays bold here, because it is the line doing the work.
+          </p>
+        </div>
+      </div>
+
+      <div class="note">
+        <span class="note__tag">Service times</span>
+        <div class="note__body">
+          <h3>Every Sunday, then the three times</h3>
+          <p>
+            <code>service_day</code> and <code>service_times</code>, the columns
+            Home's gathering card already reads. The site writes them on one
+            line as “8AM 9:30AM &amp; 11AM”; here they are three separated
+            items, so a fourth service is a row in Supabase and nothing else,
+            and the numbers line up in tabular figures.
+          </p>
+        </div>
+      </div>
+
+      <div class="note">
+        <span class="note__tag">Location</span>
+        <div class="note__body">
+          <h3>The address, and the one thing the app can do that the site can't</h3>
+          <p>
+            <code>address_line1</code> over town / state / zip, then
+            <code>maps_url</code> behind <em>Get directions</em> — Apple Maps on
+            a phone, the web map everywhere else. Secondary rather than
+            primary: it is the only button on the screen and a filled black bar
+            would shout over the address it sits under.
+          </p>
+        </div>
+      </div>
+
+      <div class="note">
+        <span class="note__tag">The photographs</span>
+        <div class="note__body">
+          <h3>The newest three off Instagram</h3>
+          <p>
+            The site closes with three photographs — a baptism, the room with
+            hands up, the kids' class. The arrangement is the site's, and what
+            shipped fills it with the three most recent Instagram posts, already
+            mirrored into Storage by the sync job that feeds the rail on
+            Connect. So there is no second place to keep three pictures current.
+            <strong>Three or none:</strong> two in a grid built for three is a
+            hole, and a page that ends on the address is a perfectly good page.
+          </p>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h3>Where it sits</h3>
+        <ul class="slots">
+          <li><b>1</b><span><em>Group</em> — hidden unless group mode is on</span></li>
+          <li><b>2</b><span><em>Journal</em></span></li>
+          <li><b>3</b><span><em>Worship</em></span></li>
+          <li><b>4</b><span><em>When &amp; Where</em> — this page, pin icon</span></li>
+          <li><b>5</b><span><em>Practices</em></span></li>
+          <li><b>6</b><span><em>Alpha</em></span></li>
+          <li><b>7</b><span><em>Give</em></span></li>
+          <li><b>8</b><span><em>Admin</em> — admins only</span></li>
+          <li><b>9</b><span><em>Settings</em></span></li>
+        </ul>
+      </div>
+
+      <div class="panel">
+        <h3>What was decided</h3>
+        <ol>
+          <li>
+            <strong>The photographs are in</strong>, and they are the Instagram
+            ones rather than three uploaded files: a photograph frozen into a
+            page is two years old by the time anybody notices.
+          </li>
+          <li>
+            <strong>Not white on black.</strong> The site sets this section in
+            white on near-black. The app has one paper and one dark theme and
+            they follow the phone, so this page wears whichever the reader is
+            already in. Inverting one screen inside the app would read as a
+            mistake rather than as the website.
+          </li>
+          <li>
+            <strong>Nothing is typed in.</strong> Times and address come from
+            <code>church_profile</code>, the row Home already reads, so the
+            Sunday a service moves this page moves with it. The two paragraphs
+            are Edit-mode slots.
+          </li>
+          <li>
+            <strong>Home keeps its gathering card.</strong> Same times, same
+            Directions button, still on the first screen. This is the fuller
+            answer behind •••, not a replacement for it.
+          </li>
+        </ol>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  var stage = document.getElementById('stage');
+  var light = document.getElementById('theme-light');
+  var dark = document.getElementById('theme-dark');
+
+  function set(theme) {
+    stage.setAttribute('data-hc', theme);
+    light.setAttribute('aria-pressed', theme === 'light' ? 'true' : 'false');
+    dark.setAttribute('aria-pressed', theme === 'dark' ? 'true' : 'false');
+  }
+
+  light.addEventListener('click', function () { set('light'); });
+  dark.addEventListener('click', function () { set('dark'); });
+}());
+</script>

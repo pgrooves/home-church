@@ -152,7 +152,14 @@ create index if not exists journal_entries_user_guide
 -- ---------------------------------------------------------------------------
 
 create or replace function public.hc_journal_touch()
-returns trigger language plpgsql as $$
+returns trigger
+language plpgsql
+-- Pinned, same as every other function in this project, for the reason 0011
+-- and 0012 both spell out. This one is SECURITY INVOKER so the exposure is
+-- smaller than a definer function's, but an unpinned search_path is a habit
+-- rather than a calculation, and the habit is to pin.
+set search_path = public
+as $$
 begin
   if new.updated_at is null then new.updated_at = now(); end if;
   if new.created_at is null then new.created_at = now(); end if;

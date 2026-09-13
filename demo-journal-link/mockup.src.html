@@ -1,0 +1,1320 @@
+<title>The Journal Link Studies</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@200..800&family=Poppins:wght@800&display=swap">
+
+<style>
+/* ==========================================================================
+   The journal link studies
+   Seven ways to draw one line of small gold type between the two discs.
+
+   Two token sets live in this page and they must never mix. The chrome
+   around the phone is this document's own; everything inside .phone is
+   lifted unedited from css/tokens.css and carried on [data-hc] so the page
+   cannot move the phone and the phone cannot move the page. Same bargain
+   demo-guide-hint/ makes, and the same reason.
+   ========================================================================== */
+
+/* --- the bench, this page's own palette ---------------------------------- */
+:root {
+  --bench:      #E9E4DA;
+  --panel:      #F4EFE7;
+  --bench-ink:  #23201D;
+  --bench-mid:  #6B645C;
+  --bench-rule: #D2C9B9;
+  --bench-line: #BFB4A0;
+  --bench-gold: #8A6A22;
+  --bench-live: #7A5F2A;
+  --bench-warn: #8C3B1E;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bench:      #161514;
+    --panel:      #201E1C;
+    --bench-ink:  #EDE7DD;
+    --bench-mid:  #9A938A;
+    --bench-rule: #34302B;
+    --bench-line: #4A443C;
+    --bench-gold: #D7BA85;
+    --bench-live: #E2C89A;
+    --bench-warn: #E0906E;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bench:      #161514;
+  --panel:      #201E1C;
+  --bench-ink:  #EDE7DD;
+  --bench-mid:  #9A938A;
+  --bench-rule: #34302B;
+  --bench-line: #4A443C;
+  --bench-gold: #D7BA85;
+  --bench-live: #E2C89A;
+  --bench-warn: #E0906E;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bench);
+  color: var(--bench-ink);
+  font-family: "Manrope", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+.wrap {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding-block: 28px 64px;
+  padding-inline: 20px;
+}
+
+/* --- masthead ------------------------------------------------------------- */
+.mast { border-bottom: 1px solid var(--bench-rule); padding-bottom: 18px; }
+.mast__eyebrow {
+  font-size: 11px; font-weight: 700; letter-spacing: 0.14em;
+  text-transform: uppercase; color: var(--bench-gold); margin: 0;
+}
+.mast__h {
+  font-family: "Poppins", -apple-system, BlinkMacSystemFont, sans-serif;
+  font-weight: 800; font-size: clamp(26px, 4.4vw, 40px); line-height: 1.08;
+  letter-spacing: -0.02em; margin: 8px 0 0; text-wrap: balance;
+}
+.mast__sub {
+  margin: 12px 0 0; max-width: 62ch; font-size: 15px; color: var(--bench-mid);
+}
+.mast__sub b { color: var(--bench-ink); font-weight: 600; }
+
+/* --- the bench ------------------------------------------------------------ */
+.bench {
+  margin-top: 26px;
+  display: grid;
+  grid-template-columns: minmax(0, 410px) minmax(0, 1fr);
+  gap: 30px;
+  align-items: start;
+}
+@media (max-width: 880px) {
+  .bench { grid-template-columns: minmax(0, 1fr); }
+}
+.left { display: flex; flex-direction: column; align-items: center; gap: 14px; }
+
+/* --- the phone ------------------------------------------------------------ */
+.stage {
+  width: 390px;
+  max-width: 100%;
+  border-radius: 42px;
+  padding: 10px;
+  background: linear-gradient(170deg, #56504A, #23211E);
+  box-shadow: 0 30px 60px rgba(0,0,0,0.30), 0 2px 0 rgba(255,255,255,0.14) inset;
+  transition: width 220ms cubic-bezier(0.4,0,0.2,1);
+}
+.stage[data-size="se"]  { width: 320px; }
+.stage[data-size="max"] { width: 430px; }
+
+.phone {
+  position: relative;
+  height: 720px;
+  border-radius: 33px;
+  overflow: hidden;
+  background: var(--hc-paper);
+  color: var(--hc-ink);
+  font-family: var(--hc-serif);
+  display: flex;
+  flex-direction: column;
+}
+
+/* ---- the shipped tokens, unedited from css/tokens.css -------------------- */
+.stage[data-hc] {
+  --hc-paper:#F7F4EF; --hc-paper-sunk:#EFEAE2; --hc-cream:#EDE8DF;
+  --hc-ink:#111111; --hc-dark:#1A1918; --hc-mid:#6D6864; --hc-rule:#C8C0B0;
+  --hc-accent:#B5A898; --hc-accent-deep:#71675A; --hc-on-dark:#F7F4EF;
+  --hc-serif:"Manrope",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  --hc-sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  --hc-sans-display:"Poppins",-apple-system,BlinkMacSystemFont,sans-serif;
+  --hc-eyebrow:11px; --hc-eyebrow-line:14px;
+  --hc-body-serif:16px; --hc-body-serif-line:25px;
+  --hc-caption:13px; --hc-caption-line:18px;
+  --hc-track-eyebrow:0.12em;
+  --hc-text-scale:1;
+  --hc-space-xs:4px; --hc-space-sm:8px; --hc-space-md:12px; --hc-space-base:16px;
+  --hc-space-lg:24px; --hc-space-xl:32px;
+  --hc-screen-pad:20px;
+  --hc-radius-sm:8px; --hc-radius-md:10px; --hc-radius-lg:12px; --hc-radius-pill:999px;
+  --hc-hairline:0.5px; --hc-edge-rule:1.5px;
+  --hc-ease:cubic-bezier(0.4,0,0.2,1); --hc-ease-enter:cubic-bezier(0,0,0.2,1);
+  --hc-dur-fast:200ms; --hc-dur-base:300ms;
+  --hc-header-h:52px; --hc-tabbar-h:56px; --hc-tap-min:44px;
+  --hc-tabbar-inset:12px; --hc-tabbar-pad:6px;
+  --hc-tabbar-space:calc(var(--hc-tabbar-h) + (var(--hc-tabbar-pad) * 2) + (var(--hc-tabbar-inset) * 2));
+  --hc-tabbar-skin:linear-gradient(178deg, rgba(255,253,250,0.94), rgba(238,233,225,0.92));
+  --hc-tabbar-edge:rgba(122,110,95,0.28);
+  --hc-tabbar-shadow:0 14px 34px rgba(26,25,24,0.18), 0 2px 8px rgba(26,25,24,0.08),
+                     inset 0 1px 0 rgba(255,255,255,0.70), inset 0 -1px 0 rgba(26,25,24,0.05);
+  --hc-tabbar-tile:linear-gradient(180deg, rgba(255,255,255,0.96), rgba(247,244,239,0.86));
+  --hc-tabbar-tile-edge:rgba(122,110,95,0.18);
+  --hc-tabbar-sheen:linear-gradient(112deg, rgba(255,255,255,0.22) 0%, rgba(255,255,255,0.06) 30%, rgba(255,255,255,0) 60%);
+
+  --hc-gold:        #D7BA85;
+  --hc-gold-ink:    #1A1918;
+  --hc-gold-halo:   rgba(255,252,246,0.55);
+  --hc-gold-skin:      linear-gradient(178deg, rgba(233,208,158,0.86), rgba(206,177,122,0.82));
+  --hc-gold-skin-lens: linear-gradient(178deg, rgba(233,208,158,0.34), rgba(206,177,122,0.28));
+  --hc-gold-edge:      rgba(122,96,48,0.34);
+  --hc-gold-shadow:    0 10px 24px rgba(26,25,24,0.16),
+                       0 2px 6px rgba(26,25,24,0.08),
+                       inset 0 1px 0 rgba(255,255,255,0.40),
+                       inset 0 -1px 0 rgba(26,25,24,0.07);
+  --hc-gold-sheen:     linear-gradient(112deg,
+                         rgba(255,255,255,0.30) 0%,
+                         rgba(255,255,255,0.09) 26%,
+                         rgba(255,255,255,0) 54%);
+  --hc-hl-wash:  color-mix(in srgb, var(--hc-accent) 62%, transparent);
+
+  /* NOT A SHIPPING TOKEN YET. The gold the type is set in, which is the whole
+     argument of this page: --hc-gold is a colour for a gold *shape*, and the
+     same value as ink on paper measures 2.7:1. See the panel on the right. */
+  --link-ink: #8A6A22;
+}
+.stage[data-hc="dark"] {
+  --hc-paper:#1A1918; --hc-paper-sunk:#201E1D; --hc-cream:#232120;
+  --hc-ink:#F2EEE7; --hc-dark:#F2EEE7; --hc-mid:#9A938A; --hc-rule:#3A3633;
+  --hc-accent:#C4B5A2; --hc-accent-deep:#CFC1AE; --hc-on-dark:#1A1918;
+  --hc-tabbar-skin:linear-gradient(178deg, rgba(58,54,51,0.88), rgba(26,25,24,0.86));
+  --hc-tabbar-edge:rgba(196,181,162,0.20);
+  --hc-tabbar-shadow:0 16px 36px rgba(0,0,0,0.52), inset 0 1px 0 rgba(242,238,231,0.10),
+                     inset 0 -1px 0 rgba(0,0,0,0.30);
+  --hc-tabbar-tile:linear-gradient(180deg, rgba(247,244,239,0.15), rgba(247,244,239,0.055));
+  --hc-tabbar-tile-edge:rgba(207,193,174,0.30);
+  --hc-tabbar-sheen:linear-gradient(112deg, rgba(255,252,247,0.14) 0%, rgba(255,252,247,0.04) 30%, rgba(255,252,247,0) 60%);
+
+  --hc-gold:        #CBAC74;
+  --hc-gold-ink:    #F4EFE6;
+  --hc-gold-halo:   rgba(12,11,10,0.55);
+  --hc-gold-skin:      linear-gradient(178deg, rgba(226,197,141,0.86), rgba(190,158,100,0.80));
+  --hc-gold-skin-lens: linear-gradient(178deg, rgba(226,197,141,0.42), rgba(190,158,100,0.34));
+  --hc-gold-edge:      rgba(247,231,196,0.30);
+  --hc-gold-shadow:    0 14px 28px rgba(0,0,0,0.46),
+                       inset 0 1px 0 rgba(255,246,224,0.24),
+                       inset 0 -1px 0 rgba(0,0,0,0.20);
+  --hc-gold-sheen:     linear-gradient(112deg,
+                         rgba(255,250,236,0.24) 0%,
+                         rgba(255,250,236,0.07) 26%,
+                         rgba(255,250,236,0) 54%);
+  --hc-hl-wash:  color-mix(in srgb, var(--hc-accent) 30%, transparent);
+
+  --link-ink: #E2C89A;
+}
+
+/* The two golds, switched from the rail. "Brand" is --hc-gold itself, which
+   is what the discs are made of; "deep" is that gold pushed until type set
+   in it clears 4.5:1 on the paper behind it, in each theme's own direction. */
+.stage[data-gold="brand"] { --link-ink: var(--hc-gold); }
+.stage[data-gold="deep"][data-hc="light"] { --link-ink: #8A6A22; }
+.stage[data-gold="deep"][data-hc="dark"]  { --link-ink: #E2C89A; }
+.stage[data-gold="deeper"][data-hc="light"] { --link-ink: #6B5017; }
+.stage[data-gold="deeper"][data-hc="dark"]  { --link-ink: #F0DCB8; }
+
+/* ---- app chrome ---------------------------------------------------------- */
+.hc-bar {
+  flex: 0 0 auto;
+  height: var(--hc-header-h);
+  display: flex; align-items: center; gap: var(--hc-space-md);
+  padding: 0 var(--hc-screen-pad);
+  border-bottom: var(--hc-hairline) solid var(--hc-rule);
+  background: var(--hc-paper);
+  position: relative; z-index: 3;
+}
+.hc-bar__back {
+  width: 34px; height: 34px; border: 0; padding: 0; background: transparent;
+  color: var(--hc-accent-deep); display: grid; place-items: center; cursor: pointer;
+}
+.hc-bar__back svg { width: 20px; height: 20px; fill: none; stroke: currentColor;
+  stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+.hc-bar__title {
+  font-family: var(--hc-sans); font-size: var(--hc-caption); color: var(--hc-mid);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+.hc-scroll {
+  position: relative;
+  flex: 1 1 auto;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  padding: var(--hc-space-lg) var(--hc-screen-pad) 150px;
+  scroll-behavior: smooth;
+}
+
+/* the index rail's notches, so the right edge is the right edge */
+.hc-rail {
+  position: absolute; top: var(--hc-header-h); bottom: 0; right: 0; width: 34px;
+  display: flex; flex-direction: column; justify-content: center; align-items: center;
+  gap: 10px; pointer-events: none; z-index: 2;
+}
+.hc-rail span { display: block; width: 11px; height: 1px; background: var(--hc-rule); }
+.hc-rail span.on { width: 17px; background: var(--hc-accent-deep); }
+
+/* ---- guide type ---------------------------------------------------------- */
+.hc-eyebrow {
+  font-family: var(--hc-sans); font-weight: 600;
+  font-size: var(--hc-eyebrow); line-height: var(--hc-eyebrow-line);
+  letter-spacing: var(--hc-track-eyebrow); text-transform: uppercase;
+  color: var(--hc-accent-deep);
+}
+.hc-guide-title {
+  font-family: var(--hc-sans-display); font-weight: 800;
+  font-size: 29px; line-height: 1.12; letter-spacing: -0.015em;
+  margin: 8px 0 0; color: var(--hc-ink); text-wrap: balance;
+}
+.hc-guide-sub {
+  font-family: var(--hc-serif); font-size: 15px;
+  line-height: 22px; color: var(--hc-mid); margin: 10px 0 0;
+}
+.hc-guide-rule { height: 0.75px; background: var(--hc-accent); margin: 16px 0 12px; width: 34%; }
+.hc-caption {
+  font-family: var(--hc-sans); font-size: var(--hc-caption);
+  line-height: var(--hc-caption-line); color: var(--hc-mid);
+}
+
+.hc-section {
+  border-top: var(--hc-hairline) solid var(--hc-rule);
+  padding-top: var(--hc-space-lg);
+  margin-top: var(--hc-space-lg);
+}
+.hc-section__bar {
+  position: relative;
+  display: flex; align-items: flex-start; gap: var(--hc-space-sm);
+  padding-left: calc(20px + var(--hc-space-md));
+}
+.hc-section__toggle {
+  display: block; width: 100%; text-align: left;
+  min-height: var(--hc-tap-min); padding: 0;
+  background: transparent; border: 0; cursor: pointer; color: inherit; font: inherit;
+}
+.hc-section__title {
+  display: block; margin-top: 8px;
+  font-family: var(--hc-sans-display); font-weight: 800;
+  font-size: 25px; line-height: 1.2; letter-spacing: -0.01em; color: var(--hc-ink);
+}
+.hc-section__rule {
+  display: block; margin-top: 12px; width: 22%; min-width: 56px;
+  height: 0.75px; background: var(--hc-accent);
+}
+.hc-section__chevron {
+  position: absolute; left: 0; top: 10px; width: 20px; height: 20px;
+  fill: none; stroke: var(--hc-accent-deep); stroke-width: 1.5;
+  stroke-linecap: round; stroke-linejoin: round;
+  transition: transform var(--hc-dur-base) var(--hc-ease);
+}
+.hc-section__toggle[aria-expanded="true"] .hc-section__chevron { transform: rotate(180deg); }
+.hc-section__panel { overflow: hidden; display: grid; grid-template-rows: 0fr;
+  transition: grid-template-rows var(--hc-dur-base) var(--hc-ease); }
+.hc-section__panel[data-open="true"] { grid-template-rows: 1fr; }
+.hc-section__panel > div { min-height: 0; }
+.hc-section__panel[data-open="true"] > div { padding-top: var(--hc-space-base); }
+
+.hc-body-serif {
+  font-family: var(--hc-serif); font-weight: 400;
+  font-size: calc(var(--hc-body-serif) * var(--hc-text-scale));
+  line-height: var(--hc-body-serif-line); color: var(--hc-ink);
+}
+.hc-prose p { margin: 0; }
+.hc-prose p + p { margin-top: var(--hc-space-base); }
+
+/* one real highlight, because half the entries this link goes to start here */
+.hc-hl { background: var(--hc-hl-wash); border-radius: 2px; }
+
+/* the take home question, so the link has something true under it */
+.hc-num {
+  display: grid; grid-template-columns: 26px minmax(0,1fr); gap: var(--hc-space-md);
+  padding: var(--hc-space-base) 0;
+  border-top: var(--hc-hairline) solid var(--hc-rule);
+}
+.hc-num__n {
+  font-family: var(--hc-sans); font-size: 13px; font-weight: 600;
+  color: var(--hc-accent-deep); font-variant-numeric: tabular-nums; padding-top: 3px;
+}
+.hc-question { margin: 0; font-family: var(--hc-serif); font-size: 15px; line-height: 23px; }
+.hc-textarea {
+  display: block; width: 100%; margin-top: 10px; min-height: 58px;
+  padding: 10px 12px; border-radius: var(--hc-radius-md);
+  border: var(--hc-hairline) solid var(--hc-rule);
+  background: var(--hc-paper-sunk); color: var(--hc-ink);
+  font-family: var(--hc-serif); font-size: 15px; line-height: 22px;
+  resize: none;
+}
+
+/* ---- the floating tab bar, six tiles ------------------------------------- */
+.hc-tabbar {
+  position: absolute; z-index: 4;
+  left: var(--hc-tabbar-inset); right: var(--hc-tabbar-inset);
+  bottom: var(--hc-tabbar-inset);
+  padding: var(--hc-tabbar-pad);
+  border-radius: 22px;
+  background: var(--hc-tabbar-skin);
+  border: var(--hc-hairline) solid var(--hc-tabbar-edge);
+  box-shadow: var(--hc-tabbar-shadow);
+  display: grid; grid-template-columns: repeat(6, 1fr); gap: 1px;
+}
+.hc-tab {
+  height: var(--hc-tabbar-h);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 4px; border-radius: 16px;
+  font-family: var(--hc-sans); font-size: 10px; line-height: 13px; font-weight: 500;
+  color: var(--hc-mid); background: transparent; border: 0; cursor: pointer;
+}
+.hc-tab svg { width: 20px; height: 20px; fill: none; stroke: currentColor;
+  stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+.hc-tab[aria-current="true"] {
+  color: var(--hc-ink);
+  background: var(--hc-tabbar-tile);
+  border: var(--hc-hairline) solid var(--hc-tabbar-tile-edge);
+}
+
+/* ---- the two discs, unedited from css/components.css --------------------- */
+.hc-disc {
+  position: absolute;
+  bottom: var(--hc-tabbar-space);
+  z-index: 5;
+  width: var(--hc-tap-min); height: var(--hc-tap-min);
+  padding: 0;
+  border-radius: var(--hc-radius-pill);
+  border: var(--hc-hairline) solid var(--hc-gold-edge);
+  background: var(--hc-gold-skin);
+  box-shadow: var(--hc-gold-shadow);
+  color: var(--hc-gold-ink);
+  display: grid; place-items: center;
+  isolation: isolate; cursor: pointer;
+  opacity: 0; transform: translateY(10px) scale(0.86); pointer-events: none;
+  transition: opacity var(--hc-dur-fast) var(--hc-ease),
+              transform var(--hc-dur-fast) var(--hc-ease-enter);
+}
+@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+  .hc-disc {
+    background: var(--hc-gold-skin-lens);
+    backdrop-filter: blur(20px) saturate(1.7);
+    -webkit-backdrop-filter: blur(20px) saturate(1.7);
+  }
+}
+.hc-disc--top  { right: var(--hc-tabbar-inset); }
+.hc-disc--back { left: var(--hc-tabbar-inset); }
+.hc-disc::after {
+  content: ""; position: absolute; inset: 0; border-radius: inherit;
+  background: var(--hc-gold-sheen); pointer-events: none;
+}
+.hc-disc__icon {
+  position: relative; z-index: 1; width: 19px; height: 19px;
+  fill: none; stroke: currentColor; stroke-width: 1.8;
+  stroke-linecap: round; stroke-linejoin: round;
+  filter: drop-shadow(0 0 2px var(--hc-gold-halo)) drop-shadow(0 1px 1px var(--hc-gold-halo));
+}
+.hc-disc[data-show="true"] { opacity: 1; transform: none; pointer-events: auto; }
+
+/* ==========================================================================
+   THE LINK. Seven studies, one slot, one geometry.
+
+   The slot is the full width between the discs and exactly one tap target
+   tall, sat on the same baseline as they are, so whatever is drawn inside it
+   is centred on the disc row rather than near it. The type is small; the
+   thing you tap is 44px, which is --hc-tap-min and not a number picked for
+   looks. Turn the footprint on in the rail to see the difference.
+   ========================================================================== */
+.jslot {
+  position: absolute; z-index: 5;
+  bottom: var(--hc-tabbar-space);
+  /* clear of both discs by an inset, so nothing here is ever a near miss */
+  left: calc(var(--hc-tabbar-inset) + var(--hc-tap-min) + var(--hc-space-sm));
+  right: calc(var(--hc-tabbar-inset) + var(--hc-tap-min) + var(--hc-space-sm));
+  height: var(--hc-tap-min);
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0; transform: translateY(10px);
+  pointer-events: none;
+  transition: opacity var(--hc-dur-fast) var(--hc-ease),
+              transform var(--hc-dur-fast) var(--hc-ease-enter);
+}
+.jslot[data-show="true"] { opacity: 1; transform: none; pointer-events: auto; }
+
+.jlink {
+  display: inline-flex; align-items: center; gap: 6px;
+  max-width: 100%;
+  height: var(--hc-tap-min);      /* the target, whatever the type does */
+  padding: 0;
+  margin: 0; border: 0; background: transparent;
+  color: var(--link-ink);
+  font-family: var(--hc-sans);
+  font-weight: 650;
+  font-size: var(--jsize, 11px);
+  line-height: 14px;
+  letter-spacing: var(--hc-track-eyebrow);
+  text-transform: uppercase;
+  white-space: nowrap;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+/* Truncation rather than collision. A line too long for the gap has to fail
+   visibly and inside its own box: overflowing it would put caps under a disc,
+   which reads as a layout bug rather than as a wording that does not fit. The
+   panel says by how much. */
+.jlink .jtext { overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.jlink:focus-visible { outline: 2px solid var(--link-ink); outline-offset: 3px; border-radius: 6px; }
+.jlink:active { opacity: 0.62; }
+.jlink svg {
+  width: 1em; height: 1em; flex: 0 0 auto;
+  fill: none; stroke: currentColor; stroke-width: 2;
+  stroke-linecap: round; stroke-linejoin: round;
+  transition: transform var(--hc-dur-fast) var(--hc-ease);
+}
+.jlink:active svg { transform: translateX(2px); }
+.jarrow--glyph { font-size: 1.05em; line-height: 1; letter-spacing: 0; }
+
+/* --- A. Bare caps. Nothing behind it, nothing around it. ------------------ */
+.jlink--a { }
+
+/* --- B. Bare caps with the disc's own halo -------------------------------
+   The discs do not trust their arrows to be legible over whatever scrolls
+   under them either: .hc-disc__icon carries two gold-halo drop shadows. This
+   is that treatment moved onto type, and it is the cheapest way to make bare
+   caps survive a photograph or a paragraph passing behind them. */
+.jlink--b {
+  filter: drop-shadow(0 0 3px var(--hc-gold-halo))
+          drop-shadow(0 1px 2px var(--hc-gold-halo));
+}
+
+/* --- C. The gold pill. The discs' material, stretched. --------------------
+   Same skin, same hairline edge, same sheen, same blur. Reads as the third
+   piece of one set rather than as a caption that happens to be gold, and the
+   ink inside it goes back to --hc-gold-ink, which is what the arrows use. */
+/* THE PAINT IS 34, THE TARGET STAYS 44. The capsule is drawn on ::before,
+   inset five pixels top and bottom, rather than by shrinking the button: a
+   pill that looks right and a pill you can hit are two different rectangles
+   and this is the seam where they came apart. Same trick in D and E. */
+.jlink--c {
+  padding: 0 16px;
+  color: var(--hc-gold-ink);
+  isolation: isolate; position: relative;
+}
+.jlink--c::before, .jlink--c::after {
+  content: ""; position: absolute; inset: 5px 0;
+  border-radius: var(--hc-radius-pill);
+  pointer-events: none; z-index: 0;
+}
+.jlink--c::before {
+  border: var(--hc-hairline) solid var(--hc-gold-edge);
+  background: var(--hc-gold-skin);
+  box-shadow: var(--hc-gold-shadow);
+}
+@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+  .jlink--c::before {
+    background: var(--hc-gold-skin-lens);
+    backdrop-filter: blur(20px) saturate(1.7);
+    -webkit-backdrop-filter: blur(20px) saturate(1.7);
+  }
+}
+.jlink--c::after { background: var(--hc-gold-sheen); }
+.jlink--c > * { position: relative; z-index: 1; }
+
+/* --- D. The paper pill. The tab bar's material, gold ink. -----------------
+   The plinth is directly below and made of exactly this. A capsule of it up
+   here reads as a piece of the same chrome, which keeps the gold to the type
+   and leaves the discs the only gold objects on the screen. */
+.jlink--d {
+  padding: 0 15px;
+  isolation: isolate; position: relative;
+}
+.jlink--d::before, .jlink--d::after {
+  content: ""; position: absolute; inset: 6px 0;
+  border-radius: var(--hc-radius-pill);
+  pointer-events: none; z-index: 0;
+}
+.jlink--d::before {
+  border: var(--hc-hairline) solid var(--hc-tabbar-edge);
+  background: var(--hc-tabbar-skin);
+  box-shadow: var(--hc-tabbar-shadow);
+}
+@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+  .jlink--d::before { backdrop-filter: blur(18px) saturate(1.5); -webkit-backdrop-filter: blur(18px) saturate(1.5); }
+}
+.jlink--d::after { background: var(--hc-tabbar-sheen); }
+.jlink--d > * { position: relative; z-index: 1; }
+
+/* --- E. The hairline capsule. An outline and nothing else. ---------------- */
+.jlink--e { padding: 0 14px; position: relative; }
+.jlink--e::before {
+  content: ""; position: absolute; inset: 7px 0;
+  border-radius: var(--hc-radius-pill);
+  border: var(--hc-hairline) solid color-mix(in srgb, var(--link-ink) 55%, transparent);
+  pointer-events: none;
+}
+
+/* --- F. Caps over a rule. -------------------------------------------------
+   The eyebrow-and-rule move from the top of every section in the app, shrunk
+   and moved into the chrome. The rule is the guides' own 0.75px hairline. */
+.jlink--f { flex-direction: column; gap: 5px; height: var(--hc-tap-min); justify-content: center; }
+.jlink--f .jrow { display: inline-flex; align-items: center; gap: 6px; }
+.jlink--f .jrule {
+  display: block; width: 100%; height: 0.75px;
+  background: color-mix(in srgb, var(--link-ink) 70%, transparent);
+}
+
+/* --- G. Underlined caps. The literal link. -------------------------------- */
+.jlink--g .jrow {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding-bottom: 3px;
+  border-bottom: 1px solid color-mix(in srgb, var(--link-ink) 60%, transparent);
+}
+
+/* the footprint. Not a shipping style: "the target is 44px" is a claim about
+   a rectangle you cannot see. */
+.phone[data-footprint="true"] .jlink {
+  outline: 1px dashed color-mix(in srgb, var(--link-ink) 65%, transparent);
+  outline-offset: 0;
+}
+.phone[data-footprint="true"] .jslot {
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--hc-mid) 40%, transparent);
+}
+.phone[data-footprint="true"] .hc-disc {
+  outline: 1px dashed color-mix(in srgb, var(--hc-gold-edge) 90%, transparent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .jslot, .hc-disc, .jlink svg { transition-duration: 1ms !important; }
+  .hc-scroll { scroll-behavior: auto; }
+}
+
+/* ==========================================================================
+   The rail: the studies, the switches, and what each one measures
+   ========================================================================== */
+.rail { display: flex; flex-direction: column; gap: 18px; }
+.card {
+  background: var(--panel);
+  border: 1px solid var(--bench-rule);
+  border-radius: 14px;
+  padding: 16px;
+}
+.card__h {
+  margin: 0 0 12px;
+  font-size: 11px; font-weight: 700; letter-spacing: 0.13em; text-transform: uppercase;
+  color: var(--bench-gold);
+}
+.grp { margin-bottom: 14px; }
+.grp:last-child { margin-bottom: 0; }
+.grp__label {
+  display: block; margin-bottom: 6px;
+  font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--bench-mid);
+}
+.opts { display: flex; flex-wrap: wrap; gap: 6px; }
+.opt {
+  font: inherit; font-size: 12.5px;
+  padding: 7px 11px; border-radius: 999px; cursor: pointer;
+  background: transparent; color: var(--bench-mid);
+  border: 1px solid var(--bench-rule);
+  transition: color 150ms, border-color 150ms, background 150ms;
+}
+.opt:hover { color: var(--bench-ink); border-color: var(--bench-line); }
+.opt[aria-pressed="true"] {
+  color: var(--bench-ink); border-color: var(--bench-live);
+  background: color-mix(in srgb, var(--bench-gold) 14%, transparent);
+  font-weight: 600;
+}
+.opt:focus-visible { outline: 2px solid var(--bench-live); outline-offset: 2px; }
+
+.studies { display: flex; flex-direction: column; gap: 4px; }
+.study {
+  display: grid; grid-template-columns: 20px minmax(0,1fr); gap: 10px;
+  align-items: baseline;
+  text-align: left; font: inherit; cursor: pointer;
+  padding: 9px 10px; border-radius: 10px;
+  background: transparent; border: 1px solid transparent; color: var(--bench-mid);
+}
+.study:hover { border-color: var(--bench-rule); color: var(--bench-ink); }
+.study[aria-pressed="true"] {
+  border-color: var(--bench-live);
+  background: color-mix(in srgb, var(--bench-gold) 12%, transparent);
+  color: var(--bench-ink);
+}
+.study:focus-visible { outline: 2px solid var(--bench-live); outline-offset: 2px; }
+.study b { font-weight: 700; font-size: 13px; color: var(--bench-gold); }
+.study[aria-pressed="true"] b { color: var(--bench-live); }
+.study span { display: block; font-size: 13px; font-weight: 600; }
+.study em { display: block; font-style: normal; font-size: 12px; color: var(--bench-mid); margin-top: 2px; }
+
+/* the measurements, which are the honest part of this page */
+.meas { display: flex; flex-direction: column; gap: 0; }
+.meas__row {
+  display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 12px;
+  align-items: baseline;
+  padding: 9px 0;
+  border-top: 1px solid var(--bench-rule);
+  font-size: 13px;
+}
+.meas__row:first-child { border-top: 0; padding-top: 0; }
+.meas__k { color: var(--bench-mid); }
+.meas__v { font-variant-numeric: tabular-nums; font-weight: 600; text-align: right; }
+.meas__v small { display: block; font-weight: 400; font-size: 11.5px; color: var(--bench-mid); }
+.pass { color: var(--bench-live); }
+.fail { color: var(--bench-warn); }
+.card__foot {
+  margin: 12px 0 0; font-size: 12px; color: var(--bench-mid);
+  border-top: 1px solid var(--bench-rule); padding-top: 10px;
+}
+.cue { font-size: 12.5px; color: var(--bench-mid); text-align: center; max-width: 390px; }
+.cue b { color: var(--bench-ink); font-weight: 600; }
+
+/* --- the notes under the bench -------------------------------------------- */
+.notes { margin-top: 40px; border-top: 1px solid var(--bench-rule); padding-top: 26px; }
+.notes__grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(258px, 1fr)); gap: 22px; }
+.note h3 { margin: 0 0 7px; font-size: 13px; font-weight: 700; letter-spacing: 0.02em; color: var(--bench-ink); }
+.note p { margin: 0 0 9px; font-size: 13.5px; color: var(--bench-mid); }
+.note p:last-child { margin-bottom: 0; }
+.note code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; color: var(--bench-ink); }
+.note strong { color: var(--bench-ink); font-weight: 600; }
+</style>
+
+<div class="wrap">
+
+  <header class="mast">
+    <p class="mast__eyebrow">Home Church &middot; guide reader</p>
+    <h1 class="mast__h">Seven ways to put the journal between the arrows</h1>
+    <p class="mast__sub">One line of small gold caps, centred on the disc row above the plinth, that takes you
+      to your entries for the guide you are reading. Seven drawings of it on the real thing: the shipping tokens,
+      the true 44px discs at their true 12px inset, the six-tile bar, and real guide text scrolling behind it.
+      <b>Scroll the phone.</b> The link is chrome, not content: it is pinned to the glass, the guide runs
+      underneath it, and it holds the middle for the whole time you are in a guide.</p>
+  </header>
+
+  <div class="bench">
+
+    <div class="left">
+      <div class="stage" data-hc="light" data-gold="deep" data-size="390" id="stage">
+        <div class="phone" data-footprint="false" id="phone">
+
+          <div class="hc-bar">
+            <button type="button" class="hc-bar__back" aria-label="Back to guides">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
+            </button>
+            <span class="hc-bar__title">The Seat at the Table</span>
+          </div>
+
+          <div class="hc-scroll" id="scroll">
+
+            <div class="hc-rail" aria-hidden="true">
+              <span></span><span class="on"></span><span></span><span class="on"></span>
+              <span></span><span class="on"></span><span></span><span class="on"></span>
+            </div>
+
+            <p class="hc-eyebrow">The Life of David</p>
+            <h1 class="hc-guide-title">The Seat at the Table</h1>
+            <p class="hc-guide-sub">What a forgotten grandson of a dead king teaches us about grace</p>
+            <div class="hc-guide-rule" aria-hidden="true"></div>
+            <p class="hc-caption">Allen Barrera &middot; November 3 &middot; 2 Samuel 9</p>
+
+            <section class="hc-section">
+              <div class="hc-section__bar">
+                <svg class="hc-section__chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+                <h2 style="flex:1 1 auto;min-width:0;margin:0">
+                  <button type="button" class="hc-section__toggle" aria-expanded="true" data-section="short">
+                    <span class="hc-eyebrow" style="display:block">Short Summary</span>
+                    <span class="hc-section__title">Overview</span>
+                    <span class="hc-section__rule" aria-hidden="true"></span>
+                  </button>
+                </h2>
+              </div>
+              <div class="hc-section__panel" data-open="true" data-panel="short">
+                <div>
+                  <div class="hc-prose hc-body-serif">
+                    <p>David finally has everything. The wars are quiet, the throne is steady, the kingdom is his.
+                      And in the middle of all that, he asks a question nobody asked him to ask. Is there anyone left
+                      of Saul&rsquo;s house I can show kindness to?</p>
+                    <p>They find a man named Mephibosheth. He is Jonathan&rsquo;s son, crippled in both feet since he
+                      was five years old, living in a town called Lo-debar, which means no pasture.
+                      <mark class="hc-hl">It is the middle of nowhere on purpose.</mark> He has spent his whole adult
+                      life staying small and staying hidden from the man who is now sending soldiers to bring him in.</p>
+                    <p>What he gets is a table. David restores every acre of Saul&rsquo;s land, assigns a household to
+                      work it, and seats Mephibosheth with the king&rsquo;s own sons for the rest of his life. Here is
+                      the line most of us miss. The chapter ends by telling us he was still lame in both feet. Grace did
+                      not fix his legs. It changed his address, and it changed what he was called.</p>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <section class="hc-section">
+              <div class="hc-section__bar">
+                <svg class="hc-section__chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+                <h2 style="flex:1 1 auto;min-width:0;margin:0">
+                  <button type="button" class="hc-section__toggle" aria-expanded="true" data-section="take">
+                    <span class="hc-eyebrow" style="display:block">Take Home</span>
+                    <span class="hc-section__title">Self-Reflection Questions</span>
+                    <span class="hc-section__rule" aria-hidden="true"></span>
+                  </button>
+                </h2>
+              </div>
+              <div class="hc-section__panel" data-open="true" data-panel="take">
+                <div>
+                  <p class="hc-caption" style="margin:0 0 4px">These are yours. They save to your account and turn up
+                    in your Journal, and nobody else can see them.</p>
+                  <div class="hc-num">
+                    <span class="hc-num__n">1</span>
+                    <div>
+                      <p class="hc-question">Lo-debar means no pasture. What is your Lo-debar, the place you go small
+                        and stay quiet so nobody looks too closely?</p>
+                      <textarea class="hc-textarea" id="q1" rows="2" aria-label="Your notes on question 1">Work, mostly. I am the one who has it handled and I have never once asked for help there.</textarea>
+                    </div>
+                  </div>
+                  <div class="hc-num">
+                    <span class="hc-num__n">2</span>
+                    <div>
+                      <p class="hc-question">Mephibosheth names himself before David can. What is the name you use for
+                        yourself when you are being honest?</p>
+                      <textarea class="hc-textarea" id="q2" rows="2" aria-label="Your notes on question 2"></textarea>
+                    </div>
+                  </div>
+                  <div class="hc-num">
+                    <span class="hc-num__n">3</span>
+                    <div>
+                      <p class="hc-question">Where are you still trying to be useful enough to keep a seat that was
+                        never based on your usefulness?</p>
+                      <textarea class="hc-textarea" id="q3" rows="2" aria-label="Your notes on question 3"></textarea>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <section class="hc-section">
+              <div class="hc-section__bar">
+                <svg class="hc-section__chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+                <h2 style="flex:1 1 auto;min-width:0;margin:0">
+                  <button type="button" class="hc-section__toggle" aria-expanded="false" data-section="pulpit">
+                    <span class="hc-eyebrow" style="display:block">From the Pulpit</span>
+                    <span class="hc-section__title">Impactful One-Liners</span>
+                    <span class="hc-section__rule" aria-hidden="true"></span>
+                  </button>
+                </h2>
+              </div>
+              <div class="hc-section__panel" data-panel="pulpit">
+                <div>
+                  <div class="hc-prose hc-body-serif">
+                    <p>&ldquo;Grace did not fix his legs. It changed his address.&rdquo;</p>
+                    <p>&ldquo;When the table cloth comes down, nobody can tell whose feet work.&rdquo;</p>
+                  </div>
+                </div>
+              </div>
+            </section>
+          </div>
+
+          <!-- the two discs, and the slot between them -->
+          <button type="button" class="hc-disc hc-disc--back" data-show="true" aria-label="Back">
+            <svg class="hc-disc__icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
+          </button>
+
+          <div class="jslot" id="slot" data-show="false"></div>
+
+          <button type="button" class="hc-disc hc-disc--top" id="totop" data-show="false" aria-label="Back to top">
+            <svg class="hc-disc__icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5M6 11l6-6 6 6"/></svg>
+          </button>
+
+          <nav class="hc-tabbar" aria-label="Tabs">
+            <button type="button" class="hc-tab">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10.2 12 3l9 7.2V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>Home</button>
+            <button type="button" class="hc-tab">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="3"/><path d="M3.5 9.5h17M8 3.5v3M16 3.5v3"/></svg>Cal</button>
+            <button type="button" class="hc-tab">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.2 2.7-5.2 6-5.2s6 2 6 5.2"/><path d="M16 5.4a3.2 3.2 0 0 1 0 6.2M18 14.6c2 .7 3 2.5 3 5"/></svg>Connect</button>
+            <button type="button" class="hc-tab">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 15v-3a8 8 0 0 1 16 0v3"/><path d="M4 14h2a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2H5a1 1 0 0 1-1-1z"/><path d="M20 14h-2a2 2 0 0 0-2 2v2a2 2 0 0 0 2 2h1a1 1 0 0 0 1-1z"/></svg>Listen</button>
+            <button type="button" class="hc-tab" aria-current="true">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4.5A1.5 1.5 0 0 1 5.5 3H19v15H5.5A1.5 1.5 0 0 0 4 19.5z"/><path d="M4 19.5A1.5 1.5 0 0 1 5.5 18H19v3H5.5A1.5 1.5 0 0 1 4 19.5z"/><path d="M8 8h7M8 11.5h5"/></svg>Guide</button>
+            <button type="button" class="hc-tab">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5.5" cy="12" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="18.5" cy="12" r="1.4"/></svg>More</button>
+          </nav>
+
+        </div>
+      </div>
+
+      <p class="cue" id="cue"><b>Scroll the guide.</b> The link stays put; the top arrow joins it at 240px.</p>
+    </div>
+
+    <div class="rail">
+
+      <div class="card">
+        <h2 class="card__h">The study</h2>
+        <div class="studies" id="studies" role="group" aria-label="Which study">
+          <button type="button" class="study" data-study="a">
+            <b>A</b><span>Bare caps<em>Type and nothing else. The quietest thing that could work.</em></span></button>
+          <button type="button" class="study" data-study="b" aria-pressed="true">
+            <b>B</b><span>Caps with the halo<em>A, plus the twin gold halo the discs put behind their own arrows.</em></span></button>
+          <button type="button" class="study" data-study="c">
+            <b>C</b><span>The gold pill<em>The discs&rsquo; material stretched into a capsule. Three gold objects, one set.</em></span></button>
+          <button type="button" class="study" data-study="d">
+            <b>D</b><span>The paper pill<em>The tab bar&rsquo;s glass instead, with the gold kept to the type.</em></span></button>
+          <button type="button" class="study" data-study="e">
+            <b>E</b><span>The hairline capsule<em>An outline in the same gold, and nothing filled in.</em></span></button>
+          <button type="button" class="study" data-study="f">
+            <b>F</b><span>Caps over a rule<em>The eyebrow-and-rule move from every section header, shrunk.</em></span></button>
+          <button type="button" class="study" data-study="g">
+            <b>G</b><span>Underlined caps<em>The literal link. Underline says tappable in a way gold does not.</em></span></button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2 class="card__h">The dressing</h2>
+
+        <div class="grp">
+          <span class="grp__label" id="lbl-words">The words</span>
+          <div class="opts" id="words" role="group" aria-labelledby="lbl-words">
+            <button type="button" class="opt" data-words="TO MY JOURNAL" aria-pressed="true">To my journal</button>
+            <button type="button" class="opt" data-words="MY JOURNAL">My journal</button>
+            <button type="button" class="opt" data-words="TO YOUR JOURNAL">To your journal</button>
+            <button type="button" class="opt" data-words="THIS GUIDE IN MY JOURNAL">This guide in my journal</button>
+          </div>
+        </div>
+
+        <div class="grp">
+          <span class="grp__label" id="lbl-arrow">The arrow</span>
+          <div class="opts" id="arrow" role="group" aria-labelledby="lbl-arrow">
+            <button type="button" class="opt" data-arrow="chevron" aria-pressed="true">Chevron</button>
+            <button type="button" class="opt" data-arrow="arrow">Arrow</button>
+            <button type="button" class="opt" data-arrow="glyph">&rarr; glyph</button>
+            <button type="button" class="opt" data-arrow="none">None</button>
+          </div>
+        </div>
+
+        <div class="grp">
+          <span class="grp__label" id="lbl-gold">The gold</span>
+          <div class="opts" id="gold" role="group" aria-labelledby="lbl-gold">
+            <button type="button" class="opt" data-gold="brand">Brand</button>
+            <button type="button" class="opt" data-gold="deep" aria-pressed="true">Deep</button>
+            <button type="button" class="opt" data-gold="deeper">Deeper</button>
+          </div>
+        </div>
+
+        <div class="grp">
+          <span class="grp__label" id="lbl-size">The size</span>
+          <div class="opts" id="size" role="group" aria-labelledby="lbl-size">
+            <button type="button" class="opt" data-size="10">10px</button>
+            <button type="button" class="opt" data-size="11" aria-pressed="true">11px</button>
+            <button type="button" class="opt" data-size="12">12px</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2 class="card__h">The bench</h2>
+
+        <div class="grp">
+          <span class="grp__label" id="lbl-theme">The phone</span>
+          <div class="opts" id="theme" role="group" aria-labelledby="lbl-theme">
+            <button type="button" class="opt" data-theme="light" aria-pressed="true">Light</button>
+            <button type="button" class="opt" data-theme="dark">Dark</button>
+          </div>
+        </div>
+
+        <div class="grp">
+          <span class="grp__label" id="lbl-width">Its width</span>
+          <div class="opts" id="width" role="group" aria-labelledby="lbl-width">
+            <button type="button" class="opt" data-width="se">SE, 320</button>
+            <button type="button" class="opt" data-width="390" aria-pressed="true">390</button>
+            <button type="button" class="opt" data-width="max">Max, 430</button>
+          </div>
+        </div>
+
+        <div class="grp">
+          <span class="grp__label" id="lbl-arrival">When it shows</span>
+          <div class="opts" id="arrival" role="group" aria-labelledby="lbl-arrival">
+            <button type="button" class="opt" data-arrival="always" aria-pressed="true">Always up</button>
+            <button type="button" class="opt" data-arrival="scroll">With the top arrow</button>
+          </div>
+        </div>
+
+        <div class="grp">
+          <span class="grp__label" id="lbl-foot">Its footprint</span>
+          <div class="opts" id="foot" role="group" aria-labelledby="lbl-foot">
+            <button type="button" class="opt" data-foot="false" aria-pressed="true">Off</button>
+            <button type="button" class="opt" data-foot="true">Draw the targets</button>
+          </div>
+        </div>
+
+        <p class="card__foot">The footprint draws the 44px tap box, the slot it lives in, and both discs. Small type
+          and a small target are not the same decision, and this is where you check they came apart.</p>
+      </div>
+
+      <div class="card">
+        <h2 class="card__h">What it measures</h2>
+        <div class="meas" id="meas">
+          <div class="meas__row">
+            <span class="meas__k">Contrast, type on what is behind it</span>
+            <span class="meas__v" id="m-contrast">&mdash;</span>
+          </div>
+          <div class="meas__row">
+            <span class="meas__k">The tap target</span>
+            <span class="meas__v" id="m-target">&mdash;</span>
+          </div>
+          <div class="meas__row">
+            <span class="meas__k">Clear of each disc by</span>
+            <span class="meas__v" id="m-gap">&mdash;</span>
+          </div>
+          <div class="meas__row">
+            <span class="meas__k">Room left in the slot</span>
+            <span class="meas__v" id="m-room">&mdash;</span>
+          </div>
+        </div>
+        <p class="card__foot" id="meas-note">4.5:1 is the floor for type this size. Brand gold is a colour for a gold
+          shape, not for ink on paper, which is the one thing this page is here to settle. C and D are measured
+          against their own glass composited over the guide, not against the paper.</p>
+      </div>
+
+    </div>
+  </div>
+
+  <section class="notes">
+    <div class="notes__grid">
+
+      <div class="note">
+        <h3>Where it sits, exactly</h3>
+        <p>Bottom is <code>--hc-tabbar-space</code>, the same line the discs sit on, so the three share a baseline
+          rather than nearly sharing one. The slot runs the full width between them, less a disc and one
+          <code>--hc-space-sm</code> at each end, so a thumb aiming at the link can never clip an arrow.</p>
+        <p>It is centred in that slot, not in the phone. Those are the same number here and stop being the same
+          number the moment anything else joins the row.</p>
+      </div>
+
+      <div class="note">
+        <h3>The gold problem</h3>
+        <p><strong>The discs are not gold type, they are gold objects.</strong> <code>--hc-gold</code> is the skin;
+          the arrow drawn on it is <code>--hc-gold-ink</code>, which is near black in light and paper in dark. Set
+          type in <code>--hc-gold</code> on the guide&rsquo;s own paper and it measures <strong>1.70:1</strong>,
+          which fails at any size. In the dark it is fine, which is the trap: it looks right on the phone of
+          whoever checks it in bed.</p>
+        <p>So &ldquo;the same gold as the arrows&rdquo; splits in two. <strong>C and D</strong> keep the literal
+          gold by making it a surface again. <strong>A, B, E, F, G</strong> keep it as ink and have to deepen it
+          until it reads. Switch The gold to Brand and watch the number go red.</p>
+      </div>
+
+      <div class="note">
+        <h3>It floats, and it stays</h3>
+        <p>Painted on the phone, not in the scroller, so the guide passes behind it exactly as it passes behind the
+          plinth and the discs. It never travels with the page and it never rides away under a thumb. In the app
+          that is the same fixed layer <code>.hc-disc</code> already lives on, one <code>z-index</code> below the
+          toast.</p>
+        <p>The back disc is up the whole time you are in a guide; only the top arrow is a scroll state, at
+          <code>TOTOP_AT = 240</code> in <code>js/app.js</code>. <strong>Always up</strong> in the switches is the
+          sticky reading and the default here. <strong>With the top arrow</strong> is the alternative, and it costs
+          a first screenful where the row is one lone arrow on the left. Both go down in presentation mode with
+          everything else, on the same <code>chromeless</code> line.</p>
+      </div>
+
+      <div class="note">
+        <h3>Where it goes</h3>
+        <p>The Journal lives behind &bull;&bull;&bull; and is a stop, not a pushed view. The router already carries
+          an id, so the tap is <code>HC.router.go({ name: 'journal', id: guide.id })</code>.</p>
+        <p>What it needs on the other end is a guide filter: <code>js/screens/journal.js</code> groups by guide
+          already, so landing on that group is a fourth pill in <code>FILTERS</code> and a scroll to the heading,
+          rather than a new screen. Nobody should arrive at the top of a stranger&rsquo;s whole journal.</p>
+      </div>
+
+      <div class="note">
+        <h3>What is faked</h3>
+        <p>Three sections rather than six, two of them open so there is prose under the link while it scrolls.
+          The index rail on the right edge is drawn rather than live. The tab bar does not navigate, and the
+          link itself does not go anywhere; it is here to be looked at and tapped, not followed.</p>
+        <p>Everything else is shipping: the tokens unedited, the 20px gutter, the 12px insets, the 44px discs,
+          the 52px bar, and the gold in both themes.</p>
+      </div>
+
+      <div class="note">
+        <h3>What it cannot settle</h3>
+        <p>Whether a third gold thing costs the discs their findability. <code>css/tokens.css</code> says being the
+          only gold thing on the screen is what makes the disc work without a label, and every study here spends
+          some of that.</p>
+        <p>And whether the words should say <em>my</em>. The app writes to you in the second person everywhere
+          else, and the Journal calls itself yours. Try both in the switches and read them in a hand.</p>
+      </div>
+
+    </div>
+  </section>
+
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  var stage  = document.getElementById('stage');
+  var phone  = document.getElementById('phone');
+  var scroll = document.getElementById('scroll');
+  var slot   = document.getElementById('slot');
+  var totop  = document.getElementById('totop');
+  var cue    = document.getElementById('cue');
+
+  /* the shape of the thing, all of it in one object */
+  var state = {
+    study: 'b',
+    words: 'TO MY JOURNAL',
+    arrow: 'chevron',
+    gold:  'deep',
+    size:  '11',
+    arrival: 'always'
+  };
+
+  var ARROWS = {
+    /* the disc's own chevron, at the disc's own stroke */
+    chevron: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>',
+    /* not in components.js today. Shipping this variant is one line in PATHS */
+    arrow:   '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M13 6l6 6-6 6"/></svg>',
+    glyph:   '<span class="jarrow--glyph" aria-hidden="true">&rarr;</span>',
+    none:    ''
+  };
+
+  /* --- drawing the link --------------------------------------------------
+     One button, rebuilt whenever anything about it changes. F and G need the
+     words and the arrow wrapped together so the rule and the underline can
+     sit under both, which is the only structural difference between them and
+     the rest. */
+  function draw() {
+    var inner = '<span class="jtext">' + state.words + '</span>' + ARROWS[state.arrow];
+    var needsRow = state.study === 'f' || state.study === 'g';
+
+    slot.innerHTML =
+      '<button type="button" class="jlink jlink--' + state.study + '" ' +
+        'style="--jsize:' + state.size + 'px" ' +
+        'aria-label="' + state.words.toLowerCase().replace(/^to /, 'Go to ') + '">' +
+        (needsRow ? '<span class="jrow">' + inner + '</span>' : inner) +
+        (state.study === 'f' ? '<span class="jrule" aria-hidden="true"></span>' : '') +
+      '</button>';
+
+    measure();
+  }
+
+  /* --- the measurements ---------------------------------------------------
+     Contrast is computed against what is actually behind the type, which is
+     not the same surface in every study: A, B, E, F and G sit on the guide's
+     paper, C sits on its own gold glass and D on the tab bar's.
+
+     THE LENS, NOT THE FALLBACK. Those two are --hc-gold-skin-lens and the tab
+     bar's skin composited over the paper behind them, because every phone
+     this ships to can blur and that is what it draws. The dense --hc-gold-skin
+     stand-in is a different number, and in the dark it is a much worse one:
+     paper coloured ink on 86% gold is about 2.5:1. Anywhere backdrop-filter
+     is missing, C needs its ink checked again.
+     -------------------------------------------------------------------- */
+  var BACKDROP = {
+    light: { paper: '#F7F4EF', gold: '#F2E7D3', glass: '#F6F3EE' },
+    dark:  { paper: '#1A1918', gold: '#6E6149', glass: '#282523' }
+  };
+
+  function hex(str) {
+    var m = String(str).trim().match(/^#?([0-9a-f]{6})$/i);
+    if (m) {
+      var n = parseInt(m[1], 16);
+      return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+    }
+    var rgb = String(str).match(/\d+(\.\d+)?/g);
+    return rgb ? [+rgb[0], +rgb[1], +rgb[2]] : [0, 0, 0];
+  }
+
+  function lum(rgb) {
+    var a = rgb.map(function (v) {
+      v /= 255;
+      return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+    });
+    return 0.2126 * a[0] + 0.7152 * a[1] + 0.0722 * a[2];
+  }
+
+  function ratio(fg, bg) {
+    var a = lum(hex(fg)), b = lum(hex(bg));
+    var hi = Math.max(a, b), lo = Math.min(a, b);
+    return (hi + 0.05) / (lo + 0.05);
+  }
+
+  function measure() {
+    var link = slot.querySelector('.jlink');
+    if (!link) return;
+
+    var theme = stage.getAttribute('data-hc') === 'dark' ? 'dark' : 'light';
+    var pack  = BACKDROP[theme];
+
+    /* C paints its own ink; everything else uses the link gold */
+    var ink = state.study === 'c'
+      ? getComputedStyle(stage).getPropertyValue('--hc-gold-ink')
+      : getComputedStyle(link).color;
+
+    var back = state.study === 'c' ? pack.gold
+             : state.study === 'd' ? pack.glass
+             : pack.paper;
+
+    var r = ratio(ink, back);
+    var ok = r >= 4.5;
+    var el = document.getElementById('m-contrast');
+    el.className = 'meas__v ' + (ok ? 'pass' : 'fail');
+    el.innerHTML = r.toFixed(2) + ':1<small>' + (ok ? 'clears 4.5' : 'under 4.5, fails') + '</small>';
+
+    var box = link.getBoundingClientRect();
+    var slotBox = slot.getBoundingClientRect();
+    var tall = Math.round(box.height);
+    var t = document.getElementById('m-target');
+    t.className = 'meas__v ' + (tall >= 44 ? 'pass' : 'fail');
+    t.innerHTML = Math.round(box.width) + ' &times; ' + tall +
+      '<small>' + (tall >= 44 ? 'meets --hc-tap-min' : 'under 44, too small') + '</small>';
+
+    var gap = Math.round(Math.min(box.left - slotBox.left, slotBox.right - box.right) + 8);
+    var g = document.getElementById('m-gap');
+    g.className = 'meas__v';
+    g.innerHTML = gap + 'px<small>8px of that is the slot&rsquo;s own inset</small>';
+
+    /* Room left, or the amount by which the words have run out of it. The
+       text truncates rather than overflowing, so the width alone would show
+       a comfortable zero on a line that does not fit; the overflow inside
+       the label is what actually tells you. */
+    var label = link.querySelector('.jtext');
+    var over = label ? Math.round(label.scrollWidth - label.clientWidth) : 0;
+    var room = Math.round(slotBox.width - box.width);
+    var r2 = document.getElementById('m-room');
+    r2.className = 'meas__v ' + (over > 1 ? 'fail' : '');
+    r2.innerHTML = over > 1
+      ? 'over by ' + over + 'px<small>the words are wider than the gap</small>'
+      : room + 'px<small>of ' + Math.round(slotBox.width) + 'px between the discs</small>';
+  }
+
+  /* --- the switches ------------------------------------------------------- */
+  function pressOne(group, el) {
+    group.querySelectorAll('[aria-pressed]').forEach(function (b) {
+      b.setAttribute('aria-pressed', b === el ? 'true' : 'false');
+    });
+  }
+  function press(group, el) {
+    group.querySelectorAll('button').forEach(function (b) {
+      b.setAttribute('aria-pressed', b === el ? 'true' : 'false');
+    });
+  }
+
+  var studies = document.getElementById('studies');
+  studies.addEventListener('click', function (e) {
+    var b = e.target.closest('.study');
+    if (!b) return;
+    state.study = b.getAttribute('data-study');
+    press(studies, b);
+    draw();
+  });
+
+  [['words', 'words'], ['arrow', 'arrow'], ['size', 'size']].forEach(function (pair) {
+    var group = document.getElementById(pair[0]);
+    group.addEventListener('click', function (e) {
+      var b = e.target.closest('.opt');
+      if (!b) return;
+      state[pair[1]] = b.getAttribute('data-' + pair[1]);
+      press(group, b);
+      draw();
+    });
+  });
+
+  var goldGroup = document.getElementById('gold');
+  goldGroup.addEventListener('click', function (e) {
+    var b = e.target.closest('.opt');
+    if (!b) return;
+    stage.setAttribute('data-gold', b.getAttribute('data-gold'));
+    press(goldGroup, b);
+    measure();
+  });
+
+  var themeGroup = document.getElementById('theme');
+  themeGroup.addEventListener('click', function (e) {
+    var b = e.target.closest('.opt');
+    if (!b) return;
+    stage.setAttribute('data-hc', b.getAttribute('data-theme'));
+    press(themeGroup, b);
+    measure();
+  });
+
+  var widthGroup = document.getElementById('width');
+  widthGroup.addEventListener('click', function (e) {
+    var b = e.target.closest('.opt');
+    if (!b) return;
+    stage.setAttribute('data-size', b.getAttribute('data-width'));
+    press(widthGroup, b);
+    window.setTimeout(measure, 240);   // after the stage finishes resizing
+  });
+
+  var arrivalGroup = document.getElementById('arrival');
+  arrivalGroup.addEventListener('click', function (e) {
+    var b = e.target.closest('.opt');
+    if (!b) return;
+    state.arrival = b.getAttribute('data-arrival');
+    press(arrivalGroup, b);
+    paintChrome();
+  });
+
+  var footGroup = document.getElementById('foot');
+  footGroup.addEventListener('click', function (e) {
+    var b = e.target.closest('.opt');
+    if (!b) return;
+    phone.setAttribute('data-footprint', b.getAttribute('data-foot'));
+    press(footGroup, b);
+  });
+
+  /* --- the folds, so the page under the link can change height ------------ */
+  document.querySelectorAll('.hc-section__toggle').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var open = btn.getAttribute('aria-expanded') === 'true';
+      btn.setAttribute('aria-expanded', open ? 'false' : 'true');
+      var panel = phone.querySelector('[data-panel="' + btn.getAttribute('data-section') + '"]');
+      if (open) panel.removeAttribute('data-open');
+      else panel.setAttribute('data-open', 'true');
+    });
+  });
+
+  /* --- what stays up, and what comes and goes -----------------------------
+     THE LINK IS CHROME, NOT CONTENT. It is painted on the phone rather than
+     in the scroller, so it does not travel with the page and it never rides
+     away under a thumb: the guide passes behind it, exactly the way the guide
+     passes behind the plinth and the discs. Only the top arrow is a scroll
+     state, and it is one because it has nothing to say until there is
+     something above you to go back to.
+
+     The switch is whether the link keeps the arrow company or holds the
+     middle from the moment the guide opens. Always up is the sticky reading
+     of the brief; With the top arrow is the tidier one, at the cost of a
+     first screenful where the row is one lone arrow on the left.
+     -------------------------------------------------------------------- */
+  var TOTOP_AT = 240;
+  var ticking = false;
+  var seen = false;
+
+  function paintChrome() {
+    var past = scroll.scrollTop > TOTOP_AT;
+    totop.setAttribute('data-show', past ? 'true' : 'false');
+    slot.setAttribute('data-show', (state.arrival === 'always' || past) ? 'true' : 'false');
+  }
+
+  scroll.addEventListener('scroll', function () {
+    if (ticking) return;
+    ticking = true;
+    window.requestAnimationFrame(function () {
+      ticking = false;
+      paintChrome();
+      if (!seen && scroll.scrollTop > TOTOP_AT) {
+        seen = true;
+        cue.innerHTML = '<b>It holds.</b> The guide runs behind it; the link does not move.';
+      }
+    });
+  }, { passive: true });
+
+  totop.addEventListener('click', function () { scroll.scrollTop = 0; });
+
+  /* Nothing on this page is worth a page load spent at rest: the link is the
+     subject, so the phone arrives already scrolled to where it lives. */
+  draw();
+  window.requestAnimationFrame(function () {
+    scroll.scrollTop = 430;
+    paintChrome();
+    measure();
+  });
+
+  window.addEventListener('resize', measure);
+})();
+</script>

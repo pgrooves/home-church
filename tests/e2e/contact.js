@@ -34,6 +34,14 @@
                               still being in the markup for whatever fills in
                               every field it can find.
 
+     "I'm new here" arrives   The one next step with no outside system behind
+                              it now sends people up to this form. A button
+                              that scrolls is exactly the kind of thing that
+                              keeps working in a unit test and stops working
+                              on a page, so it is tapped here: the form has to
+                              end up on the screen, out from under the fixed
+                              header, with focus on the heading over it.
+
    NO SUPABASE. js/config.js is served over with one pointing at this file's
    own server, which answers /functions/v1/contact the way the Edge Function
    answers it, and can be told to fail. Same seam tests/e2e/gate.js uses.
@@ -216,6 +224,74 @@ async function type(page, name, value) {
   ok('above everything Connect already had',
      order.indexOf('form') < order.indexOf('groups') || order.indexOf('groups') === -1,
      order.join(' → '));
+
+  console.log('\n--- the way up from "I’m new here" ---');
+
+  /* The step is at the foot of the screen and the form is at the top of it,
+     so this starts where a person tapping it actually is: scrolled down, with
+     the step open and the form nowhere in sight. */
+  await page.evaluate(() => {
+    const step = document.querySelector('[data-section="step-step-new"]');
+    step.querySelector('[data-action="toggle-section"]').click();
+    document.getElementById('hc-scroll').scrollTo({ top: 1e6, behavior: 'auto' });
+  });
+  await page.waitForTimeout(300);
+
+  const away = await page.evaluate(() => {
+    const step = document.querySelector('[data-section="step-step-new"]');
+    const form = document.querySelector('[data-contact-form]');
+    return {
+      button: !!step.querySelector('[data-action="go-contact"]'),
+      label: (step.querySelector('[data-action="go-contact"]') || {}).textContent || '',
+      leaves: !!step.querySelector('[data-action="open-url"]'),
+      note: !!step.querySelector('.hc-step__note'),
+      scrolled: document.getElementById('hc-scroll').scrollTop,
+      formOnScreen: form.getBoundingClientRect().bottom > 0
+    };
+  });
+
+  ok('the step has something under it at last', away.button, away.label);
+  ok('and it stays in the app rather than opening a browser',
+     !away.leaves && !away.note);
+  ok('and the form is nowhere on the screen to start with',
+     away.scrolled > 200 && !away.formOnScreen, 'scrollTop ' + away.scrolled);
+
+  await page.click('[data-section="step-step-new"] [data-action="go-contact"]');
+
+  /* The scroll is smooth, so this waits for where it lands rather than for a
+     number of milliseconds. Under the fixed top bar is the failure worth
+     naming: an anchor scrolled to zero is behind the header, and a person
+     tapping a button that appears to do nothing does not tap it again. */
+  await page.waitForFunction(() => {
+    const head = document.getElementById('hc-contact-top');
+    const bar = document.getElementById('hc-topbar');
+    if (!head || !bar) return false;
+    const top = head.getBoundingClientRect().top;
+    return top >= bar.getBoundingClientRect().bottom - 1 && top < 200;
+  }, null, { timeout: 8000 }).catch(() => {});
+
+  const landed = await page.evaluate(() => {
+    const head = document.getElementById('hc-contact-top');
+    const bar = document.getElementById('hc-topbar');
+    const form = document.querySelector('[data-contact-form]');
+    return {
+      top: head ? head.getBoundingClientRect().top : null,
+      chrome: bar.getBoundingClientRect().bottom,
+      focused: document.activeElement === head,
+      formTop: form.getBoundingClientRect().top,
+      height: window.innerHeight
+    };
+  });
+
+  ok('tapping it brings “Get in touch” into view',
+     landed.top !== null && landed.top < 200, 'top ' + landed.top);
+  ok('clear of the top bar rather than behind it',
+     landed.top >= landed.chrome - 1, 'top ' + landed.top + ', bar ends ' + landed.chrome);
+  ok('with the form itself under it on the screen',
+     landed.formTop > 0 && landed.formTop < landed.height,
+     'form at ' + landed.formTop + ' of ' + landed.height);
+  ok('and focus moved, so it is not a silent jump to a screen reader',
+     landed.focused);
 
   console.log('\n--- the honeypot ---');
 

@@ -17,6 +17,7 @@ in the app talks to Supabase with the service role key.
     python3 scripts/hc_supabase.py select events --ilike title=baptism
     python3 scripts/hc_supabase.py upsert guides guide.json
     python3 scripts/hc_supabase.py update events event-baptism patch.json
+    python3 scripts/hc_supabase.py setting home_featured_video https://youtu.be/xxxxxxxxxxx
     python3 scripts/hc_supabase.py host someone@example.com on
 
 Credentials come from `.env` at the repo root, which is git ignored. They are
@@ -449,6 +450,64 @@ def cmd_update(args):
 CHURCH_TZ = "America/Chicago"
 
 
+def cmd_setting(args):
+    """Write one row in app_settings, found by `key`.
+
+    WHY THIS IS NOT `update`. That verb filters on `id`, which every content
+    table has and app_settings does not: its primary key is `key`, because a
+    setting is named rather than slugged. Pointing `update` at it comes back
+    400 from PostgREST with a message about a missing column, which reads like
+    the row is missing rather than like the wrong verb was used.
+
+    THE TYPE COMES FROM THE ROW, not from the command line. `kind` already
+    says which of the two value columns is live, so a boolean row is written
+    as a boolean and a text row as text, and nobody can write the string
+    'true' into a switch. Used by /new-video; the ordinary way to change any
+    of these is still Settings -> Admin -> App settings, inside the app."""
+    url, key = load_env()
+
+    status, rows = request(
+        "GET", url, key, "/rest/v1/app_settings",
+        query={"select": "key,kind", "key": "eq." + args.key},
+    )
+    if status not in (200, 206):
+        die("Could not read app_settings (%s):\n%s" % (status, json.dumps(rows, indent=2)))
+    if not rows:
+        die("There is no app_settings row called %r.\n\n"
+            "A setting carries its own label and help text, which is what the\n"
+            "Admin screen draws the control from, so the row is created by the\n"
+            "migration that introduces it rather than from here. Run the\n"
+            "migration that seeds it, then try again." % args.key)
+
+    kind = rows[0].get("kind")
+    if kind == "boolean":
+        truthy = {"on": True, "true": True, "yes": True, "1": True,
+                  "off": False, "false": False, "no": False, "0": False}
+        if args.value.strip().lower() not in truthy:
+            die("%r is a switch. Say on or off." % args.key)
+        patch = {"value_bool": truthy[args.value.strip().lower()]}
+    else:
+        # An empty string is a real value here and means the church has taken
+        # the thing off the screen. It is not the same as null and it is not a
+        # reason to refuse the write.
+        patch = {"value_text": args.value}
+
+    status, body = request(
+        "PATCH", url, key, "/rest/v1/app_settings",
+        body=patch,
+        headers={"Prefer": "return=representation"},
+        query={"key": "eq." + args.key},
+    )
+    if status not in (200, 204):
+        die("Setting %r failed (%s):\n%s" % (args.key, status, json.dumps(body, indent=2)))
+
+    written = (body or [{}])[0]
+    print("set  %s  %r" % (args.key,
+                           written.get("value_bool") if kind == "boolean"
+                           else written.get("value_text")))
+    return 0
+
+
 def cmd_host(args):
     """Turn Leader mode on or off, by email rather than by uuid.
 
@@ -579,6 +638,10 @@ def main():
     p_update.add_argument("id")
     p_update.add_argument("patch", help="path to a .json file, a JSON string, or -")
 
+    p_setting = sub.add_parser("setting", help="write one app_settings row, by key")
+    p_setting.add_argument("key")
+    p_setting.add_argument("value", help="the text, or on/off for a switch")
+
     p_host = sub.add_parser("host", help="turn Leader mode on or off for somebody")
     p_host.add_argument("email")
     p_host.add_argument("state", choices=["on", "off"])
@@ -592,7 +655,7 @@ def main():
     handlers = {
         "check": cmd_check, "verify": cmd_verify, "apply": cmd_apply,
         "select": cmd_select, "upsert": cmd_upsert, "update": cmd_update,
-        "host": cmd_host, "when": cmd_when,
+        "setting": cmd_setting, "host": cmd_host, "when": cmd_when,
     }
     return handlers[args.command](args)
 
