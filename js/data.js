@@ -49,14 +49,16 @@
     givingUrl: 'https://donate.overflow.co/homechurchnola',
     websiteUrl: 'https://www.homechurchnola.com',
     social: [
-      // The dot is load bearing. Every other handle the church owns is
-      // homechurchnola, Instagram alone is homechurch.nola, and this link
-      // shipped without the dot pointing at an account that is not theirs.
+      // The dot is load bearing. Facebook, YouTube and X are homechurchnola
+      // with no dot; Instagram and TikTok are homechurch.nola. Both of the
+      // dotted ones shipped without the dot, pointing at accounts that are
+      // not the church's, so check the handle character by character before
+      // adding a platform here rather than copying the row above it.
       { label: 'Instagram', url: 'https://www.instagram.com/homechurch.nola' },
       { label: 'Facebook', url: 'https://www.facebook.com/homechurchnola' },
       { label: 'YouTube', url: 'https://www.youtube.com/@homechurchnola' },
       { label: 'X', url: 'https://x.com/homechurchnola' },
-      { label: 'TikTok', url: 'https://www.tiktok.com/@homechurchnola' }
+      { label: 'TikTok', url: 'https://www.tiktok.com/@homechurch.nola' }
     ],
     serve: {
       number: '833-801-3857',
