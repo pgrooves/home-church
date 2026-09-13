@@ -141,6 +141,21 @@ function extractMedia(html: string, shortcode: string): any | null {
 const ALPHABET =
   'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
 
+/** The same conversion backwards. Instagram's ids increase with time, so
+ *  comparing two pks orders two posts chronologically without fetching
+ *  either: a candidate whose pk exceeds the newest pk already stored is new,
+ *  and everything else is discarded before a page is requested. That is what
+ *  makes a run that finds nothing cost one request instead of two dozen. */
+function toPk(shortcode: string): bigint | null {
+  let n = 0n;
+  for (const ch of String(shortcode || '')) {
+    const i = ALPHABET.indexOf(ch);
+    if (i < 0) return null;
+    n = n * 64n + BigInt(i);
+  }
+  return n > 0n ? n : null;
+}
+
 function toShortcode(pk: string): string {
   let n = BigInt(pk), out = '';
   if (n <= 0n) return '';
@@ -251,6 +266,7 @@ Deno.serve(async (req: Request) => {
       await admin.from('instagram_sync_runs').insert({
         ok,
         trigger: body?.trigger ?? 'cron',
+        via: body?.via ?? null,
         discovered: body?.counts?.discovered ?? 0,
         wrote: body?.counts?.wrote ?? 0,
         skipped: body?.counts?.skipped ?? 0,
@@ -297,6 +313,7 @@ Deno.serve(async (req: Request) => {
   const limit = Math.min(Number(body.limit) || 9, MAX_LINKS);
   let links = Array.isArray(body.links) ? body.links.map(String) : [];
   let discovered = 0;
+  let via = 'links';
 
   /* No links given means find them. This is the whole difference between a
      command somebody runs on a Sunday and a job that keeps the rail current
@@ -451,6 +468,7 @@ Deno.serve(async (req: Request) => {
   return await finish(true, {
     handle, discovered, wrote, skipped,
     trigger: discovered ? 'cron' : 'links',
+    via,
     counts: { discovered, wrote: wrote.length, skipped: skipped.length },
     ms: Date.now() - started
   });

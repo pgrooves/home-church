@@ -301,6 +301,81 @@ ok('the arithmetic is BigInt, so an id past 2^53 is not rounded',
   F.toShortcode('3965350390354495018'),
   F.toShortcode(BigInt('3965350390354495018')));
 
+/* ---------------------------------------------- which candidates are new */
+
+/* The comparison that makes a scheduled sync cheap. Instagram's media ids
+   increase with time, so ordering two pks orders two posts, and a run can
+   discard everything it already has before requesting a single page.
+
+   The seven pairs below are real: stored posts spanning July to September,
+   each id taken from the row its date is on. If this assumption ever breaks,
+   the sync starts re-fetching old posts and missing new ones, so it is
+   asserted rather than assumed. */
+
+console.log('\n--- ids increase with time, which is why a no-op run is one request ---');
+
+{
+  const byDate = [
+    ['3945050083506620288', '2026-07-20'],
+    ['3950145224676293832', '2026-07-27'],
+    ['3960279698546193819', '2026-08-10'],
+    ['3964308400091476566', '2026-08-15'],
+    ['3965350390354495018', '2026-08-17'],
+    ['3969563126810653404', '2026-08-22'],
+    ['3980553935882145247', '2026-09-06']
+  ];
+  let rising = true;
+  for (let i = 1; i < byDate.length; i++) {
+    if (BigInt(byDate[i][0]) <= BigInt(byDate[i - 1][0])) rising = false;
+  }
+  ok('seven real posts, July to September, ids strictly increasing', rising, true);
+}
+
+ok('a shortcode decodes to the id it was made from',
+  F.toPk('DcHwSuzCUYq').toString(), '3965350390354495018');
+ok('and back again, for every one of the five that were on the rail',
+  ['3965350390354495018', '3964308400091476566', '3960279698546193819',
+   '3950145224676293832', '3945050083506620288']
+    .every((pk) => F.toPk(F.toShortcode(pk)).toString() === pk),
+  true);
+ok('a shortcode with a character outside the alphabet is not an id',
+  F.toPk('not a code!'), null);
+
+console.log('\n--- picking the ones worth fetching ---');
+
+const cands = [
+  { shortcode: 'DdNHg-7ERMG' },   // 3984874298204558086, newer
+  { shortcode: 'DdMJoevtZLx' },   // 3984602134526399217, newer
+  { shortcode: 'Dc9xLb9ic3f' },   // 3980553935882145247, the newest stored
+  { shortcode: 'DcWuKHXCbLc' }    // older still
+];
+
+ok('only the posts newer than everything stored, newest first',
+  F.newPosts(cands, '3980553935882145247', 9).map((c) => c.shortcode),
+  ['DdNHg-7ERMG', 'DdMJoevtZLx']);
+
+ok('the newest stored post is not itself new',
+  F.newPosts(cands, '3980553935882145247', 9).some((c) => c.shortcode === 'Dc9xLb9ic3f'),
+  false);
+
+ok('nothing newer is an empty list, not a fetch of everything',
+  F.newPosts(cands, '3999999999999999999', 9), []);
+
+/* An empty table is the first run. There is no floor to compare against, so
+   the newest `limit` are taken rather than all two dozen candidates a post
+   page carries. */
+ok('an empty table takes the newest few rather than everything',
+  F.newPosts(cands, null, 2).map((c) => c.shortcode),
+  ['DdNHg-7ERMG', 'DdMJoevtZLx']);
+
+ok('the cap is honoured even when more are new',
+  F.newPosts(cands, null, 9).length, 4);
+
+ok('a candidate that is not a shortcode is dropped rather than fetched',
+  F.newPosts([{ shortcode: 'nope!' }, { shortcode: 'DdNHg-7ERMG' }], null, 9)
+    .map((c) => c.shortcode),
+  ['DdNHg-7ERMG']);
+
 console.log('\n--- a profile page, which is where the links come from ---');
 
 /* Shaped as instagram.com actually served @homechurch.nola to a crawler: the

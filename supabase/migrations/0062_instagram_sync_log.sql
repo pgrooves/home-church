@@ -57,6 +57,7 @@ create table if not exists public.instagram_sync_runs (
 
   ok          boolean not null,
   trigger     text not null default 'cron',   -- cron | links
+  via         text,                           -- which source answered discovery
   discovered  integer not null default 0,     -- posts seen on the profile
   wrote       integer not null default 0,
   skipped     integer not null default 0,
@@ -71,6 +72,8 @@ comment on table public.instagram_sync_runs is
   'One row per instagram-fetch run, success or failure. Exists because pg_cron records this job as succeeded even when the sync fails: pg_net returns a request id the moment the request is queued, so the cron layer never sees the outcome. This table is the only honest record of whether the rail is being kept current.';
 comment on column public.instagram_sync_runs.ok is
   'The run completed. Not the same as having written anything: a run that found nothing new is ok with wrote = 0.';
+comment on column public.instagram_sync_runs.via is
+  'Which source discovery used: the profile page, or the newest stored post. The profile is tried first and is the one Instagram throttles, so a run log full of "the newest stored post" is the fallback doing its job rather than a problem.';
 comment on column public.instagram_sync_runs.discovered is
   'Posts found on the profile page. Zero on a run given explicit links, which does not read the profile at all.';
 comment on column public.instagram_sync_runs.error is

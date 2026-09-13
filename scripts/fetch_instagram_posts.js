@@ -250,6 +250,38 @@ function extractMedia(html, shortcode) {
 const ALPHABET =
   'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
 
+/* The same conversion backwards, which is what makes a cheap sync possible.
+ *
+ * Instagram's media ids increase with time, so comparing two pks orders two
+ * posts chronologically without fetching either. A candidate whose pk is
+ * greater than the newest pk already stored is new; everything else can be
+ * discarded before a single page is requested. Checked against seven stored
+ * posts spanning July to September in instagram-posts.test.js.
+ *
+ * Without this a run has to fetch every candidate to find out how old it is,
+ * which is two dozen requests to discover that nothing has changed. */
+function toPk(shortcode) {
+  let n = 0n;
+  for (const ch of String(shortcode || '')) {
+    const i = ALPHABET.indexOf(ch);
+    if (i < 0) return null;
+    n = n * 64n + BigInt(i);
+  }
+  return n > 0n ? n : null;
+}
+
+/* The candidates worth fetching: newer than everything already stored, newest
+   first, capped. `knownPk` is the largest id in instagram_posts, or null when
+   the table is empty, in which case the newest `limit` are taken. */
+function newPosts(candidates, knownPk, limit) {
+  const known = knownPk ? BigInt(knownPk) : null;
+  return (candidates || [])
+    .map((c) => Object.assign({}, c, { pk: toPk(c.shortcode) }))
+    .filter((c) => c.pk && (!known || c.pk > known))
+    .sort((a, b) => (a.pk < b.pk ? 1 : a.pk > b.pk ? -1 : 0))
+    .slice(0, limit || 9);
+}
+
 function toShortcode(pk) {
   let n = BigInt(pk), out = '';
   if (n <= 0n) return '';
@@ -801,7 +833,7 @@ async function main() {
 
 module.exports = {
   parseUrl, parseList, decodeEntities, sliceAt, sliceObject, extractMedia,
-  toShortcode, discover,
+  toShortcode, toPk, newPosts, discover,
   looksLikeShell, fromMedia, fromOgTags, mediaTypeFor, mediaTypeOf,
   normalizeCaption, buildRow, explainOembedError
 };
