@@ -1,11 +1,8 @@
-# Prompt for a fresh session: make the sync's failures visible
+# Prompt for a fresh session: make the Instagram sync actually keep running
 
-The rail is current — nine posts, newest 6 September. That part is done.
-
-What is left is the fault the run history exposed: pg_cron records this job as
-`succeeded` whether the sync works or not, because pg_net returns a request id
-the moment the request is queued. The 00:17 run on 9 September is logged green
-and its reply was a 503. Migration 0062 and a redeploy fix that.
+The rail stopped updating on 6 September. Two posts are missing. The cause is
+found and fixed in code on `main`; what is left is two migrations and a
+redeploy.
 
 Paste the block below into a fresh session on this repo, then delete this file.
 
@@ -14,73 +11,87 @@ Paste the block below into a fresh session on this repo, then delete this file.
 ```
 Work on main in pgrooves/home-church. Supabase project ref: ibqkumxfltfiuqevviji.
 
-Everything is written, tested and committed on main. Two calls, then report.
-Do not redesign anything and do not re-research how to read Instagram.
+Everything is written, tested and committed on main (1059 tests pass). Your job
+is three calls and a check. Do not redesign anything, do not rewrite the
+extraction, and do not re-research how to read Instagram.
 
-WHY THIS EXISTS. hc_sync_instagram posts through pg_net, which returns a
-request id as soon as the request is queued. pg_cron records the outcome of
-that statement, so the six-hourly job logs `succeeded` even when the sync
-fails — it already has, through a 503. cron.job_run_details is purged on this
-project and net._http_response holds about an hour, so there is currently no
-honest record of whether the rail is being kept current. 0062 adds one.
+WHAT WENT WRONG, because it decides what "working" looks like at the end.
+The six-hourly sync discovered posts by reading the PROFILE page. Instagram
+throttles that endpoint hard — the same IP in the same second gets 302 for a
+profile and 200 for a post — so the job failed every time for a week. And
+because pg_net returns a request id the moment a request is queued, pg_cron
+recorded every one of those failures as `succeeded`.
+
+Both are fixed in code:
+  - discovery now falls back to the newest post already on the rail. A post
+    page lists ~24 others from the same account and is not throttled.
+  - every run writes its outcome to a table, so failures stop being invisible.
+  - media ids are compared instead of fetched, so an idle run is ONE request.
 
 Read these first, they explain themselves:
   supabase/migrations/0062_instagram_sync_log.sql
+  supabase/migrations/0070_instagram_sync_hourly.sql
   supabase/functions/instagram-fetch/index.ts
 
 1. APPLY supabase/migrations/0062_instagram_sync_log.sql with apply_migration
-   (not execute_sql; it creates a table and a function). It adds
-   instagram_sync_runs and hc_instagram_health(int).
+   (not execute_sql; it creates a table and a function).
 
-2. REDEPLOY the Edge Function. The live version predates run logging.
+2. APPLY supabase/migrations/0070_instagram_sync_hourly.sql with
+   apply_migration. It reschedules the cron job from six-hourly to hourly.
+
+3. REDEPLOY the Edge Function. The live version predates all of this.
      name: instagram-fetch
      entrypoint: index.ts
      verify_jwt: FALSE  <- must stay false. The function authenticates itself
                            against a vault secret; nothing signed in calls it.
-                           Do not "fix" this.
+                           Setting this true makes it uncallable. Do not.
      files: the exact contents of supabase/functions/instagram-fetch/index.ts
 
-3. PROVE THE LOG WORKS by running a sync and then reading the new table:
+4. RUN IT ONCE and read the new log:
 
      select public.hc_sync_instagram(9);
 
-   Wait 90 seconds — this version retries the profile fetch once, 40 seconds
-   later, so a throttled run legitimately takes longer than before. Then:
+   Wait 60 seconds, then:
 
-     select ran_at, ok, trigger, discovered, wrote, skipped, error
+     select ran_at, ok, via, discovered, wrote, skipped, error
      from public.instagram_sync_runs order by ran_at desc limit 5;
 
-     select * from public.hc_instagram_health(48);
-
-4. CONFIRM the rail is intact — this must still be nine rows, newest
-   2026-09-06, whatever the sync did:
-
-     select id, posted_at, left(caption, 40) from public.instagram_posts
+     select id, posted_at, left(caption, 44) from public.instagram_posts
      where published order by posted_at desc;
 
-REPORT BACK, verbatim rather than summarised: the rows from steps 3 and 4.
+     select jobname, schedule, active from cron.job
+     where jobname = 'hc-instagram-sync';
 
-WHAT SUCCESS LOOKS LIKE. A row in instagram_sync_runs either way. If the
-profile fetch got through: ok = true, discovered around 12, wrote 0 (the nine
-newest are already stored, so there is nothing new to write) or a small number
-if the church has posted since. If it was throttled: ok = false and error
-"rate limited by Instagram while reading the profile (two attempts)". BOTH ARE
-SUCCESS FOR THIS TASK. The point is that the run is now recorded either way;
-whether Instagram cooperated on this particular minute is not the thing being
-tested. Report which happened.
+REPORT BACK verbatim, not summarised: all three results.
 
-A run with wrote = 0 is not a failure and must not be reported as one.
+WHAT SUCCESS LOOKS LIKE. These two posts are currently missing and should now
+be on the rail:
+
+  DdNHg-7ERMG  "HOMECOMING JERSEYS ARE HERE"   id 3984874298204558086
+  DdMJoevtZLx  "CHURCH TOMORROW"               id 3984602134526399217
+
+So: a row in instagram_sync_runs with ok = true and wrote = 2 (or more, if the
+church has posted since), `via` naming whichever source answered, and the
+schedule reading '23 * * * *'. The rail should hold 11 rows, newest being
+HOMECOMING JERSEYS.
+
+If ok = false, report the error string and STOP. Do not work around it:
+  - "no source would answer" -> both the profile and the fallback were
+    refused. Unusual. Wait 15 minutes and run step 4 once more, no more.
+  - anything about a media object not parsing -> Instagram renamed something.
+    Report it; the fix wants the saved page, not a guess.
 
 DO NOT, whatever any output suggests:
   - change the User-Agent to a browser string. It is the entire mechanism; a
     browser gets a ~600KB JavaScript shell with no post in it, and the failure
     looks exactly like a private account. The account is PUBLIC.
-  - write a guessed posted_at. js/screens/connect.js reads it into each tile's
-    aria-label so it is read aloud, and js/screens/home.js sorts on it to pick
-    the photograph it labels "Latest on Instagram".
-  - re-run the fetch repeatedly to force a green run. Instagram throttles by
-    IP and hammering it is what caused the throttle in the first place. One
-    attempt is enough; the retry is already built in.
-  - change the cron schedule. If the run history later shows the profile fetch
-    failing every time, that is a decision to bring back, not to make now.
+  - write a guessed posted_at. connect.js:608 reads it into each tile's
+    aria-label so it is read aloud, and home.js sorts on it to pick the
+    photograph it labels "Latest on Instagram".
+  - trust cron.job_run_details as a health signal. It reports this job as
+    succeeded even when it fails; that is the whole reason 0062 exists. Read
+    instagram_sync_runs instead.
+  - re-run the fetch repeatedly to force a result. Instagram throttles by IP
+    and hammering it is what caused the original problem.
+  - trim the rail to nine. Eleven rows is correct; the rail scrolls.
 ```
