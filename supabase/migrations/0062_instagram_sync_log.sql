@@ -68,6 +68,16 @@ create table if not exists public.instagram_sync_runs (
   error       text
 );
 
+-- `create table if not exists` does nothing to a table that already exists,
+-- so a column added to this file after the first run would never reach a
+-- database that had already applied it. That happened: the table went out
+-- without `via`, and re-running this was a no-op that left the function
+-- writing a column the table did not have. The insert is inside a try/catch,
+-- so it failed silently and blinded the very log this migration exists to
+-- provide. Converge explicitly rather than assuming a fresh database.
+alter table public.instagram_sync_runs
+  add column if not exists via text;
+
 comment on table public.instagram_sync_runs is
   'One row per instagram-fetch run, success or failure. Exists because pg_cron records this job as succeeded even when the sync fails: pg_net returns a request id the moment the request is queued, so the cron layer never sees the outcome. This table is the only honest record of whether the rail is being kept current.';
 comment on column public.instagram_sync_runs.ok is

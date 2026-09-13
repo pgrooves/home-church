@@ -315,66 +315,111 @@ Deno.serve(async (req: Request) => {
   let discovered = 0;
   let via = 'links';
 
-  /* No links given means find them. This is the whole difference between a
-     command somebody runs on a Sunday and a job that keeps the rail current
-     on its own: the profile page, asked for as a crawler, lists the recent
-     posts, and their ids convert straight to links. */
+  /* What is already stored, and the newest of it. Read before discovery
+     because both halves are needed: the set, to leave mirrored posts alone,
+     and the largest id, to recognise which candidates are new. */
+  const already = new Set<string>();
+  let newestPk: bigint | null = null;
+  if (!body.force) {
+    const { data: rows } = await admin.from('instagram_posts').select('id');
+    for (const r of rows ?? []) {
+      already.add(String(r.id));
+      try {
+        const pk = BigInt(String(r.id));
+        if (newestPk === null || pk > newestPk) newestPk = pk;
+      } catch { /* a row keyed by something other than a media id */ }
+    }
+  }
+
   if (!links.length) {
-    /* Two attempts, forty seconds apart.
+    /* TWO PLACES TO LOOK, AND THE SECOND IS THE RELIABLE ONE.
      *
-     * The profile endpoint is throttled far harder than post pages: the same
-     * IP in the same second gets 302 for a profile and 200 for a post. It is
-     * also intermittent rather than sticky, so a second try often lands where
-     * the first did not, and a tick that gives up on one 503 wastes six hours
-     * for want of forty seconds. Post fetches are not retried, because they
-     * have not been the thing that fails. */
-    let html: string | null = null;
-    let why = '';
-
-    for (let attempt = 1; attempt <= 2 && html === null; attempt++) {
-      if (attempt > 1) await new Promise((r) => setTimeout(r, 40000));
-      const res = await fetch('https://www.instagram.com/' + handle + '/', {
-        headers: {
-          'User-Agent': UA,
-          'Accept-Language': 'en-US,en;q=0.9',
-          'Accept': 'text/html,application/xhtml+xml'
-        }
+     * The profile page is the obvious source and the fragile one. Instagram
+     * throttles it far harder than anything else: the same IP in the same
+     * second gets 302 for a profile and 200 for a post. A sync that depends
+     * on it alone stops for days, which is exactly what this one did between
+     * 6 and 13 September, failing every six-hourly run while pg_cron recorded
+     * each of them as a success.
+     *
+     * A post page carries about two dozen other posts from the same account,
+     * including ones newer than itself, and post pages have never been
+     * refused. So any post already on the rail is a door into the current
+     * feed, and the newest stored one is the door used here. The profile is
+     * still tried first because it is ordered and tidy; the post page is what
+     * makes the job survive the profile being refused. */
+    const sources: Array<{ name: string; url: string }> = [
+      { name: 'the profile', url: 'https://www.instagram.com/' + handle + '/' }
+    ];
+    if (newestPk !== null) {
+      sources.push({
+        name: 'the newest stored post',
+        url: 'https://www.instagram.com/p/' + toShortcode(newestPk.toString()) + '/'
       });
-      if (res.status === 429 || /\/accounts\/login\//.test(res.url ?? '')) {
-        why = 'rate limited by Instagram while reading the profile';
-        continue;
+    }
+
+    let candidates: string[] = [];
+    const tried: string[] = [];
+
+    for (const source of sources) {
+      if (candidates.length) break;
+      try {
+        const res = await fetch(source.url, {
+          headers: {
+            'User-Agent': UA,
+            'Accept-Language': 'en-US,en;q=0.9',
+            'Accept': 'text/html,application/xhtml+xml'
+          }
+        });
+        if (res.status === 429 || /\/accounts\/login\//.test(res.url ?? '')) {
+          tried.push(source.name + ': rate limited');
+          continue;
+        }
+        if (!res.ok) { tried.push(source.name + ': HTTP ' + res.status); continue; }
+        const html = await res.text();
+        const found = discover(html);
+        if (!found.length) {
+          tried.push(source.name + (looksLikeShell(html)
+            ? ': no posts, only JavaScript'
+            : ': nothing parsed'));
+          continue;
+        }
+        candidates = found;
+        via = source.name;
+      } catch (e) {
+        tried.push(source.name + ': ' + String((e as Error)?.message ?? e));
       }
-      if (!res.ok) { why = 'profile: HTTP ' + res.status; continue; }
-      html = await res.text();
     }
 
-    if (html === null) {
-      return await finish(false, { error: why + ' (two attempts)' }, 503);
+    if (!candidates.length) {
+      return await finish(false, { error: 'no source would answer. ' + tried.join('; ') }, 503);
     }
 
-    const codes = discover(html);
-    discovered = codes.length;
-    if (!codes.length) {
-      return await finish(false, {
-        error: looksLikeShell(html)
-          ? 'the profile page had no posts in it, only Instagram\'s own JavaScript'
-          : 'the profile page arrived but no posts parsed out of it'
-      }, 502);
+    discovered = candidates.length;
+
+    /* Only the genuinely new ones are fetched. Instagram's ids increase with
+       time, so this is a comparison rather than two dozen page requests, and
+       a run with nothing new costs exactly one fetch. */
+    const fresh = candidates
+      .map((code) => ({ code, pk: toPk(code) }))
+      .filter((c) => c.pk !== null && !already.has(c.pk.toString()))
+      .filter((c) => newestPk === null || c.pk! > newestPk)
+      .sort((a, b) => (a.pk! < b.pk! ? 1 : a.pk! > b.pk! ? -1 : 0))
+      .slice(0, limit);
+
+    if (!fresh.length) {
+      return await finish(true, {
+        handle, discovered, via, wrote: [], skipped: [], trigger: 'cron',
+        counts: { discovered, wrote: 0, skipped: 0 },
+        note: 'nothing newer than what is already on the rail',
+        ms: Date.now() - started
+      });
     }
-    links = codes.slice(0, limit).map((c) => 'https://www.instagram.com/p/' + c + '/');
+
+    links = fresh.map((c) => 'https://www.instagram.com/p/' + c.code + '/');
   }
 
   if (links.length > MAX_LINKS) {
     return await finish(false, { error: 'at most ' + MAX_LINKS + ' links per call' }, 400);
-  }
-
-  /* Posts already on the rail are left alone unless asked otherwise. Without
-     this a scheduled run re-downloads and re-uploads every picture every
-     time, for a table that has not changed. */
-  const already = new Set<string>();
-  if (!body.force) {
-    const { data: rows } = await admin.from('instagram_posts').select('id');
-    for (const r of rows ?? []) already.add(String(r.id));
   }
 
   const wrote: unknown[] = [];
