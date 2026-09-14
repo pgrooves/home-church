@@ -78,6 +78,12 @@ node "$(dirname "$0")/nav-overlay.js" || exit 1
 # counted rather than made, because what it needs a browser for is a finger.
 node "$(dirname "$0")/pull.js" || exit 1
 
+# The index rail down the right edge, and the one thing a fling does to it.
+# Same terms as the two gestures above: the bundled seed, no database. What it
+# needs a browser for is a page that moved a moment ago, which is the state the
+# rail reads and the one no unit test has.
+node "$(dirname "$0")/index-rail.js" || exit 1
+
 # The one hint, which is a rectangle on the glass at a moment and therefore
 # cannot be asked about any other way. tests/hints.test.js covers the policy;
 # what is here is whether it is armed by the right thing, drawn on the right

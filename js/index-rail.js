@@ -27,6 +27,13 @@
    same two numbers, and a drag that turns out to be sideways still takes you
    to the next tab from the right edge.
 
+   AND WHY IT READS TOUCHES. Sling the page and grab the notches on the way
+   past and, for a while, nothing happened: they woke once everything was
+   still, which is the one moment nobody wants them. A finger that lands on a
+   flying page is a finger the browser has already promised to its own
+   scrolling, and the pointer events it used to be read from do not survive
+   that. Touches do. See the gesture below.
+
    WHAT IT COSTS TO DRAW. Every stop is measured once when the thumb goes
    down, and every heading's width once when the rail is built. After that one
    requestAnimationFrame loop writes transform and opacity, and nothing else,
@@ -119,6 +126,12 @@
   var SLOP   = 10;    // px before a gesture has to say which way it is going
   var AXIS   = 1.2;   // horizontal has to beat vertical by this to be a swipe
 
+  /* How long after the page last moved it still counts as moving. Long enough
+     to cover the gap between two scroll frames on a slow fling, short enough
+     that a finger arriving after a page has genuinely settled is read as
+     arriving on a still one. */
+  var MOVING = 140;
+
   /* The hint. FIRST is counted from the moment the greeting lifts off, not
      from boot: two seconds after boot is still the middle of js/splash.js.
      EVERY is the standing offer after that, on any screen, until the rail is
@@ -171,7 +184,9 @@
   var active   = -1;
   var armed    = false;   // pointer down, gesture not claimed yet
   var engaged  = false;   // it is ours
-  var pointer  = -1;      // the pointer id we are holding
+  var pointer  = -1;      // the pointer id we are holding, on a desktop
+  var finger   = -1;      // or the touch identifier, in a hand
+  var arrested = false;   // this touch landed on a moving page and stopped it
   var startX   = 0;
   var startY   = 0;
   var rawY     = 0;
@@ -189,6 +204,7 @@
   var yLast    = 0;       // finger is held to. See layout().
   var lastV    = -1;
   var swallowClick = false;
+  var scrollAt = 0;       // when the page last moved. See moving().
   var pendingScan = false;
 
   var hinting  = false;   // a hint wave is on
@@ -309,8 +325,7 @@
     widths = [];
     active = -1;
     gain = 0;
-    armed = false;
-    engaged = false;
+    release();
     track.innerHTML = '';
     titles.innerHTML = '';
     rail.hidden = true;
@@ -416,7 +431,7 @@
     fromScroll();
     paint();
     window.requestAnimationFrame(function () { measure(); layout(); paint(); });
-    window.setTimeout(function () { measure(); layout(); update(); }, 320);
+    window.setTimeout(function () { measure(); layout(); refresh(); }, 320);
   }
 
   /* --- painting: transform and opacity, and nothing else ---------------- */
@@ -693,8 +708,18 @@
     setActive(i, false);
   }
 
-  /* Called from the shell's scroll frame, next to the date rail's. */
+  /* Called from the shell's scroll frame, next to the date rail's, and from
+     nowhere else: this is the one entry that means the page moved, which is
+     what moving() reads. The note is taken before the early return, and
+     before the rail is built at all, because a fling that carries you onto a
+     screen is still a fling. Anything that wants the reading brought up to
+     date without saying the page moved asks refresh(). */
   function update() {
+    scrollAt = clock();
+    refresh();
+  }
+
+  function refresh() {
     if (!enabled || engaged || gliding) return;
     measure();
     fromScroll();
@@ -704,7 +729,19 @@
   /* --- the gesture ------------------------------------------------------
      On the scroller, not on a strip of our own. See the note at the top: a
      strip would take the right edge away from js/swipe.js for good, and this
-     way both read the same gesture and only one of them claims it. */
+     way both read the same gesture and only one of them claims it.
+
+     AND READ OFF TOUCHES, NOT POINTERS. Four pointer listeners is the tidier
+     build and it is wrong in the hand. A finger that lands while the page is
+     still flying is a finger the browser has already promised to its own
+     scrolling: the pointer stream for it is cancelled, or never starts, until
+     the deceleration is over. So sling the page and grab the notches on the
+     way past and nothing happened — they came to life a moment later, once
+     everything had stopped, which is the one moment you no longer needed
+     them. Touches keep arriving through that window. js/swipe.js and
+     js/pull.js read this same scroller off touches for their own reasons;
+     this is the third, and the pointer handlers below are left to the mouse,
+     where there is no such thing as a page still moving under the cursor. */
 
   function inZone(x, hot) {
     var box = scroller.getBoundingClientRect();
@@ -720,35 +757,53 @@
       el.closest('input, textarea, select, [contenteditable="true"]'));
   }
 
-  function onDown(evt) {
-    if (!enabled || armed || engaged) return;
-    if (evt.pointerType === 'mouse' && evt.button !== 0) return;
-    if (typingTarget(evt.target)) return;
-    if (!inZone(evt.clientX, HOT_DRAG)) return;
+  /* Is the page moving? Not asked of the scroll position, which is equal to
+     itself between any two reads and would call a flying page still, but of
+     when it last changed: update() runs from the shell's scroll frame for
+     every frame the page moves in, and MOVING is a few frames' grace after
+     the last of them. A glide of our own counts too — it is the same page
+     going by under the same thumb. */
+  function moving() {
+    return gliding || (clock() - scrollAt) < MOVING;
+  }
+
+  /* Take the movement off the page before the scrub starts writing to it.
+     The touch itself is what stops a fling on iOS, so the assignment is the
+     belt to that brace; the line that earns its place is the one above it,
+     because a glide of ours is not a fling and no finger stops it. */
+  function arrest() {
+    gliding = false;
+    var top = scroller.scrollTop;
+    scroller.scrollTop = top;
+  }
+
+  /* --- the gesture, whichever kind of thing is making it ----------------- */
+
+  function begin(x, y) {
+    if (!enabled || armed || engaged) return false;
 
     measure();
     layout();
     armed = true;
-    pointer = evt.pointerId;
-    startX = evt.clientX;
-    startY = evt.clientY;
+    startX = x;
+    startY = y;
     /* A finger on the edge proper is the hint's answer, whichever way the
        gesture turns out to go, and it takes the swell over rather than
        starting again. Further in it is nobody's answer yet — the page is as
        likely to be what is being pressed — so the wave carries on, and the
        drag takes it over below if it turns into one. */
-    if (inZone(startX, HOT_TAP)) stopHint(true);
-    rawY = ptrY = localY(evt.clientY);
+    if (inZone(x, HOT_TAP)) stopHint(true);
+    rawY = ptrY = localY(y);
     show();
     kick();
+    return true;
   }
 
-  function onMove(evt) {
-    if (evt.pointerId !== pointer) return;
+  function drag(x, y) {
     if (!armed && !engaged) return;
 
-    var dx = evt.clientX - startX;
-    var dy = evt.clientY - startY;
+    var dx = x - startX;
+    var dy = y - startY;
 
     if (armed && !engaged) {
       if (Math.abs(dx) + Math.abs(dy) < SLOP) return;
@@ -756,32 +811,47 @@
         /* Sideways. That is the tab swipe's gesture, and it is already
            reading the same finger, so this one lets go of it rather than
            half-holding it. */
-        armed = false;
-        pointer = -1;
+        release();
         hideSoon(160);
         return;
       }
       engaged = true;
       stopHint(true);   // a drag out of the outer band answers it after all
       noteUse();
-      try { scroller.setPointerCapture(evt.pointerId); } catch (err) { /* fine */ }
+      if (pointer !== -1) {
+        try { scroller.setPointerCapture(pointer); } catch (err) { /* fine */ }
+      }
     }
 
     if (!engaged) return;
-    rawY = localY(evt.clientY);
+    rawY = localY(y);
     var i = nearest(rawY);
     if (i !== active) { setActive(i, true); goTo(i); }
     kick();
   }
 
-  function onUp(evt) {
-    if (evt.pointerId !== pointer && pointer !== -1) return;
+  function release() {
+    armed = false;
+    engaged = false;
+    pointer = -1;
+    finger = -1;
+    arrested = false;
+  }
 
+  function finish(cancelled) {
     var quiet = armed && !engaged;
 
-    if (quiet && inZone(startX, HOT_TAP)) {
-      // A tap in the strip. Jump to the notch it landed on, and swallow the
-      // click that is about to land on whatever is under it.
+    /* A tap in the strip. Jump to the notch it landed on, and swallow the
+       click that is about to land on whatever is under it.
+
+       NOT WHEN THE PAGE WAS MOVING WHEN THE FINGER CAME DOWN. Putting a thumb
+       on a page that is flying to stop it is a gesture every screen on the
+       phone has, and answering that one with a jump to somewhere else is a
+       worse fault than the one this file went to touches to fix. So a still
+       finger that arrested the page has done exactly what it looked like it
+       was doing, and nothing more; the drag out of it, which is what a thumb
+       reaching for the notches is, still takes the rail below. */
+    if (!cancelled && !arrested && quiet && inZone(startX, HOT_TAP)) {
       var i = nearest(rawY);
       noteUse();
       setActive(i, true);
@@ -791,9 +861,7 @@
       quiet = false;
     }
 
-    armed = false;
-    engaged = false;
-    pointer = -1;
+    release();
 
     /* A still finger in the outer band was pressing the page, not the rail.
        It is given back untouched — no jump, and the click it is about to
@@ -806,6 +874,51 @@
     if (pendingScan) { pendingScan = false; rescan(); }
   }
 
+  /* --- a finger ---------------------------------------------------------- */
+
+  function touchIn(list) {
+    for (var i = 0; i < list.length; i++) {
+      if (list[i].identifier === finger) return list[i];
+    }
+    return null;
+  }
+
+  function onTouchStart(evt) {
+    /* A second finger is a pinch, and this app kept zoom on purpose, so the
+       rail gives back whatever it was holding rather than scrubbing through
+       one of them. */
+    if (finger !== -1) {
+      if (evt.touches.length > 1) finish(true);
+      return;
+    }
+    if (!enabled || armed || engaged) return;   // a mouse or a pen has it
+    if (evt.touches.length !== 1) return;
+
+    var t = evt.touches[0];
+    if (typingTarget(evt.target)) return;
+    if (!inZone(t.clientX, HOT_DRAG)) return;
+
+    /* THE PAGE IS STILL MOVING, AND THIS IS THE LINE THE WHOLE THING TURNS
+       ON. A touch that lands on a scrolling page is a touch the browser has
+       already begun a scroll with, and a scroll that has begun cannot be
+       refused at the first move: preventDefault on the moves after it is
+       ignored, which is the same rule js/pull.js states next door for its own
+       reason. Refused here instead, at the touch, before there is a scroll to
+       argue with — and only here, because a still page has nothing to refuse
+       and a refusal costs the click of anybody who was merely tapping a card
+       out in the outer band. On a moving page that click was never coming:
+       the first touch on a flying page stops it and fires nothing. */
+    var flying = moving();
+    if (flying) {
+      arrest();
+      if (evt.cancelable) evt.preventDefault();
+    }
+
+    if (!begin(t.clientX, t.clientY)) return;
+    finger = t.identifier;
+    arrested = flying;
+  }
+
   /* Vertical travel inside the strip belongs to the rail, so the page under
      it must not scroll as well. Prevented from the first move rather than
      from the moment the gesture is claimed, because ten pixels of scroll
@@ -813,8 +926,43 @@
      that turns out to be sideways does not need the default either: it
      cancels its own moves. */
   function onTouchMove(evt) {
+    if (finger !== -1) {
+      var t = touchIn(evt.touches);
+      if (t) drag(t.clientX, t.clientY);
+    }
     if (!armed && !engaged) return;
     if (evt.cancelable) evt.preventDefault();
+  }
+
+  function onTouchEnd(evt) {
+    if (finger === -1) return;
+    if (!touchIn(evt.changedTouches)) return;
+    finish(evt.type === 'touchcancel');
+  }
+
+  /* --- a mouse, or a pen -------------------------------------------------
+     A cursor cannot land on a page that is moving under it, so none of the
+     above applies and the pointer stream is the right thing to read. Touch
+     pointers are left alone here: they are read above, once, off the touches
+     that carry them. */
+
+  function onDown(evt) {
+    if (evt.pointerType === 'touch') return;
+    if (evt.pointerType === 'mouse' && evt.button !== 0) return;
+    if (typingTarget(evt.target)) return;
+    if (!inZone(evt.clientX, HOT_DRAG)) return;
+    if (!begin(evt.clientX, evt.clientY)) return;
+    pointer = evt.pointerId;
+  }
+
+  function onMove(evt) {
+    if (pointer === -1 || evt.pointerId !== pointer) return;
+    drag(evt.clientX, evt.clientY);
+  }
+
+  function onUp(evt) {
+    if (pointer === -1 || evt.pointerId !== pointer) return;
+    finish(evt.type === 'pointercancel');
   }
 
   /* --- wiring ------------------------------------------------------------ */
@@ -878,11 +1026,21 @@
     live = config.live;
     track = rail.querySelector('.hc-index__track');
 
+    /* The touches first, and before js/swipe.js and js/pull.js are wired, so
+       that HC.indexRail.busy() is already true when the pull asks. Neither of
+       them is passive: the rail has to be able to say a gesture is not a
+       scroll, and on a page that is already moving it has to say so at the
+       touch rather than at the first move. */
+    scroller.addEventListener('touchstart', onTouchStart, { passive: false });
+    scroller.addEventListener('touchmove', onTouchMove, { passive: false });
+    scroller.addEventListener('touchend', onTouchEnd);
+    scroller.addEventListener('touchcancel', onTouchEnd);
+
+    // And the cursor, which never has this problem.
     scroller.addEventListener('pointerdown', onDown);
     scroller.addEventListener('pointermove', onMove);
     scroller.addEventListener('pointerup', onUp);
     scroller.addEventListener('pointercancel', onUp);
-    scroller.addEventListener('touchmove', onTouchMove, { passive: false });
 
     document.addEventListener('click', function (evt) {
       if (!swallowClick) return;
@@ -931,7 +1089,8 @@
        Armed counts, not just engaged: armed is a thumb inside the rail's
        band that has not yet said which way it is going, and a pull that
        started under it would be a second claim on a finger this file is
-       already holding. */
+       already holding. True by the time the pull's own touchstart runs,
+       because this file's is wired first. See init(). */
     busy: function () { return armed || engaged; }
   };
 
