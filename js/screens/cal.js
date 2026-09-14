@@ -478,7 +478,7 @@
   function render() {
     var html = '<div class="hc-screen hc-cal-screen">';
 
-    html += c.sectionHeader('Every date in one place', 'Cal',
+    html += c.sectionHeader('Every date in one place', 'Calendar',
       { flush: true, tag: 'h1', eyebrowSlot: 'cal.eyebrow' });
 
     html += calendarBlock();
