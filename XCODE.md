@@ -348,7 +348,10 @@ them:**
   a page inside the app.
 - **Share** a quote from any guide, from the one-liners section.
 - **Add to calendar** on an event in Connect.
-- **Download guide**, which should open the iOS share sheet.
+- **Download guide**, which should open the iOS share sheet holding a PDF.
+  Open it from there: it is a real document with a cover, page numbers, and
+  selectable text, not a web page. Print everything to PDF and Send as text,
+  in a group room, and the journal export are the same file by other doors.
 - Turn a **notification switch** on in Your account. iOS should ask
   permission.
 
