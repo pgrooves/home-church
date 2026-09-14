@@ -266,7 +266,7 @@
      Monday" is a promise about this church's week and this church may keep a
      different one. */
   var NOTHING_YET = 'Nothing to listen to yet. Sunday’s message lands here on Monday.';
-  var FOLLOW = 'Follow the show';
+  var FOLLOW = 'Spotify Profile';
 
   function showCard() {
     var podcast = HC.data.podcast;
@@ -282,12 +282,12 @@
         podcast.blurb ? '<p class="hc-caption hc-card__meta">' + c.esc(podcast.blurb) + '</p>' : '',
         { table: 'podcast_show', id: podcast.id || 'show-home-church-nola', column: 'blurb',
           target: podcast, field: 'blurb',
-          value: podcast.blurb, label: 'what the show card says', rows: 4 }
+          value: podcast.blurb, label: 'what the podcast card says', rows: 4 }
       ) +
       '<div class="hc-show-card__action">' +
         c.button(HC.data.copy('listen.follow', FOLLOW), {
           labelSlot: 'listen.follow',
-          labelName: 'the Follow the show button',
+          labelName: 'the Spotify Profile button',
           action: 'open-url',
           url: podcast.showUrl,
           variant: 'secondary',
@@ -360,7 +360,7 @@
       open: false
     });
 
-    html += c.sectionHeader('Wherever you listen', 'The show',
+    html += c.sectionHeader('Wherever you listen', 'Follow Us',
       { eyebrowSlot: 'listen.show-eyebrow' });
     html += showCard();
 

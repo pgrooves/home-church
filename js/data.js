@@ -2340,7 +2340,7 @@
       blurb: 'Alpha is a few weeks of dinner, a short talk, and honest conversation. No question is too basic and nobody is going to put you on the spot.',
       url: 'https://homechurchnola.churchcenter.com/registrations/events/3798127',
       ctaLabel: 'Save your spot' },
-    { id: 'step-group', title: 'I want to lead a group',
+    { id: 'step-group', title: 'I want to host a group',
       blurb: 'We will train you and hand you a guide every week.',
       url: 'https://homechurchnola.groupvitals.com/leaderform',
       ctaLabel: 'Sign up to host' },
