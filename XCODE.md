@@ -289,6 +289,25 @@ like a bug in the app. It is not. It is the gateway.
 
 -----
 
+## 8d. Add to calendar, which needs a pod and no permission
+
+The **Add to calendar** button on the Cal tab writes the event as an `.ics`
+into the app's cache and asks iOS to *open* it. iOS knows what an `.ics` is:
+it shows the event with an **Add** on it, and the person taps that or does
+not. The app never reads or writes the calendar itself, so there is no
+capability to tick here, no entitlement, and no usage string in `Info.plist`.
+
+What it does need is `@capacitor-community/file-opener` being in the build,
+which is the same `npm install` followed by `npm run ios` as everything else.
+**If that pod did not install, the button falls back to the share sheet** —
+AirDrop, Messages, Mail, Save to Files, and no way to add the event — which
+is what a TestFlight build did before this was fixed and is the signature to
+recognise. Nothing is logged, because falling back is not an error. So a
+build where Add to calendar puts up a send-to sheet is a build where the pod
+is missing, and the fix is in Terminal, not in Xcode.
+
+-----
+
 ## 9. The privacy manifest
 
 Apple requires a privacy manifest, and Capacitor's own is empty, so the app

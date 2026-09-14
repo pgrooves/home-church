@@ -81,26 +81,77 @@
     return Promise.resolve(false);
   }
 
-  /* Writes a file into the app's own cache directory and hands it to the
-     share sheet. The cache directory is the right home for these: iOS is
-     free to reclaim it, and neither a calendar invitation nor a printed
-     guide is something the app needs to keep once it has been handed over.
+  /* Writes a file into the app's own cache directory and answers with the
+     file:// URI the phone can reach it by, or null. The cache directory is
+     the right home for these: iOS is free to reclaim it, and neither a
+     calendar invitation nor a printed guide is something the app needs to
+     keep once it has been handed over.
 
-     Returns false rather than throwing when there is no filesystem, so the
-     caller can fall back to something that does work in a browser. */
-  function writeAndShare(name, options, dialogTitle) {
+     Null rather than a throw when there is no filesystem, so every caller
+     can fall back to something that does work in a browser. */
+  function writeCacheFile(name, options) {
     var p = plugins();
-    if (!p || !p.Filesystem || !p.Share) return Promise.resolve(false);
+    if (!p || !p.Filesystem) return Promise.resolve(null);
 
     return p.Filesystem.writeFile(Object.assign({
       path: name,
       directory: 'CACHE'
     }, options)).then(function (written) {
-      return p.Share.share({
-        title: dialogTitle || name,
-        url: written.uri,
-        dialogTitle: dialogTitle || name
-      });
+      return (written && written.uri) || null;
+    }).catch(function () {
+      return null;
+    });
+  }
+
+  /* Hands an already written file to the share sheet. */
+  function shareCacheFile(uri, name, dialogTitle) {
+    var p = plugins();
+    if (!p || !p.Share || !uri) return Promise.resolve(false);
+
+    return p.Share.share({
+      title: dialogTitle || name,
+      url: uri,
+      dialogTitle: dialogTitle || name
+    }).then(function () {
+      return true;
+    }).catch(function () {
+      return false;
+    });
+  }
+
+  /* Writes the file and hands it to the share sheet. */
+  function writeAndShare(name, options, dialogTitle) {
+    var p = plugins();
+    if (!p || !p.Share) return Promise.resolve(false);
+
+    return writeCacheFile(name, options).then(function (uri) {
+      return shareCacheFile(uri, name, dialogTitle);
+    });
+  }
+
+  /* Hands a written file straight to iOS to be opened rather than sent
+     somewhere, which is a different thing from sharing it and the only one
+     of the two that reaches the Calendar.
+
+     @capacitor-community/file-opener presents a UIDocumentInteractionController
+     preview, which is the system's own view of the document with whatever
+     button that kind of document deserves on it: an event gets Add, so an
+     .ics arrives at the same place a tapped .ics in Mail or Safari arrives.
+     The share sheet, by contrast, asks which app or person to send the file
+     to, and Calendar is not an app you send a file to — which is why the
+     sheet in the bug report lists Messages and AirDrop and no way to add
+     the event at all.
+
+     Resolves false when the plugin is not in this build, so a caller can
+     fall back to the sheet rather than to nothing. */
+  function openFile(uri, mimeType) {
+    var p = plugins();
+    if (!p || !p.FileOpener || !uri) return Promise.resolve(false);
+
+    return p.FileOpener.open({
+      filePath: uri,
+      contentType: mimeType,
+      openWithDefault: true
     }).then(function () {
       return true;
     }).catch(function () {
@@ -166,11 +217,21 @@
   }
 
   /* ------------------------------------------------------------ calendar
-     An .ics file through the share sheet, where iOS offers Add to Calendar.
-     No calendar permission is requested and none is needed, because the app
-     never reads or writes the calendar itself, it hands over a file and the
-     person decides. That is the smaller ask and it is also the one that does
-     not need a usage string in Info.plist.
+     An .ics file opened by the phone, which is where iOS offers Add to
+     Calendar. No calendar permission is requested and none is needed,
+     because the app never reads or writes the calendar itself, it hands over
+     a file and the person decides. That is the smaller ask and it is also
+     the one that does not need a usage string in Info.plist.
+
+     OPENED, NOT SHARED, and that distinction is the whole bug this path was
+     rewritten for. Share.share() on the file put up the send-to sheet —
+     AirDrop, Messages, Mail, Save to Files — which is the right sheet for a
+     guide somebody wants to send to their group and the wrong one entirely
+     for an event they want on their own calendar. There is no Calendar in a
+     send-to sheet, so the button looked like it had misfired. In a browser
+     the same .ics never went near a sheet: it was handed to the browser,
+     which knows what an .ics is and offers to add it, and that is why this
+     only ever went wrong in the packaged app.
      ------------------------------------------------------------------- */
 
   // 'YYYYMMDDTHHMMSSZ', which is what an .ics wants.
@@ -223,14 +284,29 @@
     ].join('\r\n');
   }
 
+  function icsFilename(event) {
+    return (event.title || 'event').toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40) + '.ics';
+  }
+
+  /* Three roads, in the order of how close each one gets to the calendar.
+
+     The phone opens the file, which is the one that works. Failing that the
+     share sheet, which is what shipped before and is at least a way to get
+     the file off the phone — kept because a native build made without
+     `npm install` having pulled the file opener plugin in should degrade to
+     the old behaviour rather than to a button that does nothing. Failing
+     that a browser download, which is every browser. */
   function addToCalendar(event) {
     var ics = buildIcs(event);
-    var name = (event.title || 'event').toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40) + '.ics';
+    var name = icsFilename(event);
 
-    return shareFile(name, ics, 'text/calendar', event.title).then(function (ok) {
-      if (ok) return true;
-      return downloadInBrowser(name, ics, 'text/calendar');
+    return writeCacheFile(name, { data: ics, encoding: 'utf8' }).then(function (uri) {
+      return openFile(uri, 'text/calendar').then(function (opened) {
+        if (opened) return true;
+        if (uri) return shareCacheFile(uri, name, event.title);
+        return downloadInBrowser(name, ics, 'text/calendar');
+      });
     });
   }
 
@@ -834,6 +910,7 @@
     shareText: shareText,
     shareFile: shareFile,
     shareBinaryFile: shareBinaryFile,
+    openFile: openFile,
     downloadInBrowser: downloadInBrowser,
     buildIcs: buildIcs,
     addToCalendar: addToCalendar,
