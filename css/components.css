@@ -469,327 +469,324 @@
 #app[data-view="present"] .hc-pull { display: none; }
 
 /* --------------------------------------------------------------------------
-   Tab bar. A glass plinth floating clear of the screen edges, with the
-   active tab raised out of it as a tile.
+   The navigation button, and the screen it lifts.
 
-   Two pseudo elements carry the whole treatment, so the markup stays five
-   buttons and nothing else:
-     ::before  the tile, one element that slides between tabs. JS sets
-               --hc-tab-index; the tile does the travelling.
-     ::after   the sheen, one soft diagonal pass across the top-left.
-   The tile sits under the buttons and the sheen sits over everything,
-   which is the order light actually arrives in.
+   WHAT WAS HERE. Six tiles on a glass plinth across the bottom of every
+   screen, and a second plinth above it holding everything that would not fit
+   in the six. The geometry was measured rather than guessed and it worked,
+   right up to the point where the answer to "where does the next thing go" was
+   always the same answer: behind the •••. A bar that is full is a bar that has
+   stopped being a design and started being a queue.
+
+   WHAT IS HERE NOW. One round button in the bottom right corner, and behind it
+   the whole navigation, set as words rather than as pictures of words. Nothing
+   about the app moved: the same routes, in the same order, reachable by the
+   same sideways drag. What changed is that the row is now read top to bottom
+   instead of being squeezed left to right, which is the one direction a phone
+   has plenty of.
+
+   THE ORDER IS THE LANE, UPSIDE DOWN. The overlay lists the last screen in the
+   row at the top and the first at the bottom, so the thing most often reached
+   for lands nearest the thumb that opened it and Home sits directly above the
+   button. Read from the button upward it is exactly the order a drag runs: the
+   five tabs, then the modules, then Settings. See sheetTiles() and syncModules
+   in js/app.js, which are still the one list both halves come out of.
    -------------------------------------------------------------------------- */
 
-.hc-tabbar {
+.hc-navfab {
   position: fixed;
-  left: var(--hc-tabbar-inset);
-  right: var(--hc-tabbar-inset);
-  bottom: calc(var(--hc-tabbar-inset) + env(safe-area-inset-bottom));
-  z-index: 40;
-  display: flex;
-  padding: var(--hc-tabbar-pad);
-  /* Concentric with the tile: 26 outside, 6 of frame, 20 inside. Corners
-     stay parallel, which is the difference between this looking made and
-     looking assembled. */
-  border-radius: 26px;
-  background: var(--hc-tabbar-skin);
-  border: var(--hc-hairline) solid var(--hc-tabbar-edge);
-  box-shadow: var(--hc-tabbar-shadow);
-  isolation: isolate;
-}
-
-/* Glass only where the browser can actually blur. Everywhere else the
-   opaque skin above stands in, and the bar simply reads as a solid plinth. */
-@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
-  .hc-tabbar {
-    background: var(--hc-tabbar-skin-lens);
-    -webkit-backdrop-filter: blur(22px) saturate(150%);
-    backdrop-filter: blur(22px) saturate(150%);
-  }
-}
-
-/* The raised tile. Width is a fifth of the frame, driven by --hc-tab-count
-   so adding a sixth tab needs no CSS. It hides on pushed views, where no
-   tab is current, and keeps its place for the return. */
-.hc-tabbar::before {
-  content: "";
-  position: absolute;
-  z-index: 0;
-  top: var(--hc-tabbar-pad);
-  bottom: var(--hc-tabbar-pad);
-  left: var(--hc-tabbar-pad);
-  width: calc((100% - (var(--hc-tabbar-pad) * 2)) / var(--hc-tab-count, 5));
-  border-radius: 20px;
-  background: var(--hc-tabbar-tile);
-  border: var(--hc-hairline) solid var(--hc-tabbar-tile-edge);
-  box-shadow: var(--hc-tabbar-tile-shadow);
-  opacity: var(--hc-tab-tile, 1);
-  transform: translateX(calc(var(--hc-tab-index, 0) * 100%));
-  /* --hc-tab-tween is the swipe settling: the tile is given the same duration
-     as the screens so it arrives with them rather than on its own schedule.
-     Unset the rest of the time, which is the ordinary tap. */
-  transition: transform var(--hc-tab-tween, var(--hc-dur-base)) var(--hc-ease),
-              opacity var(--hc-dur-fast) var(--hc-ease);
-}
-
-/* Mid drag the tile is not travelling toward anything, it is being placed
-   every frame at a fraction of a tab, so it must not also be easing. */
-.hc-tabbar[data-swiping="true"]::before {
-  transition: opacity var(--hc-dur-fast) var(--hc-ease);
-}
-
-.hc-tabbar::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: 2;
-  pointer-events: none;
-  border-radius: inherit;
-  background: var(--hc-tabbar-sheen);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .hc-tabbar::before { transition: opacity var(--hc-dur-fast) var(--hc-ease); }
-}
-
-.hc-tab {
-  position: relative;
-  z-index: 1;
-  flex: 1 1 0;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 3px;
-  height: var(--hc-tabbar-h);
-  min-height: var(--hc-tap-min);
-  padding: 6px 2px 8px;
-  color: var(--hc-mid);
-  transition: color var(--hc-dur-fast) var(--hc-ease);
-}
-
-.hc-tab__icon {
-  width: 24px;
-  height: 24px;
-  stroke: currentColor;
-  stroke-width: 1.5;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  fill: none;
-}
-
-.hc-tab__label {
-  font-family: var(--hc-sans);
-  font-weight: 500;
-  font-size: var(--hc-tab);
-  line-height: var(--hc-tab-line);
-  letter-spacing: 0.01em;
-}
-
-/* The tile lightens the ground under the active tab, so its label lifts a
-   step past ink to hold the same separation it had on paper. */
-.hc-tab[aria-current="page"] { color: var(--hc-ink); }
-.hc-tab[aria-current="page"] .hc-tab__icon { color: var(--hc-accent-deep); }
-
-/* The focus ring has to stay inside the plinth, or it draws a rectangle
-   across the rounded corner. */
-.hc-tab:focus-visible {
-  outline-offset: -4px;
-  border-radius: 20px;
-}
-
-/* --------------------------------------------------------------------------
-   The overflow sheet. What ••• lifts.
-
-   It is the plinth again, and that is the whole design: the same skin, the
-   same hairline, the same sheen, the same 26px corner, the same 12px inset on
-   both edges, so it is exactly as wide as the bar and its edges line up with
-   the bar's rather than nearly lining up. One 8px gap between them is what
-   keeps it reading as a second object instead of the bar having grown a lump.
-
-   The modules sit on the glass the way the five tabs sit on it, and the
-   raised tile is spent on the one you are in. The bar already has a rule
-   about what a tile means and it means you are here; the sheet keeps it
-   rather than inventing a second one.
-   -------------------------------------------------------------------------- */
-
-.hc-oversheet {
-  position: fixed;
-  left: var(--hc-tabbar-inset);
-  right: var(--hc-tabbar-inset);
-  /* The bar's own height, its frame, its two hairlines and the inset it
-     floats on, and then the gap. Written out rather than measured, so moving
-     any one of those tokens moves this with it. */
-  bottom: calc(var(--hc-tabbar-h)
-               + (var(--hc-tabbar-pad) * 2)
-               + (var(--hc-hairline) * 2)
-               + var(--hc-tabbar-inset)
-               + env(safe-area-inset-bottom)
-               + 8px);
-  z-index: 46;                  /* over the discs at 45, under the toast at 60 */
-  padding: 8px var(--hc-tabbar-pad) var(--hc-tabbar-pad);
-  border-radius: 26px;
-  background: var(--hc-tabbar-skin);
-  border: var(--hc-hairline) solid var(--hc-tabbar-edge);
-  box-shadow: var(--hc-tabbar-shadow);
-  isolation: isolate;
-
-  /* Parked below the screen edge, far enough down that the shadow clears too. */
-  transform: translateY(calc(100% + 120px));
-  opacity: 1;
-  transition: transform var(--hc-dur-sheet) var(--hc-ease-enter);
-}
-
-@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
-  .hc-oversheet {
-    background: var(--hc-tabbar-skin-lens);
-    -webkit-backdrop-filter: blur(22px) saturate(150%);
-    backdrop-filter: blur(22px) saturate(150%);
-  }
-}
-
-.hc-oversheet::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: 2;
-  pointer-events: none;
-  border-radius: inherit;
-  background: var(--hc-tabbar-sheen);
-}
-
-.hc-oversheet[data-state="open"],
-.hc-oversheet[data-state="peek"] { transform: translateY(0); }
-
-/* The peek leaves on a fade rather than the slide it arrived on. Sliding back
-   down is what a dismissal looks like, and nobody opened this one. */
-.hc-oversheet[data-state="fade"] {
-  transform: translateY(0);
-  opacity: 0;
-  transition: opacity 320ms var(--hc-ease);
-}
-
-/* Mid drag it is under a finger, not travelling anywhere, so it must not also
-   be easing. And putting it back to parked once it is invisible must not be
-   animated at all, or it travels down through the screen on the way. */
-.hc-oversheet[data-dragging="true"],
-.hc-oversheet[data-reset="true"] { transition: none; }
-
-/* The handle. A grab rail with a real target around it: the drag has to start
-   somewhere a thumb can hit without aiming, and the modules below are buttons,
-   so it cannot be the whole panel. */
-.hc-oversheet__grab {
+  right: var(--hc-chrome-inset);
+  bottom: calc(var(--hc-chrome-inset) + env(safe-area-inset-bottom));
+  /* Over the overlay it opens, because it is also the way to close it. */
+  z-index: 56;
+  width: var(--hc-navfab-size);
+  height: var(--hc-navfab-size);
+  padding: 0;
   display: grid;
   place-items: center;
-  width: 100%;
-  height: 22px;
-  margin-bottom: 2px;
-  padding: 0;
-  cursor: pointer;
-  touch-action: none;
-}
-
-.hc-oversheet__handle {
-  width: 38px;
-  height: 4px;
   border-radius: var(--hc-radius-pill);
-  background: var(--hc-rule);
-}
-
-.hc-oversheet__grab:focus-visible { outline-offset: -2px; border-radius: 12px; }
-
-/* Slots only for what is there. Two modules is one row of two, filling the
-   width the way the bar fills the screen, and nothing is reserved for a third.
-   --hc-mod-count is set in js/app.js and capped at four, so a fifth module
-   starts a second row rather than a fifth narrower column. */
-.hc-oversheet__grid {
-  position: relative;
-  z-index: 1;
-  display: grid;
-  grid-template-columns: repeat(var(--hc-mod-count, 2), minmax(0, 1fr));
-  gap: 4px;
-}
-
-.hc-oversheet__mod {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 5px;
-  min-height: 72px;
-  padding: 10px 4px;
-  border-radius: 20px;
-  border: var(--hc-hairline) solid transparent;
-  color: var(--hc-ink);
+  /* 2px rather than the hairline every other edge in this app uses. The ring
+     is the only thing telling a dark disc apart from a dark photograph
+     underneath it, so it is drawn to be seen rather than to be felt. */
+  border: 2px solid var(--hc-gold);
+  background: var(--hc-navfab-skin);
+  box-shadow: var(--hc-navfab-shadow);
+  color: var(--hc-gold);
   transition: transform var(--hc-dur-fast) var(--hc-ease);
 }
 
-.hc-oversheet__mod:active { transform: scale(0.96); }
+.hc-navfab:active { transform: scale(0.94); }
 
-.hc-oversheet__icon {
-  width: 24px;
-  height: 24px;
-  color: var(--hc-accent-deep);
-  stroke: currentColor;
-  stroke-width: 1.5;
-  stroke-linecap: round;
-  stroke-linejoin: round;
+.hc-navfab__icon {
+  width: 26px;
+  height: 26px;
   fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
 }
 
-.hc-oversheet__label {
-  font-family: var(--hc-sans);
-  font-weight: 500;
-  font-size: var(--hc-tab);
-  line-height: var(--hc-tab-line);
-  letter-spacing: 0.01em;
+/* The three rules become an x. Both glyphs are the same three lines in the
+   same 24 box, so the swap is a transform on each line rather than one icon
+   being taken away and another put in its place: the middle rule fades, and
+   the outer two travel to the centre and cross. A person watching sees the
+   menu fold, which is the honest picture of what the tap did. */
+.hc-navfab__bar {
+  transform-origin: 12px 12px;
+  transition: transform var(--hc-dur-base) var(--hc-ease),
+              opacity var(--hc-dur-fast) var(--hc-ease);
 }
 
-/* The one you are in, raised out of the glass exactly as the active tab is. */
-.hc-oversheet__mod[aria-current="page"] {
-  background: var(--hc-tabbar-tile);
-  border-color: var(--hc-tabbar-tile-edge);
-  box-shadow: var(--hc-tabbar-tile-shadow);
+#app[data-navmenu="open"] .hc-navfab__bar--top {
+  transform: translateY(6px) rotate(45deg);
+}
+#app[data-navmenu="open"] .hc-navfab__bar--mid { opacity: 0; }
+#app[data-navmenu="open"] .hc-navfab__bar--bot {
+  transform: translateY(-6px) rotate(-45deg);
 }
 
-.hc-oversheet__mod:focus-visible { outline-offset: -3px; }
+@media (prefers-reduced-motion: reduce) {
+  .hc-navfab__bar { transition: none; }
+}
 
-/* The paper behind it. It stops at the tab bar rather than covering it, so
-   the bar stays lit and usable with the sheet up. */
-.hc-oversheet__scrim {
+/* --------------------------------------------------------------------------
+   The overlay. Everything the app has, on one screen.
+   -------------------------------------------------------------------------- */
+
+.hc-navmenu {
   position: fixed;
   inset: 0;
-  z-index: 30;
-  width: 100%;
-  padding: 0;
-  background: var(--hc-overlay);
+  z-index: 55;
+  display: flex;
+  flex-direction: column;
+  /* The top group is the one that can outgrow a short phone, so it is the one
+     allowed to scroll. The bottom group and the rule above it hold still. */
+  overflow: hidden;
   opacity: 0;
   pointer-events: none;
   transition: opacity var(--hc-dur-base) var(--hc-ease);
 }
 
-#app[data-oversheet="open"] .hc-oversheet__scrim {
+#app[data-navmenu="open"] .hc-navmenu {
   opacity: 1;
   pointer-events: auto;
 }
 
-/* Both discs sit exactly where the sheet lands. They go down with it up, and
-   come back when it goes, rather than floating over a scrim or poking out
-   beside a panel. */
-#app[data-oversheet="open"] .hc-disc,
-#app[data-oversheet="peek"] .hc-disc,
-#app[data-oversheet="fade"] .hc-disc {
-  opacity: 0;
-  transform: translateY(10px) scale(0.86);
-  pointer-events: none;
+@media (prefers-reduced-motion: reduce) {
+  .hc-navmenu { transition: none; }
+}
+
+/* Two groups and a rule, laid out from the two ends rather than from the
+   middle: the secondary list is pinned near the top, the primary list sits
+   directly over the button, and whatever is left over is the gap between
+   them. On a tall phone that gap is generous; on a short one the rule is
+   pushed up against the top group and the top group starts to scroll, which
+   is the right thing to give up first. */
+.hc-navmenu__panel {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: calc(var(--hc-header-h) + env(safe-area-inset-top) + var(--hc-space-lg))
+           var(--hc-screen-pad)
+           calc(var(--hc-chrome-space) + env(safe-area-inset-bottom) + var(--hc-space-base));
+}
+
+.hc-navmenu__group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* Least used at the top, most used at the bottom, so the item nearest the
+   rule is the nearest thing in this group to the thumb. */
+.hc-navmenu__group--more {
+  flex: 0 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  gap: 2px;
+  -webkit-overflow-scrolling: touch;
+}
+
+.hc-navmenu__group--tabs {
+  flex: 0 0 auto;
+  gap: 2px;
+}
+
+/* The space between the two groups. It is a flex spacer with the rule drawn
+   across the middle of it, so the rule floats between the lists rather than
+   being welded to the bottom of one. */
+.hc-navmenu__split {
+  flex: 1 1 auto;
+  min-height: var(--hc-space-lg);
+  display: grid;
+  place-items: center;
+}
+
+.hc-navmenu__rule {
+  width: 120px;
+  height: 1px;
+  background: var(--hc-navmenu-rule);
+}
+
+/* One link. The app's display face, all caps and tracked out, which is the
+   same treatment the eyebrow above every section header gets and for the same
+   reason: a word set this way is read as a label rather than as prose, and a
+   list of them reads as a list at a glance.
+
+   Compact in the top group and a real step larger in the bottom one, because
+   the difference in size is the only thing saying which list is which once
+   the icons are gone. */
+/* THE BOX HUGS THE WORD, which is the whole of what makes "tap anywhere else
+   to close" true. A link laid out as a full width row is a row of empty glass
+   on both sides of a short word that navigates, so tapping the space beside
+   HOME went home. The padding is what keeps the target comfortably wider than
+   the letters without reaching the edges of the screen. */
+.hc-navmenu__link {
+  position: relative;
+  display: block;
+  max-width: 100%;
+  padding: 0 16px;
+  font-family: var(--hc-sans-display);
+  text-align: center;
+  text-transform: uppercase;
+  color: var(--hc-navmenu-dim);
+  transition: color var(--hc-dur-fast) var(--hc-ease);
+}
+
+.hc-navmenu__group--more .hc-navmenu__link {
+  font-weight: 600;
+  font-size: 13px;
+  line-height: 32px;
+  letter-spacing: 0.16em;
+}
+
+.hc-navmenu__group--tabs .hc-navmenu__link {
+  font-weight: 800;
+  font-size: 20px;
+  line-height: 44px;
+  letter-spacing: 0.10em;
+  color: var(--hc-navmenu-ink);
+}
+
+.hc-navmenu__link:active { color: var(--hc-gold); }
+
+/* Where you already are. Gold, and a short rule under it, because colour
+   alone is not a thing everybody can see. */
+.hc-navmenu__link[aria-current="page"] { color: var(--hc-gold); }
+
+.hc-navmenu__link[aria-current="page"]::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: 4px;
+  width: 22px;
+  height: 2px;
+  margin-left: -11px;
+  border-radius: 1px;
+  background: var(--hc-gold);
+}
+
+.hc-navmenu__group--tabs .hc-navmenu__link[aria-current="page"]::after {
+  bottom: 6px;
+  width: 30px;
+  margin-left: -15px;
+}
+
+.hc-navmenu__link:focus-visible {
+  outline-offset: -2px;
+  border-radius: var(--hc-radius-sm);
+}
+
+/* A SHORT PHONE, WITH EVERY LINE THERE IS.
+
+   The longest this list ever gets is nine in the top group: the seven modules,
+   then Admin on an admin's phone, then Settings. On a 667pt screen, once the
+   header and the button's footprint are taken off, there are about 487pt to
+   put nine of those and five of the others in, and at the sizes above that is
+   four lines more than fits. The top group would scroll, which works, and
+   which also means Group, the line this church reaches for most on a Thursday
+   night, would be the one below the fold.
+
+   So the rows come in rather than the list going over. Nothing changes about
+   the type sizes, which are what say which group is which; only the leading,
+   which is the thing there is least reason to defend. 9 x 26 and 5 x 38 is
+   424, and the gap between them keeps the rest. */
+@media (max-height: 720px) {
+  .hc-navmenu__group--more .hc-navmenu__link { line-height: 26px; }
+  .hc-navmenu__group--tabs .hc-navmenu__link { line-height: 38px; }
+}
+
+/* Anywhere that is not a word. Tapping it closes the overlay without going
+   anywhere, which is the same intention the x is, so it is the same handler.
+   It sits under the panel rather than over it, and the panel's own empty
+   space lets taps through to it.
+
+   AND IT IS ALSO THE DARK ROOM: the dim is painted here rather than on
+   .hc-navmenu above, so the words sit over it rather than in it. */
+.hc-navmenu__scrim {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: var(--hc-navmenu-scrim);
+}
+
+/* And the blur, which is put on the screen underneath rather than taken out
+   of it with a backdrop-filter.
+
+   WHY NOT backdrop-filter, WHICH IS WHAT THE REST OF THIS FILE USES. Because
+   this layer, unlike the plinth and the discs, has a scrolling box inside it:
+   on a short phone with every module switched on the top group runs past the
+   room it has and becomes a scroller. Chromium promotes a scroller to its own
+   compositing layer, and a backdrop-filter anywhere in the same stacking
+   context then samples a different backdrop inside those bounds, which drew
+   the top group as a pale rectangle floating over the dim. It is a real
+   artifact and it was on the glass, not a theory.
+
+   Blurring the thing itself has no such trap, and it is also the more honest
+   description of what is being asked for: the screen you are still on, out of
+   focus, with a dark room in front of it. The four named here are the whole of
+   what is behind the overlay. They are listed rather than reached with a
+   wildcard because the overlay and the button are siblings of all four, and
+   blurring the navigation through itself is not a thing anybody wants. */
+#app[data-navmenu="open"] .hc-scroll,
+#app[data-navmenu="open"] .hc-topbar,
+#app[data-navmenu="open"] .hc-pinbar,
+#app[data-navmenu="open"] .hc-date-rail {
+  filter: blur(7px);
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .hc-oversheet,
-  .hc-oversheet[data-state="fade"],
-  .hc-oversheet__scrim { transition: none; }
+  /* The blur stays. It is not motion, and the scrim alone does not separate
+     small white capitals from a screen full of headings underneath them. */
+  .hc-navmenu__scrim { transition: none; }
+}
+
+/* The panel lets taps through everywhere it is not holding something, so the
+   scrim underneath it gets them. The links take their own, and so does the
+   top group, which has to be able to take a finger and scroll on a phone
+   short enough to need it. Both close the overlay either way: see wireMenu in
+   js/app.js, where one listener on the whole layer says so. */
+.hc-navmenu__panel {
+  position: relative;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.hc-navmenu__link,
+.hc-navmenu__group--more { pointer-events: auto; }
+
+/* The discs and the pill go down with the overlay up. They belong to the
+   screen underneath, and the screen underneath is not what anybody is reading
+   at that moment. */
+#app[data-navmenu="open"] .hc-disc,
+#app[data-navmenu="open"] .hc-jlink {
+  opacity: 0;
+  transform: translateY(10px) scale(0.86);
+  pointer-events: none;
 }
 
 /* --------------------------------------------------------------------------
@@ -1917,7 +1914,7 @@ a.hc-card:active { background: var(--hc-paper-sunk); }
    the bar too, sharing its 12px inset on both edges so the three line up on
    the same edges rather than nearly lining up.
 
-   ON THE HEIGHT. --hc-tabbar-space is the bar's whole footprint plus one
+   ON THE HEIGHT. --hc-chrome-space is the bar's whole footprint plus one
    inset, so these land exactly one inset above the plinth and the gap above
    the bar matches the gap beside it.
 
@@ -1928,7 +1925,7 @@ a.hc-card:active { background: var(--hc-paper-sunk); }
 
 .hc-disc {
   position: fixed;
-  bottom: calc(var(--hc-tabbar-space) + env(safe-area-inset-bottom));
+  bottom: calc(var(--hc-chrome-space) + env(safe-area-inset-bottom));
   z-index: 45;                    /* over the content, under the toast */
   width: var(--hc-tap-min);
   height: var(--hc-tap-min);
@@ -1951,8 +1948,8 @@ a.hc-card:active { background: var(--hc-paper-sunk); }
               transform var(--hc-dur-fast) var(--hc-ease-enter);
 }
 
-.hc-disc--top  { right: var(--hc-tabbar-inset); }
-.hc-disc--back { left: var(--hc-tabbar-inset); }
+.hc-disc--top  { right: var(--hc-chrome-inset); }
+.hc-disc--back { left: var(--hc-chrome-inset); }
 
 /* Glass only where the browser can actually blur, exactly as the tab bar
    does it. Everywhere else the denser skin above stands in. */
@@ -2045,12 +2042,12 @@ a.hc-card:active { background: var(--hc-paper-sunk); }
 .hc-jlink {
   position: fixed;
   left: 50%;
-  bottom: calc(var(--hc-tabbar-space) + env(safe-area-inset-bottom));
+  bottom: calc(var(--hc-chrome-space) + env(safe-area-inset-bottom));
   z-index: 45;                    /* beside the discs, under the toast */
 
   /* Clear of both discs at every width: the inset each one floats on, its
      44px, and a space between. On the narrowest phone this leaves 172px. */
-  max-width: calc(100% - ((var(--hc-tabbar-inset) + var(--hc-tap-min) + var(--hc-space-sm)) * 2));
+  max-width: calc(100% - ((var(--hc-chrome-inset) + var(--hc-tap-min) + var(--hc-space-sm)) * 2));
 
   height: var(--hc-tap-min);
   padding: 0 16px;
@@ -2167,7 +2164,7 @@ a.hc-card:active { background: var(--hc-paper-sunk); }
 .hc-toast {
   position: fixed;
   left: 50%;
-  bottom: calc(var(--hc-tabbar-space) + env(safe-area-inset-bottom) + var(--hc-space-base));
+  bottom: calc(var(--hc-chrome-space) + env(safe-area-inset-bottom) + var(--hc-space-base));
   transform: translate(-50%, 8px);
   z-index: 60;
   max-width: calc(100% - 40px);
@@ -2686,13 +2683,13 @@ a.hc-card:active { background: var(--hc-paper-sunk); }
    animation owns transform. */
 .hc-hlbar {
   position: fixed;
-  left: var(--hc-tabbar-inset);
-  right: var(--hc-tabbar-inset);
-  bottom: calc(var(--hc-tabbar-space) + env(safe-area-inset-bottom));
+  left: var(--hc-chrome-inset);
+  right: var(--hc-chrome-inset);
+  bottom: calc(var(--hc-chrome-space) + env(safe-area-inset-bottom));
   z-index: 55;
   width: -webkit-fit-content;
   width: fit-content;
-  max-width: calc(100% - (var(--hc-tabbar-inset) * 2));
+  max-width: calc(100% - (var(--hc-chrome-inset) * 2));
   margin: 0 auto;
   display: flex;
   align-items: stretch;
@@ -2890,9 +2887,9 @@ a.hc-card:active { background: var(--hc-paper-sunk); }
    where the answer will appear. Kept in step with .hc-hlbar above. */
 .hc-hint__bar {
   position: fixed;
-  left: var(--hc-tabbar-inset);
-  right: var(--hc-tabbar-inset);
-  bottom: calc(var(--hc-tabbar-space) + env(safe-area-inset-bottom));
+  left: var(--hc-chrome-inset);
+  right: var(--hc-chrome-inset);
+  bottom: calc(var(--hc-chrome-space) + env(safe-area-inset-bottom));
   display: flex;
   justify-content: center;
 }
@@ -3349,7 +3346,7 @@ a.hc-card:active { background: var(--hc-paper-sunk); }
   /* Clear of the back to top disc rather than merely behind it. The disc is
      44px of gold in that corner and it wins the tap either way, but a track
      that runs under it is a track with a dead end in it. */
-  bottom: calc(var(--hc-tabbar-space) + var(--hc-tap-min) + 8px
+  bottom: calc(var(--hc-chrome-space) + var(--hc-tap-min) + 8px
                + env(safe-area-inset-bottom));
   width: 34px;
 
@@ -3483,9 +3480,9 @@ a.hc-card:active { background: var(--hc-paper-sunk); }
   height: 34px;
   margin-top: -17px;
   border-radius: var(--hc-radius-pill);
-  background: var(--hc-tabbar-skin);
-  border: var(--hc-hairline) solid var(--hc-tabbar-edge);
-  box-shadow: var(--hc-tabbar-shadow);
+  background: var(--hc-glass-skin);
+  border: var(--hc-hairline) solid var(--hc-glass-edge);
+  box-shadow: var(--hc-glass-shadow);
   pointer-events: none;
   opacity: 0;
   transform-origin: 100% 50%;
@@ -3494,7 +3491,7 @@ a.hc-card:active { background: var(--hc-paper-sunk); }
 
 @supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
   .hc-index__card {
-    background: var(--hc-tabbar-skin-lens);
+    background: var(--hc-glass-skin-lens);
     backdrop-filter: blur(24px) saturate(1.6);
     -webkit-backdrop-filter: blur(24px) saturate(1.6);
   }
@@ -3797,7 +3794,7 @@ a.hc-card:active { background: var(--hc-paper-sunk); }
   z-index: 50;
   left: var(--hc-screen-pad);
   right: var(--hc-screen-pad);
-  bottom: calc(var(--hc-tabbar-space) + env(safe-area-inset-bottom) +
+  bottom: calc(var(--hc-chrome-space) + env(safe-area-inset-bottom) +
                var(--hc-space-base) + 52px);
   display: flex;
   align-items: center;

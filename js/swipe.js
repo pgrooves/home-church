@@ -96,7 +96,7 @@
      catching something that was already moving. */
   var SETTLE_EASE = 'cubic-bezier(0.22, 0.61, 0.36, 1)';
 
-  var app, scroller, mount, tabbar, totop;
+  var app, scroller, mount, totop;
   var deck = null;         // the fixed layer holding the incoming screen
   var g = null;            // the gesture in flight, null between gestures
   var settling = false;    // an animation is finishing
@@ -112,14 +112,6 @@
      behind •••, then Settings. Connect used to be the end of the line. */
   function lane() {
     return HC.router.lane();
-  }
-
-  /* The bar has one more tile than it has tabs, and the last one is •••. Past
-     Connect every module lights that same tile, so the travelling tile stops
-     there rather than sliding off the end of a bar that has nowhere further
-     to go. See emitViewChange in js/app.js, which lands on the same number. */
-  function tileLimit() {
-    return HC.router.TABS.length;
   }
 
   /* --------------------------------------------------------- what to ignore */
@@ -200,12 +192,12 @@
       }
     });
 
-    // The tile under the tab bar is placed by a custom property that the CSS
-    // multiplies by its own width, so a fraction of a tab is a fraction of the
-    // travel. It rides the finger for free, as far as ••• and no further.
-    var progress = Math.max(-1, Math.min(1, -dx / g.width));
-    var at = Math.min(g.index + progress, tileLimit());
-    tabbar.style.setProperty('--hc-tab-index', at.toFixed(4));
+    /* NOTHING ELSE MOVES WITH THE FINGER ANY MORE. There used to be a raised
+       tile in the tab bar placed from here, one custom property per frame, so
+       a fraction of a tab of travel showed as a fraction of a tab of tile. The
+       bar is gone and nothing on the glass is claiming to say which of the
+       five you are on, so a drag is now the screens and only the screens. See
+       the navigation block in js/app.js. */
   }
 
   function begin(dir) {
@@ -221,7 +213,6 @@
     if (g.flat) return;
 
     app.setAttribute('data-swiping', 'true');
-    tabbar.setAttribute('data-swiping', 'true');
     mount.classList.add('hc-view-dragging');
 
     // The disc belongs to how far the outgoing screen is scrolled, and the
@@ -268,12 +259,6 @@
       }
     });
 
-    // The tile stops being placed by hand and finishes the trip on its own,
-    // over exactly as long as the screens take, so they arrive together.
-    tabbar.style.setProperty('--hc-tab-tween', ms + 'ms');
-    tabbar.removeAttribute('data-swiping');
-    tabbar.style.setProperty('--hc-tab-index', Math.min(g.index + dir, tileLimit()));
-
     place(to);
 
     var settled = false;
@@ -293,11 +278,12 @@
         HC.router.go({ name: name }, { adopt: el, animate: false });
         HC.native.tap('Light');
 
-        /* Past Connect the raised tile parks on ••• and stays there, so the
-           bar can no longer say which module you are in. The sheet says it:
-           it shows itself for a second with that module lit and then goes.
-           Only a drag calls this, because only a drag can land you somewhere
-           the bar cannot name. See js/app.js. */
+        /* Nothing to announce any more, and the call is kept anyway. It used
+           to make the overflow sheet flash the module a drag had landed on,
+           because the raised tile in the bar parked on ••• for all of them
+           and could not say which. There is no bar and no tile; HC.overflow
+           .arrived is a no-op now, and the gesture does not need to know
+           that. See the navigation block in js/app.js. */
         if (HC.overflow) HC.overflow.arrived(name);
       } else if (totop && totopWas) {
         totop.setAttribute('data-show', totopWas);
@@ -326,8 +312,6 @@
     mount.style.transform = '';
     mount.classList.remove('hc-view-dragging');
 
-    tabbar.removeAttribute('data-swiping');
-    tabbar.style.removeProperty('--hc-tab-tween');
     app.removeAttribute('data-swiping');
 
     g = null;
@@ -461,7 +445,6 @@
     app = document.getElementById('app');
     scroller = config.scroller;
     mount = config.mount;
-    tabbar = config.tabbar;
     totop = config.totop;
 
     scroller.addEventListener('touchstart', onStart, { passive: true });

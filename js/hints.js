@@ -121,7 +121,7 @@
       [!ctx.hintsOn, 'Hints is off in Your account'],
       [ctx.spent, 'already shown once this launch'],
       [ctx.route !== 'guide-reader', 'not in a guide, the route is ' + ctx.route],
-      [ctx.sheetOpen, 'a sheet is open'],
+      [ctx.sheetOpen, 'the navigation is open'],
       [ctx.editing, 'Edit mode is on'],
       [ctx.hidden, 'the app is in the background'],
       [!armed, 'nothing armed: no section has been opened yet'],
@@ -136,14 +136,14 @@
   function context(block) {
     var route = HC.router && HC.router.current();
     var app = document.getElementById('app');
-    var sheet = app ? app.getAttribute('data-oversheet') : null;
+    var nav = app ? app.getAttribute('data-navmenu') : null;
     return {
       hintsOn: isOn(),
       spent: spent,
       route: route ? route.name : null,
-      // setSheetState() in js/app.js mirrors the ••• sheet onto #app. 'closed'
-      // and 'fade' are both on their way out; the other two own the glass.
-      sheetOpen: sheet === 'open' || sheet === 'peek',
+      // setMenuState() in js/app.js mirrors the navigation overlay onto #app.
+      // Up, it owns the whole glass and a hint has nothing to point at.
+      sheetOpen: nav === 'open',
       editing: !!(HC.edit && HC.edit.isOn && HC.edit.isOn()),
       hidden: document.hidden,
       inView: !!block && inView(block)
@@ -175,9 +175,13 @@
     return bar ? bar.getBoundingClientRect().bottom : 52;
   }
 
+  /* What is reserved at the bottom of the screen. It was the tab bar's
+     plinth, which is where the name came from; it is the round navigation
+     button now, and the question is the same one: how much of the bottom of
+     the glass is chrome rather than words. */
   function plinth() {
-    var tabs = document.querySelector('.hc-tabbar');
-    return tabs ? window.innerHeight - tabs.getBoundingClientRect().top : 100;
+    var fab = document.querySelector('.hc-navfab');
+    return fab ? window.innerHeight - fab.getBoundingClientRect().top : 100;
   }
 
   /* --------------------------------------------------------------- arming */

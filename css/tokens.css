@@ -117,44 +117,82 @@
 
   /* --- Chrome ----------------------------------------------------------- */
   --hc-header-h: 52px;
-  --hc-tabbar-h: 56px;    /* the row of tabs, not the bar around it */
   --hc-tap-min:  44px;    /* minimum touch target, never go below this */
 
-  /* The tab bar floats: a plinth inset from three edges rather than a band
-     welded to the bottom of the screen. Two measurements describe it, and
-     --hc-tabbar-space is what the rest of the app should reserve, because
-     the bar's footprint is now taller than the row inside it. */
-  --hc-tabbar-inset: 12px;  /* gap between the plinth and the screen edge */
-  --hc-tabbar-pad:    6px;  /* frame between the plinth and the tab row */
-  --hc-tabbar-space: calc(var(--hc-tabbar-h)
-                          + (var(--hc-tabbar-pad) * 2)
-                          + (var(--hc-tabbar-inset) * 2));
+  /* THE BOTTOM OF THE SCREEN, AND WHAT IS RESERVED AT IT.
 
-  /* Plinth skin. Two backgrounds because the blurred version has to be far
-     more transparent to read as glass, and the opaque one has to be dense
-     enough to stay legible where backdrop-filter is unsupported.
-     In light mode this is frosted paper, not grey glass: the tint stays in
-     the warm family so the bar looks like the app rather than the OS. */
-  --hc-tabbar-skin:      linear-gradient(178deg, rgba(255,253,250,0.94), rgba(238,233,225,0.92));
-  --hc-tabbar-skin-lens: linear-gradient(178deg, rgba(255,253,250,0.72), rgba(238,233,225,0.62));
-  --hc-tabbar-edge:      rgba(122,110,95,0.28);
-  --hc-tabbar-shadow:    0 14px 34px rgba(26,25,24,0.18),
-                         0 2px 8px rgba(26,25,24,0.08),
-                         inset 0 1px 0 rgba(255,255,255,0.70),
-                         inset 0 -1px 0 rgba(26,25,24,0.05);
-  --hc-tabbar-sheen:     linear-gradient(112deg,
-                           rgba(255,255,255,0.55) 0%,
-                           rgba(255,255,255,0.18) 26%,
-                           rgba(255,255,255,0) 52%);
+     There used to be a six tile plinth down here, and the two numbers below
+     described it: an inset it floated on, and the whole footprint the rest of
+     the app had to keep clear of. The plinth is gone and one round button has
+     taken its place, but both numbers are still the answer to exactly the
+     same two questions, so they kept their jobs and lost the tab in their
+     names.
 
-  /* The active tab is a tile raised out of the plinth. On glass there is no
-     solid ground to rise from, so the rise is drawn with light: a lighter
-     face, a hairline, a bright lip on top and a dark one underneath. */
-  --hc-tabbar-tile:        linear-gradient(180deg, rgba(255,255,255,0.96), rgba(247,244,239,0.86));
-  --hc-tabbar-tile-edge:   rgba(122,110,95,0.18);
-  --hc-tabbar-tile-shadow: inset 0 1px 0 rgba(255,255,255,0.90),
-                           inset 0 -1px 0 rgba(26,25,24,0.06),
-                           0 3px 9px rgba(26,25,24,0.12);
+     --hc-chrome-inset is the gap between anything fixed at an edge and that
+     edge. The button sits on it, and so do the two discs and the pill on the
+     row above them, which is what keeps all four on the same margins.
+
+     --hc-chrome-space is the button's whole footprint, inset included, and it
+     is what every screen reserves at the bottom and what the discs stand on.
+     Written as a calc of the two below rather than as a number, so resizing
+     the button moves everything that clears it on the same edit. */
+  --hc-chrome-inset: 12px;
+  --hc-navfab-size:  64px;
+  --hc-chrome-space: calc(var(--hc-navfab-size) + (var(--hc-chrome-inset) * 2));
+
+  /* The button itself. A dark disc with a gold ring and a gold rule set,
+     which is the app's own mark colour doing the one job it does everywhere
+     else in this interface: being the only gold thing on the screen so it is
+     findable without a label. See the note on --hc-gold below.
+
+     THE FILL DOES NOT FLIP WITH THE THEME, and that is deliberate rather than
+     an oversight. --hc-dark inverts to paper in dark mode, because it is the
+     primary button's fill and a primary button has to stay the loud one. This
+     is not that: it is a dark disc, in both themes, the same way the mark on
+     the Home Screen is drawn on its own dark ground rather than lightened to
+     match whatever is behind it. Only the value shifts, by the smallest
+     amount that lets the dark theme's card surface show through as the same
+     object. */
+  --hc-navfab-skin:   #1F1E1C;
+  --hc-navfab-shadow: 0 10px 26px rgba(26,25,24,0.26),
+                      0 2px 8px rgba(26,25,24,0.14);
+
+  /* The full screen navigation behind it. A dark scrim over whatever was on
+     the glass, blurred just enough that the screen underneath reads as a
+     place you have not left rather than as a background image.
+
+     The two inks are white and a step down from it, and they are fixed rather
+     than themed for the same reason the fill above is: this layer is its own
+     dark room in both themes, so ink that followed --hc-ink would go black on
+     black the moment somebody turned the lights on. */
+  --hc-navmenu-scrim: rgba(0,0,0,0.75);
+  --hc-navmenu-ink:   #FFFFFF;
+  --hc-navmenu-dim:   rgba(247,244,239,0.72);
+  --hc-navmenu-rule:  rgba(247,244,239,0.22);
+
+  /* The floating glass. Two backgrounds because the blurred version has to be
+     far more transparent to read as glass, and the opaque one has to be dense
+     enough to stay legible where backdrop-filter is unsupported. In light mode
+     this is frosted paper, not grey glass: the tint stays in the warm family
+     so it looks like the app rather than like the OS.
+
+     THE NAME USED TO SAY TABBAR, and the material was the tab bar's plinth.
+     The plinth is gone; the material is not. The card behind the focused
+     heading on the index rail is drawn in it, which is what keeps that card
+     reading as a piece of this app's chrome rather than as a tooltip, and
+     anything else that has to float over a photograph should reach for these
+     four rather than inventing a fifth grey. */
+  --hc-glass-skin:      linear-gradient(178deg, rgba(255,253,250,0.94), rgba(238,233,225,0.92));
+  --hc-glass-skin-lens: linear-gradient(178deg, rgba(255,253,250,0.72), rgba(238,233,225,0.62));
+  --hc-glass-edge:      rgba(122,110,95,0.28);
+  --hc-glass-shadow:    0 14px 34px rgba(26,25,24,0.18),
+                        0 2px 8px rgba(26,25,24,0.08),
+                        inset 0 1px 0 rgba(255,255,255,0.70),
+                        inset 0 -1px 0 rgba(26,25,24,0.05);
+  --hc-glass-sheen:     linear-gradient(112deg,
+                          rgba(255,255,255,0.55) 0%,
+                          rgba(255,255,255,0.18) 26%,
+                          rgba(255,255,255,0) 52%);
 
   /* The brand gold, sampled from assets/icons/mark.png rather than guessed.
      It is a mark colour everywhere else in this app, see README; the back to
@@ -231,25 +269,27 @@
   --hc-shadow-sheet: 0 -2px 24px rgba(0,0,0,0.40);
   --hc-shadow-modal: 0 8px 32px rgba(0,0,0,0.48);
 
-  /* The plinth in the dark. The shadow does the work of making it float,
-     the sheen is one soft diagonal pass, and the tile is a denser pane set
-     into the glass rather than a hole cut through it. */
-  --hc-tabbar-skin:      linear-gradient(178deg, rgba(58,54,51,0.88), rgba(26,25,24,0.86));
-  --hc-tabbar-skin-lens: linear-gradient(178deg, rgba(58,54,51,0.52), rgba(26,25,24,0.42));
-  --hc-tabbar-edge:      rgba(196,181,162,0.20);
-  --hc-tabbar-shadow:    0 16px 36px rgba(0,0,0,0.52),
-                         inset 0 1px 0 rgba(242,238,231,0.10),
-                         inset 0 -1px 0 rgba(0,0,0,0.30);
-  --hc-tabbar-sheen:     linear-gradient(112deg,
-                           rgba(247,244,239,0.15) 0%,
-                           rgba(247,244,239,0.05) 26%,
-                           rgba(247,244,239,0) 52%);
+  /* The button in the dark. It is the card surface exactly, #232120, so on a
+     dark screen the disc reads as a piece of the app lifted off the page and
+     the gold ring is the whole of what separates it. The shadow deepens to do
+     the work the light theme's does with a softer one. */
+  --hc-navfab-skin:   #232120;
+  --hc-navfab-shadow: 0 14px 30px rgba(0,0,0,0.52),
+                      0 2px 8px rgba(0,0,0,0.34);
 
-  --hc-tabbar-tile:        linear-gradient(180deg, rgba(247,244,239,0.15), rgba(247,244,239,0.055));
-  --hc-tabbar-tile-edge:   rgba(207,193,174,0.30);
-  --hc-tabbar-tile-shadow: inset 0 1px 0 rgba(255,252,247,0.24),
-                           inset 0 -1px 0 rgba(0,0,0,0.16),
-                           0 4px 12px rgba(0,0,0,0.30);
+  /* The floating glass in the dark. The shadow does the work of making it
+     float and the sheen is one soft diagonal pass. See the note in :root for
+     what still reaches for these. */
+  --hc-glass-skin:      linear-gradient(178deg, rgba(58,54,51,0.88), rgba(26,25,24,0.86));
+  --hc-glass-skin-lens: linear-gradient(178deg, rgba(58,54,51,0.52), rgba(26,25,24,0.42));
+  --hc-glass-edge:      rgba(196,181,162,0.20);
+  --hc-glass-shadow:    0 16px 36px rgba(0,0,0,0.52),
+                        inset 0 1px 0 rgba(242,238,231,0.10),
+                        inset 0 -1px 0 rgba(0,0,0,0.30);
+  --hc-glass-sheen:     linear-gradient(112deg,
+                          rgba(247,244,239,0.15) 0%,
+                          rgba(247,244,239,0.05) 26%,
+                          rgba(247,244,239,0) 52%);
 
   /* The disc in the dark. The gold deepens so it glows against charcoal
      instead of glaring, and the arrow inverts to paper for the same reason

@@ -9,46 +9,37 @@
 
   var c = HC.components;
 
-  /* Six tiles, five of them tabs.
+  /* The five screens that used to have a tile in the bar.
 
-     The bar has been at six since the Group tab landed, and the comment that
-     used to sit here said six was already past the four to five the design
-     system asks for: on a 375pt phone each tile is 56.2pt, which keeps every
-     tap target legal and leaves Connect, the widest label at 48.5pt, with
-     under 4pt of air on each side. Measured rather than guessed, in
-     demo-group-room.
+     THE BAR IS GONE AND THESE FIVE ARE NOT. There were six tiles across the
+     bottom of every screen, five tabs and a ••• that lifted everything which
+     would not fit in five, and the whole arrangement was bounded by a number
+     measured in demo-group-room: on a 375pt phone a sixth tile is 56.2pt and
+     a seventh would be 48.2pt, at which point Connect stops fitting under its
+     own icon. That argument is over. Navigation is a full screen list of
+     words now, read vertically, where the next screen this church wants costs
+     one line rather than a renegotiation of the geometry. See the header of
+     the tab bar block in css/components.css.
 
-     A seventh tile would be 48.2pt and Connect would stop fitting. So rather
-     than buy one more feature and have the same argument again at eight, the
-     sixth tile stopped being a tab: ••• pushes the More list, and everything
-     that is not one of the five lives there. The geometry above is the
-     shipped geometry, unchanged, and it never has to be renegotiated again.
+     WHAT THESE FIVE STILL ARE is the row a sideways drag runs first, which is
+     HC.router.TABS and has not moved: Home, Cal, Connect, Listen, Guide, then
+     the modules below, then Settings. This array is the labels for them, in
+     that same order, and the overlay draws it upside down so Home lands
+     nearest the button and Guide nearest the rule. Adding a name here without
+     adding it to HC.router.TABS would put a word on the screen that the drag
+     does not know about, so the two are edited together.
 
-     `tab: false` is what keeps ••• out of the sideways swipe and out of
-     HC.router.TABS. Promoting a module into the five later is a line in this
-     array and a line out of MODULES below.
-
-     CAL AND GROUP HAVE SWAPPED. Cal is a tile in the bar now and Group is the
-     second module behind •••. The count did not move, so the geometry above
-     still holds: one name came out of the bar and another went in. Both lists
-     were edited together, which is the whole trade the note above describes,
-     and HC.router.TABS below was edited with them.
-
-     AND THE FIVE HAVE BEEN REORDERED: Home, Cal, Connect, Listen, Guide.
-     Nothing entered or left the bar and ••• is still the sixth tile, so the
-     geometry above is untouched, measurements and all. Only the order moved,
-     and the order is also the order a sideways drag runs, so HC.router.TABS
-     below was edited to match on the same commit. Listen and Guide stayed
-     side by side and stayed next to the modules, which is what keeps Sunday's
-     message, the guide read from it, and Worship behind ••• within a drag of
-     each other. */
+     CAL IS CALLED CALENDAR HERE and Cal everywhere else. TITLES below is what
+     the top bar carries, and it says Cal because that is what fitted under an
+     icon in a fifth of a phone's width. Nothing is under anything any more,
+     so the church's own word for it goes on the one screen where there is
+     room for it. */
   var TAB_META = [
-    { name: 'home',    label: 'Home',    icon: 'home' },
-    { name: 'cal',     label: 'Cal',     icon: 'calendar' },
-    { name: 'connect', label: 'Connect', icon: 'connect' },
-    { name: 'listen',  label: 'Listen',  icon: 'listen' },
-    { name: 'guide',   label: 'Guide',   icon: 'guide' },
-    { name: 'more',    label: 'More',    icon: 'more', tab: false }
+    { name: 'home',    label: 'Home' },
+    { name: 'cal',     label: 'Calendar' },
+    { name: 'connect', label: 'Connect' },
+    { name: 'listen',  label: 'Listen' },
+    { name: 'guide',   label: 'Guide' }
   ];
 
   /* What is behind •••. One array, and it feeds three things that used to be
@@ -174,21 +165,15 @@
      js/search.js both call it, and both get the same list the sheet drew. */
   HC.modules = visibleModules;
 
-  /* Routes that light the ••• tile. A module is somewhere you are, not a menu
-     you got lost in, so the raised tile stays under the sixth tile the whole
-     time you are in one rather than fading out the way it does for a pushed
-     view like Your account. journal-entry is in here because it is opened
-     from a module and belongs to it. */
-  /* `practice` is in here for the same reason journal-entry is: it is opened
-     from a module and belongs to it, so the ••• tile stays lit while you are
-     reading one rather than going dark the moment you tap into a practice. */
-  /* `admin` is in here for admins and harmless for everybody else, who can no
-     more reach that route than they can reach the tile. Its four sections
-     share the route name, so the tile stays lit down inside Manage users the
-     way it stays lit inside a practice. */
-  var MODULE_ROUTES = ['more', 'worship', 'group', 'when-where', 'practices',
-                       'practice', 'alpha', 'journal', 'journal-entry', 'give',
-                       'admin'];
+  /* THERE USED TO BE A SECOND LIST HERE. MODULE_ROUTES named every route that
+     should keep the ••• tile lit, journal-entry and practice and the four
+     Admin sections included, because the raised tile in the bar parked on
+     that sixth tile for all of them and had to be told which pushed views
+     still counted as being in a module. Nothing raises a tile any more. The
+     overlay marks the route you are actually on and marks nothing when you
+     are somewhere it does not list, which is the honest answer and needed no
+     list to arrive at. HC.router.isModule is the one that remains, and it is
+     about the lane rather than about the chrome. */
 
   var TITLES = {
     home: 'Home',
@@ -253,12 +238,8 @@
      rather than at load, so the order of the script tags does not matter. */
   HC.titles = TITLES;
 
-  function isModule(name) {
-    return MODULE_ROUTES.indexOf(name) !== -1;
-  }
-
-  var mount, scroller, topbar, tabbar, totop, backdisc, pinbar, jlink;
-  var sheet, sheetGrid, sheetScrim, sheetGrab;
+  var mount, scroller, topbar, totop, backdisc, pinbar, jlink;
+  var navfab, menu, menuPanel, menuScrim;
 
   /* ------------------------------------------------------------- the shell */
 
@@ -395,56 +376,52 @@
       '<button type="button" class="hc-jlink" id="hc-jlink" ' +
           'data-show="false" data-mode="" aria-hidden="true" tabindex="-1"></button>' +
 
-      /* The overflow sheet, and the paper behind it. Both live in the shell
-         rather than in a screen, for the same reason the tab bar does: they
-         belong to the app, not to whatever is currently on. See the block
-         further down for what opens and closes them.
+      /* The navigation, and the button that lifts it. Both live in the shell
+         rather than in a screen, for the same reason the tab bar used to:
+         they belong to the app, not to whatever is currently on. See the
+         block further down for what opens and closes them.
 
-         The scrim stops at the tab bar rather than covering it, so the bar
-         stays lit and usable with the sheet up: ••• closes what it opened,
-         and any other tab takes you there and puts the sheet away on the way
-         past. A bar that goes dead under a menu is a bar you have to dismiss
-         before you can use, which is one tap more than this needs. */
-      '<button type="button" class="hc-oversheet__scrim" id="hc-oversheet-scrim" ' +
-          'aria-label="Close More" aria-hidden="true" tabindex="-1"></button>' +
-
-      '<nav class="hc-oversheet" id="hc-oversheet" aria-label="More" aria-hidden="true">' +
-        '<button type="button" class="hc-oversheet__grab" id="hc-oversheet-grab" ' +
-            'aria-label="Close More" tabindex="-1">' +
-          '<span class="hc-oversheet__handle"></span>' +
-        '</button>' +
-        '<div class="hc-oversheet__grid" id="hc-oversheet-grid"></div>' +
+         THE OVERLAY IS EMPTY UNTIL IT IS OPENED. What is in it depends on who
+         is signed in, whether the church is running rooms, and where you are
+         standing, and all three can change while the app is open. paintMenu()
+         answers all three at the moment of the tap rather than at boot, which
+         is the same rule the sheet before it followed. */
+      '<nav class="hc-navmenu" id="hc-navmenu" aria-label="Navigation" aria-hidden="true">' +
+        /* Anything that is not a word. It is a button rather than a div so a
+           keyboard and a screen reader both have the same way out that a
+           thumb has, and it sits under the panel: the panel passes taps
+           through everywhere it is not holding a link. */
+        '<button type="button" class="hc-navmenu__scrim" id="hc-navmenu-scrim" ' +
+            'aria-label="Close navigation" tabindex="-1"></button>' +
+        '<div class="hc-navmenu__panel" id="hc-navmenu-panel"></div>' +
       '</nav>' +
 
-      '<nav class="hc-tabbar" id="hc-tabbar" aria-label="Sections">' +
-        TAB_META.map(function (t) {
-          // ••• is drawn solid, see the note on `more` in js/components.js.
-          var cls = 'hc-tab__icon' + (t.name === 'more' ? ' hc-icon--solid' : '');
-          return '<button type="button" class="hc-tab" data-action="tab" data-tab="' + t.name + '">' +
-            c.icon(t.icon, cls) +
-            '<span class="hc-tab__label">' + t.label + '</span>' +
-          '</button>';
-        }).join('') +
-      '</nav>' +
+      /* The one piece of navigation chrome on the glass. It is the toggle as
+         well as the way in: the three rules fold into an x while the overlay
+         is up, and it does not move while they do, so the thumb that opened
+         it is already on the thing that closes it. */
+      '<button type="button" class="hc-navfab" id="hc-navfab" data-action="nav-toggle" ' +
+          'aria-expanded="false" aria-controls="hc-navmenu" aria-label="Open navigation">' +
+        '<svg class="hc-navfab__icon" viewBox="0 0 24 24" aria-hidden="true">' +
+          '<path class="hc-navfab__bar hc-navfab__bar--top" d="M4 6h16"/>' +
+          '<path class="hc-navfab__bar hc-navfab__bar--mid" d="M4 12h16"/>' +
+          '<path class="hc-navfab__bar hc-navfab__bar--bot" d="M4 18h16"/>' +
+        '</svg>' +
+      '</button>' +
 
       '<div class="hc-toast" id="hc-toast" role="status" aria-live="polite" data-visible="false"></div>';
 
     mount = document.getElementById('hc-view');
     scroller = document.getElementById('hc-scroll');
     topbar = document.getElementById('hc-topbar');
-    tabbar = document.getElementById('hc-tabbar');
     totop = document.getElementById('hc-totop');
     backdisc = document.getElementById('hc-back');
     jlink = document.getElementById('hc-jlink');
     pinbar = document.getElementById('hc-pinbar');
-    sheet = document.getElementById('hc-oversheet');
-    sheetGrid = document.getElementById('hc-oversheet-grid');
-    sheetScrim = document.getElementById('hc-oversheet-scrim');
-    sheetGrab = document.getElementById('hc-oversheet-grab');
-
-    // The sliding tile behind the active tab is a pseudo element sized by
-    // this count, so the CSS never has to know how many tabs there are.
-    tabbar.style.setProperty('--hc-tab-count', TAB_META.length);
+    navfab = document.getElementById('hc-navfab');
+    menu = document.getElementById('hc-navmenu');
+    menuPanel = document.getElementById('hc-navmenu-panel');
+    menuScrim = document.getElementById('hc-navmenu-scrim');
   }
 
   function initials() {
@@ -637,7 +614,7 @@
     // Presentation mode takes the whole screen. Nothing else competes with it.
     var chromeless = route.name === 'present';
     topbar.hidden = chromeless;
-    tabbar.hidden = chromeless;
+    navfab.hidden = chromeless;
 
     // The rail belongs to one screen, so every other view puts it away. This
     // runs against the view that was just mounted, before the scroll position
@@ -668,7 +645,6 @@
     var title = document.getElementById('hc-topbar-title');
     var back = topbar.querySelector('.hc-topbar__back');
     var isTop = HC.router.isStop(route);
-    var module = isModule(route.name);
 
     /* A stop is a stop, whether it has a tile of its own or lives behind •••.
        Journal and Give get the logo and no back arrow for the same reason
@@ -701,23 +677,15 @@
     // pushed view where the back arrow needs company.
     topbar.setAttribute('data-scrolled', isTop ? 'false' : 'true');
 
-    var buttons = tabbar.querySelectorAll('.hc-tab');
-    TAB_META.forEach(function (t, i) {
-      // ••• answers for every module, so sitting in the Journal lights the
-      // tile the Journal lives behind. Which module it is, the sheet says.
-      var here = t.name === 'more' ? module : t.name === route.name;
-      if (here) {
-        buttons[i].setAttribute('aria-current', 'page');
-        // The tile travels to the tab rather than appearing under it.
-        tabbar.style.setProperty('--hc-tab-index', i);
-      } else {
-        buttons[i].removeAttribute('aria-current');
-      }
-    });
-
-    // A pushed view that is not a module has no current tab, so the tile fades
-    // out and holds its place. Coming back, it is already where it should be.
-    tabbar.style.setProperty('--hc-tab-tile', (isTop || module) ? '1' : '0');
+    /* WHERE YOU ARE IS SAID IN THE OVERLAY AND NOWHERE ELSE NOW. A raised
+       tile used to travel along the bar to whichever of the six you were
+       under, and past Connect it parked on ••• and stopped being able to say
+       which module you were in, which is what the one second peek of the
+       sheet existed to cover. None of that is needed by a list that has a
+       line for every screen: the line is gold with a rule under it, and it is
+       right there the moment somebody asks. paintMenu() sets it, at the
+       moment of the tap, so nothing has to be repainted on a view change that
+       nobody is looking at the navigation during. */
 
     // The new view starts at the top, or is about to be scrolled to wherever
     // it was left. Either way the discs belong to this view and not the last
@@ -785,95 +753,80 @@
     anchor.focus({ preventScroll: true });
   }
 
-  /* ------------------------------------------------------ the overflow sheet
+  /* ------------------------------------------------------ the navigation
 
-     What ••• does now. It used to push the More list and you had to come back
-     from it; it lifts a panel out of the tab bar instead, and the modules
-     behind it are stops on the sideways swipe rather than a dead end.
+     What the round button in the corner lifts.
 
-     WHAT IT IS MADE OF. The plinth again: the same skin, hairline, sheen and
-     26px corner as the bar, exactly the bar's width, inset the same 12px from
-     both edges, sitting one 8px gap above it. Not a card in the app's paper,
-     because that would put two different objects at the bottom of the screen
-     and only one of them would look like the navigation.
+     WHAT WAS HERE. A panel that rose out of the tab bar with the modules on
+     it as tiles, and three states: open, closed, and a one second `peek` that
+     fired when a sideways drag landed somewhere the bar could not name. That
+     middle state is why this block used to own timers. It is gone with the
+     bar: the overlay has a line for every screen in the app and the line you
+     are on is gold, so there is nothing left for a peek to announce.
 
-     THREE STATES, and the middle one is the reason this file has any timers
-     in it at all:
+     WHAT IS HERE NOW is one layer, either up or down. Up, it takes the whole
+     screen, dims what is behind it, and every route the app has is a word on
+     it. Down, it is nothing at all.
 
-       open   somebody tapped •••. Scrim behind it, focus in it, Esc closes.
-       peek   a sideways drag landed on a module. The bar cannot say which one,
-              because the tile parks on ••• for all of them, so the sheet shows
-              itself for a second with that module raised and then fades. No
-              scrim, nothing dimmed: it is a label, not a menu, and it must not
-              interrupt the screen it is announcing.
-       closed parked below the edge, far enough that its shadow clears too.
-
-     The peek leaves on a fade rather than the slide it arrived on, because
-     sliding back down reads as a sheet being dismissed and nobody opened it.
+     THE LIST IS THE LANE, DRAWN UPSIDE DOWN. navItems() below still returns
+     the modules in the one order that also feeds HC.router.setModules, and
+     the overlay reverses it so the last screen in the row is at the top of
+     the glass and the first is at the bottom, nearest the thumb. Read from
+     the button upward it is exactly the order a drag runs. Nothing about that
+     order is decided here; this only decides which end of it is at the top.
      ---------------------------------------------------------------------- */
 
-  /* Long enough to read one word, short enough to be gone before the thumb
-     wants the screen back. */
-  var PEEK_MS = 1000;
-  var PEEK_FADE_MS = 320;
+  var menuOpen = false;
 
-  var sheetState = 'closed';
-  var peekTimer = null;
+  function menuIsOpen() { return menuOpen; }
 
-  function sheetIsOpen() { return sheetState === 'open'; }
-  function sheetIsPeeking() { return sheetState === 'peek' || sheetState === 'fade'; }
-
-  function setSheetState(next) {
-    sheetState = next;
-    sheet.setAttribute('data-state', next);
-    document.getElementById('app').setAttribute('data-oversheet', next);
+  function setMenuState(open) {
+    menuOpen = open;
+    document.getElementById('app').setAttribute('data-navmenu', open ? 'open' : 'closed');
+    navfab.setAttribute('aria-expanded', open ? 'true' : 'false');
+    navfab.setAttribute('aria-label', open ? 'Close navigation' : 'Open navigation');
   }
 
-  /* A button nobody can see should not be a button anybody can reach, same
-     rule as the discs. A peek is not reachable either: it is decoration on a
-     navigation the screen has already announced by its own name, and a second
-     voice saying Journal is noise.
-
-     The scrim is never hidden outright, only made unreachable: it has a fade
-     to finish and `hidden` would cut it off mid transition. Nothing can reach
-     it meanwhile, because the CSS takes its pointer events away with its
-     opacity. */
-  function sheetReachable(on) {
-    sheet.setAttribute('aria-hidden', on ? 'false' : 'true');
-    sheetGrab.tabIndex = on ? 0 : -1;
-    sheetScrim.setAttribute('aria-hidden', on ? 'false' : 'true');
-    sheetScrim.tabIndex = on ? 0 : -1;
-    var mods = sheetGrid.querySelectorAll('.hc-oversheet__mod');
-    for (var i = 0; i < mods.length; i++) mods[i].tabIndex = on ? 0 : -1;
+  /* A link nobody can see should not be a link anybody can reach, same rule as
+     the discs. The layer is never `hidden` outright, only made unreachable: it
+     has a fade to finish and `hidden` would cut it off mid transition, and the
+     CSS has already taken its pointer events away by then. */
+  function menuReachable(on) {
+    menu.setAttribute('aria-hidden', on ? 'false' : 'true');
+    menuScrim.tabIndex = on ? 0 : -1;
+    var links = menuPanel.querySelectorAll('.hc-navmenu__link');
+    for (var i = 0; i < links.length; i++) links[i].tabIndex = on ? 0 : -1;
   }
 
-  /* What is behind ••• on this phone: every module, and then Admin for the few
-     people the church made an admin.
+  /* The top group of the overlay on this phone: every module, then Admin for
+     the few people the church made an admin, then Settings.
 
      ADMIN IS A STOP LIKE THE REST OF THEM. It is the last one, past Give, and
      it is reached the way Give is: a drag left off Give brings it in, a drag
-     right takes you back to Give, and the ••• tile stays lit the whole time.
-     It was a tile you could only tap for exactly one build, which is how long
-     it took to notice that a stop you cannot swipe to is not really in the
-     row, it is just drawn beside the things that are.
+     right takes you back to Give. It was a line you could only tap for
+     exactly one build, which is how long it took to notice that a stop you
+     cannot swipe to is not really in the row, it is just drawn beside the
+     things that are.
 
      ITS SECTIONS ARE NOT STOPS. The menu is the place; Manage users and the
      other three are pushed views of it, told apart by the id on the route.
      See HC.router.isStop.
 
-     ONE LIST, TWO CONSUMERS. This draws the sheet and it also feeds
-     HC.router.setModules through syncModules below, so the order the sheet
-     lists and the order a drag runs are the same order by construction rather
-     than by two people remembering to edit both.
+     ONE LIST, TWO CONSUMERS. This draws the overlay's top group and it also
+     feeds HC.router.setModules through syncModules below, so the order the
+     overlay lists and the order a drag runs are the same order by
+     construction rather than by two people remembering to edit both. The
+     overlay reverses it on the way to the glass and nothing else does, which
+     is why this stays in lane order rather than in reading order.
 
      Recomputed rather than built once at boot, so signing in, signing out, a
      promotion arriving on the next session refresh, or an admin turning group
-     mode off in another room changes both the sheet and the row. Whether the
-     tile is there at all is presentation and nothing
-     more, the same as the Admin row in js/screens/profile.js: every button
-     behind it is checked live by the database, so a member who forged the tile
-     would find a screen where nothing works. See the header of js/admin.js. */
-  function sheetTiles() {
+     mode off in another room changes both the overlay and the row. Whether
+     the line is there at all is presentation and nothing more, the same as
+     the Admin row in js/screens/profile.js: every button behind it is checked
+     live by the database, so a member who forged the line would find a screen
+     where nothing works. See the header of js/admin.js. */
+  function navItems() {
     var tiles = visibleModules().map(function (m) {
       return { route: m.route, icon: m.icon, title: m.title, action: 'go-module', id: m.route };
     });
@@ -927,7 +880,7 @@
      pushed view when it lands, which is what the second argument means and the
      first does not. See the `tail` note in js/router.js. */
   function syncModules() {
-    var tiles = sheetTiles();
+    var tiles = navItems();
     function routes(stop) {
       return tiles.filter(function (t) { return (t.stop !== false) === stop; })
                   .map(function (t) { return t.route; });
@@ -935,183 +888,128 @@
     HC.router.setModules(routes(true), routes(false));
   }
 
-  function paintSheet() {
+  /* One line. The action and the id ride on it exactly as they did on the
+     tile this replaces, so every destination is reached by the handler that
+     already existed rather than by a second copy of the navigation. */
+  function menuLink(item, here) {
+    return '<button type="button" class="hc-navmenu__link" ' +
+        'data-action="' + c.esc(item.action) + '"' +
+        (item.id ? ' data-id="' + c.esc(item.id) + '"' : '') +
+        (item.route === here ? ' aria-current="page"' : '') + '>' +
+      c.esc(item.title) +
+    '</button>';
+  }
+
+  /* Both groups, drawn at the moment of the tap.
+
+     NOT AT BOOT, and not cached. Who is signed in decides whether Admin is in
+     the top group, the church's group_mode switch decides whether Group is,
+     and where you are standing decides which line is gold. All three can move
+     while the app is open, and asking them here means the overlay cannot be
+     out of date by construction. The sheet before it was painted on the same
+     terms and for the same reason.
+
+     REVERSED, BOTH OF THEM. navItems() returns the row in lane order and so
+     does TAB_META; the overlay draws each backwards, so the top group runs
+     from the least reached for down to the most, the bottom group ends on
+     Home, and Home is the line directly above the button. */
+  function paintMenu() {
     var route = HC.router.current();
     var here = route ? route.name : '';
-    var tiles = sheetTiles();
 
-    sheetGrid.style.setProperty('--hc-mod-count', Math.min(tiles.length, 4));
-    sheetGrid.innerHTML = tiles.map(function (m) {
-      return '<button type="button" class="hc-oversheet__mod" ' +
-          'data-action="' + c.esc(m.action) + '"' +
-          (m.id ? ' data-id="' + c.esc(m.id) + '"' : '') +
-          (m.route === here ? ' aria-current="page"' : '') + '>' +
-        c.icon(m.icon, 'hc-oversheet__icon') +
-        '<span class="hc-oversheet__label">' + c.esc(m.title) + '</span>' +
-      '</button>';
+    var more = navItems().slice().reverse().map(function (m) {
+      return menuLink(m, here);
     }).join('');
+
+    var tabs = TAB_META.slice().reverse().map(function (t) {
+      return menuLink({ route: t.name, title: t.label, action: 'tab', id: t.name }, here);
+    }).join('');
+
+    menuPanel.innerHTML = '' +
+      '<div class="hc-navmenu__group hc-navmenu__group--more">' + more + '</div>' +
+      /* One hairline and no word on it. What separates these two lists is
+         what they are for, and a list of five screens somebody opens weekly
+         does not need a heading saying so over a list of eight they open
+         when they need them. A label here would be the app talking about its
+         own navigation, which is the thing this screen exists to stop. */
+      '<div class="hc-navmenu__split"><span class="hc-navmenu__rule"></span></div>' +
+      '<div class="hc-navmenu__group hc-navmenu__group--tabs">' + tabs + '</div>';
   }
 
-  function cancelPeek() {
-    if (peekTimer) { window.clearTimeout(peekTimer); peekTimer = null; }
-  }
-
-  /* Parking it again must not be animated, or the invisible panel travels
-     back down through the screen while its opacity is coming up. */
-  function parkSheet() {
-    sheet.setAttribute('data-reset', 'true');
-    setSheetState('closed');
-    void sheet.offsetHeight;
-    sheet.removeAttribute('data-reset');
-  }
-
-  function openSheet() {
-    cancelPeek();
-    paintSheet();
-    setSheetState('open');
-    sheetReachable(true);
-    sheet.style.transform = '';
-    sheetScrim.style.opacity = '';
+  function openMenu() {
+    paintMenu();
+    setMenuState(true);
+    menuReachable(true);
     HC.native.tap('Light');
-    var first = sheetGrid.querySelector('.hc-oversheet__mod');
-    if (first) first.focus({ preventScroll: true });
+
+    /* Focus lands on the bottom group's last line, which is Home, because
+       that is the end of the list nearest the thumb that opened it and the
+       one a person reading with a keyboard should meet first. */
+    var links = menuPanel.querySelectorAll('.hc-navmenu__group--tabs .hc-navmenu__link');
+    var last = links[links.length - 1];
+    if (last) last.focus({ preventScroll: true });
   }
 
-  function closeSheet() {
-    var hadFocus = sheet.contains(document.activeElement) ||
-                   sheetScrim === document.activeElement;
-    cancelPeek();
-    setSheetState('closed');
-    sheetReachable(false);
-    sheet.style.transform = '';
-    sheetScrim.style.opacity = '';
+  function closeMenu() {
+    if (!menuOpen) return;
+    var hadFocus = menu.contains(document.activeElement);
+    setMenuState(false);
+    menuReachable(false);
 
-    // Focus goes back where it came from rather than to the top of the
-    // document, which is where a keyboard ends up when the thing it was in
-    // stops being reachable.
-    if (hadFocus) {
-      var tile = tabbar.querySelector('[data-tab="more"]');
-      if (tile) tile.focus({ preventScroll: true });
-    }
+    // Focus goes back to the button rather than to the top of the document,
+    // which is where a keyboard ends up when the thing it was in stops being
+    // reachable.
+    if (hadFocus) navfab.focus({ preventScroll: true });
   }
 
-  function endPeek() {
-    if (!sheetIsPeeking()) return;
-    cancelPeek();
-    parkSheet();
-  }
+  function wireMenu() {
+    setMenuState(false);
+    menuReachable(false);
 
-  function peekSheet() {
-    cancelPeek();
-    paintSheet();
-    sheetReachable(false);
-    setSheetState('peek');
-    peekTimer = window.setTimeout(function () {
-      if (sheetState !== 'peek') return;
-      setSheetState('fade');
-      peekTimer = window.setTimeout(function () {
-        if (sheetState === 'fade') parkSheet();
-        peekTimer = null;
-      }, prefersReducedMotion() ? 0 : PEEK_FADE_MS);
-    }, PEEK_MS);
-  }
+    /* ONE LISTENER FOR EVERY TAP ON THE LAYER, word or no word, and it always
+       does the same thing: put the overlay away. That is not a shortcut, it is
+       the rule the screen is making. A tap on a word goes there and closes; a
+       tap on the glass beside it closes and goes nowhere; there is nothing a
+       person can hit here that leaves the overlay up except the button, which
+       is the toggle.
 
-  /* Dragged down by the handle. The panel follows the finger and the scrim
-     fades with it, so the two move as one thing; past a third of the panel,
-     or on a flick, letting go finishes it, and anything less springs back. */
-  var SHEET_FLICK = 0.5;
+       The destinations are untouched by this. Every link carries the same
+       data-action its tile carried, the one delegated listener in wireEvents
+       handles it, and this listener does not interfere with that: the click
+       carries on bubbling to the document with its target intact.
 
-  /* A flick has to have gone somewhere first, same guard as FLICK_MIN in
-     js/swipe.js and for the same reason: velocity is measured between two
-     adjacent points, so a thumb that twitches a few pixels quickly reads as
-     fast without having travelled at all. Without this a nudge on the handle
-     dismisses the sheet. */
-  var SHEET_FLICK_MIN = 24;
-
-  var sd = null;
-
-  function wireSheet() {
-    setSheetState('closed');
-
-    sheetGrab.addEventListener('touchstart', function (evt) {
-      if (!sheetIsOpen() || evt.touches.length !== 1) return;
-      var t = evt.touches[0];
-      sd = { y: t.clientY, dy: 0, last: t.clientY, at: Date.now(), v: 0 };
-      sheet.setAttribute('data-dragging', 'true');
-    }, { passive: true });
-
-    // Not passive: a drag on the handle is not a scroll of anything.
-    sheetGrab.addEventListener('touchmove', function (evt) {
-      if (!sd || evt.touches.length !== 1) return;
-      var t = evt.touches[0];
-      var dy = Math.max(0, t.clientY - sd.y);
-      var now = Date.now();
-      if (now > sd.at) {
-        sd.v = (t.clientY - sd.last) / (now - sd.at);
-        sd.at = now;
-        sd.last = t.clientY;
-      }
-      sd.dy = dy;
-      sheet.style.transform = 'translateY(' + dy + 'px)';
-      var h = sheet.offsetHeight || 1;
-      sheetScrim.style.opacity = String(Math.max(0, 1 - dy / h));
-      if (evt.cancelable) evt.preventDefault();
-    }, { passive: false });
-
-    function endDrag() {
-      if (!sd) return;
-      sheet.removeAttribute('data-dragging');
-      var h = sheet.offsetHeight || 1;
-      var gone = sd.dy > h / 3 ||
-                 (sd.v > SHEET_FLICK && sd.dy > SHEET_FLICK_MIN);
-      // A finger that dragged is not also a tap on the handle.
-      var dragged = sd.dy > 4;
-      sd = null;
-      if (gone) {
-        closeSheet();
-      } else {
-        sheet.style.transform = '';
-        sheetScrim.style.opacity = '';
-      }
-      return dragged;
-    }
-
-    sheetGrab.addEventListener('touchend', endDrag);
-    sheetGrab.addEventListener('touchcancel', endDrag);
-
-    // Tapping the handle rather than dragging it closes it too, and so does
-    // the paper behind. Both are the same intention.
-    sheetGrab.addEventListener('click', function () {
-      if (sheetIsOpen() && !sd) closeSheet();
-    });
-    sheetScrim.addEventListener('click', closeSheet);
+       AND IT COVERS THE ONE TAP A VIEW CHANGE WOULD MISS. The line for the
+       screen you are already on navigates nowhere, because the router treats
+       that as a scroll to the top and fires no view change, so leaning on the
+       'view' subscription below would leave the overlay sitting over the
+       screen it was just asked to show. */
+    menu.addEventListener('click', closeMenu);
 
     document.addEventListener('keydown', function (evt) {
-      if (evt.key === 'Escape' && sheetIsOpen()) closeSheet();
+      if (evt.key === 'Escape' && menuOpen) closeMenu();
     });
 
-    /* Leaving takes the sheet with it, the same way leaving a screen takes
-       its selection bar and any open sheet. A peek is left alone here because
-       the swipe that caused it decides its own fate below: closing it on the
-       view change it was announcing would mean it never appeared at all. */
-    HC.store.on('view', function (route) {
-      if (sheetIsOpen()) closeSheet();
-      else if (sheetIsPeeking() && !isModule(route.name)) endPeek();
-    });
+    // Leaving takes it with it, the same way leaving a screen takes its
+    // selection bar and any open sheet.
+    HC.store.on('view', closeMenu);
   }
 
-  /* Called by js/swipe.js when a drag commits, and by nothing else, because
-     only a drag can put you somewhere the tab bar cannot name. Arriving on a
-     second module restarts the second rather than stacking one peek on
-     another, and the raised tile moves with you. */
+  /* The name is what js/swipe.js and the two handlers below already call, so
+     it stays even though there is no overflow left to speak of.
+
+     `arrived` IS NOW NOTHING, deliberately rather than by omission. A drag
+     that committed used to call it so the sheet could flash the module it had
+     landed on, because the raised tile parked on ••• for every one of them
+     and the bar had stopped being able to say where you were. The bar is
+     gone, nothing is claiming to say where you are except the screen itself,
+     and there is nothing to correct. It is kept as a no-op rather than
+     deleted from the caller, because the caller is the gesture and a gesture
+     should not have to know what the chrome is made of this week. */
   HC.overflow = {
-    open: function () { openSheet(); },
-    close: function () { closeSheet(); },
-    isOpen: sheetIsOpen,
-    arrived: function (name) {
-      if (HC.router.isModule(name)) peekSheet();
-      else endPeek();
-    }
+    open: function () { openMenu(); },
+    close: function () { closeMenu(); },
+    isOpen: menuIsOpen,
+    arrived: function () {}
   };
 
   /* About a card and a half of travel.
@@ -1266,17 +1164,23 @@
   /* ---------------------------------------------------------------- actions */
 
   var actions = {
-    /* Five of the six tiles go somewhere. The sixth lifts the sheet, and
-       tapping it again puts it back down, because a tile that only opens is
-       a tile you have to dismiss some other way. */
+    /* The round button in the corner, which is both doors. A control that
+       only opens is a control you have to dismiss some other way, and the
+       whole point of leaving it where it is while the overlay is up, with the
+       three rules folded into an x, is that the thumb which opened it is
+       already resting on the thing that closes it. */
+    'nav-toggle': function () {
+      if (menuIsOpen()) closeMenu();
+      else openMenu();
+    },
+
+    /* One of the five in the overlay's bottom group. The name rides on the
+       line, as it did on the tile before it, so this is unchanged: the
+       overlay is a different picture of the same navigation and not a second
+       one. Closing is the layer's own listener in wireMenu, which puts the
+       overlay away for every tap on it, this one included. */
     tab: function (el) {
-      var name = el.getAttribute('data-tab');
-      if (name === 'more') {
-        if (HC.overflow.isOpen()) HC.overflow.close();
-        else HC.overflow.open();
-        return;
-      }
-      HC.router.go({ name: name });
+      HC.router.go({ name: el.getAttribute('data-id') });
     },
 
     // Both ways back, the arrow in the header and the disc by the thumb.
@@ -4723,7 +4627,7 @@
     // theme applyPreferences() has just settled.
     paintThemeToggle();
     wireEvents();
-    wireSheet();
+    wireMenu();
     watchScroll();
 
     /* Edit mode's idle clock and the two listeners that feed it. Wired on
@@ -4759,7 +4663,6 @@
     HC.swipe.init({
       scroller: scroller,
       mount: mount,
-      tabbar: tabbar,
       totop: totop
     });
 
@@ -4868,20 +4771,23 @@
          that has no other way to the journal. */
       paintJournalLink();
 
-      /* And the ••• sheet, for the same reason as both of those: it is shell
-         chrome the router's redraw never reaches, and one of the rows that
-         just landed decides whether the Group tile is in it. An admin turning
-         group mode off in the church office has to reach the phone in
-         somebody's pocket without them relaunching the app, and this pair of
-         calls is what does it: the sheet redraws with one fewer tile, and the
-         row a sideways drag runs gets the same list on the same tick, so the
-         two cannot disagree even for a moment.
+      /* And the row a sideways drag runs, for the same reason as both of
+         those: it is shell state the router's redraw never reaches, and one
+         of the rows that just landed decides whether Group is in it. An admin
+         turning group mode off in the church office has to reach the phone in
+         somebody's pocket without them relaunching the app, and this is what
+         does it.
 
-         Unconditional, like paintPinBar above. Both are cheap, and asking
+         THE OVERLAY IS NOT REPAINTED HERE, and it used to be. The sheet was,
+         because it was markup sitting parked below the screen edge from boot
+         and a stale tile would have been on the glass the next time it rose.
+         paintMenu() runs at the moment of the tap instead, so the only thing
+         a content refresh has to keep in step is the lane.
+
+         Unconditional, like paintPinBar above. It is cheap, and asking
          js/content.js whether anything changed would be trusting the
          fingerprint that missed this in the first place. */
       syncModules();
-      paintSheet();
 
       var route = HC.router.current();
       if (route && route.name === 'profile') {

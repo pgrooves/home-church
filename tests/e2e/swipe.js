@@ -12,7 +12,7 @@
 
    WHAT IS NEW HERE AND WORTH A BROWSER. Settings sits one screen past the end
    of the row and it is not a stop. Everything the drag had done until now
-   landed somewhere with a tile and no back arrow, and the one thing that
+   landed somewhere with the logo and no back arrow, and the one thing that
    could quietly go wrong with a pushed view at the end of the lane is the
    chrome: arriving by drag has to leave the arrow and the title exactly where
    arriving by the initials in the top bar leaves them, or somebody drags into
@@ -24,7 +24,7 @@
    those two answers over.
 
    No database. This drives the app against its own bundled seed, the same as
-   alpha.js beside it. Nobody is signed in, so the phone has no Admin tile and
+   alpha.js beside it. Nobody is signed in, so the phone has no Admin line and
    the last stop is Give; the admin's row, one stop longer, is handed to the
    router directly for the second half.
 
@@ -146,13 +146,15 @@ const RIGHT = '(60, 330)';
       name: window.HC.router.current().name,
       arrow: !document.querySelector('.hc-topbar__back').hidden,
       title: document.getElementById('hc-topbar-title').textContent,
-      tile: getComputedStyle(document.querySelector('.hc-tabbar'))
-        .getPropertyValue('--hc-tab-tile').trim()
+      // The logo is the other half of the same answer the arrow gives, and it
+      // is what is left now that the raised tile in the tab bar is gone: a
+      // stop wears the lockup, a pushed view wears the arrow and the title.
+      logo: document.getElementById('hc-topbar').getAttribute('data-is-tab')
     }));
   };
 
   /* ------------------------------------------------ the end of the lane ---
-     Nobody is signed in, so there is no Admin tile and Give is the last stop.
+     Nobody is signed in, so there is no Admin line and Give is the last stop.
      Settings comes after it either way. */
 
   const lane = await page.evaluate(() => window.HC.router.lane().join(','));
@@ -166,25 +168,25 @@ const RIGHT = '(60, 330)';
   await page.evaluate(DRAG + LEFT);
   const settings = await where();
   ok('a drag left off it lands on Settings', settings.name === 'profile', settings.name);
-  ok('and Settings arrives as the pushed view it is, arrow and title and no tile',
-    settings.arrow && settings.title === 'Your account' && settings.tile === '0',
+  ok('and Settings arrives as the pushed view it is, arrow and title and no logo',
+    settings.arrow && settings.title === 'Your account' && settings.logo === 'false',
     JSON.stringify(settings));
 
   await page.evaluate(DRAG + RIGHT);
   const back = await where();
   ok('a drag right off Settings goes back to the last stop',
     back.name === 'give', back.name);
-  ok('and the stop gets its logo and its tile back',
-    !back.arrow && back.tile === '1', JSON.stringify(back));
+  ok('and the stop gets its logo back',
+    !back.arrow && back.logo === 'true', JSON.stringify(back));
 
   /* ------------------------------------------------- an admin's phone ---
      One stop longer. The row is handed over the way syncModules hands it
      over, rather than by forging a signed-in admin, because what is being
-     asked here is the drag and not who is allowed to see the tile. */
+     asked here is the drag and not who is allowed to see the line. */
 
   await page.evaluate(() => {
     window.HC.router.setModules(
-      window.HC.modules.map(function (m) { return m.route; }).concat(['admin']),
+      window.HC.modules().map(function (m) { return m.route; }).concat(['admin']),
       ['profile']
     );
     window.HC.router.go({ name: 'admin' });

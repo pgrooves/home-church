@@ -91,7 +91,7 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent; }
 a { color: inherit; text-decoration: none; }
 
 /* Controls should not select or show the iOS callout. Reading content still can. */
-button, .hc-tab, .hc-eyebrow, .hc-numeral, .hc-section__toggle, .hc-tabbar {
+button, .hc-eyebrow, .hc-numeral, .hc-section__toggle, .hc-navmenu {
   -webkit-user-select: none;
   user-select: none;
   -webkit-touch-callout: none;
@@ -148,7 +148,7 @@ button, .hc-tab, .hc-eyebrow, .hc-numeral, .hc-section__toggle, .hc-tabbar {
      strip is a title, and a long one wraps to two lines on a small phone. */
   padding-top: calc(var(--hc-header-h) + var(--hc-pin-h, 0px)
                     + env(safe-area-inset-top) + var(--hc-space-sm));
-  padding-bottom: calc(var(--hc-tabbar-space) + env(safe-area-inset-bottom) + var(--hc-space-xxl));
+  padding-bottom: calc(var(--hc-chrome-space) + env(safe-area-inset-bottom) + var(--hc-space-xxl));
   max-width: 720px;
   margin: 0 auto;
   width: 100%;

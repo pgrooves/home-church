@@ -1123,7 +1123,11 @@
   }
 
   .hc-sermon__thumb { flex-basis: 64px; width: 64px; }
-  .hc-tab__label { font-size: 10px; }
+  /* The navigation's two lists come down a step with everything else, and the
+     tracking comes off with the size: letter-spacing that reads as considered
+     at 20px reads as a word coming apart at 18. */
+  .hc-navmenu__group--more .hc-navmenu__link { font-size: 12px; letter-spacing: 0.14em; }
+  .hc-navmenu__group--tabs .hc-navmenu__link { font-size: 18px; letter-spacing: 0.08em; }
   .hc-gathering__times { gap: var(--hc-space-sm) var(--hc-space-md); }
   .hc-gathering__time + .hc-gathering__time { padding-left: var(--hc-space-md); }
 }
