@@ -1602,6 +1602,79 @@
       (covered ? '<button type="button" class="hc-btn hc-btn--tertiary" data-action="clear-checks">Start over</button>' : '');
   }
 
+  /* ------------------------------------------------------- handing over a sheet
+
+     THE ONE ROAD OUT for all three documents this app makes: a guide, a
+     group's night, and somebody's journal. Each of them is a PDF, written by
+     js/pdf.js and laid out by js/print-pdf.js, saved into the app's cache
+     directory and handed to the iOS share sheet, where a leader gets Print,
+     Save to Files, Mail and Messages.
+
+     WHY IT IS A PDF AND NOT HTML, which is what it was until this function.
+     window.print() is a silent no-op inside WKWebView, so the packaged app
+     could never use the print dialog and instead handed over the sheet as an
+     .html file. In a browser that file is a page; on a phone it is whatever
+     app claims .html, and in Messages and Mail it arrived as markup. Three
+     buttons that worked perfectly on the web produced gibberish in TestFlight.
+     A PDF is the format every one of those places already knows what to do
+     with, and it is the format somebody asking for a printable guide was
+     asking for in the first place.
+
+     THE HTML SHEET IS STILL THE FALLBACK, on purpose. If anything in the PDF
+     writer throws, a document that arrives in an awkward format beats a button
+     that does nothing, and the whole point of the old road was that it works.
+     A share sheet the person dismisses is not a failure and does not fall
+     back: it is somebody changing their mind, and handing them a second sheet
+     for the same tap would be the app arguing with them.
+
+     opts.name is the file name without an extension, opts.title is what the
+     share sheet calls it, opts.pdf() returns base64, opts.html() returns a
+     promise of the document as text. */
+
+  function handOverSheet(opts) {
+    function failed() {
+      c.toast('Could not put that together. Try again in a moment.');
+    }
+
+    function asHtml() {
+      return opts.html().then(function (html) {
+        return HC.native.shareFile(opts.name + '.html', html, 'text/html', opts.title);
+      });
+    }
+
+    function hand() {
+      var pdf = null;
+
+      try {
+        pdf = opts.pdf();
+      } catch (err) {
+        /* Nothing to tell the person: the fallback below still hands them the
+           sheet. But this is the one place a bug in the PDF writer would show
+           up, and a phone plugged into a Mac is where it would be found. */
+        console.error('print: could not build the PDF, falling back to HTML.', err);
+        pdf = null;
+      }
+
+      var road = pdf
+        ? HC.native.shareBinaryFile(opts.name + '.pdf', pdf, opts.title)
+        : asHtml();
+
+      road.then(function (ok) {
+        if (!ok) failed();
+      }).catch(failed);
+    }
+
+    /* AFTER THE TOAST HAS PAINTED, and not before. Building the document is
+       the one piece of arithmetic in this app long enough to be felt: every
+       line of every page is measured character by character, which is tens of
+       milliseconds for a guide and more for a journal somebody has been
+       writing in for a year. Run it inline and the main thread leaves before
+       the toast that says "Getting the guide ready" reaches the glass, so the
+       tap reads as nothing happening followed by a share sheet out of
+       nowhere. One turn of the loop is all it takes to put those in order. */
+    window.setTimeout(hand, 0);
+  }
+
   /* ---------------------------------------------------------------- actions */
 
   var actions = {
@@ -2866,9 +2939,9 @@
     },
 
     /* Your own copy of your own words. Same road Download guide and the night
-       sheet take: a real file to the share sheet on a phone, where iOS offers
-       Print, Save to Files and Mail, and the print dialog in a browser, where
-       window.print() actually does something. */
+       sheet take: a PDF to the share sheet on a phone, where iOS offers Print,
+       Save to Files and Mail, and the print dialog in a browser, where
+       window.print() actually does something. See handOverSheet(). */
     'journal-export': function () {
       var entries = HC.journal.all();
       if (!entries.length) {
@@ -2882,12 +2955,11 @@
       }
 
       c.toast('Getting your journal ready.');
-      HC.print.journalHtml(entries).then(function (html) {
-        return HC.native.shareFile('my-journal.html', html, 'text/html', 'Your journal');
-      }).then(function (ok) {
-        if (!ok) c.toast('Could not put that together. Try again in a moment.');
-      }).catch(function () {
-        c.toast('Could not put that together. Try again in a moment.');
+      handOverSheet({
+        name: 'my-journal',
+        title: 'Your journal',
+        pdf: function () { return HC.printPdf.journal(entries); },
+        html: function () { return HC.print.journalHtml(entries); }
       });
     },
 
@@ -2917,8 +2989,8 @@
       HC.router.go({ name: 'guide-reader', id: el.getAttribute('data-id') });
     },
 
-    /* On a phone this is a real file handed to the share sheet, where iOS
-       offers Print, Save to Files, and Mail. window.print() is a no-op inside
+    /* On a phone this is a PDF handed to the share sheet, where iOS offers
+       Print, Save to Files, and Mail. window.print() is a no-op inside
        WKWebView, so the old behavior was a button that did nothing at all
        once the app was packaged, and did it silently. In a browser, where
        print() works properly, it still uses the print dialog. */
@@ -2932,15 +3004,14 @@
 
       var guide = HC.data.getGuide(id);
       var name = (HC.data.guideTitle(guide) || 'guide').toLowerCase()
-        .replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40) + '.html';
+        .replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40);
 
       c.toast('Getting the guide ready.');
-      HC.print.standaloneHtml(id).then(function (html) {
-        return HC.native.shareFile(name, html, 'text/html', HC.data.guideTitle(guide));
-      }).then(function (ok) {
-        if (!ok) c.toast('Could not put that together. Try again in a moment.');
-      }).catch(function () {
-        c.toast('Could not put that together. Try again in a moment.');
+      handOverSheet({
+        name: name,
+        title: HC.data.guideTitle(guide),
+        pdf: function () { return HC.printPdf.guide(id); },
+        html: function () { return HC.print.standaloneHtml(id); }
       });
     },
 
@@ -3975,9 +4046,9 @@
     /* The end of the night, on one sheet. Everything goes in, including the
        answers the group never got round to opening, which the button says and
        the cover repeats. The road is the same one Download guide takes:
-       window.print() is a silent no-op inside WKWebView, so a phone gets a
-       real file handed to the share sheet where iOS offers Print, Save to
-       Files and Mail, and a browser gets the print dialog. */
+       window.print() is a silent no-op inside WKWebView, so a phone gets a PDF
+       handed to the share sheet where iOS offers Print, Save to Files and
+       Mail, and a browser gets the print dialog. */
 
     'room-sheet': function () {
       readyForSheet(function (snap) {
@@ -3986,12 +4057,11 @@
           return;
         }
         c.toast('Getting tonight ready.');
-        HC.print.nightHtml(snap).then(function (html) {
-          return HC.native.shareFile(sheetName(snap), html, 'text/html', 'Tonight');
-        }).then(function (ok) {
-          if (!ok) c.toast('Could not put that together. Try again in a moment.');
-        }).catch(function () {
-          c.toast('Could not put that together. Try again in a moment.');
+        handOverSheet({
+          name: sheetName(snap),
+          title: 'Tonight',
+          pdf: function () { return HC.printPdf.night(snap); },
+          html: function () { return HC.print.nightHtml(snap); }
         });
       });
     },
@@ -4009,13 +4079,11 @@
           return;
         }
         c.toast('Getting tonight ready.');
-        HC.print.nightHtml(snap).then(function (html) {
-          return HC.native.shareFile(sheetName(snap), html, 'text/html',
-            'Here is Thursday night, everything we wrote down.');
-        }).then(function (ok) {
-          if (!ok) c.toast('Could not put that together. Try again in a moment.');
-        }).catch(function () {
-          c.toast('Could not put that together. Try again in a moment.');
+        handOverSheet({
+          name: sheetName(snap),
+          title: 'Here is Thursday night, everything we wrote down.',
+          pdf: function () { return HC.printPdf.night(snap); },
+          html: function () { return HC.print.nightHtml(snap); }
         });
       });
     },
@@ -4078,11 +4146,13 @@
   }
 
   // A filename somebody will recognise a week later in Files.
+  // The file name with no extension on it, because handOverSheet() adds the
+  // one that matches whichever road the sheet ends up taking.
   function sheetName(snap) {
     var when = new Date(snap.room.openedAt || Date.now()).toISOString().slice(0, 10);
     var who = (snap.room.groupName || snap.room.guideTitle || 'group')
       .toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40);
-    return who + '-' + when + '.html';
+    return who + '-' + when;
   }
 
   /* ------------------------------------------------------- keeping tonight

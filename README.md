@@ -81,7 +81,9 @@ js/
   auth.js             sign in and profile sync, DORMANT, see "Accounts" below
   content.js          fills HC.data from Supabase, cache first, never blocks
   native.js           share sheet, calendar, haptics, notifications
-  print-guide.js      the printable guide, and the standalone file for sharing
+  print-guide.js      the printable guide, for the browser's print dialog
+  pdf.js              a PDF writer, standard fonts, no dependencies
+  print-pdf.js        the guide, a group's night, and a journal, as PDFs
   search.js           the index behind the magnifying glass in the top bar
   router.js           pushState routing, query string, no hash
   date-rail.js        the month strip under the header on Listen

@@ -213,6 +213,13 @@
      share sheet, where iOS offers Print, Save to Files, and Mail. A leader
      ends up with the same piece of paper by a different road.
 
+     THAT FILE IS A PDF NOW, and js/print-pdf.js is what builds it. Handing
+     over .html solved the dead button and created a quieter one: the file left
+     the app and arrived somewhere that had no idea what to do with it, so what
+     a leader actually saw in Messages or Mail was markup. What remains here is
+     the browser's road, which is the print dialog and still the right one, and
+     the fallback for a phone if the PDF writer ever throws.
+
      print.css is fetched and inlined rather than linked, because the file
      leaves the app and a relative stylesheet link would resolve to nothing
      wherever it lands. If the fetch fails the document still opens, it just

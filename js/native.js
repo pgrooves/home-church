@@ -88,16 +88,14 @@
 
      Returns false rather than throwing when there is no filesystem, so the
      caller can fall back to something that does work in a browser. */
-  function shareFile(name, contents, mimeType, dialogTitle) {
+  function writeAndShare(name, options, dialogTitle) {
     var p = plugins();
     if (!p || !p.Filesystem || !p.Share) return Promise.resolve(false);
 
-    return p.Filesystem.writeFile({
+    return p.Filesystem.writeFile(Object.assign({
       path: name,
-      data: contents,
-      directory: 'CACHE',
-      encoding: 'utf8'
-    }).then(function (written) {
+      directory: 'CACHE'
+    }, options)).then(function (written) {
       return p.Share.share({
         title: dialogTitle || name,
         url: written.uri,
@@ -108,6 +106,24 @@
     }).catch(function () {
       return false;
     });
+  }
+
+  function shareFile(name, contents, mimeType, dialogTitle) {
+    return writeAndShare(name, { data: contents, encoding: 'utf8' }, dialogTitle);
+  }
+
+  /* The same road, for a file that is not text.
+
+     THE THREE DOCUMENTS THIS APP HANDS OVER ARE PDFs NOW, built by js/pdf.js,
+     and a PDF is bytes. Capacitor's Filesystem decides which it is being given
+     by whether `encoding` is set: with it, the data is a string and is written
+     as that text, and without it the data is base64 and is written as the
+     bytes it decodes to. Passing base64 with encoding: 'utf8' would write out
+     the base64 itself, which is a text file full of gibberish with a .pdf on
+     the end, and is a mistake that looks like a broken PDF reader rather than
+     like a bug here. */
+  function shareBinaryFile(name, base64, dialogTitle) {
+    return writeAndShare(name, { data: base64 }, dialogTitle);
   }
 
   /* Browsers get a Blob and a synthetic download instead. Same file, same
@@ -817,6 +833,7 @@
     unlock: unlock,
     shareText: shareText,
     shareFile: shareFile,
+    shareBinaryFile: shareBinaryFile,
     downloadInBrowser: downloadInBrowser,
     buildIcs: buildIcs,
     addToCalendar: addToCalendar,
