@@ -1091,7 +1091,14 @@
       if (opts.url) attrs.push('data-url="' + esc(opts.url) + '"');
     }
     var value = opts.value ? '<span class="hc-row__value">' + esc(opts.value) + '</span>' : '';
-    var chevron = opts.chevron ? icon('chevronRight', 'hc-row__chevron') : '';
+    /* The glyph on the right edge. A chevron says the app is about to move you
+       somewhere inside itself, so a row that leaves the app entirely says so
+       instead, with the arrow out of the box: opts.icon names the glyph and it
+       takes the chevron's place and its slot. Same size, same colour, same
+       spot, because it is the same promise made about a different door. */
+    var chevron = opts.icon
+      ? icon(opts.icon, 'hc-row__chevron')
+      : (opts.chevron ? icon('chevronRight', 'hc-row__chevron') : '');
     var sub = opts.sub ? '<p class="hc-caption">' + esc(opts.sub) + '</p>' : '';
     var titleCls = opts.serif ? 'hc-row__title' : 'hc-row__label';
     /* A row with no title is a row that is all subtitle, the way Home's

@@ -684,9 +684,12 @@
      everything the person actually came for. Never a banner, never above the
      guide.
 
-     It goes to the Give screen rather than straight out to Overflow. That
-     screen exists to say thank you in the church's own voice before handing
-     anybody off, and skipping it to save a tap would be skipping the point. */
+     It goes straight out to Overflow, not to the Give screen. Somebody who
+     presses a verse about giving at the bottom of Home has already decided;
+     the screen in between was the church saying thank you to a person who was
+     on their way past it anyway, and a second tap between a decision and the
+     form is the place people quit. The thank you is still on the Give screen,
+     which is still in the More lane for anyone arriving that way. */
   /* The row is the verse and nothing else. The section header over it already
      says Give, and the word a second time, an inch under itself, read as the
      app stammering rather than as a title.
@@ -706,9 +709,11 @@
       '<div class="hc-home__give">' +
         c.row({
           sub: GIVING_LINE,
-          action: 'go-module',
-          id: 'give',
-          chevron: true,
+          action: 'open-url',
+          url: HC.data.church.givingUrl,
+          // The arrow out of the box rather than a chevron, because this row
+          // leaves the app. See row() in js/components.js.
+          icon: 'arrowOut',
           serif: true
         }) +
       '</div>';
