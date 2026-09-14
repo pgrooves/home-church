@@ -98,6 +98,10 @@ const READ = `(function () {
     height: Math.round(box.height),
     left: Math.round(box.left),
     right: Math.round(box.right),
+    // Where it actually is. Shown, the pill's only transform is the
+    // translate(-50%) that centres it, so its rectangle is the truth.
+    mid: box.left + (box.width / 2),
+    cy: box.top + (box.height / 2),
     // Which way the arrow points, off the shaft the icon actually drew.
     shaft: arrow ? arrow.getAttribute('d') : '',
     // Where the arrow sits in the reading order, which flips with it.
@@ -105,10 +109,26 @@ const READ = `(function () {
   };
 })()`;
 
-const DISCS = `(function () {
-  var back = document.getElementById('hc-back').getBoundingClientRect();
-  var top = document.getElementById('hc-totop').getBoundingClientRect();
-  return { backRight: Math.round(back.right), topLeft: Math.round(top.left) };
+/* THE DISCS' SLOTS, WHICH IS NOT THE SAME AS WHERE THEY ARE PAINTED. A disc
+   that is down is still in its slot; it is a transform over it, ten pixels of
+   translate and a scale to 0.86. So its rectangle reports a box 38 wide
+   sitting 10px low, and measuring the gap between two of those would have the
+   pill looking 1.5px off centre and 10px high when it is neither.
+
+   offsetLeft and offsetTop are the layout box before any transform, which is
+   the thing the pill is centred between and the reason it can be centred at
+   all whether the arrows are up or down. */
+const SLOTS = `(function () {
+  function slot(id) {
+    var e = document.getElementById(id);
+    return {
+      left: e.offsetLeft,
+      right: e.offsetLeft + e.offsetWidth,
+      mid: e.offsetLeft + (e.offsetWidth / 2),
+      cy: e.offsetTop + (e.offsetHeight / 2)
+    };
+  }
+  return { back: slot('hc-back'), top: slot('hc-totop') };
 })()`;
 
 (async () => {
@@ -147,7 +167,7 @@ const DISCS = `(function () {
     await settled(page);
 
     let pill = await page.evaluate(READ);
-    const discs = await page.evaluate(DISCS);
+    const slots = await page.evaluate(SLOTS);
 
     ok('the pill is up in a guide, without scrolling for it', pill.up && !pill.hidden && pill.tabbable,
       JSON.stringify(pill));
@@ -156,9 +176,29 @@ const DISCS = `(function () {
       pill.shaft + ' arrowFirst=' + pill.arrowFirst);
     ok('the target is a full 44px, whatever the pill is painted at', pill.height === 44,
       pill.height + 'px');
-    ok('it is clear of both discs', pill.left > discs.backRight && pill.right < discs.topLeft,
-      'back ends ' + discs.backRight + ', pill ' + pill.left + '-' + pill.right + ', top starts ' + discs.topLeft);
+    ok('it is clear of both discs', pill.left > slots.back.right && pill.right < slots.top.left,
+      'back ends ' + slots.back.right + ', pill ' + pill.left + '-' + pill.right + ', top starts ' + slots.top.left);
     ok('it carries the guide it was drawn in', pill.guide === guides.written, pill.guide);
+
+    // Held for section 4, where the arrows are gone and it must not have moved.
+    const inGuide = pill;
+
+    /* THE ROW IS A ROW. The three of them on one centre line, and the pill in
+       the middle of the two arrows rather than the middle of the screen. Those
+       are different places on this navigation, because the right hand end of
+       the row carries the button as well as the disc. It was wrong for one
+       build: the pill sat at 50% and a button's height above the arrows,
+       which read as a link left behind by an older layout. */
+    const gapMid = (slots.back.right + slots.top.left) / 2;
+
+    ok('it sits on the same centre line as both arrows',
+      Math.abs(pill.cy - slots.back.cy) < 1 && Math.abs(pill.cy - slots.top.cy) < 1,
+      'back ' + slots.back.cy + ', top ' + slots.top.cy + ', pill ' + pill.cy);
+
+    ok('and dead centre of the gap between them, not of the screen',
+      Math.abs(pill.mid - gapMid) < 1,
+      'gap centre ' + gapMid + ', pill centre ' + pill.mid
+        + ' (screen centre is ' + (await page.evaluate('innerWidth')) / 2 + ')');
 
     /* ------------------------------------------- 2. it stands down for the
        highlight bar, which lands in exactly this band and asks a question
@@ -208,6 +248,28 @@ const DISCS = `(function () {
     ok('the pill turns round', /^back to guide$/i.test(pill.text) && pill.action === 'journal-guide', pill.text);
     ok('so does its arrow, and it leads now', pill.shaft === 'M19 12H5' && pill.arrowFirst,
       pill.shaft + ' arrowFirst=' + pill.arrowFirst);
+
+    /* AND IT DID NOT MOVE GETTING HERE. The journal is a tab, so the way back
+       is down; nothing has been scrolled, so the way up is down too. Both
+       arrows that were beside it in the guide are gone and the pill is in the
+       same place to a pixel, which is the whole point of centring it on slots
+       the discs keep rather than on whichever of them happens to be up. The
+       longer label grows either side of that centre, never off it. */
+    const gone = await page.evaluate(`(function () {
+      return {
+        back: document.getElementById('hc-back').getAttribute('data-show'),
+        top: document.getElementById('hc-totop').getAttribute('data-show')
+      };
+    })()`);
+
+    ok('both arrows are down on the journal', gone.back !== 'true' && gone.top !== 'true',
+      JSON.stringify(gone));
+    ok('and the pill has not moved an inch without them',
+      Math.abs(pill.mid - inGuide.mid) < 1 && Math.abs(pill.cy - inGuide.cy) < 1,
+      'in the guide ' + inGuide.mid + 'x' + inGuide.cy + ', here ' + pill.mid + 'x' + pill.cy);
+    ok('it is the longer label, grown either side of that centre',
+      pill.right - pill.left > inGuide.right - inGuide.left,
+      (inGuide.right - inGuide.left) + 'px -> ' + (pill.right - pill.left) + 'px');
 
     await page.click('#hc-jlink');
     await settled(page);

@@ -2424,11 +2424,10 @@ a.hc-card:active { background: var(--hc-paper-sunk); }
    inset plus half the difference between the two diameters, which is what
    puts a 44 and a 64 on the same centre line.
 
-   The journal pill is deliberately not in here. It stays on the row above,
-   where it has the width to say a whole sentence; brought down to this row it
-   would have to clear the button, a disc and a gap on the right and only a
-   disc on the left, and a centred pill with 140pt reserved on one side and
-   64pt on the other is 110pt wide on a small phone, which is not a sentence. */
+   The journal pill comes down with them. It is the third thing on this row,
+   not a fourth thing hovering above it: a link floating half a button's
+   height over two arrows reads as something left behind by an older layout,
+   and the row is only a row when all three of its objects are on one line. */
 #app[data-nav="button"] .hc-disc {
   bottom: calc(var(--hc-chrome-inset) + env(safe-area-inset-bottom)
                + ((var(--hc-navfab-size) - var(--hc-tap-min)) / 2));
@@ -2436,6 +2435,40 @@ a.hc-card:active { background: var(--hc-paper-sunk); }
 
 #app[data-nav="button"] .hc-disc--top {
   right: calc(var(--hc-chrome-inset) + var(--hc-navfab-size) + var(--hc-space-md));
+}
+
+/* THE PILL, ON THE SAME LINE AND CENTRED ON THE GAP RATHER THAN ON THE GLASS.
+
+   Down to the discs' own bottom, which is the same offset they use, so the
+   three of them share a centre line. Across, 50% is the middle of the screen
+   and the middle of the screen is not the middle of this row: the right hand
+   end carries the button and its gap as well as the disc, so a pill centred
+   at 50% sits left of where the eye puts the middle of the three objects.
+
+   THE ARITHMETIC. The gap runs from the back disc's right edge, at
+   inset + 44, to the way up's left edge, at 100% - (inset + 64 + gap + 44).
+   Its middle is 50% - (64 + gap) / 2, which is what the offset below says,
+   and every term in it is the token the button and the discs are drawn from,
+   so moving either moves the pill with them.
+
+   IT DOES NOT READ THE ARROWS. The discs hold their slots whether they are up
+   or down, because a disc that is down is an opacity and a transform over its
+   slot rather than a gap that closes. So this lands in the one place on a
+   guide with both arrows, on the journal with neither, and mid fade between
+   the two. A pill that re-centred on whichever of them happened to be up
+   would be a link that moves out from under the thumb reaching for it.
+
+   AND THE WIDTH COMES OFF THE SAME SUM. What the row above gave it, less the
+   button and its gap, which is the one thing this move costs. Two words in
+   ten pixel caps still fit a 320pt phone; the ellipsis on .hc-jlink__text is
+   what catches anything longer, and caps sliding under a disc is the failure
+   it exists to prevent. */
+#app[data-nav="button"] .hc-jlink {
+  bottom: calc(var(--hc-chrome-inset) + env(safe-area-inset-bottom)
+               + ((var(--hc-navfab-size) - var(--hc-tap-min)) / 2));
+  left: calc(50% - ((var(--hc-navfab-size) + var(--hc-space-md)) / 2));
+  max-width: calc(100% - ((var(--hc-chrome-inset) + var(--hc-tap-min) + var(--hc-space-sm)) * 2)
+                       - var(--hc-navfab-size) - var(--hc-space-md));
 }
 
 /* Glass only where the browser can actually blur, exactly as the tab bar
@@ -2642,6 +2675,31 @@ a.hc-card:active { background: var(--hc-paper-sunk); }
 @media (prefers-reduced-motion: reduce) {
   .hc-jlink { transition: opacity 1ms linear; }
   .hc-jlink:active { transform: translate(-50%, 0); }
+}
+
+/* 320 wide, where the button's row is at its tightest. Coming down beside the
+   button costs the pill the button's width and its gap, and on the smallest
+   phone that is the difference between BACK TO GUIDE and BACK TO GUI...
+
+   So the gutters come off rather than the words: the padding, the gap to the
+   arrow, and the clearance to the discs, each down to what still reads as
+   space between two objects. The tracking comes off with them, which is the
+   move the navigation's two lists make one screen over and for the reason
+   given there: twelve hundredths of an em is what makes a label at this size
+   look considered, and the first thing worth spending when there is nothing
+   else left to spend.
+
+   The ellipsis on .hc-jlink__text stays as the floor under all of it. It is
+   there for a label longer than these two, and caps sliding under a disc is
+   still the failure it prevents. */
+@media (max-width: 359px) {
+  #app[data-nav="button"] .hc-jlink {
+    padding: 0 8px;
+    gap: 5px;
+    letter-spacing: 0.06em;
+    max-width: calc(100% - ((var(--hc-chrome-inset) + var(--hc-tap-min) + 4px) * 2)
+                         - var(--hc-navfab-size) - var(--hc-space-md));
+  }
 }
 
 /* --------------------------------------------------------------------------
