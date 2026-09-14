@@ -440,6 +440,7 @@ even when the version is the same.
 cd /Users/trey_1/home-church
 git merge --abort 2>/dev/null || true
 git fetch origin main && git reset --hard origin/main && npm install && npm run ios:open
+npm run preflight
 npx cap ls ios
 ```
 
@@ -460,11 +461,25 @@ like from the outside the one time it happened.
 Running it unconditionally costs about a second when nothing has changed, and
 you never have to know whether anything did.
 
-**`npx cap ls ios` is the receipt.** It lists every plugin Capacitor actually
-wired into the Xcode project. Read it before you archive: if a feature depends
-on a plugin and the plugin is not in that list, the pod did not install and
-that feature will do nothing on the phone. It is the general form of the check,
-so it stays true as plugins come and go.
+**`npm run preflight` is the receipt, and it reads itself.** Run it after
+`npm run ios:open` and before you archive. It takes the plugin list from
+`package.json` and checks every one of them against `ios/App/Podfile` (which
+says `cap sync` noticed the plugin) and `ios/App/Podfile.lock` (which says
+CocoaPods actually installed it), and it names the fix on any that are
+missing. Because the list comes from `package.json`, it covers plugins added
+after this page was written without anybody remembering to update a check —
+which is the failure a hand written one has. Exits non-zero, so it is safe to
+put in front of anything else.
+
+Do not check for a plugin by grepping for one pod name, which is a check that
+only ever answers about the plugin you thought of. A build can have
+`CapacitorLocalNotifications` in it and no file opener, and the grep says OK
+while Add to calendar puts up the send-to sheet — section 8d.
+
+**`npx cap ls ios` is the same receipt in Capacitor's own words**, and worth a
+glance because it lists what Capacitor wired into the Xcode project rather
+than what the Podfile claims. If `preflight` is happy and `cap ls` is short,
+believe `cap ls`.
 
 **`git reset --hard` throws away uncommitted work without asking.** That is
 the right behaviour here, because this checkout is a place builds are made

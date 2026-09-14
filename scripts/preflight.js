@@ -457,6 +457,83 @@ function appDelegateHooks() {
     '      entitlement stayed hidden. Paste the second method too.');
 }
 
+/* ================================================= 2d. the plugin pods
+   Every native capability this app has arrives as a CocoaPod, and a pod that
+   did not install is the quietest failure mode in the project. js/native.js
+   reaches each plugin through window.Capacitor.Plugins and treats an absent
+   one as "this phone cannot do that", which is the right answer in a browser
+   and a lie in a packaged app. So a missing pod does not throw, does not log,
+   and does not look like itself:
+
+     - no local-notifications, and Get notified is never drawn at all
+     - no file-opener, and Add to calendar falls back to the send-to sheet,
+       which is the bug that sent somebody looking at the Cal tab for it
+     - no haptics, and every confirmation is silently flat
+
+   None of those are visible from inside the web layer, and all of them are
+   one `npm install` away from being fine.
+
+   CHECKED AGAINST package.json RATHER THAN A LIST HERE, because a list here
+   is a list to forget: the file-opener was added to fix Add to calendar and
+   a hand written check would have gone on passing without it. The Podfile
+   refers to each plugin by its path under node_modules, which is the package
+   name, so the dependency names are the only thing either file needs to
+   agree about and pod names never come into it.
+
+   BOTH FILES, because they answer different questions. The Podfile is
+   rewritten by `npx cap sync ios` and says the plugin was noticed.
+   Podfile.lock is written by CocoaPods and says the pod actually installed.
+   A sync that ran while pod install failed leaves the first true and the
+   second stale, which is exactly the state that ships a plugin-less build.
+
+   ios/ is generated and gitignored, so like the AppDelegate check above this
+   can only check a machine that has run `npx cap add ios`, and skips rather
+   than fails anywhere else.
+   ===================================================================== */
+
+function pluginPods() {
+  const pkg = JSON.parse(read('package.json'));
+
+  /* Every dependency that carries native code. @capacitor/core is the one
+     that does not: it is the JavaScript bridge, and the iOS runtime it talks
+     to comes from @capacitor/ios. */
+  const plugins = Object.keys(pkg.dependencies || {})
+    .filter((name) => /capacitor/i.test(name) && name !== '@capacitor/core');
+
+  const podfile = path.join(ROOT, 'ios', 'App', 'Podfile');
+  if (!fs.existsSync(podfile)) {
+    console.log('SKIP  ios/ is not generated here, so the plugin pods cannot be checked');
+    return;
+  }
+
+  const declared = fs.readFileSync(podfile, 'utf8');
+  const lockPath = path.join(ROOT, 'ios', 'App', 'Podfile.lock');
+  const installed = fs.existsSync(lockPath) ? fs.readFileSync(lockPath, 'utf8') : null;
+
+  if (!ok('Podfile.lock exists, so pod install has run at least once', installed !== null,
+    'ios/App/Podfile.lock is missing, which means CocoaPods never ran. Run\n' +
+    '      `npm install && npm run ios`. If that still leaves no lock file, the\n' +
+    '      pod install inside `npx cap sync ios` is failing — read its output\n' +
+    '      rather than opening Xcode, which will build happily without it.')) {
+    return;
+  }
+
+  plugins.forEach(function (name) {
+    /* Only asked when the Podfile has it, so a plugin `cap sync` never saw
+       fails once with the reason it actually has rather than twice with the
+       second reason being wrong about the first. */
+    if (!ok(name + ' is in the Podfile', declared.indexOf(name) > -1,
+      '`npx cap sync ios` has not seen it. Run `npm install && npm run ios`.\n' +
+      '      Until then the plugin is absent at runtime, and js/native.js\n' +
+      '      treats absent as "this phone cannot do that" — silently.')) return;
+
+    ok('and ' + name + ' is installed', installed.indexOf(name) > -1,
+      'It is in the Podfile but not in Podfile.lock, so pod install did not\n' +
+      '      finish. Run `npm run ios` again and read the CocoaPods output.\n' +
+      '      Xcode will build without it and the capability will just be gone.');
+  });
+}
+
 /* ------------------------------------------------------------------ run it */
 
 console.log('Preflight, everything in SUBMISSION_KIT.md a machine can check.\n');
@@ -465,6 +542,7 @@ legal();
 manifest();
 pushEntitlement();
 appDelegateHooks();
+pluginPods();
 icons();
 screenshots();
 bundle();
