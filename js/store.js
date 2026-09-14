@@ -157,7 +157,27 @@
        not here. See the note at the top of js/hints.js: the one hint is once
        per launch, held in a variable that dies with the launch, and nothing
        counts anything. */
-    hints: true
+    hints: true,
+
+    /* How this phone gets around: 'button' or 'bar'.
+
+       TWO NAVIGATIONS SHIP, and this is the one line that says which one a
+       person is looking at. 'button' is the round one in the bottom right
+       corner with the full screen list behind it; 'bar' is the six tile
+       plinth across the bottom with ••• at the end of it, which is what this
+       app had for its whole life until now.
+
+       BUTTON IS THE DEFAULT because it is what the church asked for, and the
+       switch exists because a navigation is the one thing in an app that
+       people learn with their thumb rather than their eyes. Somebody who has
+       used the bar every Sunday for a year should be able to have it back in
+       one tap rather than by being told they will get used to it.
+
+       NOT A FEATURE FLAG AND NOT A ROLLOUT. It is a preference, it belongs to
+       the phone the way textScale and the theme do, and there is no plan here
+       for one of the two to win. If one of them ever does, this line and the
+       loser's half of js/app.js come out together. See applyNavStyle there. */
+    navStyle: 'button'
   };
 
   var state = {

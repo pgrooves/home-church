@@ -137,13 +137,17 @@
     var route = HC.router && HC.router.current();
     var app = document.getElementById('app');
     var nav = app ? app.getAttribute('data-navmenu') : null;
+    var sheet = app ? app.getAttribute('data-oversheet') : null;
     return {
       hintsOn: isOn(),
       spent: spent,
       route: route ? route.name : null,
-      // setMenuState() in js/app.js mirrors the navigation overlay onto #app.
-      // Up, it owns the whole glass and a hint has nothing to point at.
-      sheetOpen: nav === 'open',
+      /* Either navigation, opened. setMenuState() and setSheetState() in
+         js/app.js each mirror their own onto #app, and only one of the two can
+         ever be on a phone, so asking both is asking one. 'closed' and 'fade'
+         are on their way out; the others own the glass, and a hint pointing at
+         a paragraph underneath one has nothing to point at. */
+      sheetOpen: nav === 'open' || sheet === 'open' || sheet === 'peek',
       editing: !!(HC.edit && HC.edit.isOn && HC.edit.isOn()),
       hidden: document.hidden,
       inView: !!block && inView(block)
@@ -175,13 +179,20 @@
     return bar ? bar.getBoundingClientRect().bottom : 52;
   }
 
-  /* What is reserved at the bottom of the screen. It was the tab bar's
-     plinth, which is where the name came from; it is the round navigation
-     button now, and the question is the same one: how much of the bottom of
-     the glass is chrome rather than words. */
+  /* What is reserved at the bottom of the screen: the tab bar's plinth, which
+     is where the name came from, or the round navigation button that stands in
+     its place on a phone set to 'button'. Whichever is on is the one with a
+     box; the other is display:none and measures zero on every side, so asking
+     for both and taking the taller answer needs no question about which
+     navigation this phone has. */
   function plinth() {
-    var fab = document.querySelector('.hc-navfab');
-    return fab ? window.innerHeight - fab.getBoundingClientRect().top : 100;
+    var boxes = document.querySelectorAll('.hc-tabbar, .hc-navfab');
+    var top = 0;
+    for (var i = 0; i < boxes.length; i++) {
+      var r = boxes[i].getBoundingClientRect();
+      if (r.height) top = top ? Math.min(top, r.top) : r.top;
+    }
+    return top ? window.innerHeight - top : 100;
   }
 
   /* --------------------------------------------------------------- arming */

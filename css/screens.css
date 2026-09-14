@@ -1123,6 +1123,7 @@
   }
 
   .hc-sermon__thumb { flex-basis: 64px; width: 64px; }
+  .hc-tab__label { font-size: 10px; }
   /* The navigation's two lists come down a step with everything else, and the
      tracking comes off with the size: letter-spacing that reads as considered
      at 20px reads as a word coming apart at 18. */

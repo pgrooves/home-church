@@ -389,6 +389,31 @@
       on: p.hints !== false
     });
 
+    /* Which navigation this phone gets.
+
+       THE ONLY SETTING ON THIS SCREEN THAT CHANGES THE SHAPE OF THE APP, which
+       is why it is worded as the thing it turns on rather than as a preference
+       with two equally weighted sides. On is the menu button, which is what the
+       church chose; off is the tab bar, which is what the app had for its whole
+       life and what somebody who has reached for the bottom left corner every
+       Sunday for a year should be able to have back in one tap.
+
+       IT TAKES EFFECT UNDER YOUR THUMB. Both navigations are in the shell from
+       boot, so flipping this is one attribute on #app: the bar is there, or
+       gone, before the switch has finished travelling. Nothing reloads and
+       nowhere you were is lost.
+
+       In the Display section rather than a section of its own, beside the two
+       other switches that decide what this app looks like to this person. Not
+       editable, like every other switch here: the church does not get to reword
+       what its own settings do. */
+    html += switchRow({
+      title: 'Menu button',
+      sub: 'One button and a full screen menu, in place of the tab bar',
+      action: 'toggle-nav-style',
+      on: p.navStyle !== 'bar'
+    });
+
     /* THERE IS NO LEADER MODE ON THIS SCREEN, and there should not be one
        again. Somebody is a member, a leader or an admin, an admin sets which
        under Manage users, and nobody sets their own. A screen whose whole job

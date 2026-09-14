@@ -121,24 +121,40 @@
 
   /* THE BOTTOM OF THE SCREEN, AND WHAT IS RESERVED AT IT.
 
-     There used to be a six tile plinth down here, and the two numbers below
-     described it: an inset it floated on, and the whole footprint the rest of
-     the app had to keep clear of. The plinth is gone and one round button has
-     taken its place, but both numbers are still the answer to exactly the
-     same two questions, so they kept their jobs and lost the tab in their
-     names.
+     TWO NAVIGATIONS SHIP AND EITHER ONE CAN BE DOWN THERE, which is what
+     these two numbers exist to hide from everything else. The six tile plinth
+     and the round button are different shapes with different footprints, and
+     the ten or so rules that clear the bottom of the screen, the discs, the
+     journal pill, the toast, every screen's own padding, should not any of
+     them have to know which one is on.
 
      --hc-chrome-inset is the gap between anything fixed at an edge and that
-     edge. The button sits on it, and so do the two discs and the pill on the
-     row above them, which is what keeps all four on the same margins.
+     edge. The plinth floats on it, the button sits on it, and so do the two
+     discs and the pill on the row above them, which is what keeps them all on
+     the same margins whichever navigation is drawn.
 
-     --hc-chrome-space is the button's whole footprint, inset included, and it
-     is what every screen reserves at the bottom and what the discs stand on.
-     Written as a calc of the two below rather than as a number, so resizing
-     the button moves everything that clears it on the same edit. */
+     --hc-chrome-space is the whole footprint of whichever one is on, inset
+     included. It is defined here as the button's, because the button is the
+     default, and redefined on #app[data-nav="bar"] in css/components.css as
+     the plinth's. Nothing else in the app asks the question twice. */
   --hc-chrome-inset: 12px;
   --hc-navfab-size:  64px;
   --hc-chrome-space: calc(var(--hc-navfab-size) + (var(--hc-chrome-inset) * 2));
+
+  /* The plinth, for the phones set to 'bar'. Two measurements describe it:
+     the row of tabs, and the frame between that row and the edge of the
+     glass it sits on. --hc-chrome-space above is the sum, plus its inset. */
+  --hc-tabbar-h:   56px;
+  --hc-tabbar-pad:  6px;
+
+  /* The active tab is a tile raised out of the plinth. On glass there is no
+     solid ground to rise from, so the rise is drawn with light: a lighter
+     face, a hairline, a bright lip on top and a dark one underneath. */
+  --hc-tabbar-tile:        linear-gradient(180deg, rgba(255,255,255,0.96), rgba(247,244,239,0.86));
+  --hc-tabbar-tile-edge:   rgba(122,110,95,0.18);
+  --hc-tabbar-tile-shadow: inset 0 1px 0 rgba(255,255,255,0.90),
+                           inset 0 -1px 0 rgba(26,25,24,0.06),
+                           0 3px 9px rgba(26,25,24,0.12);
 
   /* The button itself. A dark disc with a gold ring and a gold rule set,
      which is the app's own mark colour doing the one job it does everywhere
@@ -290,6 +306,14 @@
                           rgba(247,244,239,0.15) 0%,
                           rgba(247,244,239,0.05) 26%,
                           rgba(247,244,239,0) 52%);
+
+  /* The raised tile in the dark: a denser pane set into the glass rather
+     than a hole cut through it. */
+  --hc-tabbar-tile:        linear-gradient(180deg, rgba(247,244,239,0.15), rgba(247,244,239,0.055));
+  --hc-tabbar-tile-edge:   rgba(207,193,174,0.30);
+  --hc-tabbar-tile-shadow: inset 0 1px 0 rgba(255,252,247,0.24),
+                           inset 0 -1px 0 rgba(0,0,0,0.16),
+                           0 4px 12px rgba(0,0,0,0.30);
 
   /* The disc in the dark. The gold deepens so it glows against charcoal
      instead of glaring, and the arrow inverts to paper for the same reason

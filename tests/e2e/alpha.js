@@ -135,7 +135,7 @@ function serve() {
   const nav = await page.evaluate(() => ({
     isTop: window.HC.router.isTop('alpha'),
     stops: window.HC.router.stops().join(','),
-    module: (window.HC.modules || []).filter(m => m.route === 'alpha')[0] || null
+    module: (window.HC.modules ? window.HC.modules() : []).filter(m => m.route === 'alpha')[0] || null
   }));
 
   ok('Alpha is a top level stop rather than a pushed view', nav.isTop);
