@@ -156,22 +156,11 @@
                            inset 0 -1px 0 rgba(26,25,24,0.06),
                            0 3px 9px rgba(26,25,24,0.12);
 
-  /* The button itself. A dark disc with a gold ring and a gold rule set,
-     which is the app's own mark colour doing the one job it does everywhere
-     else in this interface: being the only gold thing on the screen so it is
-     findable without a label. See the note on --hc-gold below.
-
-     THE FILL DOES NOT FLIP WITH THE THEME, and that is deliberate rather than
-     an oversight. --hc-dark inverts to paper in dark mode, because it is the
-     primary button's fill and a primary button has to stay the loud one. This
-     is not that: it is a dark disc, in both themes, the same way the mark on
-     the Home Screen is drawn on its own dark ground rather than lightened to
-     match whatever is behind it. Only the value shifts, by the smallest
-     amount that lets the dark theme's card surface show through as the same
-     object. */
-  --hc-navfab-skin:   #1F1E1C;
-  --hc-navfab-shadow: 0 10px 26px rgba(26,25,24,0.26),
-                      0 2px 8px rgba(26,25,24,0.14);
+  /* THE BUTTON HAS NO SKIN OF ITS OWN. It used to: a fixed dark fill and a
+     shadow, drawn as a solid disc with a 2px gold ring, which read as a badge
+     bolted onto the app rather than a piece of it. It is made of --hc-glass-*
+     now, the same frosted paper as the plinth it replaced, so the only thing
+     left to say about its size is its size. */
 
   /* The full screen navigation behind it. A dark scrim over whatever was on
      the glass, blurred just enough that the screen underneath reads as a
@@ -284,14 +273,6 @@
 
   --hc-shadow-sheet: 0 -2px 24px rgba(0,0,0,0.40);
   --hc-shadow-modal: 0 8px 32px rgba(0,0,0,0.48);
-
-  /* The button in the dark. It is the card surface exactly, #232120, so on a
-     dark screen the disc reads as a piece of the app lifted off the page and
-     the gold ring is the whole of what separates it. The shadow deepens to do
-     the work the light theme's does with a softer one. */
-  --hc-navfab-skin:   #232120;
-  --hc-navfab-shadow: 0 14px 30px rgba(0,0,0,0.52),
-                      0 2px 8px rgba(0,0,0,0.34);
 
   /* The floating glass in the dark. The shadow does the work of making it
      float and the sheen is one soft diagonal pass. See the note in :root for

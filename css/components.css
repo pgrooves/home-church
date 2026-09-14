@@ -871,15 +871,55 @@
   display: grid;
   place-items: center;
   border-radius: var(--hc-radius-pill);
-  /* 2px rather than the hairline every other edge in this app uses. The ring
-     is the only thing telling a dark disc apart from a dark photograph
-     underneath it, so it is drawn to be seen rather than to be felt. */
-  border: 2px solid var(--hc-gold);
-  background: var(--hc-navfab-skin);
-  box-shadow: var(--hc-navfab-shadow);
-  color: var(--hc-gold);
+
+  /* THE PLINTH'S MATERIAL, ON A ROUND PIECE OF IT. Identical to what the tab
+     bar is made of, down to the token: the same thin skin over a blur, the
+     same hairline, the same shadow, the same diagonal sheen. That is the
+     point rather than a coincidence. This button replaced a bar made of this
+     glass, and for one build it was a solid dark disc with a 2px gold ring,
+     which read as something bolted onto the app rather than a piece of it.
+     The app's chrome is frosted paper and this is now frosted paper.
+
+     THE HAIRLINE IS NOT AN OUTLINE, it is the same 0.5px edge every floating
+     surface in this app carries, and it is what keeps a transparent disc from
+     dissolving into a photograph underneath it. The ring that was asked to go
+     was the 2px gold one.
+
+     The icon is --hc-accent-deep, which is exactly what an active tab's icon
+     is drawn in. It is the taupe that is safe to set marks in, 5.05 on paper
+     and 4.54 on cream, so it holds up on glass in both themes where --hc-gold
+     at 1.9 on frosted white did not. */
+  border: var(--hc-hairline) solid var(--hc-glass-edge);
+  background: var(--hc-glass-skin);
+  box-shadow: var(--hc-glass-shadow);
+  color: var(--hc-accent-deep);
+  isolation: isolate;
   transition: transform var(--hc-dur-fast) var(--hc-ease);
 }
+
+/* Glass only where the browser can actually blur, exactly as the tab bar and
+   the discs do it. Everywhere else the denser skin above stands in and the
+   button simply reads as a solid one. */
+@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+  .hc-navfab {
+    background: var(--hc-glass-skin-lens);
+    -webkit-backdrop-filter: blur(22px) saturate(150%);
+    backdrop-filter: blur(22px) saturate(150%);
+  }
+}
+
+/* One soft diagonal pass across the top left, the plinth's again. Under the
+   icon rather than over it, which is the order light actually arrives in. */
+.hc-navfab::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--hc-glass-sheen);
+  pointer-events: none;
+}
+
+.hc-navfab__icon { position: relative; z-index: 1; }
 
 .hc-navfab:active { transform: scale(0.94); }
 
@@ -888,8 +928,20 @@
   height: 26px;
   fill: none;
   stroke: currentColor;
-  stroke-width: 2;
+  /* 1.8, the discs' weight, not the 2 it was drawn at on a solid ground. The
+     rules are thinner now for the same reason they are taupe now: this is a
+     piece of the app's chrome rather than a badge sitting on top of it. */
+  stroke-width: 1.8;
   stroke-linecap: round;
+
+  /* AND THE HALO THE DISCS ALREADY WEAR, for the reason given beside them:
+     glass this thin sits over whatever is scrolling underneath it, and on the
+     frame where that is a dark button or a photograph, neither a taupe rule
+     nor a paper one is safe on its own. The halo is what carries it. It is
+     invisible against the ordinary case, which is the disc over paper, and it
+     is the whole of the legibility in the case that is not. */
+  filter: drop-shadow(0 0 2px var(--hc-gold-halo))
+          drop-shadow(0 1px 1px var(--hc-gold-halo));
 }
 
 /* The three rules become an x. Both glyphs are the same three lines in the
@@ -2351,6 +2403,40 @@ a.hc-card:active { background: var(--hc-paper-sunk); }
 
 .hc-disc--top  { right: var(--hc-chrome-inset); }
 .hc-disc--back { left: var(--hc-chrome-inset); }
+
+/* BESIDE THE BUTTON, NOT ABOVE IT.
+
+   The rule above puts both discs one inset clear of whatever is at the bottom
+   of the screen, which is right for the tab bar: the plinth is the full width
+   of the glass and there is nowhere to be except above it. The button is not
+   the full width. It is a 64pt circle in one corner, and stacking the way up
+   directly on top of it made a totem of two round things in the same column
+   and left the rest of the row empty.
+
+   So on a phone set to 'button' the row comes down and sits beside it: the
+   way up immediately to its left, the way back at the far end of the same
+   row, and the two of them centred on the button rather than on a line of
+   their own. Read left to right it is back, up, menu, which is also the order
+   of how much each one is reached for.
+
+   THE ARITHMETIC, so that resizing the button moves all of it. The right
+   offset clears the button and one gap. The bottom offset is the button's own
+   inset plus half the difference between the two diameters, which is what
+   puts a 44 and a 64 on the same centre line.
+
+   The journal pill is deliberately not in here. It stays on the row above,
+   where it has the width to say a whole sentence; brought down to this row it
+   would have to clear the button, a disc and a gap on the right and only a
+   disc on the left, and a centred pill with 140pt reserved on one side and
+   64pt on the other is 110pt wide on a small phone, which is not a sentence. */
+#app[data-nav="button"] .hc-disc {
+  bottom: calc(var(--hc-chrome-inset) + env(safe-area-inset-bottom)
+               + ((var(--hc-navfab-size) - var(--hc-tap-min)) / 2));
+}
+
+#app[data-nav="button"] .hc-disc--top {
+  right: calc(var(--hc-chrome-inset) + var(--hc-navfab-size) + var(--hc-space-md));
+}
 
 /* Glass only where the browser can actually blur, exactly as the tab bar
    does it. Everywhere else the denser skin above stands in. */
