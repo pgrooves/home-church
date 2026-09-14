@@ -19,7 +19,7 @@
     "test:contact": "node tests/e2e/contact.js",
     "test:reminders": "node tests/e2e/reminders.js",
     "test:archive": "node tests/e2e/announcement-archive.js",
-    "test:all": "npm run test && npm run test:content && npm run test:alpha && npm run test:swipe && npm run test:pull && npm run test:jlink && npm run test:search && npm run test:gate && npm run test:contact && npm run test:reminders && npm run test:archive && npm run test:e2e",
+    "test:all": "npm run test && npm run test:content && npm run test:alpha && npm run test:swipe && npm run test:nav && npm run test:pull && npm run test:jlink && npm run test:search && npm run test:gate && npm run test:contact && npm run test:reminders && npm run test:archive && npm run test:e2e",
     "preflight": "node scripts/preflight.js",
     "legal": "node scripts/make_legal_pages.js",
     "stamp": "node scripts/stamp_assets.js",
@@ -30,7 +30,8 @@
     "practices": "node scripts/build_practices.js",
     "narrate": "node scripts/narration_text.js && sh -c 'PY=$([ -x .venv/bin/python ] && echo .venv/bin/python || echo python3); exec \"$PY\" scripts/build_narration.py \"$@\"' --",
     "narrate:reseal": "node scripts/narration_text.js && sh -c 'PY=$([ -x .venv/bin/python ] && echo .venv/bin/python || echo python3); exec \"$PY\" scripts/build_narration.py --reseal \"$@\"' --",
-    "narrate:upload": "node scripts/upload_narration.js"
+    "narrate:upload": "node scripts/upload_narration.js",
+    "test:nav": "node tests/e2e/nav-overlay.js"
   },
   "dependencies": {
     "@aparajita/capacitor-biometric-auth": "^10.0.0",

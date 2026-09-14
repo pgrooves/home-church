@@ -929,16 +929,44 @@
      allowed to scroll. The bottom group and the rule above it hold still. */
   overflow: hidden;
   opacity: 0;
+
+  /* CLOSED MEANS GONE, NOT JUST INVISIBLE, and this is the whole of the bug
+     that shipped without it.
+
+     An opacity of 0 paints nothing and still takes every touch that lands on
+     it. pointer-events:none here is not enough on its own either, because the
+     links and the scrolling group inside set pointer-events:auto so that they
+     can be tapped and dragged while the overlay is up, and a child can turn
+     that back on whatever its parent said. So on a phone that had opened the
+     navigation once, which is every phone, the panel stayed in the document
+     with eleven invisible link boxes and one invisible scroll container lying
+     across the middle of every screen in the app. A thumb dragging on one of
+     them scrolled a container with nothing in it rather than the page, and a
+     tap on one of them navigated. The page looked frozen.
+
+     visibility:hidden is the fix, because it is the one that descendants
+     inherit and cannot take back by accident: nothing inside a hidden subtree
+     is hit-tested, and none of it is in the accessibility tree either, which
+     is the other half of what "closed" should mean. The zero-second
+     transition, delayed by the length of the fade, is what lets the overlay
+     finish fading out before it stops existing; without the delay it would
+     vanish on the first frame of its own dismissal. */
+  visibility: hidden;
   pointer-events: none;
-  transition: opacity var(--hc-dur-base) var(--hc-ease);
+  transition: opacity var(--hc-dur-base) var(--hc-ease),
+              visibility 0s linear var(--hc-dur-base);
 }
 
 #app[data-navmenu="open"] .hc-navmenu {
   opacity: 1;
+  visibility: visible;
   pointer-events: auto;
+  /* Visible immediately on the way in; only the leaving is delayed. */
+  transition: opacity var(--hc-dur-base) var(--hc-ease), visibility 0s;
 }
 
 @media (prefers-reduced-motion: reduce) {
+  /* No fade to wait for, so no delay to hold the layer open through. */
   .hc-navmenu { transition: none; }
 }
 
@@ -1135,15 +1163,22 @@
    scrim underneath it gets them. The links take their own, and so does the
    top group, which has to be able to take a finger and scroll on a phone
    short enough to need it. Both close the overlay either way: see wireMenu in
-   js/app.js, where one listener on the whole layer says so. */
+   js/app.js, where one listener on the whole layer says so.
+
+   ONLY WHILE IT IS OPEN. Scoping these two to the open state is the second
+   half of the fix described on .hc-navmenu above, and it is deliberately a
+   second half rather than a tidier alternative: visibility:hidden already
+   stops every one of these being hit, and this makes sure that a future rule
+   which makes some part of a closed overlay visible again, a peeking edge, a
+   handle, cannot quietly hand it the whole screen's touches back. */
 .hc-navmenu__panel {
   position: relative;
   z-index: 1;
   pointer-events: none;
 }
 
-.hc-navmenu__link,
-.hc-navmenu__group--more { pointer-events: auto; }
+#app[data-navmenu="open"] .hc-navmenu__link,
+#app[data-navmenu="open"] .hc-navmenu__group--more { pointer-events: auto; }
 
 /* The discs and the pill go down with the overlay up. They belong to the
    screen underneath, and the screen underneath is not what anybody is reading

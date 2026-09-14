@@ -66,6 +66,13 @@ node "$(dirname "$0")/alpha.js" || exit 1
 # is a finger, not a row in a table.
 node "$(dirname "$0")/swipe.js" || exit 1
 
+# The navigation overlay, and whether a closed one is in the way of the screen
+# underneath it. Same terms as the drag above: the bundled seed, no database.
+# What it needs a browser for is hit testing, which is the one thing that
+# caught this when a full unit suite and a set of screenshots did not. See the
+# header of that file.
+node "$(dirname "$0")/nav-overlay.js" || exit 1
+
 # The pull down from the top, which is the other gesture the shell owns. Same
 # terms as the drag above it: the bundled seed, no database, and the fetches
 # counted rather than made, because what it needs a browser for is a finger.
