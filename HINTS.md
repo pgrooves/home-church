@@ -6,14 +6,26 @@ machinery that has to exist before that question has a good answer.
 This started as a map, became the record of what got built from it, and is now
 also the record of that being taken back out.
 
-**REVERTED ONCE, AND ONE HINT IS BACK.** The whole of the first attempt was
-undone on `main`, for the reasons in §12. What has since shipped is one hint
-and nothing else: the guide highlighting hint from Tier 1 of §8, in
-`js/hints.js`, with the switch in Your account, `tests/hints.test.js` and
-`tests/e2e/hints.js`. **The account hint in §1 to §6 of this document is still
-not built**, and neither is the registry, the scheduler, the budget or the
-catalogue. Read those sections as the map they were rather than as a
-description of the app.
+**REVERTED ONCE, AND TWO HINTS ARE BACK.** The whole of the first attempt was
+undone on `main`, for the reasons in §12. What has since shipped is two hints
+and nothing else, one at a time and watched, which is what §12 asked for:
+
+1. **The guide highlighting hint**, Tier 1 of §8, in `js/hints.js`, with the
+   switch in Your account, `tests/hints.test.js` and `tests/e2e/hints.js`.
+   Drawn out first in `demo-guide-hint/`. See §13.
+2. **The tab swipe hint**, also Tier 1 of §8, in `js/swipe.js`, with
+   `tests/swipe-hint.test.js` and `tests/e2e/swipe-hint.js`. Drawn out first in
+   `demo-swipe-hint/`. See §14, which is also where the shape §12 blamed for
+   the revert finally gets replaced rather than repaired.
+
+**The account hint in §1 to §6 of this document is still not built**, and
+neither is the registry, the scheduler, the budget or the catalogue. Read those
+sections as the map they were rather than as a description of the app. There is
+still no `HC.hints` registry: two hints live in the two files that own the
+things they point at, and the second one did not make the case for building
+one. **§3e is now wrong about arithmetic** and right about everything else: a
+launch shows at most one hint *at a time*, not one in total, because the two
+that exist share one clock and take turns on it. See §14.
 
 **What shipped, and what it changed.**
 
@@ -44,18 +56,25 @@ thing that still cuts it short is starting a selection, which is not a
 dismissal: it is the thing the hint was asking for, and the real bar needs the
 band the ghost is standing in.
 
-**Why this one and why alone.** §12 asked for one hint at a time, watched.
-This is the one Tier 1 calls the app's most undiscoverable feature, it is the
-only one whose absence a person can feel, and it is deliberately a single file
-with no framework in it. The second hint is when the registry earns itself.
+**Why this one first.** §12 asked for one hint at a time, watched. This is the
+one Tier 1 calls the app's most undiscoverable feature, it is the only one
+whose absence a person can feel, and it is deliberately a single file with no
+framework in it.
+
+*This section said "and why alone", and that the second hint would be when the
+registry earned itself.* The second hint has since shipped and the registry did
+not earn itself: it went in `js/swipe.js` beside the gesture it points at, the
+way this one went beside the prose it points at, and the two share the rail's
+clock rather than a scheduler. See §14. Three hints living in three files may
+well be the point at which that stops being the right answer; two is not.
 
 `demo-guide-hint/` is where its seven candidate drawings were argued out
 before any of it was built, and it still runs.
 
 Read `Home Church app design system.md` §2b (voice), §3g (motion) and §7
 (accessibility) alongside it. The precedent in code is `js/index-rail.js`,
-which already ships the only hint this app has, and `js/splash.js`, which
-already owns the moment a hint would go.
+whose own hint set the house style and now owns the clock the others share,
+and `js/splash.js`, which already owns the moment a hint would go.
 
 `demo-hint/` draws it. Three studies, both appearances, the shipping tokens,
 and a log that says what ended the hint and what the tap that ended it went on
@@ -909,3 +928,90 @@ The marks now live in a layer with no `z-index` at all, and the note on
 the light and light in the dark. The first draft of the ghost had a
 hand-picked near black in it, which would have taught a dark pill in the one
 theme where the real one is light.
+
+---
+
+## 14. The second hint, and the shape §12 blamed
+
+The tab swipe hint. The screen leans toward the next tab by 22px and comes
+back, then again by less, on the clock the index rail already hints on. It is
+in `js/swipe.js`, drawn out first in `demo-swipe-hint/`, and it is the second
+hint the app has.
+
+**It replaces the shape rather than repairing it.** §8 assigned this hint
+*travel across the tab bar*, and §12's best guess at the stutter that cost the
+first attempt a revert is exactly that: `background-position` animated across
+an element carrying `backdrop-filter: blur(22px) saturate(150%)`, which
+re-composites a live blur every frame on a phone GPU. §12 asked for travel to
+be *"rebuilt, or dropped"*. It is dropped. **Nothing is drawn over the tab bar
+at all**, and nothing is drawn anywhere: what moves is one transform on
+`#hc-view`, which is the property `place()` in the same file already writes
+sixty times a second under a finger. The travelling tile is deliberately left
+out, because it rides a finger and not a clock.
+
+That is a shape argument and not a measurement, and §12 is explicit that the
+measurement is the part still owed. It is owed on this too.
+
+**The numbers, and why they are not the ones this document would have guessed.**
+
+| | |
+|---|---|
+| **22px** | Chosen by eye on a phone against 10 and 16. `LOCK_SLOP` is the floor: ten pixels is what a real drag eats before the screen starts moving, so a hint at ten shows less than the gesture's own dead zone. `COMMIT_PART` is the ceiling: a quarter of the width reads as the app changing tabs rather than offering to. |
+| **Twice, the second smaller** | Two the same size reads as a machine ticking. Smaller the second time reads as a thumb testing and settling. |
+| **260ms out, 340ms back** | Leaving is deliberate, returning is a release. Neither overshoots. §3g rules out springs, and the *return* is the hint while the *overshoot* is the thing the rule forbids, which are two movements wearing one word. |
+| **No seam** | The study parked a pane one width away so `.hc-swipe__pane`'s edge shadow rode in on the lean, on the reasoning that paper sliding over paper is otherwise ambiguous. It lost. At 22px the movement carries itself, and every argument for the seam was an argument about 16px. |
+
+**The seam is worth keeping in mind anyway**, because building it turned up
+something true about the app that outlives this decision: that shadow is
+`rgba(28, 24, 20, 0.10)`, a fixed near-black tuned against cream, and on a dark
+phone it is not subtle, it is gone. In a real drag that barely matters, because
+a whole screen arrives behind it and the content is its own edge. Anything that
+ever leans on that shadow *alone* to say "there is a page here" will not work in
+the dark, and `demo-swipe-hint/` has the switch that shows it.
+
+**Retire on use, and Reduce Motion refuses.** The first real drag ends it for
+the launch, in `begin()`: somebody who has dragged the screen sideways knows the
+screens move sideways. Nothing is stored, so a relaunch starts it over, which is
+the rail's rule and §3d's shape without §3d's account. Under Reduce Motion it
+says nothing at all rather than degrading, which is the *opposite* of the call
+§4 makes for the account hint and is right for the same reason: that hint is
+information and survives holding still, this one is entirely movement and a
+still version would be a different hint wearing the same name.
+
+**One clock, two hints, taking turns.** This is the §3e trade coming due, and
+the answer is none of the three options §3e wrote down. The rail's thirty second
+interval is shared rather than copied: `beat()` in `js/index-rail.js` gives the
+odd beats to the rail and the even ones to the swipe, and hands the turn over
+when whichever one's turn it is has nothing to say. The rail keeps the opening
+beat, because it is the harder of the two to stumble onto by accident and
+because §12 says of this one that a sideways drag is discovered by accident more
+than anything else in the app.
+
+So §3e's *one hint per launch* becomes **one hint at a time**, which is what the
+rule was always protecting: two things moving at once is a tour. It also settles
+the collision §3e worried about without a scheduler, and it is the reason the
+registry still has not earned itself.
+
+**The one thing this changed elsewhere.** `noteUse()` in `js/index-rail.js` used
+to clear that interval when the rail was used. It does not any more, because the
+clock is no longer only the rail's; `beat()` stops it once neither hint has
+anything left. Putting that line back would silence the swipe hint on every
+phone whose owner touches the notches first, with no symptom other than a hint
+that never appears, which is the fault §12 spends a page saying is
+indistinguishable from four others. `tests/e2e/swipe-hint.js` checks the
+contract that line would break.
+
+**Against §12's five conditions, honestly.**
+
+1. **Still not profiled on a phone.** Same debt as §13, and the same narrower
+   thing that can be said: nothing animates a background, nothing is drawn over
+   the plinth, and what moves is one transform on one element that the gesture
+   already promotes and un-promotes around a drag.
+2. **`travel` is gone rather than fixed.** See above.
+3. **It can say why it is quiet**, by construction: `hintPolicy()` is a pure
+   function whose first failing line is the reason, and `tests/swipe-hint.test.js`
+   is that table.
+4. **One hint, alone**, added to an app that had one, with no scheduler
+   underneath it.
+5. **Reduce Motion is in the drawing and in the test matrix**, refusing rather
+   than degrading, for the reason above.

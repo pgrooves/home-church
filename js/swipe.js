@@ -96,12 +96,50 @@
      catching something that was already moving. */
   var SETTLE_EASE = 'cubic-bezier(0.22, 0.61, 0.36, 1)';
 
+  /* --- the hint's numbers, and where they came from ----------------------
+
+     The screen leans toward the next tab and comes back, twice, the second
+     time less far. See the long note above runHint().
+
+     22px was chosen by eye on a phone against 10 and 16. LOCK_SLOP above is
+     the floor it has to clear: ten pixels is the travel a real drag eats
+     before the screen starts moving at all, so a hint at ten shows less
+     movement than the gesture's own dead zone. COMMIT_PART is the ceiling it
+     has to stay well under: a quarter of the width is roughly a hundred
+     pixels, and anything approaching that reads as the app deciding to change
+     tabs rather than as an offer.
+
+     DECAY, and why the second lean is smaller. Two of the same size reads as a
+     machine ticking. Smaller the second time reads as a thumb testing
+     something and settling, which is the thing being described.
+
+     OUT is quicker than BACK on purpose: leaving is deliberate and returning
+     is a release. Neither overshoots. The design system §3g rules out springs,
+     and out-and-back is elastic enough without one — the *return* is the hint
+     and the overshoot is the thing the rule forbids, which are two different
+     movements wearing one word. */
+  var HINT_AMP   = 22;     // px of the first lean
+  var HINT_DECAY = 0.62;   // and how much of it the second lean is
+  var HINT_OUT   = 260;    // ms leaning away
+  var HINT_BACK  = 340;    // ms coming back
+  var HINT_GAP   = 120;    // ms of rest between the two
+
+  /* How long after the page last moved it still counts as moving. The same
+     number and the same reasoning as MOVING in js/index-rail.js: a few frames'
+     grace after the last scroll, because a sideways lean drawn under a page
+     that is still flying is a smear rather than a demonstration. */
+  var HINT_SETTLED = 140;
+
   var app, scroller, mount, tabbar, totop;
   var deck = null;         // the fixed layer holding the incoming screen
   var g = null;            // the gesture in flight, null between gestures
   var settling = false;    // an animation is finishing
   var finishSettle = null; // ends that animation early, see onStart
   var swallowClick = false;
+
+  var hint = null;         // the lean in flight, null between runs
+  var hintUsed = false;    // a real drag has happened: nothing left to point at
+  var scrollAt = 0;        // when the page last moved. See hintContext().
 
   function reducedMotion() {
     return !!(window.matchMedia &&
@@ -217,6 +255,12 @@
   function begin(dir) {
     g.dragging = true;
     g.width = scroller.clientWidth || window.innerWidth || 1;
+
+    /* They have found it. That is the end of the hint for this launch, whether
+       or not this drag goes on to commit: somebody who has dragged the screen
+       sideways knows the screens move sideways. The rail's rule, and a
+       relaunch starts it over. */
+    noteHintUse();
 
     // Where the drag counts from. Fixed here rather than recomputed per move,
     // so travel stays continuous across the origin: a finger that comes back
@@ -345,6 +389,189 @@
     finishSettle = null;
   }
 
+  /* =============================================================== the hint
+
+     The five tabs swipe and nothing on any screen says so. HINTS.md §8 has it
+     in Tier 1 and calls it "a whole navigation model nothing announces".
+
+     WHAT IT DRAWS. The screen leans toward the next tab by 22px and comes
+     back, then again by less, and that is the whole of it. No overlay, no
+     caption, no arrow: the gesture performs a little of itself, which is the
+     house style §2 of that document takes off the index rail. "The hint is the
+     thing itself moving."
+
+     WHY IT IS NOT DRAWN OVER THE TAB BAR, WHICH IS THE POINT. §8 assigned this
+     a shape called travel, a swell moving along the bar, and §12 blames that
+     shape for the stutter that got the whole hints feature reverted: it
+     animated background-position across the plinth, and the plinth carries
+     backdrop-filter: blur(22px) saturate(150%), so every frame re-composited a
+     live blur on a phone GPU. §12 asks for it to be "rebuilt, or dropped".
+     This drops it. One transform on #hc-view, which is the same property
+     place() writes sixty times a second while a finger is down, and nothing at
+     all is drawn over the bar. The travelling tile is deliberately left alone
+     for the same reason: it rides a finger, not a clock.
+
+     That is a shape argument and not a measurement, and §12 is explicit that
+     the measurement is the part still owed.
+
+     THE CLOCK IS THE RAIL'S. js/index-rail.js already hints two seconds after
+     the greeting lifts and every thirty seconds after that. This does not
+     start a second timer; it takes turns on that one, so only one thing ever
+     moves. See beat() over there.
+
+     WHAT ENDS IT. Its own timeline, about 1.3 seconds, and that is very nearly
+     the only way. There is no tap listener: the hint is already leaving, and
+     nothing is drawn in front of anything, so every tap during it lands on
+     whatever is underneath exactly as it would have.
+
+     RETIRE ON USE. The first real drag ends it for the launch, in begin()
+     below. There is nothing left to point at once somebody has found it, which
+     is the rail's own rule, and a relaunch starts it over. Nothing is stored.
+
+     AND A FINGER LANDING MID LEAN TAKES THE OFFSET OVER rather than finding
+     the screen snapped back to zero. See onStart. js/index-rail.js does the
+     same thing with its swell in stopHint(keep), for the same reason: a hint
+     that drops what it was holding the moment you answer it is a hint you feel
+     glitch. */
+
+  function hintSmooth(p) { return p * p * (3 - 2 * p); }
+  function hintRelease(p) { return 1 - Math.pow(1 - p, 3); }
+
+  /* Which way there is something to go. Left by default, because left is
+     further into the row; right only when left is the end of the line. +1 is
+     the next stop, which is the screen travelling left under a finger going
+     left, the same sign place() uses. */
+  function hintDir(i) {
+    if (i < 0) return 0;
+    var row = HC.router.lane();
+    if (row[i + 1]) return 1;
+    if (row[i - 1]) return -1;
+    return 0;
+  }
+
+  /* The whole of the policy, in the order the answers are wanted, so the first
+     line that says no is the reason it is quiet. Pure, and exported at the
+     bottom, because that is what makes tests/swipe-hint.test.js possible and
+     because HINTS.md §5 is right that the policy is where the bugs that matter
+     live. */
+  function hintPolicy(ctx) {
+    if (!ctx.hintsOn) return false;       // the one switch in Your account
+    if (ctx.used) return false;           // they have swiped, so this is over
+    if (ctx.still) return false;          // see the note in hintLive()
+    if (ctx.laneIndex < 0) return false;  // a pushed view: nothing swipes here
+    if (!ctx.dir) return false;           // nowhere to lean, so nothing honest to say
+    if (ctx.busy) return false;           // a finger is down, or a settle is in flight
+    if (ctx.sheetOpen) return false;      // something else owns the glass
+    if (ctx.editing) return false;        // an admin is mid sentence
+    if (ctx.hidden) return false;         // nobody is there
+    if (ctx.scrolling) return false;      // a lean under a moving page is a smear
+    return true;
+  }
+
+  function hintContext() {
+    var i = HC.router.laneIndex(HC.router.current());
+    var nav = app ? app.getAttribute('data-navmenu') : null;
+    var sheet = app ? app.getAttribute('data-oversheet') : null;
+    return {
+      /* One switch for every hint there will ever be, asked of the file that
+         owns it rather than re-read from the profile here, so there is one
+         answer and not two that have to agree. HINTS.md §9. */
+      hintsOn: HC.hints && HC.hints.isOn ? HC.hints.isOn() : true,
+      used: hintUsed,
+      still: reducedMotion(),
+      laneIndex: i,
+      dir: hintDir(i),
+      busy: !!g || settling || !!hint,
+      /* Either navigation, opened. The same question js/hints.js asks, for the
+         same reason: only one of the two can be on a phone, so asking both is
+         asking one, and 'closed' and 'fade' are on their way out. */
+      sheetOpen: nav === 'open' || sheet === 'open' || sheet === 'peek',
+      editing: !!(HC.edit && HC.edit.isOn && HC.edit.isOn()),
+      hidden: document.hidden,
+      scrolling: (Date.now() - scrollAt) < HINT_SETTLED
+    };
+  }
+
+  /* Lean, return, a beat, then a smaller lean and a smaller return. Written
+     out as a timeline rather than computed per frame, because the shape of the
+     movement is the whole design and it should be legible in one place. */
+  function hintLegs(dir) {
+    var legs = [];
+    for (var i = 0; i < 2; i++) {
+      var to = -dir * HINT_AMP * Math.pow(HINT_DECAY, i);
+      legs.push({ from: 0, to: to, ms: HINT_OUT, ease: hintSmooth });
+      legs.push({ from: to, to: 0, ms: HINT_BACK, ease: hintRelease });
+      if (!i) legs.push({ from: 0, to: 0, ms: HINT_GAP, ease: hintSmooth });
+    }
+    return legs;
+  }
+
+  /* Returns whether it actually ran, which is what lets the rail hand its turn
+     to whichever of the two has something to say. */
+  function runHint() {
+    if (!mount) return false;
+    var ctx = hintContext();
+    if (!hintPolicy(ctx)) return false;
+
+    hint = { legs: hintLegs(ctx.dir), leg: 0, at: 0, x: 0 };
+    mount.classList.add('hc-view-dragging');
+    window.requestAnimationFrame(hintFrame);
+    return true;
+  }
+
+  function hintFrame(now) {
+    if (!hint) return;
+    if (!hint.at) hint.at = now;
+
+    var leg = hint.legs[hint.leg];
+    var p = (now - hint.at) / leg.ms;
+
+    if (p >= 1) {
+      hint.leg++;
+      hint.at = 0;
+      if (hint.leg >= hint.legs.length) { endHint(false); return; }
+      window.requestAnimationFrame(hintFrame);
+      return;
+    }
+
+    hint.x = leg.from + (leg.to - leg.from) * leg.ease(p < 0 ? 0 : p);
+    mount.style.transform = 'translate3d(' + hint.x.toFixed(2) + 'px, 0, 0)';
+    window.requestAnimationFrame(hintFrame);
+  }
+
+  /* Ends whatever is leaning and answers with where the screen had got to.
+     `keep` leaves the transform where it is for a caller that is taking the
+     movement over; everything else puts it back. */
+  function endHint(keep) {
+    if (!hint) return 0;
+    var x = hint.x;
+    hint = null;
+    if (!keep) {
+      mount.style.transform = '';
+      mount.classList.remove('hc-view-dragging');
+    }
+    return x;
+  }
+
+  function noteHintUse() {
+    endHint(true);       // a drag is already writing to the same transform
+    hintUsed = true;
+  }
+
+  /* Could this hint still have anything to say before the app is closed?
+     Asked by the clock in js/index-rail.js, which the two of them share: once
+     neither has anything left, the interval stops rather than waking every
+     thirty seconds forever to ask a question whose answer cannot change.
+
+     REDUCE MOTION REFUSES OUTRIGHT, which is the rail's rule rather than the
+     guide hint's. That one degrades, because it is information and there is
+     something left of it holding still: the marker and the words are simply
+     there. This one is entirely movement. There is nothing left of it to show,
+     and a still version would be a different hint wearing the same name. */
+  function hintLive() {
+    return !hintUsed && !reducedMotion();
+  }
+
   /* --------------------------------------------------------------- gestures */
 
   function onStart(evt) {
@@ -374,12 +601,19 @@
     // finger, and the one that is not ours wins.
     if (touch.clientX <= 18) return;
 
+    /* A FINGER LANDING MID LEAN TAKES THE LEAN OVER. Not zero and start again:
+       that is a jump of up to 22px at the exact moment somebody has answered
+       the hint, and the whole claim this hint makes is that it is the gesture.
+       Whatever the screen was leaning is folded into the travel below. */
+    var carried = endHint(true);
+
     g = {
       target: evt.target,
       startX: touch.clientX,
       startY: touch.clientY,
-      dx: 0,
-      lastDx: 0,
+      carried: carried,
+      dx: carried,
+      lastDx: carried,
       lastT: Date.now(),
       velocity: 0,
       index: index,
@@ -420,8 +654,9 @@
     }
 
     // The slop is taken out of the travel, so the screen starts from under the
-    // finger instead of jumping the ten pixels it took to decide.
-    dx -= g.slop;
+    // finger instead of jumping the ten pixels it took to decide, and whatever
+    // the hint was leaning goes back in, so it carries on from there.
+    dx = dx - g.slop + g.carried;
 
     if (!paneFor(dx < 0 ? 1 : -1)) dx *= EDGE_PULL;
 
@@ -477,6 +712,13 @@
     scroller.addEventListener('touchstart', onStart, { passive: true });
     // Not passive: a horizontal drag has to be able to say it is not a scroll.
     scroller.addEventListener('touchmove', onMove, { passive: false });
+
+    /* Nothing but a timestamp, and passive so it cannot slow a scroll down.
+       The hint asks it whether the page is still moving: see hintContext(). */
+    scroller.addEventListener('scroll', function () {
+      scrollAt = Date.now();
+    }, { passive: true });
+
     scroller.addEventListener('touchend', onEnd);
     scroller.addEventListener('touchcancel', onCancel);
 
@@ -494,6 +736,18 @@
     });
   }
 
-  HC.swipe = { init: init };
+  HC.swipe = {
+    init: init,
+
+    /* The hint. Asked by the clock in js/index-rail.js, which the two of them
+       share so that only one thing ever moves at a time. hint() answers
+       whether it actually ran, so a turn nobody can use goes to the other one
+       rather than being spent on nothing. */
+    hint: runHint,
+    hintLive: hintLive,
+    endHint: endHint,
+
+    hintPolicy: hintPolicy    // exported for tests/swipe-hint.test.js
+  };
 
 })(window.HC = window.HC || {});

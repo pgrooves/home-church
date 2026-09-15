@@ -578,7 +578,53 @@
     if (used) return;
     used = true;
     if (firstTimer) { window.clearTimeout(firstTimer); firstTimer = 0; }
-    if (everyTimer) { window.clearInterval(everyTimer); everyTimer = 0; }
+    /* THE INTERVAL IS NOT CLEARED HERE, and it used to be. It is shared with
+       the tab swipe's hint now, and that one has a retirement of its own, so
+       the rail being finished is no longer the end of the clock. beat() stops
+       it once neither of them has anything left to say. */
+  }
+
+  /* TWO HINTS, ONE CLOCK.
+
+     js/swipe.js has a hint of its own: the screen leans toward the next tab
+     and comes back, twice. It wants exactly this moment, and two things moving
+     at once is a tour rather than a hint, so the two take turns on this one
+     interval instead of running two of them. The page sliding sideways under
+     a swell travelling down these notches would drag the swell with it, which
+     is the other half of the same argument.
+
+     The rail keeps the opening beat and the odd ones after it. It is the
+     harder of the two to stumble onto by accident: HINTS.md §12 says of the
+     other one that a sideways drag is discovered by accident more than
+     anything else in the app.
+
+     Whichever one's turn it is, if it has nothing to say — retired, Reduce
+     Motion, a screen it does not belong on — the turn goes to the other rather
+     than the beat being spent on nothing. */
+  var turn = 0;
+
+  function swipeHint(run) {
+    var s = HC.swipe;
+    if (!s || !s.hintLive || !s.hintLive()) return false;
+    return run ? !!s.hint() : true;
+  }
+
+  function beat() {
+    var live = swipeHint(false);
+
+    // Neither of them has anything left this launch. Stop asking.
+    if (used && !live) {
+      if (everyTimer) { window.clearInterval(everyTimer); everyTimer = 0; }
+      return;
+    }
+
+    if (++turn % 2) {
+      if (!used) { hint(); return; }
+      swipeHint(true);
+      return;
+    }
+    if (swipeHint(true)) return;
+    hint();
   }
 
   /* Set going once per launch, from the first screen that is allowed a rail.
@@ -598,7 +644,8 @@
           hint();
         }, HINT_FIRST);
       }
-      everyTimer = window.setInterval(hint, HINT_EVERY);
+      // beat(), not hint(): the standing offer is shared with the tab swipe.
+      everyTimer = window.setInterval(beat, HINT_EVERY);
     };
 
     if (HC.splash && HC.splash.whenGone) HC.splash.whenGone(start);

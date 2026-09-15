@@ -4,10 +4,19 @@ The screen leans toward the next tab and comes back, twice, on the clock the
 index rail already hints on. One drawing with dials on it, made to be looked at
 and swiped before anything in `js/` or `css/` is touched.
 
-**Not built.** `HINTS.md` at the repo root is the map this belongs to, and §12
-of it is why nothing here has shipped. `demo-hint/` is the same exercise for
-the account hint on Home and `demo-guide-hint/` is the one for the highlighting
-hint, which is the only hint the app actually has.
+**Chosen: 22px, twice with the second smaller, unhurried, and no seam. Built.**
+The page opens on those settings. It is the second hint the app has.
+
+The seam lost, which is the one result reading would not have predicted and is
+the reason this page exists. At 22px the movement is unambiguous on its own,
+and every argument for the seam was an argument about 16px not being legible
+enough. Dropping it takes an element, a parked pane and the dark-mode problem
+below out of the build in one go: what ships draws nothing at all, and is one
+transform on `#hc-view`. The seam switch stays on this page because the case
+for 22 is only legible next to the thing it replaced.
+
+`demo-hint/` is the same exercise for the account hint on Home, which is still
+not built, and `demo-guide-hint/` is the one for the highlighting hint.
 
 ## What is hidden, and what this points at
 
@@ -161,14 +170,23 @@ Every claim in this file about cost is still a claim.
 somebody has not swiped, is a lot of leaning. A week in a pocket answers that
 and an afternoon at a desk does not.
 
-## If it does get built
+## Where it went
 
-It belongs in `js/swipe.js`, not in `js/hints.js`. The rail's precedent: a hint
-about a gesture lives with the gesture, because it needs the mount, `place()`,
-`lane()`, and already knows the moment a real swipe happened, which makes
-retire on use one line in `onEnd`. `js/hints.js` is deliberately not a
-framework and `HINTS.md` §12 asks for one hint at a time rather than a
-registry.
+`js/swipe.js`, not `js/hints.js`. The rail's precedent: a hint about a gesture
+lives with the gesture, because it needs the mount, `place()`, `lane()`, and
+already knows the moment a real drag happened, which makes retire on use one
+line in `begin()`. `js/hints.js` is deliberately not a framework and
+`HINTS.md` §12 asks for one hint at a time rather than a registry.
+
+The clock is `js/index-rail.js`'s, shared rather than copied. `beat()` over
+there alternates between the two and hands a turn to whichever one has
+something to say. That file's `noteUse()` no longer clears the interval, which
+it used to: the rail being finished is no longer the end of the clock.
+
+`tests/swipe-hint.test.js` covers the policy and `tests/e2e/swipe-hint.js`
+covers the drawing in the real app: that it leans, puts the screen back, drops
+the compositor layer it asked for, leans the other way on the last stop, and
+retires on a real drag.
 
 ## Building it
 

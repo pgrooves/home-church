@@ -751,8 +751,8 @@ code {
         <div class="row">
           <label>The seam</label>
           <div class="seg" data-ctl="seam">
-            <button type="button" data-v="off">Off</button>
-            <button type="button" data-v="paper" aria-pressed="true">Paper edge</button>
+            <button type="button" data-v="off" aria-pressed="true">Off</button>
+            <button type="button" data-v="paper">Paper edge</button>
             <button type="button" data-v="rule">Paper edge and a hairline</button>
           </div>
           <p class="note">
@@ -769,8 +769,8 @@ code {
           <label>How far it leans</label>
           <div class="seg" data-ctl="amp">
             <button type="button" data-v="10">10px</button>
-            <button type="button" data-v="16" aria-pressed="true">16px</button>
-            <button type="button" data-v="22">22px</button>
+            <button type="button" data-v="16">16px</button>
+            <button type="button" data-v="22" aria-pressed="true">22px</button>
           </div>
           <p class="note">
             10px is <code>LOCK_SLOP</code>, the travel a real swipe eats before
@@ -954,8 +954,8 @@ code {
   /* ---------------------------------------------------------------- the desk */
 
   var opt = {
-    seam: 'paper',
-    amp: '16',
+    seam: 'off',
+    amp: '22',
     count: 'decay',
     speed: 'unhurried',
     place: 'home',

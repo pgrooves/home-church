@@ -451,7 +451,14 @@
      resets nothing: somebody who has already learned this does not need to be
      taught it again, and the launch it was spent on is spent. */
   function switched(on) {
-    if (!on) { armed = null; end('off'); }
+    if (!on) {
+      armed = null;
+      end('off');
+      /* One switch for every hint there will ever be, so it puts away whatever
+         the tab swipe has on the glass as well. HINTS.md §9: somebody who does
+         not want to be shown things does not want to say so twice. */
+      if (HC.swipe && HC.swipe.endHint) HC.swipe.endHint(false);
+    }
   }
 
   /* Everything else that ends it. Capture phase on the tap, so the hint is
@@ -515,6 +522,12 @@
     busy: busy,
     switched: switched,
     explain: explain,
+
+    /* The one switch, asked here by anything else that draws a hint, so there
+       is one answer to the question rather than two that have to agree.
+       js/swipe.js asks it. */
+    isOn: isOn,
+
     shouldShow: shouldShow    // exported for tests/hints.test.js
   };
 })(window.HC = window.HC || {});
