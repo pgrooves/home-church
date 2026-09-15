@@ -841,7 +841,7 @@ code {
         </div>
 
         <div class="row">
-          <label>The clock</label>
+          <label>The clock, after the opening pair</label>
           <div class="seg" data-ctl="clock">
             <button type="button" data-v="real">Every 30s, as it ships</button>
             <button type="button" data-v="fast" aria-pressed="true">Every 6s, so you are not waiting</button>
@@ -1577,9 +1577,16 @@ code {
   window.addEventListener('resize', function () { scale(); buildRail(); });
 
   armClock();
-  say('ready. the rail takes the first turn.');
+  say('ready. the rail at 2s, the lean at 5s, then turns.');
 
-  /* Two seconds after the greeting lifts, the way js/index-rail.js counts it. */
+  /* THE OPENING PAIR. Two seconds after the greeting lifts the notches
+     cascade, and three seconds behind that the page leans, once — the app's
+     two directions said in the order somebody would find them. The two timers
+     are independent in js/index-rail.js, so a thumb on the notches does not
+     call the lean off; the only thing that does is having already swiped,
+     which js/swipe.js refuses for itself. After the pair, the ordinary thirty
+     second rhythm takes over, starting with the rail. */
   setTimeout(function () { railHint(); }, 2000);
+  setTimeout(function () { runHint(true); }, 5000);
 })();
 </script>

@@ -127,6 +127,51 @@ const mountX = () => {
   // a page that is still moving, which is a rule and not a flake.
   await page.waitForTimeout(900);
 
+  /* ------------------------------------------ the opening pair, on its own
+
+     The rail's swell goes two seconds after the greeting lifts and the page
+     leans three seconds behind it, so a first launch says both directions
+     once. Nothing calls anything here: this waits for the app to do it.
+
+     Worth a browser because the timer is in js/index-rail.js and the thing it
+     fires is in js/swipe.js, and every other check in this file reaches past
+     that seam by calling HC.swipe.hint() directly. A wiring mistake between
+     the two would leave all of them green and the app silent for a minute. */
+
+  /* The deepest point rather than the first frame: runHint() writes a zero
+     transform before the first tick, to put the pane where it belongs, so
+     "the transform appeared" and "the screen moved" are a few frames apart. */
+  const opening = await page.evaluate(() => new Promise(resolve => {
+    const view = document.getElementById('hc-view');
+    const t0 = Date.now();
+    let started = 0, deepest = 0;
+    (function watch() {
+      const m = /translate3d\((-?[\d.]+)px/.exec(view.style.transform || '');
+      if (m) {
+        if (!started) started = Date.now() - t0;
+        deepest = Math.min(deepest, parseFloat(m[1]));
+      }
+      if (started && Date.now() - t0 - started > 400) {
+        return resolve({ at: started, x: deepest });
+      }
+      if (Date.now() - t0 > 9000) return resolve({ at: -1, x: 0 });
+      requestAnimationFrame(watch);
+    })();
+  }));
+
+  ok('it leans on its own, without being asked',
+     opening.at > 0, opening.at < 0 ? 'nothing in 9s' : 'at ' + opening.at + 'ms');
+  /* Measured from just after the gate rather than from the splash lifting, so
+     the window is generous at both ends; what it is really pinning is that the
+     lean is a few seconds in rather than a minute in, which is what it was
+     before the opening pair existed. */
+  ok('a few seconds in, not a minute', opening.at > 1500 && opening.at < 8000,
+     'at ' + opening.at + 'ms');
+  ok('and it is the swipe hint that moved, at the swipe hint\'s depth',
+     opening.x < -40 && opening.x >= -64.5, 'at ' + opening.x + 'px');
+
+  await page.waitForTimeout(1800);
+
   /* ------------------------------------------------ the contract the rail uses */
 
   const api = await page.evaluate(() => ({
@@ -306,6 +351,44 @@ const mountX = () => {
   const freshWhy = await page.evaluate(() => window.HC.swipe.explain());
   ok('and says yes, and where it would lean, when nothing is stopping it',
      /^yes: it would lean left toward /.test(freshWhy), freshWhy);
+
+  /* --------------------------------- somebody who swipes before it gets there
+
+     The opening lean is scheduled at five seconds whatever happens, because
+     the rail's own timer and this one are deliberately independent: a thumb on
+     the notches must not call off a hint about a gesture nobody has found yet.
+     Which leaves exactly one thing that should call it off, and it is the
+     obvious one — somebody who has already swiped to another page does not
+     need to be shown that pages swipe.
+
+     That is not the timer's job and it is not checked there. The lean fires on
+     schedule and js/swipe.js refuses it, which is the same rule that stops
+     every other turn once the gesture has been used. This is the case that
+     proves the two halves agree. */
+
+  await page.reload();
+  await page.waitForFunction(() => window.HC && window.HC.router, null, { timeout: 15000 });
+  await pastTheGate(page);
+
+  // Well inside the five seconds, and a real drag rather than a call.
+  await page.evaluate(DRAG + '(330, 60)');
+  await page.waitForTimeout(700);
+
+  const afterEarly = await page.evaluate(() => new Promise(resolve => {
+    const view = document.getElementById('hc-view');
+    const t0 = Date.now();
+    (function watch() {
+      const m = /translate3d\((-?[\d.]+)px/.exec(view.style.transform || '');
+      if (m && Math.abs(parseFloat(m[1])) > 2) return resolve(parseFloat(m[1]));
+      if (Date.now() - t0 > 7000) return resolve(0);
+      requestAnimationFrame(watch);
+    })();
+  }));
+
+  ok('an early swipe calls the opening lean off', afterEarly === 0,
+     'the screen moved to ' + afterEarly + 'px anyway');
+  ok('and the hint says so by name',
+     /^no: retired for this launch/.test(await page.evaluate(() => window.HC.swipe.explain())));
 
   /* -------------------------------------------------------- nothing threw */
 

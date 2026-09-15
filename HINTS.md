@@ -934,8 +934,9 @@ theme where the real one is light.
 ## 14. The second hint, and the shape §12 blamed
 
 The tab swipe hint. The screen leans 64px toward the next tab, far enough to
-uncover a heading on it, and comes back; then again by much less. On the clock
-the index rail already hints on. It is in `js/swipe.js`, drawn out first in
+uncover a heading on it, and comes back; then again by much less. Once at five
+seconds on a first launch, three behind the rail's opening swell, and after that
+on the clock the index rail already hints on. It is in `js/swipe.js`, drawn out first in
 `demo-swipe-hint/`, and it is the second hint the app has.
 
 **It replaces the shape rather than repairing it.** §8 assigned this hint
@@ -995,10 +996,29 @@ still version would be a different hint wearing the same name.
 the answer is none of the three options §3e wrote down. The rail's thirty second
 interval is shared rather than copied: `beat()` in `js/index-rail.js` gives the
 odd beats to the rail and the even ones to the swipe, and hands the turn over
-when whichever one's turn it is has nothing to say. The rail keeps the opening
-beat, because it is the harder of the two to stumble onto by accident and
+when whichever one's turn it is has nothing to say. The rail keeps the first of
+those beats, because it is the harder of the two to stumble onto by accident and
 because §12 says of this one that a sideways drag is discovered by accident more
 than anything else in the app.
+
+**And a first launch opens on both of them, three seconds apart.** The swell
+goes at two seconds and the page leans at five, which is the one place this
+document's *one hint at a time* is deliberately spent on two in a row. They are
+the app's two directions — the edge you slide down, the page you slide sideways
+— and on the launch where somebody knows neither, saying them once in the order
+they would find them is worth more than the restraint. The swell takes about
+1.15s, so three seconds leaves nearly two of stillness between: two sentences,
+not one busy moment. After the pair, the ordinary rhythm, starting with the rail
+and touching nothing in `beat()`.
+
+*The two opening timers are independent, and that is the whole of the rule.*
+`noteUse()` clears the rail's when the notches are touched and must not clear
+the swipe's, because putting a thumb on the rail is not swiping to another page.
+The one thing that calls the opening lean off is somebody having already swiped,
+and that is not the timer's decision: the lean fires on schedule and
+`js/swipe.js` refuses it, by the same retire-on-use rule that stops every other
+turn. `tests/e2e/swipe-hint.js` covers both halves, because a timer and a policy
+agreeing is exactly the kind of thing that is true until somebody tidies one.
 
 So §3e's *one hint per launch* becomes **one hint at a time**, which is what the
 rule was always protecting: two things moving at once is a tour. It also settles

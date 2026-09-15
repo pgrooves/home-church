@@ -116,9 +116,20 @@ seconds after that, on whatever screen you are on, until the rail is used. This
 shares that clock rather than starting a second one, and alternates on it: the
 rail, then the swipe, then the rail. One thing moves at a time.
 
-The rail keeps the first beat. It is the harder of the two to stumble onto by
-accident, and `HINTS.md` §12 says as much about this one: *"a sideways drag is
-discovered by accident more than anything else in the app."*
+The rail keeps the first of those beats. It is the harder of the two to stumble
+onto by accident, and `HINTS.md` §12 says as much about this one: *"a sideways
+drag is discovered by accident more than anything else in the app."*
+
+**A first launch opens on both, three seconds apart.** The swell at two seconds,
+the lean at five. It is the one place the *one hint at a time* rule is spent on
+two in a row, and it is worth it on the launch where somebody knows neither
+direction. The swell takes 1.15s, so there is nearly two seconds of stillness
+between them: two sentences rather than one busy moment.
+
+The two opening timers are independent. A thumb on the notches does not call the
+lean off, because touching the rail is not swiping to another page. The only
+thing that calls it off is having already swiped, and `js/swipe.js` refuses that
+for itself rather than the timer knowing about it.
 
 **Both at once** is on the page so the argument against it is legible rather
 than asserted. Two things moving is a tutorial, and the page sliding under the

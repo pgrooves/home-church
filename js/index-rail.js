@@ -54,6 +54,14 @@
    use it. Then it stops for good, and the next launch starts the whole thing
    over.
 
+   AND THE CLOCK IS SHARED. js/swipe.js has a hint of its own — the page leans
+   toward the next tab far enough to show a heading on it — and this file owns
+   the timer both of them run on, because two things moving at once is a tour
+   rather than a hint. Three seconds after the opening swell the page leans,
+   once, so a first launch says the app's two directions in the order somebody
+   would find them. After that they take turns on the thirty second offer,
+   starting with the rail. See armHints() and beat().
+
    The hint is the notches and nothing else. The headings, the card and the
    veil are what happens when a finger is down, and putting the contents of
    the page up unasked every thirty seconds is not a hint, it is an
@@ -143,6 +151,10 @@
      again. */
   var HINT_FIRST = 2000;
   var HINT_EVERY = 30000;
+  /* And how long after that opening swell the tab swipe leans, once, on a
+     first launch. See armHints(). The swell itself is HINT_WAVE, about 1.15s,
+     so this leaves the better part of two seconds of stillness between them. */
+  var HINT_SWIPE_AFTER = 3000;
   var HINT_WAVE  = 1150;
   var HINT_LEAD  = 1.6;     // in sigmas, outside the first and last notch
   var HINT_EDGE  = 0.18;
@@ -214,6 +226,7 @@
   var used     = false;   // the rail has been used, so the hints are done
   var hintsSet = false;   // the hints have been set going for this launch
   var firstTimer = 0;
+  var swipeTimer = 0;     // the tab swipe's one opening lean. See armHints().
   var everyTimer = 0;
 
   function clamp(v, lo, hi) { return v < lo ? lo : (v > hi ? hi : v); }
@@ -631,7 +644,26 @@
      The two second one is Home's, because Home is what the app opens onto and
      a hint two seconds into somewhere you navigated to is a hint about a rail
      you just watched appear. The standing thirty second one belongs to
-     whatever screen you happen to be on. */
+     whatever screen you happen to be on.
+
+     AND THE TAB SWIPE LEANS THREE SECONDS BEHIND THE OPENING SWELL. The two
+     are the app's two directions, and on a first launch they are worth saying
+     once, together, in the order somebody would find them: the edge you slide
+     down, then the page you slide sideways. The swell takes about 1.15s, so
+     three seconds leaves the better part of two seconds of stillness between
+     them — long enough that they read as two sentences rather than one busy
+     moment, short enough to still be the same thought.
+
+     After that pair, the ordinary rhythm: the standing thirty second offer,
+     taking turns, starting with the rail. Nothing here touches `turn`, so the
+     alternation below is exactly what it was.
+
+     THE TWO TIMERS ARE INDEPENDENT ON PURPOSE. noteUse() clears the rail's
+     when the notches are touched, and it must not clear the swipe's: putting a
+     thumb on the rail is not swiping to another page, and the one thing that
+     should call off the opening lean is somebody having already found the
+     gesture it is about. That question belongs to js/swipe.js, which refuses
+     for itself once a real drag has happened. */
   function armHints(route) {
     if (hintsSet || !route) return;
     hintsSet = true;
@@ -643,6 +675,11 @@
           firstTimer = 0;
           hint();
         }, HINT_FIRST);
+
+        swipeTimer = window.setTimeout(function () {
+          swipeTimer = 0;
+          swipeHint(true);
+        }, HINT_FIRST + HINT_SWIPE_AFTER);
       }
       // beat(), not hint(): the standing offer is shared with the tab swipe.
       everyTimer = window.setInterval(beat, HINT_EVERY);
