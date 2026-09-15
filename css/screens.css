@@ -825,7 +825,7 @@
 }
 
 /* ==========================================================================
-   When & Where
+   Services
 
    NO CARDS ON THIS SCREEN, AND THAT IS THE DESIGN. The two facts on it are a
    time and an address, which is two labelled lines in one column of prose,
@@ -886,16 +886,28 @@
 .hc-ww__town { margin-top: var(--hc-space-xs); color: var(--hc-mid); }
 .hc-ww__action { margin-top: var(--hc-space-lg); }
 
-/* Three photographs off the church's own Instagram, arranged the way the
-   website arranges them: one tall on the left, one wide above a smaller one on
-   the right. Explicit rows rather than aspect-ratio on the frames, so three
-   pictures of three different shapes cannot push the grid around between one
-   sync and the next. */
+/* Photographs off the church's own Instagram, in a collage that closes.
+
+   EVERY CELL IS FILLED, WHICH IS THE WHOLE FIX. This grid used to hold three
+   frames in a two by three, which left the top left corner empty: a notch out
+   of the block that read as a picture that had failed to load rather than as
+   a decision. Both arrangements below cover their grid completely, so the
+   photographs together are one rectangle with a straight edge on all four
+   sides, whatever shapes the pictures inside them happen to be.
+
+   FIVE, OR FOUR. Five is a three by three pinwheel: a tall one top left, a
+   wide one across from it, a square in the middle, a tall one bottom right
+   and a wide one closing the bottom left, so no two frames of the same shape
+   sit next to each other. Four is the two by three the screen can still fill
+   when the sync has only mirrored four posts. js/screens/whenwhere.js picks
+   between them and draws neither below four.
+
+   Explicit rows rather than aspect-ratio on the frames, so pictures of
+   different shapes cannot push the grid around between one sync and the
+   next. */
 .hc-ww__photos {
   margin-top: var(--hc-space-xxl);
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  grid-template-rows: repeat(3, 72px);
   gap: var(--hc-space-sm);
 }
 
@@ -905,9 +917,29 @@
   background: var(--hc-paper-sunk);
 }
 
-.hc-ww__frame--1 { grid-column: 1; grid-row: 2 / span 2; }
-.hc-ww__frame--2 { grid-column: 2; grid-row: 1 / span 2; }
-.hc-ww__frame--3 { grid-column: 2; grid-row: 3; }
+/* Five, the ordinary case: the sync keeps nine posts. */
+.hc-ww__photos--5 {
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(3, 84px);
+}
+
+.hc-ww__photos--5 .hc-ww__frame--1 { grid-column: 1; grid-row: 1 / span 2; }
+.hc-ww__photos--5 .hc-ww__frame--2 { grid-column: 2 / span 2; grid-row: 1; }
+.hc-ww__photos--5 .hc-ww__frame--3 { grid-column: 2; grid-row: 2; }
+.hc-ww__photos--5 .hc-ww__frame--4 { grid-column: 3; grid-row: 2 / span 2; }
+.hc-ww__photos--5 .hc-ww__frame--5 { grid-column: 1 / span 2; grid-row: 3; }
+
+/* Four: the same idea one column narrower, a tall frame in each column with a
+   shorter one squared off above and below it. */
+.hc-ww__photos--4 {
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: repeat(3, 84px);
+}
+
+.hc-ww__photos--4 .hc-ww__frame--1 { grid-column: 1; grid-row: 1; }
+.hc-ww__photos--4 .hc-ww__frame--2 { grid-column: 1; grid-row: 2 / span 2; }
+.hc-ww__photos--4 .hc-ww__frame--3 { grid-column: 2; grid-row: 1 / span 2; }
+.hc-ww__photos--4 .hc-ww__frame--4 { grid-column: 2; grid-row: 3; }
 
 .hc-ww__photo {
   display: block;

@@ -1,5 +1,5 @@
 /* ===========================================================================
-   When & Where, the page that answers "what time, and where".
+   Services, the page that answers "what time, and where".
 
    WHAT IS ACTUALLY AT RISK HERE. This is the screen a person who has never
    been to this church opens first, and every fact on it is a column. So the
@@ -15,11 +15,15 @@
    2. A CONTROL WITH NOTHING BEHIND IT. No maps_url means no Get directions
       button, not a button that opens nothing. An address is still readable
       with no map on file.
-   3. THE PHOTOGRAPHS ARE THREE OR NONE. They are the newest Instagram posts
-      the sync has mirrored, and the grid is built for exactly three. Two in a
-      grid for three is a hole, and a page that ends on the address is a
-      perfectly good page — which is also what a project with no Instagram
-      sync gets, so it is the ordinary case rather than an edge one.
+   3. THE COLLAGE HAS TO CLOSE. The photographs are the newest Instagram posts
+      the sync has mirrored, and they are drawn into one of two arrangements
+      that fill their grid completely: five in a three by three, or four in a
+      two by three. A partial arrangement leaves an empty cell in the middle
+      of a block of pictures, which is what this page shipped with and what
+      reads as a photograph that failed to load. So there are two things to
+      check and they are different kinds of check: the screen never draws
+      fewer frames than an arrangement needs, and the arrangement in the
+      stylesheet covers every cell of its grid exactly once.
    4. THE WORDS SURVIVE WITH NO ROW. content_pages is content like everything
       else here, which means the screen has to draw a real paragraph on a
       phone that has never reached Supabase.
@@ -141,35 +145,122 @@ okTrue('the address is still readable without one',
 
 /* ------------------------------------------------------- the photographs */
 
-console.log('\n--- three photographs, or none ---\n');
+console.log('\n--- five photographs, or four, or none ---\n');
+
+const posts = (n) => Array.from({ length: n }, (_, i) => post(i + 1));
 
 ok('none synced yet, which is the ordinary case',
    draw({ church: OTHER, posts: [] }).includes('hc-ww__photos'), false);
 
-ok('two is a hole in a grid built for three, so nothing is drawn',
-   draw({ church: OTHER, posts: [post(1), post(2)] }).includes('hc-ww__photos'), false);
+ok('three is the arrangement this page used to ship, and it left a hole',
+   draw({ church: OTHER, posts: posts(3) }).includes('hc-ww__photos'), false);
 
-const three = draw({ church: OTHER, posts: [post(1), post(2), post(3)] });
-okTrue('three draws the block', three.includes('hc-ww__photos'));
-ok('and three frames in it', (three.match(/hc-ww__frame--/g) || []).length, 3);
+const four = draw({ church: OTHER, posts: posts(4) });
+okTrue('four draws the two by three', four.includes('hc-ww__photos--4'));
+ok('with a frame per cell it has to fill',
+   (four.match(/hc-ww__frame--/g) || []).length, 4);
 
-const many = draw({
-  church: OTHER,
-  posts: [post(1), post(2), post(3), post(4), post(5)]
-});
-ok('a full rail is still three frames', (many.match(/hc-ww__frame--/g) || []).length, 3);
-okTrue('and they are the newest three', many.includes('p1.jpg') && many.includes('p3.jpg'));
-okFalse('not the fourth', many.includes('p4.jpg'));
+const five = draw({ church: OTHER, posts: posts(5) });
+okTrue('five draws the three by three instead', five.includes('hc-ww__photos--5'));
+okFalse('and only that one', five.includes('hc-ww__photos--4'));
+ok('five frames in it', (five.match(/hc-ww__frame--/g) || []).length, 5);
+
+/* Nine is what the sync keeps, so this is what the church actually sees. */
+const nine = draw({ church: OTHER, posts: posts(9) });
+okTrue('a full feed is still the five', nine.includes('hc-ww__photos--5'));
+ok('and five frames', (nine.match(/hc-ww__frame--/g) || []).length, 5);
+okTrue('they are the newest five', nine.includes('p1.jpg') && nine.includes('p5.jpg'));
+okFalse('not the sixth', nine.includes('p6.jpg'));
 
 /* A post the sync mirrored a row for but never got the picture into the
-   bucket for. It maps to an empty imageUrl, and an empty frame is worse than
-   no collage, so it does not count toward the three. */
+   bucket for. It maps to an empty imageUrl, and an empty frame is the hole
+   these arrangements exist to avoid, so it does not make up the numbers: five
+   rows with one picture missing is a four. */
 const holed = draw({
   church: OTHER,
-  posts: [post(1), { imageUrl: '', permalink: 'x' }, post(3)]
+  posts: [post(1), { imageUrl: '', permalink: 'x' }, post(3), post(4), post(5)]
 });
-okFalse('a post with no picture does not make up the numbers',
-        holed.includes('hc-ww__photos'));
+okTrue('a post with no picture drops to the arrangement that still fills',
+       holed.includes('hc-ww__photos--4'));
+okFalse('and the empty frame is not drawn', holed.includes('src=""'));
+
+const holedFour = draw({
+  church: OTHER,
+  posts: [post(1), { imageUrl: '', permalink: 'x' }, post(3), post(4)]
+});
+okFalse('three pictures left is nothing at all',
+        holedFour.includes('hc-ww__photos'));
+
+/* ---------------------------------------------------- the grid itself
+
+   The bug was never in the screen, it was in the stylesheet: three frames
+   placed into a grid with six cells, and the one nobody placed anything into
+   was the top left. So this reads the placements back out of css/screens.css
+   and fills the grid in, which is the only way to assert the thing that was
+   actually wrong — that there is no empty cell, and no two photographs
+   stacked in the same one. */
+const CSS = read('css', 'screens.css');
+
+// `1` on its own, or `2 / span 2`. Returns [start, span].
+function place(value) {
+  const parts = value.split('/').map((s) => s.trim());
+  const start = parseInt(parts[0], 10);
+  const span = parts[1] ? parseInt(parts[1].replace('span', '').trim(), 10) : 1;
+  return [start, span];
+}
+
+function track(decl) {
+  const repeat = decl.match(/repeat\(\s*(\d+)/);
+  return repeat ? parseInt(repeat[1], 10) : decl.trim().split(/\s+/).length;
+}
+
+function coverage(size) {
+  const block = CSS.match(
+    new RegExp('\\.hc-ww__photos--' + size + '\\s*\\{([^}]*)\\}')
+  );
+  if (!block) return { error: 'no .hc-ww__photos--' + size + ' rule' };
+
+  const cols = track((block[1].match(/grid-template-columns:([^;]*);/) || [])[1] || '');
+  const rows = track((block[1].match(/grid-template-rows:([^;]*);/) || [])[1] || '');
+
+  const cells = {};
+  const rule = new RegExp(
+    '\\.hc-ww__photos--' + size +
+    '\\s+\\.hc-ww__frame--(\\d+)\\s*\\{\\s*grid-column:([^;]*);\\s*grid-row:([^;]*);',
+    'g'
+  );
+
+  let frames = 0, m;
+  while ((m = rule.exec(CSS))) {
+    frames++;
+    const [col, colSpan] = place(m[2]);
+    const [row, rowSpan] = place(m[3]);
+    for (let x = col; x < col + colSpan; x++) {
+      for (let y = row; y < row + rowSpan; y++) cells[x + ',' + y] = (cells[x + ',' + y] || 0) + 1;
+    }
+  }
+
+  const empty = [], doubled = [];
+  for (let x = 1; x <= cols; x++) {
+    for (let y = 1; y <= rows; y++) {
+      const n = cells[x + ',' + y] || 0;
+      if (n === 0) empty.push('column ' + x + ', row ' + y);
+      if (n > 1) doubled.push('column ' + x + ', row ' + y);
+    }
+  }
+
+  return { cols, rows, frames, empty, doubled,
+           outside: Object.keys(cells).length - (cols * rows - empty.length) };
+}
+
+[4, 5].forEach(function (size) {
+  const grid = coverage(size);
+  ok('the ' + size + ' arrangement places ' + size + ' frames', grid.frames, size);
+  ok('and leaves no cell of its ' + grid.cols + ' by ' + grid.rows + ' empty',
+     grid.empty, []);
+  ok('and stacks nothing on top of anything', grid.doubled, []);
+  ok('and nothing hangs off the edge of the grid', grid.outside, 0);
+});
 
 /* ------------------------------------------------------------- the words */
 
@@ -177,7 +268,11 @@ console.log('\n--- the words, with and without a row ---\n');
 
 const bare = draw({ church: OTHER });
 okTrue('with no content_pages row the header still has both names',
-       bare.includes('When &amp; Where') && bare.includes('Sunday Gatherings'));
+       bare.includes('Services') && bare.includes('Sunday Gatherings'));
+okTrue('the page name is over the church’s own heading, not under it',
+       bare.indexOf('Services') < bare.indexOf('Sunday Gatherings'));
+okFalse('and the old name is gone from the screen',
+        bare.includes('When &amp; Where') || bare.includes('When & Where'));
 okTrue('the paragraph is the one in the source, not a gap',
        bare.includes('heart of our community'));
 okTrue('and the welcome line is under it',

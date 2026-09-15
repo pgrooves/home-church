@@ -117,11 +117,17 @@
        opens during their week and this is the one somebody who has never been
        here opens first. Above the two courses rather than below them for the
        same reason: "what time do you meet" is a shorter question than "should
-       I do Alpha", and the shorter question goes first. */
+       I do Alpha", and the shorter question goes first.
+
+       THE TILE SAYS SERVICES. It said When & Where, which is a description of
+       what the page answers rather than a name for the thing it is about. One
+       word, and the word the church uses out loud, fits under an icon and
+       under the arrow in the bar without being shortened. The route keeps its
+       old name so a saved link still lands here. */
     {
       route: 'when-where',
       icon: 'pin',
-      title: 'When & Where',
+      title: 'Services',
       sub: 'Sunday times, the address, and a button to the map.'
     },
     {
@@ -201,10 +207,10 @@
     connect: 'Connect',
     more: 'More',
     worship: 'Worship',
-    // The tile says When & Where and the screen's own header says Sunday
+    // The tile says Services and the screen's own header says Sunday
     // Gatherings, which is the church's name for it on their website. This is
     // the one the bar carries, because it is the one somebody tapped.
-    'when-where': 'When & Where',
+    'when-where': 'Services',
     // The month grid and the church's own dates under it. Still "Cal" now
     // that it is the second tile: the tile's label and this table have to
     // agree, and the short name is what fits under the icon.
@@ -230,7 +236,7 @@
        announcement. See js/screens/announcement-archive.js.
 
        ONE WORD IN THE BAR AND TWO ON THE SCREEN, which is the same split
-       When & Where above makes and for a plainer reason: "Announcement
+       Services above makes and for a plainer reason: "Announcement
        Archive" is wider than the bar has between the arrow and the three
        discs, and a bar that reads "Announcement A…" is worse than one that
        reads Archive. The screen's own heading, two lines below it, says the

@@ -480,15 +480,17 @@ button must not disappear because somebody tidied that list.
 
 -----
 
-## When & Where
+## Services
 
 **The fourth stop behind •••, and the one a person who has never been here
 opens first.** It is the church's Sunday Gatherings block from
 homechurchnola.com brought into the app: the two paragraphs, then the service
-times, then the address, then three photographs off the church's own Instagram.
-The tile says *When & Where*, because that is what somebody looks for in a
-menu; the screen's own header says *Sunday Gatherings*, because that is what the
-church calls it.
+times, then the address, then a collage off the church's own Instagram.
+The tile says *Services*, which is the word the church uses out loud and the
+one somebody scans a menu for; the screen's own header says *Sunday
+Gatherings*, because that is what the church calls it. It was *When & Where* —
+a description of the question rather than a name for the thing — and the route
+is still `when-where`, so a saved link still lands here.
 
 **Nothing on it is typed into a source file.** The times, the day, the street,
 the town and the map link are `church_profile.service_day`, `service_times`,
@@ -505,13 +507,22 @@ can print an address; a phone can open it, in Apple Maps on iOS and the web map
 everywhere else. No `maps_url` on file means no button rather than a button that
 opens nothing.
 
-**The photographs are the newest three Instagram posts**, already mirrored into
-the `instagram` bucket by the sync job for the rail on Connect, so there is no
-second place to keep three pictures up to date. They are decoration here rather
-than a rail: no captions, no taps, nothing to open, because Connect is where
-those posts are content. **Three or none** — two in a grid built for three is a
-hole, and a page that ends on the address is a perfectly good page, which is
-also what a project with no Instagram sync draws.
+**The photographs are the newest Instagram posts**, already mirrored into the
+`instagram` bucket by the sync job for the rail on Connect, so there is no
+second place to keep pictures up to date. They are decoration here rather than
+a rail: no captions, no taps, nothing to open, because Connect is where those
+posts are content.
+
+**The collage closes.** It drew three frames into a grid with six cells, which
+left the top left corner empty — and an empty cell in the middle of a block of
+photographs reads as a picture that failed to load rather than as a decision.
+There are two arrangements now and both of them cover their grid completely,
+so the photographs together are one rectangle with a straight edge on all four
+sides: **five** in a three by three pinwheel, which is what the sync's nine
+posts give every time, and **four** in a two by three for a feed younger than
+that. Under four there is no arrangement that closes, so nothing is drawn,
+which is also what a project with no Instagram sync gets — and a page that ends
+on the address is a perfectly good page.
 
 **Two things are deliberately not the website.** The site sets this section in
 white on near-black; this app has one paper and one dark theme and they follow
@@ -520,9 +531,11 @@ keeps its gathering card** — same times, same Directions button, still on the
 first screen. This is the fuller answer for somebody who went looking, not a
 replacement for the one on the way past.
 
-See `js/screens/whenwhere.js`, the `When & Where` block in `css/screens.css`,
-`supabase/migrations/0065_when_where_page.sql`, `tests/when-where.test.js`, and
-`demo-when-where/`, which is the drawing it was decided from.
+See `js/screens/whenwhere.js`, the `Services` block in `css/screens.css`,
+`supabase/migrations/0065_when_where_page.sql` and
+`0073_services_page_name.sql`, `tests/when-where.test.js`, and
+`demo-when-where/`, which is the drawing it was decided from and still carries
+the old name.
 
 -----
 
@@ -821,7 +834,7 @@ rather than a prerequisite: run it and the row is there, explicitly off, from
 day one.
 
 **Hiding is a filter, not a hole.** The tiles under Group move up a slot, so
-the row behind ••• reads Journal, Worship, When & Where, Practices, Alpha,
+the row behind ••• reads Journal, Worship, Services, Practices, Alpha,
 Give, then Admin on the phones that have it, then Settings. With group mode on
 it is the same row with Group at the front of it.
 

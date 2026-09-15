@@ -1,5 +1,5 @@
 /* ==========================================================================
-   Home Church, When & Where
+   Home Church, Services
    The fourth stop behind •••: what time we gather, where the building is, and
    one button that opens the map. It is the church's Sunday Gatherings page,
    which has always lived on homechurchnola.com, brought into the app so that
@@ -88,7 +88,7 @@
           variant: 'secondary',
           icon: 'pin',
           labelSlot: 'whenwhere.directions',
-          labelName: 'the Directions button on When & Where'
+          labelName: 'the Directions button on Services'
         }) +
       '</div>';
     }
@@ -96,35 +96,51 @@
     return html;
   }
 
-  /* Three photographs, and they are the ones already on the phone.
+  /* The collage at the foot of the page, and the photographs in it are the
+     ones already on the phone.
 
-     WHY INSTAGRAM AND NOT THREE FILES IN STORAGE. The sync job already mirrors
-     the church's own posts into the `instagram` bucket for the rail on
-     Connect, pictures and all, so the newest three are sitting in HC.data
-     before this screen draws. Three files uploaded beside them would be a
-     second place to remember, and the one nobody would remember: a photograph
-     chosen once and frozen into a page is a photograph that is two years old
-     by the time anybody notices.
+     WHY INSTAGRAM AND NOT FILES IN STORAGE. The sync job already mirrors the
+     church's own posts into the `instagram` bucket for the rail on Connect,
+     pictures and all, so the newest nine are sitting in HC.data before this
+     screen draws. Files uploaded beside them would be a second place to
+     remember, and the one nobody would remember: a photograph chosen once and
+     frozen into a page is a photograph that is two years old by the time
+     anybody notices.
 
-     THREE OR NONE. Two photographs in a grid built for three is a hole, and a
-     page that ends on the address is a perfectly good page. So this draws
-     nothing at all until there are three, which is also what a project with no
-     Instagram sync, and a phone that has never reached Supabase, both get.
+     FIVE, OR FOUR, OR NONE, AND THE SHAPE IS WHY. This drew three in a grid
+     with six cells, which left the top left corner of the collage empty. An
+     empty cell inside a block of photographs does not read as a gap somebody
+     chose, it reads as a picture that failed to load. Both arrangements in
+     css/screens.css fill their grid completely, so what is on the page is one
+     rectangle with a straight edge all the way round: five in a three by
+     three pinwheel, which is what the sync's nine posts give every time, and
+     four in a two by three for a church whose feed is younger than that.
+     Under four there is no arrangement that closes, so nothing is drawn,
+     which is also what a project with no Instagram sync and a phone that has
+     never reached Supabase both get. A page that ends on the address is a
+     perfectly good page.
 
      DECORATION, NOT A RAIL. They do not open anything and they carry no alt
      text, because the rail on Connect is where these posts are content: nine
      of them, captioned, each one a way into the feed. Here they are the room
      the address belongs to. Two tappable copies of the same picture on two
      screens is the kind of thing that reads as a bug. */
+  var LAYOUTS = [5, 4];
+
   function photographs() {
-    var posts = (HC.data.instagramPosts || []).filter(function (p) {
+    var usable = (HC.data.instagramPosts || []).filter(function (p) {
       return p.imageUrl;
-    }).slice(0, 3);
+    });
 
-    if (posts.length < 3) return '';
+    /* The biggest arrangement the feed can fill, never a partial one. */
+    var size = 0;
+    LAYOUTS.forEach(function (n) {
+      if (!size && usable.length >= n) size = n;
+    });
+    if (!size) return '';
 
-    return '<div class="hc-ww__photos" aria-hidden="true">' +
-      posts.map(function (p, i) {
+    return '<div class="hc-ww__photos hc-ww__photos--' + size + '" aria-hidden="true">' +
+      usable.slice(0, size).map(function (p, i) {
         return '<div class="hc-ww__frame hc-ww__frame--' + (i + 1) + '">' +
           '<img class="hc-ww__photo" src="' + c.esc(p.imageUrl) + '" alt="" ' +
             'loading="lazy" decoding="async">' +
@@ -149,7 +165,7 @@
       ledeHtml = HC.edit.wrap(ledeHtml, {
         table: 'content_pages', id: page.id, column: 'blurb',
         target: page, field: 'blurb',
-        value: page.blurb, label: 'the opening paragraph on When & Where', rows: 6
+        value: page.blurb, label: 'the opening paragraph on Services', rows: 6
       });
     }
 
@@ -158,7 +174,7 @@
     var html = '' +
       '<div class="hc-screen hc-ww">' +
         c.sectionHeader(
-          (page && page.eyebrow) || 'When & Where',
+          (page && page.eyebrow) || 'Services',
           (page && page.title) || 'Sunday Gatherings',
           { flush: true, tag: 'h1',
             eyebrowEdit: page ? {
@@ -173,7 +189,7 @@
         HC.edit.wrap(
           welcome ? '<p class="hc-body-serif hc-ww__welcome">' + c.esc(welcome) + '</p>' : '',
           { slot: 'whenwhere.welcome', value: welcome,
-            label: 'the welcome line on When & Where' }
+            label: 'the welcome line on Services' }
         ) +
 
         /* NO CARDS, WHICH IS A DECISION. A border, a fill and a radius each
