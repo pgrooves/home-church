@@ -468,6 +468,39 @@
     return true;
   }
 
+  /* What hintPolicy() would say right now, and the first reason it would say
+     no, by name. Nothing in the app calls this. It exists for a console on a
+     real phone, because a hint that does not appear is indistinguishable from
+     one that is switched off, from one already retired, from a screen it does
+     not belong on, and from a stale bundle — and not being able to tell those
+     apart is what cost the last attempt a revert. HINTS.md §12, point 3.
+
+         HC.swipe.explain()
+
+     THE ORDER OF THIS LIST IS hintPolicy()'S ORDER, and it has to stay that
+     way or this reports a rule that is not the one that actually stopped it.
+     tests/e2e/swipe-hint.js checks the two ends of that agreement. */
+  function explain() {
+    var ctx = hintContext();
+    var reasons = [
+      [!ctx.hintsOn, 'Hints is off in Your account'],
+      [ctx.used, 'retired for this launch: something has already been dragged sideways'],
+      [ctx.still, 'Reduce Motion is on, and this hint is entirely motion'],
+      [ctx.laneIndex < 0, 'a pushed view, so nothing swipes here'],
+      [!ctx.dir, 'nowhere to lean from this screen'],
+      [ctx.busy, 'a finger is down, a settle is in flight, or it is already leaning'],
+      [ctx.sheetOpen, 'the navigation is open'],
+      [ctx.editing, 'Edit mode is on'],
+      [ctx.hidden, 'the app is in the background'],
+      [ctx.scrolling, 'the page is still moving']
+    ];
+    for (var i = 0; i < reasons.length; i++) {
+      if (reasons[i][0]) return 'no: ' + reasons[i][1];
+    }
+    return 'yes: it would lean ' + (ctx.dir > 0 ? 'left' : 'right') + ' toward ' +
+           HC.router.lane()[ctx.laneIndex + ctx.dir] + ' on its next turn';
+  }
+
   function hintContext() {
     var i = HC.router.laneIndex(HC.router.current());
     var nav = app ? app.getAttribute('data-navmenu') : null;
@@ -746,6 +779,10 @@
     hint: runHint,
     hintLive: hintLive,
     endHint: endHint,
+
+    /* For a console on a real phone: the first rule that is stopping it, by
+       name. See the note above explain(). */
+    explain: explain,
 
     hintPolicy: hintPolicy    // exported for tests/swipe-hint.test.js
   };

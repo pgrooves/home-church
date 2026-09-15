@@ -1008,9 +1008,19 @@ contract that line would break.
    the plinth, and what moves is one transform on one element that the gesture
    already promotes and un-promotes around a drag.
 2. **`travel` is gone rather than fixed.** See above.
-3. **It can say why it is quiet**, by construction: `hintPolicy()` is a pure
-   function whose first failing line is the reason, and `tests/swipe-hint.test.js`
-   is that table.
+3. **It can say why it is quiet.** `HC.swipe.explain()` in a console returns
+   the first rule that said no, by name: the switch, already retired, Reduce
+   Motion, a pushed view, a finger down, the navigation, Edit mode, the
+   background, a page still moving.
+
+   *This section first claimed that point was satisfied "by construction",
+   because `hintPolicy()` is pure and `tests/swipe-hint.test.js` is that table.
+   That was a claim about the test suite wearing the clothes of a claim about
+   the app.* A pure policy makes the reason **knowable**; it does not make it
+   **askable**, and §12 asked for the second one. It was noticed the first time
+   somebody said they had not seen the hint and there was nothing to do but
+   guess — which is, precisely, the failure §12 is about. `explain()` is the
+   answer and it should have gone in with the hint.
 4. **One hint, alone**, added to an app that had one, with no scheduler
    underneath it.
 5. **Reduce Motion is in the drawing and in the test matrix**, refusing rather

@@ -216,6 +216,28 @@ const mountX = () => {
   ok('and retires the hint for the launch', after.live === false);
   ok('which is a refusal, not a silent no-op', after.ran === false);
 
+  /* ------------------------------------------------- and it can say why it is quiet
+
+     The thing whose absence cost the last attempt a revert. explain() walks
+     the same rules hintPolicy() does, in the same order, and names the first
+     one that said no — so "I have not seen it" can be answered from a console
+     instead of guessed at. Both ends are checked here because the two lists
+     are written out twice and a reordering would otherwise report the wrong
+     rule with total confidence. */
+
+  const retiredWhy = await page.evaluate(() => window.HC.swipe.explain());
+  ok('it names the rule that stopped it',
+     /^no: retired for this launch/.test(retiredWhy), retiredWhy);
+
+  await page.reload();
+  await page.waitForFunction(() => window.HC && window.HC.router, null, { timeout: 15000 });
+  await pastTheGate(page);
+  await page.waitForTimeout(900);
+
+  const freshWhy = await page.evaluate(() => window.HC.swipe.explain());
+  ok('and says yes, and where it would lean, when nothing is stopping it',
+     /^yes: it would lean left toward /.test(freshWhy), freshWhy);
+
   /* -------------------------------------------------------- nothing threw */
 
   ok('no errors on the console', noise.length === 0, noise.slice(0, 3).join(' | '));
