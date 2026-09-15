@@ -983,6 +983,34 @@ both themes. Anything that ever leans on that shadow *alone* to say "there is a
 page here" will not work in the dark, and `demo-swipe-hint/` has the switch
 that shows it.
 
+**A TURN THAT LANDS MID SCROLL IS OWED, NOT SPENT.** The first build simply
+refused a turn that arrived while the page was moving, and the turn went with
+it. That reads fine in the policy table and is badly wrong in a hand: the
+opening lean is scheduled for five seconds, and somebody who picks the app up
+and starts reading is scrolling at five seconds. The next turn was fifty-five
+seconds away. In practice the people most likely to miss it were the ones
+actually using the app.
+
+So four of the refusals wait instead. A thumb down, the page still moving, the
+notches mid swell, and a lean already up are about *this second* rather than
+about this phone, and `hintOwed()` is the line between them. Everything else
+genuinely means no — the switch, already swiped, Reduce Motion, a screen the
+gesture does not work on, a navigation or Edit mode open, the app in the
+background — because none of those resolve themselves in the next half second
+and a lean queued behind one would go off in the middle of something else.
+
+`hint()` answers true for a turn it is holding as well as one it takes, so
+`beat()` does not hand it to the rail instead. A turn the swipe is waiting to
+use is not a turn going spare.
+
+*The wait re-arms itself, and the first version did not.* It leaned on the
+scroll listener re-arming on every scroll and a touch lifting re-arming once,
+which covers a moving page and a resting thumb and nothing else. The case
+neither covers is the notches mid swell: no scroll events, no touch, and the
+wait died silently — the turn lost exactly as if it had never been owed, which
+is the bug this whole rule exists to fix, reintroduced inside the fix. It polls
+now, every 200ms, only while a turn is actually owed.
+
 **Retire on use, and Reduce Motion refuses.** The first real drag ends it for
 the launch, in `begin()`: somebody who has dragged the screen sideways knows the
 screens move sideways. Nothing is stored, so a relaunch starts it over, which is

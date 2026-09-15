@@ -155,6 +155,8 @@
   var hintPane = null;     // the next screen, rendered, while the lean is up
   var hintSide = 0;        // which side it is parked on
   var scrollAt = 0;        // when the page last moved. See hintContext().
+  var hintPending = false; // a turn arrived mid scroll and is owed. See hintOwed().
+  var hintWait = 0;        // the timer watching for the page to go still
 
   function reducedMotion() {
     return !!(window.matchMedia &&
@@ -475,12 +477,39 @@
     if (ctx.still) return false;          // see the note in hintLive()
     if (ctx.laneIndex < 0) return false;  // a pushed view: nothing swipes here
     if (!ctx.dir) return false;           // nowhere to lean, so nothing honest to say
+    if (ctx.leaning) return false;        // it is already up
     if (ctx.busy) return false;           // a finger is down, or a settle is in flight
+    if (ctx.railHinting) return false;    // the notches have the glass
     if (ctx.sheetOpen) return false;      // something else owns the glass
     if (ctx.editing) return false;        // an admin is mid sentence
     if (ctx.hidden) return false;         // nobody is there
     if (ctx.scrolling) return false;      // a lean under a moving page is a smear
     return true;
+  }
+
+  /* IS THIS TURN OWED RATHER THAN SPENT?
+
+     The four reasons above that are about *this second* rather than about this
+     phone: a thumb is down, the page is still moving, or the notches are
+     mid swell. Somebody reading a screen with their thumb on it is not
+     somebody who has declined the hint, and dropping the turn on the floor is
+     how a hint that is supposed to arrive at five seconds instead arrives at
+     sixty, or never — which is exactly what it did.
+
+     So those wait. Everything else genuinely means no: the switch is off, they
+     have already swiped, Reduce Motion, a screen the gesture does not work on,
+     a navigation or Edit mode open, the app in the background. None of those
+     resolve themselves in the next half second, and a hint that queues behind
+     them would go off in the middle of something else entirely.
+
+     `leaning` is excluded because a lean already on the glass is the turn
+     being taken, not missed. */
+  function hintOwed(ctx) {
+    if (!ctx.hintsOn || ctx.used || ctx.still) return false;
+    if (ctx.laneIndex < 0 || !ctx.dir) return false;
+    if (ctx.sheetOpen || ctx.editing || ctx.hidden) return false;
+    if (ctx.leaning) return false;
+    return !!(ctx.scrolling || ctx.busy || ctx.railHinting);
   }
 
   /* What hintPolicy() would say right now, and the first reason it would say
@@ -503,14 +532,23 @@
       [ctx.still, 'Reduce Motion is on, and this hint is entirely motion'],
       [ctx.laneIndex < 0, 'a pushed view, so nothing swipes here'],
       [!ctx.dir, 'nowhere to lean from this screen'],
-      [ctx.busy, 'a finger is down, a settle is in flight, or it is already leaning'],
+      [ctx.leaning, 'it is already leaning'],
+      [ctx.busy, 'a finger is down, or a settle is in flight'],
+      [ctx.railHinting, 'the index rail is mid swell'],
       [ctx.sheetOpen, 'the navigation is open'],
       [ctx.editing, 'Edit mode is on'],
       [ctx.hidden, 'the app is in the background'],
       [ctx.scrolling, 'the page is still moving']
     ];
     for (var i = 0; i < reasons.length; i++) {
-      if (reasons[i][0]) return 'no: ' + reasons[i][1];
+      if (reasons[i][0]) {
+        /* "waiting" means a turn is actually owed, not merely that one would
+           be if a turn came now. Reporting the second as the first is how a
+           diagnostic starts lying: it said "waiting" on a quiet phone with
+           nothing pending, which is a sentence that sounds like an answer and
+           is not one. */
+        return (hintPending ? 'waiting: ' : 'no: ') + reasons[i][1];
+      }
     }
     return 'yes: it would lean ' + (ctx.dir > 0 ? 'left' : 'right') + ' toward ' +
            HC.router.lane()[ctx.laneIndex + ctx.dir] + ' on its next turn';
@@ -529,7 +567,13 @@
       still: reducedMotion(),
       laneIndex: i,
       dir: hintDir(i),
-      busy: !!g || settling || !!hint,
+      leaning: !!hint,
+      busy: !!g || settling,
+      /* The other hint, mid swell. Only the deferred lean can collide with it
+         — beat() gives a turn to one of the two, never both — but a lean that
+         waited out a scroll can come due at any moment, including the moment
+         the notches are lighting up. One thing moves at a time. */
+      railHinting: !!(HC.indexRail && HC.indexRail.hinting && HC.indexRail.hinting()),
       /* Either navigation, opened. The same question js/hints.js asks, for the
          same reason: only one of the two can be on a phone, so asking both is
          asking one, and 'closed' and 'fade' are on their way out. */
@@ -584,12 +628,23 @@
     return pane;
   }
 
-  /* Returns whether it actually ran, which is what lets the rail hand its turn
-     to whichever of the two has something to say. */
+  /* Returns whether this turn was taken — either leaned now, or claimed and
+     owed. Either way the rail does not get it: a turn the swipe is waiting to
+     use is not a turn going spare.
+
+     It is only false when the answer is a real no, which is what lets beat()
+     hand the turn over to whichever of the two has something to say. */
   function runHint() {
     if (!mount) return false;
     var ctx = hintContext();
-    if (!hintPolicy(ctx)) return false;
+
+    if (!hintPolicy(ctx)) {
+      if (hintOwed(ctx)) { hintPending = true; waitForStill(); return true; }
+      clearPending();
+      return false;
+    }
+
+    clearPending();
 
     /* No pane, no lean. A 64px lean onto bare paper is worse than the 22px one
        it replaced: it is the same empty gesture, three times as loud. */
@@ -606,6 +661,52 @@
     placeHint(0);
     window.requestAnimationFrame(hintFrame);
     return true;
+  }
+
+  /* --------------------------------------------------- a turn that is owed
+
+     Watched rather than polled: the scroll listener re-arms this on every
+     scroll event, and a touch ending arms it once, so the only timer running
+     is one short one after the last thing that happened. When the page has
+     been still for a beat and nothing else has the glass, the lean that was
+     owed goes.
+
+     STILL is a little longer than HINT_SETTLED, which is how long a scroll
+     counts as recent. It has to be: firing at exactly that boundary is a race
+     with hintContext() still calling the page moving, and losing it means
+     going round again for no reason. */
+  var HINT_STILL = HINT_SETTLED + 60;
+
+  function waitForStill() {
+    if (hintWait) window.clearTimeout(hintWait);
+    hintWait = window.setTimeout(function () {
+      hintWait = 0;
+      if (!hintPending) return;
+
+      var ctx = hintContext();
+      if (hintPolicy(ctx)) { runHint(); return; }
+
+      /* STILL IN THE WAY, SO LOOK AGAIN. This re-arms itself rather than
+         trusting something outside to do it, and the first draft did trust
+         that: the scroll listener re-arms on every scroll, and a touch lifting
+         re-arms once, which covers a moving page and a resting thumb and
+         nothing else. The case neither covers is the notches mid swell — no
+         scroll events, no touch — and there the wait simply died and the turn
+         was lost exactly as if it had never been owed.
+
+         It is a 200ms poll of a few cheap reads, it only runs while a turn is
+         actually owed, and it stops the moment the lean goes or the reason
+         stops being a waiting kind. Worth it to not have a silent dead end in
+         the one path that exists because turns were being silently dropped. */
+      if (hintOwed(ctx)) { waitForStill(); return; }
+
+      clearPending();
+    }, HINT_STILL);
+  }
+
+  function clearPending() {
+    hintPending = false;
+    if (hintWait) { window.clearTimeout(hintWait); hintWait = 0; }
   }
 
   // The deck belongs to whichever of the two put something in it.
@@ -664,6 +765,7 @@
 
     if (keep) return x;
 
+    clearPending();
     if (hintPane && hintPane.parentNode) hintPane.parentNode.removeChild(hintPane);
     hintPane = null;
     hintSide = 0;
@@ -687,6 +789,7 @@
   function noteHintUse() {
     endHint(true);       // a drag is already writing to the same transform
     hintUsed = true;
+    clearPending();      // whatever was owed, they have just answered it
   }
 
   /* Could this hint still have anything to say before the app is closed?
@@ -881,6 +984,9 @@
        The hint asks it whether the page is still moving: see hintContext(). */
     scroller.addEventListener('scroll', function () {
       scrollAt = Date.now();
+      // Every scroll pushes the owed lean back, so it goes off once the page
+      // has actually stopped rather than in the middle of a fling.
+      if (hintPending) waitForStill();
     }, { passive: true });
 
     /* A LEAN BELONGS TO THE SCREEN IT STARTED ON. Anything floating over a
@@ -897,6 +1003,14 @@
 
     scroller.addEventListener('touchend', onEnd);
     scroller.addEventListener('touchcancel', onCancel);
+
+    /* A finger resting on the page without moving it fires no scroll events,
+       so nothing else would ever re-arm an owed lean. Lifting it does. Bound
+       separately from onEnd because that one returns early for every touch
+       that never became a gesture, which is most of them. */
+    function lifted() { if (hintPending) waitForStill(); }
+    scroller.addEventListener('touchend', lifted, { passive: true });
+    scroller.addEventListener('touchcancel', lifted, { passive: true });
 
     document.addEventListener('click', function (evt) {
       if (!swallowClick) return;
@@ -927,7 +1041,9 @@
        name. See the note above explain(). */
     explain: explain,
 
-    hintPolicy: hintPolicy    // exported for tests/swipe-hint.test.js
+    // exported for tests/swipe-hint.test.js
+    hintPolicy: hintPolicy,
+    hintOwed: hintOwed
   };
 
 })(window.HC = window.HC || {});

@@ -135,6 +135,26 @@ for itself rather than the timer knowing about it.
 than asserted. Two things moving is a tutorial, and the page sliding under the
 notches drags the swell with it.
 
+## A turn that lands mid scroll
+
+Not dropped. The lean waits for the page to be still and then goes, usually
+about a fifth of a second later.
+
+This is the correction that mattered most in the hand and is invisible on a
+desk. The opening lean is scheduled for five seconds, and somebody who picks
+the app up and starts reading is scrolling at five seconds — so the turn was
+spent, and the next one was most of a minute away. The people most likely never
+to see the hint were the ones actually using the app.
+
+Four refusals wait rather than decline: a thumb down, the page still moving,
+the notches mid swell, and a lean already up. Those are about this second.
+Everything else — the switch, already swiped, Reduce Motion, a pushed view, an
+open navigation, Edit mode, the background — genuinely means no, because none
+of them resolve themselves in half a second and a lean queued behind one would
+arrive in the middle of something else.
+
+`HC.swipe.explain()` says `waiting:` rather than `no:` while one is owed.
+
 ## The phone really swipes
 
 The gesture underneath is `js/swipe.js` in miniature carrying its actual

@@ -352,6 +352,123 @@ const mountX = () => {
   ok('and says yes, and where it would lean, when nothing is stopping it',
      /^yes: it would lean left toward /.test(freshWhy), freshWhy);
 
+  /* ------------------------------- a turn that lands in the middle of a scroll
+
+     The bug this is here for: the opening lean is scheduled for five seconds,
+     and somebody who happened to be scrolling at five seconds got nothing at
+     all. The turn was spent rather than owed, and the next one was fifty-five
+     seconds away, so in practice anybody who picked the app up and started
+     reading never saw the hint.
+
+     Three things have to hold, and they are easy to confuse: the turn is
+     claimed rather than declined, nothing moves while the page is moving, and
+     the lean arrives promptly once it stops. A turn that is quietly dropped
+     passes the middle one on its own.
+
+     THE OPENING LEAN IS WAITED OUT FIRST. It fires on the app's clock, not
+     this test's, and a version of this that started scrolling straight away
+     spent its time racing it: the lean would land mid scroll, which is the
+     opposite of what is being checked here, and read as a failure of the
+     thing it was proving. The opening timer's own behaviour is covered at the
+     top of this file, on a launch with nothing else going on. */
+
+  await page.reload();
+  await page.waitForFunction(() => window.HC && window.HC.router, null, { timeout: 15000 });
+  await pastTheGate(page);
+
+  /* ON HOME, DELIBERATELY, AND CHECKED. A reload restores whichever tab the
+     drag earlier in this file landed on, and that one is short enough to fit
+     the window — so scrollTop could not move, no scroll events fired, the page
+     was genuinely still, and the lean correctly went off in the middle of what
+     this test calls a scroll. Three runs were spent reading that as a bug in
+     the deferral. A test that needs a scrolling page should say so and fail
+     loudly when it does not have one. */
+  await page.evaluate(() => window.HC.router.go({ name: 'home' }));
+  await page.waitForTimeout(8000);   // the opening pair, come and gone
+
+  const room = await page.evaluate(() => {
+    const el = document.querySelector('.hc-scroll');
+    return el.scrollHeight - el.clientHeight;
+  });
+  ok('the screen under this test can actually scroll', room > 400, room + 'px of room');
+
+  const scrolled = await page.evaluate(() => new Promise(resolve => {
+    const scroller = document.querySelector('.hc-scroll');
+    const view = document.getElementById('hc-view');
+    const t0 = Date.now();
+    const SCROLL_FOR = 2500;
+
+    let claimed = null;
+    let leanedDuring = false;
+    let stoppedAt = 0;
+
+    function leanX() {
+      const m = /translate3d\((-?[\d.]+)px/.exec(view.style.transform || '');
+      return m ? parseFloat(m[1]) : 0;
+    }
+
+    /* OSCILLATING, NOT RUNNING DOWNHILL. Home is about 1900px in an 850px
+       window, so a steady scroll hits the bottom in a few seconds and the page
+       is genuinely still from then on — at which point the lean correctly goes
+       and the case being tested never happens. Bouncing keeps it actually
+       moving, and is closer to somebody reading than one long fling. */
+    let dir = 1;
+    const pump = setInterval(() => {
+      const top = scroller.scrollTop;
+      if (top > 600) dir = -1;
+      if (top < 40) dir = 1;
+      scroller.scrollTop = top + dir * 14;
+      if (Math.abs(leanX()) > 2) leanedDuring = true;
+      if (Date.now() - t0 > SCROLL_FOR) {
+        clearInterval(pump);
+        stoppedAt = Date.now();
+      }
+    }, 60);
+
+    // A turn, arriving well inside the scroll, exactly as a beat would.
+    setTimeout(() => { claimed = window.HC.swipe.hint(); }, 700);
+
+    /* `after` is the first frame it moved; `deepest` needs another 350ms of
+       watching, because the lean ramps over 300 and catching it at two pixels
+       in says nothing about how far it went. */
+    let began = 0, deepest = 0;
+    (function watch() {
+      if (stoppedAt) {
+        const x = leanX();
+        if (!began && Math.abs(x) > 2) began = Date.now();
+        if (began) deepest = Math.min(deepest, x);
+        if (began && Date.now() - began > 350) {
+          return resolve({ claimed: claimed, leanedDuring: leanedDuring,
+                           after: began - stoppedAt, x: deepest,
+                           why: window.HC.swipe.explain() });
+        }
+        if (!began && Date.now() - stoppedAt > 5000) {
+          return resolve({ claimed: claimed, leanedDuring: leanedDuring,
+                           after: -1, x: 0, why: window.HC.swipe.explain() });
+        }
+      }
+      requestAnimationFrame(watch);
+    })();
+  }));
+
+  /* hint() answers true for a lean it is waiting to give, so beat() does not
+     hand the turn to the rail instead. A turn the swipe is holding is not a
+     turn going spare. */
+  ok('a turn arriving mid scroll is claimed, not declined', scrolled.claimed === true,
+     'hint() said ' + scrolled.claimed);
+  ok('and nothing leans while the page is actually moving',
+     scrolled.leanedDuring === false);
+  ok('but the turn is owed, and goes once the scrolling stops', scrolled.after > 0,
+     scrolled.after < 0 ? 'nothing in 5s of stillness, and it says: ' + scrolled.why : 'ok');
+  /* Not "eventually". The next ordinary turn is most of a minute away, and the
+     whole point is that it does not wait for that. */
+  ok('promptly, not at the next turn', scrolled.after > 0 && scrolled.after < 1200,
+     scrolled.after + 'ms after the last scroll');
+  ok('and it is a full lean, not a stub',
+     scrolled.x < -40 && scrolled.x >= -64.5, 'at ' + scrolled.x + 'px');
+
+  await page.waitForTimeout(1800);
+
   /* --------------------------------- somebody who swipes before it gets there
 
      The opening lean is scheduled at five seconds whatever happens, because

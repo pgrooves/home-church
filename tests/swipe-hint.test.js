@@ -46,6 +46,7 @@ vm.createContext(sandbox);
 vm.runInContext(src, sandbox);
 
 const hintPolicy = sandbox.window.HC.swipe.hintPolicy;
+const hintOwed = sandbox.window.HC.swipe.hintOwed;
 
 /* A context in which the hint is allowed. Every case below is this with one
    thing wrong, so the test says what the rule is rather than what a blob of
@@ -56,7 +57,9 @@ const fine = {
   still: false,
   laneIndex: 0,
   dir: 1,
+  leaning: false,
   busy: false,
+  railHinting: false,
   sheetOpen: false,
   editing: false,
   hidden: false,
@@ -76,7 +79,8 @@ ok('Hints off in Your account', hintPolicy(but({ hintsOn: false })), false);
    somebody stop trusting a settings screen. */
 ok('off beats every other reason to lean', hintPolicy({
   hintsOn: false, used: false, still: false, laneIndex: 0, dir: 1,
-  busy: false, sheetOpen: false, editing: false, hidden: false, scrolling: false
+  leaning: false, busy: false, railHinting: false,
+  sheetOpen: false, editing: false, hidden: false, scrolling: false
 }), false);
 
 console.log('\n--- retire on use ---');
@@ -108,6 +112,10 @@ console.log('\n--- not over the top of something else ---');
    this would write to. Two things placing one element is the class of bug
    that looks like the app stuttering. */
 ok('a finger is down', hintPolicy(but({ busy: true })), false);
+ok('it is already leaning', hintPolicy(but({ leaning: true })), false);
+/* beat() gives a turn to one of the two, never both, so this can only happen
+   to a lean that waited out a scroll and came due mid swell. */
+ok('the index rail is mid swell', hintPolicy(but({ railHinting: true })), false);
 ok('a navigation is open', hintPolicy(but({ sheetOpen: true })), false);
 ok('Edit mode is on', hintPolicy(but({ editing: true })), false);
 ok('the app is in the background', hintPolicy(but({ hidden: true })), false);
@@ -125,6 +133,33 @@ console.log('\n--- and the one that would be undone as a kindness ---');
    that dies with the launch. */
 ok('a hundredth launch, still never swiped, still leans',
    hintPolicy(but({ used: false })), true);
+
+console.log('\n--- a turn that is owed rather than spent ---');
+/* Somebody reading with their thumb on the screen has not declined the hint.
+   Dropping the turn is how a lean scheduled for five seconds instead arrived
+   at sixty, or never, which is what this rule exists to stop. */
+ok('mid scroll, the turn waits', hintOwed(but({ scrolling: true })), true);
+ok('a thumb down, the turn waits', hintOwed(but({ busy: true })), true);
+ok('the rail mid swell, the turn waits', hintOwed(but({ railHinting: true })), true);
+
+/* And the ones that genuinely mean no. None of these resolve themselves in the
+   next half second, and a lean queued behind one of them would go off in the
+   middle of something else entirely. */
+ok('Hints off is not a wait', hintOwed(but({ hintsOn: false, scrolling: true })), false);
+ok('already swiped is not a wait', hintOwed(but({ used: true, scrolling: true })), false);
+ok('Reduce Motion is not a wait', hintOwed(but({ still: true, scrolling: true })), false);
+ok('a pushed view is not a wait',
+   hintOwed(but({ laneIndex: -1, dir: 0, scrolling: true })), false);
+ok('an open navigation is not a wait', hintOwed(but({ sheetOpen: true, scrolling: true })), false);
+ok('Edit mode is not a wait', hintOwed(but({ editing: true, scrolling: true })), false);
+ok('the background is not a wait', hintOwed(but({ hidden: true, scrolling: true })), false);
+
+/* A lean already on the glass is the turn being taken, not missed. Queueing a
+   second one behind it is how you get two leans in a row. */
+ok('already leaning is not a wait', hintOwed(but({ leaning: true, scrolling: true })), false);
+
+/* Nothing in the way at all is not a wait either: it is a lean, now. */
+ok('nothing in the way is not a wait', hintOwed(fine), false);
 
 console.log('\n' + pass + ' passed, ' + fail + ' failed');
 process.exit(fail ? 1 : 0);

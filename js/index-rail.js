@@ -1175,7 +1175,14 @@
        started under it would be a second claim on a finger this file is
        already holding. True by the time the pull's own touchstart runs,
        because this file's is wired first. See init(). */
-    busy: function () { return armed || engaged; }
+    busy: function () { return armed || engaged; },
+
+    /* Is a swell travelling down the notches right now? Asked by js/swipe.js,
+       whose own hint can come due at any moment once it has waited out a
+       scroll, and which must not lean while this is moving. beat() keeps the
+       two apart on the ordinary turns; this covers the one case beat() cannot
+       see. One thing moves at a time. */
+    hinting: function () { return hinting; }
   };
 
 })(window.HC = window.HC || {});
