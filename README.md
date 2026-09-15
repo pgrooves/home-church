@@ -560,12 +560,13 @@ See "The admin dashboard" below. **`events` is the fourth and it is a different
 shape**: it still has no write policy for any client role, and an admin reaches
 it only through the named functions in `0042_event_admin_writes.sql`, which are
 what the + , the pencil and the x on the Cal tab call. Six columns, checked
-inside, and nothing else on the table can be touched from a phone. Nine slash
+inside, and nothing else on the table can be touched from a phone. Ten slash
 commands drive the rest:
 
 | Command | Does |
 |---|---|
 | `/new-guide` | Sermon PDF to a full guide, written to `guides` and `podcasts`. The reading plan beside the series moves itself when it lands |
+| `/new-sermon` | The same, from raw service transcripts instead of a PDF. Reconstructs the garbling, merges the services into one, writes the guide here, then publishes exactly as `/new-guide` does |
 | `/new-event` | Asks for what is missing, confirms, writes to `events`, which the Cal tab draws |
 | `/new-podcast` | Episode to `podcasts`, links its guide and that Sunday's setlist, puts the real title on the message |
 | `/new-worship` | Sunday's songs to `worship_sets`, with their art, their links and their lyrics |
