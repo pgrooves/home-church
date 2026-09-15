@@ -457,6 +457,46 @@ function appDelegateHooks() {
     '      entitlement stayed hidden. Paste the second method too.');
 }
 
+/* ========================================= 2e. the calendar usage strings
+   Add to calendar puts up EKEventEditViewController, the system's own New
+   Event sheet. From iOS 17 that needs no permission and shows no prompt, so
+   on nearly every phone these strings are never read.
+
+   Below iOS 17 the sheet does need calendar access, and iOS asks for it by
+   reading a purpose string out of Info.plist. With no string there it does
+   not prompt and does not refuse — it terminates the app. That is a crash on
+   tap, on the oldest phones in the church, and it cannot happen on the
+   machine anybody tests on. Minimum Deployments is iOS 15, so those phones
+   are in scope until it isn't.
+   ===================================================================== */
+
+function calendarUsageStrings() {
+  const fragment = path.join(ROOT, 'ios-config', 'Info-calendar.plist');
+  ok('ios-config/Info-calendar.plist exists', fs.existsSync(fragment),
+    'It is the paste-in for Info.plist that keeps the New Event sheet from\n' +
+    '      crashing the app below iOS 17. See XCODE.md step 8d.');
+
+  const plist = path.join(ROOT, 'ios', 'App', 'App', 'Info.plist');
+  if (!fs.existsSync(plist)) {
+    console.log('SKIP  ios/ is not generated here, so Info.plist cannot be checked');
+    return;
+  }
+
+  const xml = fs.readFileSync(plist, 'utf8');
+
+  ok('Info.plist has NSCalendarsUsageDescription',
+    xml.indexOf('NSCalendarsUsageDescription') > -1,
+    'Below iOS 17, Add to calendar terminates the app without it rather than\n' +
+    '      asking for permission. Paste both rows from\n' +
+    '      ios-config/Info-calendar.plist into ios/App/App/Info.plist.\n' +
+    '      XCODE.md step 8d says where.');
+
+  ok('and NSCalendarsWriteOnlyAccessUsageDescription',
+    xml.indexOf('NSCalendarsWriteOnlyAccessUsageDescription') > -1,
+    'The iOS 17 key. Adding an event is all this app wants, so write-only is\n' +
+    '      the honest description of it. Paste the second row too.');
+}
+
 /* ================================================= 2d. the plugin pods
    Every native capability this app has arrives as a CocoaPod, and a pod that
    did not install is the quietest failure mode in the project. js/native.js
@@ -542,6 +582,7 @@ legal();
 manifest();
 pushEntitlement();
 appDelegateHooks();
+calendarUsageStrings();
 pluginPods();
 icons();
 screenshots();

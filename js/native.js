@@ -129,36 +129,6 @@
     });
   }
 
-  /* Hands a written file straight to iOS to be opened rather than sent
-     somewhere, which is a different thing from sharing it and the only one
-     of the two that reaches the Calendar.
-
-     @capacitor-community/file-opener presents a UIDocumentInteractionController
-     preview, which is the system's own view of the document with whatever
-     button that kind of document deserves on it: an event gets Add, so an
-     .ics arrives at the same place a tapped .ics in Mail or Safari arrives.
-     The share sheet, by contrast, asks which app or person to send the file
-     to, and Calendar is not an app you send a file to — which is why the
-     sheet in the bug report lists Messages and AirDrop and no way to add
-     the event at all.
-
-     Resolves false when the plugin is not in this build, so a caller can
-     fall back to the sheet rather than to nothing. */
-  function openFile(uri, mimeType) {
-    var p = plugins();
-    if (!p || !p.FileOpener || !uri) return Promise.resolve(false);
-
-    return p.FileOpener.open({
-      filePath: uri,
-      contentType: mimeType,
-      openWithDefault: true
-    }).then(function () {
-      return true;
-    }).catch(function () {
-      return false;
-    });
-  }
-
   function shareFile(name, contents, mimeType, dialogTitle) {
     return writeAndShare(name, { data: contents, encoding: 'utf8' }, dialogTitle);
   }
@@ -217,21 +187,46 @@
   }
 
   /* ------------------------------------------------------------ calendar
-     An .ics file opened by the phone, which is where iOS offers Add to
-     Calendar. No calendar permission is requested and none is needed,
-     because the app never reads or writes the calendar itself, it hands over
-     a file and the person decides. That is the smaller ask and it is also
-     the one that does not need a usage string in Info.plist.
 
-     OPENED, NOT SHARED, and that distinction is the whole bug this path was
-     rewritten for. Share.share() on the file put up the send-to sheet —
-     AirDrop, Messages, Mail, Save to Files — which is the right sheet for a
+     On a phone, the system's own New Event sheet, filled in. In a browser,
+     an .ics the browser knows what to do with. Both end with the person
+     tapping Add themselves, and neither asks for permission.
+
+     THE TWO WRONG ROADS THIS TOOK FIRST, because both looked right and the
+     second one looked very right.
+
+     It started as Share.share() on the .ics, which is the send-to sheet:
+     AirDrop, Messages, Mail, Save to Files. That is the correct sheet for a
      guide somebody wants to send to their group and the wrong one entirely
-     for an event they want on their own calendar. There is no Calendar in a
-     send-to sheet, so the button looked like it had misfired. In a browser
-     the same .ics never went near a sheet: it was handed to the browser,
-     which knows what an .ics is and offers to add it, and that is why this
-     only ever went wrong in the packaged app.
+     for an event they want on their own calendar. Calendar is not an app you
+     send a file to, so there was nothing on that sheet that added anything
+     and the button read as broken.
+
+     Then it became a file the phone opens, through a document interaction
+     controller, on the reasoning that iOS knows what an .ics is. iOS does:
+     it draws the event, the day around it, an Alert row and the notes. What
+     it does not draw is a way to keep it. That preview is QuickLook, whose
+     job is to show you a document, and its buttons are Close and Share. The
+     event was right there on screen and there was still no Add. The Safari
+     version of the same screen has an Add To Calendar across the bottom,
+     which is not QuickLook at all — Safari special cases calendar files.
+
+     SO IT ASKS EVENTKIT INSTEAD. EKEventEditViewController is the sheet iOS
+     itself puts up for a new event: the title and time already filled in, a
+     calendar picker, Add and Cancel. From iOS 17 it needs no calendar
+     permission and shows no prompt, because the person is acting inside the
+     system's own UI and the app never sees their calendar — which is the
+     design this always wanted and the reason the permission note below still
+     holds. @ebarooni/capacitor-calendar is the road to it; nothing else this
+     app does touches the calendar, and none of the plugin's reading half is
+     called.
+
+     NO CALENDAR PERMISSION IS REQUESTED and none is needed. The app does not
+     read the calendar, does not write to it, and never learns whether the
+     event was kept. Below iOS 17 the edit sheet does need access, so
+     Info.plist carries the usage strings and iOS asks once, at the moment
+     somebody asked for the thing — see XCODE.md 8d. On iOS 17 and up that
+     string is never read out loud.
      ------------------------------------------------------------------- */
 
   // 'YYYYMMDDTHHMMSSZ', which is what an .ics wants.
@@ -256,10 +251,25 @@
       .replace(/\r?\n/g, '\\n');
   }
 
-  function buildIcs(event) {
+  /* When the event starts and when it ends, as two Dates.
+
+     Read here rather than in each road, because the .ics and the system
+     event sheet disagreeing about the hour is the kind of difference nobody
+     would notice until two people compared their phones. Most events on the
+     Cal tab carry a start and no end — the church announces when a thing
+     begins — so an hour is assumed, which is the same assumption a person
+     makes reading "9 AM" on a poster. */
+  function eventWindow(event) {
     var start = event.start instanceof Date ? event.start : new Date(event.start);
     var end = event.end instanceof Date ? event.end
       : (event.end ? new Date(event.end) : new Date(start.getTime() + 60 * 60 * 1000));
+    return { start: start, end: end };
+  }
+
+  function buildIcs(event) {
+    var when = eventWindow(event);
+    var start = when.start;
+    var end = when.end;
 
     var uid = 'hc-' + start.getTime() + '@homechurchnola.com';
 
@@ -289,22 +299,57 @@
       .replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40) + '.ics';
   }
 
+  /* The system New Event sheet, filled in from the event on the Cal tab.
+
+     Resolves true whether the person taps Add or Cancel, and that is on
+     purpose. The plugin hands back an id when the event was saved and null
+     when it was not, and the caller's only use for the answer is deciding
+     whether to apologise. Somebody who changed their mind does not need an
+     apology, and the app has no business knowing what they decided either
+     way. So false here means the sheet never opened.
+
+     Every failure is one answer. No plugin in this build, an iOS below 17
+     whose permission was refused, a phone that cannot present the sheet —
+     the caller does the same thing with all three, which is try the next
+     road. */
+  function addToCalendarSheet(event) {
+    var p = plugins();
+    if (!p || !p.CapacitorCalendar) return Promise.resolve(false);
+
+    var when = eventWindow(event);
+
+    return p.CapacitorCalendar.createEventWithPrompt({
+      title: event.title,
+      location: event.location,
+      description: event.description,
+      // Unix milliseconds, which is what the plugin reads.
+      startDate: when.start.getTime(),
+      endDate: when.end.getTime()
+    }).then(function () {
+      return true;
+    }).catch(function () {
+      return false;
+    });
+  }
+
   /* Three roads, in the order of how close each one gets to the calendar.
 
-     The phone opens the file, which is the one that works. Failing that the
-     share sheet, which is what shipped before and is at least a way to get
-     the file off the phone — kept because a native build made without
-     `npm install` having pulled the file opener plugin in should degrade to
-     the old behaviour rather than to a button that does nothing. Failing
-     that a browser download, which is every browser. */
+     The system event sheet, which is the one that ends with the event on
+     somebody's calendar. Failing that the share sheet, which at least gets
+     the file off the phone, and is kept for the build made without
+     `npm install` having pulled the calendar plugin in: degrading to the
+     old behaviour beats a button that does nothing, and `npm run preflight`
+     names that build before it ships. Failing that a browser download,
+     which is every browser and has worked throughout. */
   function addToCalendar(event) {
-    var ics = buildIcs(event);
-    var name = icsFilename(event);
+    return addToCalendarSheet(event).then(function (opened) {
+      if (opened) return true;
 
-    return writeCacheFile(name, { data: ics, encoding: 'utf8' }).then(function (uri) {
-      return openFile(uri, 'text/calendar').then(function (opened) {
-        if (opened) return true;
-        if (uri) return shareCacheFile(uri, name, event.title);
+      var ics = buildIcs(event);
+      var name = icsFilename(event);
+
+      return shareFile(name, ics, 'text/calendar', event.title).then(function (shared) {
+        if (shared) return true;
         return downloadInBrowser(name, ics, 'text/calendar');
       });
     });
@@ -910,7 +955,7 @@
     shareText: shareText,
     shareFile: shareFile,
     shareBinaryFile: shareBinaryFile,
-    openFile: openFile,
+    addToCalendarSheet: addToCalendarSheet,
     downloadInBrowser: downloadInBrowser,
     buildIcs: buildIcs,
     addToCalendar: addToCalendar,

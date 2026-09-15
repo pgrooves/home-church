@@ -3021,8 +3021,10 @@
       });
     },
 
-    /* Hands the phone an .ics and lets the person decide. The app never asks
-       for calendar permission, because it never touches the calendar. */
+    /* Puts up the phone's own New Event sheet, filled in, and lets the person
+       tap Add or not. The app never asks for calendar permission and never
+       learns what they decided — js/native.js has the long note on why that
+       took three tries to get right. */
     'add-to-calendar': function (el) {
       var id = el.getAttribute('data-id');
       var evt = (HC.data.events || []).filter(function (e) { return e.id === id; })[0];

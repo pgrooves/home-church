@@ -289,22 +289,52 @@ like a bug in the app. It is not. It is the gateway.
 
 -----
 
-## 8d. Add to calendar, which needs a pod and no permission
+## 8d. Add to calendar, which needs a pod and two Info.plist rows
 
-The **Add to calendar** button on the Cal tab writes the event as an `.ics`
-into the app's cache and asks iOS to *open* it. iOS knows what an `.ics` is:
-it shows the event with an **Add** on it, and the person taps that or does
-not. The app never reads or writes the calendar itself, so there is no
-capability to tick here, no entitlement, and no usage string in `Info.plist`.
+The **Add to calendar** button on the Cal tab puts up the phone's own **New
+Event** sheet with the church's event already filled in, and the person taps
+**Add** or **Cancel**. That sheet is `EKEventEditViewController`, and from
+**iOS 17 it needs no calendar permission and shows no prompt**, because the
+person is acting inside Apple's own interface and the app never gets access
+to the calendar. So there is no capability to tick here and no entitlement.
 
-What it does need is `@capacitor-community/file-opener` being in the build,
+**Two things it does need.**
+
+**One, the pod.** `@ebarooni/capacitor-calendar` has to be in the build,
 which is the same `npm install` followed by `npm run ios` as everything else.
-**If that pod did not install, the button falls back to the share sheet** —
-AirDrop, Messages, Mail, Save to Files, and no way to add the event — which
-is what a TestFlight build did before this was fixed and is the signature to
-recognise. Nothing is logged, because falling back is not an error. So a
-build where Add to calendar puts up a send-to sheet is a build where the pod
-is missing, and the fix is in Terminal, not in Xcode.
+If it is missing the button falls back to the old share sheet — AirDrop,
+Messages, Mail — and nothing is logged, because falling back is not an error.
+`npm run preflight` fails on that build, so run it before you archive.
+
+**Two, two rows in `Info.plist`,** which are pure insurance and which you add
+once. Below iOS 17 the same sheet does need calendar access, and iOS asks for
+it by reading a purpose string out of `Info.plist`. **With no string there,
+iOS does not prompt and does not refuse — it kills the app.** A crash on tap,
+on the oldest phones in the church, on a path that works perfectly on yours.
+Minimum Deployments is iOS 15, so those phones are in scope.
+
+Add them the same way as the export compliance row in step 10:
+
+1. Click the **Info** tab.
+2. Hover over any row, click the small **+**.
+3. Key `NSCalendarsUsageDescription`, Type **String**, and for the value
+   paste the sentence from `ios-config/Info-calendar.plist`.
+4. Repeat for `NSCalendarsWriteOnlyAccessUsageDescription`, same sentence.
+
+`ios-config/Info-calendar.plist` holds both rows and the reasoning.
+`npm run preflight` checks that they are there whenever `ios/` exists, so
+this is a step you can forget once and not twice.
+
+**Two signatures worth recognising**, because this button has been wrong
+twice and neither time announced itself:
+
+- **A send-to sheet** (AirDrop, Messages, Mail) means the pod is missing.
+  The fix is in Terminal, not Xcode.
+- **The event drawn with only a close and a share button, and no way to add
+  it**, means an older build: that was QuickLook previewing the `.ics` file,
+  which shows a document and cannot commit one. Safari's version of that
+  screen has an **Add To Calendar** on it, which is why this looked fine on
+  the web and dead in the app.
 
 -----
 

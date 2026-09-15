@@ -1,34 +1,47 @@
 /* ===========================================================================
    Add to calendar, the first button under every event on the Cal tab.
 
-   WHY THIS FILE EXISTS. The button shipped doing the wrong thing on a phone
-   and the right thing everywhere else, which is the worst shape a bug can
-   have: it worked in a browser, it worked in the simulator's browser, it
-   worked for anybody testing the site, and in the packaged TestFlight build
-   it put up the send-to sheet — AirDrop, Messages, Mail, Save to Files — with
-   no way anywhere on it to put the event on a calendar. Nothing threw.
-   Somebody had to tap it on a real phone to find out.
+   WHY THIS FILE EXISTS. This button has been wrong twice, both times only on
+   a phone, both times silently, and both times it took somebody tapping it on
+   a real device to find out. That is the worst shape a bug can have and it is
+   the reason this file is as long as it is.
 
-   The difference is one word. Sharing a file asks which app or person to send
-   it to, and Calendar is not an app you send a file to. Opening a file asks
-   iOS to show it, and iOS knows what an .ics is: the event comes up with an
-   Add on it. So js/native.js hands the written file to the file opener, and
-   only falls back to the share sheet when that plugin is not in the build.
+   THE FIRST WRONG ROAD was Share.share() on the .ics: the send-to sheet, with
+   AirDrop and Messages and Mail on it and nothing that adds an event, because
+   Calendar is not an app you send a file to.
 
-   Three things are worth holding still, and all three are about which road
-   the tap takes rather than about what the file says.
+   THE SECOND WRONG ROAD looked like the fix and was not. The file was handed
+   to a document interaction controller, on the reasoning that iOS knows what
+   an .ics is. It does — it drew the event, the day around it, the notes. What
+   it drew was QuickLook, whose job is to show a document and whose buttons
+   are Close and Share. No Add. Safari's version of that same screen has an
+   Add To Calendar across the bottom, because Safari special cases calendar
+   files, and QuickLook does not.
 
-   THE FILE OPENER GOES FIRST. If a build has both plugins, and the shipped
-   one does, the tap must reach the opener and must not reach Share. That is
-   the bug, stated as a test.
+   THE ROAD THAT WORKS is EKEventEditViewController, the sheet iOS itself puts
+   up for a new event, filled in, with Add and Cancel on it. So what this file
+   holds still is which road a tap takes, because both wrong answers were one
+   plugin call away from the right one and neither of them threw.
 
-   THE SHARE SHEET IS STILL THERE UNDERNEATH. A native build made without the
-   opener plugin — somebody's older checkout, an `npx cap sync` that did not
-   run — should degrade to the sheet that shipped before rather than to a
-   button that does nothing at all.
+   THE SHEET GOES FIRST. If the calendar plugin is in the build, the tap must
+   reach it and must not reach Share. That is both bugs, stated as one test.
 
-   AND A BROWSER STILL DOWNLOADS. No Capacitor, no plugins, an anchor and a
-   blob, which is the road that was always working.
+   CANCEL IS NOT A FAILURE. The sheet opening is the whole of what this app
+   promises. Somebody who reads the event and changes their mind has been
+   served, and the caller must not apologise to them — it toasts on false, so
+   a cancel that answered false would put "could not open your calendar" on
+   screen right after their own decision.
+
+   THE SHARE SHEET IS STILL THERE UNDERNEATH, for a native build made without
+   the plugin — an older checkout, an `npx cap sync` that did not run.
+   Degrading to what shipped before beats a button that does nothing, and
+   `npm run preflight` fails on that build before it ships.
+
+   AND A BROWSER STILL DOWNLOADS, which is the road that was right all along.
+
+   THE TWO ROADS AGREE ABOUT THE HOUR. The sheet is filled from the same
+   start and end the .ics is written from, because two roads disagreeing by an
+   hour is a difference nobody would notice until two people compared phones.
 
    No browser and no phone. Same shape as tests/reminders.test.js: js/native.js
    runs in a VM, window.Capacitor.Plugins is whichever fakes the case under
@@ -52,7 +65,7 @@ const ok = (label, got, want) => {
    browser road asks for exactly one anchor. `calls` is handed back alongside
    HC so a test can read what the fakes saw. */
 function load(plugins) {
-  const calls = { write: [], open: [], share: [], anchors: [], toasts: [] };
+  const calls = { sheet: [], write: [], share: [], anchors: [], toasts: [] };
 
   const anchor = {
     click: function () { calls.anchors.push(this.download); },
@@ -82,7 +95,6 @@ function load(plugins) {
   sandbox.window.navigator = sandbox.navigator;
   sandbox.Blob = sandbox.window.Blob;
   sandbox.URL = sandbox.window.URL;
-  sandbox.document = sandbox.document;
 
   if (plugins) {
     sandbox.window.Capacitor = {
@@ -103,6 +115,19 @@ function load(plugins) {
   return { HC: sandbox.window.HC, calls: calls };
 }
 
+/* The system New Event sheet. `outcome` is what the person did with it:
+   'saved' hands back an id, 'canceled' hands back null — which is what the
+   plugin does on iOS — and 'reject' is the sheet never opening at all. */
+function calendar(calls, outcome) {
+  return {
+    createEventWithPrompt: function (opts) {
+      calls.sheet.push(opts);
+      if (outcome === 'reject') return Promise.reject(new Error('no sheet'));
+      return Promise.resolve({ id: outcome === 'canceled' ? null : 'ek-1' });
+    }
+  };
+}
+
 function filesystem(calls) {
   return {
     writeFile: function (opts) {
@@ -118,50 +143,95 @@ function share(calls) {
   };
 }
 
-function fileOpener(calls, behaviour) {
-  return {
-    open: function (opts) {
-      calls.open.push(opts);
-      return behaviour === 'reject'
-        ? Promise.reject(new Error('no app can open this'))
-        : Promise.resolve();
-    }
-  };
-}
-
+const START = new Date('2026-09-20T14:00:00Z');
 const EVENT = {
   title: 'Baby Blessing, September 20',
   description: 'All three services. Come early, sit anywhere.',
   location: '4640 Utica St, Metairie',
-  start: new Date('2026-09-20T14:00:00Z')
+  start: START
 };
 
-/* --------------------------------------------- the phone opens the file */
+/* ------------------------------------------- the phone puts up the sheet */
 
 (function () {
   const { HC, calls } = load(function (calls) {
     return {
+      CapacitorCalendar: calendar(calls, 'saved'),
       Filesystem: filesystem(calls),
       Share: share(calls),
-      FileOpener: fileOpener(calls),
       Haptics: { impact: function () {} }
     };
   });
 
   return HC.native.addToCalendar(EVENT).then(function (result) {
-    ok('a phone with the opener plugin says the event got somewhere', result, true);
-    ok('the .ics is written to the cache first',
-      calls.write.map(w => [w.path, w.directory, w.encoding]),
-      [['baby-blessing-september-20.ics', 'CACHE', 'utf8']]);
-    ok('and handed to the file opener, not the share sheet',
-      calls.open.map(o => [o.filePath, o.contentType, o.openWithDefault]),
-      [['file:///cache/baby-blessing-september-20.ics', 'text/calendar', true]]);
-    ok('THE SHARE SHEET IS NEVER OPENED, which is the whole bug',
-      calls.share.length, 0);
+    ok('a phone with the calendar plugin says the sheet opened', result, true);
+    ok('the event is handed over filled in',
+      calls.sheet.map(s => [s.title, s.location, s.description]),
+      [['Baby Blessing, September 20',
+        '4640 Utica St, Metairie',
+        'All three services. Come early, sit anywhere.']]);
+    ok('with the start the Cal tab gave it, in milliseconds',
+      calls.sheet[0].startDate, START.getTime());
+    ok('and an hour assumed for an event with no end',
+      calls.sheet[0].endDate - calls.sheet[0].startDate, 60 * 60 * 1000);
+    ok('NO SHARE SHEET, which was the first bug', calls.share.length, 0);
+    ok('AND NO FILE WRITTEN, which was the second', calls.write.length, 0);
     ok('and nothing is apologised for', calls.toasts, []);
   })
 
-  /* ------------------------- a native build without the opener plugin */
+  /* ------------------------------------------------- cancel is an answer */
+
+  .then(function () {
+    const { HC, calls } = load(function (calls) {
+      return {
+        CapacitorCalendar: calendar(calls, 'canceled'),
+        Filesystem: filesystem(calls),
+        Share: share(calls)
+      };
+    });
+
+    return HC.native.addToCalendar(EVENT).then(function (result) {
+      ok('somebody who taps Cancel is not told anything went wrong', result, true);
+      ok('and is not handed a share sheet as a consolation prize',
+        [calls.share.length, calls.write.length], [0, 0]);
+    });
+  })
+
+  /* --------------------- an end the church actually gave, carried across */
+
+  .then(function () {
+    const { HC, calls } = load(function (calls) {
+      return { CapacitorCalendar: calendar(calls, 'saved') };
+    });
+
+    const end = new Date('2026-09-20T16:30:00Z');
+    return HC.native.addToCalendar(Object.assign({}, EVENT, { end: end }))
+      .then(function () {
+        ok('a real end time is used rather than the assumed hour',
+          calls.sheet[0].endDate, end.getTime());
+      });
+  })
+
+  /* ------------------- and the .ics agrees with the sheet about the hour */
+
+  .then(function () {
+    const { HC, calls } = load(function (calls) {
+      return { CapacitorCalendar: calendar(calls, 'saved') };
+    });
+
+    return HC.native.addToCalendar(EVENT).then(function () {
+      const ics = HC.native.buildIcs(EVENT);
+      const stamp = (ms) => new Date(ms).toISOString()
+        .replace(/[-:]/g, '').replace(/\.\d{3}/, '');
+
+      ok('DTSTART is the same moment the sheet was given',
+        ics.indexOf('DTSTART:' + stamp(calls.sheet[0].startDate)) > -1, true);
+      ok('and so is DTEND',
+        ics.indexOf('DTEND:' + stamp(calls.sheet[0].endDate)) > -1, true);
+    });
+  })
+
+  /* ----------------------- a native build without the calendar plugin */
 
   .then(function () {
     const { HC, calls } = load(function (calls) {
@@ -169,35 +239,33 @@ const EVENT = {
     });
 
     return HC.native.addToCalendar(EVENT).then(function (result) {
-      ok('a build without the opener still gets the file off the phone', result, true);
-      ok('by way of the share sheet, on the file it already wrote',
-        calls.share.map(s => s.url),
-        ['file:///cache/baby-blessing-september-20.ics']);
-      ok('and it writes that file exactly once', calls.write.length, 1);
+      ok('a build without the plugin still gets the file off the phone', result, true);
+      ok('by way of the share sheet, as it did before', calls.share.length, 1);
+      ok('on an .ics named after the event',
+        calls.write.map(w => [w.path, w.directory, w.encoding]),
+        [['baby-blessing-september-20.ics', 'CACHE', 'utf8']]);
     });
   })
 
-  /* ----------------- the opener is there and iOS turns the file down */
+  /* --------------------- the plugin is there and the sheet refuses to open */
 
   .then(function () {
     const { HC, calls } = load(function (calls) {
       return {
+        CapacitorCalendar: calendar(calls, 'reject'),
         Filesystem: filesystem(calls),
-        Share: share(calls),
-        FileOpener: fileOpener(calls, 'reject')
+        Share: share(calls)
       };
     });
 
     return HC.native.addToCalendar(EVENT).then(function (result) {
-      ok('an opener that refuses falls through to the sheet', result, true);
-      ok('having tried the opener first', calls.open.length, 1);
-      ok('and the sheet gets the same one written file',
-        calls.share.map(s => s.url),
-        ['file:///cache/baby-blessing-september-20.ics']);
+      ok('a sheet that will not open falls through to the share sheet', result, true);
+      ok('having tried the sheet first', calls.sheet.length, 1);
+      ok('and the share sheet gets the file', calls.share.length, 1);
     });
   })
 
-  /* ------------------------------------------------------- a browser */
+  /* ------------------------------------------------------------ a browser */
 
   .then(function () {
     const { HC, calls } = load(null);
@@ -206,8 +274,8 @@ const EVENT = {
       ok('a browser downloads the .ics, as it always did', result, true);
       ok('through an anchor named after the event',
         calls.anchors, ['baby-blessing-september-20.ics']);
-      ok('with no filesystem and no plugins touched',
-        [calls.write.length, calls.open.length, calls.share.length], [0, 0, 0]);
+      ok('with no plugin touched anywhere',
+        [calls.sheet.length, calls.write.length, calls.share.length], [0, 0, 0]);
     });
   })
 
