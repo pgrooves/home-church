@@ -933,10 +933,10 @@ theme where the real one is light.
 
 ## 14. The second hint, and the shape §12 blamed
 
-The tab swipe hint. The screen leans toward the next tab by 22px and comes
-back, then again by less, on the clock the index rail already hints on. It is
-in `js/swipe.js`, drawn out first in `demo-swipe-hint/`, and it is the second
-hint the app has.
+The tab swipe hint. The screen leans 64px toward the next tab, far enough to
+uncover a heading on it, and comes back; then again by much less. On the clock
+the index rail already hints on. It is in `js/swipe.js`, drawn out first in
+`demo-swipe-hint/`, and it is the second hint the app has.
 
 **It replaces the shape rather than repairing it.** §8 assigned this hint
 *travel across the tab bar*, and §12's best guess at the stutter that cost the
@@ -956,18 +956,31 @@ measurement is the part still owed. It is owed on this too.
 
 | | |
 |---|---|
-| **22px** | Chosen by eye on a phone against 10 and 16. `LOCK_SLOP` is the floor: ten pixels is what a real drag eats before the screen starts moving, so a hint at ten shows less than the gesture's own dead zone. `COMMIT_PART` is the ceiling: a quarter of the width reads as the app changing tabs rather than offering to. |
-| **Twice, the second smaller** | Two the same size reads as a machine ticking. Smaller the second time reads as a thumb testing and settling. |
-| **260ms out, 340ms back** | Leaving is deliberate, returning is a release. Neither overshoots. §3g rules out springs, and the *return* is the hint while the *overshoot* is the thing the rule forbids, which are two movements wearing one word. |
-| **No seam** | The study parked a pane one width away so `.hc-swipe__pane`'s edge shadow rode in on the lean, on the reasoning that paper sliding over paper is otherwise ambiguous. It lost. At 22px the movement carries itself, and every argument for the seam was an argument about 16px. |
+| **64px** | The first depth that clears the 20px page gutter (`--hc-screen-pad`) with enough left over, about 44px, for the next screen's heading to come into view. `LOCK_SLOP` is the floor: ten pixels is what a real drag eats before the screen moves at all. `COMMIT_PART` is the ceiling: a quarter of the width, about 102px, reads as the app changing tabs rather than offering to. |
+| **Twice, the second much smaller** | The first lean teaches and the second is the echo that says it was a gesture. At 0.35 the second is about 22px. Two deep shoves in a row read as the app struggling rather than as a thumb testing something. |
+| **300ms out, 380ms back** | Leaving is deliberate, returning is a release. Both longer than the first draft's, because the same duration over three times the distance is a much brisker movement. Neither overshoots. §3g rules out springs, and the *return* is the hint while the *overshoot* is the thing the rule forbids, which are two movements wearing one word. |
+| **The next screen, really rendered behind it** | The lean clears the gutter onto a heading, so somebody sees a word that is not on this page. One screen render per hint, torn down after, which is the cost a single swipe already pays. |
 
-**The seam is worth keeping in mind anyway**, because building it turned up
-something true about the app that outlives this decision: that shadow is
-`rgba(28, 24, 20, 0.10)`, a fixed near-black tuned against cream, and on a dark
-phone it is not subtle, it is gone. In a real drag that barely matters, because
-a whole screen arrives behind it and the content is its own edge. Anything that
-ever leans on that shadow *alone* to say "there is a page here" will not work in
-the dark, and `demo-swipe-hint/` has the switch that shows it.
+**IT SHIPPED AT 22px OVER EMPTY PAPER FIRST, AND THAT WAS WRONG.** The first
+build leaned 22px over a blank pane, on the reasoning that the movement alone
+says the screens move and that rendering a whole screen to show twenty pixels
+of it is a cost you feel in a hand and not on a desk. Watched in the app it
+read as *this screen wobbled*, not as *there is another screen over there*.
+
+The lesson is worth more than the correction. **A lean over paper says nothing
+at any depth.** Paper on paper has nothing in it to recognise, so the fault was
+never the amplitude and a bigger wobble would not have fixed it. What the hint
+needed was a word somebody could read, and that needs both things at once:
+enough depth to clear the gutter, and something rendered behind it to clear the
+gutter *onto*. Either one alone is the version that was wrong.
+
+**The seam finding still stands, and is now somebody else's problem.**
+`.hc-swipe__pane`'s edge is `rgba(28, 24, 20, 0.10)`, a fixed near-black tuned
+against cream, and on a dark phone it is gone. It stopped mattering here the
+moment real content went behind the lean, because content is its own edge in
+both themes. Anything that ever leans on that shadow *alone* to say "there is a
+page here" will not work in the dark, and `demo-swipe-hint/` has the switch
+that shows it.
 
 **Retire on use, and Reduce Motion refuses.** The first real drag ends it for
 the launch, in `begin()`: somebody who has dragged the screen sideways knows the

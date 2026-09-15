@@ -143,28 +143,95 @@ const mountX = () => {
   const ran = await page.evaluate(() => window.HC.swipe.hint());
   ok('it runs on Home', ran === true);
 
-  await page.waitForTimeout(180);
-  const leaning = await page.evaluate(mountX);
-  ok('the screen is leaning left, toward the next tab',
-     leaning < -3 && leaning >= -22, 'at ' + leaning + 'px');
+  /* The deepest point of the first lean, 300ms in. */
+  await page.waitForTimeout(290);
+  const deep = await page.evaluate(() => {
+    const view = document.getElementById('hc-view');
+    const pane = document.querySelector('.hc-swipe__pane');
+    const m = /translate3d\((-?[\d.]+)px/.exec(view.style.transform || '');
+    return {
+      x: m ? parseFloat(m[1]) : 0,
+      promoted: view.classList.contains('hc-view-dragging'),
+      pane: !!pane,
+      paneHasScreen: !!(pane && pane.firstChild && pane.firstChild.textContent.trim().length > 20),
+      // How much of the next screen is actually uncovered, in px from the
+      // right edge of the phone.
+      showing: pane ? Math.round(window.innerWidth - pane.getBoundingClientRect().left) : 0
+    };
+  });
 
-  const willChange = await page.evaluate(() =>
-    document.getElementById('hc-view').classList.contains('hc-view-dragging'));
-  ok('the layer is promoted while it moves', willChange === true);
+  ok('the screen leans left, toward the next tab', deep.x < -40, 'at ' + deep.x + 'px');
+  /* The whole point of 64 over 22. Deeper than this reads as the app changing
+     tabs and thinking better of it; shallower shows only the 20px page gutter,
+     which is blank paper and says nothing. */
+  ok('as deep as 64px and no deeper', deep.x >= -64.5 && deep.x <= -55,
+     'at ' + deep.x + 'px');
+  ok('the layer is promoted while it moves', deep.promoted === true);
+
+  /* A rendered screen, not empty paper. This is the change the depth is for:
+     a lean this deep over nothing would be the same empty gesture three times
+     as loud. */
+  ok('the next screen is really rendered behind it', deep.pane === true);
+  ok('and it has actual content in it, not a blank pane', deep.paneHasScreen === true);
+  /* 20px of that is the page gutter, so what is left is what somebody can
+     read. A couple of dozen pixels is the first few characters of a heading. */
+  ok('and enough of it is uncovered to show words past the 20px gutter',
+     deep.showing > 40, deep.showing + 'px of it showing');
 
   /* One lean, one return, a beat, a smaller lean, a smaller return, so the
-     whole thing is 260 + 340 + 120 + 260 + 340. */
-  await page.waitForTimeout(1500);
+     whole thing is 300 + 380 + 120 + 300 + 380. */
+  await page.waitForTimeout(1700);
 
   const rest = await page.evaluate(() => ({
     x: document.getElementById('hc-view').style.transform,
-    promoted: document.getElementById('hc-view').classList.contains('hc-view-dragging')
+    promoted: document.getElementById('hc-view').classList.contains('hc-view-dragging'),
+    pane: !!document.querySelector('.hc-swipe__pane'),
+    deck: !!document.querySelector('.hc-swipe')
   }));
   ok('it puts the screen back exactly where it was', rest.x === '', 'left "' + rest.x + '"');
   /* A permanent will-change on the one element every screen mounts into keeps
      a compositor layer alive for the life of the app, to serve a movement
      lasting a second and a bit. */
   ok('and takes the promotion away again', rest.promoted === false);
+  ok('and takes the rendered screen down with it', rest.pane === false);
+  ok('and the layer it built to hold it', rest.deck === false);
+
+  /* ------------------------------------------- a tap in the middle of a lean
+
+     The lean hands its offset and its pane to whatever touches the screen, on
+     the assumption that the touch is about to become a drag. When it turns out
+     to be a tap, or a scroll, nothing is left running to put either back, and
+     without dropGesture() the screen simply stays parked 64px over with a
+     rendered copy of the next tab showing beside it. Found by reading the
+     hand-over rather than by watching it, which is the kind of thing a browser
+     test is for. */
+
+  await page.evaluate(() => window.HC.swipe.hint());
+  await page.waitForTimeout(220);
+
+  await page.evaluate(`(function () {
+    var scroller = document.querySelector('.hc-scroll');
+    function fire(type) {
+      var t = new Touch({ identifier: 9, target: scroller, clientX: 200, clientY: 400 });
+      var live = type === 'touchend' ? [] : [t];
+      scroller.dispatchEvent(new TouchEvent(type, {
+        bubbles: true, cancelable: true,
+        touches: live, targetTouches: live, changedTouches: [t]
+      }));
+    }
+    fire('touchstart');
+    fire('touchend');
+  })()`);
+  await page.waitForTimeout(120);
+
+  const tapped = await page.evaluate(() => ({
+    x: document.getElementById('hc-view').style.transform,
+    promoted: document.getElementById('hc-view').classList.contains('hc-view-dragging'),
+    pane: !!document.querySelector('.hc-swipe__pane')
+  }));
+  ok('a tap mid lean puts the screen back', tapped.x === '', 'left "' + tapped.x + '"');
+  ok('and does not strand the rendered screen', tapped.pane === false);
+  ok('and gives the compositor layer back', tapped.promoted === false);
 
   /* ------------------------------------------- the last stop leans the other way
 
@@ -186,8 +253,10 @@ const mountX = () => {
      would be miming a gesture that does nothing. It leans the other way
      instead, toward the stop it came from. */
   ok('it still runs on the last stop in the row', leanedBack === true, 'on ' + atLast);
+  /* Sampled part way through the lean rather than at its deepest, so the bound
+     is the amplitude rather than a claim about where the easing had got to. */
   ok('and leans right, because left is the end of the line',
-     rightward > 3 && rightward <= 22, 'at ' + rightward + 'px');
+     rightward > 20 && rightward <= 64.5, 'at ' + rightward + 'px');
 
   await page.evaluate(() => window.HC.swipe.endHint(false));
   await page.waitForTimeout(1600);

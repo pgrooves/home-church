@@ -101,27 +101,40 @@
      The screen leans toward the next tab and comes back, twice, the second
      time less far. See the long note above runHint().
 
-     22px was chosen by eye on a phone against 10 and 16. LOCK_SLOP above is
-     the floor it has to clear: ten pixels is the travel a real drag eats
-     before the screen starts moving at all, so a hint at ten shows less
-     movement than the gesture's own dead zone. COMMIT_PART is the ceiling it
-     has to stay well under: a quarter of the width is roughly a hundred
-     pixels, and anything approaching that reads as the app deciding to change
-     tabs rather than as an offer.
+     64px, AND WHY IT IS NOT 22. It was 22 first, over empty paper, on the
+     reasoning that the movement alone says the screens move. Watched in the
+     app, that turned out to say the wrong thing: it reads as *this screen
+     wobbled*, not as *there is another screen over there*. The fix is not a
+     bigger wobble, it is showing the thing — 64px is the first number that
+     clears the 20px page gutter (`--hc-screen-pad`) with enough left over,
+     about 44px, for the first few characters of the next screen's heading to
+     come into view. Somebody sees a word that is not on this page, which is
+     the whole claim the hint is making.
 
-     DECAY, and why the second lean is smaller. Two of the same size reads as a
-     machine ticking. Smaller the second time reads as a thumb testing
-     something and settling, which is the thing being described.
+     It stays an offer rather than a decision because of the two numbers above
+     it. LOCK_SLOP is the floor: ten pixels is what a real drag eats before the
+     screen moves at all, so anything under it shows less than the gesture's
+     own dead zone. COMMIT_PART is the ceiling: a quarter of the width is about
+     102px on a 393pt phone, and a lean approaching that reads as the app
+     changing tabs and thinking better of it. 64 is comfortably inside both.
+
+     DECAY, and why the second lean is much smaller now. The first lean does
+     the teaching and the second is the echo that says this was a gesture
+     rather than a glitch. At 0.35 the second is about 22px, which is where the
+     whole thing started, and two deep shoves in a row would read as the app
+     struggling rather than as a thumb testing something and settling.
 
      OUT is quicker than BACK on purpose: leaving is deliberate and returning
-     is a release. Neither overshoots. The design system §3g rules out springs,
-     and out-and-back is elastic enough without one — the *return* is the hint
-     and the overshoot is the thing the rule forbids, which are two different
+     is a release. Both are a little longer than they were, because the same
+     duration over three times the distance is a different, much brisker
+     movement. Neither overshoots. The design system §3g rules out springs, and
+     out-and-back is elastic enough without one — the *return* is the hint and
+     the *overshoot* is the thing the rule forbids, which are two different
      movements wearing one word. */
-  var HINT_AMP   = 22;     // px of the first lean
-  var HINT_DECAY = 0.62;   // and how much of it the second lean is
-  var HINT_OUT   = 260;    // ms leaning away
-  var HINT_BACK  = 340;    // ms coming back
+  var HINT_AMP   = 64;     // px of the first lean: past the gutter, into the words
+  var HINT_DECAY = 0.35;   // and how much of it the second lean is
+  var HINT_OUT   = 300;    // ms leaning away
+  var HINT_BACK  = 380;    // ms coming back
   var HINT_GAP   = 120;    // ms of rest between the two
 
   /* How long after the page last moved it still counts as moving. The same
@@ -139,6 +152,8 @@
 
   var hint = null;         // the lean in flight, null between runs
   var hintUsed = false;    // a real drag has happened: nothing left to point at
+  var hintPane = null;     // the next screen, rendered, while the lean is up
+  var hintSide = 0;        // which side it is parked on
   var scrollAt = 0;        // when the page last moved. See hintContext().
 
   function reducedMotion() {
@@ -539,6 +554,36 @@
     return legs;
   }
 
+  /* THE NEXT SCREEN, ACTUALLY RENDERED.
+
+     The first draft of this hint leaned over empty paper, on the reasoning
+     that rendering a whole screen to show 22 pixels of it is a cost nobody can
+     see on a desk and everybody feels in a hand. That was the right sum and
+     the wrong question: 22 pixels of paper is not worth rendering a screen
+     for, and it is also not worth *leaning* for, because paper on paper says
+     nothing. What earns the render is going deep enough to show a word.
+
+     So this is paneFor() without a gesture around it, building the same
+     element into the same layer with the same class, which is what lets a
+     finger landing mid lean take the whole thing over rather than watching it
+     blink out and be built again. See onStart.
+
+     One render per hint, torn down after. That is the cost a single swipe
+     already pays, once a minute, and it is the price of the hint saying
+     anything at all. */
+  function makeHintPane(dir) {
+    var name = lane()[HC.router.laneIndex(HC.router.current()) + dir];
+    var el = name ? HC.router.renderRoute({ name: name }) : null;
+    if (!el) return null;
+
+    var pane = document.createElement('div');
+    pane.className = 'hc-swipe__pane';
+    pane.setAttribute('data-side', dir > 0 ? 'next' : 'prev');
+    pane.appendChild(el);
+    ensureDeck().appendChild(pane);
+    return pane;
+  }
+
   /* Returns whether it actually ran, which is what lets the rail hand its turn
      to whichever of the two has something to say. */
   function runHint() {
@@ -546,10 +591,29 @@
     var ctx = hintContext();
     if (!hintPolicy(ctx)) return false;
 
-    hint = { legs: hintLegs(ctx.dir), leg: 0, at: 0, x: 0 };
+    /* No pane, no lean. A 64px lean onto bare paper is worse than the 22px one
+       it replaced: it is the same empty gesture, three times as loud. */
+    var pane = makeHintPane(ctx.dir);
+    if (!pane) { tidyDeck(); return false; }
+
+    hintPane = pane;
+    hintSide = ctx.dir;
+    hint = {
+      legs: hintLegs(ctx.dir), leg: 0, at: 0, x: 0,
+      width: scroller.clientWidth || window.innerWidth || 1
+    };
     mount.classList.add('hc-view-dragging');
+    placeHint(0);
     window.requestAnimationFrame(hintFrame);
     return true;
+  }
+
+  // The deck belongs to whichever of the two put something in it.
+  function tidyDeck() {
+    if (deck && !deck.childNodes.length && deck.parentNode) {
+      deck.parentNode.removeChild(deck);
+      deck = null;
+    }
   }
 
   function hintFrame(now) {
@@ -568,22 +632,56 @@
     }
 
     hint.x = leg.from + (leg.to - leg.from) * leg.ease(p < 0 ? 0 : p);
-    mount.style.transform = 'translate3d(' + hint.x.toFixed(2) + 'px, 0, 0)';
+    placeHint(hint.x);
     window.requestAnimationFrame(hintFrame);
   }
 
+  /* Exactly place()'s arithmetic, on one pane instead of two. Written the same
+     way on purpose: the pane ends up at the same coordinate the drag would
+     have put it at, so handing it over costs nothing and moves nothing. */
+  function placeHint(x) {
+    mount.style.transform = 'translate3d(' + x.toFixed(2) + 'px, 0, 0)';
+    if (hintPane) {
+      hintPane.style.transform =
+        'translate3d(' + (hintSide * hint.width + x).toFixed(2) + 'px, 0, 0)';
+    }
+    /* The tile under the tab bar is NOT placed, and that is the difference
+       between a hint and a half-done navigation. It rides a finger, because a
+       finger is a decision. A tile that slides a quarter of the way to Cal
+       every minute is the app saying it is going somewhere it is not. */
+  }
+
   /* Ends whatever is leaning and answers with where the screen had got to.
-     `keep` leaves the transform where it is for a caller that is taking the
-     movement over; everything else puts it back. */
+
+     `keep` is for a caller that is taking the movement over: it leaves the
+     transform and the rendered pane exactly where they are, and whoever passed
+     it is then responsible for both. Everything else puts the screen back and
+     takes the pane down. */
   function endHint(keep) {
     if (!hint) return 0;
     var x = hint.x;
     hint = null;
-    if (!keep) {
-      mount.style.transform = '';
-      mount.classList.remove('hc-view-dragging');
-    }
+
+    if (keep) return x;
+
+    if (hintPane && hintPane.parentNode) hintPane.parentNode.removeChild(hintPane);
+    hintPane = null;
+    hintSide = 0;
+    tidyDeck();
+    mount.style.transform = '';
+    mount.classList.remove('hc-view-dragging');
     return x;
+  }
+
+  /* The pane the lean had up, handed to the gesture that interrupted it, at
+     the coordinate the gesture would have built it at. Returns null when there
+     was no lean, which is the ordinary case. */
+  function claimHintPane() {
+    if (!hintPane) return null;
+    var claimed = { el: hintPane, dir: hintSide };
+    hintPane = null;
+    hintSide = 0;
+    return claimed;
   }
 
   function noteHintUse() {
@@ -634,11 +732,15 @@
     // finger, and the one that is not ours wins.
     if (touch.clientX <= 18) return;
 
-    /* A FINGER LANDING MID LEAN TAKES THE LEAN OVER. Not zero and start again:
-       that is a jump of up to 22px at the exact moment somebody has answered
-       the hint, and the whole claim this hint makes is that it is the gesture.
-       Whatever the screen was leaning is folded into the travel below. */
+    /* A FINGER LANDING MID LEAN TAKES THE LEAN OVER, PANE AND ALL. Not zero
+       and start again: that is a jump of up to 64px at the exact moment
+       somebody has answered the hint, and the whole claim this hint makes is
+       that it is the gesture. The screen's offset is folded into the travel
+       below, and the next screen the lean had already rendered becomes this
+       gesture's own pane rather than being torn down and built again one frame
+       later — which would show the app's ground through the gap it left. */
     var carried = endHint(true);
+    var claimed = claimHintPane();
 
     g = {
       target: evt.target,
@@ -656,6 +758,35 @@
       flat: reducedMotion(),
       totopWas: null
     };
+
+    // paneFor() finds it already built and placed, and never renders a second
+    // copy of a screen that is on the glass.
+    if (claimed) g.panes[claimed.dir] = claimed.el;
+  }
+
+  /* A TOUCH THAT NEVER BECAME A DRAG, AND WHY IT HAS WORK TO DO NOW.
+
+     It used to be enough to forget the gesture: nothing had moved, so there
+     was nothing to put back. Since the hint hands its lean over on touchstart,
+     a touch that turns out to be a tap or a scroll can be holding a screen
+     offset by up to 64px and a rendered pane behind it, and dropping the
+     reference would leave both on the glass with nothing left running to take
+     them down. So the gesture gives back whatever it was handed.
+
+     `carried` is the test rather than `dragging`, because this only ever has
+     anything to undo when a lean was interrupted. */
+  function dropGesture() {
+    if (!g) return;
+    if (g.carried) {
+      mount.style.transform = '';
+      mount.classList.remove('hc-view-dragging');
+    }
+    [-1, 1].forEach(function (dir) {
+      var pane = g.panes[dir];
+      if (pane && pane.parentNode) pane.parentNode.removeChild(pane);
+    });
+    g = null;
+    tidyDeck();
   }
 
   function onMove(evt) {
@@ -664,7 +795,7 @@
     // A pinch. Put everything back and leave the finger to the browser.
     if (evt.touches.length > 1) {
       if (g.dragging) settle(0);
-      else g = null;
+      else dropGesture();
       return;
     }
 
@@ -674,13 +805,13 @@
 
     if (!g.dragging) {
       if (Math.abs(dy) > LOCK_SLOP && Math.abs(dy) >= Math.abs(dx)) {
-        g = null;               // a scroll, and it always was
+        dropGesture();          // a scroll, and it always was
         return;
       }
       if (Math.abs(dx) < LOCK_SLOP || Math.abs(dx) < Math.abs(dy) * AXIS_BIAS) return;
 
       if (railWants(g.target, dx < 0 ? 1 : -1)) {
-        g = null;
+        dropGesture();
         return;
       }
       begin(dx < 0 ? 1 : -1);
@@ -711,7 +842,7 @@
 
   function onEnd() {
     if (!g || settling) return;
-    if (!g.dragging) { g = null; return; }
+    if (!g.dragging) { dropGesture(); return; }
 
     // A finger that dragged is not also a tap, and the browser does not always
     // agree, so the click that may follow is swallowed once.
@@ -730,7 +861,7 @@
   function onCancel() {
     if (!g || settling) return;
     if (g.dragging) settle(0);
-    else g = null;
+    else dropGesture();
   }
 
   /* ------------------------------------------------------------------- init */
@@ -751,6 +882,18 @@
     scroller.addEventListener('scroll', function () {
       scrollAt = Date.now();
     }, { passive: true });
+
+    /* A LEAN BELONGS TO THE SCREEN IT STARTED ON. Anything floating over a
+       screen goes when that screen does, which is the rule js/hints.js keeps
+       with its own layer and js/highlight.js with its bar. It matters more
+       here than it reads: the lean is holding a rendered copy of the *old*
+       screen's neighbour, so a tab tapped mid lean would slide the new screen
+       over to show the wrong page entirely, and hold it there for the second
+       or so the timeline had left. HC.emitViewChange in js/app.js publishes
+       this on every view change. */
+    if (HC.store && HC.store.on) {
+      HC.store.on('view', function () { endHint(false); });
+    }
 
     scroller.addEventListener('touchend', onEnd);
     scroller.addEventListener('touchcancel', onCancel);

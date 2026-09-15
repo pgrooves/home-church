@@ -4,16 +4,27 @@ The screen leans toward the next tab and comes back, twice, on the clock the
 index rail already hints on. One drawing with dials on it, made to be looked at
 and swiped before anything in `js/` or `css/` is touched.
 
-**Chosen: 22px, twice with the second smaller, unhurried, and no seam. Built.**
-The page opens on those settings. It is the second hint the app has.
+**Chosen: 64px, twice with the second much smaller, unhurried, with the next
+screen really drawn behind it. Built.** The page opens on those settings.
 
-The seam lost, which is the one result reading would not have predicted and is
-the reason this page exists. At 22px the movement is unambiguous on its own,
-and every argument for the seam was an argument about 16px not being legible
-enough. Dropping it takes an element, a parked pane and the dark-mode problem
-below out of the build in one go: what ships draws nothing at all, and is one
-transform on `#hc-view`. The seam switch stays on this page because the case
-for 22 is only legible next to the thing it replaced.
+It got there in two passes, and the first one was wrong in a way worth keeping
+on the record. **22px over empty paper shipped first**, on the reasoning that
+the movement alone says the screens move and that rendering a whole screen to
+show twenty pixels of it is a cost you feel in a hand and not on a desk. In the
+app it read as *this screen wobbled*, not as *there is another screen over
+there*. The fix was not a bigger wobble. A lean over paper says nothing at any
+depth, because paper on paper has nothing in it to recognise.
+
+So the lean goes deep enough to clear the 20px page gutter with about 44px to
+spare, and the next screen is really rendered behind it. Somebody sees a word
+that is not on this page. That is the whole claim the hint makes, and it is the
+first version that actually makes it.
+
+**Which retires the seam question rather than answering it.** Real content is
+its own edge, in both themes, so the dark-mode problem below stops mattering
+for this hint. The finding still stands about the shadow itself and the switch
+stays on this page, because the reasoning is only legible next to the two
+things it replaced.
 
 `demo-hint/` is the same exercise for the account hint on Home, which is still
 not built, and `demo-guide-hint/` is the one for the highlighting hint.
@@ -48,13 +59,19 @@ its leading edge is necessary or fussy. Those are the switches, and everything
 else on the page is there so those four questions can be asked against the real
 thing.
 
-### The seam, which is the question the page exists for
+### What is behind the lean, which is the question the page exists for
 
-Paper slides over paper. `--hc-paper` moves sixteen pixels and `--hc-paper` is
-behind it, so with nothing at the edge the lean can read as the app hiccupping
-rather than as a page underneath.
+Three answers, and the page still draws all three because the one that won is
+only legible next to the two it beat.
 
-The real gesture already solved this, in `css/components.css`:
+**Nothing.** Paper slides over paper. `--hc-paper` moves and `--hc-paper` is
+behind it, so there is nothing in the uncovered strip to recognise, and the
+lean reads as the app hiccupping. *This does not improve with depth*, which was
+the thing worth learning: 64px of blank margin is the same non-statement as
+22px of it, only louder.
+
+**Paper and the seam.** The shadow `.hc-swipe__pane` already draws during a
+real swipe:
 
 ```css
 .hc-swipe__pane {
@@ -63,31 +80,32 @@ The real gesture already solved this, in `css/components.css`:
   box-shadow: 0 0 22px rgba(28, 24, 20, 0.10);
 ```
 
-So the hint parks a pane one screen width away, the way a drag does, and lets
-that same shadow ride in on the transform.
+Better, and it fails in the dark. That shadow is a fixed near-black tuned
+against cream, and on a dark phone it is not subtle, it is gone. In a real
+swipe that barely matters, because a whole screen arrives behind it and the
+content is its own edge. Where the seam is the *only* thing there, the hint
+loses the one element that made it legible. The hairline variant is the
+candidate fix and it is not in the app.
 
-**The pane is empty, and that is deliberate.** A real pane renders the whole of
-the next screen. The hint shows sixteen pixels of it, and rendering a screen
-every thirty seconds to show sixteen pixels of it is the kind of cost that is
-invisible on a desk and audible in a hand. Paper and the seam is all those
-sixteen pixels contain either way.
+**The next screen, really drawn.** What ships. The lean clears the 20px page
+gutter with about 44px to spare and there is a heading in that strip, so
+somebody sees a word that is not on this page. Content is its own edge in both
+themes, which is what takes the dark-mode problem off the table rather than
+solving it.
 
-**What building it turned up, which reading would not have.** That shadow is
-`rgba(28, 24, 20, 0.10)`, a fixed near-black tuned against cream, and on a dark
-phone it is not merely subtle, it is gone. In the real gesture that barely
-matters: a whole screen arrives behind it and the content is its own edge. In
-the hint the seam is the only thing there is, so in Dark the hint loses the one
-element that makes it legible. The **Paper edge and a hairline** switch is the
-candidate fix and it is not in the app today. Look at both in Dark before
-deciding whether this ships at all.
+It costs one screen render per hint. That is the cost a single swipe already
+pays, once a minute, and the first draft of this hint spent a paragraph
+avoiding it for a version that said nothing. The sum was right and the question
+was wrong: twenty pixels of paper is not worth rendering a screen for, and it
+is not worth leaning for either.
 
 ## The numbers, and where they come from
 
 | | |
 |---|---|
-| **16px** | The default lean. `LOCK_SLOP` in `js/swipe.js` is 10, the travel a real swipe eats before the screen starts moving, so a hint at 10 shows less movement than the gesture's own dead zone. `COMMIT_PART` is 0.26, about 102px on this phone, so 16 is nowhere near looking like a commit. |
-| **Twice, the second smaller** | Once reads as a glitch. Evenly twice reads as a machine ticking. Decaying reads as a thumb testing and settling, which is the thing being described. |
-| **260ms out, 340ms back** | Out quicker than back. Leaving is deliberate, returning is a release. |
+| **64px** | The first depth that clears the 20px page gutter with enough left over, about 44px, to show the first few characters of the next screen's heading. `LOCK_SLOP` is 10, the travel a real swipe eats before the screen moves at all. `COMMIT_PART` is 0.26, about 102px on this phone, so 64 is still clearly an offer rather than the app changing tabs and thinking better of it. |
+| **Twice, the second much smaller** | The first lean teaches, the second is the echo that says it was a gesture rather than a glitch. At 0.35 the second is about 22px, which is where this started. Two deep shoves in a row read as the app struggling. |
+| **300ms out, 380ms back** | Out quicker than back. Leaving is deliberate, returning is a release. Both longer than the first draft's, because the same duration over three times the distance is a much brisker movement. |
 | **No overshoot** | Design system §3g rules out springs. Out and back already feels elastic without the wobble, and the return eases to rest rather than past it. The distinction is worth keeping: the *return* is the hint, the *overshoot* is the thing the rule forbids. |
 | **Left, unless left is the end** | It leans toward whatever is actually there, off `HC.router.lane()` and `laneIndex()`. On the last stop there is nothing further left, so it leans right. |
 
@@ -127,18 +145,20 @@ what it was holding the moment you answer it is a hint you feel glitch.
 
 ## Worth doing in this order
 
-1. **Watch it once with the seam off, then once with the paper edge on.** That
-   is the whole question this page exists for.
-2. **Switch the phone to Dark and do it again.** See above. This is the finding
-   the build turned up.
-3. **Swipe the phone.** The hint retires. The log says so by name.
-4. **Put a finger down mid lean.** The log says how many pixels were handed
-   over.
-5. **Set it to *Inside a guide*.** Nothing happens, and the log says *a pushed
-   view: nothing swipes here*. A hint that does not appear is otherwise
-   indistinguishable from a hint that is broken, from the switch being off, and
-   from a stale bundle, and not being able to tell those apart is what cost the
-   last attempt a revert. `HINTS.md` §12, point 3.
+1. **Watch it with *Nothing* behind it, then with the next screen drawn.** That
+   is the whole question this page exists for, and the answer changed once it
+   was watched in the app rather than here.
+2. **Try 22px with the screen drawn behind it.** Almost all of what you see is
+   the 20px gutter, which is why depth and content had to change together.
+3. **Switch the phone to Dark on *Paper and the seam*.** The shipping seam is a
+   shadow tuned against cream.
+4. **Swipe the phone.** The hint retires, because you have found the thing it
+   was pointing at. Replay puts it back; on a real phone only relaunching does.
+5. **Put a finger down mid lean and drag.** The gesture takes the offset over
+   from where the hint had it, and in the app it takes the rendered screen over
+   too rather than tearing it down and building it again a frame later.
+6. **Set it to *Inside a guide*.** Nothing happens, and the log says why by
+   name.
 
 ## What is faked
 

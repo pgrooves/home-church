@@ -749,35 +749,38 @@ code {
       <div class="desk">
 
         <div class="row">
-          <label>The seam</label>
+          <label>What is behind it</label>
           <div class="seg" data-ctl="seam">
-            <button type="button" data-v="off" aria-pressed="true">Off</button>
-            <button type="button" data-v="paper">Paper edge</button>
-            <button type="button" data-v="rule">Paper edge and a hairline</button>
+            <button type="button" data-v="off">Nothing</button>
+            <button type="button" data-v="paper">Paper and the seam</button>
+            <button type="button" data-v="peek" aria-pressed="true">The next screen, really drawn</button>
           </div>
           <p class="note">
-            Paper slides over paper, so with the seam off the lean can read as
-            the app hiccupping rather than as a page underneath. The paper edge
-            is the shadow <code>.hc-swipe__pane</code> already draws during a
-            real swipe. Switch the phone to Dark and look again: that shadow is
-            tuned against cream and very nearly vanishes, which is what the
-            hairline is a candidate answer to.
+            <strong>The next screen really drawn is what ships.</strong> Paper
+            slides over paper, so a lean over nothing reads as the app
+            hiccupping however deep it goes, and the seam alone only fixes that
+            in the light: the shadow <code>.hc-swipe__pane</code> draws is tuned
+            against cream and very nearly vanishes in Dark. Real content is its
+            own edge in both, and it says the thing the other two only gesture
+            at. It costs one screen render per hint, which is what a single
+            swipe already pays.
           </p>
         </div>
 
         <div class="row">
           <label>How far it leans</label>
           <div class="seg" data-ctl="amp">
-            <button type="button" data-v="10">10px</button>
-            <button type="button" data-v="16">16px</button>
-            <button type="button" data-v="22" aria-pressed="true">22px</button>
+            <button type="button" data-v="22">22px</button>
+            <button type="button" data-v="44">44px</button>
+            <button type="button" data-v="64" aria-pressed="true">64px</button>
           </div>
           <p class="note">
-            10px is <code>LOCK_SLOP</code>, the travel a real swipe eats before
-            the screen starts moving at all, so a hint at 10 is showing less
-            movement than the gesture's own dead zone. Committing a swipe takes
-            26% of the width, about 102px here, so none of these is close to
-            looking like a commit.
+            64px is the first number that clears the 20px page gutter with
+            enough left over, about 44px, to show the first few characters of
+            the next screen's heading. Under that you are looking at blank
+            margin. Committing a swipe takes 26% of the width, about 102px
+            here, so 64 is still clearly an offer rather than the app changing
+            tabs and thinking better of it.
           </p>
         </div>
 
@@ -954,8 +957,8 @@ code {
   /* ---------------------------------------------------------------- the desk */
 
   var opt = {
-    seam: 'off',
-    amp: '22',
+    seam: 'peek',
+    amp: '64',
     count: 'decay',
     speed: 'unhurried',
     place: 'home',
@@ -1267,7 +1270,17 @@ code {
       ghost = document.createElement('div');
       ghost.className = 'pane';
       ghost.setAttribute('data-ghost', 'true');
-      if (opt.seam === 'rule') ghost.setAttribute('data-rule', 'true');
+      /* THE ONE THAT WON. Paper and a seam was the first answer, on the
+         reasoning that rendering a whole screen to show a couple of dozen
+         pixels of it is a cost you feel in a hand and not on a desk. Watched
+         in the app, a lean over paper reads as this screen wobbling rather
+         than as another screen being there, however deep it goes. So the
+         lean goes deep enough to clear the 20px gutter and the next screen is
+         really drawn behind it, and somebody sees a word that is not on this
+         page. */
+      if (opt.seam === 'peek') {
+        ghost.appendChild(screenEl(LANE[laneIndex() + dir]));
+      }
       /* Parked exactly where a real pane parks: one screen width away on the
          side being leaned toward. */
       ghost.style.left = dir > 0 ? '100%' : '-100%';
