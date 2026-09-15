@@ -246,12 +246,12 @@ scheduled by the app and delivered by the phone to itself, so nothing in this
 section touches APNs.
 
 What it does need is the plugin being in the build, which is `npm install`
-followed by `npm run ios` (that runs `npx cap sync ios`, which installs the
-pod). If the plugin is missing, nothing breaks and nothing is logged: the app
-asks `HC.native.canRemind()` while drawing an event, gets false, and simply
-does not draw the button — the same answer a browser gets. So **a build where
-Get notified never appears on the Cal tab is a build where the pod did not
-install**, not a bug in the screen.
+followed by `npm run ios` (that runs `npx cap sync ios`, which writes the
+plugin into `Package.swift`). If the plugin is missing, nothing breaks and
+nothing is logged: the app asks `HC.native.canRemind()` while drawing an
+event, gets false, and simply does not draw the button — the same answer a
+browser gets. So **a build where Get notified never appears on the Cal tab is
+a build where the plugin did not install**, not a bug in the screen.
 
 The permission is iOS's one notification permission, the same one push asks
 for. A phone that has already said yes to the church's notifications is not
@@ -289,7 +289,7 @@ like a bug in the app. It is not. It is the gateway.
 
 -----
 
-## 8d. Add to calendar, which needs a pod and two Info.plist rows
+## 8d. Add to calendar, which needs a plugin and two Info.plist rows
 
 The **Add to calendar** button on the Cal tab puts up the phone's own **New
 Event** sheet with the church's event already filled in, and the person taps
@@ -300,7 +300,7 @@ to the calendar. So there is no capability to tick here and no entitlement.
 
 **Two things it does need.**
 
-**One, the pod.** `@ebarooni/capacitor-calendar` has to be in the build,
+**One, the plugin.** `@ebarooni/capacitor-calendar` has to be in the build,
 which is the same `npm install` followed by `npm run ios` as everything else.
 If it is missing the button falls back to the old share sheet — AirDrop,
 Messages, Mail — and nothing is logged, because falling back is not an error.
@@ -328,8 +328,8 @@ this is a step you can forget once and not twice.
 **Two signatures worth recognising**, because this button has been wrong
 twice and neither time announced itself:
 
-- **A send-to sheet** (AirDrop, Messages, Mail) means the pod is missing.
-  The fix is in Terminal, not Xcode.
+- **A send-to sheet** (AirDrop, Messages, Mail) means the plugin is missing
+  from the build. The fix is in Terminal, not Xcode.
 - **The event drawn with only a close and a share button, and no way to add
   it**, means an older build: that was QuickLook previewing the `.ics` file,
   which shows a document and cannot commit one. Safari's version of that
@@ -483,8 +483,8 @@ dependencies changed".** That was wrong in the quiet way, and it cost a build.
 the `package.json` naming it and not the package itself. Nothing in
 `npm run ios:open` installs dependencies — it is
 `stamp → sync → cap sync ios → cap open ios`, and `cap sync` discovers plugins
-by reading `node_modules`. With the package absent it finds nothing, adds no
-pod, and **the build still succeeds**. The app runs, the feature is simply not
+by reading `node_modules`. With the package absent it finds nothing, writes
+it into no manifest, and **the build still succeeds**. The app runs, the feature is simply not
 there, and nothing is logged anywhere. Section 8c describes what that looked
 like from the outside the one time it happened.
 
@@ -493,22 +493,32 @@ you never have to know whether anything did.
 
 **`npm run preflight` is the receipt, and it reads itself.** Run it after
 `npm run ios:open` and before you archive. It takes the plugin list from
-`package.json` and checks every one of them against `ios/App/Podfile` (which
-says `cap sync` noticed the plugin) and `ios/App/Podfile.lock` (which says
-CocoaPods actually installed it), and it names the fix on any that are
-missing. Because the list comes from `package.json`, it covers plugins added
-after this page was written without anybody remembering to update a check —
-which is the failure a hand written one has. Exits non-zero, so it is safe to
-put in front of anything else.
+`package.json` and checks every one against the manifest `cap sync` wrote —
+`ios/App/CapApp-SPM/Package.swift`, which is what this project uses, or
+`ios/App/Podfile` and `Podfile.lock` on a CocoaPods build — and names the fix
+on any that are missing. Because the list comes from `package.json`, it
+covers plugins added after this page was written without anybody remembering
+to update a check, which is the failure a hand written one has. Exits
+non-zero, so it is safe to put in front of anything else.
 
-Do not check for a plugin by grepping for one pod name, which is a check that
+**This project builds with Swift Package Manager, not CocoaPods.** There is
+no `Podfile` and there will not be one: `npx cap sync ios` says
+`Writing Package.swift` and puts every plugin in
+`ios/App/CapApp-SPM/Package.swift`. Worth knowing because most Capacitor
+advice on the internet assumes pods, and because the first version of this
+check looked only for a `Podfile`, found none, and skipped every single run
+while claiming `ios/` had not been generated. A skip that reads like a pass
+is worse than no check.
+
+Do not check for a plugin by grepping for one name, which is a check that
 only ever answers about the plugin you thought of. A build can have
-`CapacitorLocalNotifications` in it and no file opener, and the grep says OK
-while Add to calendar puts up the send-to sheet — section 8d.
+`CapacitorLocalNotifications` in it and no calendar plugin, and the grep says
+OK while Add to calendar puts up the send-to sheet — section 8d.
 
 **`npx cap ls ios` is the same receipt in Capacitor's own words**, and worth a
 glance because it lists what Capacitor wired into the Xcode project rather
-than what the Podfile claims. If `preflight` is happy and `cap ls` is short,
+than what a manifest claims. `npm run ios` prints the same list as it goes —
+the `Found N Capacitor plugins for ios` block is worth reading every time. If `preflight` is happy and `cap ls` is short,
 believe `cap ls`.
 
 **`git reset --hard` throws away uncommitted work without asking.** That is

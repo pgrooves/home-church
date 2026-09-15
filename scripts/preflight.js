@@ -497,16 +497,16 @@ function calendarUsageStrings() {
     '      the honest description of it. Paste the second row too.');
 }
 
-/* ================================================= 2d. the plugin pods
-   Every native capability this app has arrives as a CocoaPod, and a pod that
-   did not install is the quietest failure mode in the project. js/native.js
-   reaches each plugin through window.Capacitor.Plugins and treats an absent
-   one as "this phone cannot do that", which is the right answer in a browser
-   and a lie in a packaged app. So a missing pod does not throw, does not log,
-   and does not look like itself:
+/* ============================================== 2d. the plugin manifest
+   Every native capability this app has arrives as a plugin, and a plugin that
+   did not make it into the Xcode project is the quietest failure mode here.
+   js/native.js reaches each one through window.Capacitor.Plugins and treats
+   an absent one as "this phone cannot do that", which is the right answer in
+   a browser and a lie in a packaged app. So a missing plugin does not throw,
+   does not log, and does not look like itself:
 
      - no local-notifications, and Get notified is never drawn at all
-     - no file-opener, and Add to calendar falls back to the send-to sheet,
+     - no calendar, and Add to calendar falls back to the send-to sheet,
        which is the bug that sent somebody looking at the Cal tab for it
      - no haptics, and every confirmation is silently flat
 
@@ -514,17 +514,27 @@ function calendarUsageStrings() {
    one `npm install` away from being fine.
 
    CHECKED AGAINST package.json RATHER THAN A LIST HERE, because a list here
-   is a list to forget: the file-opener was added to fix Add to calendar and
-   a hand written check would have gone on passing without it. The Podfile
-   refers to each plugin by its path under node_modules, which is the package
-   name, so the dependency names are the only thing either file needs to
-   agree about and pod names never come into it.
+   is a list to forget: the calendar plugin was added to fix Add to calendar
+   and a hand written check would have gone on passing without it. Both
+   manifests below name each plugin by its path under node_modules, which is
+   the package name, so the dependency names are the only thing anything has
+   to agree about and native module names never come into it.
 
-   BOTH FILES, because they answer different questions. The Podfile is
-   rewritten by `npx cap sync ios` and says the plugin was noticed.
-   Podfile.lock is written by CocoaPods and says the pod actually installed.
-   A sync that ran while pod install failed leaves the first true and the
-   second stale, which is exactly the state that ships a plugin-less build.
+   WHICHEVER MANIFEST CAPACITOR ACTUALLY WROTE, and reading only one of them
+   is how the first version of this check managed to verify nothing at all.
+   Capacitor builds iOS either of two ways. Under CocoaPods it writes a
+   Podfile, and Podfile.lock says the pod installed. Under Swift Package
+   Manager — which is what this project uses, and what `cap sync` means by
+   "Writing Package.swift" — it writes ios/App/CapApp-SPM/Package.swift and
+   there is no lock file to read, because local path dependencies are
+   resolved by Xcode at build time and never appear in Package.resolved.
+
+   This check looked only for a Podfile at first. There is no Podfile here
+   and never will be, so it skipped every run while announcing that ios/ was
+   not generated — which was false, and which is exactly the "a check that
+   only answers about the thing you thought of" failure it was written to
+   replace. Now a generated ios/ with neither manifest is a failure rather
+   than a shrug.
 
    ios/ is generated and gitignored, so like the AppDelegate check above this
    can only check a machine that has run `npx cap add ios`, and skips rather
@@ -540,32 +550,52 @@ function pluginPods() {
   const plugins = Object.keys(pkg.dependencies || {})
     .filter((name) => /capacitor/i.test(name) && name !== '@capacitor/core');
 
-  const podfile = path.join(ROOT, 'ios', 'App', 'Podfile');
-  if (!fs.existsSync(podfile)) {
-    console.log('SKIP  ios/ is not generated here, so the plugin pods cannot be checked');
+  if (!fs.existsSync(path.join(ROOT, 'ios'))) {
+    console.log('SKIP  ios/ is not generated here, so the plugin list cannot be checked');
     return;
   }
 
-  const declared = fs.readFileSync(podfile, 'utf8');
-  const lockPath = path.join(ROOT, 'ios', 'App', 'Podfile.lock');
-  const installed = fs.existsSync(lockPath) ? fs.readFileSync(lockPath, 'utf8') : null;
+  const spm = path.join(ROOT, 'ios', 'App', 'CapApp-SPM', 'Package.swift');
+  const podfile = path.join(ROOT, 'ios', 'App', 'Podfile');
 
-  if (!ok('Podfile.lock exists, so pod install has run at least once', installed !== null,
-    'ios/App/Podfile.lock is missing, which means CocoaPods never ran. Run\n' +
-    '      `npm install && npm run ios`. If that still leaves no lock file, the\n' +
-    '      pod install inside `npx cap sync ios` is failing — read its output\n' +
-    '      rather than opening Xcode, which will build happily without it.')) {
+  let manifest;          // what `cap sync` wrote, and its name for a message
+  let installed = null;  // CocoaPods only: what actually got installed
+
+  if (fs.existsSync(spm)) {
+    manifest = { name: 'Package.swift', text: fs.readFileSync(spm, 'utf8') };
+  } else if (fs.existsSync(podfile)) {
+    manifest = { name: 'the Podfile', text: fs.readFileSync(podfile, 'utf8') };
+
+    const lockPath = path.join(ROOT, 'ios', 'App', 'Podfile.lock');
+    installed = fs.existsSync(lockPath) ? fs.readFileSync(lockPath, 'utf8') : null;
+
+    if (!ok('Podfile.lock exists, so pod install has run at least once', installed !== null,
+      'ios/App/Podfile.lock is missing, which means CocoaPods never ran. Run\n' +
+      '      `npm install && npm run ios`. If that still leaves no lock file, the\n' +
+      '      pod install inside `npx cap sync ios` is failing — read its output\n' +
+      '      rather than opening Xcode, which will build happily without it.')) {
+      return;
+    }
+  } else {
+    ok('ios/ has a plugin manifest', false,
+      'ios/ exists but has neither ios/App/CapApp-SPM/Package.swift nor\n' +
+      '      ios/App/Podfile, so nothing here can say which plugins are in the\n' +
+      '      build. Run `npm run ios` and read what `npx cap sync ios` prints:\n' +
+      '      its own "Found N Capacitor plugins for ios" list is the answer\n' +
+      '      until this passes.');
     return;
   }
 
   plugins.forEach(function (name) {
-    /* Only asked when the Podfile has it, so a plugin `cap sync` never saw
-       fails once with the reason it actually has rather than twice with the
-       second reason being wrong about the first. */
-    if (!ok(name + ' is in the Podfile', declared.indexOf(name) > -1,
+    /* The second question is only asked when the first passed, so a plugin
+       `cap sync` never saw fails once with the reason it actually has rather
+       than twice with the second reason being wrong about the first. */
+    if (!ok(name + ' is in ' + manifest.name, manifest.text.indexOf(name) > -1,
       '`npx cap sync ios` has not seen it. Run `npm install && npm run ios`.\n' +
       '      Until then the plugin is absent at runtime, and js/native.js\n' +
       '      treats absent as "this phone cannot do that" — silently.')) return;
+
+    if (installed === null) return;   // SPM: the manifest is the whole answer
 
     ok('and ' + name + ' is installed', installed.indexOf(name) > -1,
       'It is in the Podfile but not in Podfile.lock, so pod install did not\n' +
