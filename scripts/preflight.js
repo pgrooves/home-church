@@ -643,14 +643,33 @@ function infoPlistKeys() {
    than fails anywhere else.
    ===================================================================== */
 
+/* The dependencies that are Capacitor plugins, out of the ones whose names
+   merely say Capacitor. Two are not plugins and neither appears in the
+   manifest beside the plugins:
+
+     @capacitor/core is the JavaScript bridge and has no native side at all.
+
+     @capacitor/ios is the platform. Under CocoaPods it is a pod like any
+     other, pulled from its node_modules path, which is why a Podfile names
+     it. Under Swift Package Manager the runtime comes from Capacitor's own
+     remote package instead — capacitor-swift-pm, by URL — so Package.swift
+     never names @capacitor/ios, and expecting it there fails a build that is
+     perfectly fine. That false alarm shipped, on a green build, because the
+     fixture it was tested against was written from this same list and so
+     agreed with the bug. `cap sync` counts 11 plugins; this has to agree.
+
+   Split out from pluginPods so tests/plugin-manifest.test.js can hold the
+   rule to that number rather than to a fixture of my own making. */
+function capacitorPlugins(dependencies) {
+  const NOT_PLUGINS = ['@capacitor/core', '@capacitor/ios'];
+  return Object.keys(dependencies || {})
+    .filter((name) => /capacitor/i.test(name) && NOT_PLUGINS.indexOf(name) === -1);
+}
+
 function pluginPods() {
   const pkg = JSON.parse(read('package.json'));
 
-  /* Every dependency that carries native code. @capacitor/core is the one
-     that does not: it is the JavaScript bridge, and the iOS runtime it talks
-     to comes from @capacitor/ios. */
-  const plugins = Object.keys(pkg.dependencies || {})
-    .filter((name) => /capacitor/i.test(name) && name !== '@capacitor/core');
+  const plugins = capacitorPlugins(pkg.dependencies);
 
   if (!fs.existsSync(path.join(ROOT, 'ios'))) {
     console.log('SKIP  ios/ is not generated here, so the plugin list cannot be checked');
@@ -665,6 +684,15 @@ function pluginPods() {
 
   if (fs.existsSync(spm)) {
     manifest = { name: 'Package.swift', text: fs.readFileSync(spm, 'utf8') };
+
+    /* The platform itself, which the plugin loop deliberately no longer looks
+       for because SPM names it differently from everything else. Checked here
+       instead, so dropping it from that list did not drop it from the run. */
+    ok('Package.swift pulls in the Capacitor runtime',
+      manifest.text.indexOf('capacitor-swift-pm') > -1,
+      'Without it there is no Capacitor in the build at all, and no plugin\n' +
+      '      could load even if every one of them is listed. Run\n' +
+      '      `npm install && npm run ios` and read what cap sync prints.');
   } else if (fs.existsSync(podfile)) {
     manifest = { name: 'the Podfile', text: fs.readFileSync(podfile, 'utf8') };
 
