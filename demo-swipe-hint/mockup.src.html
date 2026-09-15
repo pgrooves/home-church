@@ -1,0 +1,1572 @@
+<title>Swipe Hint</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Poppins:wght@500;800&display=swap">
+
+<style>
+/* ==========================================================================
+   The swipe hint
+
+   The five tabs swipe, and the row runs past Connect into the modules behind
+   the ••• tile. Nothing on the screen says so. HINTS.md §8 lists it in Tier 1
+   and §12 says the shape built for it was the one that failed: it animated
+   background-position across the blurred plinth, which repaints a live blur
+   every frame, and that is the best guess at the stutter that cost the whole
+   feature a revert.
+
+   So this draws it the other way round. Nothing is drawn over the tab bar at
+   all. The screen itself leans toward the next tab and comes back, twice,
+   which is the gesture performing a little of itself: the same thing the
+   index rail does when it sends one swell down its own notches.
+
+   WHAT THE DIALS ARE FOR. There is one drawing here, not seven, because there
+   is only one drawing to make. What cannot be settled by reading is how far it
+   should lean, how many times, how fast, and whether the seam at its edge is
+   necessary or fussy. Those are the switches. Everything else on the page is
+   here so those four questions can be asked against the real thing.
+
+   THE PHONE REALLY SWIPES. The gesture underneath is a small copy of
+   js/swipe.js carrying its actual numbers, so the hint can be watched against
+   the movement it is teaching rather than against a description of it. It is
+   also the only way to see retire on use, and to feel what happens when a
+   finger lands in the middle of a bump.
+
+   TWO TOKEN SETS, AND THEY MUST NOT BE CONFUSED. --pg-* is the page around
+   the phone and follows the reader's own appearance. --hc-* is the app inside
+   the phone, lifted from css/tokens.css unedited, and follows the phone's own
+   Light / Dark control. The phone's theme is carried on [data-hc] on .stage so
+   the page it sits in cannot move it.
+
+   Everything inside .stage is drawn at real iPhone points, 393 x 852, then
+   scaled to fit, so every px in here is a shipping px.
+   ========================================================================== */
+
+:root {
+  --lockup-ink:  url("__LOCKUP_INK__");
+  --lockup-lite: url("__LOCKUP__");
+
+  --pg-paper: #F7F4EF;
+  --pg-card:  #FFFFFF;
+  --pg-ink:   #1A1918;
+  --pg-mid:   #6D6864;
+  --pg-rule:  #DAD2C4;
+  --pg-gold:  #8A682C;
+  --pg-sunk:  #EFEAE2;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --pg-paper: #171615;
+    --pg-card:  #201E1D;
+    --pg-ink:   #F2EEE7;
+    --pg-mid:   #9A938A;
+    --pg-rule:  #38342F;
+    --pg-gold:  #CBAC74;
+    --pg-sunk:  #1E1C1B;
+    color-scheme: dark;
+  }
+}
+
+:root[data-theme="dark"] {
+  --pg-paper: #171615;
+  --pg-card:  #201E1D;
+  --pg-ink:   #F2EEE7;
+  --pg-mid:   #9A938A;
+  --pg-rule:  #38342F;
+  --pg-gold:  #CBAC74;
+  --pg-sunk:  #1E1C1B;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  padding: 40px 24px 72px;
+  background: var(--pg-paper);
+  color: var(--pg-ink);
+  font-family: "Manrope", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-size: 15px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+.wrap { max-width: 1180px; margin: 0 auto; }
+
+h1 {
+  font-family: "Poppins", -apple-system, sans-serif;
+  font-weight: 800;
+  font-size: clamp(26px, 4vw, 34px);
+  line-height: 1.15;
+  letter-spacing: -0.015em;
+  margin: 0 0 10px;
+}
+
+h2 {
+  font-family: "Poppins", -apple-system, sans-serif;
+  font-weight: 500;
+  font-size: 19px;
+  margin: 0 0 10px;
+}
+
+.deck { color: var(--pg-mid); max-width: 62ch; margin: 0 0 8px; }
+.deck strong { color: var(--pg-ink); font-weight: 600; }
+
+.eyebrow {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--pg-gold);
+  margin: 0 0 6px;
+}
+
+hr { border: 0; border-top: 1px solid var(--pg-rule); margin: 32px 0; }
+
+code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12.5px;
+  background: var(--pg-sunk);
+  padding: 1px 5px;
+  border-radius: 4px;
+}
+
+/* ------------------------------------------------------------------ layout */
+
+.deskrow {
+  display: grid;
+  grid-template-columns: minmax(0, 420px) minmax(0, 1fr);
+  gap: 40px;
+  align-items: start;
+  margin-top: 28px;
+}
+
+@media (max-width: 900px) {
+  .deskrow { grid-template-columns: minmax(0, 1fr); gap: 28px; }
+}
+
+/* ------------------------------------------------------------------- phone */
+
+.frame {
+  position: relative;
+  width: 393px;
+  max-width: 100%;
+  aspect-ratio: 393 / 852;
+  margin: 0 auto;
+  border-radius: 54px;
+  padding: 11px;
+  background: linear-gradient(168deg, #4a4643, #22201f 42%, #131211);
+  box-shadow: 0 30px 60px rgba(26,25,24,0.28), 0 4px 12px rgba(26,25,24,0.18);
+}
+
+.screen {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  border-radius: 44px;
+  overflow: hidden;
+  background: #000;
+}
+
+.stage {
+  position: absolute;
+  top: 0; left: 0;
+  width: 393px;
+  height: 852px;
+  transform-origin: 0 0;
+  overflow: hidden;
+
+  /* ------ css/tokens.css, light, unedited ------ */
+  --hc-paper:       #F7F4EF;
+  --hc-paper-sunk:  #EFEAE2;
+  --hc-cream:       #EDE8DF;
+  --hc-ink:         #111111;
+  --hc-dark:        #1A1918;
+  --hc-mid:         #6D6864;
+  --hc-rule:        #C8C0B0;
+  --hc-accent:      #B5A898;
+  --hc-accent-deep: #71675A;
+  --hc-on-dark:     #F7F4EF;
+
+  --hc-serif: "Manrope", -apple-system, BlinkMacSystemFont, sans-serif;
+  --hc-sans:  -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --hc-sans-display: "Poppins", -apple-system, BlinkMacSystemFont, sans-serif;
+
+  --hc-caption: 13px;  --hc-caption-line: 18px;
+  --hc-eyebrow: 11px;
+  --hc-tab: 11px;      --hc-tab-line: 14px;
+
+  --hc-screen-pad: 20px;
+  --hc-card-pad:   20px;
+  --hc-radius-sm:  8px;
+  --hc-radius-lg:  12px;
+  --hc-radius-pill: 999px;
+  --hc-hairline: 0.5px;
+
+  --hc-ease: cubic-bezier(0.4, 0, 0.2, 1);
+  --hc-ease-enter: cubic-bezier(0, 0, 0.2, 1);
+  --hc-dur-fast: 200ms;
+  --hc-dur-base: 300ms;
+
+  --hc-header-h: 52px;
+  --hc-tabbar-h: 56px;
+  --hc-tap-min:  44px;
+  --hc-chrome-inset: 12px;
+  --hc-tabbar-pad: 6px;
+  --hc-tab-count: 5;
+
+  --hc-glass-skin:      linear-gradient(178deg, rgba(255,253,250,0.94), rgba(238,233,225,0.92));
+  --hc-glass-skin-lens: linear-gradient(178deg, rgba(255,253,250,0.72), rgba(238,233,225,0.62));
+  --hc-glass-edge:      rgba(122,110,95,0.28);
+  --hc-glass-shadow:    0 14px 34px rgba(26,25,24,0.18),
+                        0 2px 8px rgba(26,25,24,0.08),
+                        inset 0 1px 0 rgba(255,255,255,0.70),
+                        inset 0 -1px 0 rgba(26,25,24,0.05);
+  --hc-glass-sheen:     linear-gradient(112deg,
+                          rgba(255,255,255,0.55) 0%,
+                          rgba(255,255,255,0.18) 26%,
+                          rgba(255,255,255,0) 52%);
+  --hc-tabbar-tile:        linear-gradient(180deg, rgba(255,255,255,0.96), rgba(247,244,239,0.86));
+  --hc-tabbar-tile-edge:   rgba(122,110,95,0.18);
+  --hc-tabbar-tile-shadow: inset 0 1px 0 rgba(255,255,255,0.90),
+                           inset 0 -1px 0 rgba(26,25,24,0.06),
+                           0 3px 9px rgba(26,25,24,0.12);
+
+  --hc-gold:        #D7BA85;
+  --hc-gold-deep:   #B08D4B;
+
+  --safe-top: 44px;
+  --safe-bottom: 22px;
+
+  background: var(--hc-paper);
+  font-family: var(--hc-serif);
+  color: var(--hc-ink);
+}
+
+/* ------ css/tokens.css, dark, unedited ------ */
+.stage[data-hc="dark"] {
+  --hc-paper:       #1A1918;
+  --hc-paper-sunk:  #201E1D;
+  --hc-cream:       #232120;
+  --hc-ink:         #F2EEE7;
+  --hc-dark:        #F2EEE7;
+  --hc-mid:         #9A938A;
+  --hc-rule:        #3A3633;
+  --hc-accent:      #C4B5A2;
+  --hc-accent-deep: #CFC1AE;
+  --hc-on-dark:     #1A1918;
+
+  --hc-glass-skin:      linear-gradient(178deg, rgba(58,54,51,0.88), rgba(26,25,24,0.86));
+  --hc-glass-skin-lens: linear-gradient(178deg, rgba(58,54,51,0.52), rgba(26,25,24,0.42));
+  --hc-glass-edge:      rgba(196,181,162,0.20);
+  --hc-glass-shadow:    0 16px 36px rgba(0,0,0,0.52),
+                        inset 0 1px 0 rgba(242,238,231,0.10),
+                        inset 0 -1px 0 rgba(0,0,0,0.30);
+  --hc-glass-sheen:     linear-gradient(112deg,
+                          rgba(247,244,239,0.15) 0%,
+                          rgba(247,244,239,0.05) 26%,
+                          rgba(247,244,239,0) 52%);
+  --hc-tabbar-tile:        linear-gradient(180deg, rgba(247,244,239,0.15), rgba(247,244,239,0.055));
+  --hc-tabbar-tile-edge:   rgba(207,193,174,0.30);
+  --hc-tabbar-tile-shadow: inset 0 1px 0 rgba(255,252,247,0.24),
+                           inset 0 -1px 0 rgba(0,0,0,0.16),
+                           0 4px 12px rgba(0,0,0,0.30);
+
+  --hc-gold:        #CBAC74;
+  --hc-gold-deep:   #CBAC74;
+}
+
+/* ---------------------------------------------------------------- top bar */
+
+.topbar {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  z-index: 40;
+  height: calc(var(--hc-header-h) + var(--safe-top));
+  padding: var(--safe-top) var(--hc-screen-pad) 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--hc-paper);
+}
+
+.lockup {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 20px;
+  background: var(--lockup-ink) left center / contain no-repeat;
+}
+.stage[data-hc="dark"] .lockup { background-image: var(--lockup-lite); }
+
+.acts { display: flex; align-items: center; flex: 0 0 auto; }
+
+.disc {
+  width: var(--hc-tap-min);
+  height: var(--hc-tap-min);
+  padding: 0;
+  border: 0;
+  background: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--hc-ink);
+}
+.disc svg { width: 22px; height: 22px; fill: none; stroke: currentColor;
+            stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+
+.avatar__disc {
+  width: 42px;
+  height: 42px;
+  border-radius: var(--hc-radius-pill);
+  background: var(--hc-cream);
+  border: var(--hc-hairline) solid var(--hc-rule);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--hc-mid);
+}
+.avatar__disc svg { width: 20px; height: 20px; }
+
+/* ------------------------------------------------------------ the scroller
+
+   One scroll container, the way the app has one. .clip is what the transform
+   is clipped by, which is .hc-scroll's job in the real thing. */
+
+.clip {
+  position: absolute;
+  top: calc(var(--hc-header-h) + var(--safe-top));
+  left: 0; right: 0; bottom: 0;
+  overflow: hidden;
+  /* Vertical is the page's, horizontal is the gesture's. In the app this is
+     settled by reading touches and calling preventDefault; here one line does
+     it, which is the largest thing this study fakes. */
+  touch-action: pan-y;
+}
+
+.mount {
+  position: absolute;
+  inset: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Only while something is moving it. A permanent will-change on the element
+   every screen mounts into keeps a layer alive for the life of the app. */
+.mount[data-moving="true"] { will-change: transform; }
+
+/* --------------------------------------------------------------- the panes
+
+   css/components.css .hc-swipe and .hc-swipe__pane, at the same numbers. The
+   deck is where a real neighbouring screen is rendered during a drag. */
+
+.deck {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 5;
+}
+
+.pane {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background: var(--hc-paper);
+  /* The leading edge of a sheet of paper sliding over another one. Soft and
+     narrow, so it is the seam that shows rather than a drop shadow. Copied
+     from .hc-swipe__pane, unedited. */
+  box-shadow: 0 0 22px rgba(28, 24, 20, 0.10);
+  will-change: transform;
+}
+
+/* THE HINT'S OWN PANE, AND WHY IT IS EMPTY.
+
+   A real pane renders the whole of the next screen. The hint shows sixteen
+   pixels of it, and rendering a screen every thirty seconds to show sixteen
+   pixels of it is the kind of cost that is invisible on a desk and audible in
+   a hand. So the hint's pane carries paper and the seam and nothing else,
+   which is exactly what those sixteen pixels contain either way. */
+.pane[data-ghost="true"] { background: var(--hc-paper); }
+
+/* The hairline. Not in the app today: the shipping seam is a shadow tuned
+   against cream paper, and on a dark phone it very nearly disappears. This is
+   the candidate fix, and the Seam switch is how you decide whether it is
+   needed. */
+.pane[data-rule="true"] { border-left: var(--hc-hairline) solid var(--hc-rule); }
+
+/* ------------------------------------------------------------------ screens */
+
+.page {
+  min-height: 100%;
+  padding: 18px var(--hc-screen-pad)
+           calc(var(--hc-tabbar-h) + var(--hc-tabbar-pad) * 2
+                + var(--hc-chrome-inset) * 2 + var(--safe-bottom) + 18px);
+}
+
+.greet {
+  font-family: var(--hc-sans-display);
+  font-weight: 500;
+  font-size: 26px;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+  margin: 4px 0 16px;
+}
+
+.hero {
+  height: 168px;
+  border-radius: var(--hc-radius-lg);
+  background:
+    linear-gradient(150deg, rgba(0,0,0,0.05), rgba(0,0,0,0.20)),
+    linear-gradient(120deg, var(--hc-accent), var(--hc-cream) 60%, var(--hc-accent));
+  margin-bottom: 22px;
+}
+
+.sechead { margin: 22px 0 10px; }
+.sechead__eyebrow {
+  font-family: var(--hc-sans);
+  font-size: var(--hc-eyebrow);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--hc-accent-deep);
+  margin-bottom: 3px;
+}
+.sechead__title {
+  font-family: var(--hc-sans-display);
+  font-weight: 500;
+  font-size: 20px;
+  letter-spacing: -0.01em;
+}
+.sechead__rule {
+  height: var(--hc-hairline);
+  background: var(--hc-rule);
+  margin-top: 9px;
+}
+
+.card {
+  background: var(--hc-paper-sunk);
+  border: var(--hc-hairline) solid var(--hc-rule);
+  border-radius: var(--hc-radius-lg);
+  padding: var(--hc-card-pad);
+  margin-bottom: 12px;
+}
+.card__title { font-weight: 600; font-size: 15px; margin-bottom: 4px; }
+.card__meta {
+  font-size: var(--hc-caption);
+  line-height: var(--hc-caption-line);
+  color: var(--hc-mid);
+}
+
+.lines > i {
+  display: block;
+  height: 9px;
+  border-radius: 3px;
+  background: var(--hc-rule);
+  opacity: 0.55;
+  margin-bottom: 9px;
+}
+
+/* --------------------------------------------------------------- the rail
+
+   css/components.css .hc-index, at its own numbers. Drawn, never touched:
+   the gesture in the app is read off the scroller, which is what leaves this
+   edge available to the swipe as well. */
+
+.rail {
+  position: absolute;
+  z-index: 46;
+  right: 0;
+  top: calc(var(--hc-header-h) + var(--safe-top));
+  bottom: calc(var(--hc-tabbar-h) + var(--hc-tabbar-pad) * 2
+               + var(--hc-chrome-inset) * 2 + var(--hc-tap-min) + 8px
+               + var(--safe-bottom));
+  width: 34px;
+  pointer-events: none;
+}
+
+.notch { position: absolute; right: 0; width: 34px; height: 22px; }
+
+.mark {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  width: 30px;
+  height: 2px;
+  margin-top: -1px;
+  border-radius: 1px;
+  background: var(--hc-ink);
+  transform-origin: 100% 50%;
+}
+
+/* --------------------------------------------------------------- tab bar */
+
+.tabbar {
+  position: absolute;
+  left: var(--hc-chrome-inset);
+  right: var(--hc-chrome-inset);
+  bottom: calc(var(--hc-chrome-inset) + var(--safe-bottom));
+  z-index: 40;
+  display: flex;
+  padding: var(--hc-tabbar-pad);
+  border-radius: 26px;
+  background: var(--hc-glass-skin);
+  border: var(--hc-hairline) solid var(--hc-glass-edge);
+  box-shadow: var(--hc-glass-shadow);
+  isolation: isolate;
+}
+
+@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+  .tabbar {
+    background: var(--hc-glass-skin-lens);
+    -webkit-backdrop-filter: blur(22px) saturate(150%);
+    backdrop-filter: blur(22px) saturate(150%);
+  }
+}
+
+.tabbar::before {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  top: var(--hc-tabbar-pad);
+  bottom: var(--hc-tabbar-pad);
+  left: var(--hc-tabbar-pad);
+  width: calc((100% - (var(--hc-tabbar-pad) * 2)) / var(--hc-tab-count, 5));
+  border-radius: 20px;
+  background: var(--hc-tabbar-tile);
+  border: var(--hc-hairline) solid var(--hc-tabbar-tile-edge);
+  box-shadow: var(--hc-tabbar-tile-shadow);
+  transform: translateX(calc(var(--hc-tab-index, 0) * 100%));
+  transition: transform var(--hc-tab-tween, var(--hc-dur-base)) var(--hc-ease);
+}
+
+.tabbar[data-swiping="true"]::before { transition: none; }
+
+.tabbar::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  border-radius: inherit;
+  background: var(--hc-glass-sheen);
+}
+
+.tab {
+  position: relative;
+  z-index: 1;
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  height: var(--hc-tabbar-h);
+  padding: 6px 2px 8px;
+  color: var(--hc-mid);
+  border: 0;
+  background: none;
+  transition: color var(--hc-dur-fast) var(--hc-ease);
+}
+
+.tab svg {
+  width: 24px; height: 24px;
+  stroke: currentColor; stroke-width: 1.5;
+  stroke-linecap: round; stroke-linejoin: round; fill: none;
+}
+
+.tab span {
+  font-family: var(--hc-sans);
+  font-weight: 500;
+  font-size: var(--hc-tab);
+  line-height: var(--hc-tab-line);
+  letter-spacing: 0.01em;
+}
+
+.tab[data-on="true"] { color: var(--hc-ink); }
+.tab[data-on="true"] svg { color: var(--hc-accent-deep); }
+
+/* ------------------------------------------------------------------- desk */
+
+.desk {
+  background: var(--pg-card);
+  border: 1px solid var(--pg-rule);
+  border-radius: 14px;
+  padding: 20px;
+  margin-bottom: 18px;
+}
+
+.row { margin-bottom: 16px; }
+.row:last-child { margin-bottom: 0; }
+
+.row > label {
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  color: var(--pg-mid);
+  margin-bottom: 7px;
+}
+
+.seg { display: flex; flex-wrap: wrap; gap: 6px; }
+
+.seg button {
+  font: inherit;
+  font-size: 13px;
+  padding: 7px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--pg-rule);
+  background: var(--pg-paper);
+  color: var(--pg-ink);
+  cursor: pointer;
+  transition: background 140ms, border-color 140ms;
+}
+.seg button:hover { border-color: var(--pg-mid); }
+.seg button[aria-pressed="true"] {
+  background: var(--pg-ink);
+  border-color: var(--pg-ink);
+  color: var(--pg-paper);
+}
+
+.go {
+  font: inherit;
+  font-weight: 600;
+  font-size: 14px;
+  padding: 11px 18px;
+  border-radius: 999px;
+  border: 0;
+  background: var(--pg-gold);
+  color: #fff;
+  cursor: pointer;
+  width: 100%;
+}
+.go:hover { filter: brightness(1.06); }
+
+.note {
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--pg-mid);
+  margin-top: 7px;
+}
+
+/* -------------------------------------------------------------------- log */
+
+.log {
+  background: var(--pg-card);
+  border: 1px solid var(--pg-rule);
+  border-radius: 14px;
+  padding: 16px 18px;
+}
+
+.log h2 { margin-bottom: 4px; }
+
+.log__list {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
+  line-height: 1.5;
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+.log__list li {
+  padding: 5px 0;
+  border-top: 1px solid var(--pg-rule);
+  display: flex;
+  gap: 10px;
+}
+.log__list li:first-child { border-top: 0; }
+
+.log__t { color: var(--pg-mid); flex: 0 0 52px; }
+.log__m { flex: 1 1 auto; }
+.log__m b { color: var(--pg-gold); font-weight: 600; }
+
+.cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 24px; }
+.cols h2 { font-size: 17px; }
+.cols p { margin: 0 0 10px; color: var(--pg-mid); font-size: 14px; }
+.cols strong { color: var(--pg-ink); }
+</style>
+
+<div class="wrap">
+
+  <p class="eyebrow">Home Church · a study, not a build</p>
+  <h1>The swipe hint</h1>
+  <p class="deck">
+    The five tabs swipe, and the row carries on past Connect into the modules
+    behind the <strong>•••</strong> tile. Nothing on any screen says so. This
+    draws the hint for it: the screen leans toward the next tab and comes
+    back, twice, on the same clock the index rail already hints on.
+  </p>
+  <p class="deck">
+    <strong>The phone really swipes.</strong> Drag it sideways and the gesture
+    underneath carries the same numbers <code>js/swipe.js</code> does, so the
+    hint can be watched against the movement it is teaching. Using it retires
+    the hint, which is the rule, and which is also the fastest way to stop the
+    page doing anything at all — press Replay.
+  </p>
+
+  <div class="deskrow">
+
+    <div>
+      <div class="frame">
+        <div class="screen">
+          <div class="stage" id="stage" data-hc="light">
+
+            <div class="topbar">
+              <div class="lockup"></div>
+              <div class="acts">
+                <button class="disc" type="button" aria-label="Search">
+                  <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg>
+                </button>
+                <button class="disc" type="button" aria-label="Your account">
+                  <span class="avatar__disc">
+                    <svg viewBox="0 0 24 24"><path d="M3 11l9-7 9 7"></path><path d="M5 10v10h14V10"></path></svg>
+                  </span>
+                </button>
+              </div>
+            </div>
+
+            <div class="clip" id="clip">
+              <div class="mount" id="mount"></div>
+              <div class="deck" id="deckEl"></div>
+            </div>
+
+            <div class="rail" id="rail"></div>
+
+            <nav class="tabbar" id="tabbar"></nav>
+
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="desk">
+
+        <div class="row">
+          <label>The seam</label>
+          <div class="seg" data-ctl="seam">
+            <button type="button" data-v="off">Off</button>
+            <button type="button" data-v="paper" aria-pressed="true">Paper edge</button>
+            <button type="button" data-v="rule">Paper edge and a hairline</button>
+          </div>
+          <p class="note">
+            Paper slides over paper, so with the seam off the lean can read as
+            the app hiccupping rather than as a page underneath. The paper edge
+            is the shadow <code>.hc-swipe__pane</code> already draws during a
+            real swipe. Switch the phone to Dark and look again: that shadow is
+            tuned against cream and very nearly vanishes, which is what the
+            hairline is a candidate answer to.
+          </p>
+        </div>
+
+        <div class="row">
+          <label>How far it leans</label>
+          <div class="seg" data-ctl="amp">
+            <button type="button" data-v="10">10px</button>
+            <button type="button" data-v="16" aria-pressed="true">16px</button>
+            <button type="button" data-v="22">22px</button>
+          </div>
+          <p class="note">
+            10px is <code>LOCK_SLOP</code>, the travel a real swipe eats before
+            the screen starts moving at all, so a hint at 10 is showing less
+            movement than the gesture's own dead zone. Committing a swipe takes
+            26% of the width, about 102px here, so none of these is close to
+            looking like a commit.
+          </p>
+        </div>
+
+        <div class="row">
+          <label>How many</label>
+          <div class="seg" data-ctl="count">
+            <button type="button" data-v="1">Once</button>
+            <button type="button" data-v="2">Twice, evenly</button>
+            <button type="button" data-v="decay" aria-pressed="true">Twice, the second smaller</button>
+          </div>
+          <p class="note">
+            Once can read as a glitch. Evenly twice reads as a machine ticking.
+            The second one smaller reads as a thumb testing and settling, which
+            is the thing being described.
+          </p>
+        </div>
+
+        <div class="row">
+          <label>Speed</label>
+          <div class="seg" data-ctl="speed">
+            <button type="button" data-v="unhurried" aria-pressed="true">Unhurried</button>
+            <button type="button" data-v="brisk">Brisk</button>
+          </div>
+          <p class="note">
+            Out is quicker than back in both. Leaving is deliberate, returning
+            is a release. Neither overshoots: the design system §3g rules out
+            springs, and out-and-back already feels elastic without one.
+          </p>
+        </div>
+
+        <div class="row">
+          <label>Where it is standing</label>
+          <div class="seg" data-ctl="place">
+            <button type="button" data-v="home" aria-pressed="true">Home</button>
+            <button type="button" data-v="last">The last stop</button>
+            <button type="button" data-v="pushed">Inside a guide</button>
+          </div>
+          <p class="note">
+            It leans toward whatever is actually there. On Home that is left.
+            On the last stop in the row there is nothing further left, so it
+            leans right instead. Inside a guide nothing swipes at all, so it
+            refuses and says so.
+          </p>
+        </div>
+
+        <div class="row">
+          <label>The other hint</label>
+          <div class="seg" data-ctl="rail">
+            <button type="button" data-v="alone">This one alone</button>
+            <button type="button" data-v="alternate" aria-pressed="true">Taking turns with the rail</button>
+            <button type="button" data-v="both">Both at once</button>
+          </div>
+          <p class="note">
+            Both at once is on the page so the argument against it is legible
+            rather than asserted. Two things moving is a tutorial, and the page
+            sliding under the notches drags the swell with it.
+          </p>
+        </div>
+
+        <div class="row">
+          <label>The clock</label>
+          <div class="seg" data-ctl="clock">
+            <button type="button" data-v="real">Every 30s, as it ships</button>
+            <button type="button" data-v="fast" aria-pressed="true">Every 6s, so you are not waiting</button>
+            <button type="button" data-v="off">Only when I press Replay</button>
+          </div>
+        </div>
+
+        <div class="row">
+          <label>The phone</label>
+          <div class="seg" data-ctl="theme">
+            <button type="button" data-v="light" aria-pressed="true">Light</button>
+            <button type="button" data-v="dark">Dark</button>
+          </div>
+        </div>
+
+        <div class="row">
+          <label>Motion</label>
+          <div class="seg" data-ctl="motion">
+            <button type="button" data-v="full" aria-pressed="true">Full</button>
+            <button type="button" data-v="reduce">Reduce Motion</button>
+          </div>
+          <p class="note">
+            This hint refuses outright under Reduce Motion rather than
+            degrading, which is the rail's rule and not the guide hint's. The
+            guide hint degrades because it is information and there is
+            something left of it when it holds still. This one is entirely
+            movement. There is nothing left.
+          </p>
+        </div>
+
+        <div class="row">
+          <label>Hints, in Your account</label>
+          <div class="seg" data-ctl="on">
+            <button type="button" data-v="on" aria-pressed="true">On</button>
+            <button type="button" data-v="off">Off</button>
+          </div>
+        </div>
+
+        <div class="row">
+          <button class="go" type="button" id="replay">Replay, and un-retire it</button>
+        </div>
+
+      </div>
+
+      <div class="log">
+        <h2>What it did, and why</h2>
+        <p class="deck" style="font-size:13.5px;margin:0">
+          Every rule is invisible when it works. This says which one spoke.
+        </p>
+        <ul class="log__list" id="loglist"></ul>
+      </div>
+    </div>
+
+  </div>
+
+  <hr>
+
+  <div class="cols">
+    <div>
+      <h2>Worth doing in this order</h2>
+      <p><strong>1.</strong> Watch it once with the seam off, then once with
+      the paper edge on. That is the whole question this page exists for.</p>
+      <p><strong>2.</strong> Switch the phone to Dark and do it again. The
+      shipping seam is a shadow tuned against cream paper.</p>
+      <p><strong>3.</strong> Actually swipe the phone. The hint stops for good,
+      because you have found the thing it was pointing at. Replay puts it back;
+      on a real phone only relaunching does.</p>
+      <p><strong>4.</strong> Put a finger down in the middle of a lean and drag.
+      The gesture takes the offset over from where the hint had it rather than
+      snapping to zero first.</p>
+      <p><strong>5.</strong> Set it to <em>Inside a guide</em>. Nothing happens,
+      and the log says why by name.</p>
+    </div>
+    <div>
+      <h2>What is faked</h2>
+      <p><strong>Five screens, sketched.</strong> Enough that sliding shows you
+      a different one. The row in the app runs past these into the modules
+      behind ••• and then Settings.</p>
+      <p><strong>The gesture reads pointers, not touches.</strong> The real one
+      reads touches, because the index rail and the pull to refresh are reading
+      the same finger and a pointer stream does not survive a moving page. That
+      is the largest thing in here that is not the shipping build.</p>
+      <p><strong>The rail's notches are drawn, not live.</strong> Its swell is
+      the real gaussian at the real numbers; what it does not do is read the
+      headings off the page.</p>
+      <p><strong>Nothing is retired across launches</strong>, because a study
+      cannot show you a thing not happening.</p>
+    </div>
+    <div>
+      <h2>What this cannot settle</h2>
+      <p><strong>Whether it is worth building at all.</strong>
+      <code>HINTS.md</code> §12 says the sideways drag is discovered by accident
+      more than anything else in the app, and that is an argument for leaving it
+      alone. This page can tell you whether the drawing is good. It cannot tell
+      you whether the hint is needed.</p>
+      <p><strong>Whether it stutters.</strong> Nothing here animates a
+      background and nothing is drawn over the plinth, which is the shape
+      §12 asks for. That is a shape argument, not a measurement, and §12 is
+      explicit that the measurement is the part that was owed. Open this on a
+      real phone, in the sun, at arm's length.</p>
+      <p><strong>How it feels on the twentieth time.</strong> Thirty seconds
+      apart, for as long as somebody has not swiped, is a lot of leaning. A
+      week in a pocket answers that and an afternoon at a desk does not.</p>
+    </div>
+  </div>
+
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  /* ---------------------------------------------------------------- the desk */
+
+  var opt = {
+    seam: 'paper',
+    amp: '16',
+    count: 'decay',
+    speed: 'unhurried',
+    place: 'home',
+    rail: 'alternate',
+    clock: 'fast',
+    theme: 'light',
+    motion: 'full',
+    on: 'on'
+  };
+
+  var stage = document.getElementById('stage');
+  var clip = document.getElementById('clip');
+  var mount = document.getElementById('mount');
+  var deckEl = document.getElementById('deckEl');
+  var railEl = document.getElementById('rail');
+  var tabbar = document.getElementById('tabbar');
+  var loglist = document.getElementById('loglist');
+
+  function say(msg) {
+    var li = document.createElement('li');
+    var d = new Date();
+    var t = ('0' + d.getMinutes()).slice(-2) + ':' + ('0' + d.getSeconds()).slice(-2);
+    li.innerHTML = '<span class="log__t">' + t + '</span><span class="log__m">' + msg + '</span>';
+    loglist.insertBefore(li, loglist.firstChild);
+    while (loglist.children.length > 40) loglist.removeChild(loglist.lastChild);
+  }
+
+  document.querySelectorAll('.seg').forEach(function (seg) {
+    seg.addEventListener('click', function (evt) {
+      var b = evt.target.closest('button');
+      if (!b) return;
+      var key = seg.getAttribute('data-ctl');
+      seg.querySelectorAll('button').forEach(function (o) {
+        o.setAttribute('aria-pressed', String(o === b));
+      });
+      opt[key] = b.getAttribute('data-v');
+      onOption(key);
+    });
+  });
+
+  function onOption(key) {
+    if (key === 'theme') stage.setAttribute('data-hc', opt.theme);
+    if (key === 'place') { placeAt(); say('standing on <b>' + placeName() + '</b>'); }
+    if (key === 'clock') armClock();
+    if (key === 'on' && opt.on === 'off') { endHint('the switch went off'); }
+  }
+
+  /* ---------------------------------------------------------------- screens */
+
+  var TABS = [
+    { name: 'Home',    icon: '<path d="M3 11l9-7 9 7"></path><path d="M5 10v10h14V10"></path>' },
+    { name: 'Listen',  icon: '<circle cx="12" cy="12" r="9"></circle><path d="M10 9l6 3-6 3z"></path>' },
+    { name: 'Guide',   icon: '<path d="M4 5h7v15H4z"></path><path d="M13 5h7v15h-7z"></path>' },
+    { name: 'Group',   icon: '<circle cx="9" cy="9" r="3"></circle><path d="M4 20c0-3 2-5 5-5s5 2 5 5"></path><circle cx="17" cy="10" r="2.5"></circle>' },
+    { name: 'Connect', icon: '<path d="M4 6h16v12H4z"></path><path d="M4 7l8 6 8-6"></path>' }
+  ];
+
+  /* The row is longer than the bar. These four stand in for the modules
+     behind ••• and for Settings at the end of the line. */
+  var LANE = ['Home', 'Listen', 'Guide', 'Group', 'Connect', 'Journal', 'Cal', 'Give', 'Settings'];
+
+  var BODIES = {
+    Home:     { greet: 'Good morning.', hero: true,  secs: ['This Sunday', 'Announcements', 'Practices'] },
+    Listen:   { greet: '',              hero: false, secs: ['This season', 'The archive', 'Series'] },
+    Guide:    { greet: '',              hero: false, secs: ['This week', 'Earlier guides', 'Your notes'] },
+    Group:    { greet: '',              hero: false, secs: ['Your room', 'This week', 'Join a group'] },
+    Connect:  { greet: '',              hero: true,  secs: ['Latest posts', 'Serve teams', 'Get in touch'] },
+    Journal:  { greet: '',              hero: false, secs: ['Recent', 'Highlights', 'Export'] },
+    Cal:      { greet: '',              hero: false, secs: ['September', 'Coming up', 'Add to calendar'] },
+    Give:     { greet: '',              hero: false, secs: ['Give once', 'Give monthly', 'Where it goes'] },
+    Settings: { greet: '',              hero: false, secs: ['Display', 'Notifications', 'About'] }
+  };
+
+  function screenEl(name) {
+    var b = BODIES[name] || BODIES.Home;
+    var el = document.createElement('div');
+    el.className = 'page';
+    var html = '';
+    if (b.greet) html += '<div class="greet">' + b.greet + '</div>';
+    else html += '<div class="greet">' + name + '</div>';
+    if (b.hero) html += '<div class="hero"></div>';
+    b.secs.forEach(function (s, i) {
+      html +=
+        '<div class="sechead">' +
+          '<div class="sechead__eyebrow">' + (i === 0 ? 'Home Church' : 'Section') + '</div>' +
+          '<div class="sechead__title">' + s + '</div>' +
+          '<div class="sechead__rule"></div>' +
+        '</div>' +
+        '<div class="card">' +
+          '<div class="card__title">' + s + '</div>' +
+          '<div class="card__meta">A sketch. Enough to tell one screen from the next.</div>' +
+        '</div>' +
+        '<div class="lines">' +
+          '<i style="width:96%"></i><i style="width:88%"></i><i style="width:71%"></i>' +
+        '</div>';
+    });
+    el.innerHTML = html;
+    return el;
+  }
+
+  /* ---------------------------------------------------------------- the bar */
+
+  var index = 0;   // where in LANE we are standing
+
+  function tileLimit() { return TABS.length - 1; }
+
+  function buildBar() {
+    var html = '';
+    TABS.forEach(function (t, i) {
+      html +=
+        '<button class="tab" type="button" data-i="' + i + '" data-on="' + (i === 0) + '">' +
+          '<svg viewBox="0 0 24 24">' + t.icon + '</svg>' +
+          '<span>' + t.name + '</span>' +
+        '</button>';
+    });
+    tabbar.innerHTML = html;
+    tabbar.addEventListener('click', function (evt) {
+      var b = evt.target.closest('.tab');
+      if (!b) return;
+      goTo(+b.getAttribute('data-i'));
+      noteUse('a tab was tapped');
+    });
+  }
+
+  function paintBar() {
+    tabbar.style.setProperty('--hc-tab-index', Math.min(index, tileLimit()));
+    tabbar.querySelectorAll('.tab').forEach(function (b) {
+      b.setAttribute('data-on', String(+b.getAttribute('data-i') === index));
+    });
+  }
+
+  function goTo(i) {
+    index = i;
+    mount.innerHTML = '';
+    mount.appendChild(screenEl(LANE[index]));
+    paintBar();
+    buildRail();
+  }
+
+  /* ------------------------------------------------------------- where we are
+
+     laneIndex, in miniature. A pushed view is not in the row, and the hint has
+     nothing honest to lean toward from one. */
+
+  function placeName() {
+    if (opt.place === 'home') return 'Home';
+    if (opt.place === 'last') return LANE[LANE.length - 1];
+    return 'a guide';
+  }
+
+  function laneIndex() {
+    return opt.place === 'pushed' ? -1 : index;
+  }
+
+  function placeAt() {
+    if (opt.place === 'home') goTo(0);
+    else if (opt.place === 'last') goTo(LANE.length - 1);
+    else goTo(2);
+  }
+
+  /* Which way there is something to go. Left by default, because left is
+     further into the row; right only when left is the end of the line. */
+  function hintDir() {
+    var i = laneIndex();
+    if (i < 0) return 0;
+    if (LANE[i + 1]) return 1;
+    if (LANE[i - 1]) return -1;
+    return 0;
+  }
+
+  /* ---------------------------------------------------------------- the rail
+
+     Drawn at .hc-index's own numbers, with the real gaussian on top. The
+     notches are the whole of the rail's hint: the headings, the card and the
+     veil belong to a finger being down. */
+
+  var W_MAX = 30, W_MIN = 9, W_ALT = 6;
+  var A_REST = 0.20;
+  var SIGMA_OF = 1.25, SIGMA_MIN = 34, SIGMA_MAX = 110;
+  var PITCH_MAX = 64, RAIL_EDGE = 14;
+  var WAVE = 1150, LEAD = 1.6, WAVE_EDGE = 0.18;
+
+  var marks = [], ys = [], sigma = SIGMA_MAX, yFirst = 0, yLast = 0;
+
+  function buildRail() {
+    var n = (BODIES[LANE[index]] || BODIES.Home).secs.length + 1;
+    var html = '';
+    for (var i = 0; i < n; i++) html += '<span class="notch"><span class="mark"></span></span>';
+    railEl.innerHTML = html;
+    marks = [].slice.call(railEl.querySelectorAll('.mark'));
+
+    var height = railEl.clientHeight;
+    var avail = height - RAIL_EDGE * 2;
+    var pitch = n > 1 ? Math.min(avail / (n - 1), PITCH_MAX) : 0;
+    sigma = Math.max(SIGMA_MIN, Math.min(SIGMA_MAX, pitch * SIGMA_OF));
+    var span = pitch * (n - 1);
+    var y0 = (height - span) / 2;
+    yFirst = y0;
+    yLast = y0 + span;
+
+    ys = [];
+    for (var k = 0; k < n; k++) {
+      var y = y0 + k * pitch;
+      ys.push(y);
+      var notch = marks[k].parentNode;
+      notch.style.top = (y - Math.max(11, pitch / 2)) + 'px';
+      notch.style.height = Math.max(22, pitch) + 'px';
+    }
+    paintRail(0, 0);
+  }
+
+  function paintRail(centre, swell) {
+    for (var i = 0; i < marks.length; i++) {
+      var f = 0;
+      if (swell > 0.001) {
+        var d = (ys[i] - centre) / sigma;
+        f = swell * Math.exp(-d * d);
+      }
+      var base = (i % 2) ? W_ALT : W_MIN;
+      var w = base + (W_MAX - base) * f;
+      marks[i].style.transform = 'scaleX(' + (w / W_MAX).toFixed(3) + ')';
+      marks[i].style.opacity = (A_REST + (1 - A_REST) * f).toFixed(3);
+    }
+  }
+
+  function smooth(p) { return p * p * (3 - 2 * p); }
+
+  var railRunning = false;
+
+  function railHint() {
+    if (railRunning) return;
+    railRunning = true;
+    var t0 = 0;
+    (function step(now) {
+      if (!t0) t0 = now;
+      var p = (now - t0) / WAVE;
+      if (p >= 1) { railRunning = false; paintRail(0, 0); return; }
+      var lead = sigma * LEAD;
+      var y = (yFirst - lead) + ((yLast + lead) - (yFirst - lead)) * smooth(p);
+      var up = p / WAVE_EDGE, down = (1 - p) / WAVE_EDGE;
+      var e = Math.min(up, down);
+      paintRail(y, smooth(e > 1 ? 1 : e));
+      requestAnimationFrame(step);
+    })(0);
+  }
+
+  /* =========================================================== the swipe hint
+
+     One lean, or two, toward whatever is actually over there, and back to rest
+     without overshooting. Everything that moves is a transform on the mount
+     and on one ghost pane. Nothing is drawn over the tab bar, which is the one
+     thing HINTS.md §12 asks of whatever replaces the shape that was reverted.
+
+     The ghost pane is paper and the seam and nothing else. A real pane renders
+     the whole of the next screen, and rendering a screen every thirty seconds
+     to show sixteen pixels of it is a cost that does not show up on a desk. */
+
+  var SPEEDS = {
+    unhurried: { out: 260, back: 340, gap: 120 },
+    brisk:     { out: 190, back: 260, gap: 90 }
+  };
+  var DECAY = 0.62;
+
+  var hint = null;       // the run in flight
+  var ghost = null;
+  var used = false;      // somebody has swiped, so there is nothing left to say
+
+  function easeOut(p) { return 1 - Math.pow(1 - p, 3); }
+
+  /* The whole of the policy, in the order the answers are wanted. The first
+     line that says no is the reason, which is the thing whose absence cost the
+     last attempt a revert. See HINTS.md §12 and HC.hints.explain(). */
+  function why() {
+    if (opt.on === 'off') return 'Hints is off in Your account';
+    if (used) return 'already used: somebody has swiped, so there is nothing left to point at';
+    if (opt.motion === 'reduce') return 'Reduce Motion, and this hint is entirely motion';
+    if (laneIndex() < 0) return 'a pushed view: nothing swipes here';
+    if (!hintDir()) return 'nowhere to lean: this is the end of the row';
+    if (dragging) return 'a finger is already down';
+    if (settling) return 'a swipe is still settling';
+    if (hint) return 'it is already running';
+    if (document.hidden) return 'the app is in the background';
+    return null;
+  }
+
+  function runHint(quiet) {
+    var no = why();
+    if (no) {
+      if (!quiet) say('refused: <b>' + no + '</b>');
+      return;
+    }
+
+    var dir = hintDir();
+    var amp = +opt.amp;
+    var n = opt.count === '1' ? 1 : 2;
+    var sp = SPEEDS[opt.speed];
+
+    /* The timeline, written out rather than computed per frame: lean, return,
+       and a beat before the next one. */
+    var legs = [];
+    for (var i = 0; i < n; i++) {
+      var a = (opt.count === 'decay' ? amp * Math.pow(DECAY, i) : amp) * -dir;
+      legs.push({ from: 0, to: a, ms: sp.out, ease: smooth });
+      legs.push({ from: a, to: 0, ms: sp.back, ease: easeOut });
+      if (i < n - 1) legs.push({ from: 0, to: 0, ms: sp.gap, ease: smooth });
+    }
+
+    if (opt.seam !== 'off') {
+      ghost = document.createElement('div');
+      ghost.className = 'pane';
+      ghost.setAttribute('data-ghost', 'true');
+      if (opt.seam === 'rule') ghost.setAttribute('data-rule', 'true');
+      /* Parked exactly where a real pane parks: one screen width away on the
+         side being leaned toward. */
+      ghost.style.left = dir > 0 ? '100%' : '-100%';
+      deckEl.appendChild(ghost);
+    }
+
+    mount.setAttribute('data-moving', 'true');
+    hint = { legs: legs, leg: 0, t0: 0, dir: dir, amp: amp };
+    say('leaning <b>' + (dir > 0 ? 'left' : 'right') + '</b>, toward ' +
+        LANE[laneIndex() + dir] + ', ' + amp + 'px' +
+        (n > 1 ? (opt.count === 'decay' ? ', twice, decaying' : ', twice') : ', once'));
+
+    requestAnimationFrame(tick);
+  }
+
+  function tick(now) {
+    if (!hint) return;
+    if (!hint.t0) hint.t0 = now;
+
+    var leg = hint.legs[hint.leg];
+    var p = (now - hint.t0) / leg.ms;
+
+    if (p >= 1) {
+      hint.leg++;
+      hint.t0 = 0;
+      if (hint.leg >= hint.legs.length) { endHint('it ran out'); return; }
+      requestAnimationFrame(tick);
+      return;
+    }
+
+    var x = leg.from + (leg.to - leg.from) * leg.ease(p < 0 ? 0 : p);
+    placeHint(x);
+    requestAnimationFrame(tick);
+  }
+
+  function placeHint(x) {
+    var move = 'translate3d(' + x.toFixed(2) + 'px,0,0)';
+    mount.style.transform = move;
+    if (ghost) {
+      ghost.style.transform = move;
+    }
+    /* The tile is NOT placed. It rides the finger during a real swipe, and a
+       tile that leans on its own every thirty seconds is a second moving thing
+       on the one piece of chrome §12 asks us to keep still. */
+  }
+
+  /* Where the hint has the screen right now, so a finger landing mid lean can
+     take the offset over rather than snapping to zero and starting again. The
+     rail does the same thing with its swell: see stopHint(keep). */
+  function hintOffset() {
+    if (!hint) return 0;
+    var m = mount.style.transform.match(/translate3d\((-?[\d.]+)px/);
+    return m ? parseFloat(m[1]) : 0;
+  }
+
+  function endHint(whyEnded, keep) {
+    if (!hint) return;
+    hint = null;
+    if (ghost && ghost.parentNode) ghost.parentNode.removeChild(ghost);
+    ghost = null;
+    if (!keep) {
+      mount.style.transform = '';
+      mount.removeAttribute('data-moving');
+    }
+    if (whyEnded) say('ended: ' + whyEnded);
+  }
+
+  function noteUse(how) {
+    endHint(null);
+    if (used) return;
+    used = true;
+    say('retired for this launch: <b>' + how + '</b>');
+  }
+
+  /* ------------------------------------------------------------- the clock
+
+     The rail hints two seconds after the greeting lifts and every thirty
+     seconds after that until it is used. This shares that clock rather than
+     starting a second one, and takes turns on it: one thing moves at a time,
+     which is the difference between a hint and a tour. */
+
+  var clockTimer = 0;
+  var turn = 0;
+
+  function armClock() {
+    if (clockTimer) clearInterval(clockTimer);
+    clockTimer = 0;
+    if (opt.clock === 'off') return;
+    var every = opt.clock === 'real' ? 30000 : 6000;
+    clockTimer = setInterval(beat, every);
+  }
+
+  function beat() {
+    if (opt.rail === 'alone') { runHint(true); return; }
+    if (opt.rail === 'both') { railHint(); runHint(true); return; }
+    // Taking turns. The rail keeps the first beat: it is the harder of the
+    // two to stumble onto by accident.
+    turn++;
+    if (turn % 2) { railHint(); say('the rail took this turn'); }
+    else runHint(true);
+  }
+
+  /* ========================================================== the real gesture
+
+     js/swipe.js in miniature, at its own numbers, so the hint can be watched
+     against the thing it is teaching. Pointers rather than touches: see the
+     note in the page about what that fakes. */
+
+  var LOCK_SLOP = 10;
+  var AXIS_BIAS = 1.2;
+  var EDGE_PULL = 0.32;
+  var COMMIT_PART = 0.26;
+  var FLICK_SPEED = 0.45;
+  var FLICK_MIN = 30;
+  var SETTLE_MIN = 170;
+  var SETTLE_MAX = 380;
+  var SETTLE_EASE = 'cubic-bezier(0.22, 0.61, 0.36, 1)';
+
+  var g = null;
+  var dragging = false;
+  var settling = false;
+  var panes = {};
+
+  function width() { return clip.clientWidth || 393; }
+
+  function paneFor(dir) {
+    if (panes[dir] !== undefined) return panes[dir];
+    var name = LANE[index + dir];
+    if (!name) { panes[dir] = null; return null; }
+    var pane = document.createElement('div');
+    pane.className = 'pane';
+    pane.style.left = (dir > 0 ? '100%' : '-100%');
+    pane.appendChild(screenEl(name));
+    deckEl.appendChild(pane);
+    panes[dir] = pane;
+    return pane;
+  }
+
+  function place(dx) {
+    mount.style.transform = 'translate3d(' + dx + 'px,0,0)';
+    [-1, 1].forEach(function (dir) {
+      if (panes[dir]) panes[dir].style.transform = 'translate3d(' + dx + 'px,0,0)';
+    });
+    var progress = Math.max(-1, Math.min(1, -dx / width()));
+    tabbar.style.setProperty('--hc-tab-index',
+      Math.min(index + progress, tileLimit()).toFixed(4));
+  }
+
+  function clearPanes() {
+    Object.keys(panes).forEach(function (k) {
+      if (panes[k] && panes[k].parentNode) panes[k].parentNode.removeChild(panes[k]);
+    });
+    panes = {};
+  }
+
+  clip.addEventListener('pointerdown', function (evt) {
+    if (settling) return;
+    if (laneIndex() < 0) return;
+    if (evt.clientX - clip.getBoundingClientRect().left <= 18) return;  // the back gesture
+
+    /* A FINGER LANDING MID LEAN TAKES THE OFFSET OVER. Not snapping to zero
+       first: that is a jump the hand feels and the eye sees, and the whole
+       claim of this hint is that it is the gesture. */
+    var carried = 0;
+    if (hint) {
+      carried = hintOffset();
+      endHint('a finger landed on it', true);
+      say('handed <b>' + carried.toFixed(0) + 'px</b> over to the gesture');
+    }
+
+    g = {
+      startX: evt.clientX,
+      startY: evt.clientY,
+      carried: carried,
+      dx: carried,
+      lastDx: carried,
+      lastT: Date.now(),
+      velocity: 0,
+      slop: 0
+    };
+  });
+
+  clip.addEventListener('pointermove', function (evt) {
+    if (!g || settling) return;
+    var dx = evt.clientX - g.startX;
+    var dy = evt.clientY - g.startY;
+
+    if (!dragging) {
+      if (Math.abs(dy) > LOCK_SLOP && Math.abs(dy) >= Math.abs(dx)) { g = null; return; }
+      if (Math.abs(dx) < LOCK_SLOP || Math.abs(dx) < Math.abs(dy) * AXIS_BIAS) return;
+
+      dragging = true;
+      g.slop = dx < 0 ? -LOCK_SLOP : LOCK_SLOP;
+      mount.setAttribute('data-moving', 'true');
+      tabbar.setAttribute('data-swiping', 'true');
+      paneFor(dx < 0 ? 1 : -1);
+      noteUse('a real swipe');
+    }
+
+    // The slop comes out of the travel, and whatever the hint had carried
+    // goes back in, so the screen starts from under the finger.
+    dx = dx - g.slop + g.carried;
+
+    if (!paneFor(dx < 0 ? 1 : -1)) dx *= EDGE_PULL;
+
+    var now = Date.now();
+    if (now > g.lastT) {
+      g.velocity = (dx - g.lastDx) / (now - g.lastT);
+      g.lastDx = dx;
+      g.lastT = now;
+    }
+    g.dx = dx;
+    place(dx);
+  });
+
+  function settle(dir) {
+    if (settling) return;
+    settling = true;
+
+    var w = width();
+    var from = g ? g.dx : 0;
+    var to = dir ? -dir * w : 0;
+    var speed = Math.max(Math.abs(g ? g.velocity : 0), 0.4);
+    var ms = Math.max(SETTLE_MIN, Math.min(SETTLE_MAX, Math.abs(to - from) / speed));
+
+    mount.style.transition = 'transform ' + ms + 'ms ' + SETTLE_EASE;
+    [-1, 1].forEach(function (s) {
+      if (panes[s]) panes[s].style.transition = 'transform ' + ms + 'ms ' + SETTLE_EASE;
+    });
+
+    tabbar.removeAttribute('data-swiping');
+    tabbar.style.setProperty('--hc-tab-tween', ms + 'ms');
+    tabbar.style.setProperty('--hc-tab-index', Math.min(index + dir, tileLimit()));
+
+    place(to);
+
+    setTimeout(function () {
+      mount.style.transition = '';
+      mount.style.transform = '';
+      mount.removeAttribute('data-moving');
+      tabbar.style.removeProperty('--hc-tab-tween');
+      if (dir) {
+        index += dir;
+        goTo(index);
+        say('arrived on <b>' + LANE[index] + '</b>');
+      }
+      clearPanes();
+      settling = false;
+      dragging = false;
+      g = null;
+    }, ms + 20);
+  }
+
+  function release() {
+    if (!g || settling) return;
+    if (!dragging) { g = null; return; }
+    var w = width();
+    var dir = g.dx < 0 ? 1 : -1;
+    var far = Math.abs(g.dx) > w * COMMIT_PART;
+    var flick = Math.abs(g.velocity) > FLICK_SPEED &&
+                Math.abs(g.dx) > FLICK_MIN &&
+                (g.velocity < 0) === (dir > 0);
+    settle((paneFor(dir) && (far || flick)) ? dir : 0);
+  }
+
+  clip.addEventListener('pointerup', release);
+  clip.addEventListener('pointercancel', release);
+  clip.addEventListener('pointerleave', release);
+
+  /* ------------------------------------------------------------------ boot */
+
+  document.getElementById('replay').addEventListener('click', function () {
+    used = false;
+    endHint(null);
+    say('— replayed —');
+    runHint(false);
+  });
+
+  document.addEventListener('visibilitychange', function () {
+    if (document.hidden) endHint('the app went to the background');
+  });
+
+  function scale() {
+    var screen = document.querySelector('.screen');
+    var s = screen.clientWidth / 393;
+    stage.style.transform = 'scale(' + s + ')';
+    stage.style.width = '393px';
+    stage.style.height = '852px';
+  }
+
+  buildBar();
+  goTo(0);
+  scale();
+  window.addEventListener('resize', function () { scale(); buildRail(); });
+
+  armClock();
+  say('ready. the rail takes the first turn.');
+
+  /* Two seconds after the greeting lifts, the way js/index-rail.js counts it. */
+  setTimeout(function () { railHint(); }, 2000);
+})();
+</script>
