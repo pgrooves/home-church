@@ -289,7 +289,7 @@ like a bug in the app. It is not. It is the gateway.
 
 -----
 
-## 8d. Add to calendar, which needs a plugin and two Info.plist rows
+## 8d. Add to calendar, which needs a plugin and nothing from you
 
 The **Add to calendar** button on the Cal tab puts up the phone's own **New
 Event** sheet with the church's event already filled in, and the person taps
@@ -298,32 +298,41 @@ Event** sheet with the church's event already filled in, and the person taps
 person is acting inside Apple's own interface and the app never gets access
 to the calendar. So there is no capability to tick here and no entitlement.
 
-**Two things it does need.**
+**What it does need is the plugin in the build**, which is the same
+`npm install` followed by `npm run ios` as everything else. If it is missing
+the button falls back to the old share sheet — AirDrop, Messages, Mail — and
+nothing is logged, because falling back is not an error. `npm run preflight`
+fails on that build, so run it before you archive.
 
-**One, the plugin.** `@ebarooni/capacitor-calendar` has to be in the build,
-which is the same `npm install` followed by `npm run ios` as everything else.
-If it is missing the button falls back to the old share sheet — AirDrop,
-Messages, Mail — and nothing is logged, because falling back is not an error.
-`npm run preflight` fails on that build, so run it before you archive.
+**It also needs two purpose strings in `Info.plist`, and you do not add
+those by hand.** `npm run ios` writes them, from
+`ios-config/info-plist-keys.json`. Nothing to click.
 
-**Two, two rows in `Info.plist`,** which are pure insurance and which you add
-once. Below iOS 17 the same sheet does need calendar access, and iOS asks for
-it by reading a purpose string out of `Info.plist`. **With no string there,
-iOS does not prompt and does not refuse — it kills the app.** A crash on tap,
-on the oldest phones in the church, on a path that works perfectly on yours.
-Minimum Deployments is iOS 15, so those phones are in scope.
+That used to be a manual step on this page and it cost a build. Below iOS 17
+the New Event sheet does need calendar access, and iOS asks for it by reading
+a purpose string out of `Info.plist`; with no string there it does not prompt
+and does not refuse, it kills the app. Apple also checks statically, at
+upload, whether the binary references EventKit at all — and it does, so the
+string is required whether or not any phone ever reads it. Build 13 was
+archived without it and came back:
 
-Add them the same way as the export compliance row in step 10:
+```
+ITMS-90683: Missing purpose string in Info.plist — ... should contain a
+NSCalendarsUsageDescription key with a user-facing purpose string
+```
 
-1. Click the **Info** tab.
-2. Hover over any row, click the small **+**.
-3. Key `NSCalendarsUsageDescription`, Type **String**, and for the value
-   paste the sentence from `ios-config/Info-calendar.plist`.
-4. Repeat for `NSCalendarsWriteOnlyAccessUsageDescription`, same sentence.
+The rows had been added by hand, and this page's own check had said they were
+present. Which of those was wrong was never established, and the reason it
+could not be is the useful part: that check only searched the file's text for
+the key name, so it could not tell a key in the top level `<dict>` from the
+same characters anywhere else in the file. It never had the evidence for what
+it claimed. The hand written step and the check guarding it were unreliable in
+the same way at the same time.
 
-`ios-config/Info-calendar.plist` holds both rows and the reasoning.
-`npm run preflight` checks that they are there whenever `ios/` exists, so
-this is a step you can forget once and not twice.
+So there is no step now. `scripts/ios_plist.js` writes the keys as a plist
+writes keys, on every build, and `npm run preflight` parses the file rather
+than searching its text — a key in the wrong place now fails, as does an
+empty one.
 
 **Two signatures worth recognising**, because this button has been wrong
 twice and neither time announced itself:
@@ -362,14 +371,17 @@ Then in Xcode, so the file is actually included in the build:
 
 ## 10. Export compliance
 
-This saves you answering the same question on every single upload forever.
-
-1. Click the **Info** tab.
-2. Hover over any row, click the small **+** that appears.
-3. Type `ITSAppUsesNonExemptEncryption` as the key.
-4. Set the **Type** to **Boolean** and the **Value** to **NO**.
-
+**Nothing to do here any more.** `npm run ios` writes
+`ITSAppUsesNonExemptEncryption` into `Info.plist` as a Boolean `NO`, from
+`ios-config/info-plist-keys.json`, along with the other keys the build needs.
 The app only makes ordinary HTTPS requests, which are exempt.
+
+It used to be four clicks in the **Info** tab, and it is automated for the
+same reason the calendar strings are: the answer belongs in the repo, not in
+one person's memory of one afternoon in Xcode. Without it, every upload asks
+the encryption question again in App Store Connect, and the build sits in
+TestFlight under **Missing Compliance** — installable by nobody — until
+somebody notices and answers it. `npm run preflight` checks it is there.
 
 -----
 

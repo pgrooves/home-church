@@ -1,0 +1,40 @@
+{
+  "_comment": [
+    "Info.plist keys the built app must carry, and the one place their values",
+    "are written down. scripts/ios_plist.js puts them into",
+    "ios/App/App/Info.plist on every `npm run ios`, and scripts/preflight.js",
+    "checks the same list is really there. Neither reads this file's prose.",
+    "",
+    "WHY A FILE AND NOT A STEP IN XCODE.md. Every one of these used to be a",
+    "row somebody added by hand in Xcode's Info tab, and the calendar ones",
+    "cost a build: Apple rejected build 13 with ITMS-90683, missing purpose",
+    "string, on a machine where the repo's own preflight said the rows were",
+    "present. Which of them was wrong was never established, because the",
+    "check only searched the file's text and so never had the evidence to",
+    "say. Written by a script and read by a parser, the question does not",
+    "come up again.",
+    "",
+    "ios/ is generated and gitignored, so this is the only durable home for",
+    "these values."
+  ],
+
+  "keys": {
+    "NSCalendarsUsageDescription": {
+      "type": "string",
+      "value": "Home Church adds a church event to your calendar when you ask it to. It never reads your calendar.",
+      "why": "Add to calendar puts up the system New Event sheet. From iOS 17 that needs no permission and this string is never shown, but below iOS 17 the sheet does need access, and iOS terminates an app that asks without a purpose string rather than prompting. Apple's static analysis also requires it whenever the binary links EventKit at all, which is what rejected build 13."
+    },
+
+    "NSCalendarsWriteOnlyAccessUsageDescription": {
+      "type": "string",
+      "value": "Home Church adds a church event to your calendar when you ask it to. It never reads your calendar.",
+      "why": "The iOS 17 key. Adding an event is all this app ever wants, so write-only is the honest description of it."
+    },
+
+    "ITSAppUsesNonExemptEncryption": {
+      "type": "bool",
+      "value": false,
+      "why": "The app makes ordinary HTTPS requests, which are exempt. Answered here so App Store Connect stops asking on every upload, and so a build never sits in TestFlight under Missing Compliance waiting for somebody to notice."
+    }
+  }
+}

@@ -457,24 +457,113 @@ function appDelegateHooks() {
     '      entitlement stayed hidden. Paste the second method too.');
 }
 
-/* ========================================= 2e. the calendar usage strings
-   Add to calendar puts up EKEventEditViewController, the system's own New
-   Event sheet. From iOS 17 that needs no permission and shows no prompt, so
-   on nearly every phone these strings are never read.
+/* ============================================ 2e. the Info.plist keys
+   The purpose strings and the encryption answer the built app cannot ship
+   without. ios-config/info-plist-keys.json is the list and the values;
+   scripts/ios_plist.js writes them in on every `npm run ios`. This checks
+   they arrived.
 
-   Below iOS 17 the sheet does need calendar access, and iOS asks for it by
-   reading a purpose string out of Info.plist. With no string there it does
-   not prompt and does not refuse — it terminates the app. That is a crash on
-   tap, on the oldest phones in the church, and it cannot happen on the
-   machine anybody tests on. Minimum Deployments is iOS 15, so those phones
-   are in scope until it isn't.
+   PARSED, NOT GREPPED, and that distinction is a rejected build. The first
+   version of this check searched the file's text for each key name. Build 13
+   passed it, uploaded clean, and came back from Apple as ITMS-90683, missing
+   purpose string. What had actually gone wrong was never established, because
+   a text search cannot tell a key in the root dict from the same characters
+   anywhere else in the file — so the check never had the evidence for what it
+   was asserting.
+
+   So this walks the root dict and asks what a plist parser would ask. A key
+   nested in a sub-dict, sitting after </plist>, or present with an empty
+   string does not count — an empty purpose string is as rejectable as no
+   purpose string, and Xcode writes one whenever somebody adds a row and tabs
+   away without typing.
    ===================================================================== */
 
-function calendarUsageStrings() {
-  const fragment = path.join(ROOT, 'ios-config', 'Info-calendar.plist');
-  ok('ios-config/Info-calendar.plist exists', fs.existsSync(fragment),
-    'It is the paste-in for Info.plist that keeps the New Event sheet from\n' +
-    '      crashing the app below iOS 17. See XCODE.md step 8d.');
+/* Top level keys of an XML plist, as { key: { tag, text } }.
+
+   Deliberately small: it reads the shape Apple's own plists have and does not
+   pretend to be a plist library. Depth is tracked so a key inside a nested
+   dict or array is not mistaken for a root one, and the scan stops at the
+   root dict's closing tag so nothing after it is ever seen. */
+function plistRootKeys(xml) {
+  const text = xml.replace(/<!--[\s\S]*?-->/g, '');
+
+  const rootStart = text.search(/<dict\s*>/);
+  if (rootStart === -1) return null;   // no root dict: not a plist we can read
+
+  const keys = {};
+  const tag = /<(\/?)(\w+)(\/?)\s*>/g;
+  tag.lastIndex = rootStart;
+
+  let depth = 0;
+  let pendingKey = null;
+  let match;
+
+  while ((match = tag.exec(text)) !== null) {
+    const closing = match[1] === '/';
+    const name = match[2];
+    const selfClosing = match[3] === '/';
+
+    if ((name === 'dict' || name === 'array') && !selfClosing) {
+      /* A root key whose value is a container is still a root key, so record
+         it before stepping inside. Missing these would make this function
+         quietly narrower than its name, which is the bug it exists to catch
+         one level up. */
+      if (!closing && depth === 1 && pendingKey !== null) {
+        keys[pendingKey] = { tag: name, text: '' };
+        pendingKey = null;
+      }
+      depth += closing ? -1 : 1;
+      if (depth === 0) break;          // the root dict just closed
+      continue;
+    }
+
+    if (depth !== 1) continue;         // only the root dict's own children
+
+    if (name === 'key' && !closing) {
+      const end = text.indexOf('</key>', tag.lastIndex);
+      if (end === -1) break;
+      pendingKey = text.slice(tag.lastIndex, end).trim();
+      tag.lastIndex = end + '</key>'.length;
+      continue;
+    }
+
+    if (pendingKey === null || closing) continue;
+
+    // The element right after a root <key> is that key's value.
+    if (selfClosing) {
+      keys[pendingKey] = { tag: name, text: '' };
+    } else {
+      const close = '</' + name + '>';
+      const end = text.indexOf(close, tag.lastIndex);
+      if (end === -1) break;
+      keys[pendingKey] = { tag: name, text: text.slice(tag.lastIndex, end).trim() };
+      tag.lastIndex = end + close.length;
+    }
+    pendingKey = null;
+  }
+
+  return keys;
+}
+
+function infoPlistKeys() {
+  const keysPath = path.join(ROOT, 'ios-config', 'info-plist-keys.json');
+  if (!ok('ios-config/info-plist-keys.json exists', fs.existsSync(keysPath),
+    'It is the list of Info.plist keys the built app needs and the only place\n' +
+    '      their values are written down. scripts/ios_plist.js writes them into\n' +
+    '      ios/ from it on every `npm run ios`.')) {
+    return;
+  }
+
+  const spec = JSON.parse(fs.readFileSync(keysPath, 'utf8')).keys;
+
+  ok('and scripts/ios_plist.js is there to write them in',
+    fs.existsSync(path.join(ROOT, 'scripts', 'ios_plist.js')),
+    'Without it those keys are a manual Xcode step again, which is what\n' +
+    '      Apple rejected build 13 for. It runs from the `ios` npm script.');
+
+  ok('and `npm run ios` runs it', /ios_plist\.js/.test(read('package.json')),
+    'The `ios` script has to end with `node scripts/ios_plist.js`, after\n' +
+    '      `npx cap sync ios`, or the keys are never written.');
 
   const plist = path.join(ROOT, 'ios', 'App', 'App', 'Info.plist');
   if (!fs.existsSync(plist)) {
@@ -482,19 +571,32 @@ function calendarUsageStrings() {
     return;
   }
 
-  const xml = fs.readFileSync(plist, 'utf8');
+  const rootKeys = plistRootKeys(fs.readFileSync(plist, 'utf8'));
 
-  ok('Info.plist has NSCalendarsUsageDescription',
-    xml.indexOf('NSCalendarsUsageDescription') > -1,
-    'Below iOS 17, Add to calendar terminates the app without it rather than\n' +
-    '      asking for permission. Paste both rows from\n' +
-    '      ios-config/Info-calendar.plist into ios/App/App/Info.plist.\n' +
-    '      XCODE.md step 8d says where.');
+  if (!ok('ios/App/App/Info.plist parses as a plist', rootKeys !== null,
+    'No root <dict> was found in it, so nothing can read it — Xcode and Apple\n' +
+    '      included. Restore it with `npx cap sync ios`, or from git history if\n' +
+    '      it was hand edited into an invalid state.')) {
+    return;
+  }
 
-  ok('and NSCalendarsWriteOnlyAccessUsageDescription',
-    xml.indexOf('NSCalendarsWriteOnlyAccessUsageDescription') > -1,
-    'The iOS 17 key. Adding an event is all this app wants, so write-only is\n' +
-    '      the honest description of it. Paste the second row too.');
+  Object.keys(spec).forEach(function (key) {
+    const want = spec[key];
+    const got = rootKeys[key];
+
+    const present = got !== undefined &&
+      !(want.type === 'string' && (got.tag !== 'string' || got.text === ''));
+
+    ok('Info.plist has ' + key, present,
+      (got === undefined
+        ? 'It is not a key of the root <dict>. A text search can still find it\n' +
+          '      in the file — that is how build 13 was archived and rejected — so\n' +
+          '      check where it actually sits.\n      '
+        : 'It is there but empty or the wrong type, which Apple treats as\n' +
+          '      missing.\n      ') +
+      'Run `npm run ios`, which writes it from\n' +
+      '      ios-config/info-plist-keys.json. ' + (want.why || ''));
+  });
 }
 
 /* ============================================== 2d. the plugin manifest
@@ -612,7 +714,7 @@ legal();
 manifest();
 pushEntitlement();
 appDelegateHooks();
-calendarUsageStrings();
+infoPlistKeys();
 pluginPods();
 icons();
 screenshots();
