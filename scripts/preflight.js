@@ -457,24 +457,113 @@ function appDelegateHooks() {
     '      entitlement stayed hidden. Paste the second method too.');
 }
 
-/* ========================================= 2e. the calendar usage strings
-   Add to calendar puts up EKEventEditViewController, the system's own New
-   Event sheet. From iOS 17 that needs no permission and shows no prompt, so
-   on nearly every phone these strings are never read.
+/* ============================================ 2e. the Info.plist keys
+   The purpose strings and the encryption answer the built app cannot ship
+   without. ios-config/info-plist-keys.json is the list and the values;
+   scripts/ios_plist.js writes them in on every `npm run ios`. This checks
+   they arrived.
 
-   Below iOS 17 the sheet does need calendar access, and iOS asks for it by
-   reading a purpose string out of Info.plist. With no string there it does
-   not prompt and does not refuse — it terminates the app. That is a crash on
-   tap, on the oldest phones in the church, and it cannot happen on the
-   machine anybody tests on. Minimum Deployments is iOS 15, so those phones
-   are in scope until it isn't.
+   PARSED, NOT GREPPED, and that distinction is a rejected build. The first
+   version of this check searched the file's text for each key name. Build 13
+   passed it, uploaded clean, and came back from Apple as ITMS-90683, missing
+   purpose string. What had actually gone wrong was never established, because
+   a text search cannot tell a key in the root dict from the same characters
+   anywhere else in the file — so the check never had the evidence for what it
+   was asserting.
+
+   So this walks the root dict and asks what a plist parser would ask. A key
+   nested in a sub-dict, sitting after </plist>, or present with an empty
+   string does not count — an empty purpose string is as rejectable as no
+   purpose string, and Xcode writes one whenever somebody adds a row and tabs
+   away without typing.
    ===================================================================== */
 
-function calendarUsageStrings() {
-  const fragment = path.join(ROOT, 'ios-config', 'Info-calendar.plist');
-  ok('ios-config/Info-calendar.plist exists', fs.existsSync(fragment),
-    'It is the paste-in for Info.plist that keeps the New Event sheet from\n' +
-    '      crashing the app below iOS 17. See XCODE.md step 8d.');
+/* Top level keys of an XML plist, as { key: { tag, text } }.
+
+   Deliberately small: it reads the shape Apple's own plists have and does not
+   pretend to be a plist library. Depth is tracked so a key inside a nested
+   dict or array is not mistaken for a root one, and the scan stops at the
+   root dict's closing tag so nothing after it is ever seen. */
+function plistRootKeys(xml) {
+  const text = xml.replace(/<!--[\s\S]*?-->/g, '');
+
+  const rootStart = text.search(/<dict\s*>/);
+  if (rootStart === -1) return null;   // no root dict: not a plist we can read
+
+  const keys = {};
+  const tag = /<(\/?)(\w+)(\/?)\s*>/g;
+  tag.lastIndex = rootStart;
+
+  let depth = 0;
+  let pendingKey = null;
+  let match;
+
+  while ((match = tag.exec(text)) !== null) {
+    const closing = match[1] === '/';
+    const name = match[2];
+    const selfClosing = match[3] === '/';
+
+    if ((name === 'dict' || name === 'array') && !selfClosing) {
+      /* A root key whose value is a container is still a root key, so record
+         it before stepping inside. Missing these would make this function
+         quietly narrower than its name, which is the bug it exists to catch
+         one level up. */
+      if (!closing && depth === 1 && pendingKey !== null) {
+        keys[pendingKey] = { tag: name, text: '' };
+        pendingKey = null;
+      }
+      depth += closing ? -1 : 1;
+      if (depth === 0) break;          // the root dict just closed
+      continue;
+    }
+
+    if (depth !== 1) continue;         // only the root dict's own children
+
+    if (name === 'key' && !closing) {
+      const end = text.indexOf('</key>', tag.lastIndex);
+      if (end === -1) break;
+      pendingKey = text.slice(tag.lastIndex, end).trim();
+      tag.lastIndex = end + '</key>'.length;
+      continue;
+    }
+
+    if (pendingKey === null || closing) continue;
+
+    // The element right after a root <key> is that key's value.
+    if (selfClosing) {
+      keys[pendingKey] = { tag: name, text: '' };
+    } else {
+      const close = '</' + name + '>';
+      const end = text.indexOf(close, tag.lastIndex);
+      if (end === -1) break;
+      keys[pendingKey] = { tag: name, text: text.slice(tag.lastIndex, end).trim() };
+      tag.lastIndex = end + close.length;
+    }
+    pendingKey = null;
+  }
+
+  return keys;
+}
+
+function infoPlistKeys() {
+  const keysPath = path.join(ROOT, 'ios-config', 'info-plist-keys.json');
+  if (!ok('ios-config/info-plist-keys.json exists', fs.existsSync(keysPath),
+    'It is the list of Info.plist keys the built app needs and the only place\n' +
+    '      their values are written down. scripts/ios_plist.js writes them into\n' +
+    '      ios/ from it on every `npm run ios`.')) {
+    return;
+  }
+
+  const spec = JSON.parse(fs.readFileSync(keysPath, 'utf8')).keys;
+
+  ok('and scripts/ios_plist.js is there to write them in',
+    fs.existsSync(path.join(ROOT, 'scripts', 'ios_plist.js')),
+    'Without it those keys are a manual Xcode step again, which is what\n' +
+    '      Apple rejected build 13 for. It runs from the `ios` npm script.');
+
+  ok('and `npm run ios` runs it', /ios_plist\.js/.test(read('package.json')),
+    'The `ios` script has to end with `node scripts/ios_plist.js`, after\n' +
+    '      `npx cap sync ios`, or the keys are never written.');
 
   const plist = path.join(ROOT, 'ios', 'App', 'App', 'Info.plist');
   if (!fs.existsSync(plist)) {
@@ -482,31 +571,44 @@ function calendarUsageStrings() {
     return;
   }
 
-  const xml = fs.readFileSync(plist, 'utf8');
+  const rootKeys = plistRootKeys(fs.readFileSync(plist, 'utf8'));
 
-  ok('Info.plist has NSCalendarsUsageDescription',
-    xml.indexOf('NSCalendarsUsageDescription') > -1,
-    'Below iOS 17, Add to calendar terminates the app without it rather than\n' +
-    '      asking for permission. Paste both rows from\n' +
-    '      ios-config/Info-calendar.plist into ios/App/App/Info.plist.\n' +
-    '      XCODE.md step 8d says where.');
+  if (!ok('ios/App/App/Info.plist parses as a plist', rootKeys !== null,
+    'No root <dict> was found in it, so nothing can read it — Xcode and Apple\n' +
+    '      included. Restore it with `npx cap sync ios`, or from git history if\n' +
+    '      it was hand edited into an invalid state.')) {
+    return;
+  }
 
-  ok('and NSCalendarsWriteOnlyAccessUsageDescription',
-    xml.indexOf('NSCalendarsWriteOnlyAccessUsageDescription') > -1,
-    'The iOS 17 key. Adding an event is all this app wants, so write-only is\n' +
-    '      the honest description of it. Paste the second row too.');
+  Object.keys(spec).forEach(function (key) {
+    const want = spec[key];
+    const got = rootKeys[key];
+
+    const present = got !== undefined &&
+      !(want.type === 'string' && (got.tag !== 'string' || got.text === ''));
+
+    ok('Info.plist has ' + key, present,
+      (got === undefined
+        ? 'It is not a key of the root <dict>. A text search can still find it\n' +
+          '      in the file — that is how build 13 was archived and rejected — so\n' +
+          '      check where it actually sits.\n      '
+        : 'It is there but empty or the wrong type, which Apple treats as\n' +
+          '      missing.\n      ') +
+      'Run `npm run ios`, which writes it from\n' +
+      '      ios-config/info-plist-keys.json. ' + (want.why || ''));
+  });
 }
 
-/* ================================================= 2d. the plugin pods
-   Every native capability this app has arrives as a CocoaPod, and a pod that
-   did not install is the quietest failure mode in the project. js/native.js
-   reaches each plugin through window.Capacitor.Plugins and treats an absent
-   one as "this phone cannot do that", which is the right answer in a browser
-   and a lie in a packaged app. So a missing pod does not throw, does not log,
-   and does not look like itself:
+/* ============================================== 2d. the plugin manifest
+   Every native capability this app has arrives as a plugin, and a plugin that
+   did not make it into the Xcode project is the quietest failure mode here.
+   js/native.js reaches each one through window.Capacitor.Plugins and treats
+   an absent one as "this phone cannot do that", which is the right answer in
+   a browser and a lie in a packaged app. So a missing plugin does not throw,
+   does not log, and does not look like itself:
 
      - no local-notifications, and Get notified is never drawn at all
-     - no file-opener, and Add to calendar falls back to the send-to sheet,
+     - no calendar, and Add to calendar falls back to the send-to sheet,
        which is the bug that sent somebody looking at the Cal tab for it
      - no haptics, and every confirmation is silently flat
 
@@ -514,58 +616,116 @@ function calendarUsageStrings() {
    one `npm install` away from being fine.
 
    CHECKED AGAINST package.json RATHER THAN A LIST HERE, because a list here
-   is a list to forget: the file-opener was added to fix Add to calendar and
-   a hand written check would have gone on passing without it. The Podfile
-   refers to each plugin by its path under node_modules, which is the package
-   name, so the dependency names are the only thing either file needs to
-   agree about and pod names never come into it.
+   is a list to forget: the calendar plugin was added to fix Add to calendar
+   and a hand written check would have gone on passing without it. Both
+   manifests below name each plugin by its path under node_modules, which is
+   the package name, so the dependency names are the only thing anything has
+   to agree about and native module names never come into it.
 
-   BOTH FILES, because they answer different questions. The Podfile is
-   rewritten by `npx cap sync ios` and says the plugin was noticed.
-   Podfile.lock is written by CocoaPods and says the pod actually installed.
-   A sync that ran while pod install failed leaves the first true and the
-   second stale, which is exactly the state that ships a plugin-less build.
+   WHICHEVER MANIFEST CAPACITOR ACTUALLY WROTE, and reading only one of them
+   is how the first version of this check managed to verify nothing at all.
+   Capacitor builds iOS either of two ways. Under CocoaPods it writes a
+   Podfile, and Podfile.lock says the pod installed. Under Swift Package
+   Manager — which is what this project uses, and what `cap sync` means by
+   "Writing Package.swift" — it writes ios/App/CapApp-SPM/Package.swift and
+   there is no lock file to read, because local path dependencies are
+   resolved by Xcode at build time and never appear in Package.resolved.
+
+   This check looked only for a Podfile at first. There is no Podfile here
+   and never will be, so it skipped every run while announcing that ios/ was
+   not generated — which was false, and which is exactly the "a check that
+   only answers about the thing you thought of" failure it was written to
+   replace. Now a generated ios/ with neither manifest is a failure rather
+   than a shrug.
 
    ios/ is generated and gitignored, so like the AppDelegate check above this
    can only check a machine that has run `npx cap add ios`, and skips rather
    than fails anywhere else.
    ===================================================================== */
 
+/* The dependencies that are Capacitor plugins, out of the ones whose names
+   merely say Capacitor. Two are not plugins and neither appears in the
+   manifest beside the plugins:
+
+     @capacitor/core is the JavaScript bridge and has no native side at all.
+
+     @capacitor/ios is the platform. Under CocoaPods it is a pod like any
+     other, pulled from its node_modules path, which is why a Podfile names
+     it. Under Swift Package Manager the runtime comes from Capacitor's own
+     remote package instead — capacitor-swift-pm, by URL — so Package.swift
+     never names @capacitor/ios, and expecting it there fails a build that is
+     perfectly fine. That false alarm shipped, on a green build, because the
+     fixture it was tested against was written from this same list and so
+     agreed with the bug. `cap sync` counts 11 plugins; this has to agree.
+
+   Split out from pluginPods so tests/plugin-manifest.test.js can hold the
+   rule to that number rather than to a fixture of my own making. */
+function capacitorPlugins(dependencies) {
+  const NOT_PLUGINS = ['@capacitor/core', '@capacitor/ios'];
+  return Object.keys(dependencies || {})
+    .filter((name) => /capacitor/i.test(name) && NOT_PLUGINS.indexOf(name) === -1);
+}
+
 function pluginPods() {
   const pkg = JSON.parse(read('package.json'));
 
-  /* Every dependency that carries native code. @capacitor/core is the one
-     that does not: it is the JavaScript bridge, and the iOS runtime it talks
-     to comes from @capacitor/ios. */
-  const plugins = Object.keys(pkg.dependencies || {})
-    .filter((name) => /capacitor/i.test(name) && name !== '@capacitor/core');
+  const plugins = capacitorPlugins(pkg.dependencies);
 
-  const podfile = path.join(ROOT, 'ios', 'App', 'Podfile');
-  if (!fs.existsSync(podfile)) {
-    console.log('SKIP  ios/ is not generated here, so the plugin pods cannot be checked');
+  if (!fs.existsSync(path.join(ROOT, 'ios'))) {
+    console.log('SKIP  ios/ is not generated here, so the plugin list cannot be checked');
     return;
   }
 
-  const declared = fs.readFileSync(podfile, 'utf8');
-  const lockPath = path.join(ROOT, 'ios', 'App', 'Podfile.lock');
-  const installed = fs.existsSync(lockPath) ? fs.readFileSync(lockPath, 'utf8') : null;
+  const spm = path.join(ROOT, 'ios', 'App', 'CapApp-SPM', 'Package.swift');
+  const podfile = path.join(ROOT, 'ios', 'App', 'Podfile');
 
-  if (!ok('Podfile.lock exists, so pod install has run at least once', installed !== null,
-    'ios/App/Podfile.lock is missing, which means CocoaPods never ran. Run\n' +
-    '      `npm install && npm run ios`. If that still leaves no lock file, the\n' +
-    '      pod install inside `npx cap sync ios` is failing — read its output\n' +
-    '      rather than opening Xcode, which will build happily without it.')) {
+  let manifest;          // what `cap sync` wrote, and its name for a message
+  let installed = null;  // CocoaPods only: what actually got installed
+
+  if (fs.existsSync(spm)) {
+    manifest = { name: 'Package.swift', text: fs.readFileSync(spm, 'utf8') };
+
+    /* The platform itself, which the plugin loop deliberately no longer looks
+       for because SPM names it differently from everything else. Checked here
+       instead, so dropping it from that list did not drop it from the run. */
+    ok('Package.swift pulls in the Capacitor runtime',
+      manifest.text.indexOf('capacitor-swift-pm') > -1,
+      'Without it there is no Capacitor in the build at all, and no plugin\n' +
+      '      could load even if every one of them is listed. Run\n' +
+      '      `npm install && npm run ios` and read what cap sync prints.');
+  } else if (fs.existsSync(podfile)) {
+    manifest = { name: 'the Podfile', text: fs.readFileSync(podfile, 'utf8') };
+
+    const lockPath = path.join(ROOT, 'ios', 'App', 'Podfile.lock');
+    installed = fs.existsSync(lockPath) ? fs.readFileSync(lockPath, 'utf8') : null;
+
+    if (!ok('Podfile.lock exists, so pod install has run at least once', installed !== null,
+      'ios/App/Podfile.lock is missing, which means CocoaPods never ran. Run\n' +
+      '      `npm install && npm run ios`. If that still leaves no lock file, the\n' +
+      '      pod install inside `npx cap sync ios` is failing — read its output\n' +
+      '      rather than opening Xcode, which will build happily without it.')) {
+      return;
+    }
+  } else {
+    ok('ios/ has a plugin manifest', false,
+      'ios/ exists but has neither ios/App/CapApp-SPM/Package.swift nor\n' +
+      '      ios/App/Podfile, so nothing here can say which plugins are in the\n' +
+      '      build. Run `npm run ios` and read what `npx cap sync ios` prints:\n' +
+      '      its own "Found N Capacitor plugins for ios" list is the answer\n' +
+      '      until this passes.');
     return;
   }
 
   plugins.forEach(function (name) {
-    /* Only asked when the Podfile has it, so a plugin `cap sync` never saw
-       fails once with the reason it actually has rather than twice with the
-       second reason being wrong about the first. */
-    if (!ok(name + ' is in the Podfile', declared.indexOf(name) > -1,
+    /* The second question is only asked when the first passed, so a plugin
+       `cap sync` never saw fails once with the reason it actually has rather
+       than twice with the second reason being wrong about the first. */
+    if (!ok(name + ' is in ' + manifest.name, manifest.text.indexOf(name) > -1,
       '`npx cap sync ios` has not seen it. Run `npm install && npm run ios`.\n' +
       '      Until then the plugin is absent at runtime, and js/native.js\n' +
       '      treats absent as "this phone cannot do that" — silently.')) return;
+
+    if (installed === null) return;   // SPM: the manifest is the whole answer
 
     ok('and ' + name + ' is installed', installed.indexOf(name) > -1,
       'It is in the Podfile but not in Podfile.lock, so pod install did not\n' +
@@ -582,7 +742,7 @@ legal();
 manifest();
 pushEntitlement();
 appDelegateHooks();
-calendarUsageStrings();
+infoPlistKeys();
 pluginPods();
 icons();
 screenshots();

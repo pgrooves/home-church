@@ -246,12 +246,12 @@ scheduled by the app and delivered by the phone to itself, so nothing in this
 section touches APNs.
 
 What it does need is the plugin being in the build, which is `npm install`
-followed by `npm run ios` (that runs `npx cap sync ios`, which installs the
-pod). If the plugin is missing, nothing breaks and nothing is logged: the app
-asks `HC.native.canRemind()` while drawing an event, gets false, and simply
-does not draw the button — the same answer a browser gets. So **a build where
-Get notified never appears on the Cal tab is a build where the pod did not
-install**, not a bug in the screen.
+followed by `npm run ios` (that runs `npx cap sync ios`, which writes the
+plugin into `Package.swift`). If the plugin is missing, nothing breaks and
+nothing is logged: the app asks `HC.native.canRemind()` while drawing an
+event, gets false, and simply does not draw the button — the same answer a
+browser gets. So **a build where Get notified never appears on the Cal tab is
+a build where the plugin did not install**, not a bug in the screen.
 
 The permission is iOS's one notification permission, the same one push asks
 for. A phone that has already said yes to the church's notifications is not
@@ -289,7 +289,7 @@ like a bug in the app. It is not. It is the gateway.
 
 -----
 
-## 8d. Add to calendar, which needs a pod and two Info.plist rows
+## 8d. Add to calendar, which needs a plugin and nothing from you
 
 The **Add to calendar** button on the Cal tab puts up the phone's own **New
 Event** sheet with the church's event already filled in, and the person taps
@@ -298,38 +298,47 @@ Event** sheet with the church's event already filled in, and the person taps
 person is acting inside Apple's own interface and the app never gets access
 to the calendar. So there is no capability to tick here and no entitlement.
 
-**Two things it does need.**
+**What it does need is the plugin in the build**, which is the same
+`npm install` followed by `npm run ios` as everything else. If it is missing
+the button falls back to the old share sheet — AirDrop, Messages, Mail — and
+nothing is logged, because falling back is not an error. `npm run preflight`
+fails on that build, so run it before you archive.
 
-**One, the pod.** `@ebarooni/capacitor-calendar` has to be in the build,
-which is the same `npm install` followed by `npm run ios` as everything else.
-If it is missing the button falls back to the old share sheet — AirDrop,
-Messages, Mail — and nothing is logged, because falling back is not an error.
-`npm run preflight` fails on that build, so run it before you archive.
+**It also needs two purpose strings in `Info.plist`, and you do not add
+those by hand.** `npm run ios` writes them, from
+`ios-config/info-plist-keys.json`. Nothing to click.
 
-**Two, two rows in `Info.plist`,** which are pure insurance and which you add
-once. Below iOS 17 the same sheet does need calendar access, and iOS asks for
-it by reading a purpose string out of `Info.plist`. **With no string there,
-iOS does not prompt and does not refuse — it kills the app.** A crash on tap,
-on the oldest phones in the church, on a path that works perfectly on yours.
-Minimum Deployments is iOS 15, so those phones are in scope.
+That used to be a manual step on this page and it cost a build. Below iOS 17
+the New Event sheet does need calendar access, and iOS asks for it by reading
+a purpose string out of `Info.plist`; with no string there it does not prompt
+and does not refuse, it kills the app. Apple also checks statically, at
+upload, whether the binary references EventKit at all — and it does, so the
+string is required whether or not any phone ever reads it. Build 13 was
+archived without it and came back:
 
-Add them the same way as the export compliance row in step 10:
+```
+ITMS-90683: Missing purpose string in Info.plist — ... should contain a
+NSCalendarsUsageDescription key with a user-facing purpose string
+```
 
-1. Click the **Info** tab.
-2. Hover over any row, click the small **+**.
-3. Key `NSCalendarsUsageDescription`, Type **String**, and for the value
-   paste the sentence from `ios-config/Info-calendar.plist`.
-4. Repeat for `NSCalendarsWriteOnlyAccessUsageDescription`, same sentence.
+The rows had been added by hand, and this page's own check had said they were
+present. Which of those was wrong was never established, and the reason it
+could not be is the useful part: that check only searched the file's text for
+the key name, so it could not tell a key in the top level `<dict>` from the
+same characters anywhere else in the file. It never had the evidence for what
+it claimed. The hand written step and the check guarding it were unreliable in
+the same way at the same time.
 
-`ios-config/Info-calendar.plist` holds both rows and the reasoning.
-`npm run preflight` checks that they are there whenever `ios/` exists, so
-this is a step you can forget once and not twice.
+So there is no step now. `scripts/ios_plist.js` writes the keys as a plist
+writes keys, on every build, and `npm run preflight` parses the file rather
+than searching its text — a key in the wrong place now fails, as does an
+empty one.
 
 **Two signatures worth recognising**, because this button has been wrong
 twice and neither time announced itself:
 
-- **A send-to sheet** (AirDrop, Messages, Mail) means the pod is missing.
-  The fix is in Terminal, not Xcode.
+- **A send-to sheet** (AirDrop, Messages, Mail) means the plugin is missing
+  from the build. The fix is in Terminal, not Xcode.
 - **The event drawn with only a close and a share button, and no way to add
   it**, means an older build: that was QuickLook previewing the `.ics` file,
   which shows a document and cannot commit one. Safari's version of that
@@ -362,14 +371,17 @@ Then in Xcode, so the file is actually included in the build:
 
 ## 10. Export compliance
 
-This saves you answering the same question on every single upload forever.
-
-1. Click the **Info** tab.
-2. Hover over any row, click the small **+** that appears.
-3. Type `ITSAppUsesNonExemptEncryption` as the key.
-4. Set the **Type** to **Boolean** and the **Value** to **NO**.
-
+**Nothing to do here any more.** `npm run ios` writes
+`ITSAppUsesNonExemptEncryption` into `Info.plist` as a Boolean `NO`, from
+`ios-config/info-plist-keys.json`, along with the other keys the build needs.
 The app only makes ordinary HTTPS requests, which are exempt.
+
+It used to be four clicks in the **Info** tab, and it is automated for the
+same reason the calendar strings are: the answer belongs in the repo, not in
+one person's memory of one afternoon in Xcode. Without it, every upload asks
+the encryption question again in App Store Connect, and the build sits in
+TestFlight under **Missing Compliance** — installable by nobody — until
+somebody notices and answers it. `npm run preflight` checks it is there.
 
 -----
 
@@ -483,8 +495,8 @@ dependencies changed".** That was wrong in the quiet way, and it cost a build.
 the `package.json` naming it and not the package itself. Nothing in
 `npm run ios:open` installs dependencies — it is
 `stamp → sync → cap sync ios → cap open ios`, and `cap sync` discovers plugins
-by reading `node_modules`. With the package absent it finds nothing, adds no
-pod, and **the build still succeeds**. The app runs, the feature is simply not
+by reading `node_modules`. With the package absent it finds nothing, writes
+it into no manifest, and **the build still succeeds**. The app runs, the feature is simply not
 there, and nothing is logged anywhere. Section 8c describes what that looked
 like from the outside the one time it happened.
 
@@ -493,22 +505,32 @@ you never have to know whether anything did.
 
 **`npm run preflight` is the receipt, and it reads itself.** Run it after
 `npm run ios:open` and before you archive. It takes the plugin list from
-`package.json` and checks every one of them against `ios/App/Podfile` (which
-says `cap sync` noticed the plugin) and `ios/App/Podfile.lock` (which says
-CocoaPods actually installed it), and it names the fix on any that are
-missing. Because the list comes from `package.json`, it covers plugins added
-after this page was written without anybody remembering to update a check —
-which is the failure a hand written one has. Exits non-zero, so it is safe to
-put in front of anything else.
+`package.json` and checks every one against the manifest `cap sync` wrote —
+`ios/App/CapApp-SPM/Package.swift`, which is what this project uses, or
+`ios/App/Podfile` and `Podfile.lock` on a CocoaPods build — and names the fix
+on any that are missing. Because the list comes from `package.json`, it
+covers plugins added after this page was written without anybody remembering
+to update a check, which is the failure a hand written one has. Exits
+non-zero, so it is safe to put in front of anything else.
 
-Do not check for a plugin by grepping for one pod name, which is a check that
+**This project builds with Swift Package Manager, not CocoaPods.** There is
+no `Podfile` and there will not be one: `npx cap sync ios` says
+`Writing Package.swift` and puts every plugin in
+`ios/App/CapApp-SPM/Package.swift`. Worth knowing because most Capacitor
+advice on the internet assumes pods, and because the first version of this
+check looked only for a `Podfile`, found none, and skipped every single run
+while claiming `ios/` had not been generated. A skip that reads like a pass
+is worse than no check.
+
+Do not check for a plugin by grepping for one name, which is a check that
 only ever answers about the plugin you thought of. A build can have
-`CapacitorLocalNotifications` in it and no file opener, and the grep says OK
-while Add to calendar puts up the send-to sheet — section 8d.
+`CapacitorLocalNotifications` in it and no calendar plugin, and the grep says
+OK while Add to calendar puts up the send-to sheet — section 8d.
 
 **`npx cap ls ios` is the same receipt in Capacitor's own words**, and worth a
 glance because it lists what Capacitor wired into the Xcode project rather
-than what the Podfile claims. If `preflight` is happy and `cap ls` is short,
+than what a manifest claims. `npm run ios` prints the same list as it goes —
+the `Found N Capacitor plugins for ios` block is worth reading every time. If `preflight` is happy and `cap ls` is short,
 believe `cap ls`.
 
 **`git reset --hard` throws away uncommitted work without asking.** That is
