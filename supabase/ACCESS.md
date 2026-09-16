@@ -205,16 +205,40 @@ it now stands, before you tell anyone it is published.
 Both transports above reach Postgres. Neither reaches Storage.
 
 `hc_supabase.py` has no upload verb, and the MCP server has no Storage tool at
-all, so there is no way to put a file in a bucket from a web session. The
-buckets are `instagram`, `announcements` and `narration`, and everything that
-fills them is a script run on a real machine with the service role key:
+all. The buckets are `instagram`, `announcements` and `narration`, and what
+fills them is a script holding the service role key:
 `scripts/upload_narration.js` for the guide audio, the Instagram sync for the
 images.
 
-This is worth knowing before you promise anything. A guide can be published
-over MCP from a phone in full, and its narration cannot. The row and the audio
-are two different writes to two different systems, and only one of them travels.
+**What is missing is the key, not the machine.** This section used to say a web
+session simply could not do it, and that a narration run had to be handed to
+somebody on a Mac. That was measured against an egress proxy that refused
+`supabase.co`, and on 2026-09-16 it no longer does. Checked from a cloud
+session that day:
+
+- `node scripts/narration_text.js` reached PostgREST and reported
+  `source supabase`, eight guides, forty-eight sections. Not the seed.
+- A public read of an existing object in the `narration` bucket returned
+  HTTP 200. The Storage host answers.
+- `pip install kokoro-onnx soundfile imageio-ffmpeg` and the v1.0 model and
+  voices from the kokoro-onnx GitHub release all downloaded. `models/` came to
+  350MB.
+- `build_narration.py` spoke a whole guide, six sections and 25.5 minutes of
+  audio, in 4.7 minutes of wall clock at 5.5x real time on the container CPU.
+
+So the speech half needs no particular hardware, and the network is not the
+wall. The wall is that `upload_narration.js` wants `SUPABASE_SERVICE_ROLE_KEY`,
+and a fresh container has no `.env` and no such variable unless the environment
+supplies one. Put it in the environment's variables and a phone session
+finishes the job; leave it out and the guide publishes silent.
+
+**Still unverified:** an authenticated write to Storage from a cloud session.
+The run above got as far as `--dry-run`, which listed the six files and the row
+it would set, because no key was present to try the real thing. Reads work and
+the host resolves; the PUT itself has not been proven. Do not write it down as
+working until somebody has watched it succeed.
 
 | What you see | What it means |
 |---|---|
-| `CONNECT tunnel failed, response 403` to `supabase.co` on an upload | Same proxy, same answer as the tables. There is no MCP fallback for this one. Hand the command to somebody on a Mac. |
+| `CONNECT tunnel failed, response 403` to `supabase.co` on an upload | The proxy refused the host. This was the old default and is no longer what a cloud session gets; if you see it again the policy changed back, and there is no MCP fallback for Storage. |
+| `Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY, or pass --dry-run.` | The ordinary web-session case. Nothing is broken. The key is not in the environment. |

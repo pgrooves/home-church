@@ -315,16 +315,29 @@ in `js/data.js`, so the guide you just wrote is not among them and every guide
 it missed stays silent. It warns in six lines when that happens. Do not
 narrate past that warning.
 
-**This needs a real machine, and most sessions on this app are not one.** The
-speech model is a 340MB local download and the upload is an HTTPS PUT to
-`supabase.co`, which the web session proxy refuses, exactly as
-`supabase/ACCESS.md` describes. MCP is not a way around it: it reaches Postgres,
-and Storage has no MCP path at all.
+**What this needs is the key, not a particular machine.** A cloud container
+runs the speech model fine: `pip install kokoro-onnx soundfile imageio-ffmpeg`,
+pull the v1.0 model and voices into `models/`, and a whole guide speaks in
+about five minutes at 5.5x real time. The proxy reaches `supabase.co` too.
+`supabase/ACCESS.md` has the measurements and the one thing still unproven,
+which is the authenticated Storage write.
 
-So in a web session: publish the guide, say plainly that the narration has not
-been made yet, and give the pastor the two commands above to run on the Mac.
-Do not report the guide as fully published without saying which half is
-missing. In a session on a real machine with `.env` present, just run them.
+So check for the key before you decide you cannot do this:
+
+```bash
+[ -n "$SUPABASE_SERVICE_ROLE_KEY" ] && echo have it || echo not here
+```
+
+**If the key is there, narrate and upload, wherever you are running.** Do not
+skip it because the session is a web session; that is no longer the question.
+
+**If the key is not there,** publish the guide, then say plainly and in the
+confirmation that the audio has not been made, and give the pastor both routes:
+put `SUPABASE_SERVICE_ROLE_KEY` in the environment's variables so future guides
+finish by themselves, or run the two commands above somewhere that has `.env`.
+Never report a guide as fully published without naming the half that is
+missing. A guide that went out silent is invisible from inside the app, and the
+pastor finds out weeks later.
 
 First run on any machine needs the model, once. `NEW_GUIDE_PROCESS.md`
 Step 5b has the four commands.
