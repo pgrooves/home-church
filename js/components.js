@@ -283,6 +283,81 @@
     return m[1].replace(/^www\./i, '').replace(/:\d+$/, '');
   }
 
+  /* ------------------------------------------- a link that hides where it goes
+
+     THE JONAH READING PLAN. A card went up on Home with a button reading
+     ACCESS THE READING PLAN that opened a YouTube video. The href had come
+     straight out of the church's own newsletter and looked like this:
+
+       https://aifarn.fn72.fdske.com/e/c/01m28c9k…/01m28c9k…
+
+     a click-tracking wrapper pasted in from some other campaign, still
+     pointing wherever that campaign had pointed. The intake now follows a
+     wrapper to wherever it lands before writing it down — see checkedLinks in
+     supabase/functions/newsletter-intake — but a lookup can fail, and when it
+     does the URL is kept rather than thrown away, because a missing button on
+     a real announcement is the more common harm.
+
+     So the last check is a person, and this is what lets the Needs review card
+     warn them. Not a blocker and not a filter: one line saying this particular
+     link will not say where it goes, over the Approve button, which is the
+     thing nobody had on the Sunday this went wrong.
+
+     THE SAME READING AS THE EDGE FUNCTION, deliberately. opaqueRedirect() over
+     there is fenced between @@ links markers and tested in
+     tests/newsletter-links.test.js; this is that function in the language this
+     side of the app is written in, for the same reason textToHtml exists twice
+     — an Edge Function cannot call into the app, and the app cannot call into
+     it. If one is changed the other has to be.
+
+     A wrapper is a path made of nothing but routing words and machine ids,
+     with the id in the path or in the query, or one of the shorteners, which
+     are wrappers whose ids are too short for the rule to see. Everything else
+     names itself: churchcenter.com/registrations/signups/3869072 is ugly and
+     perfectly readable, and so is youtube.com/watch?v=… */
+
+  var CLICK_SEGMENT = /^(?:e|c|r|t|u|l|ls|cl|cl0|l0|go|out|wf|ss|click|clicks|track|tracking|redirect|link|links)$/i;
+  var SHORTENER_HOST = /^(?:www\.)?(?:bit\.ly|tinyurl\.com|t\.co|ow\.ly|buff\.ly|rb\.gy|is\.gd|cutt\.ly|shorturl\.at|goo\.gl|rebrand\.ly|trib\.al|lnk\.to|smarturl\.it)$/i;
+
+  /* An id rather than a name. Long, made of the characters ids are made of,
+     and carrying either a digit or a change of case. Anything with words in it
+     is a page somebody named: `jonah-homechurch`, `homecoming-gala-tickets-1`. */
+  function opaqueSegment(segment) {
+    if (!/^[A-Za-z0-9_=-]{10,}$/.test(segment)) return false;
+    if (/[A-Za-z]{3,}[-_]|[-_][A-Za-z]{3,}/.test(segment)) return false;
+    return /\d/.test(segment) || (/[a-z]/.test(segment) && /[A-Z]/.test(segment));
+  }
+
+  function opaqueLink(url) {
+    var value = String(url == null ? '' : url).trim();
+    if (!/^https?:\/\//i.test(value)) return false;
+
+    var parsed;
+    try {
+      parsed = new URL(value);
+    } catch (err) {
+      return false;
+    }
+    if (SHORTENER_HOST.test(parsed.hostname)) return true;
+
+    var segments = parsed.pathname.split('/').filter(Boolean);
+    if (!segments.length) return false;
+
+    var routed = segments.every(function (s) {
+      return CLICK_SEGMENT.test(s) || opaqueSegment(s);
+    });
+    if (!routed) return false;
+    if (segments.some(opaqueSegment)) return true;
+
+    // `/ls/click?upn=<blob>`: every segment is a routing word and the id is in
+    // the query instead.
+    var opaqueQuery = false;
+    parsed.searchParams.forEach(function (value) {
+      if (opaqueSegment(String(value).trim())) opaqueQuery = true;
+    });
+    return opaqueQuery;
+  }
+
   /* The eleven characters in the middle of a YouTube link, or ''. Every shape
      a person can arrive with: the watch URL, the share URL, the embed URL, the
      live URL, and a bare id pasted on its own.
@@ -1341,6 +1416,7 @@
     smsUrl: smsUrl,
     webUrl: webUrl,
     urlHost: urlHost,
+    opaqueLink: opaqueLink,
     youtubeId: youtubeId,
     youtubeThumb: youtubeThumb,
     youtubeEmbedUrl: youtubeEmbedUrl,

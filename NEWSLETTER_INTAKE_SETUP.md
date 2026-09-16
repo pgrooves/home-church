@@ -639,6 +639,60 @@ rewrites itself while nobody is looking is not a thing this app does.
 
 ---
 
+## When a button goes somewhere nobody meant
+
+The Jonah reading plan card went up on Home with a button reading **ACCESS THE
+READING PLAN** that opened a YouTube video. Nothing above it had gone wrong in
+the way bugs usually go wrong. The link really was in the email, so the
+allowlist let it through. The model really did pick the anchor whose text said
+reading plan. An admin really did read the card before approving it. The href
+was
+
+```
+https://aifarn.fn72.fdske.com/e/c/01m28c9k…/01m28c9k…
+```
+
+a click-tracking wrapper, pasted into the newsletter from some other campaign
+and still pointing wherever that campaign had pointed. Every check this feature
+performs was passed by a URL that no human being could read.
+
+**A wrapper is not a destination.** It is a promise about one, and the whole
+point of a redirect is that you cannot tell what it is promising by looking at
+it. "Was this string in the email" is the wrong question to ask of it, and it
+was the only question anyone was asking.
+
+So before the model is shown a single candidate, every link is read rather than
+copied:
+
+- **Unwrapped**, where the destination is written into the URL — `?url=`, `?u=`,
+  Google's `?q=`, the percent-encoded path segment Amazon SES uses, and a
+  wrapper inside a wrapper. No network, nothing to go wrong.
+- **Followed**, where it is not. A path made of nothing but routing words and
+  machine ids, or one of the common shorteners, is opened and followed to
+  wherever it lands, and what lands in the table is that. Sixteen lookups an
+  email, four seconds each.
+- **Written down**, when two buttons turn out to land in the same place. That is
+  how this particular card went wrong — ACCESS THE READING PLAN and Watch the
+  video, one YouTube video — so the second one is left off and the run's note on
+  the Admin screen says which, and why.
+
+**A lookup that fails does not lose the link.** It tells us nothing: the tracker
+may be dead, or picky about who is asking. Dropping the button off a real
+announcement on that evidence would trade a rare wrong link for a common
+missing one. The URL stays, and the last check is a person — the **Needs
+review** card now says where a draft's buttons go, under the dates and over
+Approve, and warns in orange when one of them is a redirect that would not say.
+That line is the thing nobody had on the Sunday this went wrong.
+
+The reading of "this one hides where it goes" is written twice, once in the
+Edge Function and once in `js/components.js` as `c.opaqueLink`, because neither
+side can call into the other. `tests/newsletter-links.test.js` pins down both
+and asserts they agree. It errs towards *not* a wrapper: a link it misses is
+left exactly as it was before any of this, and a link it wrongly suspects costs
+one HTTP request.
+
+---
+
 ## What this deliberately does not do
 
 - **It does not publish.** Ever. There is no setting that makes it publish.
@@ -651,7 +705,8 @@ rewrites itself while nobody is looking is not a thing this app does.
   congregation, before approval or after it.
 - **It does not invent URLs.** The model is given the links and images that
   were actually in the email and may only choose from that list. Anything else
-  it returns is dropped on the way in.
+  it returns is dropped on the way in. Since the Jonah reading plan, that list
+  is destinations rather than wrappers: see the section above.
 - **It does not store the newsletter.** The ledger keeps a subject, a sender
   and a Message-ID so it can recognise an email it has seen. The body is not
   kept anywhere.

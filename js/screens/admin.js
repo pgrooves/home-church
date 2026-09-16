@@ -750,6 +750,81 @@
     return '';
   }
 
+  /* Where a parsed draft's buttons go, said before the tap rather than found
+     out after it.
+
+     THE JONAH READING PLAN. A card came through this queue with a button
+     reading ACCESS THE READING PLAN, somebody read the words, tapped Approve,
+     and the congregation got a YouTube video. The words were right; the href
+     was a click-tracking wrapper pasted into the newsletter from some other
+     campaign. Nothing on this card said what it was, because this card had
+     never said anything about links at all — the only way to see one was to
+     open Edit and read the URL field, which is not what Approve is for.
+
+     So the hosts go on the card. One line, the way reviewDates() puts the
+     dates on it, because a link is exactly as much a fact about an
+     announcement as its dates are and it was the one fact this screen was
+     silent about.
+
+     AND A WARNING WHEN A LINK WILL NOT SAY. The intake follows a wrapper to
+     wherever it lands before writing it down, so this is rare now — it is what
+     is left when that lookup failed, which is the case where the URL is kept
+     precisely because nobody knows enough to throw it away. See c.opaqueLink
+     and checkedLinks in supabase/functions/newsletter-intake. */
+  function reviewLinks(row) {
+    var urls = [];
+    var add = function (url) {
+      var safe = c.webUrl(url);
+      if (safe && /^https?:/i.test(safe) && urls.indexOf(safe) === -1) urls.push(safe);
+    };
+
+    add(row.link_url);
+    // The rest of them are in the words. announcementHtml writes every link
+    // the newsletter gave an announcement as its own line, and only the first
+    // becomes link_url, so the card under the button is not the whole story.
+    // `&` is the only one of the five that survives in a real URL, and it is
+    // in every query string with two parameters in it.
+    String(row.body_html || '').replace(
+      /href\s*=\s*"([^"]*)"/gi,
+      function (all, href) { add(href.replace(/&amp;/gi, '&')); return all; }
+    );
+    return urls;
+  }
+
+  function reviewLinkNote(row) {
+    var urls = reviewLinks(row);
+    if (!urls.length) return '';
+
+    var hosts = [];
+    urls.forEach(function (url) {
+      var host = c.urlHost(url);
+      if (host && hosts.indexOf(host) === -1) hosts.push(host);
+    });
+
+    var hidden = urls.filter(function (url) { return c.opaqueLink(url); });
+    var line = hosts.length === 1
+      ? 'The button goes to ' + hosts[0] + '.'
+      : 'The buttons go to ' + hosts.join(', ') + '.';
+
+    if (!hidden.length) {
+      return '<p class="hc-caption hc-admin__review-dates">' + c.esc(line) + '</p>';
+    }
+
+    var warn;
+    if (urls.length === 1) {
+      warn = 'It is a redirect that would not say where it ends up, so open it ' +
+        'yourself before approving this.';
+    } else if (hidden.length === 1) {
+      warn = 'One of them is a redirect that would not say where it ends up, so ' +
+        'open it yourself before approving this.';
+    } else {
+      warn = hidden.length + ' of them are redirects that would not say where they ' +
+        'end up, so open them yourself before approving this.';
+    }
+
+    return '<p class="hc-caption hc-admin__warn">' + c.esc(line) + ' ' + c.esc(warn) + '</p>';
+  }
+
   /* The internal note, from migration 0043.
 
      WHAT IT IS FOR. The intake tells every admin at once that the queue has
@@ -811,6 +886,9 @@
               (row.duplicate_note ? ': ' + c.esc(row.duplicate_note) : '') + '</p>'
             : '') +
           '<p class="hc-caption hc-admin__review-dates">' + c.esc(reviewDates(row)) + '</p>' +
+          // Where its buttons go, which until the Jonah reading plan this
+          // screen never said. See reviewLinkNote.
+          reviewLinkNote(row) +
           /* Said before the tap, not discovered after it. Approving an
              announcement that carries an event changes two screens, and a
              button that quietly writes to the Connect tab as well as Home is

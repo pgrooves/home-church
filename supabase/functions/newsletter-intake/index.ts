@@ -585,6 +585,299 @@ function extractTextLinks(
   return out;
 }
 
+/* @@ links:start
+   ------------------------------------------------------------- where a link goes
+
+   WHY THIS EXISTS. The Jonah reading plan card went up on Home with a button
+   reading ACCESS THE READING PLAN that opened a YouTube video nobody had asked
+   for. Nothing above went wrong in the way bugs usually go wrong. The email
+   really did contain that URL, so cleanChoice let it through; the model really
+   did pick the anchor whose text said READING PLAN; the admin really did read
+   the card before approving it. The href was
+
+     https://aifarn.fn72.fdske.com/e/c/01m28c9k…/01m28c9k…
+
+   a click-tracking wrapper pasted in from some other campaign, still pointing
+   wherever that campaign had pointed. Every check this function and its
+   reviewer perform was passed by a URL that no human being could read.
+
+   THAT IS THE HOLE: the allowlist asks "was this string in the email", which is
+   the wrong question for a wrapper. A wrapper is not a destination, it is a
+   promise about one, and the whole point of a redirect is that you cannot tell
+   what it is promising by looking. So before the model ever sees a candidate,
+   every link that hides its destination is opened and followed to wherever it
+   actually lands, and what gets stored is that.
+
+   TWO WAYS TO SEE THROUGH ONE. Most wrappers carry their destination in the
+   open — `?url=`, `?u=`, Google's `?q=`, the URL-encoded path segment Amazon
+   SES uses — and unwrapRedirect reads those off without touching the network.
+   What is left is genuinely opaque, an id that means something only to the
+   sender's server, and the only way to learn where it goes is to go there.
+
+   WHAT IT DOES NOT DO IS THROW A LINK AWAY. A lookup that fails tells us
+   nothing — the tracker may be dead, or picky about who is asking — and
+   dropping the button off a real announcement on that evidence would be
+   trading a rare wrong link for a common missing one. The URL stays, the ledger
+   says plainly that it could not be checked, and the Needs review card says the
+   same thing over the Approve button. See reviewLinkNote() in
+   js/screens/admin.js, which runs this same reading of "opaque" so the two
+   cannot disagree about which links a person is being warned about.
+   ---------------------------------------------------------------------- */
+
+/* Parameters that hold the real destination. A value only counts when it is
+   itself an absolute http(s) URL, which is what keeps Mailchimp's `u=<id>` and
+   an ordinary `?u=42` out of it. `q` is not in the general list — plenty of
+   sites use it for a search box — so it is added only for the two hosts that
+   redirect with it. */
+const REDIRECT_PARAMS = [
+  'url', 'u', 'target', 'dest', 'destination',
+  'redirect', 'redirect_url', 'redirect_uri', 'link', 'to',
+];
+const SEARCH_REDIRECT_HOST = /(?:^|\.)(?:google\.[a-z.]+|youtube\.com)$/i;
+
+/* A wrapper read from the outside, without asking anyone. Bounded because a
+   wrapper around a wrapper is ordinary — a newsletter link inside a safe-links
+   rewrite inside a click tracker — and a loop is not worth risking. */
+function unwrapRedirect(url: string): string {
+  let current = String(url || '').trim();
+
+  for (let hop = 0; hop < 4; hop++) {
+    let parsed: URL;
+    try {
+      parsed = new URL(current);
+    } catch {
+      return current;
+    }
+
+    let next = '';
+
+    const names = SEARCH_REDIRECT_HOST.test(parsed.hostname)
+      ? [...REDIRECT_PARAMS, 'q']
+      : REDIRECT_PARAMS;
+    for (const name of names) {
+      const value = (parsed.searchParams.get(name) ?? '').trim();
+      if (/^https?:\/\//i.test(value)) { next = value; break; }
+    }
+
+    /* The other place a destination hides in plain sight: a path segment that
+       is the whole URL, percent-encoded. Amazon SES writes
+       `/L0/https:%2F%2Fexample.com%2Fserve/1/0100…` and the church's own
+       mailing list may well end up behind one of those. */
+    if (!next) {
+      for (const segment of parsed.pathname.split('/')) {
+        if (!segment) continue;
+        let decoded = '';
+        try { decoded = decodeURIComponent(segment); } catch { continue; }
+        if (/^https?:\/\/\S+$/i.test(decoded)) { next = decoded; break; }
+      }
+    }
+
+    if (!next || next === current) return current;
+    current = next;
+  }
+
+  return current;
+}
+
+/* The routing words a click wrapper's path is made of, none of which is a page
+   anybody wrote. */
+const CLICK_SEGMENT = /^(?:e|c|r|t|u|l|ls|cl|cl0|l0|go|out|wf|ss|click|clicks|track|tracking|redirect|link|links)$/i;
+
+/* An id rather than a name. Long, made of the characters ids are made of, and
+   carrying either a digit or a change of case — `01m28c9kdesvkzv0g8vf4bt6m7`,
+   `3NKa9sLp`, a base64 blob. Anything with words in it is a page somebody
+   named: `jonah-homechurch`, `some-event-tickets-123456789`, `registrations`.
+   Erring towards "not an id" is the safe direction, because a link this misses
+   is only left exactly as it is today. */
+function opaqueSegment(segment: string): boolean {
+  if (!/^[A-Za-z0-9_=-]{10,}$/.test(segment)) return false;
+  if (/[A-Za-z]{3,}[-_]|[-_][A-Za-z]{3,}/.test(segment)) return false;
+  return /\d/.test(segment) || (/[a-z]/.test(segment) && /[A-Z]/.test(segment));
+}
+
+/* URL shorteners, which are wrappers that happen to be short. Their ids are
+   five or six characters, so the path rule below cannot see them, and a church
+   posts them on purpose often enough to be worth naming. */
+const SHORTENER_HOST = /^(?:www\.)?(?:bit\.ly|tinyurl\.com|t\.co|ow\.ly|buff\.ly|rb\.gy|is\.gd|cutt\.ly|shorturl\.at|goo\.gl|rebrand\.ly|trib\.al|lnk\.to|smarturl\.it)$/i;
+
+/* Does this URL hide where it goes? True for a wrapper whose path is nothing
+   but routing words and ids, with the id in the path or in the query, and for
+   the shorteners above. False for every ordinary link, including the long ugly
+   ones: churchcenter.com/registrations/signups/3869072 names what it is, and so
+   does youtube.com/watch?v=… */
+function opaqueRedirect(url: string): boolean {
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return false;
+  }
+  if (!/^https?:$/i.test(parsed.protocol)) return false;
+  if (SHORTENER_HOST.test(parsed.hostname)) return true;
+
+  const segments = parsed.pathname.split('/').filter(Boolean);
+  if (!segments.length) return false;
+  if (!segments.every((s) => CLICK_SEGMENT.test(s) || opaqueSegment(s))) return false;
+
+  if (segments.some(opaqueSegment)) return true;
+  // `/ls/click?upn=<blob>`: every segment is a routing word and the id is in
+  // the query instead.
+  for (const [, value] of parsed.searchParams) {
+    if (opaqueSegment(value.trim())) return true;
+  }
+  return false;
+}
+
+function hostOf(url: string): string {
+  try {
+    return new URL(url).hostname.replace(/^www\./i, '');
+  } catch {
+    return url.slice(0, 40);
+  }
+}
+
+/* How much of a run to spend learning where links go. Sixteen lookups is far
+   more than a newsletter with one pasted tracker in it needs and far less than
+   a run's budget. */
+const MAX_LINK_LOOKUPS = 16;
+
+interface CheckedLinks {
+  links: Array<{ url: string; text: string }>;
+  notes: string[];
+}
+
+/* Every candidate, as a destination rather than a promise. Unwrapped where the
+   URL says enough, followed where it does not, de-duplicated afterwards as well
+   as before — two wrappers landing in the same place are one link, and the day
+   that happens is the day something is wrong with the email, so it is written
+   down rather than quietly tidied away.
+
+   `resolve` is a parameter so that everything here except the socket can be
+   tested: tests/newsletter-links.test.js hands it a lookup that answers from a
+   table, which is the only way to pin down what happens when a tracker refuses
+   to answer without waiting for one to. */
+async function checkedLinks(
+  raw: Array<{ url: string; text: string }>,
+  resolve: (url: string) => Promise<string | null> = resolveLink,
+): Promise<CheckedLinks> {
+  const notes: string[] = [];
+  const named = (link: { url: string; text: string }) =>
+    link.text ? `“${link.text.slice(0, 40)}”` : link.url.slice(0, 60);
+
+  const seen = new Set<string>();
+  const unwrapped: Array<{ url: string; text: string }> = [];
+  for (const link of raw) {
+    const url = unwrapRedirect(link.url);
+    if (!/^https?:\/\//i.test(url) || seen.has(url)) continue;
+    seen.add(url);
+    unwrapped.push({ url, text: link.text });
+  }
+
+  const opaque = unwrapped.filter((l) => opaqueRedirect(l.url)).slice(0, MAX_LINK_LOOKUPS);
+  const landed = new Map<string, string>();
+  if (opaque.length) {
+    const found = await Promise.all(opaque.map((l) => resolve(l.url)));
+    opaque.forEach((link, i) => {
+      const to = found[i];
+      if (to) landed.set(link.url, to);
+      else {
+        notes.push(`${named(link)} is a redirect that would not say where it goes.`);
+      }
+    });
+  }
+
+  /* Two buttons, one destination. Harmless when a newsletter repeats its own
+     sign-up link in the header and again at the bottom, and the loudest signal
+     there is when it is not: ACCESS THE READING PLAN and Watch the video
+     landing on the same YouTube video is precisely how the Jonah card went
+     wrong, and it is only visible at all now that both have been followed.
+
+     WHICH WORDS SURVIVE matters as much as which URL does, and it cannot be
+     left to the order the email happened to put them in. An anchor that goes
+     straight to a page is the one whose text can be trusted to describe it; a
+     wrapper's text describes whatever the person pasting it believed. So the
+     direct link's words win even when the wrapper got here first, and either
+     way the pair is written down. */
+  const out: Array<{ url: string; text: string }> = [];
+  const at = new Map<string, { url: string; text: string }>();
+  const wrapperAt = new Map<string, { url: string; text: string }>();
+
+  for (const link of unwrapped) {
+    const url = landed.get(link.url) ?? link.url;
+    const wrapped = landed.has(link.url);
+    const kept = at.get(url);
+
+    if (!kept) {
+      const entry = { url, text: link.text };
+      at.set(url, entry);
+      if (wrapped) wrapperAt.set(url, link);
+      out.push(entry);
+      continue;
+    }
+
+    if (wrapped) {
+      notes.push(
+        `${named(link)} goes to ${hostOf(url)}, the same place as ` +
+        `${named(kept)}, so it was left off.`,
+      );
+      continue;
+    }
+
+    const wrapper = wrapperAt.get(url);
+    if (wrapper) {
+      notes.push(
+        `${named(wrapper)} goes to ${hostOf(url)}, the same place as ` +
+        `${named(link)}, so it was left off.`,
+      );
+      kept.text = link.text;
+      wrapperAt.delete(url);
+    }
+    // Two plain links to one page is a newsletter repeating itself. Nothing
+    // was hidden and there is nothing to say about it.
+  }
+
+  return { links: out, notes };
+}
+/* @@ links:end */
+
+/* Long enough for a redirect, short enough that a tracker which simply never
+   answers cannot hold the mailbox open. */
+const LINK_LOOKUP_MS = 4000;
+
+/* Asking as a browser asks. Some trackers answer a bare fetch with 403 and a
+   browser with the redirect; being honest about who we are buys nothing here
+   except a link the church loses. */
+const LINK_USER_AGENT =
+  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 ' +
+  '(KHTML, like Gecko) Chrome/124.0 Safari/537.36';
+
+/* Follow one wrapper to wherever it lands, or null if it would not say.
+   `redirect: 'follow'` does the hops and `res.url` is where it stopped, which
+   is the same answer a phone would get by tapping it. The body is cancelled
+   rather than read: we want the address, not the page. */
+async function resolveLink(url: string): Promise<string | null> {
+  const control = new AbortController();
+  const timer = setTimeout(() => control.abort(), LINK_LOOKUP_MS);
+  try {
+    const res = await fetch(url, {
+      method: 'GET',
+      redirect: 'follow',
+      signal: control.signal,
+      headers: { 'User-Agent': LINK_USER_AGENT, 'Accept': 'text/html,*/*' },
+    });
+    try { await res.body?.cancel(); } catch { /* already drained */ }
+
+    const landed = unwrapRedirect(String(res.url || ''));
+    if (!/^https?:\/\//i.test(landed)) return null;
+    // It went nowhere, which is what a tracker that refused us looks like.
+    return landed === url ? null : landed;
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 /* Pictures worth offering. The filter is the whole value here: a marketing
    email is mostly one-pixel tracking beacons, spacer gifs and a logo, and a
    draft announcement carrying a tracking pixel as its photograph is worse than
@@ -1824,6 +2117,12 @@ Deno.serve(async (req: Request) => {
      screen draws as a warning. */
   let failedCount = 0;
   let failedNote: string | null = null;
+  /* Links this run could not read the destination of, or left off because two
+     buttons landed in the same place. Carried up to the run's note for the same
+     reason the two above are: the per-email ledger is a table no screen draws,
+     and a person is about to tap Approve on a card built out of these. See
+     checkedLinks. */
+  const linkNotes: string[] = [];
 
   try {
     await imap.connect(host, port);
@@ -1969,8 +2268,26 @@ Deno.serve(async (req: Request) => {
         // The anchors first, then anything written out as bare text. See
         // extractTextLinks: a plain-text-only newsletter has no anchors at all,
         // and the model may only choose from this list.
-        const links = [...htmlLinks, ...extractTextLinks(text, htmlLinks)];
+        //
+        // Then every one of them followed to where it actually goes, before the
+        // model sees it and therefore before the allowlist is built out of it.
+        // See checkedLinks: a wrapper is not a destination, and the candidate
+        // list is the one place this function can still tell the difference.
+        const checked = await checkedLinks(
+          [...htmlLinks, ...extractTextLinks(text, htmlLinks)],
+        );
+        const links = checked.links;
         const images = html ? extractImages(html) : [];
+
+        /* Kept on the ledger, which is where the Admin screen reads a run's
+           note from. A link that could not be checked is not a failure — the
+           drafts are fine and the email is parsed — but it is the one thing
+           about this email a person would want to know before approving
+           anything out of it. */
+        const linkNote = checked.notes.length
+          ? checked.notes.join(' ').slice(0, 500)
+          : null;
+        if (linkNote) linkNotes.push(linkNote);
 
         if (text.length < 40) {
           ledger.status = 'empty';
@@ -2128,9 +2445,11 @@ Deno.serve(async (req: Request) => {
 
           if (!rows.length) {
             ledger.status = 'empty';
-            ledger.note = 'Read it, but nothing in it looked like an announcement.';
+            ledger.note = [
+              'Read it, but nothing in it looked like an announcement.', linkNote,
+            ].filter(Boolean).join(' ').slice(0, 500);
           } else if (dryRun) {
-            preview.push({ subject, drafts: rows });
+            preview.push({ subject, drafts: rows, links: linkNote });
             draftCount += rows.length;
           } else {
             /* The ledger row is already there — the claim above wrote it
@@ -2169,7 +2488,7 @@ Deno.serve(async (req: Request) => {
             }
 
             await settleEmail(admin, emailId, {
-              status: 'parsed', drafts: rows.length, note: null,
+              status: 'parsed', drafts: rows.length, note: linkNote,
             });
 
             draftCount += rows.length;
@@ -2275,6 +2594,10 @@ Deno.serve(async (req: Request) => {
         `${failedCount === 1 ? 'was' : 'were'} not turned into drafts. ${failedNote ?? ''}`.trim(),
       );
     }
+    /* Last, because it is the only one of the three that is not about the run
+       having gone badly, and first-come-first-served on the 500 characters is
+       the right order for that. */
+    if (linkNotes.length) lines.push(linkNotes.join(' '));
     const note = lines.length ? lines.join(' ').slice(0, 500) : null;
 
     /* After the mailbox is closed and before the run is written, which is the
