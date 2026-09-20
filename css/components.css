@@ -3722,6 +3722,13 @@ a.hc-card:active { background: var(--hc-paper-sunk); }
 .hc-gate__track[data-step="1"] { transform: translateX(-33.3333%); }
 .hc-gate__track[data-step="2"] { transform: translateX(-66.6667%); }
 
+/* The password panel shares the third slot with the code panel and starts
+   out of the flow, so the track is always exactly three panels wide. This
+   rule is what makes that true: `hidden` alone loses to the `display: flex`
+   directly below it, and a panel that is meant to be gone but is merely
+   transparent still takes a third of the track. */
+.hc-gate__panel[hidden] { display: none; }
+
 .hc-gate__panel {
   flex: 0 0 33.3333%;
   width: 33.3333%;

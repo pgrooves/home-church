@@ -14,6 +14,14 @@
    Email works with no extra setup. Phone needs an SMS provider turned on
    in the Supabase dashboard first, see js/config.js.
 
+   WITH ONE EXCEPTION, and it is a short list rather than a mode. The
+   addresses in config.PASSWORD_ACCOUNTS are asked for a password instead of
+   being emailed a code. Nothing else about them differs, and nobody who is
+   not on that list can reach the password field at all. See "the password
+   door" below for what it is for; the short version is that an emailed code
+   is useless to somebody who does not hold the mailbox, and whoever reviews
+   this app for Apple does not hold ours.
+
    NOTE ON THE API CONTRACT: the endpoint shapes below (POST /auth/v1/otp,
    /auth/v1/verify, /auth/v1/token, and the profiles REST table) match
    Supabase's documented Auth and PostgREST APIs at the time this was
@@ -192,18 +200,75 @@
     };
     body[id.channel] = id.value;
 
-    return gotrueFetch('/verify', { body: body }).then(function (session) {
-      storeSessionFromResponse(session);
-      return syncAfterSignIn().then(function () {
-        /* Said twice, on purpose. setSession() above announces that somebody
-           is signed in, which is true a whole round trip before the phone
-           knows anything about them; this one announces who, and the name in
-           the greeting on Home is what was waiting for it. init() below has
-           done exactly this since it was written, for exactly this reason,
-           and the two sign-in paths should not differ in what they tell the
-           rest of the app. */
-        HC.store.emit('auth', { signedIn: true, user: getUser() });
-      });
+    return gotrueFetch('/verify', { body: body }).then(completeSignIn);
+  }
+
+  /* The last few inches of every sign-in, whichever door it came through.
+     Extracted when the password path arrived: there are two ways in now, and
+     the comment below has said since the file was written that they must not
+     differ in what they tell the rest of the app. A shared function is how
+     that stops being a promise and starts being true. */
+  function completeSignIn(body) {
+    storeSessionFromResponse(body);
+    return syncAfterSignIn().then(function () {
+      /* Said twice, on purpose. setSession() above announces that somebody
+         is signed in, which is true a whole round trip before the phone
+         knows anything about them; this one announces who, and the name in
+         the greeting on Home is what was waiting for it. init() below has
+         done exactly this since it was written, for exactly this reason,
+         and the two sign-in paths should not differ in what they tell the
+         rest of the app. */
+      HC.store.emit('auth', { signedIn: true, user: getUser() });
+    });
+  }
+
+  /* -------------------------------------------------- the password door
+
+     A short list of addresses sign in with a password rather than a code.
+     Everything above this comment is untouched by it: the same session, the
+     same profile sync, the same emit, the same everything afterwards. The
+     only difference is which credential the account proves itself with.
+
+     WHO IS ON THE LIST AND WHY, in js/config.js. In one line: an emailed
+     code cannot reach somebody who does not hold the mailbox, and whoever
+     reviews this app for Apple does not hold ours.
+
+     THE LIST IS NOT A PERMISSION. Being on it grants nothing. It routes the
+     sign-in screen to a different field, and Supabase still decides whether
+     the password is right. An address added here by mistake gets a password
+     panel it cannot fill in, which is a dead end rather than a door. */
+
+  function usesPassword(identifier) {
+    var list = cfg.PASSWORD_ACCOUNTS;
+    if (!list || !list.length) return false;
+    var id = classify(identifier);
+    if (!id || id.channel !== 'email') return false;
+    var value = id.value.toLowerCase();
+    return list.some(function (entry) {
+      return String(entry || '').trim().toLowerCase() === value;
+    });
+  }
+
+  function signInWithPassword(identifier, password) {
+    if (!configured()) return Promise.reject(new Error('Accounts are not set up for this church yet.'));
+    var id = classify(identifier);
+    if (!id || id.channel !== 'email') {
+      return Promise.reject(new Error('That does not look like an email address.'));
+    }
+    if (!password) return Promise.reject(new Error('Enter your password first.'));
+
+    return gotrueFetch('/token?grant_type=password', {
+      body: { email: id.value, password: password }
+    }).then(completeSignIn).catch(function (err) {
+      /* Supabase says "Invalid login credentials", which is correct and
+         reads like a server talking to a server. The address was already
+         accepted a panel ago, so the only thing that can be wrong here is
+         the password, and saying so is both kinder and more useful than
+         leaving somebody to wonder which half they got wrong. */
+      if (/invalid login credentials/i.test(err.message || '')) {
+        throw new Error('That password did not match. Check it and try again.');
+      }
+      throw err;
     });
   }
 
@@ -569,6 +634,8 @@
     classify: classify,
     requestCode: requestCode,
     verifyCode: verifyCode,
+    usesPassword: usesPassword,
+    signInWithPassword: signInWithPassword,
     signOut: signOut,
     deleteAccount: deleteAccount,
     saveProfile: saveProfile,

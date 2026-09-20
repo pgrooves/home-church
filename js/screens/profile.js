@@ -39,7 +39,7 @@
   // Local to this screen, same pattern as the day/neighborhood filters on
   // Connect. Reset to idle whenever a code actually goes out or verifies.
   var authIdentifier = '';
-  var authStep = 'idle';   // idle | sent
+  var authStep = 'idle';   // idle | sent | password
 
   function field(name, label, value, autocomplete) {
     return '' +
@@ -91,6 +91,29 @@
           c.button('Sign out', { action: 'sign-out', variant: 'secondary' }) +
           c.button('Delete my account', { action: 'go-legal', id: 'data', variant: 'tertiary' }) +
         '</div>';
+    }
+
+    /* The same fork js/gate.js has, in the other place somebody can sign in.
+       It has to be in both: the gate is what a cold launch shows, and this
+       is where the App Review notes send a reviewer, so a password path that
+       existed in only one of them would work exactly half the time. What the
+       list is for is in js/config.js. */
+    if (authStep === 'password') {
+      return '' +
+        c.sectionHeader('Almost there', 'Enter your password') +
+        '<p class="hc-body-serif hc-account__copy">' + c.esc(authIdentifier) +
+          ' signs in with a password rather than an emailed code.</p>' +
+        '<form class="hc-form" data-auth-form="password" novalidate>' +
+          '<label class="hc-field">' +
+            '<span class="hc-field__label">Your password</span>' +
+            '<input class="hc-input" type="password" autocomplete="current-password" ' +
+              'autocapitalize="off" autocorrect="off" spellcheck="false" ' +
+              'name="password" placeholder="Your password">' +
+          '</label>' +
+          c.button('Sign in', { action: 'auth-password' }) +
+        '</form>' +
+        '<button type="button" class="hc-btn hc-btn--tertiary hc-mt-lg" data-action="auth-restart">' +
+          'Use a different email</button>';
     }
 
     if (authStep === 'sent') {

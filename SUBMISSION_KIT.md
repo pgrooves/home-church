@@ -124,13 +124,40 @@ signing in, and the host's moderation queue needs an account the church has
 marked as a group leader. Set this up before you submit, or section 7 has two
 blanks in it and a reviewer with no way to check the Guideline 1.2 controls.
 
-- [ ] In Supabase, **Authentication → Sign In / Providers → Email**, add two
-      **test OTPs**: one address for the host, one for the member, each with
-      a fixed six digit code. A test OTP means the code always works and no
-      email is sent, so a reviewer is never waiting on an inbox we control.
-      Use addresses that read as what they are, `applereview.host@` and
-      `applereview.member@` on the church domain.
-- [ ] Sign in once as each so the `profiles` row exists.
+> **September 20: this section was rewritten, because the version before it
+> described a feature that does not exist and submission 1.0 (8) was rejected
+> on September 17 for exactly that gap.**
+>
+> It told you to set up **email test OTPs** in the Supabase dashboard, fixed
+> codes that always work with no email sent. Supabase has that for phone
+> numbers and has never had it for email; it is an open feature request
+> against GoTrue and nothing more. So there was no way to follow this page,
+> and what went to Apple instead was the login for an Outlook mailbox with
+> the demo account's codes in it. The reviewer could not get into the
+> mailbox, or the code never arrived in it, and so they never got into the
+> app at all. Guideline 2.1, and a fortnight.
+>
+> The app now has a password path for a short list of addresses, in
+> `js/config.js`. What follows sets that up. **The mailbox is no longer in
+> the loop: nothing is ever sent to these addresses and nobody needs to be
+> able to read their mail.**
+
+- [ ] Decide the addresses and put them in `PASSWORD_ACCOUNTS` in
+      `js/config.js`. The host one is `homechurchleader@outlook.com` and is
+      already there. **A second address for the member account still has to
+      be chosen and added**, or the Guideline 1.2 walkthrough below has one
+      account that can sign in and one that cannot. An address on this list
+      never receives mail, so it does not need to be a working mailbox, but
+      it does have to be an address Supabase will accept.
+- [ ] In Supabase, **Authentication → Users → Add user**, create each one
+      with **Auto Confirm User** ticked and a password you choose. An
+      unconfirmed user cannot use the password grant, and a reviewer meeting
+      "Email not confirmed" is a reviewer who is not getting in.
+- [ ] Check that **Authentication → Sign In / Providers → Email** still has
+      password sign-in enabled. It is on by default. If it was ever turned
+      off to make this a code-only church, the password path 400s on every
+      attempt and the whole of this section is decoration.
+- [ ] Sign in once as each, in the app, so the `profiles` row exists.
 - [ ] Turn Leader mode on for the host account. From an admin's phone that is
       Admin → Manage users → the Leader mode switch on their row, which is how
       the church does it. By hand it is still one column:
@@ -139,11 +166,29 @@ blanks in it and a reviewer with no way to check the Guideline 1.2 controls.
       This is what the reviewer's Leader mode walkthrough in section 7 needs,
       not only the moderation queue: since migration 0036 the leader tools and
       the presentation view belong to the account rather than to the phone.
-- [ ] Fill both addresses and both codes into the review notes in section 7.
+- [ ] Fill both addresses and both passwords into the review notes in
+      section 7, and put the **host** pair into the App Store Connect demo
+      credential fields. That field takes one account; the member one lives
+      in the notes.
+- [ ] **Copy and paste the address into App Store Connect rather than typing
+      it.** The app matches what is typed against `PASSWORD_ACCOUNTS`
+      ignoring case and surrounding spaces and nothing else, and there is no
+      "have a password?" link on the sign-in screen to recover with: one was
+      considered and dropped, because it would be shown to a whole
+      congregation to help one person who was sent written instructions. A
+      mismatch means the reviewer is emailed a code at an address nobody is
+      watching, which is the September 17 rejection happening twice.
+- [ ] **Then prove it on a real device**, which is what replaces that link.
+      Type the address exactly as it now appears in the App Store Connect
+      field, confirm the panel that comes up asks for a password rather than
+      a code, and confirm the password gets you in. Two minutes, and it is
+      the only check that catches a typo in either place.
 - [ ] Walk the seven steps in section 7 yourself, on a device, exactly as
       written. If any step does not do what it says, fix the step or fix the
       app before a reviewer finds the difference.
 - [ ] Leave both accounts in place after approval. Apple re-reviews updates.
+      The password path is ordinary app behaviour and stays shipped; there
+      is nothing here to take back out of a later build, deliberately.
 
 -----
 
@@ -517,10 +562,19 @@ so the church grants it to the people who lead a group instead of leaving it
 as a switch anybody can turn on. We have supplied an account below that has
 it, so everything in it is one sign-in away.
 
-Signing in has no password. We send a six digit code to an email address and
-the account is created on first use, so you can sign in with any address you
-control. The two demo accounts below are configured so the codes never change
-and no email is sent.
+HOW TO SIGN IN WITH THE ACCOUNT WE GAVE YOU
+Our members sign in with a code we email them. The two demo accounts below
+are different, and deliberately so: they sign in with an ordinary password,
+so that reaching the app never depends on your being able to read our mail.
+Type the email address, tap "Send me a code", and the app will ask you for a
+password rather than a code. Nothing is emailed to anyone.
+
+The account in the demo credential field above is the Host account, and it
+is the one the walkthrough below uses. The Member account is at the bottom
+of these notes and works the same way.
+
+(If you would rather make your own account, you can. Any address you control
+works, we email it six digits, and the account is created on first use.)
 
 DELETING AN ACCOUNT, GUIDELINE 5.1.1(v)
 Once signed in, account deletion is available in two places, both inside the
@@ -543,7 +597,9 @@ because the church turns it on for the people who lead a group.
 
   1. Tap the circle in the top right corner of any screen. This opens
      Your account.
-  2. Sign in with the Host email and code from the bottom of these notes.
+  2. Sign in with the Host email and password from the bottom of these
+     notes. Type the address, tap "Send me a code", and the app asks you for
+     the password instead.
   3. Scroll to "Leader mode" and tap "Open leader tools" to see the roster
      and prayer capture.
   4. Then tap the Guide tab, open any guide, and tap "Start presentation
@@ -592,14 +648,16 @@ The Guideline 1.2 controls are all one tap deep and all testable:
 
 TO TEST ALL OF THAT ON ONE DEVICE
 Reporting and blocking only appear on writing that is not your own, so this
-needs two accounts. Both are below, and both are configured as test accounts:
-the codes never change and no email is actually sent. One device is enough,
+needs two accounts. Both are below, and both sign in with a password rather
+than an emailed code, so neither needs a mailbox. One device is enough,
 because a room lives on our server and is still there when you sign back in.
 
   Host account (marked as a group leader)
-    Email: __________________     Code: __________
+    Email: homechurchleader@outlook.com
+    Password: __________________
   Member account
-    Email: __________________     Code: __________
+    Email: __________________
+    Password: __________________
 
   1. Tap the circle in the top right and sign in as the HOST.
   2. Tap the Group tab, then "Open a room" under Leader mode. The app mints

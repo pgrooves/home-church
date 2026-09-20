@@ -1110,6 +1110,31 @@ why the button's size and placement are a compliance question and not a taste
 one, and `tests/e2e/gate.js` for the whole flow driven in a browser, sign in,
 wrong code, guest, and Reduce Motion.
 
+### The one account that signs in with a password
+
+Almost everything above is the whole story: an address, six digits, no
+passwords to manage or reset. The exception is a short list of addresses in
+`config.PASSWORD_ACCOUNTS`, which are asked for a password instead and are
+emailed nothing.
+
+It exists because of a rejection. Submission 1.0 (8) came back under
+Guideline 2.1 on September 17: the demo account signed in with an emailed
+code, so the reviewer was handed the login for the mailbox that code went
+to, and they never got into either. Whoever reviews this app cannot read our
+mail, and a password is what App Store Connect's demo credential fields are
+shaped for.
+
+**What it is not is a mode, or a door for reviewers.** There is no button
+for it, nothing on the first panel hints at it, and an address that is not
+on the list cannot reach the password field at all. It is a second kind of
+credential on two ordinary accounts, which is why it ships permanently
+rather than being taken back out after approval. `js/gate.js` forks to it
+before any code is requested; `js/screens/profile.js` does the same for the
+other place somebody can sign in, because the review notes point there.
+Being on the list grants nothing: Supabase still decides whether the
+password is right. See the comment beside the list in `js/config.js`, and
+"The two demo accounts" in `SUBMISSION_KIT.md`.
+
 ### The sign in email has to be edited by hand
 
 `js/auth.js` asks Supabase for a one time code and the Profile screen asks the

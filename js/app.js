@@ -3697,12 +3697,38 @@
         input.focus();
         return;
       }
+      /* The fork, before anything is sent. Same rule as js/gate.js: an
+         address on the list in js/config.js is asked for a password, so no
+         code is generated and no email goes out. Everybody else carries on
+         to the code this app has always sent. */
+      if (HC.auth.usesPassword(value)) {
+        HC.screens.profileHelpers.setAuthIdentifier(HC.auth.classify(value).value);
+        HC.screens.profileHelpers.setAuthStep('password');
+        HC.router.go({ name: 'profile' }, { force: true });
+        return;
+      }
+
       el.setAttribute('disabled', 'true');
       HC.auth.requestCode(value).then(function (id) {
         HC.screens.profileHelpers.setAuthIdentifier(id.value);
         HC.screens.profileHelpers.setAuthStep('sent');
         HC.router.go({ name: 'profile' }, { force: true });
         c.toast(id.channel === 'email' ? 'Code sent. Check your email.' : 'Code sent. Check your texts.');
+      }).catch(function (err) {
+        el.removeAttribute('disabled');
+        c.toast(err.message);
+      });
+    },
+
+    'auth-password': function (el) {
+      var form = el.closest('form');
+      var password = form.querySelector('input[name="password"]').value;
+      var identifier = HC.screens.profileHelpers.getAuthIdentifier();
+      el.setAttribute('disabled', 'true');
+      HC.auth.signInWithPassword(identifier, password).then(function () {
+        HC.screens.profileHelpers.resetAuth();
+        HC.router.go({ name: 'profile' }, { force: true });
+        c.toast('You are signed in.');
       }).catch(function (err) {
         el.removeAttribute('disabled');
         c.toast(err.message);

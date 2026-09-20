@@ -20,6 +20,14 @@
      email    where to send the code
      code     the six digits that came back
 
+   AND ONE FORK, which almost nobody sees. The addresses in
+   config.PASSWORD_ACCOUNTS are asked for a password in place of the code,
+   and the password panel stands in the third slot when they are. There is
+   no button for it and nothing on the first panel hints at it, because a
+   congregation should not be offered a door that belongs to one account.
+   Typing an address that is not on the list cannot reach it. What it is
+   for is in js/config.js, next to the list.
+
    WHY THERE IS AN EMAIL STEP AT ALL. The code has to be sent somewhere.
    requestCode in js/auth.js is the same one Your account uses and it needs an
    address before there is a code to type, so the address is its own panel
@@ -58,7 +66,17 @@
   var SAY = 1600;
   var SAY_STILL = 900;
 
-  var STEPS = { choose: 0, email: 1, code: 2 };
+  /* Four panels, three slots. `code` and `password` are the same step of the
+     same journey, prove that this is you, reached by different people: they
+     share slot 2 and exactly one of them is in the document's flow at a time.
+
+     WHY NOT A FOURTH SLOT. The track is a flex row as wide as its panels and
+     the slide is one transform, so a fourth panel would make every panel
+     narrower than the screen and make the walk to the password a slide past
+     a code field nobody is going to type in. Sharing the slot means the
+     movement is identical whichever way the fork goes, and css/components.css
+     keeps the three it was written for. */
+  var STEPS = { choose: 0, email: 1, code: 2, password: 2 };
 
   var root = null;        // the splash layer, borrowed rather than built
   var deck = null;
@@ -127,6 +145,24 @@
             'data-gate="back-email">Use a different email</button>' +
         '</form>' +
 
+        /* Hidden from the first frame, and it matters that it is: a fourth
+           panel in the flow would divide the track four ways and leave every
+           panel short of the screen. It takes slot 2 only once somebody on
+           the list in js/config.js has typed their address, and the code
+           panel steps out of the flow as it does. */
+        '<form class="hc-gate__panel" data-panel="password" novalidate hidden>' +
+          '<label class="hc-gate__label" for="hc-gate-password">Your password</label>' +
+          '<input class="hc-input" id="hc-gate-password" name="password" type="password" ' +
+            'autocomplete="current-password" autocapitalize="off" ' +
+            'autocorrect="off" spellcheck="false" placeholder="Your password">' +
+          '<p class="hc-gate__note" data-for>This account signs in with a password.</p>' +
+          '<p class="hc-gate__error" data-error hidden></p>' +
+          '<button type="submit" class="hc-btn hc-btn--primary" data-gate="password-verify">' +
+            'Sign me in</button>' +
+          '<button type="button" class="hc-btn hc-btn--tertiary hc-gate__back" ' +
+            'data-gate="back-email">Use a different email</button>' +
+        '</form>' +
+
       '</div>';
   }
 
@@ -180,6 +216,17 @@
     pin();
   }
 
+  /* Which of the two panels is standing in slot 2. Called before go(), never
+     after: the track has to be the right three panels wide before the
+     transform that slides it, or the browser lays out four panels for a
+     frame and the slide starts from somewhere nobody meant. */
+  function useSlotTwo(name) {
+    var keep = panelOf(name);
+    var drop = panelOf(name === 'code' ? 'password' : 'code');
+    if (drop) drop.setAttribute('hidden', 'true');
+    if (keep) keep.removeAttribute('hidden');
+  }
+
   function go(name) {
     if (!(name in STEPS)) return;
     step = name;
@@ -228,6 +275,20 @@
       return;
     }
 
+    /* The fork, and it happens before anything is sent. An address on the
+       list in js/config.js is asked for a password instead, which means no
+       code is generated, no email goes out, and there is nothing to wait
+       for: the panel is simply already there. Everybody else falls through
+       to the code the app has always sent. */
+    if (HC.auth.usesPassword(value)) {
+      identifier = HC.auth.classify(value).value;
+      var who = panelOf('password').querySelector('[data-for]');
+      if (who) who.textContent = 'Signing in as ' + identifier + '.';
+      useSlotTwo('password');
+      go('password');
+      return;
+    }
+
     busy('email', true);
     HC.auth.requestCode(value).then(function (id) {
       identifier = id.value;
@@ -236,6 +297,7 @@
         sent.textContent = 'We sent a code to ' + id.value + '. It can take a minute to land.';
       }
       busy('email', false);
+      useSlotTwo('code');
       go('code');
     }).catch(function (err) {
       busy('email', false);
@@ -261,6 +323,30 @@
     }).catch(function (err) {
       busy('code', false);
       say('code', err.message);
+    });
+  }
+
+  /* The other half of the fork. Lands in exactly the same place signIn()
+     does, including the burst, because from here down there is no such
+     thing as two kinds of signed in. */
+  function signInWithPassword() {
+    var panel = panelOf('password');
+    var input = panel.querySelector('input');
+    var password = input.value || '';
+
+    say('password', '');
+    if (!password) {
+      say('password', 'Enter your password.');
+      focusInto(input);
+      return;
+    }
+
+    busy('password', true);
+    HC.auth.signInWithPassword(identifier, password).then(function () {
+      welcome();
+    }).catch(function (err) {
+      busy('password', false);
+      say('password', err.message);
     });
   }
 
@@ -323,6 +409,7 @@
       var name = evt.target.getAttribute('data-panel');
       if (name === 'email') sendCode();
       else if (name === 'code') signIn();
+      else if (name === 'password') signInWithPassword();
     });
   }
 
