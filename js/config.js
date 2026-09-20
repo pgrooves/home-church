@@ -18,7 +18,10 @@
    token, the only difference is what the email says. In Authentication ->
    Emails, edit both the "Magic Link" template (returning members) and the
    "Confirm signup" template (first time signing in) to print {{ .Token }},
-   the six digits, and drop {{ .ConfirmationURL }} entirely. The link is not
+   the code, and drop {{ .ConfirmationURL }} entirely. How many digits that
+   token is comes from Email OTP Length on the same dashboard page, which is
+   eight for this project and six by default; the app's fields say eight, so
+   the two have to agree. The link is not
    just redundant here, it is broken, nothing in the app handles the redirect
    it lands on. See README, "Accounts", for the templates to paste.
 
@@ -35,7 +38,7 @@
     SUPABASE_ANON_KEY: 'sb_publishable_x7NBiMU-rIxRwu68xCydGQ_fnwzR8Ey',
 
     /* THE ACCOUNTS THAT SIGN IN WITH A PASSWORD INSTEAD OF A CODE.
-       Everybody else types an address and we email them six digits. These
+       Everybody else types an address and we email them eight digits. These
        addresses are asked for a password instead, and no email is sent.
 
        WHY THIS EXISTS. Guideline 2.1 requires that whoever reviews the app

@@ -118,7 +118,7 @@ way back to an address.
 
 ### The Resend backstop, and whether you want it
 
-Resend is the account that already sends the six digit sign in codes, and it
+Resend is the account that already sends the eight digit sign in codes, and it
 used to send this form too. It is still wired up as a fallback: **if the Gmail
 send fails and `RESEND_API_KEY` is set, the message goes out through Resend
 instead**, from `Home Church app <app@homechurchnola.com>` rather than from

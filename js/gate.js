@@ -18,7 +18,7 @@
 
      choose   Log in with email, or continue as guest
      email    where to send the code
-     code     the six digits that came back
+     code     the eight digits that came back
 
    AND ONE FORK, which almost nobody sees. The addresses in
    config.PASSWORD_ACCOUNTS are asked for a password in place of the code,

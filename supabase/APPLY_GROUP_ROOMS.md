@@ -136,10 +136,13 @@ Do not "fix" these. If the count ever drops, something was taken out.
   while `service_role` bypasses it, which is how the slur list stays closed.
   Also flagged on `public.push_log`, pre-existing.
 - `auth_leaked_password_protection` (WARN). HaveIBeenPwned checking is off.
-  **This app has no passwords.** Sign in is an emailed six digit code, start to
-  finish — see `requestCode` and `verifyCode` in `js/auth.js`. The setting
-  guards a code path nothing here uses. Turn it on if you like, one toggle in
-  the dashboard, but nothing in this app changes either way.
+  **Almost nothing in this app has a password.** Sign in for the congregation
+  is an emailed eight digit code, start to finish — see `requestCode` and
+  `verifyCode` in `js/auth.js`. The exception is the two demo accounts in
+  `config.PASSWORD_ACCOUNTS`, which App Review signs in with; they are the
+  only rows this setting would ever touch. Turn it on if you like, one toggle
+  in the dashboard, and pick passwords for those two that it would not object
+  to anyway.
 
 ---
 

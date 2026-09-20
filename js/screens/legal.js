@@ -127,7 +127,7 @@
 
     html += block('Signing in, which is the one part that does leave', [
       'Signing in is optional. Everything above works whether you sign in or not, and the app never asks you to. What signing in buys you is that Your information follows you to a new phone instead of starting over.',
-      'To sign in you give us an email address. We send a six digit code to it, and once you type the code back in you have an account. There is no password to forget or for us to lose.',
+      'To sign in you give us an email address. We send an eight digit code to it, and once you type the code back in you have an account. There is no password to forget or for us to lose.',
       'From that point on, whatever you have filled in under Your information is stored on our server as well as on your phone, so it can be there when you sign in somewhere else. That is your name, and any of these you chose to fill in: your birthday, your campus, your marital status, and your address. If you left a field blank it stays blank, and none of it is required to use the app.'
     ]);
 
@@ -172,7 +172,7 @@
     html += list('The services this app depends on', [
       'Supabase, which stores the sermons, guides, and events the app downloads, and which stores your account if you make one. Their servers for this project are in Ohio, in the United States.',
       'Google, whose Gmail carries a message you send from the form on Connect to the church, in the same way it would carry an email you wrote to us yourself. They handle the sending and nothing else.',
-      'Resend, which delivers the six digit sign in code to your email address, and carries a message from the form on Connect on the occasions Gmail cannot. They handle the sending and nothing else.',
+      'Resend, which delivers the eight digit sign in code to your email address, and carries a message from the form on Connect on the occasions Gmail cannot. They handle the sending and nothing else.',
       'Apple, which delivers notifications if you have turned them on.'
     ]);
 

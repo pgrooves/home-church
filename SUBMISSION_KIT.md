@@ -605,7 +605,7 @@ is the one the walkthrough below uses. The Member account is at the bottom
 of these notes and works the same way.
 
 (If you would rather make your own account, you can. Any address you control
-works, we email it six digits, and the account is created on first use.)
+works, we email it eight digits, and the account is created on first use.)
 
 DELETING AN ACCOUNT, GUIDELINE 5.1.1(v)
 Once signed in, account deletion is available in two places, both inside the
