@@ -582,6 +582,16 @@ which is exactly the shape that fails Guideline 4.2.
 Thanks for reviewing. Home Church is the app for a single church in Metairie,
 Louisiana. A few notes to save you time.
 
+WHAT CHANGED SINCE THE LAST SUBMISSION
+Submission 08792afe-55f3-4c13-b984-097eb4e91092, version 1.0 (8), was
+returned under Guideline 2.1 because the demo credentials did not get you
+in. That was our mistake and we have fixed the cause rather than the
+symptom. The account we gave you signed in with a code emailed to a mailbox,
+so using it meant logging into that mailbox first. The two demo accounts
+below now sign in with an ordinary password instead. No email, no mailbox,
+no waiting. The credentials in the demo account fields above are current and
+we have signed in with them on a device.
+
 ALMOST NOTHING NEEDS AN ACCOUNT
 Every screen is available on first launch without signing in, including the
 whole guide catalogue and every sermon. Two things are not. Writing in a
