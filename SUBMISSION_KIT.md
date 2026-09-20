@@ -142,17 +142,45 @@ blanks in it and a reviewer with no way to check the Guideline 1.2 controls.
 > the loop: nothing is ever sent to these addresses and nobody needs to be
 > able to read their mail.**
 
-- [ ] Decide the addresses and put them in `PASSWORD_ACCOUNTS` in
-      `js/config.js`. The host one is `homechurchleader@outlook.com` and is
-      already there. **A second address for the member account still has to
-      be chosen and added**, or the Guideline 1.2 walkthrough below has one
-      account that can sign in and one that cannot. An address on this list
-      never receives mail, so it does not need to be a working mailbox, but
-      it does have to be an address Supabase will accept.
-- [ ] In Supabase, **Authentication → Users → Add user**, create each one
-      with **Auto Confirm User** ticked and a password you choose. An
-      unconfirmed user cannot use the password grant, and a reviewer meeting
-      "Email not confirmed" is a reviewer who is not getting in.
+Both addresses are already in `PASSWORD_ACCOUNTS` in `js/config.js`:
+
+| | Address | What it is for |
+|---|---|---|
+| Host | `homechurchappleader@outlook.com` | Leader mode, the moderation queue, and the App Store Connect demo credential fields |
+| Member | `homechurchappreview@outlook.com` | The second seat the Guideline 1.2 walkthrough needs, so Report and Block appear |
+
+They differ by five letters in the middle and nothing else. Copy them, from
+here or from the config file; do not retype them anywhere.
+
+- [ ] **Set a password on each one.** Both users already exist in Supabase
+      and are confirmed, which is the easy half. The hard half is that the
+      dashboard has no way to set a password on a user who already has an
+      account: the only button offers to *email* a reset link, which is the
+      mailbox this whole exercise exists to get out of. Two ways round it,
+      and the first is simpler:
+      - **Delete the user and add it again.** Authentication → Users, the
+        `...` menu → Delete user, then **Add user → Create new user** with
+        the same address, a password you choose, and **Auto Confirm User**
+        ticked. A demo account holds nothing worth keeping, and this way
+        there are no keys to handle. Ticking Auto Confirm is not optional:
+        an unconfirmed user cannot use the password grant, and a reviewer
+        meeting "Email not confirmed" is a reviewer who is not getting in.
+        Note that deleting the user takes its `profiles` row with it, so
+        Leader mode has to be granted again afterwards, below.
+      - **Or set it in place, from the SQL editor**, if you would rather not
+        delete anything. Supabase keeps pgcrypto in the `extensions` schema,
+        so both functions need naming in full:
+        ```sql
+        update auth.users
+        set encrypted_password = extensions.crypt(
+              'THE PASSWORD', extensions.gen_salt('bf'))
+        where email in ('homechurchappleader@outlook.com',
+                        'homechurchappreview@outlook.com');
+        ```
+        This writes straight into an `auth` table, which Supabase discourages
+        as a habit and which is fine as a one-off for two accounts nobody
+        depends on. Give the two accounts different passwords by running it
+        twice, one address at a time.
 - [ ] Check that **Authentication → Sign In / Providers → Email** still has
       password sign-in enabled. It is on by default. If it was ever turned
       off to make this a code-only church, the password path 400s on every
@@ -161,8 +189,11 @@ blanks in it and a reviewer with no way to check the Guideline 1.2 controls.
 - [ ] Turn Leader mode on for the host account. From an admin's phone that is
       Admin → Manage users → the Leader mode switch on their row, which is how
       the church does it. By hand it is still one column:
-      `update public.profiles set can_host = true where id =
-      (select id from auth.users where email = '…');`
+      `update public.profiles set can_host = true where id = (select id from
+      auth.users where email = 'homechurchappleader@outlook.com');`
+      Only the host account. The member account is a member on purpose:
+      half of what the Guideline 1.2 walkthrough shows is what somebody
+      without Leader mode sees.
       This is what the reviewer's Leader mode walkthrough in section 7 needs,
       not only the moderation queue: since migration 0036 the leader tools and
       the presentation view belong to the account rather than to the phone.
@@ -653,10 +684,10 @@ than an emailed code, so neither needs a mailbox. One device is enough,
 because a room lives on our server and is still there when you sign back in.
 
   Host account (marked as a group leader)
-    Email: homechurchleader@outlook.com
+    Email: homechurchappleader@outlook.com
     Password: __________________
   Member account
-    Email: __________________
+    Email: homechurchappreview@outlook.com
     Password: __________________
 
   1. Tap the circle in the top right and sign in as the HOST.

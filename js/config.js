@@ -61,7 +61,10 @@
        on a real device and confirm the password panel is what comes up.
        Comparison is case-insensitive and trims whitespace; nothing else is
        forgiven. See SUBMISSION_KIT.md, "The two demo accounts". */
-    PASSWORD_ACCOUNTS: ['homechurchleader@outlook.com']
+    PASSWORD_ACCOUNTS: [
+      'homechurchappleader@outlook.com',  // the host, marked as a group leader
+      'homechurchappreview@outlook.com'   // the member, for the Guideline 1.2 walkthrough
+    ]
   };
 
 })(window.HC = window.HC || {});
