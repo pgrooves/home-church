@@ -599,6 +599,11 @@ in. The account signed in with a code emailed to a mailbox, so using it
 meant logging into that mailbox first. Both accounts above now use ordinary
 passwords instead. We have signed in with them on a device.
 
+GETTING AROUND
+There is no tab bar. The round button in the bottom right corner opens the
+navigation, which is the whole app as a full screen list. The circle in the
+top right of any screen opens Your account.
+
 WHERE TO LOOK FIRST: LEADER MODE
 Almost every screen works without signing in. Leader mode does not, because
 it belongs to a person rather than a phone: it lets somebody host a group
@@ -606,18 +611,19 @@ room and edit the questions their whole group answers, so the church grants
 it to the people who lead a group. It is the heart of the app and it is easy
 to miss, so:
 
-  1. Tap the circle in the top right of any screen (Your account) and sign
-     in with the Host account above.
-  2. Tap ••• in the tab bar, then Group.
+  1. Tap the circle in the top right (Your account) and sign in with the
+     Host account above.
+  2. Tap the round button in the bottom right, then GROUP.
   3. Under "Leader mode — Host tonight", pick this week's guide and tap
      "Open a room". The app mints a six digit code for your group.
-  4. Then tap the Guide tab, open any guide, and tap "Start presentation
-     mode" at the top. That is the one-question-at-a-time view leaders use
-     while running a meeting in a living room.
+  4. Then open GUIDE from that same menu, open any guide, and tap "Start
+     presentation mode" at the top. That is the one-question-at-a-time view
+     leaders use while running a meeting in a living room.
 
-  (Signed in as the Member account, or signed out, the Group tab offers only
-  a box to type somebody else's room code into. That is the feature working,
-  not an error: it is what everybody who is not leading a group sees.)
+  (Signed in as the Member account, or signed out, the Group screen offers
+  only a box to type somebody else's room code into. That is the feature
+  working, not an error: it is what everybody who is not leading a group
+  sees.)
 
 DELETING AN ACCOUNT, GUIDELINE 5.1.1(v)
 Signed in, deletion is in two places, both in-app, neither requiring an
@@ -627,7 +633,7 @@ removed. Two taps, the second confirming. It deletes rather than
 deactivates. The separate "Erase everything on this phone" button clears
 local device data only and is deliberately not the same control.
 
-THE GROUP TAB, AND GUIDELINE 1.2
+THE GROUP SCREEN, AND GUIDELINE 1.2
 A group room is a room a small group joins with a six digit code from their
 leader. It carries that week's discussion questions. Each person types their
 own answer, the answers stay hidden until the host opens them one at a time,
@@ -657,15 +663,14 @@ The Guideline 1.2 controls, all one tap deep:
 Reporting and blocking only appear on writing that is not your own, so to
 see them: as the HOST, open a room as above and add a prayer request at the
 bottom (the terms screen appears first). Sign out, sign in as the MEMBER,
-open the Group tab and join with that room code — Report and Block are under
-the host's request. Sign out and back in as the HOST, rejoin with the same
-code, and the report is waiting at the top of the room. One device is
-enough; the room lives on our server. While you are in a room, typing a slur
-into an answer and posting it is refused with a message and nothing is
-stored.
+open GROUP and join with that room code — Report and Block are under the
+host's request. Sign out and back in as the HOST, rejoin with the same code,
+and the report is waiting at the top of the room. One device is enough; the
+room lives on our server. While you are in a room, typing a slur into an
+answer and posting it is refused with a message and nothing is stored.
 
 THE GIVE TAB TAKES NO PAYMENT IN THE APP
-Tapping it opens our giving provider, Overflow, in SFSafariViewController.
+Tapping GIVE opens our giving provider, Overflow, in SFSafariViewController.
 No purchase, digital content, or app functionality is unlocked by giving,
 and nothing is gated behind it. We are handing off to a charitable donation
 platform, not circumventing in-app purchase. Baptism and course signups,
