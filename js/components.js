@@ -534,6 +534,12 @@
     message: '<path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9.5 9.5 0 0 1-2.9-.4L4 21l1.4-4.1A8.2 8.2 0 0 1 3.6 11.5 8.4 8.4 0 0 1 12 3.1a8.4 8.4 0 0 1 9 8.4z"/>',
     flag: '<path d="M5 21V4"/><path d="M5 5h11l-1.6 3.2L16 11.5H5z"/>',
     pencil: '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>',
+    /* Two into one, going down. Drawn for the Merge with control on the Cal
+       tab, where the corner of an event has room for a picture and not for a
+       word. Nothing else uses it yet, and the shape is deliberately a Y rather
+       than two arrows: what this button does is join, not move. */
+    merge: '<path d="M6 3v3.5A5.5 5.5 0 0 0 11.5 12h1A5.5 5.5 0 0 0 18 6.5V3"/>' +
+           '<path d="M12 12v9"/><path d="m8.5 17.5 3.5 3.5 3.5-3.5"/>',
 
     /* The Cal tab, the second tile in the bar. A month block with its two
        rings and one day marked, which is the drawing the whole screen is: a
@@ -978,6 +984,138 @@
     return html;
   }
 
+  /* ------------------------------------------------------- merging by hand
+
+     THE PANEL BEHIND "Merge with", drawn here because two screens put it up —
+     the Admin list of announcements and the Cal tab — and a flow drawn twice
+     is a flow that behaves differently in two places, which is the same
+     argument addToCalendar below was lifted out of js/screens/connect.js for.
+
+     IT IS A PANEL AND NOT A DIALOG, deliberately. This app has no modal and
+     should not grow one for this: every other decision on the Admin screen is
+     made by a card replacing a list — the announcement form does exactly this
+     — and a thing you can scroll, read twice and back out of is the right
+     shape for "here is what the merged card would say".
+
+     TWO STATES, AND THE SECOND ONE IS THE POINT.
+
+       pick      a dropdown of everything it could be merged into, and one
+                 button. Nothing has happened, nothing has been asked of a
+                 model, and Cancel costs nothing.
+
+       preview   what the merged row would say, field by field, with the old
+                 value struck through above the new one. THIS IS WHAT MAKES
+                 THE WHOLE FEATURE HONEST: a model wrote these words and they
+                 are about to be on Home, so the tap that puts them there is a
+                 tap somebody made having read them.
+
+     AND WHEN NOTHING CHANGED, there is no Save button at all. The church asked
+     for that in as many words — "if everything remains the same after the new
+     message is analyzed, a message to the admin is given saying so and nothing
+     changes" — and a greyed out Save would be a worse way of saying it than a
+     sentence and a way back.
+
+     `state` is HC.admin.mergeState(); `targets` is HC.admin.mergeTargets().
+     This file reads them and writes nothing, like every other function in it. */
+  function mergePanel(state, targets, opts) {
+    if (!state) return '';
+
+    var o = opts || {};
+    var thing = state.kind === 'event' ? 'date' : 'announcement';
+    var source = o.sourceTitle || 'this one';
+
+    var html = '<div class="hc-admin__item hc-admin__item--review hc-merge">';
+
+    html += '<div class="hc-admin__item-head">' +
+      '<p class="hc-eyebrow">Merging “' + esc(source) + '”</p>';
+
+    if (state.step === 'preview' && state.preview) {
+      html += previewBody(state, thing);
+    } else {
+      html += '<p class="hc-caption">Pick the ' + esc(thing) + ' this one is ' +
+        'really about. Its words are kept and whatever this one adds is written ' +
+        'onto it; nothing is saved until you have read what would change.</p>';
+
+      if (state.error) {
+        html += '<p class="hc-caption hc-admin__warn">' + esc(state.error) + '</p>';
+      }
+
+      html += '<label class="hc-field">' +
+        '<span class="hc-field__label">Merge into</span>' +
+        '<select class="hc-input" data-merge-target>' +
+          '<option value="">Pick one…</option>' +
+          (targets || []).map(function (t) {
+            return '<option value="' + esc(t.id) + '"' +
+              (t.id === state.targetId ? ' selected' : '') + '>' +
+              esc(t.title) + (t.when ? ' — ' + esc(t.when) : '') +
+            '</option>';
+          }).join('') +
+        '</select>' +
+      '</label>';
+    }
+
+    html += '</div><div class="hc-admin__item-actions">';
+
+    if (state.step === 'preview' && state.preview) {
+      if (!state.preview.unchanged) {
+        html += button('Save the merge', { action: 'merge-save', small: true,
+          busy: o.busy === 'merge-save' });
+      }
+      html += button('Pick a different one', { action: 'merge-back',
+        variant: 'secondary', small: true });
+    } else {
+      html += button('See what would change', { action: 'merge-preview',
+        small: true, disabled: !state.targetId, busy: o.busy === 'merge-preview' });
+    }
+
+    html += button('Cancel', { action: 'merge-cancel', variant: 'tertiary', small: true });
+
+    return html + '</div></div>';
+  }
+
+  /* The diff. One row per field that would move, the old value above the new
+     one, both in full rather than elided: a body that is summarised in the
+     preview is a body nobody has actually read.
+
+     NOT DRAWN AS MARKUP, even for body_html. The point of this panel is to
+     show what would be written, and drawing a merged card as a card would hide
+     exactly the thing somebody is here to check. */
+  function previewBody(state, thing) {
+    var p = state.preview;
+
+    var html = '<p class="hc-row__title">' + esc(p.keeps_title) + '</p>';
+
+    if (p.unchanged) {
+      return html +
+        '<p class="hc-caption">Nothing changes. Everything “' + esc(p.other_title) +
+        '” says is already on this ' + esc(thing) + ', so there is nothing to ' +
+        'write. You can still delete the other one if it is a duplicate.</p>';
+    }
+
+    html += '<p class="hc-caption hc-admin__warn">' + esc(p.note) + '</p>';
+
+    html += '<dl class="hc-merge__diff">';
+    (p.changes || []).forEach(function (change) {
+      html += '<dt class="hc-caption hc-merge__field">' + esc(change.label) + '</dt>' +
+        '<dd class="hc-merge__values">' +
+          (change.before
+            ? '<p class="hc-caption hc-merge__before">' + esc(change.before) + '</p>'
+            : '<p class="hc-caption hc-merge__before hc-merge__before--none">nothing</p>') +
+          '<p class="hc-merge__after">' + esc(change.after) + '</p>' +
+        '</dd>';
+    });
+    html += '</dl>';
+
+    html += '<p class="hc-caption">Saving writes this onto “' + esc(p.keeps_title) +
+      '”. “' + esc(p.other_title) + '” ' +
+      (state.kind === 'event'
+        ? 'comes off the calendar, and anything pointing at it points at this one.'
+        : 'goes to the Deleted drawer, and its date and its pictures come with it.') +
+      '</p>';
+
+    return html;
+  }
+
   /* --------------------------------------------------- add to calendar
 
      The Add to calendar control, in one place because it is now drawn in two:
@@ -995,12 +1133,22 @@
      `eventId` is an events row id, and the 'add-to-calendar' handler in
      js/app.js looks it up in HC.data.events. An announcement whose event is
      not published is not in that list, so the caller checks before drawing
-     this rather than offering a button that would do nothing. */
-  function addToCalendar(eventId) {
+     this rather than offering a button that would do nothing.
+
+     `day` is which of an event's days this button is offering, since migration
+     0074 let one event run on several. ONE DAY PER TAP, deliberately: a button
+     that quietly put three entries in somebody's calendar would be a button
+     doing more than it says, and there is no taking them back out — this app
+     can never reach a phone's own calendar again. The caller says which day it
+     is drawing, so the button under the second Sunday adds the second Sunday.
+     Left out, it is the day the event starts on, which is what every caller
+     written before 0074 meant. */
+  function addToCalendar(eventId, day) {
     var label = HC.data.copy('connect.add-to-calendar', 'Add to calendar');
 
     var html = '<button type="button" class="hc-inline-link" ' +
-      'data-action="add-to-calendar" data-id="' + esc(eventId) + '">' +
+      'data-action="add-to-calendar" data-id="' + esc(eventId) + '" ' +
+      (day ? 'data-day="' + esc(day) + '" ' : '') + '>' +
         icon('plus', 'hc-share__icon') +
         '<span>' + esc(label) + '</span>' +
       '</button>';
@@ -1349,6 +1497,7 @@
     embedBase: embedBase,
 
     sectionHeader: sectionHeader,
+    mergePanel: mergePanel,
     quoteCard: quoteCard,
     numberedRow: numberedRow,
     checkRow: checkRow,

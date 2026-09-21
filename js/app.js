@@ -2404,6 +2404,71 @@
       }));
     },
 
+    /* ------------------------------------------------------ merging by hand
+
+       THE BACKUP, and these five handlers are all of it on this side. The flow
+       itself lives in js/admin.js because two screens reach it, and what it
+       draws lives in js/components.js for the same reason; these only say what
+       a tap means and when to repaint.
+
+       WHICH SCREEN REPAINTS is the one thing worth knowing here. A merge can
+       be started from the Admin list or from the Cal tab, so every one of
+       these ends in repaintHere() rather than in repaintAdmin(): a Cal tab
+       merge repainting the Admin screen would leave the tap apparently doing
+       nothing at all. */
+
+    'admin-announcement-merge': function (el) {
+      HC.admin.startMerge('announcement', el.getAttribute('data-id'));
+      repaintHere();
+    },
+
+    'admin-event-merge-with': function (el) {
+      HC.admin.startMerge('event', el.getAttribute('data-id'));
+      repaintHere();
+    },
+
+    'cal-event-merge': function (el) {
+      HC.admin.startMerge('event', el.getAttribute('data-id'));
+      repaintHere();
+    },
+
+    'merge-cancel': function () {
+      HC.admin.cancelMerge();
+      repaintHere();
+    },
+
+    // Back to the picker from the preview, with nothing written. The preview
+    // is dropped with it, because a preview of one pairing shown under another
+    // pairing's name is the one thing this panel must never do.
+    'merge-back': function () {
+      var at = HC.admin.mergeState();
+      if (!at) return;
+      at.step = 'pick';
+      at.preview = null;
+      repaintHere();
+    },
+
+    'merge-preview': function () {
+      var at = HC.admin.mergeState();
+      if (!at || !at.targetId) return;
+
+      mergeRun('merge-preview', HC.admin.previewMerge());
+    },
+
+    'merge-save': function () {
+      var at = HC.admin.mergeState();
+      if (!at || !at.preview) return;
+
+      var keeps = at.preview.keeps_title;
+      var kind = at.kind;
+
+      mergeRun('merge-save', HC.admin.applyMerge().then(function () {
+        HC.components.toast(kind === 'event'
+          ? 'One date now, “' + keeps + '”.'
+          : 'One announcement now, “' + keeps + '”.');
+      }));
+    },
+
     /* ------------------------------------------------------------- users */
 
     'admin-role': function (el) {
@@ -2671,6 +2736,32 @@
       });
     },
 
+    /* The other days one event runs on, from migration 0074. Both of these
+       change the draft this screen is holding and nothing else: nothing
+       reaches Supabase until Save, which is the promise the rest of this form
+       already makes and the reason Cancel means something.
+
+       THE BOX IS READ AND THEN EMPTIED BY THE REPAINT, which is the whole
+       reason adding a day is a button rather than something that happens the
+       moment the date input changes. A date input fires while somebody is
+       still typing the year, so the eager version of this adds 0002-01-01 and
+       0020-01-01 on the way to 2026. */
+    'cal-day-add': function () {
+      var box = document.querySelector('[data-cal-newday]');
+      if (!box) return;
+
+      var why = calHelpers().addDay(box.value);
+      if (why) { c.toast(why); return; }
+
+      HC.native.tap('Light');
+      repaintCal();
+    },
+
+    'cal-day-remove': function (el) {
+      calHelpers().removeDay(el.getAttribute('data-day'));
+      repaintCal();
+    },
+
     'cal-event-cancel': function () {
       calHelpers().clearDraft();
       repaintCal();
@@ -2709,7 +2800,11 @@
         startsAt: h.startsAtIso(d),
         timeLabel: String(d.timeLabel || '').trim(),
         location: String(d.location || '').trim(),
-        description: String(d.blurb || '').trim()
+        description: String(d.blurb || '').trim(),
+        // The other days it runs on, from migration 0074. Sent every time,
+        // including empty: an empty list is what taking the second Sunday off
+        // a class looks like, and leaving it out would leave the column alone.
+        alsoOn: (d.days || []).slice().sort()
       }).then(function () {
         h.clearDraft();
         // The grid follows what was just written. A confirmation that says it
@@ -3027,6 +3122,10 @@
        took three tries to get right. */
     'add-to-calendar': function (el) {
       var id = el.getAttribute('data-id');
+      // Which day, for an event that runs on more than one since 0074. The
+      // button says which it is offering; without one it is the day the event
+      // starts on, which is what an announcement's copy of this button means.
+      var day = el.getAttribute('data-day') || '';
       var evt = (HC.data.events || []).filter(function (e) { return e.id === id; })[0];
       if (!evt) return;
 
@@ -3034,7 +3133,7 @@
         title: evt.title,
         description: evt.blurb,
         location: evt.location,
-        start: HC.screens.calHelpers.eventStart(evt)
+        start: HC.screens.calHelpers.eventStart(evt, day)
       }).then(function (ok) {
         if (ok) HC.native.tap('Light');
         else c.toast('Could not open your calendar from here.');
@@ -4433,6 +4532,34 @@
     HC.router.go({ name: 'admin', id: route.id, restore: true }, { force: true });
   }
 
+  /* Whichever of the two is on screen. Merging by hand is reachable from the
+     Admin list and from the Cal tab, and a handler that knew which one it was
+     on would be two handlers. Neither repaint does anything when its screen is
+     not the one showing, so calling both is the whole implementation. */
+  function repaintHere() {
+    repaintAdmin();
+    repaintCal();
+  }
+
+  /* adminRun's twin for the merge panel, and the difference is only which
+     screen's busy flag it sets. The Admin screen and the Cal tab each hold
+     their own, because each draws its own buttons; the merge in the middle is
+     one object in js/admin.js either way. */
+  function mergeRun(token, promise) {
+    var route = HC.router.current();
+    var h = (route && route.name === 'cal') ? calHelpers() : adminHelpers();
+
+    h.setBusy(token);
+    repaintHere();
+
+    return promise.catch(function (err) {
+      HC.components.toast(err.message || 'That did not go through. Try again in a moment.');
+    }).then(function () {
+      h.setBusy('');
+      repaintHere();
+    });
+  }
+
   /* Every keystroke on the Admin screen. Writes into the draft object and
      draws nothing, for the reason in the input listener above.
 
@@ -5137,6 +5264,16 @@
          on the default rather than on what somebody picked. */
       var remindWhat = evt.target.getAttribute && evt.target.getAttribute('data-remind');
       if (remindWhat) HC.reminders.setField(remindWhat, evt.target.value);
+
+      /* Which row a merge is aimed at. Repainted, unlike every other field on
+         this screen, and it is the one place that is right: picking a
+         different target is picking a different merge, so the button under it
+         has to come back to life and any preview of the old pairing has to go.
+         Nothing is written and nothing is asked of a model until the button. */
+      if (evt.target.hasAttribute && evt.target.hasAttribute('data-merge-target')) {
+        HC.admin.setMergeTarget(evt.target.value);
+        repaintHere();
+      }
 
       // The announcement picture. A file input only ever reports 'change',
       // never 'input', which is why this is here rather than above.

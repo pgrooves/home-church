@@ -2605,6 +2605,51 @@
   margin-top: var(--hc-space-sm);
 }
 
+/* ---------------------------------------------------------- merging by hand
+
+   The panel behind "Merge with", drawn by mergePanel() in js/components.js.
+   It replaces the list on whichever screen put it up, so it is styled as a
+   review card rather than as a dialog: the same stripe, the same padding, and
+   nothing that says "modal", because it is not one and backing out of it costs
+   a tap either way.
+
+   THE DIFF IS THE WHOLE POINT and it is styled to be read rather than skimmed.
+   The old value is struck through above the new one, in the quiet colour, so
+   a glance down the left edge answers "what is this replacing" and a glance
+   down the right answers "with what". Both are given in full; a preview that
+   truncates the body is a preview of the wrong thing. */
+.hc-merge__diff {
+  margin: var(--hc-space-md) 0 0;
+  display: grid;
+  gap: var(--hc-space-md);
+}
+
+.hc-merge__field {
+  color: var(--hc-mid);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: 0.75rem;
+}
+
+.hc-merge__values {
+  margin: var(--hc-space-xs) 0 0;
+  display: grid;
+  gap: var(--hc-space-xs);
+  border-left: 2px solid var(--hc-rule);
+  padding-left: var(--hc-space-sm);
+}
+
+.hc-merge__before {
+  color: var(--hc-mid);
+  text-decoration: line-through;
+}
+
+/* A field that was empty. Struck-through nothing reads as a mistake, so the
+   word is said and the strike comes off. */
+.hc-merge__before--none { text-decoration: none; font-style: italic; }
+
+.hc-merge__after { margin: 0; }
+
 /* Who approved a thing out of the newsletter queue, from migration 0043. An
    internal note on an admin-only screen: quieter than the body above it,
    because it is a record rather than something to act on, and not warning
@@ -3535,3 +3580,70 @@ button.hc-cal__day { cursor: pointer; }
    button, and taking it twice puts Save and Cancel a long way below the last
    field they belong to. */
 .hc-cal__form-actions .hc-btn { margin-top: 0; }
+
+/* ------------------------------------------------ the other days it runs
+
+   The list of extra days on the event form, from migration 0074. A block
+   rather than a second date box, because "Friday to Sunday" and "two Sundays
+   three weeks apart" are the same thing to a calendar and a range would only
+   express the first.
+
+   Each day is a chip with an x, which is the same shape the announcement form
+   uses for its pictures. One idea, said the same way in both places: here is a
+   thing you added, here is how to take it off. */
+.hc-cal__days { margin-top: var(--hc-space-base); }
+
+.hc-cal__day-list {
+  list-style: none;
+  margin: var(--hc-space-sm) 0 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--hc-space-sm);
+}
+
+.hc-cal__day {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--hc-space-xs);
+  padding: var(--hc-space-xs) var(--hc-space-xs) var(--hc-space-xs) var(--hc-space-md);
+  border: 1px solid var(--hc-rule);
+  border-radius: var(--hc-radius-pill);
+  background: var(--hc-paper-sunk);
+}
+
+.hc-cal__day-x {
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  padding: 0;
+  background: none;
+  color: var(--hc-mid);
+  border-radius: var(--hc-radius-pill);
+  cursor: pointer;
+}
+
+.hc-cal__day-x:active { background: var(--hc-paper); }
+.hc-cal__day-icon { width: 14px; height: 14px; }
+
+/* The empty box and the button that reads it. They sit on one line on
+   anything with room and stack on a narrow phone, where a date input is
+   already as wide as the screen wants to be. */
+.hc-cal__day-add {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--hc-space-sm);
+  margin-top: var(--hc-space-sm);
+}
+
+.hc-cal__day-add .hc-input { flex: 1 1 10rem; }
+.hc-cal__day-add .hc-btn { margin-top: 0; }
+
+/* "Also October 11 and October 18", under an event that runs on more than one
+   day. Quieter than the time and the place above it, because it is the second
+   question somebody asks of a row and not the first. */
+.hc-event__more-days { color: var(--hc-mid); }
