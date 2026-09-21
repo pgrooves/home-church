@@ -223,5 +223,93 @@ ok('the picker escapes ids, titles and the name at the top',
 
 ok('no merge in flight draws nothing at all', c.mergePanel(null, TARGETS, {}), '');
 
+/* ------------------------------------------- the screen that puts it up ---
+
+   THE BUG THIS SECTION EXISTS FOR, and it is worth writing down because
+   everything above passed while the feature was broken on a phone.
+
+   js/screens/cal.js render() returns an ELEMENT on every path, because that is
+   what the router appends. The merge branch shipped returning the HTML STRING
+   instead. Nothing threw, nothing logged, and the router had nothing to append
+   — so tapping Merge on an event drew a completely blank screen, header and
+   all. Every test in this file passed, because every one of them asked
+   mergePanel() for markup and never asked a screen to draw it.
+
+   So the contract under test here is the dull one: whatever render() hands
+   back, it is not a string. The fake document is the smallest thing that lets
+   c.el() run — createElement returns an object with no firstElementChild, so
+   el() hands back the wrapper it just filled, which is an object either way. */
+
+function loadCal() {
+  const calls = [];
+  const sandbox = {
+    window: { localStorage: fakeStorage(), console: console },
+    document: {
+      createElement: function () {
+        const node = { tagName: 'DIV', innerHTML: '', firstElementChild: null };
+        calls.push(node);
+        return node;
+      }
+    }
+  };
+  sandbox.window.window = sandbox.window;
+  sandbox.window.document = sandbox.document;
+  vm.createContext(sandbox);
+  ['data.js', 'store.js', 'components.js', 'screens/cal.js'].forEach(function (f) {
+    vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'js', f), 'utf8'), sandbox);
+  });
+  return sandbox.window.HC;
+}
+
+const calHC = loadCal();
+
+// The two neighbours cal.js leans on when it draws. Neither is what is under
+// test; both have to exist or render() falls over for the wrong reason.
+calHC.edit = { wrap: (html) => html, mark: (html) => html };
+calHC.data.events = [
+  { id: 'e-gala', title: 'Homecoming Gala', date: '2030-10-23',
+    dates: ['2030-10-23'], time: '6:30 PM', location: 'The Loft' },
+  { id: 'e-home', title: 'Homecoming', date: '2030-10-23',
+    dates: ['2030-10-23'], time: '6:30 PM', location: '' }
+];
+
+let merge = null;
+calHC.admin = {
+  isAdmin: () => true,
+  mergeState: () => merge,
+  mergeTargets: () => [{ id: 'e-home', title: 'Homecoming', when: '2030-10-23' }]
+};
+
+const drawn = () => calHC.screens.cal();
+
+/* The ordinary calendar first, so the assertion below is about the merge
+   branch rather than about render() never having worked. */
+ok('the calendar draws an element', typeof drawn(), 'object');
+
+merge = { kind: 'event', sourceId: 'e-gala', targetId: '', step: 'pick',
+          preview: null, busy: false, error: '' };
+
+const panel = drawn();
+
+/* THE ONE THAT WAS FAILING. A string here is a blank screen on a phone. */
+ok('and so does the merge panel, rather than handing back a string',
+  typeof panel, 'object');
+ok('it is not a string', typeof panel === 'string', false);
+
+// And what it drew is the panel, so the element is not merely an empty div.
+ok('the panel is in it', panel.innerHTML.indexOf('merge-cancel') !== -1, true);
+ok('naming what is being merged',
+  panel.innerHTML.indexOf('Homecoming Gala') !== -1, true);
+
+/* A merge started on the announcements list must not take the Cal tab over;
+   the two screens share one piece of state and only the event kind is this
+   screen's. */
+merge = { kind: 'announcement', sourceId: 'a-1', targetId: '', step: 'pick',
+          preview: null, busy: false, error: '' };
+ok('an announcement merge leaves the calendar alone',
+  drawn().innerHTML.indexOf('merge-cancel'), -1);
+
+merge = null;
+
 console.log('\n' + pass + ' passed, ' + fail + ' failed.');
 if (fail) process.exit(1);

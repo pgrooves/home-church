@@ -677,7 +677,11 @@
       html += c.mergePanel(merging,
         HC.admin.mergeTargets('event', merging.sourceId),
         { sourceTitle: (eventById(merging.sourceId) || {}).title, busy: busy });
-      return html + '</div>';
+      /* c.el, not the string. EVERY return from this function is an element,
+         because that is what the router appends; handing it a string is a
+         screen that draws nothing at all, with no error anywhere to say why.
+         This branch shipped returning the string and did exactly that. */
+      return c.el(html + '</div>');
     }
 
     html += calendarBlock();
