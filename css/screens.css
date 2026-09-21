@@ -3590,10 +3590,20 @@ button.hc-cal__day { cursor: pointer; }
 
    Each day is a chip with an x, which is the same shape the announcement form
    uses for its pictures. One idea, said the same way in both places: here is a
-   thing you added, here is how to take it off. */
-.hc-cal__days { margin-top: var(--hc-space-base); }
+   thing you added, here is how to take it off.
 
-.hc-cal__day-list {
+   NAMED __pick AND NOT __day, and the reason is a bug that shipped. These were
+   called hc-cal__day, which is ALREADY the class on every cell of the month
+   grid four hundred lines above. Same name, later in the file, so these rules
+   won: every date in the grid grew a circle, and the day somebody had open
+   lost its fill. Nothing in the grid's own CSS had changed — it was simply
+   being overruled by a block that had no business naming itself that.
+
+   The grid is `__day`. These are `__pick`, because what they are is the days
+   somebody picked. */
+.hc-cal__picks { margin-top: var(--hc-space-base); }
+
+.hc-cal__pick-list {
   list-style: none;
   margin: var(--hc-space-sm) 0 0;
   padding: 0;
@@ -3602,7 +3612,7 @@ button.hc-cal__day { cursor: pointer; }
   gap: var(--hc-space-sm);
 }
 
-.hc-cal__day {
+.hc-cal__pick {
   display: inline-flex;
   align-items: center;
   gap: var(--hc-space-xs);
@@ -3612,7 +3622,7 @@ button.hc-cal__day { cursor: pointer; }
   background: var(--hc-paper-sunk);
 }
 
-.hc-cal__day-x {
+.hc-cal__pick-x {
   width: 28px;
   height: 28px;
   display: inline-flex;
@@ -3626,13 +3636,13 @@ button.hc-cal__day { cursor: pointer; }
   cursor: pointer;
 }
 
-.hc-cal__day-x:active { background: var(--hc-paper); }
-.hc-cal__day-icon { width: 14px; height: 14px; }
+.hc-cal__pick-x:active { background: var(--hc-paper); }
+.hc-cal__pick-icon { width: 14px; height: 14px; }
 
 /* The empty box and the button that reads it. They sit on one line on
    anything with room and stack on a narrow phone, where a date input is
    already as wide as the screen wants to be. */
-.hc-cal__day-add {
+.hc-cal__pick-add {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -3640,8 +3650,8 @@ button.hc-cal__day { cursor: pointer; }
   margin-top: var(--hc-space-sm);
 }
 
-.hc-cal__day-add .hc-input { flex: 1 1 10rem; }
-.hc-cal__day-add .hc-btn { margin-top: 0; }
+.hc-cal__pick-add .hc-input { flex: 1 1 10rem; }
+.hc-cal__pick-add .hc-btn { margin-top: 0; }
 
 /* "Also October 11 and October 18", under an event that runs on more than one
    day. Quieter than the time and the place above it, because it is the second

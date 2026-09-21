@@ -576,18 +576,21 @@
   function moreDaysField(d) {
     var days = Array.isArray(d.days) ? d.days : [];
 
-    var html = '<div class="hc-field hc-cal__days">' +
+    /* hc-cal__pick, NOT hc-cal__day: that one is the month grid's cell class,
+       and naming these the same thing put a circle round every date in the
+       calendar. See the note in css/screens.css. */
+    var html = '<div class="hc-field hc-cal__picks">' +
       '<span class="hc-field__label">Other days it runs</span>';
 
     if (days.length) {
-      html += '<ul class="hc-cal__day-list">';
+      html += '<ul class="hc-cal__pick-list">';
       days.slice().sort().forEach(function (day) {
-        html += '<li class="hc-cal__day">' +
+        html += '<li class="hc-cal__pick">' +
           '<span>' + c.esc(c.formatDate(day)) + '</span>' +
-          '<button type="button" class="hc-cal__day-x" data-action="cal-day-remove" ' +
+          '<button type="button" class="hc-cal__pick-x" data-action="cal-day-remove" ' +
             'data-day="' + c.esc(day) + '" ' +
             'aria-label="Take ' + c.esc(c.formatDate(day)) + ' off this event">' +
-            c.icon('close', 'hc-cal__day-icon') +
+            c.icon('close', 'hc-cal__pick-icon') +
           '</button>' +
         '</li>';
       });
@@ -598,7 +601,7 @@
        the day the moment it is filled in. A date input fires while somebody is
        still typing the year, so an eager version of this adds three wrong days
        on the way to the right one. */
-    html += '<div class="hc-cal__day-add">' +
+    html += '<div class="hc-cal__pick-add">' +
       '<input class="hc-input" type="date" data-cal-newday autocomplete="off" ' +
         'aria-label="Another day this event runs">' +
       c.button('Add this day', { action: 'cal-day-add', variant: 'secondary',
