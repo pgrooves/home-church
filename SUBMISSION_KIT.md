@@ -573,7 +573,9 @@ analytics, external links, and data collection that buy us nothing.
 
 ## 7. App Review notes
 
-Paste this into the Notes for Review field. **The Leader mode walkthrough is
+Paste this into the Notes for Review field, which caps at 4000 characters.
+This is 3849, which leaves room for CRLF line endings if App Store Connect
+counts them; check the count again if you edit it. **The Leader mode walkthrough is
 the most important thing in this entire document.** A reviewer who does not
 find Leader mode is assessing a reading app with two tabs that link outward,
 which is exactly the shape that fails Guideline 4.2.
@@ -592,11 +594,9 @@ PASSWORD rather than a code. Nothing is emailed and you need no mailbox.
     Email: homechurchappreview@outlook.com
     Password: __________________
 
-Submission 08792afe-55f3-4c13-b984-097eb4e91092, version 1.0 (8), was
-returned under Guideline 2.1 because these credentials did not get you in:
-the account used a code emailed to a mailbox, so it needed that mailbox
-first. Both accounts now use ordinary passwords. We have signed in with them
-on a device.
+Submission 08792afe-55f3-4c13-b984-097eb4e91092 (1.0 build 8) was returned
+under 2.1: the demo account needed a mailbox to receive a code. Both
+accounts now use passwords, tested on a device.
 
 GETTING AROUND
 There is no tab bar. The round button in the bottom right opens the
@@ -606,7 +606,7 @@ account.
 LEADER MODE, WHICH IS THE HEART OF THE APP
 Almost everything works signed out. Leader mode does not: it belongs to a
 person rather than a phone, so the church grants it to whoever leads a
-group. It is easy to miss, so:
+group. It is easy to miss:
 
   1. Circle in the top right, sign in with the Host account.
   2. Round button in the bottom right, then GROUP.
@@ -628,10 +628,10 @@ deliberately not the same control.
 
 THE GROUP SCREEN, AND GUIDELINE 1.2
 A room is joined with a six digit code from a leader and carries that week's
-discussion questions. Answers stay hidden until the host opens them one at a
-time. Rooms expire that night and are deleted after ninety days. There is no
-feed, no messaging, no directory, no way to contact another user, and no way
-to find a room without being handed its code.
+questions. Answers stay hidden until the host opens them one at a time.
+Rooms expire that night and are deleted after ninety days. There is no feed,
+no messaging, no directory, and no way to find a room without being handed
+its code.
 
 The controls, all one tap deep:
 
@@ -649,21 +649,18 @@ The controls, all one tap deep:
   * BLOCKING. Beside Report on every note, enforced on our server. An
     Unblock list sits at the bottom of the room.
 
-To see reporting and blocking, which only appear on writing that is not your
-own: as the HOST, open a room and add a prayer request at the bottom (the
-terms screen appears first). Sign out, sign in as the MEMBER, open GROUP,
-join with that code — Report and Block are under the host's request. Sign
-back in as the HOST and rejoin: the report is at the top of the room. One
-device is enough. Posting a slur is refused and nothing is stored.
+Report and Block only appear on writing that is not your own. To see them:
+as the HOST, open a room and add a prayer request (the terms screen appears
+first). Sign in as the MEMBER, open GROUP, join with that code — both sit
+under the host's request. Sign back in as the HOST and rejoin: the report is
+at the top of the room. One device is enough. Posting a slur is refused and
+nothing is stored.
 
 GIVE TAKES NO PAYMENT IN THE APP
 It opens our giving provider, Overflow, in SFSafariViewController. No
-purchase, digital content, or functionality is unlocked by giving, and
-nothing is gated behind it — a charitable donation handoff, not a
-circumvention of in-app purchase. Course signups, group hosting, our email
-list and sermon audio open in the system browser the same way.
-
-The app also works offline: airplane mode and relaunch opens full content.
+purchase or functionality is unlocked by giving and nothing is gated behind
+it — a charitable donation handoff, not a circumvention of in-app purchase.
+Course signups and sermon audio open in the system browser too.
 
 Anything else, hello@homechurchnola.com.
 ```
