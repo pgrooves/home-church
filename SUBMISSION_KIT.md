@@ -582,9 +582,8 @@ which is exactly the shape that fails Guideline 4.2.
 Home Church is the app for a single church in Metairie, Louisiana.
 
 HOW TO SIGN IN — PLEASE READ THIS FIRST
-Type the email address, tap "Send me a code", and the app will ask you for a
-PASSWORD rather than a code. Nothing is emailed to anyone and you do not
-need access to any mailbox.
+Type the email address, tap "Send me a code", and the app asks you for a
+PASSWORD rather than a code. Nothing is emailed and you need no mailbox.
 
   Host account (a group leader)
     Email: homechurchappleader@outlook.com
@@ -594,97 +593,79 @@ need access to any mailbox.
     Password: __________________
 
 Submission 08792afe-55f3-4c13-b984-097eb4e91092, version 1.0 (8), was
-returned under Guideline 2.1 because our demo credentials did not get you
-in. The account signed in with a code emailed to a mailbox, so using it
-meant logging into that mailbox first. Both accounts above now use ordinary
-passwords instead. We have signed in with them on a device.
+returned under Guideline 2.1 because these credentials did not get you in:
+the account used a code emailed to a mailbox, so it needed that mailbox
+first. Both accounts now use ordinary passwords. We have signed in with them
+on a device.
 
 GETTING AROUND
-There is no tab bar. The round button in the bottom right corner opens the
-navigation, which is the whole app as a full screen list. The circle in the
-top right of any screen opens Your account.
+There is no tab bar. The round button in the bottom right opens the
+navigation, a full screen list. The circle in the top right opens Your
+account.
 
-WHERE TO LOOK FIRST: LEADER MODE
-Almost every screen works without signing in. Leader mode does not, because
-it belongs to a person rather than a phone: it lets somebody host a group
-room and edit the questions their whole group answers, so the church grants
-it to the people who lead a group. It is the heart of the app and it is easy
-to miss, so:
+LEADER MODE, WHICH IS THE HEART OF THE APP
+Almost everything works signed out. Leader mode does not: it belongs to a
+person rather than a phone, so the church grants it to whoever leads a
+group. It is easy to miss, so:
 
-  1. Tap the circle in the top right (Your account) and sign in with the
-     Host account above.
-  2. Tap the round button in the bottom right, then GROUP.
+  1. Circle in the top right, sign in with the Host account.
+  2. Round button in the bottom right, then GROUP.
   3. Under "Leader mode — Host tonight", pick this week's guide and tap
-     "Open a room". The app mints a six digit code for your group.
-  4. Then open GUIDE from that same menu, open any guide, and tap "Start
-     presentation mode" at the top. That is the one-question-at-a-time view
-     leaders use while running a meeting in a living room.
+     "Open a room". The app mints a six digit code for the group.
+  4. Open GUIDE from the same menu, open any guide, tap "Start presentation
+     mode" — the one-question-at-a-time view leaders use while running a
+     meeting.
 
-  (Signed in as the Member account, or signed out, the Group screen offers
-  only a box to type somebody else's room code into. That is the feature
-  working, not an error: it is what everybody who is not leading a group
-  sees.)
+  (As the Member account, or signed out, GROUP offers only a box for
+  somebody else's room code. That is the feature working, not an error.)
 
 DELETING AN ACCOUNT, GUIDELINE 5.1.1(v)
-Signed in, deletion is in two places, both in-app, neither requiring an
-email to us or a website: "Delete my account" directly under Sign out in
-Your account, and again in Your data beside the copy explaining what is
-removed. Two taps, the second confirming. It deletes rather than
-deactivates. The separate "Erase everything on this phone" button clears
-local device data only and is deliberately not the same control.
+Two places, both in-app, neither needing an email to us or a website:
+"Delete my account" under Sign out in Your account, and again in Your data.
+Two taps, the second confirming. It deletes rather than deactivates. The
+separate "Erase everything on this phone" clears local data only and is
+deliberately not the same control.
 
 THE GROUP SCREEN, AND GUIDELINE 1.2
-A group room is a room a small group joins with a six digit code from their
-leader. It carries that week's discussion questions. Each person types their
-own answer, the answers stay hidden until the host opens them one at a time,
-and the last section is prayer requests. The room expires that night and is
-deleted after ninety days. There is no feed, no messaging, no directory, no
-way to contact another user, and no way to find a room without being handed
-its code by a person.
+A room is joined with a six digit code from a leader and carries that week's
+discussion questions. Answers stay hidden until the host opens them one at a
+time. Rooms expire that night and are deleted after ninety days. There is no
+feed, no messaging, no directory, no way to contact another user, and no way
+to find a room without being handed its code.
 
-The Guideline 1.2 controls, all one tap deep:
+The controls, all one tap deep:
 
-  * TERMS BEFORE THE FIRST POST. The first attempt to write in a room hits a
-    screen stating the rules against objectionable content and asking for
-    agreement. There is no way past it, and our server refuses the post as
-    well, so it cannot be skipped by anything.
-  * FILTERING. Posts are checked against a slur list on our server before
-    they are stored, on posting and on editing.
-  * REPORTING. Every note written by somebody else carries a visible Report
-    button. It asks why, confirms, and names hello@homechurchnola.com as a
-    second route.
-  * A HOST QUEUE. Reports appear at the top of the room for whoever is
-    hosting it, with "Take it down", which removes it for everybody, and
-    "Leave it up". Our terms commit us to acting on anything sent to that
-    address within 24 hours.
-  * BLOCKING. Next to Report on every note, enforced on our server rather
-    than hidden on screen. An Unblock list sits at the bottom of the room.
+  * TERMS FIRST. The first attempt to write in a room hits a screen stating
+    the rules against objectionable content and asking for agreement. Our
+    server refuses the post too, so it cannot be skipped.
+  * FILTERING. Checked against a slur list on our server before storage, on
+    posting and on editing.
+  * REPORTING. Every note by somebody else carries a visible Report button.
+    It asks why, confirms, and names hello@homechurchnola.com as a second
+    route.
+  * A HOST QUEUE. Reports appear at the top of the room for the host, with
+    "Take it down" and "Leave it up". Our terms commit us to acting within
+    one day.
+  * BLOCKING. Beside Report on every note, enforced on our server. An
+    Unblock list sits at the bottom of the room.
 
-Reporting and blocking only appear on writing that is not your own, so to
-see them: as the HOST, open a room as above and add a prayer request at the
-bottom (the terms screen appears first). Sign out, sign in as the MEMBER,
-open GROUP and join with that room code — Report and Block are under the
-host's request. Sign out and back in as the HOST, rejoin with the same code,
-and the report is waiting at the top of the room. One device is enough; the
-room lives on our server. While you are in a room, typing a slur into an
-answer and posting it is refused with a message and nothing is stored.
+To see reporting and blocking, which only appear on writing that is not your
+own: as the HOST, open a room and add a prayer request at the bottom (the
+terms screen appears first). Sign out, sign in as the MEMBER, open GROUP,
+join with that code — Report and Block are under the host's request. Sign
+back in as the HOST and rejoin: the report is at the top of the room. One
+device is enough. Posting a slur is refused and nothing is stored.
 
-THE GIVE TAB TAKES NO PAYMENT IN THE APP
-Tapping GIVE opens our giving provider, Overflow, in SFSafariViewController.
-No purchase, digital content, or app functionality is unlocked by giving,
-and nothing is gated behind it. We are handing off to a charitable donation
-platform, not circumventing in-app purchase. Baptism and course signups,
-group hosting, our email list and sermon audio open in the system browser
-the same way.
+GIVE TAKES NO PAYMENT IN THE APP
+It opens our giving provider, Overflow, in SFSafariViewController. No
+purchase, digital content, or functionality is unlocked by giving, and
+nothing is gated behind it — a charitable donation handoff, not a
+circumvention of in-app purchase. Course signups, group hosting, our email
+list and sermon audio open in the system browser the same way.
 
-ALSO WORTH KNOWING
-Notification permission is requested only when somebody turns a switch on in
-Your account, never at launch, and declining is respected. The app is built
-to work offline: put the phone in airplane mode and relaunch, and it opens
-to full content rather than an error. Our congregation opens it in a
-building with concrete walls every Sunday.
+The app also works offline: airplane mode and relaunch opens full content.
 
-Anything else, we are at hello@homechurchnola.com and will answer quickly.
+Anything else, hello@homechurchnola.com.
 ```
 
 -----
