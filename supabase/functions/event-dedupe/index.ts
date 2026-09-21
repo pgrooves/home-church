@@ -106,6 +106,27 @@ interface Row {
   duplicateOf: string | null;
 }
 
+/* Every church day one event is on: the day starts_at falls on, plus the
+   other days 0074 lets it carry. The same answer public.hc_event_days gives
+   in SQL, said again here because the model has to be told the difference
+   between a retreat that runs Friday to Sunday and three separate evenings —
+   and because an event compared on its first day alone would call a weekend
+   and the Saturday inside it two different things. */
+function daysOf(starts: string, alsoOn: unknown): string[] {
+  const first = starts ? churchDay(starts) : '';
+  const rest = Array.isArray(alsoOn)
+    ? alsoOn.map((d) => String(d ?? '').slice(0, 10)).filter(Boolean)
+    : [];
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const d of [first, ...rest]) {
+    if (!d || seen.has(d)) continue;
+    seen.add(d);
+    out.push(d);
+  }
+  return out.sort();
+}
+
 /* America/Chicago, the same church clock the intake and the Cal tab use. The
    day matters more than anything else in this comparison, and a date rendered
    in UTC turns a seven in the evening into the next morning, which would have
@@ -131,6 +152,7 @@ function churchTime(iso: string): string {
 function shape(r: Record<string, unknown>): Row {
   const starts = String(r.starts_at ?? '');
   const label = String(r.time_label ?? '').trim();
+  const days = daysOf(starts, r.also_on);
   return {
     id: String(r.id),
     title: String(r.title ?? ''),
@@ -139,9 +161,13 @@ function shape(r: Record<string, unknown>): Row {
        time_label is what the intake writes when the email named no time, so a
        row carrying one is a row whose nine in the morning is a placeholder —
        and telling the model that outright stops it reading two placeholders as
-       agreement, or a placeholder and a real seven o'clock as a disagreement. */
+       agreement, or a placeholder and a real seven o'clock as a disagreement.
+
+       And every day it runs on, since 0074, so a class on two Sundays reads as
+       one thing on two days rather than as one Sunday with a stray date. */
     when: starts
-      ? churchDay(starts) + (label ? `, time not known (${label})` : `, ${churchTime(starts)}`)
+      ? (days.length > 1 ? days.join(' and ') : days[0]) +
+        (label ? `, time not known (${label})` : `, ${churchTime(starts)}`)
       : 'no date',
     starts,
     location: String(r.location ?? '').trim(),
@@ -207,11 +233,16 @@ function prompt(drafts: Row[], candidates: Row[]): string {
     '  - one has a location or a blurb and the other has none',
     '  - one says the time is not known and the other gives an hour ON THE SAME DAY',
     '  - one is on the calendar and the other is still waiting to be approved',
+    '  - one runs across SEVERAL DAYS and the other is one of those days, under the',
+    '    same name. "Fall Retreat, 2026-11-06 and 2026-11-07 and 2026-11-08" and',
+    '    "Fall Retreat Saturday, 2026-11-07" are one retreat entered twice, not two',
+    '    things. An event that lists more than one day lists every day it runs on.',
     '',
     'It is NOT the same night when it is:',
-    '  - a different day. Two dates are two events unless one of them plainly says',
-    '    the time is not known and they share the day. A weekly gathering on the 3rd',
-    '    and the 10th is two events, however identical the wording.',
+    '  - a different day, with no day in common. Two dates are two events unless one',
+    '    of them plainly says the time is not known and they share a day. A weekly',
+    '    gathering on the 3rd and the 10th, entered as two events each naming one of',
+    '    those days, is two events, however identical the wording.',
     '  - the next occurrence of something recurring, or one of a series',
     '  - two different things on one evening (a men\'s breakfast and a women\'s night',
     '    can share a date and share nothing else)',
@@ -337,7 +368,7 @@ async function run(
   opts: { dryRun: boolean; all: boolean },
 ): Promise<Record<string, unknown>> {
   const since = new Date(Date.now() - WINDOW_DAYS * 86400000).toISOString();
-  const COLUMNS = 'id, title, description, starts_at, time_label, location, published, created_at, duplicate_of';
+  const COLUMNS = 'id, title, description, starts_at, time_label, location, also_on, published, created_at, duplicate_of';
 
   let waiting = admin
     .from('events')

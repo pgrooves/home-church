@@ -533,6 +533,11 @@
      HC.data.events, which is the synced copy every screen reads, not this
      file's cache. The pending queue above is a different list and is untouched
      by a hand written event. */
+  /* p_also_on is the seventh argument migration 0074 added, and it is sent on
+     every save rather than only when there is something in it. An empty list
+     is a real answer — it is what taking the second Sunday off a class looks
+     like — and leaving the argument out on that save would call 0042's six
+     argument version, which deliberately leaves the column alone. */
   function saveEvent(draft) {
     return HC.auth.rpc('hc_admin_save_event', {
       p_id: draft.id || null,
@@ -540,9 +545,11 @@
       p_starts_at: draft.startsAt,
       p_time_label: draft.timeLabel || null,
       p_location: draft.location || null,
-      p_description: draft.description || null
+      p_description: draft.description || null,
+      p_also_on: Array.isArray(draft.alsoOn) ? draft.alsoOn : []
     }).then(function (id) {
       HC.content.refresh();
+      invalidate('eventDuplicates');
       return id;
     });
   }
@@ -1044,14 +1051,185 @@
       });
   }
 
+  /* A function since 0075, where it was a PATCH. The reason is the pass
+     itself: it now looks at posted announcements as well as at the queue, so a
+     pair somebody has refused would be raised again on the next sweep unless
+     the refusal is remembered. Remembering it means stamping dedupe_checked_at
+     as well as clearing the two flag columns, and three columns that have to
+     move together is a rule rather than a form. */
   function keepAnnouncementSeparate(id) {
-    return HC.auth.restFetch('/announcements?id=eq.' + encodeURIComponent(id), {
-      method: 'PATCH',
-      headers: { Prefer: 'return=minimal' },
-      body: { duplicate_of: null, duplicate_note: null }
-    }).then(function () {
+    return HC.auth.rpc('hc_admin_keep_announcement_separate', { p_id: id })
+      .then(function () {
+        invalidate('announcements');
+      });
+  }
+
+  /* ------------------------------------------------------- merging by hand
+
+     THE BACKUP, and it is a backup on purpose. Everything above this is the
+     robot noticing; this is what the church does on the day it does not. Two
+     cards on Home that are plainly one thing, with no flag on either, and an
+     admin who already knows what the model could not work out.
+
+     THREE STEPS, HELD HERE RATHER THAN IN A SCREEN, because two screens reach
+     it — the Admin list and the Cal tab — and a flow held in one of them would
+     be a second copy in the other. js/components.js draws it; js/app.js taps
+     it; this holds what it is in the middle of.
+
+       pick      which other row to merge into. Nothing has happened yet.
+       preview   the content-merge Edge Function has worked out what the merged
+                 row would say, and `preview.changes` is what the screen draws.
+                 STILL NOTHING HAS BEEN WRITTEN.
+       save      the fields that were on screen go to migration 0075's merge
+                 function, exactly as they were shown.
+
+     The fields are carried from the preview to the save untouched and with no
+     second model call in between, which is the whole reason the preview is
+     honest: what somebody read is what is written. */
+
+  var merge = null;
+
+  function mergeState() { return merge; }
+
+  function startMerge(kind, id) {
+    merge = { kind: kind, sourceId: id, targetId: '', step: 'pick',
+              preview: null, busy: false, error: '' };
+  }
+
+  function cancelMerge() { merge = null; }
+
+  function setMergeTarget(id) {
+    if (!merge) return;
+    merge.targetId = id || '';
+    // A different target is a different merge. Holding the old preview would
+    // put one card's words under another card's name.
+    merge.preview = null;
+    merge.error = '';
+  }
+
+  function previewMerge() {
+    if (!merge || !merge.targetId) return Promise.resolve(null);
+
+    var at = merge;
+    at.busy = true;
+    at.error = '';
+
+    return HC.auth.callFunction('/content-merge', {
+      kind: at.kind,
+      source_id: at.sourceId,
+      target_id: at.targetId
+    }, 'Could not work that merge out. Try again in a moment.')
+      .then(function (answer) {
+        // The flow may have been cancelled, or pointed somewhere else, while
+        // this was in the air. A preview landing on a merge nobody is looking
+        // at any more is how the wrong two rows get shown as a pair.
+        if (merge !== at || at.targetId !== answer.target_id) return null;
+        at.busy = false;
+        at.step = 'preview';
+        at.preview = answer;
+        return answer;
+      }, function (err) {
+        if (merge === at) {
+          at.busy = false;
+          at.error = err.message || 'Could not work that merge out.';
+        }
+        throw err;
+      });
+  }
+
+  function applyMerge() {
+    if (!merge || !merge.preview) return Promise.reject(new Error('Nothing to save.'));
+
+    var at = merge;
+    var fn = at.kind === 'announcement'
+      ? 'hc_admin_merge_announcement'
+      : 'hc_admin_merge_event';
+
+    return HC.auth.rpc(fn, {
+      p_source_id: at.sourceId,
+      p_target_id: at.targetId,
+      p_fields: at.preview.fields || {}
+    }).then(function (target) {
+      merge = null;
       invalidate('announcements');
+      invalidate('events');
+      invalidate('eventDuplicates');
+      invalidate('approvals');
+      HC.content.refresh();
+      return target;
+    }, function (err) {
+      /* Everything is dropped whether or not this worked, for the reason
+         approveAnnouncement gives: the likeliest refusal is another admin
+         having got there first, which means this screen is holding a list from
+         before they did. */
+      invalidate('announcements');
+      invalidate('events');
+      invalidate('eventDuplicates');
+      throw err;
     });
+  }
+
+  /* What is on the other end of "Merge with". Everything of the same kind
+     except the row being merged and anything already gone, newest first,
+     because the thing somebody is merging into is nearly always something they
+     posted recently.
+
+     ANNOUNCEMENTS COME FROM THE LIST THIS SCREEN ALREADY HOLDS, which is every
+     row including the queue; dates come from the calendar the whole app reads,
+     because an approved event is not in any of this file's caches and the Cal
+     tab is where somebody notices two of them. */
+  function mergeTargets(kind, sourceId) {
+    if (kind === 'announcement') {
+      return list('announcements').filter(function (row) {
+        return row.id !== sourceId && !row.deleted_at;
+      }).map(function (row) {
+        return { id: row.id, title: row.title,
+                 when: row.review_state === 'pending' ? 'Waiting to be approved'
+                                                      : announcementStatus(row) };
+      });
+    }
+
+    /* THE CALENDAR AND THE QUEUE, not just the calendar. HC.data.events holds
+       what is published, which is the right list on the Cal tab and half a
+       list on the Admin screen: two dates parsed out of one newsletter and
+       both still waiting are exactly the pair somebody would reach for this
+       button to settle, and neither of them is published yet. Merged by id, so
+       a pending date that is also in the synced copy is offered once. */
+    var seen = {};
+    var out = [];
+
+    (HC.data.events || []).forEach(function (row) {
+      if (!row || row.id === sourceId || seen[row.id]) return;
+      seen[row.id] = true;
+      out.push({ id: row.id, title: row.title,
+                 when: [row.date, row.time].filter(Boolean).join(', ') });
+    });
+
+    list('events').forEach(function (row) {
+      if (!row || row.id === sourceId || seen[row.id]) return;
+      seen[row.id] = true;
+      out.push({ id: row.id, title: row.title,
+                 when: HC.components.eventWhen(row) + ' · waiting to be approved' });
+    });
+
+    return out;
+  }
+
+  /* One line saying where an announcement stands, for the picker above. The
+     Admin screen has its own richer version of this sentence; this one is
+     deliberately shorter, because it is read inside a dropdown. */
+  function announcementStatus(row) {
+    if (!row.published) return 'Draft';
+    if (row.ends_on && todayIso() >= row.ends_on) return 'Finished';
+    if (row.starts_on && todayIso() < row.starts_on) return 'Dated ahead';
+    return 'On Home';
+  }
+
+  function todayIso() {
+    var d = new Date();
+    return d.getFullYear() + '-' +
+      ('0' + (d.getMonth() + 1)).slice(-2) + '-' +
+      ('0' + d.getDate()).slice(-2);
   }
 
   /* The notification. Deliberately a separate call from the save rather than
@@ -1409,6 +1587,16 @@
     reorderAnnouncement: reorderAnnouncement,
     applyAnnouncementUpdate: applyAnnouncementUpdate,
     keepAnnouncementSeparate: keepAnnouncementSeparate,
+
+    // Merging by hand, the backup for everything the pass misses. See the
+    // block above startMerge().
+    mergeState: mergeState,
+    startMerge: startMerge,
+    cancelMerge: cancelMerge,
+    setMergeTarget: setMergeTarget,
+    previewMerge: previewMerge,
+    applyMerge: applyMerge,
+    mergeTargets: mergeTargets,
 
     pending: pending,
     loadApprovals: loadApprovals,

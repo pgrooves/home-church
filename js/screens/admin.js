@@ -130,6 +130,18 @@
     })[0] || null;
   }
 
+  /* One date, out of whichever list on this screen happens to have it. The
+     dates queue and the duplicates list are two fetches and an approved event
+     is in neither, so the synced calendar every screen reads is the last
+     place to look. Only the merge panel asks, and only for a title. */
+  function eventById(id) {
+    var rows = HC.admin.pendingEvents().concat(HC.admin.eventDuplicates());
+    for (var i = 0; i < rows.length; i++) {
+      if (rows[i].id === id) return rows[i];
+    }
+    return (HC.data.events || []).filter(function (e) { return e.id === id; })[0] || null;
+  }
+
   /* 'YYYY-MM-DD' in the phone's own zone. The date columns are plain dates,
      so this never involves a timezone. Same helper Home uses, for the same
      reason: an announcement retires at midnight in Metairie. */
@@ -915,6 +927,12 @@
                 busy: busy === 'event-separate:' + row.id })
             : c.button('Approve', { action: 'admin-event-approve', id: row.id,
                 small: true, busy: busy === 'event-approve:' + row.id })) +
+          /* And the hand-picked merge, for the date the pass did not pair with
+             anything. Same backup as the one on an announcement row, and the
+             same reasoning; see the note beside it. */
+          c.button('Merge with', { action: 'admin-event-merge-with', id: row.id,
+            variant: 'secondary', small: true,
+            ariaLabel: 'Merge “' + row.title + '” into another date' }) +
           c.button('Discard', { action: 'admin-event-discard', id: row.id,
             variant: 'tertiary', small: true, busy: busy === 'event-discard:' + row.id }) +
         '</div>' +
@@ -964,6 +982,59 @@
       '</p>';
   }
 
+  /* ------------------------------------- the same thing, already on Home
+
+     THE HALF 0051 NEVER HAD, and the reason the church ended up with
+     Homecoming Gala twice. That migration only ever looked at drafts in the
+     queue: once something was approved, nothing compared it against anything
+     again, so a pair that only becomes obvious with both cards on Home had
+     nowhere to be noticed. Since 0075 the pass reads posted rows too, and what
+     it finds lands here.
+
+     Drawn below the two queues, exactly like its twin for dates, because
+     nothing in it is waiting on a decision: Home works today, it is just
+     saying one thing twice. This is the tidying somebody does when they have a
+     minute.
+
+     AND MERGE IS NOT THE PRIMARY BUTTON, for the same reason it is not in the
+     dates version: both of these are already live and the church has been
+     using them, so the tap that changes something should take more deciding
+     than the tap that says they are two things. */
+  function announcementDuplicatesSection(rows) {
+    var html = c.sectionHeader('', 'The same thing, twice');
+    html += '<p class="hc-caption hc-admin__intro-note">Both of these are on Home ' +
+      'already, and they look like one thing posted twice. Update it writes what ' +
+      'the newer one says onto the older card, keeps its place on Home, and puts ' +
+      'the other under Deleted. Post separately says they are two things and stops ' +
+      'asking.</p>';
+
+    rows.forEach(function (row) {
+      var keeps = announcementById(row.duplicate_of);
+      if (!keeps) return;
+
+      html += '<div class="hc-admin__item hc-admin__item--review">' +
+        '<div class="hc-admin__item-head">' +
+          '<p class="hc-eyebrow">' + c.esc(announcementStatus(row)) + '</p>' +
+          '<p class="hc-row__title">' + c.esc(row.title) + '</p>' +
+          (row.body ? '<p class="hc-caption">' + c.esc(row.body) + '</p>' : '') +
+          '<p class="hc-caption hc-admin__warn">Looks like the same thing as “' +
+            c.esc(keeps.title) + '”' +
+            (row.duplicate_note ? ': ' + c.esc(row.duplicate_note) : '') + '</p>' +
+          approvedNote('announcement', row.id, 'Approved by') +
+        '</div>' +
+        '<div class="hc-admin__item-actions">' +
+          c.button('Update it', { action: 'admin-review-apply-update', id: row.id,
+            variant: 'secondary', small: true, busy: busy === 'merge:' + row.id }) +
+          c.button('Post separately', { action: 'admin-review-keep-separate',
+            id: row.id, variant: 'tertiary', small: true,
+            busy: busy === 'separate:' + row.id }) +
+        '</div>' +
+      '</div>';
+    });
+
+    return html;
+  }
+
   /* ------------------------------------ the same night, already on the calendar
 
      The half of migration 0052 that has no equivalent upstairs. An announcement
@@ -1001,6 +1072,9 @@
         '<div class="hc-admin__item-actions">' +
           c.button('Merge', { action: 'admin-event-merge', id: row.id,
             variant: 'secondary', small: true, busy: busy === 'event-merge:' + row.id }) +
+          c.button('Merge with', { action: 'admin-event-merge-with', id: row.id,
+            variant: 'secondary', small: true,
+            ariaLabel: 'Merge “' + row.title + '” into a different date' }) +
           c.button('Keep both', { action: 'admin-event-keep-separate', id: row.id,
             variant: 'tertiary', small: true,
             busy: busy === 'event-separate:' + row.id }) +
@@ -1307,7 +1381,11 @@
   function announcementsSection() {
     var html = '<div class="hc-screen hc-admin">';
     html += announcementsBody();
-    if (!draft) html += groupBoxSection();
+    // The group box waits while the form is open, and now while a merge is
+    // open too, for the same reason: one decision on screen at a time, and a
+    // paragraph about home groups under "here is what this merge would say" is
+    // a second thing to read in the middle of the first.
+    if (!draft && !HC.admin.mergeState()) html += groupBoxSection();
     return html + '</div>';
   }
 
@@ -1315,6 +1393,24 @@
     var html = c.sectionHeader('For the church', 'Announcements', { flush: true, tag: 'h1' });
 
     if (draft) return html + announcementForm();
+
+    /* Merging by hand, which takes the screen over the same way the form does
+       and for the same reason: it is one decision being made, and a list of
+       other announcements behind it is a list of other decisions somebody
+       might tap by mistake. See mergePanel() in js/components.js, and the
+       block above startMerge() in js/admin.js for what the three steps are. */
+    var merging = HC.admin.mergeState();
+    if (merging) {
+      var from = merging.kind === 'event'
+        ? (eventById(merging.sourceId) || {}).title
+        : (announcementById(merging.sourceId) || {}).title;
+
+      return html + c.mergePanel(
+        merging,
+        HC.admin.mergeTargets(merging.kind, merging.sourceId),
+        { sourceTitle: from, busy: busy }
+      );
+    }
 
     html += newsletterNotice();
 
@@ -1382,8 +1478,21 @@
 
     var deleted = rows.filter(function (row) { return !!row.deleted_at; });
 
+    /* And the pairs already on Home, which is the half 0051 never had. Taken
+       out of the Posted list below so no announcement is drawn twice on one
+       screen with a different set of buttons each time — the same rule the
+       review queue follows. */
+    var saidTwice = rows.filter(function (row) {
+      return row.duplicate_of && row.review_state !== 'pending' && !row.deleted_at &&
+        !!announcementById(row.duplicate_of);
+    });
+    if (saidTwice.length) html += announcementDuplicatesSection(saidTwice);
+
+    var flagged = {};
+    saidTwice.forEach(function (row) { flagged[row.id] = true; });
+
     rows = rows.filter(function (row) {
-      return row.review_state !== 'pending' && !row.deleted_at;
+      return row.review_state !== 'pending' && !row.deleted_at && !flagged[row.id];
     });
 
     if (!rows.length) return html + deletedSection(deleted);
@@ -1410,7 +1519,14 @@
        postedOrder() is that list, said once in js/admin.js beside the two
        orderings it is made of. Live first, then everything that is not on Home
        today, which carries no arrows. */
-    var ordered = HC.admin.postedOrder();
+    /* Minus whatever is up in "The same thing, twice", so nothing is drawn
+       twice on one screen with a different set of buttons each time. `live`
+       is deliberately NOT filtered: it is the numbering the arrows write back
+       to Home with, and a list renumbered here would move the wrong card
+       there. A flagged pair is a state that lasts one tap. */
+    var ordered = HC.admin.postedOrder().filter(function (row) {
+      return !flagged[row.id];
+    });
 
     html += c.sectionHeader('', 'Posted');
 
@@ -1457,6 +1573,22 @@
             : '') +
           c.button('Edit', { action: 'admin-announcement-edit', id: row.id,
             variant: 'secondary', small: true }) +
+          /* MERGE WITH, the backup for everything the dedupe pass misses.
+             Everything above this screen is the robot getting better at
+             noticing two cards about one thing, and it will still miss one:
+             two titles with no word in common, a pair two months apart, a
+             newsletter that renames something completely. When that happens
+             the person looking at the list already knows the answer, and the
+             answer should be a button rather than a message to somebody.
+
+             Drawn on every posted row rather than only on flagged ones, which
+             is the whole difference from Update it above: a flag is the
+             robot's opinion and this is somebody's knowledge. Secondary, and
+             after Edit, because it is the rarer of the two by a long way and
+             because it ends with one of these rows in the Deleted drawer. */
+          c.button('Merge with', { action: 'admin-announcement-merge', id: row.id,
+            variant: 'secondary', small: true,
+            ariaLabel: 'Merge “' + row.title + '” into another announcement' }) +
           /* A way back from the archive box on Home, on the screen that is
              already showing every announcement whether it drew a card or not.
              Archiving is remembered on the phone, so the undo has to be on the

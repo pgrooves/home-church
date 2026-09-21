@@ -83,17 +83,43 @@
     return a.date < b.date ? -1 : 1;
   }
 
-  /* Every event on the calendar, keyed by the day it happens. Built fresh on
-     each draw rather than kept: the list underneath comes from the same
+  /* Every day one event runs on, first day first. `dates` is what js/content.js
+     builds out of starts_at and also_on; the fallback is for a payload cached
+     from before migration 0074, which has `date` and nothing else. */
+  function daysOf(e) {
+    if (Array.isArray(e.dates) && e.dates.length) return e.dates;
+    return e.date ? [e.date] : [];
+  }
+
+  /* Every event on the calendar, keyed by the days it happens on. Built fresh
+     on each draw rather than kept: the list underneath comes from the same
      object, and a cached index is one more thing that can be looking at last
      week's content after a refresh. */
   function eventsByDay() {
     var map = {};
     events().forEach(function (e) {
-      (map[e.date] || (map[e.date] = [])).push(e);
+      /* ONE EVENT, EVERY DAY IT IS ON. A class over two Sundays is one row in
+         the table and two dots on the grid, which is the whole of what 0074
+         is for: somebody looking at the Monday in between should not conclude
+         it is over. */
+      daysOf(e).forEach(function (day) {
+        (map[day] || (map[day] = [])).push(e);
+      });
     });
     Object.keys(map).forEach(function (day) { map[day].sort(byDate); });
     return map;
+  }
+
+  /* The next day an event is still to run, or its last day once they have all
+     been and gone. What Upcoming sorts and prints: a class whose first Sunday
+     has passed is still coming up, and saying so under the date that has gone
+     would be worse than not listing it. */
+  function nextDay(e, from) {
+    var days = daysOf(e);
+    for (var i = 0; i < days.length; i++) {
+      if (days[i] >= from) return days[i];
+    }
+    return days.length ? days[days.length - 1] : '';
   }
 
   /* What the list under the grid shows: today and everything after it,
@@ -106,7 +132,30 @@
      looked up, which is a thing the old list could not do at all. */
   function upcoming() {
     var today = todayIso();
-    return events().filter(function (e) { return e.date >= today; }).sort(byDate);
+
+    /* LISTED ONCE, UNDER THE NEXT DAY IT RUNS, not once per day. The grid
+       above is where "what is on this Sunday" is answered and it draws the
+       event on every day it is on; this list answers "what is coming up", and
+       a class that filled two rows of it would read as two classes. The row
+       itself says the other days. */
+    return events().filter(function (e) {
+      return daysOf(e).some(function (day) { return day >= today; });
+    }).map(function (e) {
+      return e.date === nextDay(e, today)
+        ? e
+        : shallow(e, { date: nextDay(e, today) });
+    }).sort(byDate);
+  }
+
+  /* A copy of an event with a field or two changed, so Upcoming can print the
+     day an event is next on without moving the day it starts on. The list is
+     drawn from HC.data.events, which every other screen reads too, and writing
+     into it here would quietly move the date on Home. */
+  function shallow(e, over) {
+    var out = {};
+    Object.keys(e).forEach(function (k) { out[k] = e[k]; });
+    Object.keys(over).forEach(function (k) { out[k] = over[k]; });
+    return out;
   }
 
   /* When an event actually starts, as a Date. Moved here with the list from
@@ -117,8 +166,13 @@
      the rest. A real time wins when there is one. When there is not, nine in
      the morning is the least wrong guess for a church event and it beats
      refusing to make a calendar entry at all. The person can drag it. */
-  function eventStart(evt) {
-    var parts = String(evt.date || '').split('-');
+  /* `day` names which of an event's days is wanted, for the Add to calendar
+     button under the second Sunday of a class. Left out it is the day the
+     event starts on, which is what every caller written before migration 0074
+     meant and what an event with one day has always had. */
+  function eventStart(evt, day) {
+    var on = /^\d{4}-\d{2}-\d{2}$/.test(String(day || '')) ? String(day) : evt.date;
+    var parts = String(on || '').split('-');
     var d = new Date(+parts[0], (+parts[1]) - 1, +parts[2], 9, 0, 0, 0);
 
     var m = /(\d{1,2}):(\d{2})\s*(AM|PM)/i.exec(evt.time || '');
@@ -307,7 +361,10 @@
         (metaLine(evt) ? '<p class="hc-caption">' + c.esc(metaLine(evt)) + '</p>' : '') +
         (evt.blurb ? '<p class="hc-body-serif hc-event__blurb">' + c.esc(evt.blurb) + '</p>' : '') +
         '<div class="hc-event__action">' +
-          c.addToCalendar(evt.id) +
+          /* The day the panel is open on, not the day the event starts. An
+             event on this grid twice is one event on two days, and the button
+             under the second Sunday has to add the second Sunday. */
+          c.addToCalendar(evt.id, selected) +
           c.remindMe(evt.id) +
         '</div>' +
       '</div>';
@@ -327,8 +384,45 @@
     return [evt.time, evt.location].filter(Boolean).join(' · ');
   }
 
+  /* The other days, said under an event that runs on more than one.
+
+     WORDED FROM THE DAY THE ROW IS PRINTING, not from the first day, which is
+     the difference between useful and confusing. Upcoming shows a class under
+     the next Sunday it is on; "also October 11" beneath it means the one after
+     that. Once every day has been and gone the sentence goes, because "also"
+     about a date in the past is a sentence nobody can act on.
+
+     TWO DAYS ARE NAMED IN FULL AND MORE THAN TWO ARE COUNTED. "also October 11
+     and October 18" is a line somebody reads; six dates in a row is a line
+     somebody skips, and the whole list is one tap away on the grid above. */
+  function otherDays(evt, showing) {
+    var rest = daysOf(evt).filter(function (day) {
+      return day !== showing && day >= todayIso();
+    });
+    if (!rest.length) return '';
+    if (rest.length <= 2) {
+      return 'Also ' + rest.map(function (d) { return c.formatDate(d); }).join(' and ');
+    }
+    return 'Also on ' + rest.length + ' other days, through ' +
+      c.formatDate(rest[rest.length - 1]);
+  }
+
   function isAdmin() {
     return !!(HC.admin && HC.admin.isAdmin());
+  }
+
+  /* The merge this screen is in the middle of, or null. The state lives in
+     js/admin.js because the Admin screen puts up the same panel; this only
+     asks whether the one in flight is a date, so a merge started on the
+     announcements list does not draw a calendar over itself. */
+  function mergeHere() {
+    if (!isAdmin() || !HC.admin.mergeState) return null;
+    var at = HC.admin.mergeState();
+    return at && at.kind === 'event' ? at : null;
+  }
+
+  function eventById(id) {
+    return (HC.data.events || []).filter(function (e) { return e.id === id; })[0] || null;
   }
 
   /* The two controls in the corner of an event, for an admin.
@@ -344,6 +438,21 @@
           'data-id="' + c.esc(evt.id) + '" ' +
           'aria-label="Edit ' + c.esc(evt.title) + '">' +
           c.icon('pencil', 'hc-event__admin-icon') +
+        '</button>' +
+        /* MERGE WITH, and this is the only place in the app it can be reached
+           for a date nothing has flagged. The Admin screen offers it on the
+           dates in the review queue and on the pairs the dedupe pass found;
+           two entries the pass never paired are on this screen and on no
+           other, and this is where somebody notices them — scrolling the
+           calendar and seeing one evening written twice.
+
+           Between the pencil and the x, because that is the order of how much
+           it changes: what this is, what this is really about, and whether it
+           should be here at all. */
+        '<button type="button" class="hc-event__admin-btn" data-action="cal-event-merge" ' +
+          'data-id="' + c.esc(evt.id) + '" ' +
+          'aria-label="Merge ' + c.esc(evt.title) + ' into another date">' +
+          c.icon('merge', 'hc-event__admin-icon') +
         '</button>' +
         '<button type="button" class="hc-event__admin-btn hc-event__admin-btn--x" ' +
           'data-action="cal-event-delete" data-id="' + c.esc(evt.id) + '" ' +
@@ -362,6 +471,10 @@
         '<p class="hc-eyebrow">' + c.esc(c.formatDate(evt.date)) + '</p>' +
         '<p class="hc-row__title">' + c.esc(evt.title) + '</p>' +
         (meta ? '<p class="hc-caption">' + c.esc(meta) + '</p>' : '') +
+        (otherDays(evt, evt.date)
+          ? '<p class="hc-caption hc-event__more-days">' +
+            c.esc(otherDays(evt, evt.date)) + '</p>'
+          : '') +
         /* The paragraph, not the date, the time, the place or the title. An
            event's when and where are what the Add to calendar button writes
            into somebody's phone, and a description that has drifted is a much
@@ -382,7 +495,9 @@
            one. See remindMe() in js/components.js for why the second is drawn
            on a phone and nowhere else. */
         '<div class="hc-event__action">' +
-          c.addToCalendar(evt.id) +
+          // The day this row is printing, which for a multi-day event is the
+          // next one it runs on rather than the one it started on.
+          c.addToCalendar(evt.id, evt.date) +
           c.remindMe(evt.id) +
         '</div>' +
       '</div>';
@@ -392,7 +507,7 @@
 
   function blankDraft() {
     return { id: null, title: '', date: '', time: '', timeLabel: '',
-             location: '', blurb: '' };
+             location: '', blurb: '', days: [] };
   }
 
   /* A draft built from the row as the table holds it, not as the app draws it.
@@ -414,7 +529,14 @@
       time: when ? c.pad2(when.getHours()) + ':' + c.pad2(when.getMinutes()) : '',
       timeLabel: row.time_label || '',
       location: row.location || '',
-      blurb: row.description || ''
+      blurb: row.description || '',
+      /* The other days it runs on, from migration 0074. Plain dates, already
+         in the church's own calendar sense, so unlike `date` above there is
+         nothing to convert: a date column is a date and a phone in another
+         state still reads "the 12th" as the 12th. */
+      days: Array.isArray(row.also_on)
+        ? row.also_on.map(function (d) { return String(d).slice(0, 10); })
+        : []
     };
   }
 
@@ -431,11 +553,73 @@
       '</label>';
   }
 
-  /* Six fields and no more. An event also has a signup link, a capacity and a
-     category, and none of them is here: they are filled in by /new-event where
-     there is room to think about them, and migration 0042 leaves all three
-     alone on an edit, so a correction typed on a phone cannot blank the
-     registration link on a serve day. */
+  /* The other days this same event runs on, from migration 0074.
+
+     WHY A LIST AND NOT A SECOND DATE BOX. Because both shapes of the problem
+     are one shape. A retreat that runs Friday to Sunday and a class that meets
+     on two Sundays three weeks apart are, from the calendar's point of view,
+     the same thing: one event, several days. A "to" box would handle the first
+     and refuse the second, and the church has both.
+
+     THE FIRST DAY IS NOT IN IT, ever. That day is the Date box above, it is
+     what the event's time hangs off, and listing it twice is how a grid draws
+     one event on one day two times. Adding it here is quietly ignored on the
+     way to the table, by hc_event_also_on in 0074 — which is also what stops a
+     phone with a stale copy of this form writing something the column does not
+     allow.
+
+     ONE TIME FOR ALL OF THEM, and that is a decision rather than a shortcut. A
+     class at half past six meets at half past six on both Sundays. A thing
+     that genuinely happens at two different hours on two days is two events
+     and should read as two on the Cal tab, where somebody is deciding which
+     one to turn up to. */
+  function moreDaysField(d) {
+    var days = Array.isArray(d.days) ? d.days : [];
+
+    var html = '<div class="hc-field hc-cal__days">' +
+      '<span class="hc-field__label">Other days it runs</span>';
+
+    if (days.length) {
+      html += '<ul class="hc-cal__day-list">';
+      days.slice().sort().forEach(function (day) {
+        html += '<li class="hc-cal__day">' +
+          '<span>' + c.esc(c.formatDate(day)) + '</span>' +
+          '<button type="button" class="hc-cal__day-x" data-action="cal-day-remove" ' +
+            'data-day="' + c.esc(day) + '" ' +
+            'aria-label="Take ' + c.esc(c.formatDate(day)) + ' off this event">' +
+            c.icon('close', 'hc-cal__day-icon') +
+          '</button>' +
+        '</li>';
+      });
+      html += '</ul>';
+    }
+
+    /* An empty date box with a button beside it, rather than a box that adds
+       the day the moment it is filled in. A date input fires while somebody is
+       still typing the year, so an eager version of this adds three wrong days
+       on the way to the right one. */
+    html += '<div class="hc-cal__day-add">' +
+      '<input class="hc-input" type="date" data-cal-newday autocomplete="off" ' +
+        'aria-label="Another day this event runs">' +
+      c.button('Add this day', { action: 'cal-day-add', variant: 'secondary',
+        small: true }) +
+    '</div>';
+
+    html += '<span class="hc-caption hc-field__help">' +
+      (days.length
+        ? 'It shows on the calendar on the date above and on each of these.'
+        : 'Leave this empty for a one-day event. Add a day for a class over two ' +
+          'Sundays, or a retreat across a weekend.') +
+      '</span>';
+
+    return html + '</div>';
+  }
+
+  /* Six fields and no more, plus the list of days above. An event also has a
+     signup link, a capacity and a category, and none of them is here: they are
+     filled in by /new-event where there is room to think about them, and
+     migration 0042 leaves all three alone on an edit, so a correction typed on
+     a phone cannot blank the registration link on a serve day. */
   function eventForm() {
     var d = draft;
     var html = '<form class="hc-form hc-cal__form" novalidate>';
@@ -447,6 +631,8 @@
       placeholder: 'City Serve Day' });
 
     html += field({ name: 'date', label: 'Date', value: d.date, type: 'date' });
+
+    html += moreDaysField(d);
 
     html += field({ name: 'time', label: 'Time', value: d.time, type: 'time',
       help: 'Leave it empty if the event has no clock time.' });
@@ -480,6 +666,19 @@
 
     html += c.sectionHeader('Every date in one place', 'Calendar',
       { flush: true, tag: 'h1', eyebrowSlot: 'cal.eyebrow' });
+
+    /* Merging two dates by hand takes the whole screen, above the month
+       rather than below it, because it is the one thing here that is not
+       about looking something up. Same panel the Admin screen puts up, drawn
+       by js/components.js so the two cannot come to disagree about what a
+       merge says it will do. */
+    var merging = mergeHere();
+    if (merging) {
+      html += c.mergePanel(merging,
+        HC.admin.mergeTargets('event', merging.sourceId),
+        { sourceTitle: (eventById(merging.sourceId) || {}).title, busy: busy });
+      return html + '</div>';
+    }
 
     html += calendarBlock();
     html += dayPanel();
@@ -572,6 +771,32 @@
     if (draft && name in draft) draft[name] = value;
   }
 
+  /* Adding and taking away a day. Both are on the draft rather than on the
+     table: nothing here reaches Supabase until Save, the same promise the rest
+     of this form makes, so a day added and then thought better of costs
+     nothing and leaves no trace.
+
+     THE FIRST DAY IS REFUSED RATHER THAN SWALLOWED. Picking the date that is
+     already in the Date box is a thing somebody does by accident, and the
+     honest answer is to say so rather than to accept it and quietly drop it
+     three layers down in hc_event_also_on. */
+  function addDay(iso) {
+    if (!draft) return '';
+    var day = String(iso || '').slice(0, 10);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) return 'Pick a day first.';
+    if (day === draft.date) return 'That is already the date above.';
+    if (draft.days.indexOf(day) !== -1) return 'That day is already on it.';
+    if (draft.days.length >= 29) return 'That is as many days as one event can hold.';
+
+    draft.days = draft.days.concat([day]).sort();
+    return '';
+  }
+
+  function removeDay(iso) {
+    if (!draft) return;
+    draft.days = draft.days.filter(function (d) { return d !== iso; });
+  }
+
   /* What the Save button hands migration 0042.
 
      starts_at is built in the phone's own zone and sent as UTC, which is the
@@ -596,6 +821,9 @@
     eventsByDay: eventsByDay,
     upcoming: upcoming,
     metaLine: metaLine,
+    daysOf: daysOf,
+    nextDay: nextDay,
+    otherDays: otherDays,
     startsAtIso: startsAtIso,
     isoDate: isoDate,
     todayIso: todayIso,
@@ -611,6 +839,8 @@
     clearDraft: function () { draft = null; },
     getDraft: function () { return draft; },
     setField: setField,
+    addDay: addDay,
+    removeDay: removeDay,
     setBusy: function (token) { busy = token || ''; }
   };
 

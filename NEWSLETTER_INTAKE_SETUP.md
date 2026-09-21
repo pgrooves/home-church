@@ -268,12 +268,32 @@ The church emails about Homecoming in September, again in October with a ticket
 link, and again the week before with a change of time. Each of those parses into
 a new announcement, so Home ends up with three cards about one night.
 
-A third Edge Function, `announcement-dedupe`, reads each new draft alongside the
-announcements the church already has and writes down which one it looks like an
-update to, and what is new in it. `pg_cron` calls it every five minutes through
-`hc_dedupe_tick()`, which returns immediately unless a draft is actually waiting
-— so the ordinary week is an index lookup every five minutes and a handful of
-model calls when a newsletter lands. No new secret; it shares the intake's.
+A third Edge Function, `announcement-dedupe`, reads each new announcement
+alongside the ones the church already has and writes down which one it looks
+like a second go at, and what is new in it. `pg_cron` calls it every five
+minutes through `hc_dedupe_tick()`, and — since migration `0075` — so does an
+insert on the table, so the flags are usually there before the intake's
+notification is read rather than up to five minutes after it. The tick returns
+immediately unless something is actually waiting, so the ordinary week is an
+index lookup every five minutes and a handful of model calls when a newsletter
+lands. No new secret; it shares the intake's.
+
+**Three holes migration `0075` closed**, because the church fell through all of
+them in one fortnight — Homecoming Gala posted twice, the Jonah reading plan
+posted twice, and no merge was ever offered for either:
+
+- **Two drafts could not see each other.** The candidate list was everything
+  that had *left* the queue, so two drafts sitting in it together were compared
+  against everything except one another. Approve both and there are two cards.
+  The pass now reads every announcement in the window, queue included.
+- **Once approved, nothing looked again.** `dedupe_checked_at` was stamped, the
+  row left the queue, and there was no equivalent of the calendar's *"the same
+  night, twice"* section. Posted rows are now checked too, and a pair that only
+  becomes obvious with both cards on Home gets its own section on the Admin
+  screen with the same two buttons.
+- **The flag could arrive after the decision.** Fetch Announcements is a button
+  somebody is standing in front of. The insert trigger above is half the fix;
+  the other half is a guard with no model in it at all, below.
 
 In the review queue the card then says *"Looks like an update to 'Homecoming
 Gala, October 23': adds a ticket link and moves it to 6:30pm"*, and Approve is
@@ -299,8 +319,86 @@ curl -X POST https://ibqkumxfltfiuqevviji.supabase.co/functions/v1/announcement-
   -d '{"dry_run": true}'
 ```
 
-`{"all": true}` re-checks drafts it has already looked at, which is what to use
+`{"all": true}` re-checks rows it has already looked at, which is what to use
 after changing the prompt.
+
+### The guard with no model in it
+
+Migration `0075` gives announcements the same instant, free check the calendar
+has had since `0053`, with one rule changed. The calendar's version is "same
+day, and a word in common", and the day does most of the work; most
+announcements carry no date at all, so a shared word on its own would pair the
+men's breakfast with the men's retreat and flag half of Home.
+
+So this one asks whether one title is **contained in** the other, once the noise
+words are gone. That is the shape the real pairs have:
+
+```
+{homecoming}           in {homecoming, gala}       -> flagged
+{jonah, reading, plan} in {jonah, reading, plan}   -> flagged
+{mens, breakfast}      vs {mens, retreat}          -> left alone
+```
+
+It never overwrites a row somebody has answered for, and it can never stop an
+announcement being written. A pair it raises wrongly is taken back down by the
+pass within five minutes, or by one tap of **Post separately**, which now
+remembers the refusal — `hc_admin_keep_announcement_separate`, a function since
+`0075`, because the pass watches posted rows and a refusal it forgot would come
+straight back.
+
+---
+
+## When the robot misses one anyway: Merge with
+
+Everything above is the robot getting better at noticing, and it will still miss
+one: two titles with no word in common, a pair two months apart, a newsletter
+that renames something completely. When that happens the person looking at the
+two cards already knows the answer, and the answer should be a button.
+
+**Merge with** is on every posted announcement in *Manage Announcements*, on the
+dates in *Dates to review* and *The same night, twice*, and in the corner of
+every event on the Cal tab. It is three steps and nothing is written until the
+third:
+
+1. **Pick** the announcement or date this one is really about. A dropdown and a
+   button; nothing has happened yet and no model has been asked anything.
+2. **See what would change.** The `content-merge` Edge Function reads both rows,
+   works out what the merged version says, and hands back a field-by-field diff
+   — the old value struck through above the new one. **Still nothing is
+   written.** If the other row adds nothing at all, it says so and offers no
+   Save, which is the whole of what "nothing changed" should look like.
+3. **Save**, which writes exactly the fields that were on screen.
+
+There is no second model call between the preview and the write, so what
+somebody read is what is written.
+
+**What the model is and is not asked**, because this is the one place in the
+project where a model writes words that go on Home. It merges *prose*: the
+title, the blurb, the body, the place, the link label. It is asked for no date,
+no time, no list of days and no picture, because each of those already has a
+rule written down:
+
+| | |
+|---|---|
+| the start and the hour | `0052`'s rule. A time somebody vouched for is never replaced by the parser's nine in the morning. |
+| the days | `0074`'s rule. Unioned, because a day lost in a merge is a night the church is no longer meeting. |
+| when a card comes down | the later of the two `ends_on`, so a merged card does not vanish early. |
+| the pictures | the survivor's, or the other one's when it has none. |
+| a URL | the model picks *between* the two and the answer is checked against them; an invented one is dropped rather than shown. |
+
+`content-merge` writes nothing to any table. The write is
+`hc_admin_merge_announcement` or `hc_admin_merge_event` from `0075`, each of
+which takes only the columns it names — so `published`, `pinned` and `priority`
+stay out of reach, exactly as `0051` promised.
+
+```bash
+supabase functions deploy content-merge
+```
+
+It needs `GEMINI_API_KEY`, which is already set project-wide, and it is the only
+dedupe function that is **not** `--no-verify-jwt`: it is called by an admin from
+the app with their own token, and it checks their role server side the way
+`admin-remove-user` does.
 
 ---
 
@@ -501,6 +599,24 @@ never be wrong is a guard that misses the pair it was written for.
 Nothing here merges anything. The whole of 0053 is about *when the flag
 appears*; Merge and Keep both are still the only two ways a pair is settled,
 and both are taps.
+
+### One event, several days
+
+Migration `0074` lets an event carry `also_on`, a list of the other days it
+runs on: a class over two Sundays, a retreat across a weekend, a serve week
+with three evenings. `starts_at` is still the first day and still carries the
+only clock time, so every query, index and screen written before this goes on
+working; the Cal tab draws the event on every day it names, lists it once under
+the next day it is still to run, and says *"Also October 11"* underneath.
+
+It changes the dedupe pass too, and it has to: an event compared on its first
+day alone would call a weekend and the Saturday inside it two different things.
+The same-day guard now pairs two events sharing **any** day, and a merge
+**unions** the days both rows knew about — a day lost in a merge is a night the
+church is quietly no longer meeting.
+
+Two different hours on two days is the one case that really is two events,
+because somebody reading the calendar is deciding which to turn up to.
 
 ---
 
