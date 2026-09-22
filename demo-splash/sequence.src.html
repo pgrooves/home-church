@@ -1,0 +1,1126 @@
+<title>The Welcome After The House</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant:ital,wght@0,300;0,400;0,600;1,400&family=Poppins:wght@500;800&display=swap">
+
+<style>
+/* ==========================================================================
+   The welcome after the house
+
+   Third sheet on the splash, and the second pass at it. The first pass only
+   moved when the welcome started. That was not enough, and the reason is
+   worth writing down.
+
+   WHY THE WELCOME LOOKS LIKE IT FADES IN PLACE. It rises 8pt, and the rise
+   and the fade are one animation on one curve, cubic-bezier(0.16, 0.84,
+   0.44, 1). That curve is nearly all front: at 90ms it is 39% through, at
+   270ms it is 76% through. So by the time the words are solid enough to read
+   at all, under 2pt of the 8 is left, and that last 2pt takes another 600ms.
+   Every part of the move that could be seen has already happened while the
+   text was too faint to see it. Starting the whole thing later does not fix
+   that. It just fades in place later.
+
+   WHAT FIXES IT. Two animations instead of one. The fade is short, so the
+   words are solid early, and the travel is longer, further, and on a gentler
+   curve, so most of it happens in front of somebody who can see it.
+
+   Same two token sets as the other sheets. --pg-* is the page around the
+   phones, --hc-* is the app inside them, lifted from css/tokens.css.
+
+   The phones are drawn at real iPhone points, 393 x 852, and scaled to 76%
+   to fit their frames, which also scales the travel down — so under them the
+   same three options run again at 1:1, where a point is a point.
+   ========================================================================== */
+
+:root {
+  --mark:        url("__MARK__");
+  --lockup-ink:  url("__LOCKUP_INK__");
+  --lockup-lite: url("__LOCKUP__");
+
+  --pg-paper:   #F7F4EF;
+  --pg-cream:   #EDE8DF;
+  --pg-ink:     #111111;
+  --pg-mid:     #6D6864;
+  --pg-rule:    #C8C0B0;
+  --pg-gold:    #B08D4B;
+  --pg-sunk:    #EFEAE2;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --pg-paper: #1A1918;
+    --pg-cream: #232120;
+    --pg-ink:   #F2EEE7;
+    --pg-mid:   #9A938A;
+    --pg-rule:  #3A3633;
+    --pg-gold:  #CBAC74;
+    --pg-sunk:  #201E1D;
+    color-scheme: dark;
+  }
+}
+
+:root[data-theme="dark"] {
+  --pg-paper: #1A1918;
+  --pg-cream: #232120;
+  --pg-ink:   #F2EEE7;
+  --pg-mid:   #9A938A;
+  --pg-rule:  #3A3633;
+  --pg-gold:  #CBAC74;
+  --pg-sunk:  #201E1D;
+  color-scheme: dark;
+}
+
+body {
+  margin: 0;
+  background: var(--pg-paper);
+  color: var(--pg-ink);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+.sheet {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding-block: 56px 88px;
+  padding-inline: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 40px;
+}
+
+/* --- masthead -------------------------------------------------------- */
+
+.masthead { display: flex; flex-direction: column; gap: 14px; max-width: 62ch; }
+
+.eyebrow {
+  font-size: 11px;
+  line-height: 14px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--pg-gold);
+  margin: 0;
+}
+
+.masthead h1 {
+  font-family: "Poppins", -apple-system, BlinkMacSystemFont, sans-serif;
+  font-weight: 800;
+  font-size: clamp(30px, 4.6vw, 42px);
+  line-height: 1.08;
+  letter-spacing: -0.01em;
+  margin: 0;
+  text-wrap: balance;
+}
+
+.masthead p { margin: 0; font-size: 16px; line-height: 25px; color: var(--pg-mid); }
+
+/* --- controls -------------------------------------------------------- */
+
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 20px;
+  padding: 16px 18px;
+  background: var(--pg-cream);
+  border: 1px solid var(--pg-rule);
+  border-radius: 14px;
+  position: sticky;
+  top: env(safe-area-inset-top, 0px);
+  z-index: 5;
+}
+
+.control { display: flex; align-items: center; gap: 8px; }
+
+.control > span {
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--pg-mid);
+}
+
+.seg {
+  display: inline-flex;
+  background: var(--pg-sunk);
+  border: 1px solid var(--pg-rule);
+  border-radius: 999px;
+  padding: 2px;
+}
+
+.seg button {
+  appearance: none;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 13px;
+  color: var(--pg-mid);
+  padding: 6px 14px;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.seg button[aria-pressed="true"] {
+  background: var(--pg-paper);
+  color: var(--pg-ink);
+  box-shadow: 0 1px 3px rgba(26, 25, 24, 0.14);
+}
+
+.seg button:focus-visible,
+.replay:focus-visible { outline: 2px solid var(--pg-gold); outline-offset: 2px; }
+
+.replay {
+  appearance: none;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  color: var(--pg-ink);
+  background: var(--pg-paper);
+  border: 1px solid var(--pg-rule);
+  border-radius: 999px;
+  padding: 7px 16px;
+  margin-left: auto;
+}
+
+/* --- the three phones -------------------------------------------------- */
+
+.studies {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(288px, 1fr));
+  gap: 40px 32px;
+}
+
+.study { display: flex; flex-direction: column; gap: 16px; }
+
+.frame {
+  width: 300px;
+  max-width: 100%;
+  height: 651px;
+  margin: 0 auto;
+  border-radius: 46px;
+  padding: 5px;
+  background: linear-gradient(160deg, #3B3733, #161513);
+  box-shadow: 0 18px 40px rgba(26, 25, 24, 0.22), 0 2px 6px rgba(26, 25, 24, 0.16);
+  flex: none;
+}
+
+.screen { width: 100%; height: 100%; border-radius: 41px; overflow: hidden; position: relative; }
+
+/* The app's own tokens, straight out of css/tokens.css. Both the phones and
+   the 1:1 strip below them are the app, so both carry them. */
+.stage,
+.band {
+  --hc-paper:  #F7F4EF;
+  --hc-cream:  #EDE8DF;
+  --hc-ink:    #111111;
+  --hc-mid:    #6D6864;
+  --hc-rule:   #C8C0B0;
+  --hc-gold:   #D7BA85;
+  --hc-lockup: var(--lockup-ink);
+  --hc-serif: "Cormorant", Georgia, "Times New Roman", serif;
+  --hc-sans-display: "Poppins", -apple-system, BlinkMacSystemFont, sans-serif;
+  --hc-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+
+  background: var(--hc-paper);
+  color: var(--hc-ink);
+}
+
+.stage[data-app-theme="dark"],
+.band[data-app-theme="dark"] {
+  --hc-paper:  #1A1918;
+  --hc-cream:  #232120;
+  --hc-ink:    #F2EEE7;
+  --hc-mid:    #9A938A;
+  --hc-rule:   #3A3633;
+  --hc-gold:   #CBAC74;
+  --hc-lockup: var(--lockup-lite);
+}
+
+.stage {
+  width: 393px;
+  height: 852px;
+  transform: scale(0.76336);
+  transform-origin: 0 0;
+  position: relative;
+}
+
+.pill {
+  position: absolute;
+  top: 11px; left: 50%;
+  transform: translateX(-50%);
+  width: 124px; height: 36px;
+  border-radius: 22px;
+  background: #161513;
+  z-index: 4;
+}
+
+.indicator {
+  position: absolute;
+  bottom: 9px; left: 50%;
+  transform: translateX(-50%);
+  width: 140px; height: 5px;
+  border-radius: 3px;
+  background: var(--hc-ink);
+  opacity: 0.28;
+  z-index: 4;
+}
+
+.caption { display: flex; flex-direction: column; gap: 6px; }
+
+.caption h2 {
+  font-family: "Poppins", -apple-system, BlinkMacSystemFont, sans-serif;
+  font-weight: 800;
+  font-size: 17px;
+  line-height: 22px;
+  margin: 0;
+}
+
+.caption p { margin: 0; font-size: 14px; line-height: 21px; color: var(--pg-mid); }
+
+.caption .tag {
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--pg-gold);
+}
+
+/* ==========================================================================
+   Home, sketched. Only enough of it to see what the splash lands on.
+   ========================================================================== */
+
+.home {
+  position: absolute;
+  inset: 0;
+  padding: 62px 20px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.home__bar { height: 30px; display: flex; align-items: center; }
+
+.home__lockup {
+  width: 118px;
+  aspect-ratio: 1461 / 230;
+  background: var(--hc-lockup) left center / contain no-repeat;
+}
+
+.home__greeting {
+  font-family: var(--hc-sans-display);
+  font-weight: 800;
+  font-size: 28px;
+  line-height: 32px;
+  letter-spacing: -0.01em;
+  margin: 6px 0 0;
+}
+
+.home__label {
+  font-size: 11px;
+  line-height: 14px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--hc-mid);
+  margin: 0;
+}
+
+.home__card {
+  background: var(--hc-cream);
+  border-radius: 14px;
+  padding: 18px 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.home__card h3 {
+  font-family: var(--hc-serif);
+  font-weight: 600;
+  font-size: 26px;
+  line-height: 30px;
+  margin: 0;
+}
+
+.home__times { display: flex; flex-direction: column; gap: 8px; }
+
+.home__time {
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--hc-sans);
+  font-size: 13px;
+  line-height: 18px;
+  color: var(--hc-mid);
+  border-top: 1px solid var(--hc-rule);
+  padding-top: 8px;
+}
+
+.home__block { height: 96px; border-radius: 14px; background: var(--hc-cream); }
+
+.home__tabs {
+  position: absolute;
+  left: 16px; right: 16px; bottom: 26px;
+  height: 58px;
+  border-radius: 20px;
+  background: var(--hc-cream);
+  border: 1px solid var(--hc-rule);
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  padding: 0 6px;
+}
+
+.home__tab {
+  font-size: 10px;
+  letter-spacing: 0.02em;
+  color: var(--hc-mid);
+  padding: 6px 7px;
+  border-radius: 12px;
+}
+
+.home__tab--on {
+  color: var(--hc-ink);
+  background: var(--hc-paper);
+  box-shadow: 0 2px 6px rgba(26, 25, 24, 0.12);
+}
+
+/* ==========================================================================
+   The splash, as it ships in every respect but the welcome's entrance.
+   ========================================================================== */
+
+.splash {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  background: var(--hc-paper);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.markwrap { position: relative; width: 92px; margin-bottom: 26px; }
+
+.mark {
+  width: 92px;
+  aspect-ratio: 246 / 226;
+  background: var(--mark) center / contain no-repeat;
+}
+
+/* The mark's own silhouette as a mask, so the light only touches the gold.
+   Unchanged from what ships; it is here because the welcome's new timing has
+   to be judged against it. */
+.gleam {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  -webkit-mask: var(--mark) center / contain no-repeat;
+          mask: var(--mark) center / contain no-repeat;
+  background-image: linear-gradient(105deg,
+    rgba(138, 104, 44, 0) 24%,
+    rgba(138, 104, 44, 0.32) 39%,
+    rgba(255, 251, 242, 0.95) 50%,
+    rgba(138, 104, 44, 0.32) 61%,
+    rgba(138, 104, 44, 0) 76%);
+  background-repeat: no-repeat;
+  background-size: 300% 100%;
+  background-position: 100% 0;
+  opacity: 0;
+}
+
+.greeting {
+  margin: 0;
+  padding: 0 32px;
+  text-align: center;
+  text-wrap: balance;
+  font-family: var(--hc-sans-display);
+  font-weight: 800;
+  /* 28px and not 32: this is what .hc-home__greeting actually is, and
+     matching it is the whole reason the handoff reads as words changing. */
+  font-size: 28px;
+  line-height: 32px;
+  letter-spacing: -0.01em;
+}
+
+.loading {
+  position: absolute;
+  left: 0; right: 0;
+  bottom: 54px;
+  margin: 0;
+  text-align: center;
+  color: var(--hc-mid);
+  font-family: var(--hc-sans);
+  font-size: 13px;
+  line-height: 18px;
+}
+
+/* --- the timing --------------------------------------------------------
+
+   Everything but the welcome is identical in all three and identical to what
+   ships. --k is the slow motion control, a plain multiplier on every number,
+   so half speed is the same sequence and not a different one. */
+
+.stage,
+.band {
+  --k: 1;
+
+  --dur-mark: calc(900ms * var(--k));
+  --del-mark: calc(140ms * var(--k));
+  --del-load: calc(1000ms * var(--k));
+  --del-gleam: calc(1900ms * var(--k));
+  --dur-gleam: calc(1000ms * var(--k));
+  --del-hand: calc(2750ms * var(--k));
+  --dur-hand: calc(420ms * var(--k));
+  --ease: cubic-bezier(0.16, 0.84, 0.44, 1);
+
+  /* The welcome, and the whole proposal. Travel and fade are separate now:
+     one duration for the move, another for the words becoming solid. As it
+     ships they are the same number on the same curve, which is the bug. */
+  --del-line:    calc(460ms * var(--k));
+  --dur-line:    calc(900ms * var(--k));
+  --fade-line:   calc(900ms * var(--k));
+  --lift-line:   lift-8;
+  --ease-line:   cubic-bezier(0.16, 0.84, 0.44, 1);
+  --ease-fade:   cubic-bezier(0.16, 0.84, 0.44, 1);
+}
+
+.slow .stage,
+.slow .band { --k: 2; }
+
+/* Lift. The house lands on its own, then the words come up behind it: solid
+   in 240ms so they can be seen at all, still travelling for 560, 16pt on a
+   gentle ease out. Nearly 6pt of the move happens after the text is fully
+   legible, against under 2 today. */
+.s-lift .stage,
+.band.s-lift {
+  --del-line:    calc(980ms * var(--k));
+  --dur-line:    calc(560ms * var(--k));
+  --fade-line:   calc(240ms * var(--k));
+  --lift-line:   lift-16;
+  --ease-line:   cubic-bezier(0.39, 0.58, 0.57, 1);
+  --ease-fade:   ease-out;
+}
+
+/* The same idea with more of everything: 20pt over 680ms. Over 8pt of it
+   is in front of somebody who can read the words. */
+.s-long .stage,
+.band.s-long {
+  --del-line:    calc(980ms * var(--k));
+  --dur-line:    calc(680ms * var(--k));
+  --fade-line:   calc(260ms * var(--k));
+  --lift-line:   lift-20;
+  --ease-line:   cubic-bezier(0.39, 0.58, 0.57, 1);
+  --ease-fade:   ease-out;
+}
+
+.splash .mark,
+.splash .greeting,
+.splash .loading,
+.band .greeting { opacity: 0; }
+
+.playing .mark {
+  animation: rise var(--dur-mark) var(--ease) var(--del-mark) forwards,
+             bloom var(--dur-gleam) ease-in-out var(--del-gleam);
+}
+
+/* Two animations, not one. That is the change. The travel is a named
+   keyframe per distance rather than a variable inside one, because a var()
+   in a keyframe is the kind of thing that quietly resolves to nothing on
+   some phone and leaves exactly the fade in place this sheet exists to
+   get rid of. */
+.playing .greeting {
+  animation: var(--lift-line) var(--dur-line) var(--ease-line) var(--del-line) forwards,
+             fade var(--fade-line) var(--ease-fade) var(--del-line) forwards;
+}
+
+.playing .loading {
+  animation: fade calc(700ms * var(--k)) ease var(--del-load) forwards,
+             breathe calc(2800ms * var(--k)) ease-in-out calc(var(--del-load) + 800ms * var(--k)) infinite;
+}
+
+.playing .gleam {
+  animation: sweep var(--dur-gleam) cubic-bezier(0.4, 0, 0.3, 1) var(--del-gleam) forwards;
+}
+
+/* The handoff. The splash lifts off Home rather than Home arriving. */
+.playing .splash {
+  animation: handoff var(--dur-hand) ease-in var(--del-hand) forwards;
+}
+
+.playing .home {
+  animation: settle calc(520ms * var(--k)) var(--ease) calc(var(--del-hand) + 60ms * var(--k)) backwards;
+}
+
+@keyframes rise {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes lift-8  { from { transform: translateY(8px); }  to { transform: translateY(0); } }
+@keyframes lift-16 { from { transform: translateY(16px); } to { transform: translateY(0); } }
+@keyframes lift-20 { from { transform: translateY(20px); } to { transform: translateY(0); } }
+
+@keyframes fade { to { opacity: 1; } }
+
+@keyframes breathe {
+  0%, 100% { opacity: 0.45; }
+  50%      { opacity: 0.9; }
+}
+
+@keyframes sweep {
+  0%   { opacity: 0; background-position: 100% 0; }
+  12%  { opacity: 1; }
+  88%  { opacity: 1; }
+  100% { opacity: 0; background-position: 0% 0; }
+}
+
+@keyframes bloom {
+  0%, 100% { filter: none; }
+  50%      { filter: drop-shadow(0 0 7px rgba(215, 186, 133, 0.34)); }
+}
+
+@keyframes handoff {
+  to { opacity: 0; visibility: hidden; }
+}
+
+@keyframes settle {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Reduce Motion. base.css collapses every duration to nothing but leaves the
+   delays alone, so the still version is the three pieces appearing in order,
+   and the still hold is 1200ms. A welcome that waited until 980 would be
+   readable for two tenths of a second, so its delay goes back to the house's
+   own 140ms: no house is rising, so there is nothing to follow. */
+@media (prefers-reduced-motion: reduce) {
+  .playing .mark,
+  .playing .greeting {
+    animation: fade 400ms ease var(--del-mark) forwards;
+  }
+  .playing .loading { animation: fade 400ms ease var(--del-load) forwards; }
+  .playing .gleam { animation: none; opacity: 0; }
+  .playing .home { animation: none; }
+}
+
+/* --- the same three at 1:1 ---------------------------------------------
+
+   The phones are at 76%, which shrinks 16pt of travel to 12 and is exactly
+   the wrong way to judge whether a move reads. These are the same three
+   entrances at full size, on the same paper, stacked so they can be watched
+   against each other. */
+
+.closeup {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  border: 1px solid var(--pg-rule);
+  border-radius: 14px;
+  overflow: hidden;
+  background: var(--pg-rule);
+}
+
+.band {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 22px 20px;
+  min-height: 78px;
+  overflow: hidden;
+}
+
+.band__tag {
+  flex: none;
+  width: 92px;
+  font-size: 11px;
+  line-height: 15px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--hc-mid);
+}
+
+.band .greeting {
+  padding: 0;
+  text-align: left;
+  flex: 1;
+  min-width: 0;
+}
+
+.band__px {
+  flex: none;
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--hc-mid);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+@media (max-width: 520px) {
+  .band { flex-wrap: wrap; gap: 6px 14px; }
+  .band__tag { width: auto; }
+  .band .greeting { flex-basis: 100%; }
+}
+
+/* --- the beats, drawn --------------------------------------------------- */
+
+.track {
+  position: relative;
+  height: 26px;
+  border-radius: 6px;
+  background: var(--pg-sunk);
+  border: 1px solid var(--pg-rule);
+  overflow: hidden;
+}
+
+/* Every bar is placed as a percentage of the same 3.2 second window, so the
+   three tracks read straight down the page. */
+.bar {
+  position: absolute;
+  top: 5px;
+  height: 14px;
+  border-radius: 4px;
+  background: var(--pg-gold);
+  opacity: 0.45;
+}
+
+/* The travel, and inside it the part of the travel that happens while the
+   words are still going solid. The pale head is the part nobody sees. */
+.bar--line { opacity: 1; }
+
+.bar--fade {
+  background: var(--pg-paper);
+  opacity: 0.55;
+  border-radius: 4px 0 0 4px;
+}
+
+.track__hand {
+  position: absolute;
+  top: 0; bottom: 0;
+  width: 1px;
+  background: var(--pg-ink);
+  opacity: 0.35;
+}
+
+.scale {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  color: var(--pg-mid);
+  font-variant-numeric: tabular-nums;
+  padding-top: 4px;
+}
+
+/* --- notes ------------------------------------------------------------ */
+
+.notes {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 28px;
+  border-top: 1px solid var(--pg-rule);
+  padding-top: 32px;
+}
+
+.note h3 {
+  font-family: "Poppins", -apple-system, BlinkMacSystemFont, sans-serif;
+  font-weight: 800;
+  font-size: 13px;
+  line-height: 18px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin: 0 0 10px;
+}
+
+.note p, .note li { font-size: 15px; line-height: 24px; color: var(--pg-mid); margin: 0 0 10px; }
+.note ul { margin: 0; padding-left: 18px; }
+.note b { color: var(--pg-ink); font-weight: 600; }
+
+.beats {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+
+.beats th {
+  text-align: left;
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--pg-mid);
+  font-weight: 400;
+  padding: 0 0 8px;
+}
+
+.beats td {
+  border-top: 1px solid var(--pg-rule);
+  padding: 8px 12px 8px 0;
+  color: var(--pg-mid);
+}
+
+.beats td:first-child { color: var(--pg-ink); white-space: nowrap; }
+
+.scroller { overflow-x: auto; }
+
+.section-head {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: 62ch;
+}
+
+.section-head h2 {
+  font-family: "Poppins", -apple-system, BlinkMacSystemFont, sans-serif;
+  font-weight: 800;
+  font-size: 22px;
+  line-height: 28px;
+  letter-spacing: -0.01em;
+  margin: 0;
+}
+
+.section-head p { margin: 0; font-size: 15px; line-height: 24px; color: var(--pg-mid); }
+</style>
+
+<div class="sheet">
+
+  <header class="masthead">
+    <p class="eyebrow">Home Church, the screen before Home</p>
+    <h1>The welcome after the house</h1>
+    <p>
+      Second pass, and this one fixes the real problem. The welcome does rise
+      8pt today — but the rise and the fade are one animation on one hard
+      ease-out curve, so 76% of the move is over by 270ms, while the words are
+      still too faint to see it. What is left is under 2pt, crawling out over
+      another six tenths of a second. That is why it reads as a fade in place,
+      and why moving it later on its own changed nothing. Here the fade is
+      short and the travel is long: the words go solid first, then keep
+      climbing where they can be seen.
+    </p>
+  </header>
+
+  <div class="controls">
+    <div class="control">
+      <span>Speed</span>
+      <div class="seg" id="speed">
+        <button type="button" data-speed="real" aria-pressed="true">Real time</button>
+        <button type="button" data-speed="half" aria-pressed="false">Half speed</button>
+      </div>
+    </div>
+
+    <div class="control">
+      <span>App appearance</span>
+      <div class="seg" id="theme">
+        <button type="button" data-theme="light" aria-pressed="true">Light</button>
+        <button type="button" data-theme="dark" aria-pressed="false">Dark</button>
+      </div>
+    </div>
+
+    <div class="control">
+      <span>Repeat</span>
+      <div class="seg" id="loop">
+        <button type="button" data-loop="off" aria-pressed="true">Once</button>
+        <button type="button" data-loop="on" aria-pressed="false">Keep going</button>
+      </div>
+    </div>
+
+    <button type="button" class="replay" id="replay">Play them again</button>
+  </div>
+
+  <div class="studies" id="studies"></div>
+
+  <div class="section-head">
+    <h2>The same three at full size</h2>
+    <p>
+      The phones are drawn at 76%, which turns 16pt of travel into 12 and is
+      exactly the wrong way to judge whether a move reads. These are the same
+      three entrances at 1:1, on the same paper, one under another. The pale
+      head on each track above is the part of the move that happens before the
+      words are solid — the part nobody sees.
+    </p>
+  </div>
+
+  <div class="closeup" id="closeup"></div>
+
+  <!-- One phone, written once and stamped three times. Three hand-copied
+       phones drift, and a comparison of timing is worthless the moment
+       anything else between them is different. -->
+  <template id="phone">
+    <section class="study">
+      <div class="frame">
+        <div class="screen">
+          <div class="stage" data-app-theme="light">
+            <div class="home">
+              <div class="home__bar"><div class="home__lockup"></div></div>
+              <h1 class="home__greeting">Good morning, Trey.</h1>
+              <p class="home__label">This Sunday</p>
+              <div class="home__card">
+                <h3>Gathering at Home</h3>
+                <div class="home__times">
+                  <div class="home__time"><span>216 Giuffrias Ave</span><span>8:00</span></div>
+                  <div class="home__time"><span>Metairie</span><span>9:30</span></div>
+                  <div class="home__time"><span>Kids at every hour</span><span>11:00</span></div>
+                </div>
+              </div>
+              <div class="home__block"></div>
+              <div class="home__tabs">
+                <span class="home__tab home__tab--on">Home</span>
+                <span class="home__tab">Listen</span>
+                <span class="home__tab">Guide</span>
+                <span class="home__tab">Group</span>
+                <span class="home__tab">Connect</span>
+                <span class="home__tab">•••</span>
+              </div>
+            </div>
+            <div class="splash">
+              <div class="markwrap">
+                <div class="mark" role="img" aria-label="Home Church"></div>
+                <div class="gleam"></div>
+              </div>
+              <h1 class="greeting">Welcome home, Trey.</h1>
+              <p class="loading">Loading...</p>
+            </div>
+            <div class="pill"></div>
+            <div class="indicator"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="track" aria-hidden="true">
+        <div class="bar bar--mark"></div>
+        <div class="bar bar--line"></div>
+        <div class="bar bar--fade"></div>
+        <div class="track__hand"></div>
+      </div>
+      <div class="scale" aria-hidden="true"><span>0s</span><span>House</span><span>Welcome</span><span>Light</span><span>3.2s</span></div>
+
+      <div class="caption">
+        <span class="tag"></span>
+        <h2></h2>
+        <p></p>
+      </div>
+    </section>
+  </template>
+
+  <template id="row">
+    <div class="band" data-app-theme="light">
+      <span class="band__tag"></span>
+      <p class="greeting">Welcome home, Trey.</p>
+      <span class="band__px"></span>
+    </div>
+  </template>
+
+  <div class="notes">
+    <div class="note">
+      <h3>Why it looked like a fade</h3>
+      <div class="scroller">
+        <table class="beats">
+          <thead>
+            <tr><th>Into the move</th><th>Opacity</th><th>Travel left</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>90ms</td><td>0.39</td><td>4.9pt of 8</td></tr>
+            <tr><td>180ms</td><td>0.62</td><td>3.0pt</td></tr>
+            <tr><td>270ms</td><td>0.76</td><td>1.9pt</td></tr>
+            <tr><td>450ms</td><td>0.92</td><td>0.7pt</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>
+        One animation, one curve, and that curve is nearly all front. By the
+        time the words can be read, the move is done. The eye gets a fade and
+        a two point drift.
+      </p>
+    </div>
+    <div class="note">
+      <h3>The beats, lift version</h3>
+      <div class="scroller">
+        <table class="beats">
+          <thead>
+            <tr><th>Time</th><th>What happens</th><th>Change</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>0.14s</td><td>House rises over 900ms, 8pt</td><td>same</td></tr>
+            <tr><td>0.98s</td><td>Welcome goes solid in 240ms</td><td>was 900ms</td></tr>
+            <tr><td>0.98s</td><td>and climbs 16pt over 560ms</td><td>was 8pt / 900ms</td></tr>
+            <tr><td>1.00s</td><td>Loading arrives, then breathes</td><td>same</td></tr>
+            <tr><td>1.90s</td><td>Light crosses the house</td><td>same</td></tr>
+            <tr><td>2.75s</td><td>Splash lifts off, Home settles in</td><td>same</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>
+        Settled at <b>1.54s</b>, clear of the light and 1.2 seconds before the
+        handoff. Nothing arrives later than it does now.
+      </p>
+    </div>
+    <div class="note">
+      <h3>What it costs in the app</h3>
+      <p>
+        One rule in <b>css/components.css</b>: the welcome gets two animations
+        instead of one, and a <b>lift</b> keyframe beside the <b>rise</b> one
+        the house still uses. Nothing else in the file moves.
+      </p>
+      <p>
+        The house, the loading line, the light across the gold, the 2750ms hold
+        and the 420ms lift off in <b>js/splash.js</b>, the gate on a signed out
+        phone, and everything waiting on the splash being gone are all
+        untouched. Under Reduce Motion the delay goes back to 140ms, since
+        there is no house rising to follow and the still hold is only 1200ms.
+      </p>
+    </div>
+  </div>
+
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  /* The three. Only the class and the words differ; the timing each class
+     stands for is in the stylesheet, next to the shipping numbers it is being
+     measured against. line is [delay, travel ms, fade ms, points]. */
+  var STUDIES = [
+    {
+      cls: 's-now',
+      tag: 'As it ships today',
+      title: 'A fade, and a two point drift',
+      note: 'The welcome starts at 460ms, overlapping the house, and its rise ' +
+            'and fade share one hard ease out. 76% of the travel is spent ' +
+            'before the words are solid. What you actually see is the last ' +
+            '2pt, over six tenths of a second. It reads as no movement at all.',
+      mark: [140, 900],
+      line: [460, 900, 900, 8]
+    },
+    {
+      cls: 's-lift',
+      tag: 'Proposed',
+      title: 'Solid first, then still climbing',
+      note: 'The house lands on its own. At 980ms the words go solid in 240ms ' +
+            'and keep travelling for 560, 16pt on a gentle ease out — so ' +
+            'nearly 6pt of the move happens in front of somebody who can read ' +
+            'it, against under 2 today. Quick, and nothing snaps.',
+      mark: [140, 900],
+      line: [980, 560, 240, 16]
+    },
+    {
+      cls: 's-long',
+      tag: 'Alternate',
+      title: 'More of the same move',
+      note: 'The same shape with more of everything: 20pt over 680ms, solid at ' +
+            '260. Over 8pt of it is visible travel. The most obviously a ' +
+            'movement, and the one most likely to feel like a lot on the ' +
+            'twentieth launch. Watch this one in dark.',
+      mark: [140, 900],
+      line: [980, 680, 260, 20]
+    }
+  ];
+
+  /* The tracks are drawn against this window so all three read straight down
+     the page. 3.2s covers everything up to the handoff with room after it. */
+  var WINDOW = 3200;
+  var HANDOFF = 2750;
+
+  var studies = document.getElementById('studies');
+  var closeup = document.getElementById('closeup');
+  var phone = document.getElementById('phone');
+  var row = document.getElementById('row');
+  var timer = null;
+  var half = false;
+
+  function pct(ms) { return (ms / WINDOW * 100) + '%'; }
+
+  STUDIES.forEach(function (s) {
+    var node = phone.content.cloneNode(true);
+    var section = node.querySelector('.study');
+    section.classList.add(s.cls);
+
+    section.querySelector('.tag').textContent = s.tag;
+    section.querySelector('.caption h2').textContent = s.title;
+    section.querySelector('.caption p').textContent = s.note;
+
+    var mark = section.querySelector('.bar--mark');
+    mark.style.left = pct(s.mark[0]);
+    mark.style.width = pct(s.mark[1]);
+
+    var line = section.querySelector('.bar--line');
+    line.style.left = pct(s.line[0]);
+    line.style.width = pct(s.line[1]);
+
+    /* The head of the travel that happens while the words are still going
+       solid, laid over it. On the shipping timing it is the whole bar. */
+    var fade = section.querySelector('.bar--fade');
+    fade.style.left = pct(s.line[0]);
+    fade.style.width = pct(Math.min(s.line[2], s.line[1]));
+
+    section.querySelector('.track__hand').style.left = pct(HANDOFF);
+
+    studies.appendChild(node);
+
+    var band = row.content.cloneNode(true);
+    var el = band.querySelector('.band');
+    el.classList.add(s.cls);
+    el.querySelector('.band__tag').textContent = s.tag;
+    el.querySelector('.band__px').textContent = s.line[3] + 'pt / ' + s.line[1] + 'ms';
+    closeup.appendChild(band);
+  });
+
+  var plays = Array.prototype.slice.call(document.querySelectorAll('.stage, .band'));
+
+  function play() {
+    plays.forEach(function (s) {
+      s.classList.remove('playing');
+      /* Reading offsetWidth restarts the animations without a timer. */
+      void s.offsetWidth;
+      s.classList.add('playing');
+    });
+  }
+
+  /* The cycle is the last beat plus a beat of Home, so a repeat reads as a
+     fresh launch rather than a stutter. Half speed doubles it with the rest. */
+  function cycle() { return (half ? 2 : 1) * 3600 + 1400; }
+
+  function press(group, value, attr) {
+    Array.prototype.forEach.call(group.querySelectorAll('button'), function (b) {
+      b.setAttribute('aria-pressed', String(b.dataset[attr] === value));
+    });
+  }
+
+  function looping() {
+    return document.querySelector('#loop button[data-loop="on"]')
+      .getAttribute('aria-pressed') === 'true';
+  }
+
+  function reloop() {
+    clearInterval(timer);
+    timer = null;
+    if (looping()) timer = setInterval(play, cycle());
+  }
+
+  document.getElementById('speed').addEventListener('click', function (e) {
+    var b = e.target.closest('button');
+    if (!b) return;
+    press(this, b.dataset.speed, 'speed');
+    half = b.dataset.speed === 'half';
+    document.querySelector('.sheet').classList.toggle('slow', half);
+    play();
+    reloop();
+  });
+
+  document.getElementById('theme').addEventListener('click', function (e) {
+    var b = e.target.closest('button');
+    if (!b) return;
+    press(this, b.dataset.theme, 'theme');
+    plays.forEach(function (s) { s.dataset.appTheme = b.dataset.theme; });
+    play();
+  });
+
+  document.getElementById('loop').addEventListener('click', function (e) {
+    var b = e.target.closest('button');
+    if (!b) return;
+    press(this, b.dataset.loop, 'loop');
+    reloop();
+    if (timer) play();
+  });
+
+  document.getElementById('replay').addEventListener('click', play);
+
+  play();
+}());
+</script>
