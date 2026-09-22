@@ -104,11 +104,15 @@ them and writes two files per source, none of them committed:
 
 ## Shipped
 
-**Front door with the soft pass is in the app.** The layer lives in
-`index.html` so it is on the glass at first paint, its styles are at the bottom
-of `css/components.css`, and `js/splash.js` puts the name in and takes the
-whole thing away once `boot()` says Home is painted. These two pages stay as
-the drawings it was decided from.
+**Front door with the soft pass is in the app**, and so is the third sheet's
+heavier entrance for the welcome: solid in 260ms, climbing 20pt over 680 from
+980ms, `hc-splash-lift` beside the `hc-splash-rise` the house still uses, and
+the delay back at 140ms under Reduce Motion. The layer lives in `index.html` so
+it is on the glass at first paint, its styles are at the bottom of
+`css/components.css`, and `js/splash.js` puts the name in and takes the whole
+thing away once `boot()` says Home is painted. Nothing about the hold, the
+light, the handoff or the gate moved for the welcome's entrance. These three
+pages stay as the drawings it was decided from.
 
 One number moved between the drawing and the app: the greeting is 28px, not
 32, because that is what `.hc-home__greeting` actually is, and matching it was

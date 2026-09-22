@@ -3598,9 +3598,9 @@ a.hc-card:active { background: var(--hc-paper-sunk); }
   color: var(--hc-mid);
 }
 
-/* The entrance. The house settles, the welcome follows a beat behind, the
-   loading line arrives last and breathes, and the light crosses the mark at
-   1.9s, still going as the layer starts to leave.
+/* The entrance. The house settles on its own, the welcome comes up behind it,
+   the loading line arrives last and breathes, and the light crosses the mark
+   at 1.9s, still going as the layer starts to leave.
 
    base.css collapses all of this under Reduce Motion, which leaves the three
    pieces on screen at once and no light. That is the intended still version,
@@ -3614,8 +3614,37 @@ a.hc-card:active { background: var(--hc-paper-sunk); }
              hc-splash-bloom 1000ms ease-in-out 1900ms;
 }
 
+/* THE WELCOME IS TWO ANIMATIONS AND THAT IS THE WHOLE POINT OF IT. It used to
+   be one: hc-splash-rise, opacity and travel together on the same hard ease
+   out, starting at 460ms while the house was still climbing. Nobody ever saw
+   it move. That curve is almost all front, 39% through at 90ms and 76% at
+   270ms, so by the time the words were solid enough to read, under 2pt of
+   their 8pt rise was left, and that last 2pt took another 600ms. What it
+   read as was a fade in place.
+
+   Split apart, the fade is short and the travel is long: solid in 260ms so
+   the words can be seen at all, still climbing for 680 from 20pt on an ease
+   out gentle enough to spread the move out. Over 8pt of it now happens in
+   front of somebody who can read it.
+
+   The delay waits for the house. Its rise ends at 1.04s, so 980ms is the
+   welcome arriving after it rather than with it, and the whole thing is
+   settled at 1.66s: clear of the light at 1.9s, and more than a second
+   before the layer leaves at 2.75s. Nothing about the hold moved for this.
+   See demo-splash/sequence.src.html for the drawing it was chosen from. */
 .hc-splash__greeting {
-  animation: hc-splash-rise 900ms cubic-bezier(0.16, 0.84, 0.44, 1) 460ms forwards;
+  animation: hc-splash-lift 680ms cubic-bezier(0.39, 0.58, 0.57, 1) 980ms forwards,
+             hc-splash-fade 260ms ease-out 980ms forwards;
+}
+
+/* Reduce Motion is the one place the wait costs something. base.css collapses
+   every duration to nothing but leaves the delays alone, so the still version
+   is the three pieces appearing in order, and js/splash.js holds it for
+   1200ms. A welcome that waited until 980 would be readable for two tenths of
+   a second. There is no house rising to follow in that version anyway, so it
+   arrives with the house instead. */
+@media (prefers-reduced-motion: reduce) {
+  .hc-splash__greeting { animation-delay: 140ms; }
 }
 
 .hc-splash__loading {
@@ -3630,6 +3659,13 @@ a.hc-card:active { background: var(--hc-paper-sunk); }
 @keyframes hc-splash-rise {
   from { opacity: 0; transform: translateY(8px); }
   to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Travel only. The welcome's opacity is hc-splash-fade, on its own shorter
+   clock, which is what makes the movement visible. */
+@keyframes hc-splash-lift {
+  from { transform: translateY(20px); }
+  to   { transform: translateY(0); }
 }
 
 @keyframes hc-splash-fade { to { opacity: 1; } }
@@ -3839,9 +3875,10 @@ a.hc-card:active { background: var(--hc-paper-sunk); }
   animation: hc-gate-pop 760ms cubic-bezier(0.2, 0.9, 0.3, 1) forwards;
 }
 
-/* Replaces the entrance animation still filling this element, which is why it
-   holds opacity 1 at both ends: whatever this says is what the greeting is
-   from here on. */
+/* Replaces both entrance animations still filling this element, which is why
+   it holds opacity 1 at both ends: whatever this says is what the greeting is
+   from here on. One name in the list is enough to do that, since a shorthand
+   sets the whole list. */
 .hc-splash--in .hc-splash__greeting {
   animation: hc-gate-say 520ms cubic-bezier(0.16, 0.84, 0.44, 1) forwards;
 }
