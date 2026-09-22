@@ -18,6 +18,7 @@
       "mcp__supabase__apply_migration",
       "mcp__supabase__deploy_edge_function",
 
+      "Bash(node scripts/resolve_songs.js:*)",
       "Bash(node scripts/stamp_assets.js)",
       "Bash(node scripts/sync_web.js)",
       "Bash(node scripts/make_screenshots.js)",

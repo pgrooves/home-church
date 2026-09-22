@@ -21,6 +21,15 @@ TRANSCRIPT
 so if you have your Bible go ahead and turn with me to second saving 21...
 ```
 
+Add `--go` and it publishes both halves without stopping, which is what a
+Sunday afternoon actually wants. **Read "Going straight through" below before
+you rely on it**, because it moves a judgment call off the pastor and onto
+this command, and the whole of what it is allowed to decide is written there.
+
+```
+/new-sunday --go    series-jonah, 38 min
+```
+
 $ARGUMENTS
 
 ---
@@ -39,6 +48,69 @@ one half is missing or fails, and the single receipt at the end.
 
 The three commands underneath are unchanged and still work on their own. A
 week where only the setlist needs publishing is still `/new-worship`.
+
+## Going straight through, with `--go`
+
+Without it, this run stops twice: once at `/new-sermon` Step 4 to show the
+draft and ask which series and how long the message ran, and once at
+`/new-worship` Step 5 to show the resolved set. **With `--go`, neither
+happens.** Both halves publish and the receipt is the first thing you read.
+
+**Give it the two facts in the command line** and there is nothing left to
+ask for:
+
+```
+/new-sunday --go    series-jonah, 38 min
+```
+
+Leave them out and they are derived rather than asked about. The series is
+the one with `is_current` set, which is right on every Sunday that continues
+a series. The duration comes off the transcript's own timestamps when it has
+them, and is left off the row when it does not, which the app draws as a
+sensible blank.
+
+### What `--go` is allowed to decide, and what it is not
+
+`/new-sermon` Step 4 already ends with "Skip this only if the user says to go
+straight through," so turning it off is that command's own provision and not
+an override at all.
+
+`/new-worship` Step 5 is different. It says "Always show the finished set and
+wait for a yes. This is a required step, not a courtesy," and `--go` overrules
+it. **That is the one place this file overrules a delegated one, it is
+deliberate, and it is narrow.** It buys the quiet Sunday, and the price is
+paid by a single rule:
+
+**Never guess. Drop instead, and say what was dropped.** That rule costs
+almost nothing here, because `/new-worship` Step 3b already answers the
+question "what if no result passes the rules" with "leave the platform out,
+the screen draws nothing for a missing link, and that is the correct
+outcome." A song that goes up with two buttons instead of three is a small
+thing anybody can fix later with `/edit-content`. A song that goes up with a
+button that opens the wrong recording is the thing nobody catches by looking
+at the screen, and the confirmation step existed to catch exactly that. So
+the confirmation goes and its judgment stays: anything short of a clean match
+under 3b's rules is left off rather than shipped.
+
+### The two things `--go` still stops for
+
+Neither is judgment. Both are information the command does not have and
+cannot derive, and guessing at either is worse than a Sunday evening
+interruption.
+
+- **A message that starts a new series.** A new series is a new row with a
+  title, a subtitle, a blurb and artwork, plus flipping the old one's
+  `is_current`, and none of that is inferable from a transcript. If the
+  sermon plainly continues the current series, carry on. If it reads like a
+  new one and the command line did not name a series, stop and ask.
+- **A setlist line naming two artists.** `Holy Spirit: Jesus Culture or
+  Bryan & Katie Torwalt` is two different recordings and picking one silently
+  is picking wrong half the time. `/new-worship` already refuses to decide
+  this and so does `--go`. **You control this one from your side**: one artist
+  per line and it never comes up.
+
+Everything else that would have been a question becomes a line in the
+receipt.
 
 ## Step 0. Split the message, then save both halves
 
@@ -89,12 +161,13 @@ Read `.claude/commands/new-sermon.md` in full and execute it against the
 transcript half, exactly as though it had been typed on its own. All of it,
 including the parts that are inconvenient in a chained run:
 
-- **Step 4's draft check happens.** Show the title, the `short_summary` and
-  the three anchors, ask which series this is in and roughly how long the
-  message ran, and wait. Real pastoral content is going out under the
-  church's name and the fact that a setlist is queued behind it is not a
-  reason to skip the read. Skip it only if the user says to go straight
-  through, which is what that step already says.
+- **Step 4's draft check happens, unless `--go` was passed.** Show the title,
+  the `short_summary` and the three anchors, ask which series this is in and
+  roughly how long the message ran, and wait. Real pastoral content is going
+  out under the church's name and the fact that a setlist is queued behind it
+  is not a reason to skip the read. With `--go` it is skipped, which is that
+  step's own provision rather than an override, and the two answers come from
+  the command line or are derived as "Going straight through" describes.
 - **Its confirmation is not printed on its own.** Hold the five or six lines
   and fold them into the single receipt at the end of this file.
 
@@ -119,10 +192,14 @@ reason this order is worth having:
   `preached_on` returns it and the setlist gets linked the moment it is
   written. That is the normal path here, not a surprise, and it is why the
   guide goes first.
-- **Step 5's confirmation happens.** Show the resolved set and wait for a
-  yes. Every `!` line is still a question, and an unanswered one still stops
-  the write. This is the half where a wrong recording ships under a right
-  title and nobody catches it by looking at the screen.
+- **Step 5's confirmation happens, unless `--go` was passed.** Show the
+  resolved set and wait for a yes. Every `!` line is a question, and an
+  unanswered one stops the write. This is the half where a wrong recording
+  ships under a right title and nobody catches it by looking at the screen.
+  With `--go`, the confirmation goes and its judgment stays: every `!` line
+  becomes a dropped link and a line in the receipt instead of a question,
+  except a line naming two artists, which still stops. "Going straight
+  through" is the whole of what that is allowed to decide.
 
 Hold its two line confirmation for the receipt, same as Step 1.
 
