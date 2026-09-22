@@ -66,8 +66,8 @@ written.
 **Now write both halves to disk before you start the sermon work:**
 
 ```bash
-/tmp/sunday-2026-09-20-setlist.txt     # the song list, verbatim, as typed
-/tmp/sunday-2026-09-20.json            # { sunday, sermon_id, guide_id, series_id, title }
+/tmp/sunday-2026-09-20-setlist.txt   # the song list, verbatim, as typed
+/tmp/sunday-2026-09-20.json          # sunday, sermon_id, guide_id, series_id, title
 ```
 
 This is the one piece of bookkeeping that earns its keep. `/new-sermon`
