@@ -44,6 +44,27 @@ The light is the mark's own silhouette used as a mask, so a band of warm white
 with slightly deeper gold shoulders slides across and is clipped to the house.
 No second asset, and nothing to keep in sync if the logo is ever redrawn.
 
+## The third sheet, `sequence.src.html`
+
+**When the welcome arrives, and nothing else.** What ships has the welcome
+starting at 460ms, while the house still has half its rise left, so the two
+come up as one block. This sheet puts the house on its own first and lets the
+welcome follow: three phones, the shipping timing, the welcome at 980ms over
+460ms from 10pt, and a quicker alternate at 1060ms over 360ms from 12pt.
+
+Everything else is the shipping sequence, on every phone: the house, the
+loading line, the light across the gold at 1.9s, the 2750ms hold and the 420ms
+lift off. Each phone runs the whole launch through to Home, because the point
+to check is that the later welcome is still read before the splash leaves. Under
+each one is a track drawing the two rises against the same 3.2s window, with the
+handoff marked. Half speed is a control, and it is a plain multiplier on every
+number, so it is the same sequence rather than a different one.
+
+The one thing the sheet argues for outside the animation itself: under Reduce
+Motion, `css/base.css` collapses durations but not delays, and the still hold is
+1200ms, so the welcome's delay goes back to the house's own 140ms there. No
+house is rising, so there is nothing for it to follow.
+
 ## Building it
 
 Each `*.src.html` carries placeholders for the brand PNGs. `build.js` inlines
