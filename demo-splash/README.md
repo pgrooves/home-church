@@ -46,24 +46,51 @@ No second asset, and nothing to keep in sync if the logo is ever redrawn.
 
 ## The third sheet, `sequence.src.html`
 
-**When the welcome arrives, and nothing else.** What ships has the welcome
-starting at 460ms, while the house still has half its rise left, so the two
-come up as one block. This sheet puts the house on its own first and lets the
-welcome follow: three phones, the shipping timing, the welcome at 980ms over
-460ms from 10pt, and a quicker alternate at 1060ms over 360ms from 12pt.
+**Why the welcome looks like it fades in place, and what fixes it.** The first
+pass at this sheet only moved when the welcome started, which changed nothing:
+it faded in place later. The reason is in the animation itself. The welcome
+rises 8pt, but the rise and the fade are one animation on one curve,
+`cubic-bezier(0.16, 0.84, 0.44, 1)`, and that curve is nearly all front — 39%
+through at 90ms, 76% at 270ms. By the time the words are solid enough to read,
+under 2pt of the 8 is left, and that last 2pt crawls out over another 600ms.
+Every part of the move somebody could have seen is over before they can see it.
 
-Everything else is the shipping sequence, on every phone: the house, the
-loading line, the light across the gold at 1.9s, the 2750ms hold and the 420ms
-lift off. Each phone runs the whole launch through to Home, because the point
-to check is that the later welcome is still read before the splash leaves. Under
-each one is a track drawing the two rises against the same 3.2s window, with the
-handoff marked. Half speed is a control, and it is a plain multiplier on every
-number, so it is the same sequence rather than a different one.
+The fix is two animations instead of one: a short fade so the words go solid
+early, and a longer, further, gentler travel that happens in front of somebody
+who can read them. Three phones — the shipping timing, the welcome at 980ms
+going solid in 240ms and climbing 16pt over 560, and a heavier alternate at
+20pt over 680.
+
+Everything else is the shipping sequence on every phone: the house, the loading
+line, the light across the gold at 1.9s, the 2750ms hold and the 420ms lift off.
+Each phone runs the whole launch through to Home, because the point to check is
+that the later welcome is still read before the splash leaves. Under each is a
+track drawing the move against the same 3.2s window, with the part that happens
+before the words are solid drawn pale on top of it, and the handoff marked.
+
+Because the phones are scaled to 76%, which is the wrong way to judge whether a
+move reads, the same three entrances run again underneath at 1:1.
 
 The one thing the sheet argues for outside the animation itself: under Reduce
 Motion, `css/base.css` collapses durations but not delays, and the still hold is
 1200ms, so the welcome's delay goes back to the house's own 140ms there. No
 house is rising, so there is nothing for it to follow.
+
+### Looking at a frame of it
+
+The sheet's own timing is hard to check by eye and impossible to check with a
+screenshot, because a headless browser's virtual clock does not advance CSS
+animations in step with it. Both animations on the welcome start at
+`--del-line`, so a copy of the built page with
+
+    .band .greeting {
+      animation-play-state: paused !important;
+      animation-delay: calc(var(--del-line) - 1250ms) !important;
+    }
+
+renders exactly the frame at 1250ms, and a screenshot of that is worth
+something. That is how the first version of this sheet was caught running all
+three rows on the shipping timing.
 
 ## Building it
 

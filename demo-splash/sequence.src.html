@@ -7,21 +7,29 @@
 /* ==========================================================================
    The welcome after the house
 
-   Third sheet on the splash. The screen that ships is unchanged in every
-   respect but one: when the welcome arrives. Today it starts climbing at
-   460ms, while the house is still on its way up, so the two read as one
-   thing coming up together. This draws the other reading — the house lands
-   on its own, and then the welcome follows it, quickly.
+   Third sheet on the splash, and the second pass at it. The first pass only
+   moved when the welcome started. That was not enough, and the reason is
+   worth writing down.
 
-   Same two token sets as the other sheets, and the same rule about not
-   confusing them. --pg-* is the page around the phones. --hc-* is the app
-   inside them, lifted from css/tokens.css.
+   WHY THE WELCOME LOOKS LIKE IT FADES IN PLACE. It rises 8pt, and the rise
+   and the fade are one animation on one curve, cubic-bezier(0.16, 0.84,
+   0.44, 1). That curve is nearly all front: at 90ms it is 39% through, at
+   270ms it is 76% through. So by the time the words are solid enough to read
+   at all, under 2pt of the 8 is left, and that last 2pt takes another 600ms.
+   Every part of the move that could be seen has already happened while the
+   text was too faint to see it. Starting the whole thing later does not fix
+   that. It just fades in place later.
 
-   Every phone is drawn at real iPhone points, 393 x 852, and scaled to fit,
-   so the numbers here are shipping numbers. All three run the whole launch
-   through to a sketch of Home, because the question is whether the later
-   welcome still fits inside the hold, and that cannot be judged without the
-   end of it. Home is a sketch. Do not read it as a Home redesign.
+   WHAT FIXES IT. Two animations instead of one. The fade is short, so the
+   words are solid early, and the travel is longer, further, and on a gentler
+   curve, so most of it happens in front of somebody who can see it.
+
+   Same two token sets as the other sheets. --pg-* is the page around the
+   phones, --hc-* is the app inside them, lifted from css/tokens.css.
+
+   The phones are drawn at real iPhone points, 393 x 852, and scaled to 76%
+   to fit their frames, which also scales the travel down — so under them the
+   same three options run again at 1:1, where a point is a point.
    ========================================================================== */
 
 :root {
@@ -74,7 +82,8 @@ body {
 .sheet {
   max-width: 1120px;
   margin: 0 auto;
-  padding: 56px 24px 88px;
+  padding-block: 56px 88px;
+  padding-inline: 24px;
   display: flex;
   flex-direction: column;
   gap: 40px;
@@ -196,14 +205,10 @@ body {
 
 .screen { width: 100%; height: 100%; border-radius: 41px; overflow: hidden; position: relative; }
 
-.stage {
-  width: 393px;
-  height: 852px;
-  transform: scale(0.76336);
-  transform-origin: 0 0;
-  position: relative;
-
-  /* Light, straight out of css/tokens.css */
+/* The app's own tokens, straight out of css/tokens.css. Both the phones and
+   the 1:1 strip below them are the app, so both carry them. */
+.stage,
+.band {
   --hc-paper:  #F7F4EF;
   --hc-cream:  #EDE8DF;
   --hc-ink:    #111111;
@@ -219,7 +224,8 @@ body {
   color: var(--hc-ink);
 }
 
-.stage[data-app-theme="dark"] {
+.stage[data-app-theme="dark"],
+.band[data-app-theme="dark"] {
   --hc-paper:  #1A1918;
   --hc-cream:  #232120;
   --hc-ink:    #F2EEE7;
@@ -227,6 +233,14 @@ body {
   --hc-rule:   #3A3633;
   --hc-gold:   #CBAC74;
   --hc-lockup: var(--lockup-lite);
+}
+
+.stage {
+  width: 393px;
+  height: 852px;
+  transform: scale(0.76336);
+  transform-origin: 0 0;
+  position: relative;
 }
 
 .pill {
@@ -368,9 +382,7 @@ body {
 }
 
 /* ==========================================================================
-   The splash, exactly as it ships: paper, the mark alone, the Home tab's own
-   display face at the Home tab's own 28px, Loading small and muted at the
-   bottom, and the soft pass of light across the gold at 1.9s.
+   The splash, as it ships in every respect but the welcome's entrance.
    ========================================================================== */
 
 .splash {
@@ -392,9 +404,9 @@ body {
   background: var(--mark) center / contain no-repeat;
 }
 
-/* The mark's own silhouette as a mask, so the light only ever touches the
-   gold. Unchanged from what ships; it is here because the welcome's new
-   timing has to be judged against it. */
+/* The mark's own silhouette as a mask, so the light only touches the gold.
+   Unchanged from what ships; it is here because the welcome's new timing has
+   to be judged against it. */
 .gleam {
   position: absolute;
   inset: 0;
@@ -441,11 +453,12 @@ body {
 
 /* --- the timing --------------------------------------------------------
 
-   Everything but the welcome is identical in all three phones and identical
-   to what ships. --k is the slow motion control, a plain multiplier on every
-   number, so half speed is the same sequence and not a different one. */
+   Everything but the welcome is identical in all three and identical to what
+   ships. --k is the slow motion control, a plain multiplier on every number,
+   so half speed is the same sequence and not a different one. */
 
-.stage {
+.stage,
+.band {
   --k: 1;
 
   --dur-mark: calc(900ms * var(--k));
@@ -457,45 +470,64 @@ body {
   --dur-hand: calc(420ms * var(--k));
   --ease: cubic-bezier(0.16, 0.84, 0.44, 1);
 
-  /* The welcome. These three are the entire proposal. */
-  --dur-line: calc(900ms * var(--k));
-  --del-line: calc(460ms * var(--k));
-  --travel-line: 8px;
+  /* The welcome, and the whole proposal. Travel and fade are separate now:
+     one duration for the move, another for the words becoming solid. As it
+     ships they are the same number on the same curve, which is the bug. */
+  --del-line:    calc(460ms * var(--k));
+  --dur-line:    calc(900ms * var(--k));
+  --fade-line:   calc(900ms * var(--k));
+  --lift-line:   lift-8;
+  --ease-line:   cubic-bezier(0.16, 0.84, 0.44, 1);
+  --ease-fade:   cubic-bezier(0.16, 0.84, 0.44, 1);
 }
 
-.slow .stage { --k: 2; }
+.slow .stage,
+.slow .band { --k: 2; }
 
-/* Follows. The house has landed — the rise ends at 1.04s and, on that ease,
-   has visually settled well before — and the welcome comes up behind it over
-   460ms from 10pt. Quick enough that it is never a wait, slow enough that
-   nothing snaps. */
-.s-follow .stage {
-  --dur-line: calc(460ms * var(--k));
-  --del-line: calc(980ms * var(--k));
-  --travel-line: 10px;
+/* Lift. The house lands on its own, then the words come up behind it: solid
+   in 240ms so they can be seen at all, still travelling for 560, 16pt on a
+   gentle ease out. Nearly 6pt of the move happens after the text is fully
+   legible, against under 2 today. */
+.s-lift .stage,
+.band.s-lift {
+  --del-line:    calc(980ms * var(--k));
+  --dur-line:    calc(560ms * var(--k));
+  --fade-line:   calc(240ms * var(--k));
+  --lift-line:   lift-16;
+  --ease-line:   cubic-bezier(0.39, 0.58, 0.57, 1);
+  --ease-fade:   ease-out;
 }
 
-/* The same idea a half beat quicker and a touch further: 360ms from 12pt,
-   starting once the house is unambiguously done. More of a lift, less of a
-   settle. */
-.s-quick .stage {
-  --dur-line: calc(360ms * var(--k));
-  --del-line: calc(1060ms * var(--k));
-  --travel-line: 12px;
+/* The same idea with more of everything: 20pt over 680ms. Over 8pt of it
+   is in front of somebody who can read the words. */
+.s-long .stage,
+.band.s-long {
+  --del-line:    calc(980ms * var(--k));
+  --dur-line:    calc(680ms * var(--k));
+  --fade-line:   calc(260ms * var(--k));
+  --lift-line:   lift-20;
+  --ease-line:   cubic-bezier(0.39, 0.58, 0.57, 1);
+  --ease-fade:   ease-out;
 }
 
 .splash .mark,
 .splash .greeting,
-.splash .loading { opacity: 0; }
+.splash .loading,
+.band .greeting { opacity: 0; }
 
 .playing .mark {
   animation: rise var(--dur-mark) var(--ease) var(--del-mark) forwards,
              bloom var(--dur-gleam) ease-in-out var(--del-gleam);
 }
 
+/* Two animations, not one. That is the change. The travel is a named
+   keyframe per distance rather than a variable inside one, because a var()
+   in a keyframe is the kind of thing that quietly resolves to nothing on
+   some phone and leaves exactly the fade in place this sheet exists to
+   get rid of. */
 .playing .greeting {
-  --travel: var(--travel-line);
-  animation: rise var(--dur-line) var(--ease) var(--del-line) forwards;
+  animation: var(--lift-line) var(--dur-line) var(--ease-line) var(--del-line) forwards,
+             fade var(--fade-line) var(--ease-fade) var(--del-line) forwards;
 }
 
 .playing .loading {
@@ -517,9 +549,13 @@ body {
 }
 
 @keyframes rise {
-  from { opacity: 0; transform: translateY(var(--travel, 8px)); }
+  from { opacity: 0; transform: translateY(8px); }
   to   { opacity: 1; transform: translateY(0); }
 }
+
+@keyframes lift-8  { from { transform: translateY(8px); }  to { transform: translateY(0); } }
+@keyframes lift-16 { from { transform: translateY(16px); } to { transform: translateY(0); } }
+@keyframes lift-20 { from { transform: translateY(20px); } to { transform: translateY(0); } }
 
 @keyframes fade { to { opacity: 1; } }
 
@@ -550,11 +586,10 @@ body {
 }
 
 /* Reduce Motion. base.css collapses every duration to nothing but leaves the
-   delays alone, so in the app the still version is three pieces appearing in
-   order at their delays. That is the one place a later welcome would cost
-   something: the still hold is 1200ms, and a welcome that waited until 980
-   would be on screen for two tenths of a second. So the delay goes back when
-   there is no house rising to follow. The sheet does the same thing here. */
+   delays alone, so the still version is the three pieces appearing in order,
+   and the still hold is 1200ms. A welcome that waited until 980 would be
+   readable for two tenths of a second, so its delay goes back to the house's
+   own 140ms: no house is rising, so there is nothing to follow. */
 @media (prefers-reduced-motion: reduce) {
   .playing .mark,
   .playing .greeting {
@@ -563,6 +598,64 @@ body {
   .playing .loading { animation: fade 400ms ease var(--del-load) forwards; }
   .playing .gleam { animation: none; opacity: 0; }
   .playing .home { animation: none; }
+}
+
+/* --- the same three at 1:1 ---------------------------------------------
+
+   The phones are at 76%, which shrinks 16pt of travel to 12 and is exactly
+   the wrong way to judge whether a move reads. These are the same three
+   entrances at full size, on the same paper, stacked so they can be watched
+   against each other. */
+
+.closeup {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  border: 1px solid var(--pg-rule);
+  border-radius: 14px;
+  overflow: hidden;
+  background: var(--pg-rule);
+}
+
+.band {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 22px 20px;
+  min-height: 78px;
+  overflow: hidden;
+}
+
+.band__tag {
+  flex: none;
+  width: 92px;
+  font-size: 11px;
+  line-height: 15px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--hc-mid);
+}
+
+.band .greeting {
+  padding: 0;
+  text-align: left;
+  flex: 1;
+  min-width: 0;
+}
+
+.band__px {
+  flex: none;
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--hc-mid);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+@media (max-width: 520px) {
+  .band { flex-wrap: wrap; gap: 6px 14px; }
+  .band__tag { width: auto; }
+  .band .greeting { flex-basis: 100%; }
 }
 
 /* --- the beats, drawn --------------------------------------------------- */
@@ -577,28 +670,24 @@ body {
 }
 
 /* Every bar is placed as a percentage of the same 3.2 second window, so the
-   three tracks can be read straight down the page. */
+   three tracks read straight down the page. */
 .bar {
   position: absolute;
   top: 5px;
   height: 14px;
   border-radius: 4px;
   background: var(--pg-gold);
-  opacity: 0.55;
+  opacity: 0.45;
 }
 
+/* The travel, and inside it the part of the travel that happens while the
+   words are still going solid. The pale head is the part nobody sees. */
 .bar--line { opacity: 1; }
 
-.bar__label {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 10px;
-  letter-spacing: 0.04em;
-  color: #201E1D;
-  white-space: nowrap;
+.bar--fade {
+  background: var(--pg-paper);
+  opacity: 0.55;
+  border-radius: 4px 0 0 4px;
 }
 
 .track__hand {
@@ -669,6 +758,24 @@ body {
 .beats td:first-child { color: var(--pg-ink); white-space: nowrap; }
 
 .scroller { overflow-x: auto; }
+
+.section-head {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: 62ch;
+}
+
+.section-head h2 {
+  font-family: "Poppins", -apple-system, BlinkMacSystemFont, sans-serif;
+  font-weight: 800;
+  font-size: 22px;
+  line-height: 28px;
+  letter-spacing: -0.01em;
+  margin: 0;
+}
+
+.section-head p { margin: 0; font-size: 15px; line-height: 24px; color: var(--pg-mid); }
 </style>
 
 <div class="sheet">
@@ -677,14 +784,14 @@ body {
     <p class="eyebrow">Home Church, the screen before Home</p>
     <h1>The welcome after the house</h1>
     <p>
-      One change, drawn three ways. Today the house and the welcome come up
-      almost together: the welcome starts climbing at 460ms, while the house is
-      still on its way. These put the house on its own first and let the welcome
-      follow it, quickly. Nothing else moves — the loading line, the light
-      crossing the gold, the hold and the handoff to Home are the shipping ones,
-      and the whole launch still ends at 2.75s. Each phone plays the whole thing
-      through, because that is the only way to see that the later welcome still
-      has time to be read.
+      Second pass, and this one fixes the real problem. The welcome does rise
+      8pt today — but the rise and the fade are one animation on one hard
+      ease-out curve, so 76% of the move is over by 270ms, while the words are
+      still too faint to see it. What is left is under 2pt, crawling out over
+      another six tenths of a second. That is why it reads as a fade in place,
+      and why moving it later on its own changed nothing. Here the fade is
+      short and the travel is long: the words go solid first, then keep
+      climbing where they can be seen.
     </p>
   </header>
 
@@ -717,6 +824,19 @@ body {
   </div>
 
   <div class="studies" id="studies"></div>
+
+  <div class="section-head">
+    <h2>The same three at full size</h2>
+    <p>
+      The phones are drawn at 76%, which turns 16pt of travel into 12 and is
+      exactly the wrong way to judge whether a move reads. These are the same
+      three entrances at 1:1, on the same paper, one under another. The pale
+      head on each track above is the part of the move that happens before the
+      words are solid — the part nobody sees.
+    </p>
+  </div>
+
+  <div class="closeup" id="closeup"></div>
 
   <!-- One phone, written once and stamped three times. Three hand-copied
        phones drift, and a comparison of timing is worthless the moment
@@ -764,7 +884,8 @@ body {
 
       <div class="track" aria-hidden="true">
         <div class="bar bar--mark"></div>
-        <div class="bar bar--line"><span class="bar__label"></span></div>
+        <div class="bar bar--line"></div>
+        <div class="bar bar--fade"></div>
         <div class="track__hand"></div>
       </div>
       <div class="scale" aria-hidden="true"><span>0s</span><span>House</span><span>Welcome</span><span>Light</span><span>3.2s</span></div>
@@ -777,23 +898,38 @@ body {
     </section>
   </template>
 
+  <template id="row">
+    <div class="band" data-app-theme="light">
+      <span class="band__tag"></span>
+      <p class="greeting">Welcome home, Trey.</p>
+      <span class="band__px"></span>
+    </div>
+  </template>
+
   <div class="notes">
     <div class="note">
-      <h3>What actually changes</h3>
+      <h3>Why it looked like a fade</h3>
+      <div class="scroller">
+        <table class="beats">
+          <thead>
+            <tr><th>Into the move</th><th>Opacity</th><th>Travel left</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>90ms</td><td>0.39</td><td>4.9pt of 8</td></tr>
+            <tr><td>180ms</td><td>0.62</td><td>3.0pt</td></tr>
+            <tr><td>270ms</td><td>0.76</td><td>1.9pt</td></tr>
+            <tr><td>450ms</td><td>0.92</td><td>0.7pt</td></tr>
+          </tbody>
+        </table>
+      </div>
       <p>
-        One line in <b>css/components.css</b>. The welcome's animation is the
-        only thing touched: its delay, its duration, and the 8pt of travel that
-        becomes 10.
-      </p>
-      <p>
-        The house, the loading line, the light across the gold, the 420ms lift
-        off and the 2750ms hold in <b>js/splash.js</b> are all the numbers that
-        are there now. The gate that comes up on a signed out phone is
-        untouched, and so is everything that waits on the splash being gone.
+        One animation, one curve, and that curve is nearly all front. By the
+        time the words can be read, the move is done. The eye gets a fade and
+        a two point drift.
       </p>
     </div>
     <div class="note">
-      <h3>The beats, follow version</h3>
+      <h3>The beats, lift version</h3>
       <div class="scroller">
         <table class="beats">
           <thead>
@@ -801,7 +937,8 @@ body {
           </thead>
           <tbody>
             <tr><td>0.14s</td><td>House rises over 900ms, 8pt</td><td>same</td></tr>
-            <tr><td>0.98s</td><td>Welcome follows over 460ms, 10pt</td><td>was 0.46s / 900ms / 8pt</td></tr>
+            <tr><td>0.98s</td><td>Welcome goes solid in 240ms</td><td>was 900ms</td></tr>
+            <tr><td>0.98s</td><td>and climbs 16pt over 560ms</td><td>was 8pt / 900ms</td></tr>
             <tr><td>1.00s</td><td>Loading arrives, then breathes</td><td>same</td></tr>
             <tr><td>1.90s</td><td>Light crosses the house</td><td>same</td></tr>
             <tr><td>2.75s</td><td>Splash lifts off, Home settles in</td><td>same</td></tr>
@@ -809,22 +946,23 @@ body {
         </table>
       </div>
       <p>
-        The welcome is fully up at <b>1.44s</b>, a beat clear of the light and
-        1.3 seconds before the handoff. Nothing arrives later than it does now.
+        Settled at <b>1.54s</b>, clear of the light and 1.2 seconds before the
+        handoff. Nothing arrives later than it does now.
       </p>
     </div>
     <div class="note">
-      <h3>The one thing to watch for</h3>
+      <h3>What it costs in the app</h3>
       <p>
-        Reduce Motion. <b>css/base.css</b> collapses every duration to nothing
-        but leaves delays alone, so the still version is the three pieces
-        appearing in order, and the still hold is 1200ms. A welcome that waited
-        until 980 would be readable for two tenths of a second.
+        One rule in <b>css/components.css</b>: the welcome gets two animations
+        instead of one, and a <b>lift</b> keyframe beside the <b>rise</b> one
+        the house still uses. Nothing else in the file moves.
       </p>
       <p>
-        So under Reduce Motion the delay goes back to the house's own 140ms:
-        no house is rising, so there is nothing to follow, and all three pieces
-        arrive at once the way that version was always meant to.
+        The house, the loading line, the light across the gold, the 2750ms hold
+        and the 420ms lift off in <b>js/splash.js</b>, the gate on a signed out
+        phone, and everything waiting on the splash being gone are all
+        untouched. Under Reduce Motion the delay goes back to 140ms, since
+        there is no house rising to follow and the still hold is only 1200ms.
       </p>
     </div>
   </div>
@@ -835,42 +973,42 @@ body {
 (function () {
   'use strict';
 
-  /* The three phones. Only the class and the words differ; the timing each
-     class stands for is in the stylesheet, next to the shipping numbers it is
-     being measured against. */
+  /* The three. Only the class and the words differ; the timing each class
+     stands for is in the stylesheet, next to the shipping numbers it is being
+     measured against. line is [delay, travel ms, fade ms, points]. */
   var STUDIES = [
     {
       cls: 's-now',
       tag: 'As it ships today',
-      title: 'Both at once',
-      note: 'The welcome starts at 460ms, while the house still has half its ' +
-            'rise to go, and takes the same 900ms. They overlap for more than ' +
-            'half a second, so what arrives is one block of screen rather than ' +
-            'a house and then a greeting.',
+      title: 'A fade, and a two point drift',
+      note: 'The welcome starts at 460ms, overlapping the house, and its rise ' +
+            'and fade share one hard ease out. 76% of the travel is spent ' +
+            'before the words are solid. What you actually see is the last ' +
+            '2pt, over six tenths of a second. It reads as no movement at all.',
       mark: [140, 900],
-      line: [460, 900]
+      line: [460, 900, 900, 8]
     },
     {
-      cls: 's-follow',
+      cls: 's-lift',
       tag: 'Proposed',
-      title: 'The house, then the welcome',
-      note: 'The house lands on its own. The welcome comes up behind it at ' +
-            '980ms over 460ms, from 10pt instead of 8 — a little further so ' +
-            'the shorter move still reads as a rise. Quick, but nothing snaps, ' +
-            'and it is up a full second before the splash leaves.',
+      title: 'Solid first, then still climbing',
+      note: 'The house lands on its own. At 980ms the words go solid in 240ms ' +
+            'and keep travelling for 560, 16pt on a gentle ease out — so ' +
+            'nearly 6pt of the move happens in front of somebody who can read ' +
+            'it, against under 2 today. Quick, and nothing snaps.',
       mark: [140, 900],
-      line: [980, 460]
+      line: [980, 560, 240, 16]
     },
     {
-      cls: 's-quick',
+      cls: 's-long',
       tag: 'Alternate',
-      title: 'A half beat quicker',
-      note: 'The same order, tightened: 360ms from 12pt, starting at 1.06s ' +
-            'when the house is unarguably finished. The gap before it is ' +
-            'longer and the move itself is faster, which reads as a lift ' +
-            'rather than a settle. Watch this one in dark.',
+      title: 'More of the same move',
+      note: 'The same shape with more of everything: 20pt over 680ms, solid at ' +
+            '260. Over 8pt of it is visible travel. The most obviously a ' +
+            'movement, and the one most likely to feel like a lot on the ' +
+            'twentieth launch. Watch this one in dark.',
       mark: [140, 900],
-      line: [1060, 360]
+      line: [980, 680, 260, 20]
     }
   ];
 
@@ -880,14 +1018,16 @@ body {
   var HANDOFF = 2750;
 
   var studies = document.getElementById('studies');
-  var tpl = document.getElementById('phone');
+  var closeup = document.getElementById('closeup');
+  var phone = document.getElementById('phone');
+  var row = document.getElementById('row');
   var timer = null;
   var half = false;
 
   function pct(ms) { return (ms / WINDOW * 100) + '%'; }
 
   STUDIES.forEach(function (s) {
-    var node = tpl.content.cloneNode(true);
+    var node = phone.content.cloneNode(true);
     var section = node.querySelector('.study');
     section.classList.add(s.cls);
 
@@ -902,17 +1042,29 @@ body {
     var line = section.querySelector('.bar--line');
     line.style.left = pct(s.line[0]);
     line.style.width = pct(s.line[1]);
-    line.querySelector('.bar__label').textContent = (s.line[1] / 1000).toFixed(2) + 's';
+
+    /* The head of the travel that happens while the words are still going
+       solid, laid over it. On the shipping timing it is the whole bar. */
+    var fade = section.querySelector('.bar--fade');
+    fade.style.left = pct(s.line[0]);
+    fade.style.width = pct(Math.min(s.line[2], s.line[1]));
 
     section.querySelector('.track__hand').style.left = pct(HANDOFF);
 
     studies.appendChild(node);
+
+    var band = row.content.cloneNode(true);
+    var el = band.querySelector('.band');
+    el.classList.add(s.cls);
+    el.querySelector('.band__tag').textContent = s.tag;
+    el.querySelector('.band__px').textContent = s.line[3] + 'pt / ' + s.line[1] + 'ms';
+    closeup.appendChild(band);
   });
 
-  var stages = Array.prototype.slice.call(document.querySelectorAll('.stage'));
+  var plays = Array.prototype.slice.call(document.querySelectorAll('.stage, .band'));
 
   function play() {
-    stages.forEach(function (s) {
+    plays.forEach(function (s) {
       s.classList.remove('playing');
       /* Reading offsetWidth restarts the animations without a timer. */
       void s.offsetWidth;
@@ -921,8 +1073,7 @@ body {
   }
 
   /* The cycle is the last beat plus a beat of Home, so a repeat reads as a
-     fresh launch rather than a stutter. Half speed doubles it with everything
-     else. */
+     fresh launch rather than a stutter. Half speed doubles it with the rest. */
   function cycle() { return (half ? 2 : 1) * 3600 + 1400; }
 
   function press(group, value, attr) {
@@ -931,12 +1082,15 @@ body {
     });
   }
 
+  function looping() {
+    return document.querySelector('#loop button[data-loop="on"]')
+      .getAttribute('aria-pressed') === 'true';
+  }
+
   function reloop() {
     clearInterval(timer);
     timer = null;
-    if (document.querySelector('#loop button[data-loop="on"]').getAttribute('aria-pressed') === 'true') {
-      timer = setInterval(play, cycle());
-    }
+    if (looping()) timer = setInterval(play, cycle());
   }
 
   document.getElementById('speed').addEventListener('click', function (e) {
@@ -944,7 +1098,7 @@ body {
     if (!b) return;
     press(this, b.dataset.speed, 'speed');
     half = b.dataset.speed === 'half';
-    studies.classList.toggle('slow', half);
+    document.querySelector('.sheet').classList.toggle('slow', half);
     play();
     reloop();
   });
@@ -953,7 +1107,7 @@ body {
     var b = e.target.closest('button');
     if (!b) return;
     press(this, b.dataset.theme, 'theme');
-    stages.forEach(function (s) { s.dataset.appTheme = b.dataset.theme; });
+    plays.forEach(function (s) { s.dataset.appTheme = b.dataset.theme; });
     play();
   });
 
