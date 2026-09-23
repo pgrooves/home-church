@@ -112,7 +112,7 @@ function versesOf(id: string, max = 40): string[] | null {
 function tidy(text: string): string {
   return String(text ?? '')
     .replace(/\r\n?/g, '\n')
-    .replace(/[ \t ]+/g, ' ')
+    .replace(/[ \t\u00a0]+/g, ' ')
     .replace(/ *\n */g, '\n')
     .replace(/\n{3,}/g, '\n\n')
     .trim();
