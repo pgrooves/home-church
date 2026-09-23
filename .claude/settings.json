@@ -22,6 +22,8 @@
       "mcp__supabase__deploy_edge_function",
 
       "Edit(/tmp/**)",
+      "WebSearch",
+      "WebFetch",
 
       "Bash(python3 scripts/spotify_episode.py:*)",
       "Bash(node scripts/resolve_songs.js:*)",

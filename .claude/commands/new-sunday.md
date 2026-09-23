@@ -30,6 +30,17 @@ this command, and the whole of what it is allowed to decide is written there.
 /new-sunday --go    series-jonah, 38 min
 ```
 
+**Read a dash of any kind as `--go`.** A phone's keyboard turns `--` into an
+en dash without being asked, so `–go`, `—go` and `-go` all arrive here meaning
+the same thing, and so does the phrase "go straight through". Treating a
+smart-quoted dash as an unrecognized flag, and then stopping twice for
+confirmations the user thought they had turned off, is a bug in this file
+rather than a typo in their message.
+
+**A date on its own line at the top of the TRANSCRIPT block is the Sunday**,
+not transcript content. People put it there because that is where it looks
+like it belongs. Take it, and say which Sunday you read.
+
 $ARGUMENTS
 
 ---
@@ -131,9 +142,10 @@ decoration around them.
   real weeks.
 
 **Then establish the Sunday**, once, here, and pass the same date to both
-commands. With no date in the message it is the most recent Sunday, which is
-today when today is Sunday. Say which Sunday you picked before anything is
-written.
+commands. Look in three places, in order: on the command line, on a line of
+its own at the top of the `TRANSCRIPT` block, and failing both, the most
+recent Sunday, which is today when today is Sunday. Say which Sunday you
+picked before anything is written.
 
 **Now write both halves to disk before you start the sermon work:**
 
