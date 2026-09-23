@@ -230,7 +230,15 @@ const said  = page => page.evaluate(() => {
     await openASection(page);
     await scrollOnto(page);
     ok('a relaunch offers it again', await marks(page) > 0, true);
-    await page.waitForTimeout(2800);   // let it go on its own; a tap will not
+
+    /* ------------------------------------------------ folding it puts it away */
+    /* The marks are fixed over where the words were, so a fold that takes the
+       words away left them floating over whatever slid up into their place. */
+    await page.evaluate(() =>
+      document.querySelector('[data-opened] .hc-section__toggle').click());
+    await page.waitForTimeout(400);
+    ok('folding the section it is on puts it away',
+       await page.evaluate(() => document.querySelectorAll('.hc-hint, .hc-hint-marks').length), 0);
 
     /* ------------------------------------------- the scroll that never comes */
     /* Overview is the first section in every guide and it is folded like the

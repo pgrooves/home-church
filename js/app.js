@@ -3308,6 +3308,8 @@
          then waits for the scroll onto the words it is about. Arming is not
          showing and nothing is drawn here: see js/hints.js. */
       if (HC.hints && !open) HC.hints.sectionOpened(el.closest('.hc-section'));
+      // And folding one puts away a hint drawn over its words.
+      if (HC.hints && open) HC.hints.sectionClosed();
 
       /* The room is the one screen that redraws itself under you, so the DOM
          cannot be where it remembers which question chunks are open. Nothing

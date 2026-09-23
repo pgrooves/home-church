@@ -28,7 +28,7 @@
 
    WHAT ENDS IT. Two seconds, and then it fades. That is the ordinary way and
    very nearly the only way: leaving the screen, the app going to the
-   background, a rotation, the switch in Your account, and starting a
+   background, a rotation, the switch in Your account, folding a section, and starting a
    selection, which is not a dismissal but the thing it was asking for.
 
    A TAP DOES NOT END IT, AND THE LAYER STILL NEVER TAKES ONE. Those are two
@@ -230,6 +230,16 @@
       if (!armed || layer) return;
       if (shouldShow(context(armed))) show(armed);
     }, NO_SCROLL);
+  }
+
+  /* Called by the same handler when a section folds. The marks are drawn in
+     a fixed layer over where the words were, so a fold pulls the words out
+     from under them and leaves the marker floating over whatever slides up
+     into their place. Whatever is on the glass goes with the fold. Nothing is
+     disarmed and no timer is touched when nothing is drawn: a folded panel
+     measures zero, and inView already says no to it. */
+  function sectionClosed() {
+    if (layer) end('fold');
   }
 
   function onScroll() {
@@ -518,6 +528,7 @@
   HC.hints = {
     listen: listen,
     sectionOpened: sectionOpened,
+    sectionClosed: sectionClosed,
     end: end,
     busy: busy,
     switched: switched,
