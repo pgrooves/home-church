@@ -142,7 +142,7 @@
      gets fixed.
 
      What is left here is the Journal's half of the decision, which is the link
-     policy. 'bible' means the only href that survives is Bible Gateway's, so
+     policy. 'bible' means the only hrefs that survive are scripture links, so
      the scripture button works and a paragraph pasted out of an email cannot
      smuggle a link into somebody's notes. That matters more here than it looks:
      an entry can be pushed to a group room, where other people read it.
@@ -168,12 +168,13 @@
     return HC.richtext.textToHtml(text);
   }
 
-  /* Every Bible Gateway link in the body, as the references they name. What
+  /* Every scripture link in the body, bible.com or the Bible Gateway ones
+     older entries carry, as the references they name. What
      the "your own scripture index" list is built from, and what makes an
      entry findable by the verse it sits on. */
   function refsIn(html) {
     var found = [];
-    var re = /<a href="https:\/\/www\.biblegateway\.com\/[^"]*">([^<]+)<\/a>/g;
+    var re = /<a href="https:\/\/www\.(?:bible\.com\/bible|biblegateway\.com)\/[^"]*">([^<]+)<\/a>/g;
     var m;
     while ((m = re.exec(html || ''))) {
       var ref = m[1].replace(/&amp;/g, '&').trim();

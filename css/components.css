@@ -3158,6 +3158,58 @@ a.hc-card:active { background: var(--hc-paper-sunk); }
 
 .hc-sheet__note { margin-top: var(--hc-space-md); }
 
+/* A sheet redrawn in place, as the verse sheet is when its words arrive, has
+   already made its entrance. Playing it again would bounce it on every
+   answer. */
+.hc-sheet[data-settled="true"] .hc-sheet__panel,
+.hc-sheet[data-settled="true"] .hc-sheet__scrim { animation: none; }
+
+/* The verse sheet, js/verse.js. The reference in the serif the picker uses
+   for its preview, the words in the reading serif a guide uses, and the
+   translation's copyright under them in caption size, because it has to be
+   there and it does not have to be loud. */
+.hc-verse__ref { margin-bottom: var(--hc-space-md); font-weight: 400; }
+
+.hc-verse__body { min-height: 4.5em; }
+
+.hc-verse__text + .hc-verse__text { margin-top: var(--hc-space-md); }
+
+.hc-verse__status { color: var(--hc-mid); }
+
+.hc-verse__credit {
+  margin-top: var(--hc-space-lg);
+  color: var(--hc-mid);
+}
+
+/* More than one passage in a reference. A row of pills that scrolls sideways
+   rather than wraps, so a guide's long list does not push the words down. */
+.hc-verse__pills {
+  display: flex;
+  gap: var(--hc-space-sm);
+  margin: 0 calc(var(--hc-space-base) * -1) var(--hc-space-md);
+  padding: 0 var(--hc-space-base);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.hc-verse__pills::-webkit-scrollbar { display: none; }
+
+.hc-verse__pill {
+  flex: 0 0 auto;
+  min-height: var(--hc-tap-min);
+  padding: 0 var(--hc-space-md);
+  border: var(--hc-hairline) solid var(--hc-rule);
+  border-radius: 999px;
+  color: var(--hc-mid);
+  font-size: calc(14px * var(--hc-text-scale));
+  white-space: nowrap;
+}
+
+.hc-verse__pill[aria-selected="true"] {
+  border-color: var(--hc-accent);
+  color: var(--hc-accent-deep);
+}
+
 /* The reminder sheet on the Cal tab. Three presets over the two boxes, which
    is the whole of the question it asks. It borrows .hc-sheet__verses for the
    day and the time, because those are two halves of one answer in exactly the

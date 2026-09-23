@@ -23,7 +23,7 @@
 
   // Update this whenever the text below changes in a way that matters, and
   // confirm it before submitting to the App Store.
-  var EFFECTIVE = 'September 20, 2026';
+  var EFFECTIVE = 'September 23, 2026';
 
   /* ---------------------------------------------------------- small parts */
 
@@ -165,7 +165,7 @@
     ]);
 
     html += block('When the app hands you off to somebody else', [
-      'Some things here are not ours. Giving opens Overflow. Messages open our podcast host or Spotify. Scripture opens BibleGateway. Baptism and Alpha open Church Center. Hosting a group opens Group Vitals. Sending us a prayer request opens a Google form. The email list opens Flodesk.',
+      'Some things here are not ours. Giving opens Overflow. Messages open our podcast host or Spotify. Read the full chapter, under a verse, opens YouVersion’s bible.com. Baptism and Alpha open Church Center. Hosting a group opens Group Vitals. Sending us a prayer request opens a Google form. The email list opens Flodesk.',
       'Each of those opens in your phone’s own browser, and once you are there you are on their site and under their privacy policy, not ours. Anything you type into one of their forms goes to them and to the church. It does not pass through this app, and we only ever see what you chose to send.'
     ]);
 
@@ -173,6 +173,7 @@
       'Supabase, which stores the sermons, guides, and events the app downloads, and which stores your account if you make one. Their servers for this project are in Ohio, in the United States.',
       'Google, whose Gmail carries a message you send from the form on Connect to the church, in the same way it would carry an email you wrote to us yourself. They handle the sending and nothing else.',
       'Resend, which delivers the eight digit sign in code to your email address, and carries a message from the form on Connect on the occasions Gmail cannot. They handle the sending and nothing else.',
+      'YouVersion, which supplies the words of a verse when you tap a scripture reference. The request goes from our server to theirs and carries the passage and nothing else: not your network address, not your account, not which guide you were reading.',
       'Apple, which delivers notifications if you have turned them on.'
     ]);
 

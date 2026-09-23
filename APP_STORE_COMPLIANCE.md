@@ -369,7 +369,8 @@ screen. See section 2.5.
 | **Supabase** (us-east-2, Ohio) | Content reads. With accounts off, nothing personal. | Keep. Disclose. |
 | **Google Fonts** (`index.html:31`) | **Every user's IP address, on every cold launch, render blocking** | **Self host.** See below. |
 | **Overflow** | Whatever the user does after tapping the button, in their own browser | Keep. Disclose the handoff. |
-| **Buzzsprout, Spotify, BibleGateway, Apple Maps** | Same, user initiated, in the system browser | Keep. Disclose. |
+| **Buzzsprout, Spotify, bible.com, Apple Maps** | Same, user initiated, in the system browser | Keep. Disclose. |
+| **YouVersion Platform** | The passage id, from our Edge Function. Nothing about the person | Keep. Disclose. See BIBLE_VERSES_SETUP.md |
 | **APNs**, once push ships | Device token | Keep. Disclose. |
 
 **Self hosting the fonts is a small change with a disproportionate payoff.**

@@ -149,7 +149,7 @@
 
      The verse list is built from js/bible.js, so it stops where the chapter
      stops. That is the whole reason those numbers ship: a free number field
-     accepts John 3:400 and sends somebody to a page that says nothing found.
+     accepts John 3:400 and opens a verse sheet with nothing in it.
      ---------------------------------------------------------------------- */
 
   function remember() {
@@ -253,8 +253,8 @@
       c.button('Add it', { action: 'scripture-insert', disabled: !ready }) +
     '</div>';
 
-    html += '<p class="hc-caption hc-sheet__note">It goes in as a link. Tapping it opens the passage on ' +
-      'Bible Gateway, in your own browser.</p>';
+    html += '<p class="hc-caption hc-sheet__note">It goes in as a link. Tapping it shows the ' +
+      'passage right here, without leaving the app.</p>';
 
     return html + '</div></div>';
   }

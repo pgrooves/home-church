@@ -18,8 +18,10 @@
    callers disagree about.
 
      'bible'   A journal entry. The only link anybody can put in one is the
-               scripture button's, so the only href that survives is Bible
-               Gateway's. Somebody pasting a paragraph out of an email does not
+               scripture button's, so the only hrefs that survive are bible.com
+               passages and the Bible Gateway ones every entry written before
+               the verse sheet carries. Somebody pasting a paragraph out of an
+               email does not
                get to smuggle a link into their own notes, which matters
                because an entry can be pushed to a group room.
 
@@ -55,7 +57,11 @@
 
   var VOID = { br: true };
 
-  var BIBLE = 'https://www.biblegateway.com/';
+  /* bible.com is what the scripture button writes now. Bible Gateway is what
+     it wrote until the verse sheet, and entries already on phones and in the
+     journal table still carry it, so dropping it would strip the link out of
+     every one of them the next time they were saved. */
+  var BIBLE = ['https://www.bible.com/bible/', 'https://www.biblegateway.com/'];
 
   /* Anchored at the start, so a scheme is a scheme and not something that
      appears later in a URL. Leading whitespace and control characters are
@@ -77,7 +83,10 @@
     if (!url) return '';
     if (policy === 'web') return WEB_SCHEME.test(url) ? url : '';
     // Not startsWith: this has to run in older WKWebViews too.
-    return url.indexOf(BIBLE) === 0 ? url : '';
+    for (var i = 0; i < BIBLE.length; i++) {
+      if (url.indexOf(BIBLE[i]) === 0) return url;
+    }
+    return '';
   }
 
   // Blocks that must never end up inside a <p>. See the note in cleanNodes().

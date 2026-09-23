@@ -233,9 +233,24 @@
     return keyword ? 'sms:' + to + '&body=' + encodeURIComponent(keyword) : 'sms:' + to;
   }
 
+  /* The passage on bible.com, which is where a scripture link points and where
+     the verse sheet sends somebody who wants more than the verses. A
+     reference js/bible.js cannot read still goes somewhere useful: bible.com's
+     own search, rather than a link to nothing. */
   function bibleUrl(reference) {
-    return 'https://www.biblegateway.com/passage/?search=' +
-      encodeURIComponent(reference) + '&version=ESV';
+    var p = HC.bible && HC.bible.parseAll(reference)[0];
+    if (p) return HC.bible.passageUrl(p);
+    return 'https://www.bible.com/search/bible?q=' + encodeURIComponent(reference || '');
+  }
+
+  /* Is this href one of ours, a scripture link rather than a web page? Both
+     hosts, because every journal entry written before the verse sheet
+     existed carries a Bible Gateway link, and those have to open the sheet
+     too. */
+  var SCRIPTURE_HREF = /^https:\/\/(?:www\.biblegateway\.com\/|www\.bible\.com\/bible\/)/;
+
+  function isScriptureHref(href) {
+    return SCRIPTURE_HREF.test(String(href || ''));
   }
 
   /* ------------------------------------------------------------------ links
@@ -1450,7 +1465,8 @@
           '<span class="hc-row__title">' + esc(item.reference) + '</span>' +
           '<p class="hc-caption">' + esc(item.note) + '</p>' +
         '</span>' +
-        icon('arrowOut', 'hc-row__chevron') +
+        // A chevron, not the arrow out of the app: it opens the verse sheet now.
+        icon('chevronRight', 'hc-row__chevron') +
       '</button>';
   }
 
@@ -1486,6 +1502,7 @@
     pad2: pad2,
     openExternal: openExternal,
     bibleUrl: bibleUrl,
+    isScriptureHref: isScriptureHref,
     smsUrl: smsUrl,
     webUrl: webUrl,
     urlHost: urlHost,

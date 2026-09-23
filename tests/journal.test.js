@@ -195,6 +195,13 @@ console.log('\n— the allowlist —');
      s('<a href="javascript:steal()">click</a>'), 'click');
   ok('a lookalike host does not pass',
      s('<a href="https://www.biblegateway.com.evil.test/x">John 3:16</a>'), 'John 3:16');
+  ok('a bible.com passage link keeps its href, which is what the button writes now',
+     s('<a href="https://www.bible.com/bible/111/JHN.3.16.NIV">John 3:16</a>'),
+     '<a href="https://www.bible.com/bible/111/JHN.3.16.NIV">John 3:16</a>');
+  ok('but not the rest of bible.com',
+     s('<a href="https://www.bible.com/login">John 3:16</a>'), 'John 3:16');
+  ok('nor a bible.com lookalike',
+     s('<a href="https://www.bible.com.evil.test/bible/111/JHN.3.16">John 3:16</a>'), 'John 3:16');
 
   // What a browser actually hands back after return-then-bullet.
   ok('a list inside a div is not wrapped in a paragraph',
@@ -296,6 +303,10 @@ console.log('\n— writing —');
     bodyHtml: '<p>on <a href="https://www.biblegateway.com/passage/?search=John+3%3A16">John 3:16</a></p>'
   });
   ok('scripture is pulled out of the body', withRef.refs, ['John 3:16']);
+  ok('from a bible.com link as well as a Bible Gateway one',
+     HC.journal.refsIn('<p><a href="https://www.bible.com/bible/111/ROM.12.1-2.NIV">Romans 12:1-2</a> ' +
+       'and <a href="https://www.biblegateway.com/passage/?search=Jude+4">Jude 4</a></p>'),
+     ['Romans 12:1-2', 'Jude 4']);
 
   ok('the list is newest first', HC.journal.all().map(x => x.id), [withRef.id, e.id]);
   HC.journal.togglePin(e.id);

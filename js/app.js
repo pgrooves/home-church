@@ -3274,8 +3274,19 @@
       });
     },
 
+    /* A scripture row on a guide. The words come up in a sheet over the guide
+       rather than a web page over the app; see js/verse.js. */
     'open-scripture': function (el) {
-      c.openExternal(c.bibleUrl(el.getAttribute('data-reference')));
+      HC.verse.open(el.getAttribute('data-reference'));
+    },
+
+    'verse-close': function () {
+      HC.verse.close();
+    },
+
+    // Between the passages of a reference that names more than one.
+    'verse-show': function (el) {
+      HC.verse.show(parseInt(el.getAttribute('data-id'), 10) || 0);
     },
 
     share: function (el) {
@@ -4898,6 +4909,17 @@
       if (link && !link.hasAttribute('download') &&
           !link.closest('[contenteditable="true"]')) {
         evt.preventDefault();
+        /* A scripture link opens the verse sheet, the same as a scripture row
+           does. The words of the link are the reference, because the editor
+           writes them that way; the href is only where to go when the sheet
+           cannot read them, which is what HC.verse.open() does with a
+           reference it does not understand. */
+        if (c.isScriptureHref(link.getAttribute('href')) && HC.verse) {
+          var ref = (link.textContent || '').trim();
+          if (HC.bible.parseAll(ref).length) HC.verse.open(ref);
+          else c.openExternal(link.getAttribute('href'));
+          return;
+        }
         c.openExternal(link.getAttribute('href'));
         return;
       }
@@ -5582,6 +5604,10 @@
        to any one screen, so a guide that re-renders does not take it with
        it. */
     HC.highlight.init();
+
+    // The sheet a tapped scripture reference opens. Only its listeners; it
+    // draws nothing until somebody taps one.
+    HC.verse.init();
 
     HC.store.on('journal', function () {
       var route = HC.router.current();

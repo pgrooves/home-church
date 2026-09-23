@@ -3805,6 +3805,58 @@ a.hc-card:active { background: var(--hc-paper-sunk); }
 
 .hc-sheet__note { margin-top: var(--hc-space-md); }
 
+/* A sheet redrawn in place, as the verse sheet is when its words arrive, has
+   already made its entrance. Playing it again would bounce it on every
+   answer. */
+.hc-sheet[data-settled="true"] .hc-sheet__panel,
+.hc-sheet[data-settled="true"] .hc-sheet__scrim { animation: none; }
+
+/* The verse sheet, js/verse.js. The reference in the serif the picker uses
+   for its preview, the words in the reading serif a guide uses, and the
+   translation's copyright under them in caption size, because it has to be
+   there and it does not have to be loud. */
+.hc-verse__ref { margin-bottom: var(--hc-space-md); font-weight: 400; }
+
+.hc-verse__body { min-height: 4.5em; }
+
+.hc-verse__text + .hc-verse__text { margin-top: var(--hc-space-md); }
+
+.hc-verse__status { color: var(--hc-mid); }
+
+.hc-verse__credit {
+  margin-top: var(--hc-space-lg);
+  color: var(--hc-mid);
+}
+
+/* More than one passage in a reference. A row of pills that scrolls sideways
+   rather than wraps, so a guide's long list does not push the words down. */
+.hc-verse__pills {
+  display: flex;
+  gap: var(--hc-space-sm);
+  margin: 0 calc(var(--hc-space-base) * -1) var(--hc-space-md);
+  padding: 0 var(--hc-space-base);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.hc-verse__pills::-webkit-scrollbar { display: none; }
+
+.hc-verse__pill {
+  flex: 0 0 auto;
+  min-height: var(--hc-tap-min);
+  padding: 0 var(--hc-space-md);
+  border: var(--hc-hairline) solid var(--hc-rule);
+  border-radius: 999px;
+  color: var(--hc-mid);
+  font-size: calc(14px * var(--hc-text-scale));
+  white-space: nowrap;
+}
+
+.hc-verse__pill[aria-selected="true"] {
+  border-color: var(--hc-accent);
+  color: var(--hc-accent-deep);
+}
+
 /* The reminder sheet on the Cal tab. Three presets over the two boxes, which
    is the whole of the question it asks. It borrows .hc-sheet__verses for the
    day and the time, because those are two halves of one answer in exactly the
@@ -4245,9 +4297,9 @@ a.hc-card:active { background: var(--hc-paper-sunk); }
   color: var(--hc-mid);
 }
 
-/* The entrance. The house settles, the welcome follows a beat behind, the
-   loading line arrives last and breathes, and the light crosses the mark at
-   1.9s, still going as the layer starts to leave.
+/* The entrance. The house settles on its own, the welcome comes up behind it,
+   the loading line arrives last and breathes, and the light crosses the mark
+   at 1.9s, still going as the layer starts to leave.
 
    base.css collapses all of this under Reduce Motion, which leaves the three
    pieces on screen at once and no light. That is the intended still version,
@@ -4261,8 +4313,37 @@ a.hc-card:active { background: var(--hc-paper-sunk); }
              hc-splash-bloom 1000ms ease-in-out 1900ms;
 }
 
+/* THE WELCOME IS TWO ANIMATIONS AND THAT IS THE WHOLE POINT OF IT. It used to
+   be one: hc-splash-rise, opacity and travel together on the same hard ease
+   out, starting at 460ms while the house was still climbing. Nobody ever saw
+   it move. That curve is almost all front, 39% through at 90ms and 76% at
+   270ms, so by the time the words were solid enough to read, under 2pt of
+   their 8pt rise was left, and that last 2pt took another 600ms. What it
+   read as was a fade in place.
+
+   Split apart, the fade is short and the travel is long: solid in 260ms so
+   the words can be seen at all, still climbing for 680 from 20pt on an ease
+   out gentle enough to spread the move out. Over 8pt of it now happens in
+   front of somebody who can read it.
+
+   The delay waits for the house. Its rise ends at 1.04s, so 980ms is the
+   welcome arriving after it rather than with it, and the whole thing is
+   settled at 1.66s: clear of the light at 1.9s, and more than a second
+   before the layer leaves at 2.75s. Nothing about the hold moved for this.
+   See demo-splash/sequence.src.html for the drawing it was chosen from. */
 .hc-splash__greeting {
-  animation: hc-splash-rise 900ms cubic-bezier(0.16, 0.84, 0.44, 1) 460ms forwards;
+  animation: hc-splash-lift 680ms cubic-bezier(0.39, 0.58, 0.57, 1) 980ms forwards,
+             hc-splash-fade 260ms ease-out 980ms forwards;
+}
+
+/* Reduce Motion is the one place the wait costs something. base.css collapses
+   every duration to nothing but leaves the delays alone, so the still version
+   is the three pieces appearing in order, and js/splash.js holds it for
+   1200ms. A welcome that waited until 980 would be readable for two tenths of
+   a second. There is no house rising to follow in that version anyway, so it
+   arrives with the house instead. */
+@media (prefers-reduced-motion: reduce) {
+  .hc-splash__greeting { animation-delay: 140ms; }
 }
 
 .hc-splash__loading {
@@ -4277,6 +4358,13 @@ a.hc-card:active { background: var(--hc-paper-sunk); }
 @keyframes hc-splash-rise {
   from { opacity: 0; transform: translateY(8px); }
   to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Travel only. The welcome's opacity is hc-splash-fade, on its own shorter
+   clock, which is what makes the movement visible. */
+@keyframes hc-splash-lift {
+  from { transform: translateY(20px); }
+  to   { transform: translateY(0); }
 }
 
 @keyframes hc-splash-fade { to { opacity: 1; } }
@@ -4486,9 +4574,10 @@ a.hc-card:active { background: var(--hc-paper-sunk); }
   animation: hc-gate-pop 760ms cubic-bezier(0.2, 0.9, 0.3, 1) forwards;
 }
 
-/* Replaces the entrance animation still filling this element, which is why it
-   holds opacity 1 at both ends: whatever this says is what the greeting is
-   from here on. */
+/* Replaces both entrance animations still filling this element, which is why
+   it holds opacity 1 at both ends: whatever this says is what the greeting is
+   from here on. One name in the list is enough to do that, since a shorthand
+   sets the whole list. */
 .hc-splash--in .hc-splash__greeting {
   animation: hc-gate-say 520ms cubic-bezier(0.16, 0.84, 0.44, 1) forwards;
 }
@@ -7675,6 +7764,51 @@ a.hc-card:active { background: var(--hc-paper-sunk); }
   margin-top: var(--hc-space-sm);
 }
 
+/* ---------------------------------------------------------- merging by hand
+
+   The panel behind "Merge with", drawn by mergePanel() in js/components.js.
+   It replaces the list on whichever screen put it up, so it is styled as a
+   review card rather than as a dialog: the same stripe, the same padding, and
+   nothing that says "modal", because it is not one and backing out of it costs
+   a tap either way.
+
+   THE DIFF IS THE WHOLE POINT and it is styled to be read rather than skimmed.
+   The old value is struck through above the new one, in the quiet colour, so
+   a glance down the left edge answers "what is this replacing" and a glance
+   down the right answers "with what". Both are given in full; a preview that
+   truncates the body is a preview of the wrong thing. */
+.hc-merge__diff {
+  margin: var(--hc-space-md) 0 0;
+  display: grid;
+  gap: var(--hc-space-md);
+}
+
+.hc-merge__field {
+  color: var(--hc-mid);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: 0.75rem;
+}
+
+.hc-merge__values {
+  margin: var(--hc-space-xs) 0 0;
+  display: grid;
+  gap: var(--hc-space-xs);
+  border-left: 2px solid var(--hc-rule);
+  padding-left: var(--hc-space-sm);
+}
+
+.hc-merge__before {
+  color: var(--hc-mid);
+  text-decoration: line-through;
+}
+
+/* A field that was empty. Struck-through nothing reads as a mistake, so the
+   word is said and the strike comes off. */
+.hc-merge__before--none { text-decoration: none; font-style: italic; }
+
+.hc-merge__after { margin: 0; }
+
 /* Who approved a thing out of the newsletter queue, from migration 0043. An
    internal note on an admin-only screen: quieter than the body above it,
    because it is a record rather than something to act on, and not warning
@@ -8606,6 +8740,83 @@ button.hc-cal__day { cursor: pointer; }
    field they belong to. */
 .hc-cal__form-actions .hc-btn { margin-top: 0; }
 
+/* ------------------------------------------------ the other days it runs
+
+   The list of extra days on the event form, from migration 0074. A block
+   rather than a second date box, because "Friday to Sunday" and "two Sundays
+   three weeks apart" are the same thing to a calendar and a range would only
+   express the first.
+
+   Each day is a chip with an x, which is the same shape the announcement form
+   uses for its pictures. One idea, said the same way in both places: here is a
+   thing you added, here is how to take it off.
+
+   NAMED __pick AND NOT __day, and the reason is a bug that shipped. These were
+   called hc-cal__day, which is ALREADY the class on every cell of the month
+   grid four hundred lines above. Same name, later in the file, so these rules
+   won: every date in the grid grew a circle, and the day somebody had open
+   lost its fill. Nothing in the grid's own CSS had changed — it was simply
+   being overruled by a block that had no business naming itself that.
+
+   The grid is `__day`. These are `__pick`, because what they are is the days
+   somebody picked. */
+.hc-cal__picks { margin-top: var(--hc-space-base); }
+
+.hc-cal__pick-list {
+  list-style: none;
+  margin: var(--hc-space-sm) 0 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--hc-space-sm);
+}
+
+.hc-cal__pick {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--hc-space-xs);
+  padding: var(--hc-space-xs) var(--hc-space-xs) var(--hc-space-xs) var(--hc-space-md);
+  border: 1px solid var(--hc-rule);
+  border-radius: var(--hc-radius-pill);
+  background: var(--hc-paper-sunk);
+}
+
+.hc-cal__pick-x {
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  padding: 0;
+  background: none;
+  color: var(--hc-mid);
+  border-radius: var(--hc-radius-pill);
+  cursor: pointer;
+}
+
+.hc-cal__pick-x:active { background: var(--hc-paper); }
+.hc-cal__pick-icon { width: 14px; height: 14px; }
+
+/* The empty box and the button that reads it. They sit on one line on
+   anything with room and stack on a narrow phone, where a date input is
+   already as wide as the screen wants to be. */
+.hc-cal__pick-add {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--hc-space-sm);
+  margin-top: var(--hc-space-sm);
+}
+
+.hc-cal__pick-add .hc-input { flex: 1 1 10rem; }
+.hc-cal__pick-add .hc-btn { margin-top: 0; }
+
+/* "Also October 11 and October 18", under an event that runs on more than one
+   day. Quieter than the time and the place above it, because it is the second
+   question somebody asks of a row and not the first. */
+.hc-event__more-days { color: var(--hc-mid); }
+
 
 /* --- standalone page overrides ------------------------------------------ */
 html, body { position: static; overflow: visible; height: auto; }
@@ -8624,7 +8835,7 @@ body { background: var(--hc-paper); }
 </head>
 <body>
 <main class="hc-page">
-<div class="hc-screen hc-legal hc-view-enter"><header class="hc-section-header hc-section-header--flush"><span class="hc-eyebrow hc-section-header__eyebrow">The fine print</span><h1 class="hc-section-header__title">Terms of use</h1><div class="hc-section-header__rule" aria-hidden="true"></div></header><p class="hc-caption hc-legal__date">Effective September 20, 2026</p><section class="hc-legal__block"><h2 class="hc-legal__heading">The short version</h2><p class="hc-body-serif hc-legal__p">Use the app. Be decent with it. We built it for our church and we are not claiming it is perfect.</p></section><section class="hc-legal__block"><h2 class="hc-legal__heading">What this is</h2><p class="hc-body-serif hc-legal__p">Home Church makes this app for our congregation and for anyone else who wants it. Sermons, small group guides, what is coming up, and a way to find us on a Sunday.</p></section><section class="hc-legal__block"><h2 class="hc-legal__heading">Using it</h2><p class="hc-body-serif hc-legal__p">Do not use the app to break the law, and do not try to break the app. Do not take the guides and sell them.</p><p class="hc-body-serif hc-legal__p">Short of that, use them. Print one, hand it around your group, read a line out loud, quote it somewhere. That is what they were written for, and you do not need to ask.</p></section><section class="hc-legal__block"><h2 class="hc-legal__heading">What you write is yours</h2><p class="hc-body-serif hc-legal__p">Your journal, your notes on a guide, your group’s roster and the prayer requests you keep in Leader mode. They are yours. We claim nothing over anything you write here, we do not read it, and we do not use it to train anything. Signed out it never leaves your phone; signed in, your journal is copied to your account so it follows you, and the privacy policy says exactly what that does and does not mean.</p><p class="hc-body-serif hc-legal__p">A group room is the one place that works differently, because the whole point of it is that other people read what you wrote. It still belongs to you. You can edit it or delete it whenever you like. But once you post it, the people in that room have seen it, and the next section is about what that asks of everybody.</p></section><section class="hc-legal__block"><h2 class="hc-legal__heading">In a group room</h2><p class="hc-body-serif hc-legal__p">A room is your small group, on a Thursday night, writing down what they would say out loud. Write like that. Nothing hateful, nothing obscene, nothing aimed at somebody, nothing that is not yours to post. If you would not say it with the room looking at you, it does not go in the box.</p><p class="hc-body-serif hc-legal__p">What other people write in a room stays in the room. It is not yours to forward, screenshot, or repeat somewhere they did not choose.</p><p class="hc-body-serif hc-legal__p">Every note has a Report button and you can block anybody, which stops their writing reaching you. Whoever hosts the room can take anything down for everybody. We look at reports and act on them within one day, and acting on one can mean removing what was written, removing somebody from a room, or closing their account.</p><p class="hc-body-serif hc-legal__p">If the problem is the person hosting your room, or you would rather not go through them, write to us at hello@homechurchnola.com and it comes straight to the church.</p></section><section class="hc-legal__block"><h2 class="hc-legal__heading">The sheet at the end of the night</h2><p class="hc-body-serif hc-legal__p">Whoever hosts a room can turn the evening into one document and send it to the group. Everything the room wrote goes on it, including answers the group never got round to opening, and the prayer requests. That is what the button says before you tap it.</p><p class="hc-body-serif hc-legal__p">Once that document leaves the app it is a file on somebody’s phone and we cannot reach it. Deleting what you wrote afterwards does not take it off a sheet that has already gone out. Worth knowing before you write, and worth a leader thinking about before they send.</p></section><section class="hc-legal__block"><h2 class="hc-legal__heading">What we can do</h2><p class="hc-body-serif hc-legal__p">We can change the app, add to it, or stop offering it. If we ever stop, we will tell you rather than let it go quiet.</p></section><section class="hc-legal__block"><h2 class="hc-legal__heading">No promises</h2><p class="hc-body-serif hc-legal__p">The app is offered as it is. We do not promise it will always work, that it will be free of mistakes, or that it will always be available. To the fullest extent Louisiana law allows, Home Church is not liable for any loss or damage arising from your use of the app, or from not being able to use it.</p></section><section class="hc-legal__block"><h2 class="hc-legal__heading">Louisiana</h2><p class="hc-body-serif hc-legal__p">These terms are governed by the laws of the State of Louisiana, without regard to its conflict of law rules.</p></section><section class="hc-legal__block"><h2 class="hc-legal__heading">If this changes</h2><p class="hc-body-serif hc-legal__p">New date at the top, and we will tell you if the change is one that matters.</p></section><section class="hc-legal__block"><h2 class="hc-legal__heading">Reaching us</h2><p class="hc-body-serif hc-legal__p">Home Church<br>216 Giuffrias Ave<br>Metairie, LA 70001</p><a class="hc-btn hc-btn--secondary" href="mailto:hello@homechurchnola.com"><span>Email the church</span></a></section></div>
+<div class="hc-screen hc-legal hc-view-enter"><header class="hc-section-header hc-section-header--flush"><span class="hc-eyebrow hc-section-header__eyebrow">The fine print</span><h1 class="hc-section-header__title">Terms of use</h1><div class="hc-section-header__rule" aria-hidden="true"></div></header><p class="hc-caption hc-legal__date">Effective September 23, 2026</p><section class="hc-legal__block"><h2 class="hc-legal__heading">The short version</h2><p class="hc-body-serif hc-legal__p">Use the app. Be decent with it. We built it for our church and we are not claiming it is perfect.</p></section><section class="hc-legal__block"><h2 class="hc-legal__heading">What this is</h2><p class="hc-body-serif hc-legal__p">Home Church makes this app for our congregation and for anyone else who wants it. Sermons, small group guides, what is coming up, and a way to find us on a Sunday.</p></section><section class="hc-legal__block"><h2 class="hc-legal__heading">Using it</h2><p class="hc-body-serif hc-legal__p">Do not use the app to break the law, and do not try to break the app. Do not take the guides and sell them.</p><p class="hc-body-serif hc-legal__p">Short of that, use them. Print one, hand it around your group, read a line out loud, quote it somewhere. That is what they were written for, and you do not need to ask.</p></section><section class="hc-legal__block"><h2 class="hc-legal__heading">What you write is yours</h2><p class="hc-body-serif hc-legal__p">Your journal, your notes on a guide, your group’s roster and the prayer requests you keep in Leader mode. They are yours. We claim nothing over anything you write here, we do not read it, and we do not use it to train anything. Signed out it never leaves your phone; signed in, your journal is copied to your account so it follows you, and the privacy policy says exactly what that does and does not mean.</p><p class="hc-body-serif hc-legal__p">A group room is the one place that works differently, because the whole point of it is that other people read what you wrote. It still belongs to you. You can edit it or delete it whenever you like. But once you post it, the people in that room have seen it, and the next section is about what that asks of everybody.</p></section><section class="hc-legal__block"><h2 class="hc-legal__heading">In a group room</h2><p class="hc-body-serif hc-legal__p">A room is your small group, on a Thursday night, writing down what they would say out loud. Write like that. Nothing hateful, nothing obscene, nothing aimed at somebody, nothing that is not yours to post. If you would not say it with the room looking at you, it does not go in the box.</p><p class="hc-body-serif hc-legal__p">What other people write in a room stays in the room. It is not yours to forward, screenshot, or repeat somewhere they did not choose.</p><p class="hc-body-serif hc-legal__p">Every note has a Report button and you can block anybody, which stops their writing reaching you. Whoever hosts the room can take anything down for everybody. We look at reports and act on them within one day, and acting on one can mean removing what was written, removing somebody from a room, or closing their account.</p><p class="hc-body-serif hc-legal__p">If the problem is the person hosting your room, or you would rather not go through them, write to us at hello@homechurchnola.com and it comes straight to the church.</p></section><section class="hc-legal__block"><h2 class="hc-legal__heading">The sheet at the end of the night</h2><p class="hc-body-serif hc-legal__p">Whoever hosts a room can turn the evening into one document and send it to the group. Everything the room wrote goes on it, including answers the group never got round to opening, and the prayer requests. That is what the button says before you tap it.</p><p class="hc-body-serif hc-legal__p">Once that document leaves the app it is a file on somebody’s phone and we cannot reach it. Deleting what you wrote afterwards does not take it off a sheet that has already gone out. Worth knowing before you write, and worth a leader thinking about before they send.</p></section><section class="hc-legal__block"><h2 class="hc-legal__heading">What we can do</h2><p class="hc-body-serif hc-legal__p">We can change the app, add to it, or stop offering it. If we ever stop, we will tell you rather than let it go quiet.</p></section><section class="hc-legal__block"><h2 class="hc-legal__heading">No promises</h2><p class="hc-body-serif hc-legal__p">The app is offered as it is. We do not promise it will always work, that it will be free of mistakes, or that it will always be available. To the fullest extent Louisiana law allows, Home Church is not liable for any loss or damage arising from your use of the app, or from not being able to use it.</p></section><section class="hc-legal__block"><h2 class="hc-legal__heading">Louisiana</h2><p class="hc-body-serif hc-legal__p">These terms are governed by the laws of the State of Louisiana, without regard to its conflict of law rules.</p></section><section class="hc-legal__block"><h2 class="hc-legal__heading">If this changes</h2><p class="hc-body-serif hc-legal__p">New date at the top, and we will tell you if the change is one that matters.</p></section><section class="hc-legal__block"><h2 class="hc-legal__heading">Reaching us</h2><p class="hc-body-serif hc-legal__p">Home Church<br>216 Giuffrias Ave<br>Metairie, LA 70001</p><a class="hc-btn hc-btn--secondary" href="mailto:hello@homechurchnola.com"><span>Email the church</span></a></section></div>
 </main>
 </body>
 </html>
