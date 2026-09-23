@@ -96,11 +96,13 @@ function serve() {
 const HAND = `window.__hand = (function () {
   var scroller = document.querySelector('.hc-scroll');
 
-  function fire(type, x, y) {
+  /* hard: the touch arrives the way a phone sends one that lands on a
+     flying page, which is uncancellable. */
+  function fire(type, x, y, hard) {
     var t = new Touch({ identifier: 7, target: scroller, clientX: x, clientY: y });
     var live = type === 'touchend' ? [] : [t];
     var evt = new TouchEvent(type, {
-      bubbles: true, cancelable: true,
+      bubbles: true, cancelable: !hard,
       touches: live, targetTouches: live, changedTouches: [t]
     });
     scroller.dispatchEvent(evt);
@@ -221,6 +223,64 @@ const HAND = `window.__hand = (function () {
     JSON.stringify(scrubbed));
   ok('and the contents is up beside the thumb while it does',
     scrubbed.state === 'on', JSON.stringify(scrubbed));
+
+  /* ------------------------- 2b, the same thing, the way a phone sends it
+
+     On the glass the touch that lands on a flying page is uncancellable, so
+     the preventDefault above does nothing there and the page kept scrolling
+     under the thumb. What has to hold is the page itself: its overflow goes
+     while the rail has the finger, and comes back the moment it lets go. */
+
+  const phone = await page.evaluate(async () => {
+    const h = window.__hand;
+    const s = document.querySelector('.hc-scroll');
+    await h.settled(0);
+    await h.stirred(240);
+    const from = h.top();
+    const x = h.x();
+    const at = h.notchY(1);
+    h.fire('touchstart', x, at, true);
+    const heldAtTouch = getComputedStyle(s).overflowY;
+    const last = document.querySelectorAll('.hc-index__notch').length - 1;
+    const to = h.notchY(last);
+    for (let i = 1; i <= 8; i++) {
+      h.fire('touchmove', x, at + (to - at) * (i / 8), true);
+      await h.frames(1);
+    }
+    const heldInDrag = getComputedStyle(s).overflowY;
+    h.fire('touchend', x, to, true);
+    await h.frames(40);
+    return {
+      from: from, to: h.top(), heldAtTouch: heldAtTouch, heldInDrag: heldInDrag,
+      after: getComputedStyle(s).overflowY
+    };
+  });
+  ok('an uncancellable touch on a moving page still holds the page still',
+    phone.heldAtTouch === 'hidden', JSON.stringify(phone));
+  ok('and the drag out of it scrubs, with the page held the whole way',
+    phone.heldInDrag === 'hidden' && phone.to > phone.from + 100, JSON.stringify(phone));
+  ok('and the page scrolls again the moment the finger lifts',
+    phone.after === 'auto', JSON.stringify(phone));
+
+  const reach = await page.evaluate(async () => {
+    const h = window.__hand;
+    await h.settled(0);
+    await h.stirred(200);
+    const x = document.querySelector('.hc-scroll').getBoundingClientRect().right - 68;
+    h.fire('touchstart', x, h.notchY(1), true);
+    const flying = window.HC.indexRail.busy();
+    h.fire('touchend', x, h.notchY(1), true);
+    await h.settled(200);
+    h.fire('touchstart', x, h.notchY(1));
+    const still = window.HC.indexRail.busy();
+    h.fire('touchend', x, h.notchY(1));
+    await h.frames(40);
+    return { flying: flying, still: still };
+  });
+  ok('a thumb reaching a little further in mid fling is still caught',
+    reach.flying === true, JSON.stringify(reach));
+  ok('but the band on a still page is the width it always was',
+    reach.still === false, JSON.stringify(reach));
 
   /* ------------------------------------------------ 3, the ordinary tap */
 

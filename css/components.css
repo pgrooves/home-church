@@ -4126,6 +4126,16 @@ a[href^="https://www.biblegateway.com/"]::selection,
 
 .hc-index[hidden] { display: none !important; }
 
+/* The page, while the rail has the finger. A touch that lands on a flying
+   page cannot be refused from a touch listener on a phone — the scroll owns
+   it before the listener runs — so the scroll is taken away instead: no
+   overflow, no fling, no pan. js/index-rail.js still moves the page itself,
+   because a script can scroll what a thumb cannot. See hold() there. */
+.hc-scroll[data-index-held] {
+  overflow-y: hidden;
+  touch-action: none;
+}
+
 /* The written column, the card and the veil come and go together. */
 .hc-index[data-state="off"] ~ .hc-index__titles,
 .hc-index[data-state="off"] ~ .hc-index__card,

@@ -34,6 +34,17 @@
    scrolling, and the pointer events it used to be read from do not survive
    that. Touches do. See the gesture below.
 
+   AND WHY IT HOLDS THE PAGE STILL. Reading touches was half of it. On the
+   glass, a touch that lands on a flying page cannot be cancelled: iOS and
+   Chrome both hand it over uncancellable, because the scroll already owns
+   it, so the page kept scrolling under the thumb and the scrub fought it
+   until the fling ran out. Refusing the scroll now happens a level down: while
+   the rail holds a finger, the scroller is marked [data-index-held] and
+   css/components.css takes its overflow away. A scroller that cannot scroll
+   stops its fling and lets go of the pan in progress, whatever the touch
+   events were allowed to say. The page is still moved, by the glide below,
+   because a script can scroll what a thumb cannot. See hold().
+
    WHAT IT COSTS TO DRAW. Every stop is measured once when the thumb goes
    down, and every heading's width once when the rail is built. After that one
    requestAnimationFrame loop writes transform and opacity, and nothing else,
@@ -93,6 +104,13 @@
      it is pressing the thing it is on. */
   var HOT_DRAG = 56;
   var HOT_TAP  = 34;
+
+  /* And while the page is flying, the drag band is wider. A thumb that
+     reaches for the edge mid fling is aimed at a moving target from a
+     moving hand, and it lands further in than one placed on a still page.
+     The cost is small: a vertical drag out here on a moving page was going
+     to scroll it, and a scrub scrolls it too. */
+  var HOT_FLYING = 76;
 
   var W_MAX  = 30;    // a notch at the centre of the swell
   var W_MIN  = 9;     // a notch at rest
@@ -199,6 +217,7 @@
   var pointer  = -1;      // the pointer id we are holding, on a desktop
   var finger   = -1;      // or the touch identifier, in a hand
   var arrested = false;   // this touch landed on a moving page and stopped it
+  var held     = false;   // the scroller's own scrolling is off. See hold().
   var startX   = 0;
   var startY   = 0;
   var rawY     = 0;
@@ -857,8 +876,23 @@
      because a glide of ours is not a fling and no finger stops it. */
   function arrest() {
     gliding = false;
+    hold(true);
     var top = scroller.scrollTop;
     scroller.scrollTop = top;
+  }
+
+  /* Turn the page's own scrolling off, or back on. This is what actually
+     makes the rail take a finger from a flying page: a preventDefault on
+     that touch is ignored on the glass (see the note at the top), and an
+     overflow that is not there is not. Set when a touch lands on a moving
+     page and when a drag becomes a scrub, cleared the moment the finger is
+     let go of, whichever way. One attribute write each way, and none when
+     nothing changes. */
+  function hold(on) {
+    if (on === held || !scroller) return;
+    held = on;
+    if (on) scroller.setAttribute('data-index-held', 'true');
+    else scroller.removeAttribute('data-index-held');
   }
 
   /* --- the gesture, whichever kind of thing is making it ----------------- */
@@ -900,6 +934,9 @@
         return;
       }
       engaged = true;
+      // A page that was still when the finger landed can have started a
+      // scroll of its own by now; this is where the rail takes it back.
+      hold(true);
       stopHint(true);   // a drag out of the outer band answers it after all
       noteUse();
       if (pointer !== -1) {
@@ -920,6 +957,7 @@
     pointer = -1;
     finger = -1;
     arrested = false;
+    hold(false);
   }
 
   function finish(cancelled) {
@@ -980,7 +1018,8 @@
 
     var t = evt.touches[0];
     if (typingTarget(evt.target)) return;
-    if (!inZone(t.clientX, HOT_DRAG)) return;
+    var flying = moving();
+    if (!inZone(t.clientX, flying ? HOT_FLYING : HOT_DRAG)) return;
 
     /* THE PAGE IS STILL MOVING, AND THIS IS THE LINE THE WHOLE THING TURNS
        ON. A touch that lands on a scrolling page is a touch the browser has
@@ -991,14 +1030,17 @@
        argue with — and only here, because a still page has nothing to refuse
        and a refusal costs the click of anybody who was merely tapping a card
        out in the outer band. On a moving page that click was never coming:
-       the first touch on a flying page stops it and fires nothing. */
-    var flying = moving();
+       the first touch on a flying page stops it and fires nothing.
+
+       On the glass that touch usually arrives uncancellable, and the
+       preventDefault is a no-op. arrest() is what does the work there: it
+       holds the page, and a page with no overflow has no scroll to begin. */
     if (flying) {
       arrest();
       if (evt.cancelable) evt.preventDefault();
     }
 
-    if (!begin(t.clientX, t.clientY)) return;
+    if (!begin(t.clientX, t.clientY)) { hold(false); return; }
     finger = t.identifier;
     arrested = flying;
   }
