@@ -175,16 +175,23 @@ including the parts that are inconvenient in a chained run:
   its line. Three commands, in this order:
 
   ```bash
-  npm run narrate:sync     # first run in a container: pulls what is already spoken
+  npm run narrate:setup    # venv and model, idempotent, ~3 min on a fresh container
+  npm run narrate:sync     # pulls what is already spoken out of Supabase
   npm run narrate          # speaks only the new guide, once sync has run
   npm run narrate:upload   # sends it and writes guides.narration
   ```
 
-  **Do not skip `narrate:sync` on a fresh container.** Without it the narrator
-  finds no previous manifest and no mp3s, and speaks the entire catalogue, an
-  hour of audio to publish six sections. `/new-sermon` has the whole of why.
-  If the container has no venv or model yet, that setup is four commands and
-  about three minutes, also in `/new-sermon`.
+  **Run all four, in that order, every week.** The first two are idempotent
+  and cost nothing when they are not needed, so there is no judgment call to
+  get wrong. `narrate:sync` is the one whose absence is expensive and silent:
+  without it the narrator finds no manifest and no mp3s, and speaks the entire
+  catalogue, half an hour to publish six sections. `/new-sermon` has the whole
+  of why.
+
+  **If `narrate` reports it is about to make far more sections than the guide
+  you just wrote, stop and ask.** That means hashes moved across the
+  catalogue, and resealing rather than re-speaking is a decision about audio
+  already published. It belongs to the pastor, not to this run.
 
 - **Its confirmation is not printed on its own.** Hold the five or six lines
   and fold them into the single receipt at the end of this file.

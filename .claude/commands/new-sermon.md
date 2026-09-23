@@ -714,10 +714,16 @@ So the guide goes out complete on Sunday, which is the whole point of doing
 this here rather than leaving a note for later.
 
 ```bash
-npm run narrate:sync     # only on a fresh checkout, see below
-npm run narrate          # writes the text, then speaks it
+npm run narrate:setup    # venv and model, once per container, idempotent
+npm run narrate:sync     # pull what is already spoken, see below
+npm run narrate          # writes the text, then speaks only what is new
 npm run narrate:upload   # needs SUPABASE_SERVICE_ROLE_KEY in the environment
 ```
+
+All four are `npm run`, which `.claude/settings.json` already allows, so none
+of them stops to ask. That is the reason they are npm scripts rather than the
+raw commands: a fresh container needs the setup every time, and as four bare
+commands that is four permission prompts in front of the pastor every Sunday.
 
 **Read the second command's output before letting the third one run.** It
 prints where the guides came from. `source supabase` is correct. `source seed`
@@ -746,17 +752,9 @@ already agrees, and then the run speaks the new guide and nothing else. On a
 machine that has its own `narration/`, the Mac, it is unnecessary and
 harmless.
 
-First run in a container needs the model and the venv, once. Roughly three
-minutes:
-
-```bash
-python3 -m venv .venv
-.venv/bin/pip install kokoro-onnx soundfile imageio-ffmpeg
-mkdir -p models && curl -L -o models/kokoro-v1.0.onnx \
-  https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.0/kokoro-v1.0.onnx
-curl -L -o models/voices-v1.0.bin \
-  https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.0/voices-v1.0.bin
-```
+`narrate:setup` is the venv and the 340MB model, and it is idempotent: about
+three minutes on a fresh container, nothing at all on the second run. Run it
+every time rather than deciding whether it is needed.
 
 **Only say the narration is missing when it actually failed**, and say what
 failed rather than that the session was the wrong kind.
