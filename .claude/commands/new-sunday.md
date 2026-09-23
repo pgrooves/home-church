@@ -209,32 +209,38 @@ anyway with `sermon_id` null. That is the case `/new-worship` Step 2 already
 calls normal, the screen finds the message by date, and Tuesday fills the id
 in. Say plainly in the receipt which half went up and which did not.
 
-## Step 3. Make sure Tuesday is covered
+## Step 3. Tuesday is a reminder, not an errand
 
 The episode does not post until Tuesday, so `/new-podcast` is not part of
-this run. **A standing routine handles it**: it wakes Tuesday evening
-Central, looks for a message still carrying `(Working Title)`, and runs
-`/new-podcast` for it, or ends silently when there is nothing waiting.
+this run. **A standing routine nudges you on Tuesday evening Central**, and a
+nudge is all it does: it sends one line telling you to run `/new-podcast` in
+a thread, and touches nothing.
 
-**It wakes again Wednesday evening, and that is the retry.** A Tuesday that
-failed, or an episode that had not posted yet when it looked, gets picked up
-the next night with no state carried between them. The query is the whole
-mechanism: a message whose episode is attached no longer carries
-`(Working Title)`, so Wednesday finds nothing and ends silently on every
-ordinary week. Nothing has to remember whether Tuesday worked.
+**That is deliberate, and it is worth knowing why, because the obvious design
+does not work.** The routine was first written to do the job itself: query
+for a message still carrying `(Working Title)`, then run `/new-podcast` for
+it. It could not. **A scheduled session comes up with no Supabase connector
+and no `.env`**, which `supabase/ACCESS.md` calls "neither transport," and a
+routine created from inside a session cannot carry a connector grant with it.
+The result was a failure report every week instead of a reminder, on a week
+when there genuinely was a message waiting.
+
+So the split is: **a scheduled session reminds, a thread you opened works.**
+Your own threads reach Supabase. Fired ones do not. Anything that has to
+touch the database belongs on this side of that line.
 
 **There is one routine, not one per Sunday.** Check before you create
 anything:
 
-- List the account's routines and look for one named **Tuesday episode
-  check**. Found it, and it is enabled, there is nothing to do. Say so in one
-  clause of the receipt and stop.
-- Missing or disabled, recreate or re-enable it, on `0 0 * * 3,4` UTC, which
-  is 7pm Central on Tuesday and Wednesday during daylight time, with the
-  standalone prompt described below. Cron is fixed UTC and Central is not, so
-  when daylight saving ends in November this becomes 6pm Central until
-  somebody moves it to `0 1 * * 3,4`. An hour early on a Tuesday costs
-  nothing, so it is worth knowing rather than worth fixing in a hurry.
+- List the account's routines and look for one named **Tuesday: run
+  /new-podcast**. Found it, and it is enabled, there is nothing to do. Say so
+  in one clause of the receipt and stop.
+- Missing or disabled, recreate or re-enable it on `0 0 * * 3` UTC, which is
+  7pm Central Tuesday during daylight time, with a prompt that sends the one
+  line and explicitly does no work: no file reads, no commands, no queries.
+  Cron is fixed UTC and Central is not, so when daylight saving ends in
+  November this becomes 6pm Central until somebody moves it to `0 1 * * 3`.
+  An hour early on a reminder costs nothing.
 - **No routines tooling in this session**, which is what a terminal session
   on the Mac looks like, print the reminder instead and do not pretend it is
   scheduled:
@@ -243,40 +249,9 @@ anything:
 Tuesday    run /new-podcast, no scheduler in this session
 ```
 
-The routine's prompt has to stand entirely on its own, because it fires into
-a fresh session on a fresh container. **It does not read the files from Step
-0, which are long gone.** It finds its work in the database, with the
-complement of the stale check `/new-sermon` already documents:
-
-```sql
-select id, title, preached_on, episode_url
-  from public.podcasts
- where title like '%(Working Title)%'
-   and preached_on >= current_date - 14
- order by preached_on desc;
-```
-
-Nothing returned is the normal outcome most weeks and the run ends without
-saying anything. One row is the week's message, and `/new-podcast` takes it
-from there. More than one means a Sunday was missed, so handle the most
-recent and name the others rather than working through them unasked.
-
-**That run finds the episode itself.** `/new-podcast` fetches the show and
-takes the title, date, link and description off it, the same as it does when
-somebody types it by hand, and asking for those is its fallback rather than
-its habit. Nothing here changes that, and nothing here should invite the
-fallback by pre-emptively asking. Let the command work the way it works.
-
-**The one thing to actually watch, and it is not the schedule.** A routine
-created from inside a session carries no connector grant, so the Tuesday
-session may come up with no Supabase MCP server, and `.env` is not there
-either. `supabase/ACCESS.md` calls that "neither transport," and on a
-scheduled run with nobody watching it would otherwise look exactly like a
-quiet week. So the routine's prompt is written to break the silence in that
-one case, and to say that Wednesday will try again. If both nights report it,
-the fix is to recreate the routine from the Routines screen on claude.ai,
-where the Supabase connector can be attached to it, rather than to change
-anything here.
+**Do not give the routine database work again** without first confirming a
+fired session can actually reach Supabase. The symptom of getting this wrong
+is not an error, it is a quiet week that looks exactly like a finished one.
 
 ## Step 4. One receipt, not three
 
