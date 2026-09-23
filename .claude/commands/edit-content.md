@@ -26,9 +26,10 @@ Read **`supabase/ACCESS.md`**. It says which of the two transports to use, the
 Supabase MCP server or `scripts/hc_supabase.py`, and gives the SQL equivalent
 of every script verb below.
 
-A missing `.env` or a refused connection is what a web session looks like, and
-this app is mostly edited from a phone, so that is the normal path rather than
-a dead end. Use MCP.
+A missing `.env` is what a web session looks like, and this app is mostly
+edited from a phone. That is no longer a dead end or a reason to reach for
+MCP: the script takes the key from the environment and the project URL from
+`js/config.js`, so it runs here too.
 
 Two things this command depends on that raw SQL will not do for you: dollar
 quote any prose you write, since the whole job here is other people's

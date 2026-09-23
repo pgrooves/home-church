@@ -32,8 +32,10 @@ command with an empty value rather than something that needs a code change.
 Read **`supabase/ACCESS.md`**. It says which of the two transports to use, the
 Supabase MCP server or `scripts/hc_supabase.py`.
 
-A missing `.env` or a refused connection is the ordinary shape of a web
-session, not a reason to stop. Use MCP. Confirm the project ref is
+A missing `.env` is the ordinary shape of a web session and no longer a
+problem: the script takes the key from the environment and the project URL
+from `js/config.js`, so it runs here too, and it is the one that does not
+put a permission prompt in front of the pastor. Confirm the project ref is
 `ibqkumxfltfiuqevviji`, stop only if neither transport is available, and never
 ask for a key in the chat.
 

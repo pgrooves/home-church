@@ -12,16 +12,34 @@ rather than each carrying their own copy, so the two cannot drift.
 
 ## Which transport
 
-**Try the Supabase MCP server first.** It is the one that works from a phone,
-and this app is largely built from one. It reaches the project over Anthropic's
-own path, so the egress proxy that blocks `supabase.co` in web sessions does
-not apply. If `mcp__Supabase__execute_sql` is available, use it.
+**Try `scripts/hc_supabase.py` first.** It takes the service role key from
+`.env` at the repo root, or from `SUPABASE_SERVICE_ROLE_KEY` in the
+environment, and the project URL from `js/config.js`. The verbs are short,
+`upsert` refuses a row with no `id`, and nothing has to be hand quoted.
 
-**Otherwise use `scripts/hc_supabase.py`.** It takes its credentials from
-`.env` at the repo root, and failing that from `SUPABASE_URL` and
-`SUPABASE_SERVICE_ROLE_KEY` in the environment. It is the better tool when you
-have it: the verbs are shorter, `upsert` refuses a row with no `id`, and
-nothing has to be hand quoted.
+**This used to say to try MCP first, and that was wrong for three reasons**,
+all of which cost a week between them:
+
+- **It is not available everywhere.** A connector is enabled per chat, so a
+  scheduled session never has it and cannot be given it. The script runs
+  anywhere there is a shell.
+- **It prompts.** `Bash(python3 scripts/hc_supabase.py:*)` is allowlisted in
+  `.claude/settings.json`, so the script asks nobody for anything. An MCP tool
+  call puts an Allow once dialog in front of the pastor for every read and
+  every write, and on a phone there is no "don't ask again" on it.
+- **It was two code paths.** The same publish behaved differently on a Sunday
+  and on a Tuesday, which is exactly where a difference hides until it
+  matters.
+
+**Fall back to the Supabase MCP server** when the script cannot run: no shell,
+no key, or a repo you are not standing in. If `mcp__Supabase__execute_sql` is
+available it reaches the same project and writes the same rows.
+
+**`supabase.co` is reachable from a web session.** An earlier version of this
+file said the egress proxy blocks it and that MCP was the way around. That is
+no longer true here: the script talks to `https://<ref>.supabase.co` directly
+and so does the narration upload. Do not plan around a block that is not
+there, and do not reintroduce that claim without testing it first.
 
 **If neither is available**, say so plainly and stop before writing anything.
 Do not fall back to editing `js/data.js`. That file is the cold start seed, not

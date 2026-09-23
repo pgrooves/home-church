@@ -168,6 +168,24 @@ including the parts that are inconvenient in a chained run:
   is not a reason to skip the read. With `--go` it is skipped, which is that
   step's own provision rather than an override, and the two answers come from
   the command line or are derived as "Going straight through" describes.
+- **The narration is part of it and is the half most often dropped.** That
+  command ends by speaking the guide's six sections and uploading them, and a
+  guide published without it is live with six silent play buttons and nothing
+  in the app saying so. It runs here, in this session, and the receipt carries
+  its line. Three commands, in this order:
+
+  ```bash
+  npm run narrate:sync     # first run in a container: pulls what is already spoken
+  npm run narrate          # speaks only the new guide, once sync has run
+  npm run narrate:upload   # sends it and writes guides.narration
+  ```
+
+  **Do not skip `narrate:sync` on a fresh container.** Without it the narrator
+  finds no previous manifest and no mp3s, and speaks the entire catalogue, an
+  hour of audio to publish six sections. `/new-sermon` has the whole of why.
+  If the container has no venv or model yet, that setup is four commands and
+  about three minutes, also in `/new-sermon`.
+
 - **Its confirmation is not printed on its own.** Hold the five or six lines
   and fold them into the single receipt at the end of this file.
 
@@ -273,6 +291,7 @@ Published  Boats to Tarshish (Working Title)
 Stephen, September 20 2026
 guides, series-jonah, 7 sections, 14 questions, 16 one-liners
 Reading    week 2 of 4, Jonah 1:11 to 2:10, grace at the bottom
+Narrated   6 sections, 9.4 min, af_heart
 Reconstructed  "Jabra" as Joppa, "Minava" as Nineveh.
 
 Published  4 songs for September 20 2026
@@ -280,6 +299,11 @@ Linked to Boats to Tarshish, art and links on all four
 
 Tuesday    routine is set, 7pm Central
 ```
+
+**The `Narrated` line is not optional and its absence is the bug to watch
+for.** A guide can be published, correct, and silent, and nothing on any
+screen says which. If that line is missing from a receipt, the audio was not
+made, whatever else the receipt says.
 
 The lines each command owns are still that command's to write, in its own
 words, including the ones it only prints in particular cases: the

@@ -28,7 +28,26 @@
 const fs = require('fs');
 const path = require('path');
 
-const URL_BASE = process.env.SUPABASE_URL;
+/* The project URL, from the environment or else from js/config.js.
+
+   It is not a secret: config.js is committed and served to every phone with
+   this exact string in it, so reading it here tells nobody anything they
+   could not already read. Deriving it means a session with no .env needs the
+   service role key set and nothing else, which is what lets the scheduled and
+   the web sessions run this at all. The key is never derived from anything.
+   scripts/hc_supabase.py does the same, and supabase/ACCESS.md has the whole
+   of it. */
+function urlFromConfig() {
+  try {
+    const src = fs.readFileSync(path.join(__dirname, '..', 'js', 'config.js'), 'utf8');
+    const m = src.match(/SUPABASE_URL\s*:\s*['"]([^'"]+)['"]/);
+    return m ? m[1].replace(/\/+$/, '') : null;
+  } catch (e) {
+    return null;
+  }
+}
+
+const URL_BASE = process.env.SUPABASE_URL || urlFromConfig();
 const KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const DRY = process.argv.includes('--dry-run');
 const DIR = process.argv.includes('--dir')
@@ -54,10 +73,16 @@ if (ONLY && !ONLY.startsWith('guide-')) {
   die('--only takes a guide id, like guide-boats-tarshish, not "' + ONLY + '".');
 }
 
-if (!DRY && (!URL_BASE || !KEY)) {
-  die('Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY, or pass --dry-run.\n' +
+if (!DRY && !KEY) {
+  die('Set SUPABASE_SERVICE_ROLE_KEY, or pass --dry-run.\n' +
       'The service role key is under Project Settings -> API. It is not the anon key,\n' +
       'and it must never end up in js/config.js.');
+}
+
+if (!DRY && !URL_BASE) {
+  die('No SUPABASE_URL, and js/config.js has none to fall back on.\n' +
+      'That second part is the surprising one: the app itself is not pointed\n' +
+      'at a project. Fix js/config.js, or set SUPABASE_URL.');
 }
 
 const manifestPath = path.join(DIR, 'manifest.json');

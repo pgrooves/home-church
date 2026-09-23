@@ -19,8 +19,9 @@ you have `.env` and a shell. Every command below is written in the script's
 verbs, and that file has the SQL equivalent of each one.
 
 Most sessions on this app are web sessions from a phone, where `.env` does not
-exist and the proxy blocks `supabase.co`. That is the normal case, not a
-failure. Use MCP and carry on.
+exist. That is the normal case and not a failure: the script takes the key
+from the environment and the project URL from `js/config.js`. `supabase.co`
+itself is reachable, whatever older notes in this repo say.
 
 Confirm the project ref is `ibqkumxfltfiuqevviji`, the one `js/config.js`
 reads. Only stop if neither transport is available, and never ask for a key in

@@ -18,8 +18,10 @@ Supabase MCP server or `scripts/hc_supabase.py`, and gives the SQL equivalent
 of every script verb below. It also has the SQL form of `when`, which matters
 here more than in any other command.
 
-A missing `.env` or a refused connection is the ordinary shape of a web
-session, not a reason to stop. Use MCP. Confirm the project ref is
+A missing `.env` is the ordinary shape of a web session and no longer a
+problem: the script takes the key from the environment and the project URL
+from `js/config.js`, so it runs here too, and it is the one that does not
+put a permission prompt in front of the pastor. Confirm the project ref is
 `ibqkumxfltfiuqevviji`, stop only if neither transport is available, and never
 ask for a key in the chat.
 

@@ -714,30 +714,52 @@ So the guide goes out complete on Sunday, which is the whole point of doing
 this here rather than leaving a note for later.
 
 ```bash
+npm run narrate:sync     # only on a fresh checkout, see below
 npm run narrate          # writes the text, then speaks it
 npm run narrate:upload   # needs SUPABASE_SERVICE_ROLE_KEY in the environment
 ```
 
-**Read the first command's output before letting the second one run.** It
+**Read the second command's output before letting the third one run.** It
 prints where the guides came from. `source supabase` is correct. `source seed`
 means it could not reach the project and fell back to the three guides frozen
 in `js/data.js`, so the guide you just wrote is not among them and every guide
 it missed stays silent. It warns in six lines when that happens. Do not
 narrate past that warning.
 
-**This needs a real machine, and most sessions on this app are not one.** The
-speech model is a 340MB local download and the upload is an HTTPS PUT to
-`supabase.co`, which the web session proxy refuses, exactly as
-`supabase/ACCESS.md` describes. MCP is not a way around it: it reaches Postgres,
-and Storage has no MCP path at all.
+**This runs in a web session. Do not hand it to the pastor.** An earlier
+version of this file said the speech model was too big and that the upload was
+blocked by the egress proxy, and told every session to publish the guide
+silent and leave the Mac a note. Both halves of that were tested and neither
+holds: the model files come from GitHub releases and download fine, pypi is
+reachable so the venv installs, and `supabase.co` answers, which is the same
+thing that lets `hc_supabase.py` work at all. A guide going out silent every
+week was a claim nobody had rechecked, not a limit.
 
-So in a web session: publish the guide, say plainly that the narration has not
-been made yet, and give the pastor the two commands above to run on the Mac.
-Do not report the guide as fully published without saying which half is
-missing. In a session on a real machine with `.env` present, just run them.
+**`narrate:sync` is the step that makes it cheap, and it is easy to skip and
+then not understand what went wrong.** `build_narration.py` re-speaks a
+section unless its hash matches `narration/manifest.json` **and** its mp3 is
+on disk. `narration/` is git ignored, correctly, so a fresh container has
+neither and will happily spend half an hour speaking the whole catalogue to
+publish one guide. `narrate:sync` pulls the manifest and the mp3s out of
+`guides.narration` and the Storage bucket, which is where every machine's copy
+already agrees, and then the run speaks the new guide and nothing else. On a
+machine that has its own `narration/`, the Mac, it is unnecessary and
+harmless.
 
-First run on any machine needs the model, once. `NEW_GUIDE_PROCESS.md`
-Step 5b has the four commands.
+First run in a container needs the model and the venv, once. Roughly three
+minutes:
+
+```bash
+python3 -m venv .venv
+.venv/bin/pip install kokoro-onnx soundfile imageio-ffmpeg
+mkdir -p models && curl -L -o models/kokoro-v1.0.onnx \
+  https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.0/kokoro-v1.0.onnx
+curl -L -o models/voices-v1.0.bin \
+  https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.0/voices-v1.0.bin
+```
+
+**Only say the narration is missing when it actually failed**, and say what
+failed rather than that the session was the wrong kind.
 
 **It costs nothing.** Kokoro-82M is Apache 2.0 and runs on the CPU: no API, no
 key, no account, no quota, no per-play charge. A weekly guide is about four
@@ -784,12 +806,13 @@ plan that quietly stopped following its series is only visible in a week number
 somebody read out loud. Leave it off only when the current plan follows no
 series, where there is nothing to report rather than something missing.
 
-If the narration did not run, say which half is missing and what to run,
-rather than leaving the last line off:
+If the narration did not run, say which half is missing and **what actually
+failed**, rather than leaving the last line off or blaming the session for
+being a web one, which is not a reason:
 
 ```
-Not narrated. Run `npm run narrate && npm run narrate:upload` on the Mac,
-this session cannot reach Storage.
+Not narrated. `npm run narrate` exited 1: <what it said>. The guide is
+published and its play buttons are silent until this is rerun.
 ```
 
 The sixth line, last, and only when the stale check found something. Name
