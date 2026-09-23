@@ -23,6 +23,7 @@
 
       "Edit(/tmp/**)",
 
+      "Bash(python3 scripts/spotify_episode.py:*)",
       "Bash(node scripts/resolve_songs.js:*)",
       "Bash(node scripts/stamp_assets.js)",
       "Bash(node scripts/sync_web.js)",

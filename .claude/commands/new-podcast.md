@@ -12,9 +12,25 @@ publishing once is enough. `js/data.js` is the cold start seed now, a frozen
 snapshot, and editing it by hand is how two copies of the catalogue drift
 apart.
 
-Try fetching the show yourself first. If the egress proxy blocks it, which is
-normal in web sessions, ask for the episode's title, publish date, Spotify
-link, and description rather than guessing at any of them.
+**Get the episode with the script, not by asking:**
+
+```bash
+python3 scripts/spotify_episode.py
+```
+
+It returns the latest episode's title, link, publish date and duration from
+any session, with no key and no login. `NEW_PODCAST_PROCESS.md` Step 1 has the
+`--episode` flag for a specific one, and the table of which routes work, which
+matters because the obvious ones do not: the Spotify show page loads but is
+drawn by JavaScript, Buzzsprout is blocked outright, and WebFetch summarizes
+the embed page and throws the JSON away. **Do not ask for those four fields,
+and do not fall back to asking because a page came back empty.** Asking is
+what this script exists to stop.
+
+The one field it cannot get is the episode notes, which are on Buzzsprout.
+Publish the row without them, say so, and ask for them after. A message with a
+working link and no notes is published; a message held back for its notes
+still reads "Audio coming soon!" on Listen.
 
 If the request mentions backfilling, the back catalogue, or older episodes,
 follow the "Backfilling the whole catalogue" section instead of the
