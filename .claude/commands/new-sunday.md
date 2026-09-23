@@ -209,38 +209,41 @@ anyway with `sermon_id` null. That is the case `/new-worship` Step 2 already
 calls normal, the screen finds the message by date, and Tuesday fills the id
 in. Say plainly in the receipt which half went up and which did not.
 
-## Step 3. Tuesday is a reminder, not an errand
+## Step 3. Tuesday runs itself, on the second transport
 
 The episode does not post until Tuesday, so `/new-podcast` is not part of
-this run. **A standing routine nudges you on Tuesday evening Central**, and a
-nudge is all it does: it sends one line telling you to run `/new-podcast` in
-a thread, and touches nothing.
+this run. **A standing routine wakes Tuesday evening Central**, looks for a
+message still carrying `(Working Title)`, and runs `/new-podcast` for it, or
+ends silently when there is nothing. It wakes again Wednesday, and that is the
+retry: attaching an episode removes the marker, so the same query that finds
+work on Tuesday finds nothing on Wednesday and no state passes between them.
 
-**That is deliberate, and it is worth knowing why, because the obvious design
-does not work.** The routine was first written to do the job itself: query
-for a message still carrying `(Working Title)`, then run `/new-podcast` for
-it. It could not. **A scheduled session comes up with no Supabase connector
-and no `.env`**, which `supabase/ACCESS.md` calls "neither transport," and a
-routine created from inside a session cannot carry a connector grant with it.
-The result was a failure report every week instead of a reminder, on a week
-when there genuinely was a message waiting.
+**How it reaches Supabase is the part worth knowing**, because the obvious
+answer is wrong and a week was lost to it. A scheduled session has **no MCP
+connector**: connectors are enabled per chat, nobody opened this one, and a
+routine created from inside a session cannot carry a grant with it. It also
+has **no `.env`**, because that file is git ignored and the container is a
+fresh clone. `supabase/ACCESS.md` calls that combination "neither transport,"
+and the routine reported it every week instead of working.
 
-So the split is: **a scheduled session reminds, a thread you opened works.**
-Your own threads reach Supabase. Fired ones do not. Anything that has to
-touch the database belongs on this side of that line.
+**The environment variables are the way through.** `SUPABASE_URL` and
+`SUPABASE_SERVICE_ROLE_KEY` set on the environment reach every session in it,
+including the ones nobody opened, and `scripts/hc_supabase.py` now reads them
+when there is no `.env`. That is the second transport, in the one place it was
+missing. `supabase/ACCESS.md` has the whole of it, including what it means to
+put a service_role key there.
 
 **There is one routine, not one per Sunday.** Check before you create
 anything:
 
-- List the account's routines and look for one named **Tuesday: run
-  /new-podcast**. Found it, and it is enabled, there is nothing to do. Say so
-  in one clause of the receipt and stop.
-- Missing or disabled, recreate or re-enable it on `0 0 * * 3` UTC, which is
-  7pm Central Tuesday during daylight time, with a prompt that sends the one
-  line and explicitly does no work: no file reads, no commands, no queries.
-  Cron is fixed UTC and Central is not, so when daylight saving ends in
-  November this becomes 6pm Central until somebody moves it to `0 1 * * 3`.
-  An hour early on a reminder costs nothing.
+- List the account's routines and look for one named **Tuesday episode
+  check**. Found it, and it is enabled, there is nothing to do. Say so in one
+  clause of the receipt and stop.
+- Missing or disabled, recreate or re-enable it on `0 0 * * 3,4` UTC, which is
+  7pm Central Tuesday and Wednesday during daylight time. Cron is fixed UTC
+  and Central is not, so when daylight saving ends in November this becomes
+  6pm Central until somebody moves it to `0 1 * * 3,4`. An hour early costs
+  nothing.
 - **No routines tooling in this session**, which is what a terminal session
   on the Mac looks like, print the reminder instead and do not pretend it is
   scheduled:
@@ -249,9 +252,11 @@ anything:
 Tuesday    run /new-podcast, no scheduler in this session
 ```
 
-**Do not give the routine database work again** without first confirming a
-fired session can actually reach Supabase. The symptom of getting this wrong
-is not an error, it is a quiet week that looks exactly like a finished one.
+**Its prompt must check the transport before the work and say which variable
+is missing if one is.** A scheduled run cannot ask a question and get an
+answer, so the only useful thing it can do with a missing credential is name
+it. The failure mode to design against is not an error, it is a quiet week
+that looks exactly like a finished one.
 
 ## Step 4. One receipt, not three
 

@@ -80,30 +80,48 @@ PROBE_ROWS = {
 # --------------------------------------------------------------------------
 
 def load_env():
-    """Read .env into a dict. Deliberately tiny, no dependency on python-dotenv."""
-    if not os.path.exists(ENV_PATH):
-        die(
-            ".env not found at the repo root.\n"
-            "Copy .env.example to .env and fill in SUPABASE_URL and "
-            "SUPABASE_SERVICE_ROLE_KEY.\n"
-            ".env is git ignored, so it stays on this machine."
-        )
+    """Credentials from `.env`, or from the process environment when there is none.
 
+    `.env` on a real machine is the original case and still wins where it
+    exists. The environment is the second one, and it is what makes this script
+    work in a session nobody is sitting in front of: a scheduled run comes up
+    with no `.env`, and it also comes up with no Supabase MCP server, because a
+    connector is enabled per chat and a fired session has no chat to enable it
+    in. Those two facts together used to mean "neither transport," which
+    `supabase/ACCESS.md` says is the one case where a run stops. Set the two
+    variables on the environment and the second transport is there instead.
+
+    Read the file first so a machine with both keeps behaving exactly as it
+    did, then fall back per variable rather than all or nothing, which lets an
+    environment supply the key while a `.env` supplies the rest, or the other
+    way round.
+    """
     env = {}
-    with open(ENV_PATH, "r", encoding="utf-8") as fh:
-        for line in fh:
-            line = line.strip()
-            if not line or line.startswith("#") or "=" not in line:
-                continue
-            key, _, value = line.partition("=")
-            value = value.strip().strip('"').strip("'")
-            env[key.strip()] = value
+    if os.path.exists(ENV_PATH):
+        with open(ENV_PATH, "r", encoding="utf-8") as fh:
+            for line in fh:
+                line = line.strip()
+                if not line or line.startswith("#") or "=" not in line:
+                    continue
+                key, _, value = line.partition("=")
+                value = value.strip().strip('"').strip("'")
+                env[key.strip()] = value
 
-    url = env.get("SUPABASE_URL", "").rstrip("/")
-    key = env.get("SUPABASE_SERVICE_ROLE_KEY", "")
+    url = (env.get("SUPABASE_URL") or os.environ.get("SUPABASE_URL", "")).rstrip("/")
+    key = env.get("SUPABASE_SERVICE_ROLE_KEY") or os.environ.get(
+        "SUPABASE_SERVICE_ROLE_KEY", ""
+    )
 
     if not url or not key:
-        die("SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must both be set in .env.")
+        missing = [n for n, v in (("SUPABASE_URL", url),
+                                  ("SUPABASE_SERVICE_ROLE_KEY", key)) if not v]
+        die(
+            "%s not set.\n"
+            "Either copy .env.example to .env at the repo root and fill it in, "
+            "which is the way on your own machine and stays git ignored, or set "
+            "them as environment variables, which is the way in a session that "
+            "has no .env. supabase/ACCESS.md has both." % " and ".join(missing)
+        )
     if not url.startswith("https://"):
         die("SUPABASE_URL should start with https://")
 
