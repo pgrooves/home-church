@@ -112,15 +112,34 @@ def load_env():
         "SUPABASE_SERVICE_ROLE_KEY", ""
     )
 
-    if not url or not key:
-        missing = [n for n, v in (("SUPABASE_URL", url),
-                                  ("SUPABASE_SERVICE_ROLE_KEY", key)) if not v]
+    # Last resort for the URL only: the one the shipped app is pointed at.
+    #
+    # It is not a secret. `js/config.js` is committed, served to every phone,
+    # and carries this exact string, so deriving it here tells nobody anything
+    # they could not already read. The key is the secret half and is never
+    # derived from anything: no file in this repo has it and none should.
+    #
+    # This exists so that a session nobody opened needs one thing configured
+    # rather than two. The key has to be supplied; the URL never did, and
+    # asking for it was one more thing to get wrong in an environment nobody
+    # looks at twice. It also cannot drift from the app, because it is the
+    # app's own value rather than a second copy of it.
+    if not url:
+        url = (app_config()[0] or "").rstrip("/")
+
+    if not key:
         die(
-            "%s not set.\n"
+            "SUPABASE_SERVICE_ROLE_KEY not set.\n"
             "Either copy .env.example to .env at the repo root and fill it in, "
             "which is the way on your own machine and stays git ignored, or set "
-            "them as environment variables, which is the way in a session that "
-            "has no .env. supabase/ACCESS.md has both." % " and ".join(missing)
+            "it as an environment variable, which is the way in a session that "
+            "has no .env. supabase/ACCESS.md has both."
+        )
+    if not url:
+        die(
+            "SUPABASE_URL not set, and js/config.js has none to fall back on.\n"
+            "That second part is the surprising one: the app itself is not "
+            "pointed at a project. Fix js/config.js, or set SUPABASE_URL."
         )
     if not url.startswith("https://"):
         die("SUPABASE_URL should start with https://")

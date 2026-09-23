@@ -53,18 +53,27 @@ a fresh clone.
 That combination is "neither transport," and a Tuesday routine reported it
 every week rather than doing its job.
 
-**The environment variables are the way through.** Set on the environment
-rather than in a file, they reach every session in it including the ones
+**One environment variable is the way through**, set on the environment rather
+than in a file, because those reach every session in it including the ones
 nobody opened:
 
 ```
-SUPABASE_URL=https://ibqkumxfltfiuqevviji.supabase.co
 SUPABASE_SERVICE_ROLE_KEY=<the service_role key>
 ```
 
-`hc_supabase.py` reads `.env` first and falls back to these per variable, so a
-machine with a real `.env` behaves exactly as it always did and nothing about
-this changes what any command does with the data.
+**That is the whole list.** `SUPABASE_URL` is not needed and should not be set:
+`hc_supabase.py` falls back to the URL in `js/config.js`, which is committed,
+served to every phone, and therefore no secret at all. One thing to configure
+instead of two, and the URL cannot drift from the app because it is the app's
+own value rather than a second copy of it.
+
+The order is `.env`, then the environment, then `js/config.js` for the URL
+alone. A machine with a real `.env` behaves exactly as it always did, a `.env`
+deliberately pointed at another project still wins, and nothing about any of
+this changes what a command does with the data.
+
+**The key is never derived.** No file in this repo holds it and none should.
+If it is missing the script refuses and says so.
 
 **`SUPABASE_SERVICE_ROLE_KEY` bypasses row level security**, which is the whole
 reason it can write the content tables, and putting it on the environment means

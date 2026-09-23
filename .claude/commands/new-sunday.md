@@ -226,12 +226,14 @@ has **no `.env`**, because that file is git ignored and the container is a
 fresh clone. `supabase/ACCESS.md` calls that combination "neither transport,"
 and the routine reported it every week instead of working.
 
-**The environment variables are the way through.** `SUPABASE_URL` and
-`SUPABASE_SERVICE_ROLE_KEY` set on the environment reach every session in it,
-including the ones nobody opened, and `scripts/hc_supabase.py` now reads them
-when there is no `.env`. That is the second transport, in the one place it was
-missing. `supabase/ACCESS.md` has the whole of it, including what it means to
-put a service_role key there.
+**One environment variable is the way through.**
+`SUPABASE_SERVICE_ROLE_KEY`, set on the environment, reaches every session in
+it including the ones nobody opened, and `scripts/hc_supabase.py` reads it
+when there is no `.env`. The URL it falls back to `js/config.js` for, which is
+committed and public, so there is one thing to configure rather than two.
+That is the second transport, in the one place it was missing.
+`supabase/ACCESS.md` has the whole of it, including what it means to put a
+service_role key on an environment.
 
 **There is one routine, not one per Sunday.** Check before you create
 anything:
