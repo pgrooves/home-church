@@ -360,5 +360,6 @@
     background: none !important;
     -webkit-text-fill-color: currentColor !important;
     animation: none !important;
+    filter: none !important;
   }
 }

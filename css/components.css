@@ -3080,10 +3080,10 @@ a.hc-card:active { background: var(--hc-paper-sunk); }
 /* --------------------------------------------------------------------------
    Scripture you can tap
    Every reference that opens the verse sheet says so the same way: a little
-   heavier than the words around it, and every few seconds a thin line of
-   gold light crosses it, left to right, the way it crosses the house on the
-   splash screen. Once, briefly, then still for a while: it is a hint that
-   the words do something, not a thing to watch.
+   heavier than the words around it, and every four and a half seconds a
+   band of gold light crosses it, left to right, with a soft glow while it
+   does, the way the light crosses the house on the splash screen. Then still
+   again: it is a hint that the words do something, not a thing to watch.
 
    HOW. The text is painted by its own background, clipped to the letters.
    The background is the text's colour with one narrow band of the glint in
@@ -3111,26 +3111,39 @@ a[href^="https://www.biblegateway.com/"],
 .hc-row[data-action="open-scripture"] .hc-row__title,
 .hc-entry__ref {
   font-weight: 600;
-  background-image: linear-gradient(105deg,
-    currentColor 40%,
-    var(--hc-scripture-glint) 50%,
-    currentColor 60%);
-  background-size: 300% 100%;
+  background-image: linear-gradient(100deg,
+    currentColor 36%,
+    var(--hc-scripture-glint) 44%,
+    var(--hc-scripture-glint-hi) 50%,
+    var(--hc-scripture-glint) 56%,
+    currentColor 64%);
+  background-size: 260% 100%;
   background-position: 100% 0;
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
-  animation: hc-scripture-glint 7s cubic-bezier(0.4, 0, 0.3, 1) infinite;
-  animation-delay: var(--hc-glint-at, 1.2s);
+  animation: hc-scripture-glint 4.5s cubic-bezier(0.45, 0, 0.35, 1) infinite;
+  animation-delay: var(--hc-glint-at, 0.8s);
 }
 
-/* Still for most of the seven seconds, then one pass of about a second. The
-   delay above staggers where in that cycle each reference starts, which is
-   what makes a guide's list of rows light up one after another rather than
-   all at once. */
+/* Still for a little over half of the four and a half seconds, then one
+   pass of about two, and while the light is on the words they glow a
+   little, gold, the way the mark does on the splash screen.
+
+   The glow is a filter rather than a text-shadow on purpose: the letters
+   are transparent and painted by the background, and a text-shadow is
+   drawn on top of that background, which would cover the gold with a
+   blur. A drop-shadow filter is applied to what was painted, so it glows
+   around the light instead of over it.
+
+   The delay above staggers where in that cycle each reference starts, which
+   is what makes a guide's list of rows light up one after another rather
+   than all at once. */
 @keyframes hc-scripture-glint {
-  0%, 84% { background-position: 100% 0; }
-  100%    { background-position: 0% 0; }
+  0%, 55% { background-position: 100% 0; filter: none; }
+  70%     { filter: drop-shadow(0 0 5px var(--hc-scripture-glow)); }
+  88%     { filter: drop-shadow(0 0 5px var(--hc-scripture-glow)); }
+  100%    { background-position: 0% 0; filter: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {

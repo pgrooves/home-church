@@ -157,7 +157,12 @@ const settle = () => new Promise(r => setImmediate(r));
   ok('a name is not a book', F('Mark was here 5 times'), []);
   ok('nor is a chapter that is not there', F('Mark 97'), []);
   ok('lower case is somebody\'s job, not the book of Job', F('my job 3 days a week'), []);
-  ok('two letter abbreviations are left alone in prose', F('Ps 23 and Jn 3:16'), []);
+  ok('a short form with only a chapter is left alone', F('Ps 23 and Jn 3'), []);
+  ok('but with a chapter and a verse the shape is scripture, in any case',
+     F('john 3:16, Jn 3:16, ps 23:1, rom 8:28.'), ['john 3:16', 'Jn 3:16', 'rom 8:28']);
+  ok('two letter forms still need their capital', F('ps 23:1 but Ps 23:1'), ['Ps 23:1']);
+  ok('and an everyday word in lower case is still a word', F('my job 5:15 shift'), []);
+  ok('a time on its own is not scripture', F('we met at 7:15'), []);
   ok('but not the long names', F('Psalm 23, Song of Songs 2:4, Jude 4'),
      ['Psalm 23', 'Song of Songs 2:4', 'Jude 4']);
   ok('a reference glued to a word is not one', F('Johnny 3:16 and xJohn 3:16'), []);

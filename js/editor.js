@@ -437,7 +437,138 @@
     insertAtCaret('<a href="' + c.esc(url) + '">' + c.esc(label) + '</a>&nbsp;');
   }
 
+  /* ------------------------------------------------ scripture as it is typed
+
+     A reference typed into the Journal becomes a scripture link the moment it
+     is finished, while the caret is still in the box, so it glints and taps
+     like one without waiting for a save. Called on every input event from
+     js/app.js.
+
+     "FINISHED" IS THE HARD PART. "John 3:1" is a real verse and so is
+     "John 3:16", so a reference that ends right at the caret, or is followed
+     only by the characters that could still extend it (":", "-", "." and
+     digits), is left alone: somebody is still typing it. A space, a comma,
+     a new line, or moving the caret away is what finishes it.
+
+     And links already in the box are kept honest. One whose words were
+     edited into another verse gets the new href; one whose words stopped
+     being a reference at all goes back to plain words. That is also what
+     rescues a link a browser let the typing run on inside of ("John 3:16 is"
+     becomes "John 3:16" and " is").
+
+     THE CARET IS THE WHOLE DIFFICULTY OF DOING THIS WHILE TYPING. The DOM is
+     edited around the text node the caret is in rather than rebuilt, the
+     caret's node and offset are carried through every split and merge, and
+     the selection is put back where it was at the end. */
+
+  var SCRIPTURE_HREF = /^https:\/\/(?:www\.bible\.com\/bible\/|www\.biblegateway\.com\/)/;
+  var STILL_TYPING = /^[:.\-–—\d]*$/;
+
+  function textNodes(box) {
+    var out = [];
+    var walker = document.createTreeWalker(box, NodeFilter.SHOW_TEXT, null, false);
+    var node;
+    while ((node = walker.nextNode())) out.push(node);
+    return out;
+  }
+
+  function hrefFor(text) {
+    var p = HC.bible.parseAll(text)[0];
+    return p ? HC.bible.passageUrl(p) : '';
+  }
+
+  function liveLink(box) {
+    if (!box || !HC.bible || !HC.bible.find) return false;
+
+    var sel = window.getSelection();
+    var caret = null;
+    if (sel && sel.rangeCount && sel.isCollapsed && box.contains(sel.anchorNode) &&
+        sel.anchorNode.nodeType === 3) {
+      caret = { node: sel.anchorNode, offset: sel.anchorOffset };
+    }
+    var changed = false;
+
+    // 1. Links that no longer say what they point at.
+    Array.prototype.slice.call(box.querySelectorAll('a[href]')).forEach(function (a) {
+      if (!SCRIPTURE_HREF.test(a.getAttribute('href') || '')) return;
+      var words = (a.textContent || '').trim();
+      // Judged by parse(), not the stricter prose finder: a link somebody made
+      // on purpose that reads "Ps 23" is still a link to Psalm 23.
+      var href = hrefFor(words);
+      /* Typing at the very end of a link lands after it, not in it, so
+         "john 3:1" + "7" is a link and a stray 7. Characters that carry the
+         reference on mean it is being extended: let go of it here, and the
+         whole of it is linked again below once it is finished. */
+      var next = a.nextSibling;
+      var extended = next && next.nodeType === 3 && /^[:.\-\u2013\u2014]?\d/.test(next.nodeValue);
+      if (href && HC.bible.parse(words) && !extended) {
+        if (a.getAttribute('href') !== href && a.getAttribute('href').indexOf('bible.com') !== -1) {
+          a.setAttribute('href', href);
+          changed = true;
+        }
+        return;
+      }
+      // Unwrapped by moving its own text nodes out, so the caret's node survives.
+      while (a.firstChild) a.parentNode.insertBefore(a.firstChild, a);
+      a.parentNode.removeChild(a);
+      changed = true;
+    });
+
+    // 2. Neighbouring text nodes back into one, so a reference split by an
+    //    edit is one string again. The caret goes with its characters.
+    textNodes(box).forEach(function (node) {
+      var next = node.nextSibling;
+      while (next && next.nodeType === 3) {
+        if (caret && caret.node === next) {
+          caret.node = node;
+          caret.offset += node.nodeValue.length;
+        }
+        node.nodeValue += next.nodeValue;
+        next.parentNode.removeChild(next);
+        next = node.nextSibling;
+      }
+    });
+
+    // 3. New references, outside links, that are finished.
+    textNodes(box).forEach(function (node) {
+      if (node.parentNode && node.parentNode.closest && node.parentNode.closest('a')) return;
+      var hits = HC.bible.find(node.nodeValue);
+      // Last first, so the earlier offsets still point at the same characters.
+      for (var i = hits.length - 1; i >= 0; i--) {
+        var h = hits[i];
+        if (caret && caret.node === node && caret.offset >= h.start &&
+            STILL_TYPING.test(node.nodeValue.slice(h.end, caret.offset))) continue;
+
+        var href = hrefFor(h.text);
+        if (!href) continue;
+        var mid = node.splitText(h.start);
+        var after = mid.splitText(h.end - h.start);
+        var a = document.createElement('a');
+        a.setAttribute('href', href);
+        mid.parentNode.insertBefore(a, mid);
+        a.appendChild(mid);
+        if (caret && caret.node === node && caret.offset >= h.end) {
+          caret.node = after;
+          caret.offset -= h.end;
+        }
+        changed = true;
+      }
+    });
+
+    if (changed && caret && sel) {
+      try {
+        var r = document.createRange();
+        r.setStart(caret.node, Math.min(caret.offset, caret.node.nodeValue.length));
+        r.collapse(true);
+        sel.removeAllRanges();
+        sel.addRange(r);
+      } catch (err) { /* the caret's node went away; the browser puts it somewhere sane */ }
+    }
+    return changed;
+  }
+
   HC.editor = {
+    liveLink: liveLink,
     field: field,
     toolbar: toolbar,
     format: format,

@@ -394,21 +394,47 @@
     'Thess', 'Tim', 'Tit', 'Philem', 'Heb', 'Jas', 'Pet', 'Rev', 'Song of Songs'
   ];
 
+  /* Every short form a book goes by, for the loose case below: "Jn 3:16",
+     "Ps 23:1", "gen 1:1". The digit that starts "1co" is the "1 " the
+     pattern already allows for, so it comes off here. */
+  var ANY_SHORT = [];
+  Object.keys(SHORT).forEach(function (code) {
+    SHORT[code].split(' ').forEach(function (k) {
+      var bare = k.replace(/^[1-3]/, '');
+      if (bare && ANY_SHORT.indexOf(bare) === -1) ANY_SHORT.push(bare);
+    });
+  });
+
   var PROSE = (function () {
     var names = {};
     books.forEach(function (b) { names[b.name.replace(/^[1-3] /, '')] = true; });
     PROSE_SHORT.forEach(function (n) { names[n] = true; });
+    ANY_SHORT.forEach(function (n) { names[n] = true; });
     // Longest first, so "Song of Solomon" wins over "Song" and "Philemon"
     // over "Phil".
     var alt = Object.keys(names).sort(function (a, b) { return b.length - a.length; })
       .map(function (n) { return n.replace(/ /g, '\\s+'); }).join('|');
+    // Case-insensitive; find() decides afterwards how much case matters.
     return new RegExp(
-      '(^|[^A-Za-z0-9])((?:[1-3]\\s?)?(?:' + alt + ')\\.?\\s+\\d{1,3}' +
-      '(?:[:.]\\d{1,3}[ab]?(?:\\s?[-–—]\\s?\\d{1,3}(?:[:.]\\d{1,3})?[ab]?)?' +
-      '|\\s?[-–—]\\s?\\d{1,3})?)(?![0-9A-Za-z])', 'g');
+      '(^|[^A-Za-z0-9])((?:[1-3]\\s?)?(' + alt + ')(?:\\.\\s*|\\s+)\\d{1,3}' +
+      '(?:[:.]\\d{1,3}[ab]?(?:\\s?[-\u2013\u2014]\\s?\\d{1,3}(?:[:.]\\d{1,3})?[ab]?)?' +
+      '|\\s?[-\u2013\u2014]\\s?\\d{1,3})?)(?![0-9A-Za-z])', 'gi');
   })();
 
-  /* Every reference in a run of plain text, as { start, end, text }. */
+  /* Words that are books and also ordinary words, left alone in lower case
+     even with a verse after them: "my job 5:15 shift" is a time. */
+  var EVERYDAY = { job: 1, mark: 1, acts: 1, numbers: 1, song: 1, am: 1 };
+
+  /* Every reference in a run of plain text, as { start, end, text }.
+
+     HOW STRICT DEPENDS ON THE SHAPE. With a chapter AND a verse ("3:16"),
+     the shape is unmistakably scripture, so the book can be any case and
+     any short form: "john 3:16", "Jn 3:16", "ps 23:1". Two letter forms
+     still need their capital ("Ps", not "ps"), and the everyday words above
+     still need theirs. With only a chapter ("Psalm 23"), it has to look like
+     a book name somebody meant: a capital, and three letters or more, so
+     "Dan 3" can be a psalm-less person but "Mark was 5" never is. Either
+     way parse() has the last word, so the verse has to exist in the NIV. */
   function find(text) {
     var out = [];
     var s = String(text || '');
@@ -417,12 +443,26 @@
     while ((m = PROSE.exec(s))) {
       var ref = m[2];
       var start = m.index + m[1].length;
-      if (parse(ref)) out.push({ start: start, end: start + ref.length, text: ref });
+      var token = m[3];
+      var capital = /^[A-Z]/.test(token);
+      var bare = token.toLowerCase().replace(/\./g, '');
+      var verse = /\d[:.]\d/.test(ref);
+      var shortForm = bare.length <= 2;
+      var looksMeant = verse
+        ? (capital || (!shortForm && !EVERYDAY[bare]))
+        : (capital && !shortForm && (findFull(token) || PROSE_SHORT.indexOf(token) !== -1));
+      if (looksMeant && parse(ref)) out.push({ start: start, end: start + ref.length, text: ref });
       // A zero width match cannot happen here, but a regex loop that trusts
       // that is a regex loop that hangs the day it is wrong.
       if (PROSE.lastIndex === m.index) PROSE.lastIndex++;
     }
     return out;
+  }
+
+  // Whether a token is a whole book name rather than an abbreviation.
+  function findFull(token) {
+    var t = token.toLowerCase();
+    return books.some(function (b) { return b.name.replace(/^[1-3] /, '').toLowerCase() === t; });
   }
 
   /* Markup in, the same markup out with every reference in its text turned

@@ -5051,6 +5051,20 @@
        typing: rewriting the markup under a live caret moves it. The input
        event afterwards is what saves the linked version through the same
        path as a keystroke. */
+    /* Moving the caret away from a reference finishes it, the same as typing
+       a space after it would: tapping somewhere else in the entry, or the
+       arrow keys. selectionchange is the only event that sees all of those,
+       and it is debounced because it fires on every step of a drag. */
+    var linkAfterMove = null;
+    document.addEventListener('selectionchange', function () {
+      window.clearTimeout(linkAfterMove);
+      linkAfterMove = window.setTimeout(function () {
+        var box = document.activeElement;
+        if (!box || !box.getAttribute || box.getAttribute('data-journal-body') === null) return;
+        if (HC.editor.liveLink(box)) box.dispatchEvent(new Event('input', { bubbles: true }));
+      }, 350);
+    });
+
     document.addEventListener('focusout', function (evt) {
       var el = evt.target;
       if (!el || !el.getAttribute || el.getAttribute('data-journal-body') === null) return;
@@ -5160,6 +5174,10 @@
          once there are, so the back gesture and a reload both land on the
          real entry rather than on a blank draft. */
       if (el.getAttribute && el.getAttribute('data-journal-body') !== null) {
+        // A reference finished just now becomes a link before anything is
+        // saved. Not mid-composition: rewriting text under an IME or iOS
+        // dictation that has not committed yet loses what it was holding.
+        if (!evt.isComposing) HC.editor.liveLink(el);
         // A contenteditable, not a textarea: what was typed is markup, and it
         // is sanitized on the way into the store rather than here.
         debounce('journal-body', function () { saveEntryBody(el.innerHTML); });

@@ -301,6 +301,84 @@ const SHEET = `(function () {
       await page.evaluate(`!!document.querySelector('[data-sheet="verse"] mark.hc-hl')`));
     await page.keyboard.press('Escape');
 
+    /* Typed the way a person types, with the caret in the box the whole
+       time: the link has to appear the moment the reference is finished,
+       not a verse before, and the caret has to stay where the writing is. */
+    await page.evaluate(`HC.router.go({ name: 'journal-entry', id: 'new' })`);
+    await page.waitForSelector('#hc-entry-body');
+    await page.locator('#hc-entry-body').tap();
+    const live = () => page.evaluate(`(function () {
+      var box = document.querySelector('#hc-entry-body');
+      var a = box.querySelectorAll('a');
+      return { links: [].map.call(a, function (x) { return x.textContent; }),
+               hrefs: [].map.call(a, function (x) { return x.getAttribute('href'); }),
+               text: box.textContent.replace(/\u00a0/g, ' '), focused: document.activeElement === box };
+    })()`);
+
+    await page.keyboard.type('Reading john 3:1');
+    let now = await live();
+    ok('while typing, "john 3:1" is not linked yet: it may be going on to 3:16',
+      now.links.length === 0, JSON.stringify(now));
+    await page.keyboard.type('6');
+    now = await live();
+    ok('nor is "john 3:16" with the caret still at the end of it', now.links.length === 0, JSON.stringify(now));
+    await page.keyboard.type(' again');
+    now = await live();
+    ok('a space finishes it: linked while still typing, lower case and all',
+      now.links.join() === 'john 3:16' && now.hrefs[0] === 'https://www.bible.com/bible/111/JHN.3.16.NIV',
+      JSON.stringify(now));
+    ok('and the caret carried on after it, in the box', now.text === 'Reading john 3:16 again' && now.focused,
+      JSON.stringify(now));
+
+    await page.keyboard.type(' and Jn 14:6, then more.');
+    now = await live();
+    ok('a short form with chapter and verse, finished by a comma',
+      now.links.join('|') === 'john 3:16|Jn 14:6', JSON.stringify(now));
+    ok('nothing typed went missing', now.text === 'Reading john 3:16 again and Jn 14:6, then more.',
+      JSON.stringify(now));
+
+    await page.keyboard.type(' Psalm 23:1-');
+    now = await live();
+    ok('a range still being typed waits', now.links.length === 2, JSON.stringify(now));
+    await page.keyboard.type('3');
+    await page.keyboard.press('Enter');
+    now = await live();
+    ok('and a new line finishes it', now.links.indexOf('Psalm 23:1-3') !== -1, JSON.stringify(now));
+
+    // Editing a link's words into another verse moves the link with them.
+    await page.evaluate(`(function () {
+      var a = document.querySelector('#hc-entry-body a');
+      var t = a.firstChild;
+      var r = document.createRange();
+      r.setStart(t, t.nodeValue.length); r.collapse(true);
+      var s = getSelection(); s.removeAllRanges(); s.addRange(r);
+    })()`);
+    await page.keyboard.press('Backspace');
+    await page.keyboard.type('7');
+    now = await live();
+    ok('while the new verse is being typed the old link lets go of it',
+      now.links[0] !== 'john 3:1', JSON.stringify(now));
+    // Moving on, here with the arrow keys, finishes it.
+    await page.keyboard.press('ArrowRight');
+    await page.keyboard.press('ArrowRight');
+    await page.waitForTimeout(500);
+    now = await live();
+    ok('a link edited into another verse points at the new one',
+      now.links[0] === 'john 3:17' && now.hrefs[0] === 'https://www.bible.com/bible/111/JHN.3.17.NIV',
+      JSON.stringify(now));
+
+    await page.waitForTimeout(600);
+    const livelySaved = await page.evaluate(`HC.journal.all({ kind: 'entry' })[0].bodyHtml`);
+    ok('and it is saved with the links in it',
+      /JHN\.3\.17\.NIV">john 3:17<\/a>/.test(livelySaved) && /JHN\.14\.6\.NIV">Jn 14:6<\/a>/.test(livelySaved),
+      livelySaved);
+
+    await page.locator('#hc-entry-body a', { hasText: 'Jn 14:6' }).tap();
+    await page.waitForSelector('[data-sheet="verse"]');
+    ok('and a link made while typing opens the verse sheet while still editing',
+      (await page.evaluate(`document.querySelector('[data-sheet="verse"]').getAttribute('aria-label')`)) === 'Jn 14:6');
+    await page.keyboard.press('Escape');
+
     /* An entry typed before this existed, reopened: the reference comes up as
        a link without anybody having to touch it. */
     const old = await page.evaluate(`(function () {

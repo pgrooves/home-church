@@ -1461,7 +1461,7 @@
      crosses each reference, so the rows light up one after another down the
      page. See "Scripture you can tap" in css/components.css. */
   function scriptureRow(item, index) {
-    var at = typeof index === 'number' ? ' style="--hc-glint-at: ' + (1.2 + index * 0.14).toFixed(2) + 's"' : '';
+    var at = typeof index === 'number' ? ' style="--hc-glint-at: ' + (0.8 + index * 0.18).toFixed(2) + 's"' : '';
     return '' +
       '<button type="button" class="hc-row" data-action="open-scripture" ' +
         'data-reference="' + esc(item.reference) + '"' + at + '>' +
