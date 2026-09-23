@@ -4304,9 +4304,19 @@ a[href^="https://www.biblegateway.com/"]::selection,
 
    role="status" rather than role="alert", so a screen reader reads it when it
    reaches it instead of interrupting whatever is being read.
+
+   STICKY, THE WAY THE STRIP BELOW IS FIXED. It starts where it always sat,
+   above the greeting, and when Home scrolls it stops against the bottom of
+   the top bar, or of the pinned strip when there is one, and stays there. It
+   is sticky and not fixed because it belongs to Home and not to the shell:
+   the other tabs never draw it, so it leaves when Home does. Nothing between
+   it and .hc-scroll clips overflow, which is what sticky needs to work.
    -------------------------------------------------------------------------- */
 
 .hc-pinned {
+  position: sticky;
+  z-index: 5;                  /* over Home's cards, under all of the chrome */
+  top: calc(var(--hc-header-h) + var(--hc-pin-h, 0px) + env(safe-area-inset-top));
   background: var(--hc-accent-deep);
   border-radius: var(--hc-radius-sm);
   padding: var(--hc-space-md) var(--hc-space-base);
