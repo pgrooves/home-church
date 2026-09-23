@@ -3078,6 +3078,78 @@ a.hc-card:active { background: var(--hc-paper-sunk); }
 }
 
 /* --------------------------------------------------------------------------
+   Scripture you can tap
+   Every reference that opens the verse sheet says so the same way: a little
+   heavier than the words around it, and every few seconds a thin line of
+   gold light crosses it, left to right, the way it crosses the house on the
+   splash screen. Once, briefly, then still for a while: it is a hint that
+   the words do something, not a thing to watch.
+
+   HOW. The text is painted by its own background, clipped to the letters.
+   The background is the text's colour with one narrow band of the glint in
+   the middle, three times wider than the words, and walking it from one end
+   to the other carries the band across. currentColor rather than a token,
+   so it is the same taupe or ink the words already were in either theme,
+   and the hairline under a link keeps its own colour because a border is
+   not text.
+
+   WHERE. Anything that opens the sheet:
+     a scripture link in a journal entry, a note or an announcement, found by
+       its href, because those are markup somebody wrote and carry no class
+     the scripture rows on a guide, cascading down the list, one row a beat
+       after the one above (--hc-glint-at, set by scriptureRow())
+     the passage under a verse highlight on its journal entry
+
+   REDUCE MOTION keeps the weight and drops the light. The global rule in
+   base.css shortens durations rather than removing animations, and an
+   infinite animation shortened to nothing is a flicker, so it is switched
+   off by name here instead.
+   -------------------------------------------------------------------------- */
+
+a[href^="https://www.bible.com/bible/"],
+a[href^="https://www.biblegateway.com/"],
+.hc-row[data-action="open-scripture"] .hc-row__title,
+.hc-entry__ref {
+  font-weight: 600;
+  background-image: linear-gradient(105deg,
+    currentColor 40%,
+    var(--hc-scripture-glint) 50%,
+    currentColor 60%);
+  background-size: 300% 100%;
+  background-position: 100% 0;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: hc-scripture-glint 7s cubic-bezier(0.4, 0, 0.3, 1) infinite;
+  animation-delay: var(--hc-glint-at, 1.2s);
+}
+
+/* Still for most of the seven seconds, then one pass of about a second. The
+   delay above staggers where in that cycle each reference starts, which is
+   what makes a guide's list of rows light up one after another rather than
+   all at once. */
+@keyframes hc-scripture-glint {
+  0%, 84% { background-position: 100% 0; }
+  100%    { background-position: 0% 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  a[href^="https://www.bible.com/bible/"],
+  a[href^="https://www.biblegateway.com/"],
+  .hc-row[data-action="open-scripture"] .hc-row__title,
+  .hc-entry__ref { animation: none; }
+}
+
+/* A selection inside a reference has to be readable, and transparent letters
+   over a selection highlight are not. While selected they are simply the
+   colour they were. */
+a[href^="https://www.bible.com/bible/"]::selection,
+a[href^="https://www.biblegateway.com/"]::selection,
+.hc-row[data-action="open-scripture"] .hc-row__title::selection {
+  -webkit-text-fill-color: currentColor;
+}
+
+/* --------------------------------------------------------------------------
    The sheet
    One overlay, from the bottom, used by the scripture picker. The app's only
    modal, and it stays that way unless something else genuinely cannot be a

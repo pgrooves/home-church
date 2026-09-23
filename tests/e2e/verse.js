@@ -323,7 +323,40 @@ const SHEET = `(function () {
     ok('the Journal files verse highlights under Scripture',
       await page.evaluate(`/Scripture/.test(document.querySelector('.hc-journal').innerText) && /From scripture/i.test(document.querySelector('.hc-journal').innerText)`));
 
-    /* ------------------------------------------------ 5. leaving */
+    /* --------------------------- 5. scripture says it can be tapped */
+
+    const glint = sel => page.evaluate(`(function (sel) {
+      var el = document.querySelector(sel);
+      if (!el) return null;
+      var cs = getComputedStyle(el);
+      return { weight: cs.fontWeight, anim: cs.animationName, clip: cs.webkitBackgroundClip };
+    })(${JSON.stringify(sel)})`);
+
+    await page.evaluate(`HC.router.go({ name: 'guide-reader', id: ${JSON.stringify(guide)} })`);
+    await page.waitForTimeout(400);
+    let g = await glint('.hc-row[data-action="open-scripture"] .hc-row__title');
+    ok('a guide\'s scripture rows are a little heavier, with the glint crossing them',
+      g && g.weight === '600' && g.anim === 'hc-scripture-glint' && g.clip === 'text', JSON.stringify(g));
+    ok('each row a beat after the one above',
+      await page.evaluate(`(function () {
+        var rows = document.querySelectorAll('.hc-row[data-action="open-scripture"]');
+        return rows.length < 2 || getComputedStyle(rows[1].querySelector('.hc-row__title')).animationDelay !==
+          getComputedStyle(rows[0].querySelector('.hc-row__title')).animationDelay;
+      })()`));
+
+    await page.evaluate(`HC.router.go({ name: 'journal-entry', id: ${JSON.stringify(old)} })`);
+    await page.waitForSelector('#hc-entry-body a');
+    g = await glint('#hc-entry-body a');
+    ok('and so is a scripture link in an entry', g && g.weight === '600' && g.anim === 'hc-scripture-glint',
+      JSON.stringify(g));
+
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    g = await glint('#hc-entry-body a');
+    ok('with Reduce Motion on it keeps the weight and loses the light',
+      g && g.weight === '600' && g.anim === 'none', JSON.stringify(g));
+    await page.emulateMedia({ reducedMotion: 'no-preference' });
+
+    /* ------------------------------------------------ 6. leaving */
 
     await page.evaluate('window.__left = []');
     await page.evaluate(`HC.verse.open('Romans 8:28')`);

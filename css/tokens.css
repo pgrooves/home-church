@@ -231,6 +231,11 @@
   --hc-hl-noted: color-mix(in srgb, var(--hc-accent) 78%, transparent);
 
   --hc-gold:        #D7BA85;
+  /* The light that crosses a scripture reference, css/components.css. A
+     shade deeper than the gold above, because it is drawn inside taupe text
+     on paper rather than as a surface, and the brand gold on paper nearly
+     disappears. */
+  --hc-scripture-glint: #B8924A;
   --hc-gold-ink:    #1A1918;
   --hc-gold-halo:   rgba(255,252,246,0.55);
   --hc-gold-skin:      linear-gradient(178deg, rgba(233,208,158,0.86), rgba(206,177,122,0.82));
@@ -304,6 +309,9 @@
   --hc-hl-noted: color-mix(in srgb, var(--hc-accent) 42%, transparent);
 
   --hc-gold:        #CBAC74;
+  /* Brighter on dark, the other way round: the text is already light, so
+     the light crossing it has to be lighter still to be seen at all. */
+  --hc-scripture-glint: #F3DDAE;
   --hc-gold-ink:    #F4EFE6;
   --hc-gold-halo:   rgba(12,11,10,0.55);
   --hc-gold-skin:      linear-gradient(178deg, rgba(226,197,141,0.86), rgba(190,158,100,0.80));

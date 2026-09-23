@@ -348,3 +348,17 @@
     margin: 0;
   }
 }
+
+/* Scripture you can tap is painted by a background clipped to its letters
+   (see css/components.css), and a printer leaves backgrounds out by default.
+   On paper it is ordinary ink. */
+@media print {
+  a[href^="https://www.bible.com/bible/"],
+  a[href^="https://www.biblegateway.com/"],
+  .hc-row[data-action="open-scripture"] .hc-row__title,
+  .hc-entry__ref {
+    background: none !important;
+    -webkit-text-fill-color: currentColor !important;
+    animation: none !important;
+  }
+}

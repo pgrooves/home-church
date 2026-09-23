@@ -1457,10 +1457,14 @@
 
   /* --------------------------------------------------------------- scripture */
 
-  function scriptureRow(item) {
+  /* `index` is the row's place in its list, and only staggers the glint that
+     crosses each reference, so the rows light up one after another down the
+     page. See "Scripture you can tap" in css/components.css. */
+  function scriptureRow(item, index) {
+    var at = typeof index === 'number' ? ' style="--hc-glint-at: ' + (1.2 + index * 0.14).toFixed(2) + 's"' : '';
     return '' +
       '<button type="button" class="hc-row" data-action="open-scripture" ' +
-        'data-reference="' + esc(item.reference) + '">' +
+        'data-reference="' + esc(item.reference) + '"' + at + '>' +
         '<span class="hc-row__body">' +
           '<span class="hc-row__title">' + esc(item.reference) + '</span>' +
           '<p class="hc-caption">' + esc(item.note) + '</p>' +
