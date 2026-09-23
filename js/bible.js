@@ -368,8 +368,104 @@
       (p.toVerse > p.verse ? '-' + p.toVerse : '') + '.' + VERSION.abbreviation;
   }
 
+  /* -------------------------------------------- references in ordinary words
+
+     The journal's half of the verse sheet. Somebody types "John 3:16" into an
+     entry, and once it is saved those letters become a link the sheet opens
+     from, the same as if they had used the scripture button.
+
+     STRICTER THAN parse(), on purpose. parse() is handed things already
+     known to be references; this is reading prose, where "Mark" is a name,
+     "Job" is work and "Am" starts a sentence. So:
+
+       the book has to start with a capital letter, as a book name does
+       two letter abbreviations are not books here (no "Ps 23", no "Jn 3")
+       a chapter number has to follow, so "Mark" alone is never a link
+       and parse() has to agree the chapter and verse exist, so "Mark 97"
+       stays words
+
+     Numbered books take their number as 1, 2 or 3 and nothing else, because
+     "I John 3" in a sentence is more often a person than a letter. */
+  var PROSE_SHORT = [
+    'Gen', 'Exod', 'Lev', 'Num', 'Deut', 'Josh', 'Judg', 'Sam', 'Kgs', 'Chr',
+    'Chron', 'Neh', 'Esth', 'Psa', 'Psalm', 'Prov', 'Eccl', 'Eccles', 'Isa',
+    'Jer', 'Lam', 'Ezek', 'Dan', 'Hos', 'Obad', 'Mic', 'Nah', 'Hab', 'Zeph',
+    'Hag', 'Zech', 'Mal', 'Matt', 'Rom', 'Cor', 'Gal', 'Eph', 'Phil', 'Col',
+    'Thess', 'Tim', 'Tit', 'Philem', 'Heb', 'Jas', 'Pet', 'Rev', 'Song of Songs'
+  ];
+
+  var PROSE = (function () {
+    var names = {};
+    books.forEach(function (b) { names[b.name.replace(/^[1-3] /, '')] = true; });
+    PROSE_SHORT.forEach(function (n) { names[n] = true; });
+    // Longest first, so "Song of Solomon" wins over "Song" and "Philemon"
+    // over "Phil".
+    var alt = Object.keys(names).sort(function (a, b) { return b.length - a.length; })
+      .map(function (n) { return n.replace(/ /g, '\\s+'); }).join('|');
+    return new RegExp(
+      '(^|[^A-Za-z0-9])((?:[1-3]\\s?)?(?:' + alt + ')\\.?\\s+\\d{1,3}' +
+      '(?:[:.]\\d{1,3}[ab]?(?:\\s?[-–—]\\s?\\d{1,3}(?:[:.]\\d{1,3})?[ab]?)?' +
+      '|\\s?[-–—]\\s?\\d{1,3})?)(?![0-9A-Za-z])', 'g');
+  })();
+
+  /* Every reference in a run of plain text, as { start, end, text }. */
+  function find(text) {
+    var out = [];
+    var s = String(text || '');
+    var m;
+    PROSE.lastIndex = 0;
+    while ((m = PROSE.exec(s))) {
+      var ref = m[2];
+      var start = m.index + m[1].length;
+      if (parse(ref)) out.push({ start: start, end: start + ref.length, text: ref });
+      // A zero width match cannot happen here, but a regex loop that trusts
+      // that is a regex loop that hangs the day it is wrong.
+      if (PROSE.lastIndex === m.index) PROSE.lastIndex++;
+    }
+    return out;
+  }
+
+  /* Markup in, the same markup out with every reference in its text turned
+     into a scripture link. Works on the string rather than the DOM, so the
+     same function serves the store (js/journal.js, on every save) and the
+     editor (on the way onto the screen, and when the writing box lets go).
+
+     Only text between tags is touched, and never text already inside an
+     <a>: a reference somebody linked on purpose, with the scripture button,
+     keeps the link it has. The words of a new link are exactly the words
+     that were typed, so "Rom 12:1-2" stays "Rom 12:1-2" on the page. */
+  function linkify(html) {
+    var parts = String(html || '').split(/(<[^>]*>)/);
+    var inLink = 0;
+    for (var i = 0; i < parts.length; i++) {
+      var part = parts[i];
+      if (!part) continue;
+      if (part.charAt(0) === '<') {
+        if (/^<a[\s>]/i.test(part)) inLink++;
+        else if (/^<\/a\s*>/i.test(part) && inLink) inLink--;
+        continue;
+      }
+      if (inLink) continue;
+      var hits = find(part);
+      if (!hits.length) continue;
+      var out = '';
+      var cursor = 0;
+      hits.forEach(function (h) {
+        var href = passageUrl(parseAll(h.text)[0]);
+        out += part.slice(cursor, h.start) +
+          '<a href="' + href.replace(/&/g, '&amp;').replace(/"/g, '&quot;') + '">' +
+          h.text + '</a>';
+        cursor = h.end;
+      });
+      parts[i] = out + part.slice(cursor);
+    }
+    return parts.join('');
+  }
+
   HC.bible = {
     VERSION: VERSION,
+    find: find,
+    linkify: linkify,
     books: books,
     getBook: getBook,
     findBook: findBook,

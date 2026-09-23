@@ -22,6 +22,11 @@
    is the honest answer: the words are not here, and that button is where
    they are.
 
+   WHAT YOU CAN DO WITH THE WORDS. Select them, and the same Note this /
+   Highlight bar a guide has comes up; what you keep goes to the Journal
+   under Scripture. js/highlight.js does all of it; this only draws the
+   paragraphs the way that file expects. See paragraphs() below.
+
    WHAT IT WILL NOT DO is guess. A reference js/bible.js cannot read, or one
    that runs past the end of its chapter, never reaches the network. It goes
    straight to bible.com's search, which is where the old Bible Gateway link
@@ -104,10 +109,21 @@
 
   /* ------------------------------------------------------------ the sheet */
 
-  function paragraphs(text) {
-    return String(text || '').split(/\n{2,}/).map(function (para) {
-      return '<p class="hc-body-serif hc-verse__text">' +
-        c.esc(para).replace(/\n/g, '<br>') + '</p>';
+  /* Each paragraph is a block the highlighter can keep words from, the same
+     contract a guide's prose has with js/highlight.js: a data-hl-path on the
+     block, and something around it that says what the words belong to. Here
+     that is data-passage on the body, the reference as the sheet shows it.
+
+     Drawn through HC.journal.marked(), so words kept from this passage, or
+     from another one that overlaps it, come up already highlighted. Line
+     breaks stay as characters and CSS shows them, because the offsets a
+     highlight stores are counted in the block's text, and a <br> is not
+     text. */
+  function paragraphs(text, id) {
+    return String(text || '').split(/\n{2,}/).map(function (para, i) {
+      var path = 'scripture:' + id + ':' + i;
+      return '<p class="hc-body-serif hc-verse__text" data-hl-path="' + c.esc(path) + '">' +
+        (HC.journal ? HC.journal.marked(null, path, para) : c.esc(para)) + '</p>';
     }).join('');
   }
 
@@ -144,7 +160,7 @@
     }
 
     var v = got.version || {};
-    return paragraphs(got.text) +
+    return paragraphs(got.text, HC.bible.usfm(p)) +
       (v.copyright || v.abbreviation
         ? '<p class="hc-caption hc-verse__credit">' +
             c.esc(v.copyright || v.abbreviation) + '</p>'
@@ -169,7 +185,8 @@
           '</div>' +
           pills() +
           '<h2 class="hc-sheet__preview hc-verse__ref">' + c.esc(HC.bible.label(p)) + '</h2>' +
-          '<div class="hc-verse__body">' + body() + '</div>' +
+          '<div class="hc-verse__body" data-passage="' + c.esc(HC.bible.label(p)) + '">' +
+            body() + '</div>' +
           '<div class="hc-sheet__foot">' +
             c.button('Read the full chapter', {
               action: 'open-url', url: HC.bible.chapterUrl(p), variant: 'secondary'

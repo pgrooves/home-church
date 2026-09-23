@@ -107,7 +107,7 @@
   }
 
   function eyebrowFor(entry) {
-    if (entry.kind === 'highlight') return 'From the guide';
+    if (entry.kind === 'highlight') return entry.guideId ? 'From the guide' : 'From scripture';
     if (entry.kind === 'reflection') return 'Take home';
     if (entry.kind === 'night') return 'Your group';
     return entry.guideTitle ? 'On this guide' : 'Loose note';
@@ -154,9 +154,15 @@
     var groups = {};
 
     list.forEach(function (entry) {
-      var key = entry.guideId || '__loose';
+      // What was kept from the verse sheet belongs to no guide, but it is not
+      // a loose note either: it is scripture, and it gets a heading of its own.
+      var key = entry.guideId ||
+        (HC.journal.isScripturePath(entry.path) ? '__scripture' : '__loose');
       if (!groups[key]) {
-        groups[key] = { title: entry.guideTitle || 'Loose notes', entries: [] };
+        groups[key] = {
+          title: key === '__scripture' ? 'Scripture' : (entry.guideTitle || 'Loose notes'),
+          entries: []
+        };
         order.push(key);
       }
       groups[key].entries.push(entry);
@@ -169,7 +175,8 @@
     var html = '';
     order.forEach(function (key) {
       var group = groups[key];
-      html += c.sectionHeader(key === '__loose' ? 'No guide' : 'Guide', group.title);
+      var eyebrow = key === '__loose' ? 'No guide' : (key === '__scripture' ? 'Highlighted' : 'Guide');
+      html += c.sectionHeader(eyebrow, group.title);
       html += '<div class="hc-jlist">';
       group.entries.forEach(function (entry) { html += card(entry); });
       html += '</div>';
@@ -365,11 +372,20 @@
     // What you highlighted, above what you wrote about it. Not editable: it
     // is a quotation, and a quotation you can rewrite is not one.
     if (entry && entry.quote) {
+      /* Kept from the verse sheet, the caption is the passage, and tapping it
+         opens the passage again, with this highlight drawn in it. */
+      var fromScripture = !entry.guideId && HC.journal.isScripturePath(entry.path) && entry.title;
       html += '<figure class="hc-entry__quote">' +
         '<blockquote class="hc-quote">“' + c.esc(entry.quote) + '”</blockquote>' +
-        (entry.guideTitle
-          ? '<figcaption class="hc-caption">' + c.esc(entry.guideTitle) + '</figcaption>'
-          : '') +
+        (fromScripture
+          ? '<figcaption class="hc-caption">' +
+              '<button type="button" class="hc-entry__ref" data-action="open-scripture" ' +
+                'data-reference="' + c.esc(entry.title) + '">' +
+                c.esc(entry.title + ' · ' + HC.bible.VERSION.abbreviation) + '</button>' +
+            '</figcaption>'
+          : (entry.guideTitle
+            ? '<figcaption class="hc-caption">' + c.esc(entry.guideTitle) + '</figcaption>'
+            : '')) +
       '</figure>';
     } else {
       html += c.sectionHeader(entry ? 'Your entry' : 'New', entry && entry.title ? entry.title : 'Write it down',

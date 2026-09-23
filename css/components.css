@@ -3174,6 +3174,21 @@ a.hc-card:active { background: var(--hc-paper-sunk); }
 
 .hc-verse__text + .hc-verse__text { margin-top: var(--hc-space-md); }
 
+/* Line breaks in the Psalms are characters in the text rather than <br>s,
+   because a highlight's offsets count characters. pre-line draws them and
+   still folds runs of spaces. */
+.hc-verse__text { white-space: pre-line; }
+
+/* The passage under a highlight kept from the verse sheet, on its journal
+   entry. Drawn the way a scripture link in the writing is, because it does
+   the same thing: opens the passage. */
+.hc-entry__ref {
+  padding: 0;
+  font: inherit;
+  color: var(--hc-accent-deep);
+  border-bottom: var(--hc-hairline) solid var(--hc-accent);
+}
+
 .hc-verse__status { color: var(--hc-mid); }
 
 .hc-verse__credit {
@@ -3311,6 +3326,19 @@ a.hc-card:active { background: var(--hc-paper-sunk); }
   transform: translateY(10px) scale(0.86);
   pointer-events: none;
 }
+
+/* Over the verse sheet. The sheet covers the tab bar and the band above it,
+   so the bar comes up over the sheet instead, at the foot of it where Read
+   the full chapter is, which is the one thing on the sheet that can wait
+   while somebody decides what to do with the words they picked. */
+#app[data-hlbar="sheet"] .hc-hlbar {
+  z-index: 65;
+  bottom: calc(var(--hc-space-lg) + env(safe-area-inset-bottom));
+}
+
+/* And the button it sits over steps aside, rather than showing its words
+   round the edges of the bar. It is back the moment the selection ends. */
+#app[data-hlbar="sheet"] [data-sheet="verse"] .hc-sheet__foot { visibility: hidden; }
 
 #app[data-hlbar="true"] .hc-jlink {
   opacity: 0;

@@ -107,7 +107,7 @@
        than a line in a list, and it deserves the awkward paragraph as well as
        the reassuring one. See supabase/migrations/0023_journal.sql. */
     html += block('Your journal', [
-      'Anything you write in the Journal, and any note you attach to something you highlighted in a guide, is yours. Signed out, it never leaves your phone. Signed in, a copy is kept on our server so it is still there when you open the app on a new phone, and so that losing your phone does not lose what you wrote.',
+      'Anything you write in the Journal, and any note you attach to something you highlighted in a guide or a verse, is yours. Signed out, it never leaves your phone. Signed in, a copy is kept on our server so it is still there when you open the app on a new phone, and so that losing your phone does not lose what you wrote.',
       'No other account can read it. That is not a setting we chose and could change by accident, it is enforced by the database itself: a request for somebody else’s journal comes back empty, and there is no screen anywhere in this app, or in anything the church runs, that shows one person another person’s writing.',
       'Here is the part that would be easy to leave out. Your journal is stored as ordinary text, which means whoever administers our database could read it if they went looking, the same way it is true of your email at any company. We are not going to pretend otherwise by saying it is encrypted so that not even we can read it. That would need a key, and signing in here is a code sent to you rather than a password, so there is nothing to build a key from that would not either live on one phone, defeating the point of it following you, or be held by us, defeating the point of the key.',
       'What we can tell you is what we actually do: nobody at this church reads journals, there is no screen that would show one, and deleting an entry deletes it from our server too. If you would rather keep it all on your phone, do not sign in. Everything in the Journal works either way.',
@@ -332,7 +332,7 @@
       html += list('What is stored in your account', [
         'The email address you sign in with.',
         'Your name, and anything else you filled in under Your information: birthday, campus, marital status, and your address if you gave one.',
-        'Your journal, including anything you highlighted in a guide and whatever you wrote about it.'
+        'Your journal, including anything you highlighted in a guide or a verse and whatever you wrote about it.'
       ]);
     }
 

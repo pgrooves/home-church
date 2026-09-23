@@ -156,6 +156,11 @@ function boot(opts) {
   // own link policy. Below store.js and above journal.js, the same order
   // index.html loads them in.
   vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'js', 'richtext.js'), 'utf8'), sandbox);
+  // The books, for the references journal.js turns into links on save. Left
+  // out when a test asks, to prove the store still works without them.
+  if (!opts.noBible) {
+    vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'js', 'bible.js'), 'utf8'), sandbox);
+  }
   vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'js', 'journal.js'), 'utf8'), sandbox);
 
   const HC = sandbox.window.HC;
@@ -491,6 +496,61 @@ console.log('\n— highlights, after the guide has been edited —');
 /* ------------------------------------------------------------------ sync */
 
 console.log('\n— two phones, one journal —');
+/* ------------------------------------------------ scripture in the journal */
+
+console.log('\n— scripture in the journal —');
+{
+  const { HC } = boot();
+
+  const typed = HC.journal.create({ bodyHtml: '<p>Sat with Romans 8:28 and Psalm 23 today.</p>' });
+  ok('a reference typed as words is a link once saved',
+     typed.bodyHtml,
+     '<p>Sat with <a href="https://www.bible.com/bible/111/ROM.8.28.NIV">Romans 8:28</a> and ' +
+       '<a href="https://www.bible.com/bible/111/PSA.23.NIV">Psalm 23</a> today.</p>');
+  ok('and both are in the entry\'s scripture', typed.refs, ['Romans 8:28', 'Psalm 23']);
+  ok('the words read the same as before', typed.bodyText, 'Sat with Romans 8:28 and Psalm 23 today.');
+
+  const edited = HC.journal.update(typed.id, { bodyHtml: '<p>Changed my mind: John 3:16.</p>' });
+  ok('an edit is linked the same way', edited.refs, ['John 3:16']);
+
+  const noBible = boot({ noBible: true }).HC;
+  ok('without the books loaded an entry is still saved, just not linked',
+     noBible.journal.create({ bodyHtml: '<p>John 3:16</p>' }).bodyHtml, '<p>John 3:16</p>');
+
+  // A highlight made in the verse sheet.
+  const WORDS = 'For God so loved the world that he gave his one and only Son';
+  const kept = HC.journal.create({
+    kind: 'highlight',
+    guideId: null,
+    title: 'John 3:16-18',
+    path: 'scripture:JHN.3.16-JHN.3.18:0',
+    quote: 'loved the world',
+    start: 11, end: 26
+  });
+
+  ok('a verse highlight is filed under its passage', kept.refs, ['John 3:16-18']);
+  ok('and shows up under the Scripture filter',
+     HC.journal.all({ withScripture: true }).map(e => e.id).indexOf(kept.id) !== -1, true);
+  ok('it is a scripture path', HC.journal.isScripturePath(kept.path), true);
+
+  const mark = html => /<mark[^>]*>loved the world<\/mark>/.test(html);
+  ok('it is drawn in the passage it was made in',
+     mark(HC.journal.marked(null, 'scripture:JHN.3.16-JHN.3.18:0', WORDS)), true);
+  ok('and in another passage that overlaps it',
+     mark(HC.journal.marked(null, 'scripture:JHN.3.16:0', WORDS)), true);
+  ok('but not in another book with the same words',
+     mark(HC.journal.marked(null, 'scripture:ROM.8.28:0', WORDS)), false);
+  ok('nor another chapter of the same book',
+     mark(HC.journal.marked(null, 'scripture:JHN.5.1:0', WORDS)), false);
+  ok('and never in a guide',
+     mark(HC.journal.marked('some-guide', 'shortSummary.0', WORDS)), false);
+
+  // A note written about it is a note like any other.
+  HC.journal.update(kept.id, { bodyHtml: '<p>This is the whole thing.</p>' });
+  ok('a note keeps the passage as its scripture',
+     HC.journal.get(kept.id).refs, ['John 3:16-18']);
+}
+
 (async () => {
   // Nothing goes up while nobody is signed in.
   {

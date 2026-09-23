@@ -99,7 +99,9 @@ const SHEET = `(function () {
       body: JSON.stringify({
         id: ref,
         reference: ref,
-        text: 'Words for ' + ref,
+        text: ref === 'JHN.3.16'
+          ? 'For God so loved the world that he gave his one and only Son'
+          : 'Words for ' + ref,
         version: { id: 111, abbreviation: 'NIV', copyright: 'NIV® Copyright © 2011 by Biblica, Inc.®' }
       })
     });
@@ -195,7 +197,133 @@ const SHEET = `(function () {
       (await page.evaluate('window.__left')).join() === 'https://example.com/',
       (await page.evaluate('window.__left')).join());
 
-    /* ------------------------------------------------ 3. leaving */
+    /* ------------------------------ 3. keeping words from the sheet */
+
+    /* Selects `words` inside the first paragraph of the verse sheet the way a
+       drag would leave it: one Range, which fires selectionchange. */
+    const select = words => page.evaluate(`(function (words) {
+      var block = document.querySelector('[data-sheet="verse"] .hc-verse__text');
+      var walker = document.createTreeWalker(block, NodeFilter.SHOW_TEXT);
+      var node;
+      while ((node = walker.nextNode())) {
+        var at = node.nodeValue.indexOf(words);
+        if (at === -1) continue;
+        var r = document.createRange();
+        r.setStart(node, at);
+        r.setEnd(node, at + words.length);
+        var sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(r);
+        return true;
+      }
+      return false;
+    })(${JSON.stringify(words)})`);
+
+    await page.evaluate(`HC.verse.open('John 3:16')`);
+    await page.waitForSelector('[data-sheet="verse"] .hc-verse__text');
+    await select('loved the world');
+    await page.waitForSelector('.hc-hlbar', { timeout: 3000 }).catch(() => {});
+
+    const bar = await page.evaluate(`(function () {
+      var b = document.querySelector('.hc-hlbar');
+      if (!b) return null;
+      var r = b.getBoundingClientRect();
+      var top = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+      return { onTop: !!(top && top.closest('.hc-hlbar')), mode: document.getElementById('app').getAttribute('data-hlbar') };
+    })()`);
+    ok('selecting words in the verse sheet brings up Note this / Highlight', !!bar, JSON.stringify(bar));
+    ok('over the sheet, where it can be tapped', bar && bar.onTop && bar.mode === 'sheet', JSON.stringify(bar));
+
+    await page.locator('.hc-hlbar [data-action="hl-mark"]').tap();
+    await page.waitForTimeout(200);
+    const kept = await page.evaluate(`(function () {
+      var e = HC.journal.all({ kind: 'highlight' }).filter(function (x) { return !x.guideId; })[0];
+      return e && { quote: e.quote, title: e.title, path: e.path, refs: e.refs };
+    })()`);
+    ok('Highlight keeps the words in the Journal', kept && kept.quote === 'loved the world', JSON.stringify(kept));
+    ok('filed under the passage', kept && kept.title === 'John 3:16' && kept.refs.join() === 'John 3:16',
+      JSON.stringify(kept));
+    ok('and the words are marked in the sheet',
+      await page.evaluate(`!!document.querySelector('[data-sheet="verse"] mark.hc-hl')`));
+
+    // Opened again from somewhere else, the mark is still there.
+    await page.keyboard.press('Escape');
+    await page.evaluate(`HC.verse.open('Jn 3:16')`);
+    await page.waitForSelector('[data-sheet="verse"] .hc-verse__text');
+    ok('and still marked the next time the passage is opened',
+      await page.evaluate(`(document.querySelector('[data-sheet="verse"] mark.hc-hl') || {}).textContent === 'loved the world'`));
+
+    // Note this: the note sheet comes up over the verse sheet.
+    await select('his one and only Son');
+    await page.waitForSelector('.hc-hlbar', { timeout: 3000 }).catch(() => {});
+    await page.locator('.hc-hlbar [data-action="hl-note"]').tap();
+    await page.waitForSelector('[data-sheet="note"] #hc-hl-note');
+    await page.locator('#hc-hl-note').type('Only Son. Not one of several.');
+    await page.waitForTimeout(600);
+    await page.locator('[data-sheet="note"] [data-action="hl-close"]').last().tap();
+    await page.waitForTimeout(200);
+    const noted = await page.evaluate(`(function () {
+      var e = HC.journal.all({ kind: 'highlight' }).filter(function (x) { return x.quote === 'his one and only Son'; })[0];
+      return e && { body: e.bodyText, title: e.title };
+    })()`);
+    ok('Note this writes a note that lands in the Journal',
+      noted && noted.body === 'Only Son. Not one of several.' && noted.title === 'John 3:16', JSON.stringify(noted));
+    ok('and the verse sheet shows it as a noted highlight',
+      await page.evaluate(`!!document.querySelector('[data-sheet="verse"] mark.hc-hl--noted')`));
+    await page.keyboard.press('Escape');
+
+    /* -------------------------- 4. a reference typed into the journal */
+
+    await page.evaluate(`HC.router.go({ name: 'journal-entry', id: 'new' })`);
+    await page.waitForSelector('#hc-entry-body');
+    await page.locator('#hc-entry-body').tap();
+    await page.keyboard.type('Came back to John 3:16 tonight.');
+    await page.waitForTimeout(600);
+    // Letting go of the box is what links it on screen.
+    await page.evaluate(`document.activeElement.blur()`);
+    await page.waitForTimeout(600);
+
+    const typed = await page.evaluate(`(function () {
+      var a = document.querySelector('#hc-entry-body a');
+      var e = HC.journal.all({ kind: 'entry' })[0];
+      return { link: a && a.textContent, href: a && a.getAttribute('href'), saved: e && e.bodyHtml, refs: e && e.refs };
+    })()`);
+    ok('a reference typed in an entry becomes a link once the box lets go',
+      typed.link === 'John 3:16' && typed.href === 'https://www.bible.com/bible/111/JHN.3.16.NIV', JSON.stringify(typed));
+    ok('and it is saved that way', /<a href="https:\/\/www\.bible\.com\/bible\/111\/JHN\.3\.16\.NIV">John 3:16<\/a>/.test(typed.saved || ''),
+      typed.saved);
+
+    await page.locator('#hc-entry-body a').tap();
+    await page.waitForSelector('[data-sheet="verse"] .hc-verse__text');
+    ok('tapping it in the entry opens the verse sheet',
+      /For God so loved/.test((await page.evaluate(SHEET) || {}).text || ''));
+    ok('with what was highlighted from it earlier',
+      await page.evaluate(`!!document.querySelector('[data-sheet="verse"] mark.hc-hl')`));
+    await page.keyboard.press('Escape');
+
+    /* An entry typed before this existed, reopened: the reference comes up as
+       a link without anybody having to touch it. */
+    const old = await page.evaluate(`(function () {
+      var id = 'old-entry';
+      var s = HC.journal._state();
+      s.entries[id] = Object.assign({}, s.entries[Object.keys(s.entries)[0]], {
+        id: id, kind: 'entry', path: null, quote: null, title: '',
+        bodyHtml: '<p>From before: Romans 8:28.</p>', deletedAt: null
+      });
+      return id;
+    })()`);
+    await page.evaluate(`HC.router.go({ name: 'journal-entry', id: ${JSON.stringify(old)} })`);
+    await page.waitForSelector('#hc-entry-body');
+    ok('an older entry shows its typed reference as a link when it is opened',
+      await page.evaluate(`(document.querySelector('#hc-entry-body a') || {}).textContent === 'Romans 8:28'`));
+
+    /* The Journal lists what was kept from scripture under its own heading. */
+    await page.evaluate(`HC.router.go({ name: 'journal' })`);
+    await page.waitForTimeout(400);
+    ok('the Journal files verse highlights under Scripture',
+      await page.evaluate(`/Scripture/.test(document.querySelector('.hc-journal').innerText) && /From scripture/i.test(document.querySelector('.hc-journal').innerText)`));
+
+    /* ------------------------------------------------ 5. leaving */
 
     await page.evaluate('window.__left = []');
     await page.evaluate(`HC.verse.open('Romans 8:28')`);

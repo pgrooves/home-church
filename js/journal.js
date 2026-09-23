@@ -155,8 +155,14 @@
     return HC.richtext.esc(value);
   }
 
+  /* References typed as ordinary words become scripture links on the way
+     in, so "John 3:16" in an entry opens the verse sheet once it is saved,
+     the same as a reference put in with the scripture button. Before the
+     sanitizer, so what linkify() writes is checked like anything else. See
+     linkify() in js/bible.js for what counts as a reference. */
   function sanitize(html) {
-    return HC.richtext.sanitize(html, { links: 'bible' });
+    var linked = HC.bible && HC.bible.linkify ? HC.bible.linkify(html) : html;
+    return HC.richtext.sanitize(linked, { links: 'bible' });
   }
 
   function plainText(html) {
@@ -172,8 +178,11 @@
      older entries carry, as the references they name. What
      the "your own scripture index" list is built from, and what makes an
      entry findable by the verse it sits on. */
-  function refsIn(html) {
+  function refsIn(html, path, title) {
     var found = [];
+    // A highlight made in the verse sheet is about its passage whether or not
+    // the note under it names one, so it belongs under the Scripture filter.
+    if (isScripturePath(path) && title) found.push(title);
     var re = /<a href="https:\/\/www\.(?:bible\.com\/bible|biblegateway\.com)\/[^"]*">([^<]+)<\/a>/g;
     var m;
     while ((m = re.exec(html || ''))) {
@@ -228,9 +237,51 @@
      an entry that carries only the words, which is the more durable half of
      the anchor and the half that survives the guide being edited. */
   function forAnchor(guideId, path) {
+    if (!guideId && isScripturePath(path)) return forScripture(path);
     return all({ guideId: guideId }).filter(function (e) {
       return e.path === path && (typeof e.start === 'number' || !!e.quote);
     });
+  }
+
+  /* ------------------------------------------------------ scripture anchors
+
+     A highlight made in the verse sheet belongs to no guide. Its path is
+
+       scripture:<passage>:<paragraph>      scripture:JHN.3.16-JHN.3.18:0
+
+     where the passage is YouVersion's id for what the sheet was showing and
+     the paragraph is which of its paragraphs the words were in.
+
+     THE SAME WORDS, WHEREVER THEY TURN UP AGAIN. John 3:16 highlighted from
+     a guide's row is still highlighted when John 3:16-18 is opened from a
+     journal entry. So besides the exact path, any scripture highlight in the
+     same book whose chapters overlap this block's is offered too, and is
+     drawn only if its quotation is actually in these words. Offsets are no
+     use across passages, so those are matched on the quote alone: stripping
+     start and end is what makes locate() below do that. */
+  var SCRIPTURE = 'scripture:';
+
+  function isScripturePath(path) {
+    return typeof path === 'string' && path.indexOf(SCRIPTURE) === 0;
+  }
+
+  // { book, from, to } for the passage a scripture path names.
+  function chaptersOf(path) {
+    var m = /^scripture:([1-3A-Z]{3})\.(\d+)[^-:]*(?:-[1-3A-Z]{3}\.(\d+)[^:]*)?:/.exec(path || '');
+    return m ? { book: m[1], from: +m[2], to: +(m[3] || m[2]) } : null;
+  }
+
+  function forScripture(path) {
+    var here = chaptersOf(path);
+    return all({ kind: 'highlight' }).filter(function (e) {
+      return !e.guideId && isScripturePath(e.path) && (typeof e.start === 'number' || !!e.quote);
+    }).map(function (e) {
+      if (e.path === path) return e;
+      var there = chaptersOf(e.path);
+      if (!here || !there || !e.quote || here.book !== there.book ||
+          there.to < here.from || there.from > here.to) return null;
+      return Object.assign({}, e, { start: null, end: null });
+    }).filter(Boolean);
   }
 
   function count() {
@@ -269,7 +320,7 @@
       title: patch.title || '',
       bodyHtml: html,
       bodyText: plainText(html),
-      refs: refsIn(html),
+      refs: refsIn(html, patch.path, patch.title),
 
       pinned: !!patch.pinned,
       createdAt: patch.createdAt || now,
@@ -299,7 +350,7 @@
         : textToHtml(patch.bodyText || ''));
       entry.bodyHtml = html;
       entry.bodyText = plainText(html);
-      entry.refs = refsIn(html);
+      entry.refs = refsIn(html, entry.path, entry.title);
     }
 
     if (patch.guideId !== undefined && patch.guideTitle === undefined) {
@@ -405,7 +456,7 @@
 
   function marked(guideId, path, text) {
     text = String(text == null ? '' : text);
-    if (!guideId) return esc(text);
+    if (!guideId && !isScripturePath(path)) return esc(text);
 
     /* A locked journal is locked everywhere it surfaces, not only on its own
        screen. Which lines somebody underlined, and which of those they wrote
@@ -828,6 +879,7 @@
     plainText: plainText,
     textToHtml: textToHtml,
     refsIn: refsIn,
+    isScripturePath: isScripturePath,
 
     owner: owner,
     sync: sync,

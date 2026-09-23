@@ -147,6 +147,32 @@ const settle = () => new Promise(r => setImmediate(r));
      all('Ephesians 4:40-32; Matthew 6:14-15; Matt 18:21-22'),
      ['Matthew 6:14-15', 'Matthew 18:21-22']);
 
+  /* ---------------------------------------------- references in prose */
+
+  const F = t => B.find(t).map(h => h.text);
+  ok('a reference in a sentence', F('I read John 3:16 this morning'), ['John 3:16']);
+  ok('several, abbreviated and numbered',
+     F('Rom. 12:1-2 and then 1 Cor 13 and 2 Sam 7:12–16.'),
+     ['Rom. 12:1-2', '1 Cor 13', '2 Sam 7:12–16']);
+  ok('a name is not a book', F('Mark was here 5 times'), []);
+  ok('nor is a chapter that is not there', F('Mark 97'), []);
+  ok('lower case is somebody\'s job, not the book of Job', F('my job 3 days a week'), []);
+  ok('two letter abbreviations are left alone in prose', F('Ps 23 and Jn 3:16'), []);
+  ok('but not the long names', F('Psalm 23, Song of Songs 2:4, Jude 4'),
+     ['Psalm 23', 'Song of Songs 2:4', 'Jude 4']);
+  ok('a reference glued to a word is not one', F('Johnny 3:16 and xJohn 3:16'), []);
+
+  ok('linkify turns a typed reference into a scripture link, keeping the words',
+     B.linkify('<p>on Romans 8:28 today</p>'),
+     '<p>on <a href="https://www.bible.com/bible/111/ROM.8.28.NIV">Romans 8:28</a> today</p>');
+  ok('it leaves a reference that is already a link alone',
+     B.linkify('<p><a href="https://www.bible.com/bible/111/JHN.3.16.NIV">John 3:16</a></p>'),
+     '<p><a href="https://www.bible.com/bible/111/JHN.3.16.NIV">John 3:16</a></p>');
+  ok('and does not reach inside a tag',
+     B.linkify('<p title="John 3:16">x</p>'), '<p title="John 3:16">x</p>');
+  ok('markup with nothing to link comes back exactly as it went in',
+     B.linkify('<p>Some <strong>words</strong>.</p>'), '<p>Some <strong>words</strong>.</p>');
+
   /* ---------------------------------------------------- what it writes out */
 
   const U = s => B.usfm(B.parse(s));

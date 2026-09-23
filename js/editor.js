@@ -109,6 +109,9 @@
     var links = opts.links === 'web' ? 'web' : 'bible';
     var hook = opts.hook || 'journal-body';
     var html = HC.richtext.sanitize(opts.html || '', { links: links });
+    // A journal entry's typed references come up as links, including ones
+    // written before references were linked on save. See linkify().
+    if (links === 'bible' && HC.bible && HC.bible.linkify) html = HC.bible.linkify(html);
 
     return '' +
       '<div class="hc-editor">' +

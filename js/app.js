@@ -4906,6 +4906,23 @@
          href to openExternal() cancels the save and navigates instead, which
          is what broke Add to calendar in the browser. */
       var link = evt.target.closest && evt.target.closest('a[href]');
+
+      /* A scripture link inside a writing surface opens the verse sheet too.
+         Every other link in one is left alone, because a tap there is
+         somebody putting the caret in their own sentence. A scripture link is
+         the exception because it is the whole reason the journal turns typed
+         references into links: tapping "John 3:16" in your own entry should
+         show you John 3:16. The keyboard goes down first, so the sheet is not
+         half hidden behind it. */
+      if (link && link.closest('[contenteditable="true"]') &&
+          c.isScriptureHref(link.getAttribute('href')) && HC.verse &&
+          HC.bible.parseAll((link.textContent || '').trim()).length) {
+        evt.preventDefault();
+        if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+        HC.verse.open((link.textContent || '').trim());
+        return;
+      }
+
       if (link && !link.hasAttribute('download') &&
           !link.closest('[contenteditable="true"]')) {
         evt.preventDefault();
@@ -5027,6 +5044,21 @@
       window.clearTimeout(timers[id]);
       timers[id] = window.setTimeout(fn, 400);
     }
+
+    /* A journal box letting go of the caret is the moment its typed
+       references become links, on screen as well as in the store (which
+       links them on every save; see sanitize() in js/journal.js). Not while
+       typing: rewriting the markup under a live caret moves it. The input
+       event afterwards is what saves the linked version through the same
+       path as a keystroke. */
+    document.addEventListener('focusout', function (evt) {
+      var el = evt.target;
+      if (!el || !el.getAttribute || el.getAttribute('data-journal-body') === null) return;
+      var linked = HC.bible.linkify(el.innerHTML);
+      if (linked === el.innerHTML) return;
+      el.innerHTML = linked;
+      el.dispatchEvent(new Event('input', { bubbles: true }));
+    });
 
     document.addEventListener('input', function (evt) {
       var el = evt.target;
