@@ -7,7 +7,8 @@
    that hands back.
 
    Two views:
-     journal        the list, grouped by the guide an entry belongs to
+     journal        the list, folded by the guide an entry belongs to, and
+                    by month inside any guide with more than ten
      journal-entry  one entry, open, with the editor in it
 
    A new entry does not exist until somebody types. Tapping New opens
@@ -37,6 +38,12 @@
   var filter = 'all';
   var search = '';
   var draft = null;      // { bodyText, guideId } while a new entry is unsaved
+
+  /* Which folds somebody has opened or shut by hand, by data-fold key. Kept
+     so a repaint after a keystroke or a filter tap leaves them as they were;
+     anything not in here takes its default from grouped(). Cleared whenever
+     the search or the scope changes, since a different list is a fresh start. */
+  var folds = {};
 
   /* The guide this screen is scoped to, or null for the whole journal.
 
@@ -89,6 +96,7 @@
       scope = next;
       filter = scope ? 'guide' : 'all';
       search = '';
+      folds = {};
     } else if (!scope && filter === 'guide') {
       filter = 'all';
     }
@@ -148,7 +156,98 @@
   /* Grouped by the guide an entry belongs to, newest group first, with the
      untagged ones last under their own heading. The Guide index already
      groups by series this way, so it is a pattern that exists rather than a
-     new one to learn. */
+     new one to learn.
+
+     EVERY GROUP FOLDS, and starts folded. A journal a year old is a long
+     scroll of cards, and the headings are the index to it: you open the
+     guide you came for and leave the rest shut. Two cases open by default,
+     because a closed fold would hide the very thing on screen: a search,
+     where the cards are the answer, and a journal narrowed to one guide,
+     where there is only one group to open.
+
+     A GROUP OF MORE THAN MONTH_FOLD_AT SPLITS INTO MONTHS inside its fold,
+     each one its own fold named for the month and year the notes in it were
+     written. Pinned entries stay above the months, where Pin to the top
+     promised to put them. */
+  var MONTH_FOLD_AT = 10;
+
+  function monthKey(entry) {
+    return String(entry.createdAt || '').slice(0, 7);
+  }
+
+  function monthLabel(ym) {
+    var y = parseInt(ym.slice(0, 4), 10);
+    var m = parseInt(ym.slice(5, 7), 10);
+    if (!y || !m) return 'Undated';
+    return c.monthNames[m - 1] + ' ' + y;
+  }
+
+  function isOpen(key, fallback) {
+    return Object.prototype.hasOwnProperty.call(folds, key) ? folds[key] : fallback;
+  }
+
+  function cards(entries) {
+    var html = '<div class="hc-jlist">';
+    entries.forEach(function (entry) { html += card(entry); });
+    return html + '</div>';
+  }
+
+  /* One fold: a heading that is a button, and the panel it opens. The same
+     aria-expanded / data-open pair every other fold in the app uses, so the
+     panel animates on the grid rows the section panels already do. */
+  function fold(opts) {
+    return '' +
+      '<section class="hc-jfold hc-jfold--' + opts.level + '">' +
+        '<h' + (opts.level === 'group' ? 2 : 3) + ' class="hc-jfold__h">' +
+          '<button type="button" class="hc-jfold__toggle" data-action="journal-fold" ' +
+            'data-fold="' + c.esc(opts.key) + '" aria-expanded="' + (opts.open ? 'true' : 'false') + '" ' +
+            'aria-controls="' + c.esc(opts.panelId) + '">' +
+            '<span class="hc-jfold__heading">' +
+              (opts.eyebrow ? '<span class="hc-eyebrow">' + c.esc(opts.eyebrow) + '</span>' : '') +
+              '<span class="hc-jfold__title">' + c.esc(opts.title) + '</span>' +
+              (opts.level === 'group' ? '<span class="hc-jfold__rule" aria-hidden="true"></span>' : '') +
+            '</span>' +
+            '<span class="hc-caption hc-jfold__count">' + opts.count +
+              '<span class="hc-visually-hidden">' + (opts.count === 1 ? ' entry' : ' entries') + '</span>' +
+            '</span>' +
+            c.icon('chevronDown', 'hc-jfold__chevron') +
+          '</button>' +
+        '</h' + (opts.level === 'group' ? 2 : 3) + '>' +
+        '<div class="hc-jfold__panel" id="' + c.esc(opts.panelId) + '" ' +
+          'data-open="' + (opts.open ? 'true' : 'false') + '">' +
+          '<div>' + opts.body + '</div>' +
+        '</div>' +
+      '</section>';
+  }
+
+  function byMonth(entries, groupKey, panelId, openByDefault) {
+    var pinned = entries.filter(function (e) { return e.pinned; });
+    var order = [];
+    var months = {};
+    entries.forEach(function (entry) {
+      if (entry.pinned) return;
+      var ym = monthKey(entry);
+      if (!months[ym]) { months[ym] = []; order.push(ym); }
+      months[ym].push(entry);
+    });
+    // all() hands entries back newest first, so the months arrive that way.
+
+    var html = pinned.length ? cards(pinned) : '';
+    order.forEach(function (ym) {
+      var key = 'm:' + groupKey + ':' + ym;
+      html += fold({
+        level: 'month',
+        key: key,
+        panelId: panelId + '-' + (ym || 'undated'),
+        title: monthLabel(ym),
+        count: months[ym].length,
+        open: isOpen(key, openByDefault),
+        body: cards(months[ym])
+      });
+    });
+    return html;
+  }
+
   function grouped(list) {
     var order = [];
     var groups = {};
@@ -172,14 +271,27 @@
     order = order.filter(function (k) { return k !== '__loose'; })
       .concat(groups.__loose ? ['__loose'] : []);
 
+    var searching = !!search.trim();
+    var groupOpen = searching || (filter === 'guide' && !!scope);
+
     var html = '';
-    order.forEach(function (key) {
+    order.forEach(function (key, i) {
       var group = groups[key];
       var eyebrow = key === '__loose' ? 'No guide' : (key === '__scripture' ? 'Highlighted' : 'Guide');
-      html += c.sectionHeader(eyebrow, group.title);
-      html += '<div class="hc-jlist">';
-      group.entries.forEach(function (entry) { html += card(entry); });
-      html += '</div>';
+      var foldKey = 'g:' + key;
+      var panelId = 'hc-jgroup-' + i;
+      html += fold({
+        level: 'group',
+        key: foldKey,
+        panelId: panelId,
+        eyebrow: eyebrow,
+        title: group.title,
+        count: group.entries.length,
+        open: isOpen(foldKey, groupOpen),
+        body: group.entries.length > MONTH_FOLD_AT
+          ? byMonth(group.entries, key, panelId, searching)
+          : cards(group.entries)
+      });
     });
     return html;
   }
@@ -453,7 +565,11 @@
     repaint: repaint,
     setFilter: function (v) { filter = v; },
     getFilter: function () { return filter; },
-    setSearch: function (v) { search = v; },
+    setSearch: function (v) {
+      if (v.trim() !== search.trim()) folds = {};
+      search = v;
+    },
+    setFold: function (key, open) { folds[key] = open; },
 
     // The unsaved new entry. See the note at the top of this file.
     getDraft: function () { return draft; },

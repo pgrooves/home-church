@@ -1862,6 +1862,119 @@
   margin-top: var(--hc-space-base);
 }
 
+/* The folds. A guide's heading is drawn the way a section header is, eyebrow,
+   title and the short accent rule, only it is a button with a count and a
+   chevron leading it. A month inside it is the same fold one size down: no
+   eyebrow, no rule, a hairline above it the way archive rows sit. */
+.hc-jfold--group { margin-top: var(--hc-space-xl); }
+
+.hc-jfold__h { margin: 0; }
+
+.hc-jfold__toggle {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--hc-space-md);
+  width: 100%;
+  min-height: var(--hc-tap-min);
+  padding: 0 0 0 calc(20px + var(--hc-space-md));
+  text-align: left;
+  color: var(--hc-ink);
+}
+
+.hc-jfold__heading {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: block;
+}
+
+.hc-jfold__heading .hc-eyebrow { display: block; }
+
+.hc-jfold__title {
+  display: block;
+  font-family: var(--hc-sans-display);
+  font-weight: 800;
+  font-size: calc(25px * var(--hc-text-scale));
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+}
+
+.hc-jfold--group .hc-eyebrow + .hc-jfold__title { margin-top: 8px; }
+
+.hc-jfold__rule {
+  display: block;
+  margin-top: 12px;
+  width: 22%;
+  min-width: 56px;
+  height: 0.75px;
+  background: var(--hc-accent);
+}
+
+.hc-jfold__count {
+  flex: 0 0 auto;
+  align-self: center;
+  padding: 0 var(--hc-space-sm);
+  border-radius: var(--hc-radius-pill);
+  background: var(--hc-cream);
+  color: var(--hc-mid);
+}
+
+.hc-jfold__chevron {
+  position: absolute;
+  left: 0;
+  top: 10px;
+  width: 20px;
+  height: 20px;
+  stroke: var(--hc-accent-deep);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: transform var(--hc-dur-base) var(--hc-ease);
+}
+
+.hc-jfold__toggle[aria-expanded="true"] .hc-jfold__chevron { transform: rotate(180deg); }
+
+.hc-jfold--month {
+  margin-top: var(--hc-space-base);
+  padding-top: var(--hc-space-sm);
+  border-top: var(--hc-hairline) solid var(--hc-rule);
+}
+
+.hc-jfold--month .hc-jfold__toggle { align-items: center; }
+
+.hc-jfold--month .hc-jfold__title {
+  font-size: calc(18px * var(--hc-text-scale));
+  font-weight: 700;
+}
+
+.hc-jfold--month .hc-jfold__chevron { top: 50%; margin-top: -10px; }
+
+.hc-jfold--month .hc-jfold__toggle[aria-expanded="true"] .hc-jfold__chevron {
+  transform: rotate(180deg);
+}
+
+.hc-jfold__panel {
+  overflow: hidden;
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows var(--hc-dur-base) var(--hc-ease);
+}
+
+.hc-jfold__panel[data-open="true"] { grid-template-rows: 1fr; }
+
+.hc-jfold__panel > div {
+  min-height: 0;
+  /* A closed fold's cards are still in the tree, so hide them from the tab
+     order and a screen reader too, once the fold has finished closing. */
+  visibility: hidden;
+  transition: visibility 0s linear var(--hc-dur-base);
+}
+
+.hc-jfold__panel[data-open="true"] > div {
+  visibility: visible;
+  transition-delay: 0s;
+}
+
 .hc-jcard {
   display: block;
   width: 100%;

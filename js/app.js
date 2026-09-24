@@ -3087,6 +3087,16 @@
       });
     },
 
+    // A guide's heading, or a month's inside it, opening in place. Remembered
+    // by the screen so the next repaint does not shut it again.
+    'journal-fold': function (el) {
+      var open = el.getAttribute('aria-expanded') === 'true';
+      el.setAttribute('aria-expanded', open ? 'false' : 'true');
+      var panel = document.getElementById(el.getAttribute('aria-controls'));
+      if (panel) panel.setAttribute('data-open', open ? 'false' : 'true');
+      HC.screens.journalHelpers.setFold(el.getAttribute('data-fold'), !open);
+    },
+
     'journal-filter': function (el) {
       HC.screens.journalHelpers.setFilter(el.getAttribute('data-value'));
       HC.screens.journalHelpers.repaint();
