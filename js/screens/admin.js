@@ -1968,7 +1968,10 @@
     /* 0066. Read by name in js/components.js, and it is the URL of the page
        every YouTube player in the app is framed through on a phone. Deleting
        it would take the video with it. See embed.html. */
-    home_embed_base: true
+    home_embed_base: true,
+    /* 0077. Read by name in js/maintenance.js, and deleting it while it was on
+       would be the quiet way to lift the cover with nobody deciding to. */
+    maintenance_mode_on: true
   };
 
   /* The Group tab's switch, as the app knows it rather than as the database
@@ -2043,6 +2046,53 @@
     return html;
   }
 
+  /* Maintenance mode: the whole app covered for everybody who is not an
+     admin, until an admin says otherwise. Carried whole for the same reason
+     GROUP_MODE is: the switch is drawn whether or not 0077 has ever run, and
+     the first tap writes this row. See js/maintenance.js. */
+  var MAINTENANCE = {
+    key: 'maintenance_mode_on',
+    label: 'Maintenance mode',
+    help: 'On covers the whole app for everybody except admins, with the house ' +
+      'and “We’ll be back soon.” It stays up until an admin turns this off.',
+    sortOrder: 5
+  };
+
+  // Same two sources and the same fallback as groupModeOn() above.
+  function maintenanceOn() {
+    var row = HC.admin.settings().filter(function (s) {
+      return s.key === MAINTENANCE.key;
+    })[0];
+    if (row) return !!row.value_bool;
+    return HC.data.setting(MAINTENANCE.key, false) === true;
+  }
+
+  /* The first thing on this screen, above Edit mode, because the afternoon
+     somebody needs it is not an afternoon to go looking for it. */
+  function maintenanceSection() {
+    var on = maintenanceOn();
+
+    var html = c.sectionHeader('', 'Maintenance mode');
+    html += switchRow({
+      title: 'Maintenance mode',
+      sub: on
+        ? 'On. Everybody except admins sees “We’ll be back soon.” and cannot use the app.'
+        : 'Off. The app is open to everybody as usual.',
+      action: 'admin-maintenance-toggle',
+      id: MAINTENANCE.key,
+      on: on
+    });
+    html += '<p class="hc-caption hc-admin__loading">' +
+      'For when something has gone wrong and the app needs to be out of ' +
+      'people’s hands while it is fixed. Members, leaders and signed out ' +
+      'phones get the house and “We’ll be back soon.” over the ' +
+      'whole app, including phones that are already open, within a minute. ' +
+      'Admins keep the app. Nothing is deleted, and it stays up until an admin ' +
+      'turns it off.</p>';
+
+    return html;
+  }
+
   /* Rows this screen deliberately does not draw in the list, because they are
      already drawn somewhere they mean more: the push default belongs on the
      Announcements screen, and Group mode is a section of its own a few inches
@@ -2056,10 +2106,15 @@
   var DRAWN_ELSEWHERE = {};
   DRAWN_ELSEWHERE[PUSH_DEFAULT_KEY] = true;
   DRAWN_ELSEWHERE[GROUP_MODE.key] = true;
+  DRAWN_ELSEWHERE[MAINTENANCE.key] = true;
 
   function settingsSection() {
     var html = '<div class="hc-screen hc-admin">';
     html += c.sectionHeader('For the church', 'App settings', { flush: true, tag: 'h1' });
+
+    // The emergency switch, first. Drawn before anything has been fetched,
+    // like Group mode, and for the same reason. See maintenanceSection.
+    html += maintenanceSection();
 
     // Above the seeded rows, so the first switch on this screen is the one an
     // admin came here to flip. It needs nothing fetched, which is also why it
@@ -2212,7 +2267,11 @@
        row to upsert and the value to move away from — and neither belongs in
        that file, because this screen is what draws the switch. */
     groupMode: function () { return GROUP_MODE; },
-    groupModeOn: groupModeOn
+    groupModeOn: groupModeOn,
+
+    // Maintenance mode, the same pair for the same handler shape.
+    maintenance: function () { return MAINTENANCE; },
+    maintenanceOn: maintenanceOn
   };
 
 })(window.HC = window.HC || {});

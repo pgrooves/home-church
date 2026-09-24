@@ -2656,6 +2656,29 @@
       adminRun('setting:' + meta.key, HC.admin.saveSwitch(meta, next));
     },
 
+    /* Maintenance mode, the whole app covered for everybody but the admins.
+       Same shape as Group mode above, row and all, with one difference: going
+       on asks first. This switch takes the app away from the whole church
+       within a minute, and that should never be a stray tap. Going off does
+       not ask, because lifting it quickly is the whole point. */
+    'admin-maintenance-toggle': function (el) {
+      var meta = HC.screens.adminHelpers.maintenance();
+      var next = !HC.screens.adminHelpers.maintenanceOn();
+
+      if (next && !window.confirm('Turn on Maintenance mode? Everybody except ' +
+            'admins will see “We’ll be back soon.” and will not be able to use ' +
+            'the app until an admin turns it off.')) return;
+
+      setSwitch(el, next);
+      HC.native.tap(next ? 'Medium' : 'Light');
+
+      adminRun('setting:' + meta.key, HC.admin.saveSwitch(meta, next).then(function () {
+        HC.components.toast(next
+          ? 'Maintenance mode is on. Only admins can use the app.'
+          : 'Maintenance mode is off. The app is open again.');
+      }));
+    },
+
     'admin-setting-delete': function (el) {
       var key = el.getAttribute('data-id');
       var row = HC.admin.settings().filter(function (s) { return s.key === key; })[0];
@@ -5405,6 +5428,13 @@
     HC.content.primeFromCache();
 
     renderShell();
+
+    /* Maintenance mode, straight after the shell exists and before anything
+       is drawn into it. The cached content above is what it reads, so a phone
+       that was covered when it closed is covered again before Home is on the
+       glass, with or without signal. From here it listens for itself. See
+       js/maintenance.js. */
+    if (HC.maintenance) HC.maintenance.start();
     // The disc is drawn empty in the shell markup above and filled here,
     // once, because which of the two icons it holds is a question about the
     // theme applyPreferences() has just settled.

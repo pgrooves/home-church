@@ -3856,6 +3856,66 @@ a[href^="https://www.biblegateway.com/"]::selection,
 }
 
 /* ==========================================================================
+   Maintenance mode
+
+   The screen above, held. Same layer, same house, same face for the words,
+   with "We'll be back soon." where the welcome would be. Drawn by
+   js/maintenance.js over everything, the splash and its gate included, and
+   none of it animates: this is the settled frame of the greeting, and it
+   stays on the glass until an admin turns the switch off.
+   ========================================================================== */
+
+.hc-maintenance { z-index: 100; }
+
+.hc-maintenance__mark { display: block; width: 92px; height: auto; }
+
+.hc-maintenance .hc-splash__greeting {
+  animation: none;
+  opacity: 1;
+  transform: none;
+}
+
+.hc-maintenance__foot {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: calc(var(--hc-space-lg) + env(safe-area-inset-bottom));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0 var(--hc-space-xl);
+}
+
+/* Where Loading sits on the splash, and just as quiet. An admin needs to be
+   able to find it; nobody else needs to notice it. */
+.hc-maintenance__link {
+  background: none;
+  border: 0;
+  padding: var(--hc-space-sm) var(--hc-space-base);
+  min-height: var(--hc-tap-min);
+  font-family: var(--hc-sans);
+  font-size: var(--hc-caption);
+  line-height: var(--hc-caption-line);
+  color: var(--hc-mid);
+  opacity: 0.7;
+}
+
+.hc-maintenance__form {
+  width: 100%;
+  max-width: 320px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--hc-space-sm);
+}
+
+.hc-maintenance__note {
+  margin: 0;
+  min-height: var(--hc-caption-line);
+  text-align: center;
+  color: var(--hc-mid);
+}
+
+/* ==========================================================================
    The way in
 
    What the screen above becomes on a phone that is not signed in: the same
