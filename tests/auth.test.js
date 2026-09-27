@@ -27,8 +27,9 @@ const ok = (label, got, want) => {
   else { console.log('FAIL  ' + label + '\n        got  ' + a + '\n        want ' + b); fail++; }
 };
 
-function freshSandbox() {
+function freshSandbox(seed) {
   const disk = {};
+  Object.keys(seed || {}).forEach(k => { disk[k] = JSON.stringify(seed[k]); });
   const profile = {};
   const store = {
     storage: {
@@ -48,7 +49,9 @@ function freshSandbox() {
     fetchCalls.push(url);
     const hit = Object.keys(responses).find(p => url.includes(p));
     if (!hit) throw new Error('unstubbed fetch: ' + url);
-    const { status, body } = responses[hit]();
+    const { status, body, offline } = responses[hit]();
+    // What a real fetch does with no network path: reject with a TypeError.
+    if (offline) return Promise.reject(new TypeError('Load failed'));
     return Promise.resolve({
       status,
       ok: status >= 200 && status < 300,
@@ -59,7 +62,7 @@ function freshSandbox() {
   const sandbox = {
     window: {},
     fetch: fakeFetch,
-    Promise, JSON, Date, console, Object,
+    Promise, JSON, Date, console, Object, TypeError,
     setTimeout, clearTimeout
   };
   sandbox.window.HC = {
@@ -76,7 +79,7 @@ function freshSandbox() {
   vm.createContext(sandbox);
   vm.runInContext(fs.readFileSync(AUTH_JS, 'utf8'), sandbox);
 
-  return { auth: sandbox.window.HC.auth, profile, responses, fetchCalls };
+  return { auth: sandbox.window.HC.auth, profile, responses, fetchCalls, disk };
 }
 
 function stubSignIn({ responses }, remoteProfileRow) {
@@ -247,6 +250,80 @@ function stubSignIn({ responses }, remoteProfileRow) {
     ok('a wrong password is said plainly',
        message, 'That password did not match. Check it and try again.');
     ok('and nobody is signed in on the strength of it', t.auth.isSignedIn(), false);
+  }
+
+  /* ---- staying signed in across an App Store update.
+
+     THE BUG THIS IS FOR. Somebody who had not opened the app in over an hour
+     (so, after every update) came back to a sign-in screen and had to fetch
+     a code again. The first launch has an expired access token, so the app
+     refreshes, and ensureFreshSession() used to throw the whole session away
+     on any failure at all: the radio still waking up, a 5xx, one of the three
+     simultaneous refreshes launch used to send losing the race. The auth logs
+     showed those three and four at a time, same token, same second. */
+  const EXPIRED = { session: { accessToken: 'old', refreshToken: 'ref-1',
+    expiresAt: Date.now() - 1000, user: { id: 'u1', email: 'trey@example.com' } } };
+  const REFRESHED = () => ({ status: 200, body: {
+    access_token: 'new', refresh_token: 'ref-2', expires_in: 3600,
+    user: { id: 'u1', email: 'trey@example.com' } } });
+
+  {
+    const t = freshSandbox(EXPIRED);
+    t.responses['/auth/v1/token'] = () => ({ offline: true });
+    let message = null;
+    try { await t.auth.rpc('anything'); } catch (err) { message = err.message; }
+    ok('no network during a refresh still says so', /reach the church/.test(message), true);
+    ok('AND DOES NOT SIGN ANYBODY OUT', t.auth.isSignedIn(), true);
+    ok('the refresh token is still on disk for next time', t.disk.session && JSON.parse(t.disk.session).refreshToken, 'ref-1');
+
+    t.responses['/auth/v1/token'] = REFRESHED;
+    t.responses['/rest/v1/rpc/anything'] = () => ({ status: 200, body: { fine: true } });
+    const got = await t.auth.rpc('anything');
+    ok('and the next call, with signal, refreshes and goes through', got, { fine: true });
+    ok('holding the new refresh token', JSON.parse(t.disk.session).refreshToken, 'ref-2');
+  }
+
+  {
+    const t = freshSandbox(EXPIRED);
+    t.responses['/auth/v1/token'] = () => ({ status: 503, body: { message: 'upstream' } });
+    try { await t.auth.rpc('anything'); } catch (err) { /* expected */ }
+    ok('a server error on refresh does not sign anybody out', t.auth.isSignedIn(), true);
+  }
+
+  {
+    const t = freshSandbox(EXPIRED);
+    t.responses['/auth/v1/token'] = () => ({ status: 429, body: { message: 'slow down' } });
+    try { await t.auth.rpc('anything'); } catch (err) { /* expected */ }
+    ok('nor does being rate limited', t.auth.isSignedIn(), true);
+  }
+
+  {
+    const t = freshSandbox(EXPIRED);
+    t.responses['/auth/v1/token'] = () => ({ status: 400,
+      body: { error: 'invalid_grant', error_description: 'Invalid Refresh Token: Refresh Token Not Found' } });
+    try { await t.auth.rpc('anything'); } catch (err) { /* expected */ }
+    ok('but a refresh token Supabase refuses does sign out', t.auth.isSignedIn(), false);
+    ok('and leaves nothing on disk', 'session' in t.disk, false);
+  }
+
+  {
+    const t = freshSandbox(EXPIRED);
+    t.responses['/auth/v1/token'] = REFRESHED;
+    t.responses['/rest/v1/rpc/'] = () => ({ status: 200, body: [] });
+    await Promise.all([t.auth.rpc('a'), t.auth.rpc('b'), t.auth.rpc('c')]);
+    ok('three calls at launch share ONE refresh, never reusing a spent token',
+       t.fetchCalls.filter(u => u.includes('grant_type=refresh_token')).length, 1);
+    await t.auth.rpc('d');
+    ok('and once it lands, nobody refreshes again for the next hour',
+       t.fetchCalls.filter(u => u.includes('grant_type=refresh_token')).length, 1);
+  }
+
+  {
+    const t = freshSandbox(EXPIRED);
+    t.responses['/auth/v1/token'] = () => ({ offline: true });
+    t.auth.init();
+    await new Promise(r => setTimeout(r, 0));
+    ok('launching offline leaves the person signed in', t.auth.isSignedIn(), true);
   }
 
   console.log('\n' + (fail ? fail + ' failed, ' + pass + ' passed.' : pass + ' passed.'));
