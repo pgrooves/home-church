@@ -3739,27 +3739,6 @@
 
       if (!HC.native.isNative()) return;
 
-      /* Which switches count as "still on", and why this is not simply every
-         key in the object.
-
-         The two review switches from migration 0043 default to true on every
-         phone, because Profile draws them only for an admin and the server
-         refuses them for anybody else, so nothing is gained by drawing a
-         member's phone a false it will never see. That makes them useless as
-         evidence here: `some(k => next[k])` would be true on every phone in
-         the congregation, so a member turning their last real switch off would
-         take the syncPreferences branch, and their row would keep `active =
-         true` for ever. Nothing addressed by preference would reach them, and
-         the `test` topic, which goes to every active phone on purpose, would.
-
-         So the two only count on a phone that is actually an admin's, which is
-         the same condition that draws them. */
-      var isAdmin = HC.admin && HC.admin.isAdmin();
-      var anyStillOn = Object.keys(next).some(function (k) {
-        if (!isAdmin && (k === 'announcementReview' || k === 'eventReview')) return false;
-        return next[k];
-      });
-
       if (turningOn) {
         HC.native.enableNotifications().then(function (granted) {
           if (granted) {
@@ -3773,13 +3752,14 @@
           setSwitch(el, false);
           c.toast('Notifications are switched off for this app in Settings. Turn them on there and come back.');
         });
-      } else if (anyStillOn) {
-        // They still want something, just not this one. Update the row rather
-        // than deregistering the phone, which would silence the others too.
-        HC.native.syncPreferences();
       } else {
-        // Last one off means stop sending to this phone entirely.
-        HC.native.disableNotifications();
+        /* Update the row, never deregister the phone, even when this was the
+           last switch on. These choose topics; the pinned banner is not one
+           and goes to every phone iOS allows (migration 0078). Deregistering
+           here is how a phone with notifications Allowed in Settings used to
+           stop hearing the church altogether. Settings is the off switch for
+           everything, and Profile says so under these. */
+        HC.native.syncPreferences();
       }
     },
 

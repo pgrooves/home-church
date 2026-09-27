@@ -809,41 +809,6 @@
     });
   }
 
-  /* Turning the switch off removes the token, so the church stops sending to
-     this phone. It does not revoke the iOS permission, which only Settings
-     can do, and the app should not pretend otherwise. */
-  function disableNotifications() {
-    var token = HC.store.storage.get(TOKEN_KEY, null);
-    HC.store.storage.remove(TOKEN_KEY);
-
-    var cfg = HC.config || {};
-    if (!token || !cfg.SUPABASE_URL || !cfg.SUPABASE_ANON_KEY) return Promise.resolve(true);
-
-    /* One call, and it takes the name off the row along with everything else.
-       This was a PATCH straight at the table until 0043 and had never once
-       worked, for the reason set out at length above registerRequest(): the
-       `?token=eq.X` filter is a WHERE clause and anon has no SELECT. So every
-       phone that ever switched notifications off stayed on the list, and the
-       app said nothing because this catch resolves true either way.
-
-       THE ANONYMOUS KEY RATHER THAN THE SESSION, even for an admin, and that
-       is not an oversight either. Somebody who signed out an hour ago must
-       still be able to turn their notifications off, and a phone in this app
-       is far more often signed out than signed in. The function does not ask
-       who is calling for exactly that reason; migration 0043 section 3b says
-       what that costs and why it is the same cost 0010 already accepted.
-
-       Resolves true whatever happens, which is unchanged and is right. The
-       switch is off on this phone, the stored token is already gone, and there
-       is nothing a person could do about a failure here. A row left active is
-       repaired by the sender, which retires anything APNs stops accepting. */
-    return fetch(cfg.SUPABASE_URL + '/rest/v1/rpc/hc_deactivate_device_token', {
-      method: 'POST',
-      headers: restHeaders({ Prefer: 'return=minimal' }),
-      body: JSON.stringify({ p_token: token })
-    }).then(function () { return true; }, function () { return true; });
-  }
-
   /* Re-registers on launch when the switch is already on, because an APNs
      token is not permanent. It changes on restore from backup, and sometimes
      on reinstall, and a church sending to a stale token gets silence rather
@@ -864,8 +829,37 @@
       wantsSomething = true;
     }
 
-    if (!wantsSomething) return;
-    enableNotifications();
+    if (wantsSomething) {
+      enableNotifications();
+      return;
+    }
+
+    /* EVERY SWITCH OFF IS NOT THE SAME AS NO NOTIFICATIONS. The four switches
+       choose topics, and the pinned banner and the test push are not topics:
+       they go to every phone iOS lets the church reach (migration 0078). This
+       line used to return here, so a phone whose switches were all off never
+       registered at all, and the one place that decides whether it hears
+       anything, the Notifications row in iOS Settings, said "Allowed" to a
+       phone the church had no token for. The commonest way in is somebody who
+       said no to the prompt, which puts the switch back, and later said yes in
+       Settings instead.
+
+       So it registers here too, with every topic false, but only when iOS
+       already says yes. checkPermissions() never shows the prompt, which keeps
+       the promise above: nobody is asked at launch who has not asked first. */
+    registerIfAllowed();
+  }
+
+  function registerIfAllowed() {
+    var p = plugins();
+    if (!p || !p.PushNotifications || !p.PushNotifications.checkPermissions) return;
+
+    listen(p);
+
+    p.PushNotifications.checkPermissions().then(function (result) {
+      if (!result || result.receive !== 'granted') return;
+      return p.PushNotifications.register();
+    }).catch(function () { /* retried next launch */ });
   }
 
   /* ------------------------------------------------------------- biometry
@@ -967,7 +961,6 @@
     cancelAllReminders: cancelAllReminders,
     onReminderTapped: onReminderTapped,
     enableNotifications: enableNotifications,
-    disableNotifications: disableNotifications,
     syncPreferences: syncPreferences,
     syncAdminPreferences: syncAdminPreferences,
     clearAdminNotifications: clearAdminNotifications,

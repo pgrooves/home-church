@@ -374,6 +374,16 @@
         'and nothing in it is on Home until you say so.</p>';
     }
 
+    /* Said out loud because these switches no longer silence everything. The
+       pinned banner reaches every phone iOS allows, whatever is set here, and
+       a switch that looks like it turns something off when it does not is the
+       lie js/native.js keeps warning about. See resumeNotifications there. */
+    if (HC.native && HC.native.isNative()) {
+      html += '<p class="hc-caption hc-profile__hint">Urgent news from the church, ' +
+        'like a change to Sunday, reaches every phone that allows Home Church ' +
+        'notifications in Settings.</p>';
+    }
+
     // Reading
     html += c.sectionHeader('Easier to read', 'Display');
     html += '<p class="hc-eyebrow hc-eyebrow--legible hc-filters__label">Text size</p>';
