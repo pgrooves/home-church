@@ -134,7 +134,11 @@
       body: opts.body ? JSON.stringify(opts.body) : undefined
     })).then(function (res) {
       return res.json().catch(function () { return {}; }).then(function (body) {
-        if (!res.ok) throw new Error(friendlyError(body, 'Something went wrong. Try again in a moment.'));
+        if (!res.ok) {
+          var err = new Error(friendlyError(body, 'Something went wrong. Try again in a moment.'));
+          err.status = res.status;   // ensureFreshSession() decides on this
+          throw err;
+        }
         return body;
       });
     });
@@ -155,21 +159,52 @@
     });
   }
 
-  // Refreshes ahead of expiry rather than waiting for a 401, so a signed-in
-  // visit that spans more than an hour does not quietly fall back to guest.
+  /* Refreshes ahead of expiry rather than waiting for a 401, so a signed-in
+     visit that spans more than an hour does not quietly fall back to guest.
+
+     ONE REFRESH AT A TIME. A cold launch with an expired token has init(),
+     the Group tab and the push registration all asking at once, and each used
+     to send its own refresh with the same refresh token. Supabase rotates the
+     token on every refresh, so every request after the first is a reuse of a
+     token that is already spent. It forgives that inside a few seconds; any
+     one of them landing later is read as a stolen token, and the whole
+     session is revoked. So everybody waits on the same request.
+
+     AND ONLY THE SERVER SIGNS ANYBODY OUT. This used to drop the session on
+     any failure at all, which included no signal for a moment, the radio
+     still waking up on the first launch after an App Store update, or a 5xx.
+     Each of those logged somebody out and sent them back to their inbox for
+     a code. Now the session goes only when Supabase answers that the refresh
+     token is no good (a 4xx other than rate limiting). Anything else rejects
+     this one call and keeps the tokens, and the next call tries again. */
+  var refreshing = null;
+
   function ensureFreshSession() {
     if (!session) return Promise.resolve(null);
     if (session.expiresAt - Date.now() > 60000) return Promise.resolve(session);
+    if (refreshing) return refreshing;
 
-    return gotrueFetch('/token?grant_type=refresh_token', {
-      body: { refresh_token: session.refreshToken }
+    var from = session;
+    refreshing = gotrueFetch('/token?grant_type=refresh_token', {
+      body: { refresh_token: from.refreshToken }
     }).then(function (body) {
+      // Signed out (or back in as somebody else) while this was in flight.
+      if (session !== from) return session;
       storeSessionFromResponse(body);
       return session;
-    }).catch(function () {
-      setSession(null);
+    }, function (err) {
+      var rejected = err && err.status >= 400 && err.status < 500 && err.status !== 429;
+      if (!rejected) throw err;
+      if (session === from) setSession(null);
       return null;
+    }).then(function (result) {
+      refreshing = null;
+      return result;
+    }, function (err) {
+      refreshing = null;
+      throw err;
     });
+    return refreshing;
   }
 
   /* ------------------------------------------------------------- sign in */
@@ -587,6 +622,8 @@
     if (!configured() || !session) return;
     ensureFreshSession().then(function (fresh) {
       if (fresh) syncAfterSignIn().then(function () { HC.store.emit('auth', { signedIn: true, user: getUser() }); });
+    }).catch(function () {
+      // Offline at launch. Still signed in; the next call refreshes.
     });
   }
 
