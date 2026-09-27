@@ -43,6 +43,7 @@
   var draft = null;        // the announcement being written or edited
   var pageDraft = null;    // the content page being edited
   var groupBox = null;     // the home groups paragraph on Connect, being edited
+  var bannerDraft = null;  // the pinned banner's words, while Edit is open
   var busy = '';           // the id of whatever is mid network call
   var uploading = false;
 
@@ -50,6 +51,7 @@
     draft = null;
     pageDraft = null;
     groupBox = null;
+    bannerDraft = null;
     busy = '';
     uploading = false;
   }
@@ -2093,6 +2095,100 @@
     return html;
   }
 
+  /* The pinned banner: the switch, and the sentence behind an Edit button.
+
+     WHY EDIT AND SAVE, when every other text box on this screen saves as you
+     type. Those are links pasted in one go. This is a sentence the whole
+     church reads, typed a word at a time, and saving each word put every half
+     written version of it on Home and repainted the screen under the cursor,
+     which is what threw the keyboard away after every space. Now nothing
+     leaves the phone until Save, and the box is never redrawn while it is
+     being typed in.
+
+     "Notify everyone" sits beside Save because the moment to tell people is
+     the moment the words are final. Saving with it on turns the banner on if
+     it was off, since a notification about a banner nobody can see is a
+     notification about nothing. The switch starts off every time Edit opens:
+     four hundred lock screens should never be the default. */
+  var BANNER_ON = {
+    key: 'home_banner_on',
+    label: 'Pinned banner',
+    help: 'Shows a single line at the very top of Home, above everything else. ' +
+      'Use it for the thing that cannot wait for an announcement.',
+    sortOrder: 10
+  };
+  var BANNER_MESSAGE_KEY = 'home_banner_message';
+
+  function settingRow(key) {
+    return HC.admin.settings().filter(function (s) { return s.key === key; })[0];
+  }
+
+  function bannerOn() {
+    var row = settingRow(BANNER_ON.key);
+    if (row) return !!row.value_bool;
+    return HC.data.setting(BANNER_ON.key, false) === true;
+  }
+
+  function bannerMessage() {
+    var row = settingRow(BANNER_MESSAGE_KEY);
+    if (row) return String(row.value_text || '');
+    return String(HC.data.setting(BANNER_MESSAGE_KEY, '') || '');
+  }
+
+  function bannerSection() {
+    var on = bannerOn();
+    var message = bannerMessage().trim();
+
+    var html = c.sectionHeader('', 'Pinned banner');
+    html += switchRow({
+      title: 'Pinned banner',
+      sub: on
+        ? (message ? 'On. The line below is at the top of Home for everybody.'
+                   : 'On, but there is nothing to show until it says something.')
+        : 'Off. Nothing is pinned to the top of Home.',
+      action: 'admin-banner-toggle',
+      id: BANNER_ON.key,
+      on: on
+    });
+
+    if (!bannerDraft) {
+      html += '<div class="hc-field">' +
+        '<span class="hc-field__label">Banner message</span>' +
+        '<p class="hc-admin__banner-text' + (message ? '' : ' hc-caption') + '">' +
+          c.esc(message || 'No message yet.') +
+        '</p>' +
+      '</div>';
+      html += '<div class="hc-admin__item-actions">' +
+        c.button(message ? 'Edit' : 'Write one', { action: 'admin-banner-edit',
+          variant: 'secondary', small: true }) +
+      '</div>';
+      return html;
+    }
+
+    html += textarea({
+      name: 'bannerMessage',
+      label: 'Banner message',
+      value: bannerDraft.message,
+      rows: 3,
+      help: 'One sentence. Nothing changes on Home until you tap Save.'
+    });
+    html += switchRow({
+      title: 'Notify everyone',
+      sub: 'Sends the banner to every phone as a notification when you save. ' +
+        'Turns the banner on if it is off.',
+      action: 'admin-banner-notify-toggle',
+      on: bannerDraft.notify
+    });
+    html += '<div class="hc-admin__item-actions">' +
+      c.button('Save', { action: 'admin-banner-save', small: true,
+        busy: busy === 'banner' }) +
+      c.button('Cancel', { action: 'admin-banner-cancel', variant: 'tertiary',
+        small: true, disabled: busy === 'banner' }) +
+    '</div>';
+
+    return html;
+  }
+
   /* Rows this screen deliberately does not draw in the list, because they are
      already drawn somewhere they mean more: the push default belongs on the
      Announcements screen, and Group mode is a section of its own a few inches
@@ -2107,6 +2203,8 @@
   DRAWN_ELSEWHERE[PUSH_DEFAULT_KEY] = true;
   DRAWN_ELSEWHERE[GROUP_MODE.key] = true;
   DRAWN_ELSEWHERE[MAINTENANCE.key] = true;
+  DRAWN_ELSEWHERE[BANNER_ON.key] = true;
+  DRAWN_ELSEWHERE[BANNER_MESSAGE_KEY] = true;
 
   function settingsSection() {
     var html = '<div class="hc-screen hc-admin">';
@@ -2126,6 +2224,9 @@
     // there may be nothing to fetch. See groupModeSection.
     html += groupModeSection();
 
+    // The banner, with its own Edit and Save. See bannerSection.
+    html += bannerSection();
+
     var rows = HC.admin.settings().filter(function (s) {
       return !DRAWN_ELSEWHERE[s.key];
     });
@@ -2137,7 +2238,7 @@
     html += c.sectionHeader('', 'Switches and messages');
 
     if (!rows.length) {
-      html += pending('settings', 'No settings yet.');
+      html += pending('settings', 'Nothing else here yet.');
     } else {
       rows.forEach(function (s) {
         if (s.kind === 'boolean') {
@@ -2271,7 +2372,17 @@
 
     // Maintenance mode, the same pair for the same handler shape.
     maintenance: function () { return MAINTENANCE; },
-    maintenanceOn: maintenanceOn
+    maintenanceOn: maintenanceOn,
+
+    // The pinned banner: its switch, what it says, and the words being edited.
+    banner: function () { return BANNER_ON; },
+    bannerOn: bannerOn,
+    bannerMessageKey: function () { return BANNER_MESSAGE_KEY; },
+    getBannerDraft: function () { return bannerDraft; },
+    startBannerDraft: function () {
+      bannerDraft = { message: bannerMessage(), notify: false };
+    },
+    clearBannerDraft: function () { bannerDraft = null; }
   };
 
 })(window.HC = window.HC || {});

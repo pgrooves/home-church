@@ -1484,6 +1484,14 @@
     });
   }
 
+  /* The pinned banner, to every phone. Takes nothing: the database reads the
+     banner as it stands and refuses if it is off or empty, so the words on
+     the lock screen are always the words on Home. Called after the save, and
+     separately from it, for the reason notifyAnnouncement gives. See 0078. */
+  function notifyBanner() {
+    return HC.auth.rpc('hc_admin_send_banner', {});
+  }
+
   /* A switch the app knows by name, saved whether or not its row exists yet.
 
      WHY THIS IS NOT saveSetting ABOVE. That one PATCHes a row by its key, and
@@ -1652,6 +1660,7 @@
     loadSettings: loadSettings,
     saveSetting: saveSetting,
     saveSwitch: saveSwitch,
+    notifyBanner: notifyBanner,
     createSetting: createSetting,
     deleteSetting: deleteSetting
   };

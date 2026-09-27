@@ -64,7 +64,8 @@ type Topic =
   | 'test'
   | 'announcement'
   | 'announcement_review'
-  | 'event_review';
+  | 'event_review'
+  | 'banner';
 
 const TOPIC_COLUMN: Record<Topic, string | null> = {
   new_guide: 'wants_new_guide',
@@ -74,6 +75,10 @@ const TOPIC_COLUMN: Record<Topic, string | null> = {
   announcement_review: 'wants_announcement_review',
   event_review: 'wants_event_review',
   test: null, // a test goes to every active phone, on purpose
+  // The pinned banner, when an admin ticks "Notify everyone" beside Save. It
+  // is the church saying everybody needs to know this, so it goes to every
+  // active phone as well. See migration 0078.
+  banner: null,
 };
 
 /* The two topics that go to some phones rather than to all of them.
@@ -273,6 +278,30 @@ async function compose(
     return {
       title,
       body: body ? firstSentence(body) : 'Open the app to read it.',
+    };
+  }
+
+  /* The pinned banner, read at send time rather than carried in, so the lock
+     screen can never say something Home does not. Off or empty is the null
+     case: an admin who took it down in the second between Save and here. */
+  if (topic === 'banner') {
+    const { data: rows } = await admin
+      .from('app_settings')
+      .select('key, value_bool, value_text')
+      .in('key', ['home_banner_on', 'home_banner_message']);
+
+    const on = (rows ?? []).find((r) => r.key === 'home_banner_on')?.value_bool === true;
+    const message = String(
+      (rows ?? []).find((r) => r.key === 'home_banner_message')?.value_text ?? '',
+    ).replace(/\s+/g, ' ').trim();
+
+    if (!on || !message) return null;
+
+    // Not firstSentence(): the banner is already one line, and cutting it at
+    // the first full stop would drop the half that says when.
+    return {
+      title: 'Home Church',
+      body: message.length > 178 ? message.slice(0, 177).trimEnd() + '\u2026' : message,
     };
   }
 

@@ -2685,6 +2685,14 @@
 
 .hc-admin__item-actions .hc-btn { margin-top: 0; }
 
+/* The pinned banner's sentence on App settings while it is not being edited.
+   Read as the words themselves, not as a disabled box. */
+.hc-admin__banner-text {
+  margin: 4px 0 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
 .hc-admin__loading,
 .hc-admin__self {
   color: var(--hc-mid);

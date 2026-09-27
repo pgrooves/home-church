@@ -2679,6 +2679,79 @@
       }));
     },
 
+    /* The pinned banner's switch. Same shape as Group mode: the row is carried
+       by the screen so the first tap upserts it on a project that has somehow
+       lost it. Taking the banner down or putting it back is instant, like
+       every other switch here; only the words wait for Save. */
+    'admin-banner-toggle': function (el) {
+      var h = HC.screens.adminHelpers;
+      var next = !h.bannerOn();
+      setSwitch(el, next);
+      HC.native.tap('Light');
+      adminRun('setting:' + h.banner().key, HC.admin.saveSwitch(h.banner(), next));
+    },
+
+    'admin-banner-edit': function () {
+      HC.screens.adminHelpers.startBannerDraft();
+      repaintAdmin();
+      focusAdminField('bannerMessage');
+    },
+
+    'admin-banner-cancel': function () {
+      HC.screens.adminHelpers.clearBannerDraft();
+      repaintAdmin();
+    },
+
+    // Flipped on screen and in the draft, with no repaint, so whatever is
+    // half typed in the box above stays exactly where it is.
+    'admin-banner-notify-toggle': function (el) {
+      var d = HC.screens.adminHelpers.getBannerDraft();
+      if (!d) return;
+      d.notify = !d.notify;
+      setSwitch(el, d.notify);
+      HC.native.tap('Light');
+    },
+
+    /* Save, and then, if asked, tell everybody. In that order and as separate
+       calls, for the reason notifyAnnouncement gives in js/admin.js: a banner
+       that saved but did not notify is fine and fixable, and a notification
+       about words that did not save is a lie on every lock screen. */
+    'admin-banner-save': function () {
+      var h = HC.screens.adminHelpers;
+      var d = h.getBannerDraft();
+      if (!d) return;
+
+      var message = String(d.message || '').trim();
+      var notify = d.notify;
+      var wasOn = h.bannerOn();
+
+      if (notify && !message) {
+        HC.components.toast('Write the banner before notifying anybody.');
+        return;
+      }
+      if (notify && !window.confirm('Save the banner and send it to everybody’s ' +
+            'phone as a notification? This cannot be undone.')) return;
+
+      var work = HC.admin.saveSetting(h.bannerMessageKey(), 'text', message);
+      if (notify && !wasOn) {
+        work = work.then(function () { return HC.admin.saveSwitch(h.banner(), true); });
+      }
+
+      adminRun('banner', work.then(function () {
+        h.clearBannerDraft();
+        if (!notify) {
+          HC.components.toast(message && wasOn ? 'Saved. It is on Home now.' : 'Saved.');
+          return;
+        }
+        return HC.admin.notifyBanner().then(function () {
+          HC.components.toast('Saved, and everybody has been told.');
+        }).catch(function (err) {
+          HC.components.toast('Saved. The notification did not send: ' +
+            (err.message || 'try again in a moment.'));
+        });
+      }));
+    },
+
     'admin-setting-delete': function (el) {
       var key = el.getAttribute('data-id');
       var row = HC.admin.settings().filter(function (s) { return s.key === key; })[0];
@@ -4557,6 +4630,18 @@
     });
   }
 
+  /* The caret into one box on the Admin screen, after the repaint that drew
+     it. Same deferral as focusEditor above, for the same reason. */
+  function focusAdminField(name) {
+    window.requestAnimationFrame(function () {
+      var box = document.querySelector('[data-admin-field="' + name + '"]');
+      if (!box) return;
+      box.focus();
+      try { box.setSelectionRange(box.value.length, box.value.length); }
+      catch (err) { /* Some browsers refuse this on a just-focused element. */ }
+    });
+  }
+
   function calHelpers() {
     return HC.screens.calHelpers;
   }
@@ -4617,6 +4702,14 @@
     var h = adminHelpers();
     var d = h.getDraft();
     var p = h.getPageDraft();
+
+    // The pinned banner's words, held until Save. Nothing is drawn and
+    // nothing is sent, which is what keeps the keyboard up. See bannerSection.
+    if (name === 'bannerMessage') {
+      var bd = h.getBannerDraft();
+      if (bd) bd.message = value;
+      return;
+    }
 
     if (name === 'setting') {
       debounceGlobal('setting-' + id, function () {
