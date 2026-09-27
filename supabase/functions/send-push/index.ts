@@ -376,7 +376,11 @@ function firstSentence(text: string): string {
 /* --------------------------------------------------------------- sending */
 
 /* @@ gateway:start */
-interface SendOutcome { ok: boolean; retire: boolean; reason?: string; wrongGateway?: boolean; }
+interface SendOutcome {
+  ok: boolean; retire: boolean; reason?: string; wrongGateway?: boolean;
+  // The request never got an HTTP answer: the connection dropped under it.
+  network?: boolean;
+}
 
 const PRODUCTION_HOST = 'api.push.apple.com';
 const SANDBOX_HOST = 'api.sandbox.push.apple.com';
@@ -388,6 +392,28 @@ function otherGateway(host: string): string | null {
   if (host === PRODUCTION_HOST) return SANDBOX_HOST;
   if (host === SANDBOX_HOST) return PRODUCTION_HOST;
   return null;
+}
+
+/* WHEN APPLE ANSWERS WITH THE CONNECTION RATHER THAN A STATUS. A refused
+ * token usually comes back as a plain 400. But APNs can also close the whole
+ * HTTP/2 connection (GOAWAY) and put the reason in the goodbye, and fetch()
+ * then throws instead of returning, with the reason buried in the error text:
+ *
+ *   http2 error: connection error received: not a result of an error
+ *   (b"{\"reason\":\"BadDeviceToken\"}")
+ *
+ * On 27 September that was a TestFlight phone sent to the sandbox first. It
+ * was read as "network trouble", so it was never tried on production, and a
+ * phone that was allowed notifications and on the list heard nothing. So the
+ * reason is read out of the error, and a BadDeviceToken found there means
+ * exactly what the 400 means.
+ */
+function fromNetworkError(err: unknown): SendOutcome {
+  const text = String(err);
+  if (/BadDeviceToken/.test(text)) {
+    return { ok: false, retire: true, reason: `GOAWAY BadDeviceToken`, wrongGateway: true };
+  }
+  return { ok: false, retire: false, reason: text, network: true };
 }
 
 /* ONE PHONE, TWO GATEWAYS, AND WHY THE SECRET IS NOT ENOUGH.
@@ -411,13 +437,18 @@ async function sendEitherGateway(
   host: string,
   send: (host: string) => Promise<SendOutcome>,
 ): Promise<SendOutcome> {
-  const first = await send(host);
+  let first = await send(host);
+  // A dropped connection says nothing about the token, and every request
+  // in flight on it fails together when APNs closes it for somebody else's
+  // token. One more try opens a fresh one.
+  if (first.network) first = await send(host);
   if (first.ok || !first.wrongGateway) return first;
 
   const other = otherGateway(host);
   if (!other) return first;
 
-  const second = await send(other);
+  let second = await send(other);
+  if (second.network) second = await send(other);
   if (second.ok) return second;
 
   return {
@@ -492,7 +523,7 @@ async function sendOne(
       wrongGateway: reason === 'BadDeviceToken',
     };
   } catch (err) {
-    return { ok: false, retire: false, reason: String(err) };
+    return fromNetworkError(err);
   }
 }
 

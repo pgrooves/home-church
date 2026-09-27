@@ -46,20 +46,31 @@ if (start === -1 || end === -1 || end < start) {
 }
 
 const fenced = stripTypeScriptTypes(source.slice(start, end));
-const { sendEitherGateway, PRODUCTION_HOST, SANDBOX_HOST } = vm.runInNewContext(
-  fenced + '\n({ sendEitherGateway, PRODUCTION_HOST, SANDBOX_HOST })');
+const { sendEitherGateway, fromNetworkError, PRODUCTION_HOST, SANDBOX_HOST } = vm.runInNewContext(
+  fenced + '\n({ sendEitherGateway, fromNetworkError, PRODUCTION_HOST, SANDBOX_HOST })');
 
 const OK = { ok: true, retire: false };
 const BAD = { ok: false, retire: true, reason: '400 BadDeviceToken', wrongGateway: true };
 const GONE = { ok: false, retire: true, reason: '410 Unregistered' };
-const DOWN = { ok: false, retire: false, reason: 'TypeError: network' };
+const DOWN = { ok: false, retire: false, reason: 'TypeError: network', network: true };
 
-/* A fake APNs: answers by gateway, and remembers which ones it was asked. */
+/* A fake APNs: answers by gateway, and remembers which ones it was asked.
+   An answer can be a list, taken in order, for a gateway asked twice. */
 function apns(answers) {
   const asked = [];
-  const send = (host) => { asked.push(host); return Promise.resolve(answers[host]); };
+  const send = (host) => {
+    asked.push(host);
+    const a = answers[host];
+    return Promise.resolve(Array.isArray(a) ? a.shift() : a);
+  };
   return { send, asked };
 }
+
+/* What fetch() threw on 27 September, word for word, when the sandbox closed
+   the connection over a TestFlight phone's token. */
+const GOAWAY_TEXT = 'TypeError: error sending request for https://api.sandbox.push.apple.com/3/device/D34A ' +
+  '([2620:149:208:303::1f]:443): client error (SendRequest): http2 error: connection error received: ' +
+  'not a result of an error (b"{\\"reason\\":\\"BadDeviceToken\\"}")';
 
 (async () => {
   console.log('\n--- the ordinary phone ---');
@@ -102,7 +113,30 @@ function apns(answers) {
 
   a = apns({ [PRODUCTION_HOST]: DOWN });
   await sendEitherGateway(PRODUCTION_HOST, a.send);
-  ok('a network failure is not a wrong gateway', a.asked, [PRODUCTION_HOST]);
+  ok('a network failure is not a wrong gateway, it is one more try on the same one',
+    a.asked, [PRODUCTION_HOST, PRODUCTION_HOST]);
+
+  a = apns({ [PRODUCTION_HOST]: [DOWN, OK] });
+  ok('and that second try delivers',
+    (await sendEitherGateway(PRODUCTION_HOST, a.send)).ok, true);
+
+  console.log('\n--- Apple saying BadDeviceToken by closing the connection ---');
+
+  const goaway = fromNetworkError(new Error(GOAWAY_TEXT));
+  ok('the reason is read out of the error', [goaway.wrongGateway, !!goaway.network], [true, false]);
+  ok('any other thrown error is plain network trouble',
+    [fromNetworkError(new Error('connection reset')).network,
+     !!fromNetworkError(new Error('connection reset')).wrongGateway], [true, false]);
+
+  a = apns({ [SANDBOX_HOST]: goaway, [PRODUCTION_HOST]: OK });
+  const tf = await sendEitherGateway(SANDBOX_HOST, a.send);
+  ok('THE 27 SEPTEMBER BUG: a TestFlight phone refused by GOAWAY is delivered on production',
+    tf.ok, true);
+  ok('sandbox first, then production', a.asked, [SANDBOX_HOST, PRODUCTION_HOST]);
+
+  a = apns({ [SANDBOX_HOST]: BAD, [PRODUCTION_HOST]: [DOWN, OK] });
+  ok('a dropped connection on the second gateway is tried once more too',
+    (await sendEitherGateway(SANDBOX_HOST, a.send)).ok, true);
 
   a = apns({ 'apns.example.test': BAD });
   ok('a host that is neither of Apple\'s has no other one to try',
