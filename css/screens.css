@@ -2685,6 +2685,28 @@
 
 .hc-admin__item-actions .hc-btn { margin-top: 0; }
 
+/* Users, split into Admins, Hosts and Members under the search box. The folds
+   are the Journal's, and a row a search has left out is hidden outright. */
+.hc-admin__users [hidden] { display: none; }
+
+/* The list is the positioned box so a row's offsetTop is measured from it,
+   which is what sizeUserLists() in js/screens/admin.js cuts it off at. Past
+   ten people it scrolls inside itself, and the scroll stops at its own ends
+   rather than carrying on into the page behind it. flow-root so the first
+   row's margin stays inside the list whether or not it is scrolling, or the
+   cut would land a margin's width short of the tenth row. */
+.hc-admin__users-list {
+  position: relative;
+  display: flow-root;
+}
+
+.hc-admin__users-list[data-scroll="true"] {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  border-bottom: var(--hc-hairline) solid var(--hc-rule);
+}
+
 /* The pinned banner's sentence on App settings while it is not being edited.
    Read as the words themselves, not as a disabled box. */
 .hc-admin__banner-text {

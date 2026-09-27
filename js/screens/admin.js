@@ -46,6 +46,8 @@
   var bannerDraft = null;  // the pinned banner's words, while Edit is open
   var busy = '';           // the id of whatever is mid network call
   var uploading = false;
+  var userQuery = '';      // what is typed in the box above the users list
+  var userFolds = {};      // which of Admins, Hosts and Members are open
 
   function resetDrafts() {
     draft = null;
@@ -54,6 +56,8 @@
     bannerDraft = null;
     busy = '';
     uploading = false;
+    userQuery = '';
+    userFolds = {};
   }
 
   /* -------------------------------------------------------------- helpers */
@@ -1696,8 +1700,27 @@
     return u.is_leader ? 'Leader' : 'Member';
   }
 
+  /* The three folds the list is split into. Hosts are the people with Leader
+     mode on: the switch is still called Leader mode, but what it is for is
+     hosting a group room, and that is the word an admin scanning for them has
+     in mind. An admin with Leader mode on is under Admins, the same rule as
+     personStanding() above. */
+  var USER_GROUPS = [
+    { key: 'admins',  title: 'Admins',  empty: 'No admins yet.' },
+    { key: 'hosts',   title: 'Hosts',   empty: 'Nobody has Leader mode on yet.' },
+    { key: 'members', title: 'Members', empty: 'No members yet.' }
+  ];
+
+  // Past this many people a fold stops growing and scrolls inside itself.
+  var USERS_VISIBLE = 10;
+
+  function userGroup(u) {
+    if (u.role === 'admin') return 'admins';
+    return u.is_leader ? 'hosts' : 'members';
+  }
+
   function usersSection() {
-    var html = '<div class="hc-screen hc-admin">';
+    var html = '<div class="hc-screen hc-admin hc-admin__users">';
     html += c.sectionHeader('For the church', 'Users', { flush: true, tag: 'h1' });
 
     var rows = HC.admin.users();
@@ -1713,81 +1736,204 @@
       'write announcements, edit content, and set what everybody else is. Nobody can ' +
       'change their own.</p>';
 
-    rows.forEach(function (u) {
-      var self = HC.admin.isSelf(u.id);
-      var isAdminRow = u.role === 'admin';
+    /* Filtered in place as somebody types, by filterUsers() below, rather than
+       by redrawing the screen: a redraw between two letters takes the
+       keyboard down. The value is drawn back in so a repaint for any other
+       reason, a switch tapped mid search, keeps what was typed. */
+    html += '<label class="hc-field hc-search__field">' +
+      '<span class="hc-visually-hidden">Search users</span>' +
+      '<span class="hc-search__box">' +
+        c.icon('search', 'hc-search__icon') +
+        '<input class="hc-input hc-search__input" type="search" data-admin-user-search ' +
+          'placeholder="Search by name or email" autocomplete="off" ' +
+          'autocorrect="off" autocapitalize="none" spellcheck="false" ' +
+          'value="' + c.esc(userQuery) + '">' +
+      '</span>' +
+    '</label>';
 
-      html += '<div class="hc-admin__item">' +
-        '<div class="hc-admin__item-head">' +
-          '<p class="hc-eyebrow">' + c.esc(personStanding(u)) +
-            (self ? ' · You' : '') + '</p>' +
-          '<p class="hc-row__title">' + c.esc(personName(u)) + '</p>' +
-          '<p class="hc-caption">' + c.esc(u.email || 'No email on file') + '</p>' +
-        '</div>';
+    var grouped = { admins: [], hosts: [], members: [] };
+    rows.forEach(function (u) { grouped[userGroup(u)].push(u); });
 
-      /* Leader mode, on the row rather than behind a second screen, because
-         this is the thing an admin comes here to do most often: somebody has
-         started leading a group and needs to be able to open a room on
-         Thursday.
-
-         MEMBERS ONLY, AND THAT IS THE WHOLE RULE. An admin already has
-         everything Leader mode grants and hosts a room without it (migration
-         0036), so a switch on an admin's row is one that changes nothing
-         anybody can see, whether it is your own row or somebody else's. The
-         line below says so instead. Demote an admin and the switch comes back
-         on their row, still holding whatever it held: the value is never
-         thrown away, it is only hidden while it cannot matter. */
-      if (isAdminRow) {
-        /* Your own row says this once, in the line under the buttons, rather
-           than twice in two stacked captions. */
-        if (!self) {
-          html += '<p class="hc-caption hc-admin__self">An admin has the leader tools ' +
-            'and can host a group room already. There is no Leader mode to turn on.</p>';
-        }
-      } else {
-        html += switchRow({
-          title: 'Leader mode',
-          sub: u.is_leader
-            ? 'On. Leader tools, and they can open a group room.'
-            : 'Off. Turn it on for somebody who leads a group.',
-          action: 'admin-leader',
-          id: u.id,
-          on: !!u.is_leader
-        });
-      }
-
-      html += '<div class="hc-admin__item-actions">';
-
-      /* The safety guard, drawn rather than merely enforced. A disabled button
-         with a reason under it is a better answer than a button that works
-         and then explains why it did not, and it is the same shape the
-         database gives back: hc_admin_set_role refuses this, and so does the
-         trigger underneath it. */
-      if (self) {
-        html += '<p class="hc-caption hc-admin__self">You cannot change your own role or ' +
-          'remove your own account here, and an admin has the leader tools already. ' +
-          'Deleting your account is under Your data.</p>';
-      } else {
-        html += c.button(isAdminRow ? 'Make a member' : 'Make an admin', {
-          action: 'admin-role',
-          id: u.id,
-          variant: 'secondary',
-          small: true,
-          busy: busy === 'role:' + u.id
-        });
-        html += c.button('Remove', {
-          action: 'admin-user-remove',
-          id: u.id,
-          variant: 'tertiary',
-          small: true,
-          busy: busy === 'remove:' + u.id
-        });
-      }
-
-      html += '</div></div>';
+    USER_GROUPS.forEach(function (g) {
+      var panelId = 'admin-users-' + g.key;
+      html += '<section class="hc-jfold hc-jfold--group" data-user-fold="' + g.key + '">' +
+        '<h2 class="hc-jfold__h">' +
+          '<button type="button" class="hc-jfold__toggle" data-action="admin-user-fold" ' +
+            'data-id="' + g.key + '" aria-expanded="false" aria-controls="' + panelId + '">' +
+            '<span class="hc-jfold__heading">' +
+              '<span class="hc-jfold__title">' + c.esc(g.title) + '</span>' +
+              '<span class="hc-jfold__rule" aria-hidden="true"></span>' +
+            '</span>' +
+            '<span class="hc-caption hc-jfold__count">' +
+              '<span data-user-count>' + grouped[g.key].length + '</span>' +
+              '<span class="hc-visually-hidden"> people</span>' +
+            '</span>' +
+            c.icon('chevronDown', 'hc-jfold__chevron') +
+          '</button>' +
+        '</h2>' +
+        '<div class="hc-jfold__panel" id="' + panelId + '" data-open="false">' +
+          '<div>' +
+            '<p class="hc-caption hc-admin__loading" data-user-empty>' + c.esc(g.empty) + '</p>' +
+            '<div class="hc-admin__users-list" data-user-list>';
+      grouped[g.key].forEach(function (u) { html += userItem(u); });
+      html += '</div></div></div></section>';
     });
 
     html += '</div>';
+    return html;
+  }
+
+  /* Every word typed has to turn up somewhere in the name or the email, in any
+     order, so "smith jo" finds Jo Smith. */
+  function userHaystack(u) {
+    return [u.first_name, u.last_name, u.email].filter(Boolean).join(' ').toLowerCase();
+  }
+
+  function setUserFold(fold, open) {
+    var toggle = fold.querySelector('[data-action="admin-user-fold"]');
+    var panel = fold.querySelector('.hc-jfold__panel');
+    if (toggle) toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+    if (panel) panel.setAttribute('data-open', open ? 'true' : 'false');
+  }
+
+  /* Shows who matches what is typed, updates each fold's count, and decides
+     which folds are open: while there is a search, every fold with somebody
+     in it opens and every empty one closes; with none, each is the way the
+     admin last left it, which on the way in is closed. */
+  function filterUsers(root) {
+    var terms = userQuery.trim().toLowerCase().split(/\s+/).filter(Boolean);
+
+    USER_GROUPS.forEach(function (g) {
+      var fold = root.querySelector('[data-user-fold="' + g.key + '"]');
+      if (!fold) return;
+
+      var shown = 0;
+      Array.prototype.forEach.call(fold.querySelectorAll('[data-user-search]'), function (item) {
+        var hay = item.getAttribute('data-user-search');
+        var match = terms.every(function (t) { return hay.indexOf(t) !== -1; });
+        item.hidden = !match;
+        if (match) shown++;
+      });
+
+      var count = fold.querySelector('[data-user-count]');
+      if (count) count.textContent = shown;
+
+      var empty = fold.querySelector('[data-user-empty]');
+      if (empty) {
+        empty.hidden = shown > 0;
+        empty.textContent = terms.length ? 'Nobody here matches.' : g.empty;
+      }
+
+      var list = fold.querySelector('[data-user-list]');
+      if (list) list.scrollTop = 0;
+
+      setUserFold(fold, terms.length ? shown > 0 : !!userFolds[g.key]);
+    });
+
+    sizeUserLists(root);
+  }
+
+  /* A fold with more than ten people in it is cut off at the bottom of the
+     tenth and scrolls from there. Measured rather than set as a height in
+     the stylesheet, because a row is taller with a Leader mode switch than
+     without one and taller again when a long name wraps. Rows keep their
+     layout while a fold is closed, so this works on a closed fold too, but
+     not before the screen is on the page: render() calls it again once it
+     is. */
+  function sizeUserLists(root) {
+    Array.prototype.forEach.call(root.querySelectorAll('[data-user-list]'), function (list) {
+      var visible = Array.prototype.filter.call(list.children, function (item) {
+        return !item.hidden;
+      });
+      var last = visible[USERS_VISIBLE - 1];
+      if (visible.length <= USERS_VISIBLE || !last.offsetHeight) {
+        list.style.maxHeight = '';
+        list.removeAttribute('data-scroll');
+        return;
+      }
+      list.style.maxHeight = (last.offsetTop + last.offsetHeight) + 'px';
+      list.setAttribute('data-scroll', 'true');
+    });
+  }
+
+  /* A phone turned on its side rewraps every row, so the cut moves with it. */
+  window.addEventListener('resize', function () {
+    if (document.querySelector('[data-user-list]')) sizeUserLists(document);
+  });
+
+  function userItem(u) {
+    var html = '';
+    var self = HC.admin.isSelf(u.id);
+    var isAdminRow = u.role === 'admin';
+
+    html += '<div class="hc-admin__item" data-user-search="' + c.esc(userHaystack(u)) + '">' +
+      '<div class="hc-admin__item-head">' +
+        '<p class="hc-eyebrow">' + c.esc(personStanding(u)) +
+          (self ? ' · You' : '') + '</p>' +
+        '<p class="hc-row__title">' + c.esc(personName(u)) + '</p>' +
+        '<p class="hc-caption">' + c.esc(u.email || 'No email on file') + '</p>' +
+      '</div>';
+
+    /* Leader mode, on the row rather than behind a second screen, because
+       this is the thing an admin comes here to do most often: somebody has
+       started leading a group and needs to be able to open a room on
+       Thursday.
+
+       MEMBERS ONLY, AND THAT IS THE WHOLE RULE. An admin already has
+       everything Leader mode grants and hosts a room without it (migration
+       0036), so a switch on an admin's row is one that changes nothing
+       anybody can see, whether it is your own row or somebody else's. The
+       line below says so instead. Demote an admin and the switch comes back
+       on their row, still holding whatever it held: the value is never
+       thrown away, it is only hidden while it cannot matter. */
+    if (isAdminRow) {
+      /* Your own row says this once, in the line under the buttons, rather
+         than twice in two stacked captions. */
+      if (!self) {
+        html += '<p class="hc-caption hc-admin__self">An admin has the leader tools ' +
+          'and can host a group room already. There is no Leader mode to turn on.</p>';
+      }
+    } else {
+      html += switchRow({
+        title: 'Leader mode',
+        sub: u.is_leader
+          ? 'On. Leader tools, and they can open a group room.'
+          : 'Off. Turn it on for somebody who leads a group.',
+        action: 'admin-leader',
+        id: u.id,
+        on: !!u.is_leader
+      });
+    }
+
+    html += '<div class="hc-admin__item-actions">';
+
+    /* The safety guard, drawn rather than merely enforced. A disabled button
+       with a reason under it is a better answer than a button that works
+       and then explains why it did not, and it is the same shape the
+       database gives back: hc_admin_set_role refuses this, and so does the
+       trigger underneath it. */
+    if (self) {
+      html += '<p class="hc-caption hc-admin__self">You cannot change your own role or ' +
+        'remove your own account here, and an admin has the leader tools already. ' +
+        'Deleting your account is under Your data.</p>';
+    } else {
+      html += c.button(isAdminRow ? 'Make a member' : 'Make an admin', {
+        action: 'admin-role',
+        id: u.id,
+        variant: 'secondary',
+        small: true,
+        busy: busy === 'role:' + u.id
+      });
+      html += c.button('Remove', {
+        action: 'admin-user-remove',
+        id: u.id,
+        variant: 'tertiary',
+        small: true,
+        busy: busy === 'remove:' + u.id
+      });
+    }
+
+    html += '</div></div>';
     return html;
   }
 
@@ -2328,7 +2474,13 @@
     if (id === 'settings') HC.admin.loadSettings();
 
     if (id === 'announcements') return c.el(announcementsSection());
-    if (id === 'users') return c.el(usersSection());
+    if (id === 'users') {
+      var usersEl = c.el(usersSection());
+      filterUsers(usersEl);
+      // Again once the screen is on the page, where the rows have a height.
+      requestAnimationFrame(function () { sizeUserLists(document); });
+      return usersEl;
+    }
     if (id === 'content') return c.el(contentSection());
     if (id === 'settings') return c.el(settingsSection());
 
@@ -2359,6 +2511,24 @@
        tapped. */
     getGroupBox: function () { return groupBoxDraft(); },
     clearGroupBox: function () { groupBox = null; },
+
+    /* The users list. Both work on the screen as it is rather than redrawing
+       it, so typing keeps the keyboard up and a fold opens with its scroll
+       position intact. A fold tapped while there is a search opens or closes
+       for now only; clearing the search puts every fold back where the admin
+       left it. */
+    setUserSearch: function (value) {
+      userQuery = value || '';
+      filterUsers(document);
+    },
+    toggleUserFold: function (key) {
+      var fold = document.querySelector('[data-user-fold="' + key + '"]');
+      if (!fold) return;
+      var toggle = fold.querySelector('[data-action="admin-user-fold"]');
+      var open = !(toggle && toggle.getAttribute('aria-expanded') === 'true');
+      if (!userQuery.trim()) userFolds[key] = open;
+      setUserFold(fold, open);
+    },
 
     setBusy: function (value) { busy = value || ''; },
     setUploading: function (value) { uploading = !!value; },

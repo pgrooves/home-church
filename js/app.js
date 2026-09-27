@@ -2524,6 +2524,11 @@
       }));
     },
 
+    // Admins, Hosts or Members, opened or closed. Nothing is saved or redrawn.
+    'admin-user-fold': function (el) {
+      adminHelpers().toggleUserFold(el.getAttribute('data-id'));
+    },
+
     'admin-user-remove': function (el) {
       var id = el.getAttribute('data-id');
       var person = HC.admin.users().filter(function (u) { return u.id === id; })[0];
@@ -5345,6 +5350,14 @@
         debounce('search', function () {
           HC.screens.searchHelpers.setQuery(el.value);
         });
+        return;
+      }
+
+      /* The search above the Admin users list. Not debounced and not
+         repainted: it hides and shows rows that are already drawn, which is
+         cheap enough to do on every letter and keeps the keyboard up. */
+      if (el.getAttribute && el.getAttribute('data-admin-user-search') !== null) {
+        adminHelpers().setUserSearch(el.value);
         return;
       }
 
