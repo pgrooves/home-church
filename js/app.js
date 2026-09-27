@@ -5798,11 +5798,16 @@
       if (route && route.name === 'group') HC.screens.groupHelpers.repaint();
     });
 
-    // An APNs token is not permanent. It changes on restore from backup and
-    // sometimes on reinstall, and a church sending to a stale token gets
-    // silence rather than an error, so this re-registers on every launch
-    // where somebody has already asked for notifications.
+    // On a first launch this is the notification prompt, and a yes turns
+    // every switch on. On every launch after, it re-registers, because an
+    // APNs token is not permanent. See resumeNotifications in js/native.js.
     HC.native.resumeNotifications();
+
+    // Back to the front, perhaps from Settings with notifications newly
+    // allowed. Quiet: it only acts when iOS's answer has changed.
+    document.addEventListener('visibilitychange', function () {
+      if (document.visibilityState === 'visible') HC.native.resumeNotifications(true);
+    });
 
     /* Event reminders. Registers the tap listener that opens the Cal tab on
        the right day, and sweeps: an event somebody was waiting on may have

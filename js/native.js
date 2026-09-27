@@ -535,9 +535,10 @@
   }
 
   /* ------------------------------------------------------- notifications
-     Asked for at the moment somebody turns the switch on in Profile, never
-     at launch. A permission prompt on first open, before anybody knows what
-     the app is, is how an app gets a no forever.
+     Asked for on the first launch, the first thing a new phone sees, and a
+     yes turns on every kind of notification there is. The church decided
+     that: the pinned banner is for news everybody needs, and a phone that was
+     never asked can never hear it. See resumeNotifications().
 
      Version 1 has no accounts, so the token is stored on its own with no
      name attached to it. That is the whole reason push survived the decision
@@ -793,6 +794,43 @@
     });
   }
 
+  /* What iOS last told this phone, 'granted' or 'denied', kept so a change
+     can be noticed. iOS answers the prompt once and never shows it again, so
+     the only way to know somebody has since said yes in Settings is to
+     remember that they had said no. */
+  var ANSWER_KEY = 'pushAnswer';
+
+  function rememberAnswer(answer) {
+    HC.store.storage.set(ANSWER_KEY, answer);
+  }
+
+  /* A yes turns on everything this phone can be sent, which is what the
+     person just agreed to. "Available" is what Profile draws: the group day
+     switch only while groups are in season, and the two review switches only
+     do anything on an admin's phone (the server refuses them otherwise). */
+  function turnEverythingOn() {
+    var church = (HC.data && HC.data.church) || {};
+    var next = Object.assign({}, HC.store.getProfile().notifications, {
+      newGuide: true,
+      sundayReminder: true,
+      announcements: true,
+      groupWeek: !!church.groupsInSeason,
+      announcementReview: true,
+      eventReview: true
+    });
+    HC.store.updateProfile({ notifications: next });
+  }
+
+  /* A no turns them all off, so Profile does not show switches that are on
+     while nothing can arrive. Turning one back on asks again, and when iOS
+     will not, says where to go instead. */
+  function turnEverythingOff() {
+    var prefs = HC.store.getProfile().notifications || {};
+    var next = {};
+    Object.keys(prefs).forEach(function (k) { next[k] = false; });
+    HC.store.updateProfile({ notifications: next });
+  }
+
   /* Resolves to true only when permission was actually granted, so the
      caller can put the switch back if somebody says no. */
   function enableNotifications() {
@@ -803,63 +841,78 @@
 
     return p.PushNotifications.requestPermissions().then(function (result) {
       if (!result || result.receive !== 'granted') return false;
+      rememberAnswer('granted');
       return p.PushNotifications.register().then(function () { return true; });
     }).catch(function () {
       return false;
     });
   }
 
-  /* Re-registers on launch when the switch is already on, because an APNs
-     token is not permanent. It changes on restore from backup, and sometimes
-     on reinstall, and a church sending to a stale token gets silence rather
-     than an error. */
-  function resumeNotifications() {
+  /* THE FIRST THING A NEW PHONE SEES, called at boot, while the greeting is
+     still on the glass. And again every time the app comes back to the
+     front, for the one case iOS gives no event for: somebody who said no,
+     went to Settings, and said yes there.
+
+     Three answers, three paths:
+
+       not asked yet   ask now. Yes turns every switch on and registers; no
+                       turns them all off.
+       granted         register, every launch, because an APNs token is not
+                       permanent (restore from backup, some reinstalls). If
+                       the last answer this phone saw was no, this is a yes
+                       from Settings and it turns every switch on first.
+                       Registered whatever the switches say: they choose
+                       topics, and the pinned banner is not one (0078).
+       denied          the switches go off, once, so Profile tells the truth.
+
+     A phone upgrading from a build that did not remember the answer has
+     nothing stored. A yes there is recorded and its switches left exactly as
+     their owner set them; only a change of answer turns them all on.
+
+     `quiet` is the foreground case: it acts only on a change of answer, so
+     coming back to the app is not a registration request every time. */
+  function resumeNotifications(quiet) {
     if (!isNative()) return;
-    var prefs = HC.store.getProfile().notifications || {};
-    var wantsSomething = prefs.newGuide || prefs.sundayReminder ||
-      prefs.groupWeek || prefs.announcements;
-
-    /* The two admin ones count, but only on a phone that is actually an
-       admin's. Without the isAdminHere() half this reads as "every phone wants
-       something", because the two default to true for everybody: Profile draws
-       them for nobody else and the server refuses them for nobody else, but
-       this line would have registered a phone whose owner had turned all four
-       real switches off. */
-    if (isAdminHere() && (prefs.announcementReview || prefs.eventReview)) {
-      wantsSomething = true;
-    }
-
-    if (wantsSomething) {
-      enableNotifications();
-      return;
-    }
-
-    /* EVERY SWITCH OFF IS NOT THE SAME AS NO NOTIFICATIONS. The four switches
-       choose topics, and the pinned banner and the test push are not topics:
-       they go to every phone iOS lets the church reach (migration 0078). This
-       line used to return here, so a phone whose switches were all off never
-       registered at all, and the one place that decides whether it hears
-       anything, the Notifications row in iOS Settings, said "Allowed" to a
-       phone the church had no token for. The commonest way in is somebody who
-       said no to the prompt, which puts the switch back, and later said yes in
-       Settings instead.
-
-       So it registers here too, with every topic false, but only when iOS
-       already says yes. checkPermissions() never shows the prompt, which keeps
-       the promise above: nobody is asked at launch who has not asked first. */
-    registerIfAllowed();
-  }
-
-  function registerIfAllowed() {
     var p = plugins();
-    if (!p || !p.PushNotifications || !p.PushNotifications.checkPermissions) return;
+    if (!p || !p.PushNotifications) return;
 
     listen(p);
 
-    p.PushNotifications.checkPermissions().then(function (result) {
-      if (!result || result.receive !== 'granted') return;
-      return p.PushNotifications.register();
-    }).catch(function () { /* retried next launch */ });
+    var last = HC.store.storage.get(ANSWER_KEY, null);
+    var check = p.PushNotifications.checkPermissions
+      ? p.PushNotifications.checkPermissions()
+      : Promise.resolve(null);
+
+    check.then(function (status) {
+      var state = status && status.receive;
+
+      if (state === 'granted') {
+        if (quiet && last === 'granted') return;
+        if (last === 'denied') turnEverythingOn();
+        rememberAnswer('granted');
+        return p.PushNotifications.register();
+      }
+
+      if (state === 'denied') {
+        if (last !== 'denied') {
+          turnEverythingOff();
+          rememberAnswer('denied');
+        }
+        return;
+      }
+
+      // Never asked. Ask now, on any launch, foreground or not.
+      return p.PushNotifications.requestPermissions().then(function (result) {
+        if (result && result.receive === 'granted') {
+          // Before register(): the registration carries the switches.
+          turnEverythingOn();
+          rememberAnswer('granted');
+          return p.PushNotifications.register();
+        }
+        turnEverythingOff();
+        rememberAnswer('denied');
+      });
+    }).catch(function () { /* tried again next launch */ });
   }
 
   /* ------------------------------------------------------------- biometry
