@@ -177,9 +177,11 @@
        nothing carries them up any more. Ask again when a feature needs one,
        and let that feature say what it needs it for.
 
-       CAMPUS STAYS. It is not personal, the column has been there since 0009,
-       and it is what a second location would filter events and notifications
-       on without inventing a new idea.
+       CAMPUS IS HIDDEN, NOT GONE. There is one location today, so asking
+       people to pick it is noise. The column (since 0009), the default in
+       js/store.js, and the FIELD_MAP entry in js/auth.js all stay, because
+       campus is what a second location would filter events and notifications
+       on. Bringing it back is one field() line in this function.
 
        ALREADY-SAVED ROWS ARE NOT TOUCHED BY THIS. The columns still exist and
        still hold whatever people typed. Clearing them is a separate, deliberate
@@ -191,7 +193,6 @@
           field('firstName', 'First name', p.firstName, 'given-name') +
           field('lastName', 'Last name', p.lastName, 'family-name') +
         '</div>' +
-        field('campus', 'Campus', p.campus, 'off') +
       '</div>' +
       note;
   }
