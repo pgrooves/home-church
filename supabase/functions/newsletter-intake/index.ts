@@ -1129,6 +1129,7 @@ async function askGemini(
   links: Array<{ url: string; text: string }>,
   images: string[],
   emailDate: string,
+  tuning: Record<string, unknown> = {},
 ): Promise<Parsed[]> {
   let res: Response;
   try {
@@ -1156,6 +1157,8 @@ async function askGemini(
             maxOutputTokens: 32768,
             responseMimeType: 'application/json',
             responseSchema: SCHEMA,
+            // Empty except on a dry run that asked for it. See `tuning` in main.
+            ...tuning,
           },
         }),
       },
@@ -1193,6 +1196,12 @@ async function askGemini(
   const raw = parts.map((p: { text?: string }) => p?.text ?? '').join('').trim();
   const finish = String(payload?.candidates?.[0]?.finishReason ?? 'no reason given');
 
+  /* Where the output budget went. "MAX_TOKENS" on its own cannot tell a model
+     that thought for thirty thousand tokens from one that wrote them, and those
+     are different fixes, so every failure below says which it was. */
+  const usage = payload?.usageMetadata ?? {};
+  const spent = `thinking ${usage.thoughtsTokenCount ?? 0}, answer ${usage.candidatesTokenCount ?? '?'} tokens`;
+
   /* EVERY FAILURE BELOW IS TRANSIENT, and that is the fix for a week that went
      missing rather than a loosening of the rules.
 
@@ -1214,7 +1223,7 @@ async function askGemini(
      is what makes a retry safe by construction rather than by argument: there
      are no drafts to duplicate, because there are none yet. */
   if (!raw) {
-    throw new TransientError(`Gemini returned nothing to parse (${finish}). Trying again next run.`);
+    throw new TransientError(`Gemini returned nothing to parse (${finish}; ${spent}). Trying again next run.`);
   }
 
   let parsed: unknown;
@@ -1224,14 +1233,17 @@ async function askGemini(
     // MAX_TOKENS is the one worth naming outright: it is the answer being too
     // long rather than the model misbehaving, and it is what a five item
     // newsletter does to a budget that was set for four.
+    // The end, not the beginning: the beginning is always `{"announcements"`,
+    // and the end is where a model that has lost its place shows it.
     throw new TransientError(
-      `Gemini did not finish its JSON (${finish}). Trying again next run. It began: ${raw.slice(0, 120)}`,
+      `Gemini did not finish its JSON (${finish}; ${spent}; ${raw.length} characters). ` +
+      `Trying again next run. It ended: ${raw.slice(-160)}`,
     );
   }
 
   const list = (parsed as { announcements?: unknown })?.announcements;
   if (!Array.isArray(list)) {
-    throw new TransientError(`Gemini returned no announcements array (${finish}). Trying again next run.`);
+    throw new TransientError(`Gemini returned no announcements array (${finish}; ${spent}). Trying again next run.`);
   }
   return list as Parsed[];
 }
@@ -1993,11 +2005,22 @@ Deno.serve(async (req: Request) => {
     return json({ error: 'No.' }, 401);
   }
 
-  let body: { probe?: boolean; dry_run?: boolean; backfill?: boolean; limit?: number } = {};
+  let body: {
+    probe?: boolean; dry_run?: boolean; backfill?: boolean; limit?: number;
+    generation_config?: Record<string, unknown>; model?: string;
+  } = {};
   try { body = await req.json(); } catch { /* an empty body is a normal tick */ }
   const probe = body.probe === true;
   const dryRun = body.dry_run === true;
   const backfill = body.backfill === true;
+
+  /* Model settings to try, honoured on a dry run and nowhere else. A dry run
+     writes nothing and spends none of an email's attempts, so this is how a
+     parse that keeps failing gets experimented on without a redeploy per
+     guess and without costing the newsletter its retries. */
+  const tuning = dryRun && body.generation_config && typeof body.generation_config === 'object'
+    ? body.generation_config
+    : {};
 
   const url = Deno.env.get('SUPABASE_URL');
   const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
@@ -2092,7 +2115,8 @@ Deno.serve(async (req: Request) => {
   // costs nothing and saves an hour of "but I copied it exactly".
   const password = (Deno.env.get('NEWSLETTER_IMAP_PASSWORD') ?? '').replace(/\s+/g, '');
   const geminiKey = Deno.env.get('GEMINI_API_KEY');
-  const model = Deno.env.get('GEMINI_MODEL') || DEFAULT_MODEL;
+  const model = (dryRun && typeof body.model === 'string' && body.model.trim())
+    || Deno.env.get('GEMINI_MODEL') || DEFAULT_MODEL;
 
   const missing = [
     !user && 'NEWSLETTER_IMAP_USER',
@@ -2329,7 +2353,7 @@ Deno.serve(async (req: Request) => {
           const emailDay = (sentAt ?? new Date().toISOString()).slice(0, 10);
 
           const items = await askGemini(
-            geminiKey!, model, text, links, images, emailDay,
+            geminiKey!, model, text, links, images, emailDay, tuning,
           );
 
           const allowedLinks = links.map((l) => l.url);
@@ -2567,6 +2591,7 @@ Deno.serve(async (req: Request) => {
           if (spent) {
             failedCount += 1;
             failedNote = reason;
+            if (dryRun) preview.push({ subject, failed: reason });
             // Settled, so it stops being found. Without this the fortnight
             // search would keep handing it back to a claim that now refuses.
             if (!dryRun) await imap.markSeen(uid);
@@ -2574,6 +2599,7 @@ Deno.serve(async (req: Request) => {
           } else {
             deferred += 1;
             deferredNote = reason;
+            if (dryRun) preview.push({ subject, deferred: reason });
             console.warn(`newsletter-intake: deferring ${messageId} (attempt ${attempt}): ${err.message}`);
           }
           continue;
