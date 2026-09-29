@@ -22,7 +22,7 @@
         refused there and then.
      2. A drag out of that touch scrubs, while the page is still settling.
         This is the report, in one line.
-     3. A touch on a still page is NOT refused. The 56px band is mostly card,
+     3. A touch on a still page is NOT refused. The 44px band is mostly card,
         and a refusal costs the click of everybody who was only tapping one.
      4. A still finger that landed on a moving page stops the page and does
         nothing else. Touching a flying page to stop it is a gesture every
@@ -266,7 +266,7 @@ const HAND = `window.__hand = (function () {
     const h = window.__hand;
     await h.settled(0);
     await h.stirred(200);
-    const x = document.querySelector('.hc-scroll').getBoundingClientRect().right - 68;
+    const x = document.querySelector('.hc-scroll').getBoundingClientRect().right - 50;
     h.fire('touchstart', x, h.notchY(1), true);
     const flying = window.HC.indexRail.busy();
     h.fire('touchend', x, h.notchY(1), true);

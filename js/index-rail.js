@@ -92,25 +92,33 @@
      A drag out here is a scrub the page would otherwise have taken as a
      scroll, and that is a fair trade: nobody drags down the far right of the
      screen by accident, and the ones who mean the rail rarely put a thumb on
-     the actual glass edge. 56px is the 20px page gutter plus a card's own
-     20px of padding, plus slack — a thumb landing anywhere over dead space
-     catches it, and it is still the right seventh of the phone, nowhere near
-     the middle.
+     the actual glass edge. 44px is the 20px page gutter plus most of a
+     card's own 20px of padding — a thumb landing over dead space catches it,
+     and it is the right ninth of the phone, nowhere near the middle.
+
+     It was 56px, a little slack past the padding, and on a 393px phone that
+     was enough to take ordinary scrolls from people who read with their
+     thumb near the right edge. The slack went; the gutter stayed.
 
      A tap out here is a click taken away from whatever was under it, and
      past about 40px what is under it is a card's contents: a chevron, a
      count, the right end of a row. So the tap keeps the old width and stays
      over the gutter. A still finger at 45px in is not reaching for the rail,
      it is pressing the thing it is on. */
-  var HOT_DRAG = 56;
+  var HOT_DRAG = 44;
   var HOT_TAP  = 34;
 
   /* And while the page is flying, the drag band is wider. A thumb that
      reaches for the edge mid fling is aimed at a moving target from a
      moving hand, and it lands further in than one placed on a still page.
      The cost is small: a vertical drag out here on a moving page was going
-     to scroll it, and a scrub scrolls it too. */
-  var HOT_FLYING = 76;
+     to scroll it, and a scrub scrolls it too.
+
+     But not much wider. Flicking the page again before it settles is how
+     people scroll, and every one of those flicks lands on a moving page, so
+     this band is the one a reader near the edge hits most. It was 76px and
+     took those flicks for scrubs; it keeps 12px over the drag band now. */
+  var HOT_FLYING = 56;
 
   var W_MAX  = 30;    // a notch at the centre of the swell
   var W_MIN  = 9;     // a notch at rest
