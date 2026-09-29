@@ -1122,6 +1122,26 @@ function prompt(
   ].join('\n');
 }
 
+/* How hard one run tries before handing a busy email back to the ledger. Two
+   goes per model a few seconds apart, and nothing new started after a minute
+   and a half. See the retry loop in askGemini. */
+const BUSY_TRIES_PER_MODEL = 2;
+const BUSY_WAIT_MS = 5000;
+const BUSY_BUDGET_MS = 90_000;
+
+/* Other Flash models to ask when the configured one is busy. Overridable by
+   secret, like GEMINI_MODEL, because which of these exist for a given key
+   changes faster than this file does. */
+const DEFAULT_FALLBACK_MODELS = ['gemini-flash-latest', 'gemini-3.7-flash'];
+
+function fallbackModels(primary: string): string[] {
+  const set = Deno.env.get('GEMINI_FALLBACK_MODELS');
+  const list = set !== undefined
+    ? set.split(',').map((m) => m.trim()).filter(Boolean)
+    : DEFAULT_FALLBACK_MODELS;
+  return [...new Set(list)].filter((m) => m !== primary);
+}
+
 async function askGemini(
   apiKey: string,
   model: string,
@@ -1131,69 +1151,107 @@ async function askGemini(
   emailDate: string,
   tuning: Record<string, unknown> = {},
 ): Promise<Parsed[]> {
-  let res: Response;
-  try {
-    res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ role: 'user', parts: [{ text: prompt(text, links, images, emailDate) }] }],
-          generationConfig: {
-            /* 1.0, which is Gemini 3's default, and not the 0.2 this used to
-               ask for. Google's guidance for the Gemini 3 models is to leave
-               temperature at 1.0 because lower values can send the model into
-               a loop, and that is what a loop looks like from here: an answer
-               that runs to the output ceiling and stops mid-JSON. The Homecoming
-               Gala email, one event and a ticket link, did exactly that on the
-               29th of September. The "18:000000…" time field further down this
-               file was the same failure wearing a different field. */
-            temperature: 1.0,
-            /* Generous, and it is the thinking that spends it rather than the
-               answer: four announcements came back as 456 tokens of JSON after
-               2,268 tokens of thought. A model that hits this ceiling stops
-               mid-JSON and the parse below fails, which is the failure
-               gemini-3-flash-preview produced every time.
+  const request = JSON.stringify({
+    contents: [{ role: 'user', parts: [{ text: prompt(text, links, images, emailDate) }] }],
+    generationConfig: {
+      /* 1.0, which is Gemini 3's default, and not the 0.2 this used to
+         ask for. Google's guidance for the Gemini 3 models is to leave
+         temperature at 1.0 because lower values can send the model into
+         a loop, and that is what a loop looks like from here: an answer
+         that runs to the output ceiling and stops mid-JSON. The Homecoming
+         Gala email, one event and a ticket link, did exactly that on the
+         29th of September. The "18:000000…" time field further down this
+         file was the same failure wearing a different field. */
+      temperature: 1.0,
+      /* Generous, and it is the thinking that spends it rather than the
+         answer: four announcements came back as 456 tokens of JSON after
+         2,268 tokens of thought. A model that hits this ceiling stops
+         mid-JSON and the parse below fails, which is the failure
+         gemini-3-flash-preview produced every time.
 
-               RAISED FROM 8,192 AFTER IT COST A REAL NEWSLETTER. The 11th of
-               September carried five items with long detail lists, and the
-               answer was cut off mid-array on the configured model, not on a
-               preview one. 8,192 was never measured, it was the first number
-               that worked; this is four times the headroom for a job that runs
-               once a week, and the tokens are only spent if they are used. */
-            maxOutputTokens: 32768,
-            responseMimeType: 'application/json',
-            responseSchema: SCHEMA,
-            // Empty except on a dry run that asked for it. See `tuning` in main.
-            ...tuning,
-          },
-        }),
-      },
+         RAISED FROM 8,192 AFTER IT COST A REAL NEWSLETTER. The 11th of
+         September carried five items with long detail lists, and the
+         answer was cut off mid-array on the configured model, not on a
+         preview one. 8,192 was never measured, it was the first number
+         that worked; this is four times the headroom for a job that runs
+         once a week, and the tokens are only spent if they are used. */
+      maxOutputTokens: 32768,
+      responseMimeType: 'application/json',
+      responseSchema: SCHEMA,
+      // Empty except on a dry run that asked for it. See `tuning` in main.
+      ...tuning,
+    },
+  });
+
+  /* BUSY IS RETRIED HERE, AND ON ANOTHER MODEL, not only on the next tick.
+
+     WHY. On the 29th of September the Homecoming Gala email met a 503 on seven
+     of its first eight attempts, and each of those cost a whole twenty minute
+     tick for one request. Busy spells on the free tier come and go and are per
+     model, so the cheap thing is to wait a few seconds and ask again, and then
+     to ask a different Flash model, before giving the email back to the
+     ledger.
+
+     WHICH MODELS. The configured one first, always. Then GEMINI_FALLBACK_MODELS,
+     a comma separated secret, or the default list below. A fallback that this
+     key cannot reach answers 404 and is simply skipped, so a stale name in the
+     list costs one request and never fails the email.
+
+     BOUNDED IN TIME as well as in count. An Edge Function has a wall clock
+     limit, and a run that dies mid-retry leaves its claim to the staleness rule
+     rather than writing an outcome. So no new request is started once
+     BUSY_BUDGET_MS has passed; a successful answer can itself take a minute. */
+  const models = [model, ...fallbackModels(model)];
+  const began = Date.now();
+  let res: Response | null = null;
+  let busy = '';
+  let usedModel = model;
+
+  tries:
+  for (const m of models) {
+    for (let i = 0; i < BUSY_TRIES_PER_MODEL; i++) {
+      if (Date.now() - began > BUSY_BUDGET_MS) break tries;
+      if (i > 0) await new Promise((r) => setTimeout(r, BUSY_WAIT_MS * i));
+
+      let r: Response;
+      try {
+        r = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(m)}:generateContent?key=${encodeURIComponent(apiKey)}`,
+          { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: request },
+        );
+      } catch (err) {
+        // DNS, TLS, a reset socket. None of it is the email's fault.
+        busy = `Could not reach Gemini: ${String((err as Error).message ?? err)}`;
+        continue;
+      }
+
+      if (r.ok) { res = r; usedModel = m; break tries; }
+
+      const detail = await r.text().catch(() => '');
+      /* 429 is the rate limit and 5xx is Google having a moment. Both are
+         worth another go in a few seconds, and both end in the same place if
+         every go is refused: the email is left alone for the next tick. */
+      if (r.status === 429) {
+        busy = `Gemini is rate limiting us on the free tier (${m}).`;
+        continue;
+      }
+      if (r.status >= 500) {
+        busy = `Gemini is busy (${r.status}) on ${m}.`;
+        continue;
+      }
+      // A fallback this key cannot use. Not the email's fault, not fatal.
+      if (m !== model && (r.status === 404 || r.status === 400 || r.status === 403)) break;
+      throw new Error(`Gemini returned ${r.status} on ${m}: ${detail.slice(0, 300)}`);
+    }
+  }
+
+  if (!res) {
+    throw new TransientError(
+      `${busy || 'Gemini did not answer.'} Tried ${models.join(', ')}. ` +
+      'The newsletter is untouched and the next run will try again.',
     );
-  } catch (err) {
-    // DNS, TLS, a reset socket. None of it is the email's fault.
-    throw new TransientError(`Could not reach Gemini: ${String((err as Error).message ?? err)}`);
   }
-
-  if (!res.ok) {
-    const detail = await res.text().catch(() => '');
-    /* 429 is the rate limit and 5xx is Google having a moment. Both come back
-       to the same place: leave the email alone and try again on the next tick.
-       503 in particular is not rare on the free tier, and it is what the newest
-       Flash models were returning when this was written. */
-    if (res.status === 429) {
-      throw new TransientError(
-        'Gemini is rate limiting us on the free tier. The newsletter is untouched and the next run will try again.',
-      );
-    }
-    if (res.status >= 500) {
-      throw new TransientError(
-        `Gemini is busy (${res.status}). The newsletter is untouched and the next run will try again.`,
-      );
-    }
-    throw new Error(`Gemini returned ${res.status}: ${detail.slice(0, 300)}`);
-  }
+  if (usedModel !== model) console.warn(`newsletter-intake: answered by fallback model ${usedModel}`);
 
   const payload = await res.json();
 
