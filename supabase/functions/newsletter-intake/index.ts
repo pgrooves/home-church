@@ -1141,7 +1141,15 @@ async function askGemini(
         body: JSON.stringify({
           contents: [{ role: 'user', parts: [{ text: prompt(text, links, images, emailDate) }] }],
           generationConfig: {
-            temperature: 0.2,
+            /* 1.0, which is Gemini 3's default, and not the 0.2 this used to
+               ask for. Google's guidance for the Gemini 3 models is to leave
+               temperature at 1.0 because lower values can send the model into
+               a loop, and that is what a loop looks like from here: an answer
+               that runs to the output ceiling and stops mid-JSON. The Homecoming
+               Gala email, one event and a ticket link, did exactly that on the
+               29th of September. The "18:000000…" time field further down this
+               file was the same failure wearing a different field. */
+            temperature: 1.0,
             /* Generous, and it is the thinking that spends it rather than the
                answer: four announcements came back as 456 tokens of JSON after
                2,268 tokens of thought. A model that hits this ceiling stops
@@ -1888,7 +1896,8 @@ async function runBackfill(
       body: JSON.stringify({
         contents: [{ role: 'user', parts: [{ text: backfillPrompt(rows) }] }],
         generationConfig: {
-          temperature: 0.2,
+          // 1.0 for the same reason as the parse above.
+          temperature: 1.0,
           // Twenty-five rows of id, date and location, and the same truncation
           // risk as the parse above: one row short of the end is a date that
           // silently never gets made.
