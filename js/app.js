@@ -2404,6 +2404,71 @@
       }));
     },
 
+    /* ------------------------------------------------------ merging by hand
+
+       THE BACKUP, and these five handlers are all of it on this side. The flow
+       itself lives in js/admin.js because two screens reach it, and what it
+       draws lives in js/components.js for the same reason; these only say what
+       a tap means and when to repaint.
+
+       WHICH SCREEN REPAINTS is the one thing worth knowing here. A merge can
+       be started from the Admin list or from the Cal tab, so every one of
+       these ends in repaintHere() rather than in repaintAdmin(): a Cal tab
+       merge repainting the Admin screen would leave the tap apparently doing
+       nothing at all. */
+
+    'admin-announcement-merge': function (el) {
+      HC.admin.startMerge('announcement', el.getAttribute('data-id'));
+      repaintHere();
+    },
+
+    'admin-event-merge-with': function (el) {
+      HC.admin.startMerge('event', el.getAttribute('data-id'));
+      repaintHere();
+    },
+
+    'cal-event-merge': function (el) {
+      HC.admin.startMerge('event', el.getAttribute('data-id'));
+      repaintHere();
+    },
+
+    'merge-cancel': function () {
+      HC.admin.cancelMerge();
+      repaintHere();
+    },
+
+    // Back to the picker from the preview, with nothing written. The preview
+    // is dropped with it, because a preview of one pairing shown under another
+    // pairing's name is the one thing this panel must never do.
+    'merge-back': function () {
+      var at = HC.admin.mergeState();
+      if (!at) return;
+      at.step = 'pick';
+      at.preview = null;
+      repaintHere();
+    },
+
+    'merge-preview': function () {
+      var at = HC.admin.mergeState();
+      if (!at || !at.targetId) return;
+
+      mergeRun('merge-preview', HC.admin.previewMerge());
+    },
+
+    'merge-save': function () {
+      var at = HC.admin.mergeState();
+      if (!at || !at.preview) return;
+
+      var keeps = at.preview.keeps_title;
+      var kind = at.kind;
+
+      mergeRun('merge-save', HC.admin.applyMerge().then(function () {
+        HC.components.toast(kind === 'event'
+          ? 'One date now, “' + keeps + '”.'
+          : 'One announcement now, “' + keeps + '”.');
+      }));
+    },
+
     /* ------------------------------------------------------------- users */
 
     'admin-role': function (el) {
@@ -2457,6 +2522,11 @@
           ? name + ' can host a group room now.'
           : 'Leader mode is off for ' + name + '.');
       }));
+    },
+
+    // Admins, Hosts or Members, opened or closed. Nothing is saved or redrawn.
+    'admin-user-fold': function (el) {
+      adminHelpers().toggleUserFold(el.getAttribute('data-id'));
     },
 
     'admin-user-remove': function (el) {
@@ -2591,6 +2661,102 @@
       adminRun('setting:' + meta.key, HC.admin.saveSwitch(meta, next));
     },
 
+    /* Maintenance mode, the whole app covered for everybody but the admins.
+       Same shape as Group mode above, row and all, with one difference: going
+       on asks first. This switch takes the app away from the whole church
+       within a minute, and that should never be a stray tap. Going off does
+       not ask, because lifting it quickly is the whole point. */
+    'admin-maintenance-toggle': function (el) {
+      var meta = HC.screens.adminHelpers.maintenance();
+      var next = !HC.screens.adminHelpers.maintenanceOn();
+
+      if (next && !window.confirm('Turn on Maintenance mode? Everybody except ' +
+            'admins will see “We’ll be back soon.” and will not be able to use ' +
+            'the app until an admin turns it off.')) return;
+
+      setSwitch(el, next);
+      HC.native.tap(next ? 'Medium' : 'Light');
+
+      adminRun('setting:' + meta.key, HC.admin.saveSwitch(meta, next).then(function () {
+        HC.components.toast(next
+          ? 'Maintenance mode is on. Only admins can use the app.'
+          : 'Maintenance mode is off. The app is open again.');
+      }));
+    },
+
+    /* The pinned banner's switch. Same shape as Group mode: the row is carried
+       by the screen so the first tap upserts it on a project that has somehow
+       lost it. Taking the banner down or putting it back is instant, like
+       every other switch here; only the words wait for Save. */
+    'admin-banner-toggle': function (el) {
+      var h = HC.screens.adminHelpers;
+      var next = !h.bannerOn();
+      setSwitch(el, next);
+      HC.native.tap('Light');
+      adminRun('setting:' + h.banner().key, HC.admin.saveSwitch(h.banner(), next));
+    },
+
+    'admin-banner-edit': function () {
+      HC.screens.adminHelpers.startBannerDraft();
+      repaintAdmin();
+      focusAdminField('bannerMessage');
+    },
+
+    'admin-banner-cancel': function () {
+      HC.screens.adminHelpers.clearBannerDraft();
+      repaintAdmin();
+    },
+
+    // Flipped on screen and in the draft, with no repaint, so whatever is
+    // half typed in the box above stays exactly where it is.
+    'admin-banner-notify-toggle': function (el) {
+      var d = HC.screens.adminHelpers.getBannerDraft();
+      if (!d) return;
+      d.notify = !d.notify;
+      setSwitch(el, d.notify);
+      HC.native.tap('Light');
+    },
+
+    /* Save, and then, if asked, tell everybody. In that order and as separate
+       calls, for the reason notifyAnnouncement gives in js/admin.js: a banner
+       that saved but did not notify is fine and fixable, and a notification
+       about words that did not save is a lie on every lock screen. */
+    'admin-banner-save': function () {
+      var h = HC.screens.adminHelpers;
+      var d = h.getBannerDraft();
+      if (!d) return;
+
+      var message = String(d.message || '').trim();
+      var notify = d.notify;
+      var wasOn = h.bannerOn();
+
+      if (notify && !message) {
+        HC.components.toast('Write the banner before notifying anybody.');
+        return;
+      }
+      if (notify && !window.confirm('Save the banner and send it to everybody’s ' +
+            'phone as a notification? This cannot be undone.')) return;
+
+      var work = HC.admin.saveSetting(h.bannerMessageKey(), 'text', message);
+      if (notify && !wasOn) {
+        work = work.then(function () { return HC.admin.saveSwitch(h.banner(), true); });
+      }
+
+      adminRun('banner', work.then(function () {
+        h.clearBannerDraft();
+        if (!notify) {
+          HC.components.toast(message && wasOn ? 'Saved. It is on Home now.' : 'Saved.');
+          return;
+        }
+        return HC.admin.notifyBanner().then(function () {
+          HC.components.toast('Saved, and everybody has been told.');
+        }).catch(function (err) {
+          HC.components.toast('Saved. The notification did not send: ' +
+            (err.message || 'try again in a moment.'));
+        });
+      }));
+    },
+
     'admin-setting-delete': function (el) {
       var key = el.getAttribute('data-id');
       var row = HC.admin.settings().filter(function (s) { return s.key === key; })[0];
@@ -2671,6 +2837,32 @@
       });
     },
 
+    /* The other days one event runs on, from migration 0074. Both of these
+       change the draft this screen is holding and nothing else: nothing
+       reaches Supabase until Save, which is the promise the rest of this form
+       already makes and the reason Cancel means something.
+
+       THE BOX IS READ AND THEN EMPTIED BY THE REPAINT, which is the whole
+       reason adding a day is a button rather than something that happens the
+       moment the date input changes. A date input fires while somebody is
+       still typing the year, so the eager version of this adds 0002-01-01 and
+       0020-01-01 on the way to 2026. */
+    'cal-day-add': function () {
+      var box = document.querySelector('[data-cal-newday]');
+      if (!box) return;
+
+      var why = calHelpers().addDay(box.value);
+      if (why) { c.toast(why); return; }
+
+      HC.native.tap('Light');
+      repaintCal();
+    },
+
+    'cal-day-remove': function (el) {
+      calHelpers().removeDay(el.getAttribute('data-day'));
+      repaintCal();
+    },
+
     'cal-event-cancel': function () {
       calHelpers().clearDraft();
       repaintCal();
@@ -2709,7 +2901,11 @@
         startsAt: h.startsAtIso(d),
         timeLabel: String(d.timeLabel || '').trim(),
         location: String(d.location || '').trim(),
-        description: String(d.blurb || '').trim()
+        description: String(d.blurb || '').trim(),
+        // The other days it runs on, from migration 0074. Sent every time,
+        // including empty: an empty list is what taking the second Sunday off
+        // a class looks like, and leaving it out would leave the column alone.
+        alsoOn: (d.days || []).slice().sort()
       }).then(function () {
         h.clearDraft();
         // The grid follows what was just written. A confirmation that says it
@@ -2969,6 +3165,16 @@
       });
     },
 
+    // A guide's heading, or a month's inside it, opening in place. Remembered
+    // by the screen so the next repaint does not shut it again.
+    'journal-fold': function (el) {
+      var open = el.getAttribute('aria-expanded') === 'true';
+      el.setAttribute('aria-expanded', open ? 'false' : 'true');
+      var panel = document.getElementById(el.getAttribute('aria-controls'));
+      if (panel) panel.setAttribute('data-open', open ? 'false' : 'true');
+      HC.screens.journalHelpers.setFold(el.getAttribute('data-fold'), !open);
+    },
+
     'journal-filter': function (el) {
       HC.screens.journalHelpers.setFilter(el.getAttribute('data-value'));
       HC.screens.journalHelpers.repaint();
@@ -3027,6 +3233,10 @@
        took three tries to get right. */
     'add-to-calendar': function (el) {
       var id = el.getAttribute('data-id');
+      // Which day, for an event that runs on more than one since 0074. The
+      // button says which it is offering; without one it is the day the event
+      // starts on, which is what an announcement's copy of this button means.
+      var day = el.getAttribute('data-day') || '';
       var evt = (HC.data.events || []).filter(function (e) { return e.id === id; })[0];
       if (!evt) return;
 
@@ -3034,7 +3244,7 @@
         title: evt.title,
         description: evt.blurb,
         location: evt.location,
-        start: HC.screens.calHelpers.eventStart(evt)
+        start: HC.screens.calHelpers.eventStart(evt, day)
       }).then(function (ok) {
         if (ok) HC.native.tap('Light');
         else c.toast('Could not open your calendar from here.');
@@ -3175,8 +3385,19 @@
       });
     },
 
+    /* A scripture row on a guide. The words come up in a sheet over the guide
+       rather than a web page over the app; see js/verse.js. */
     'open-scripture': function (el) {
-      c.openExternal(c.bibleUrl(el.getAttribute('data-reference')));
+      HC.verse.open(el.getAttribute('data-reference'));
+    },
+
+    'verse-close': function () {
+      HC.verse.close();
+    },
+
+    // Between the passages of a reference that names more than one.
+    'verse-show': function (el) {
+      HC.verse.show(parseInt(el.getAttribute('data-id'), 10) || 0);
     },
 
     share: function (el) {
@@ -3198,6 +3419,8 @@
          then waits for the scroll onto the words it is about. Arming is not
          showing and nothing is drawn here: see js/hints.js. */
       if (HC.hints && !open) HC.hints.sectionOpened(el.closest('.hc-section'));
+      // And folding one puts away a hint drawn over its words.
+      if (HC.hints && open) HC.hints.sectionClosed();
 
       /* The room is the one screen that redraws itself under you, so the DOM
          cannot be where it remembers which question chunks are open. Nothing
@@ -3521,27 +3744,6 @@
 
       if (!HC.native.isNative()) return;
 
-      /* Which switches count as "still on", and why this is not simply every
-         key in the object.
-
-         The two review switches from migration 0043 default to true on every
-         phone, because Profile draws them only for an admin and the server
-         refuses them for anybody else, so nothing is gained by drawing a
-         member's phone a false it will never see. That makes them useless as
-         evidence here: `some(k => next[k])` would be true on every phone in
-         the congregation, so a member turning their last real switch off would
-         take the syncPreferences branch, and their row would keep `active =
-         true` for ever. Nothing addressed by preference would reach them, and
-         the `test` topic, which goes to every active phone on purpose, would.
-
-         So the two only count on a phone that is actually an admin's, which is
-         the same condition that draws them. */
-      var isAdmin = HC.admin && HC.admin.isAdmin();
-      var anyStillOn = Object.keys(next).some(function (k) {
-        if (!isAdmin && (k === 'announcementReview' || k === 'eventReview')) return false;
-        return next[k];
-      });
-
       if (turningOn) {
         HC.native.enableNotifications().then(function (granted) {
           if (granted) {
@@ -3555,13 +3757,14 @@
           setSwitch(el, false);
           c.toast('Notifications are switched off for this app in Settings. Turn them on there and come back.');
         });
-      } else if (anyStillOn) {
-        // They still want something, just not this one. Update the row rather
-        // than deregistering the phone, which would silence the others too.
-        HC.native.syncPreferences();
       } else {
-        // Last one off means stop sending to this phone entirely.
-        HC.native.disableNotifications();
+        /* Update the row, never deregister the phone, even when this was the
+           last switch on. These choose topics; the pinned banner is not one
+           and goes to every phone iOS allows (migration 0078). Deregistering
+           here is how a phone with notifications Allowed in Settings used to
+           stop hearing the church altogether. Settings is the off switch for
+           everything, and Profile says so under these. */
+        HC.native.syncPreferences();
       }
     },
 
@@ -3697,12 +3900,38 @@
         input.focus();
         return;
       }
+      /* The fork, before anything is sent. Same rule as js/gate.js: an
+         address on the list in js/config.js is asked for a password, so no
+         code is generated and no email goes out. Everybody else carries on
+         to the code this app has always sent. */
+      if (HC.auth.usesPassword(value)) {
+        HC.screens.profileHelpers.setAuthIdentifier(HC.auth.classify(value).value);
+        HC.screens.profileHelpers.setAuthStep('password');
+        HC.router.go({ name: 'profile' }, { force: true });
+        return;
+      }
+
       el.setAttribute('disabled', 'true');
       HC.auth.requestCode(value).then(function (id) {
         HC.screens.profileHelpers.setAuthIdentifier(id.value);
         HC.screens.profileHelpers.setAuthStep('sent');
         HC.router.go({ name: 'profile' }, { force: true });
         c.toast(id.channel === 'email' ? 'Code sent. Check your email.' : 'Code sent. Check your texts.');
+      }).catch(function (err) {
+        el.removeAttribute('disabled');
+        c.toast(err.message);
+      });
+    },
+
+    'auth-password': function (el) {
+      var form = el.closest('form');
+      var password = form.querySelector('input[name="password"]').value;
+      var identifier = HC.screens.profileHelpers.getAuthIdentifier();
+      el.setAttribute('disabled', 'true');
+      HC.auth.signInWithPassword(identifier, password).then(function () {
+        HC.screens.profileHelpers.resetAuth();
+        HC.router.go({ name: 'profile' }, { force: true });
+        c.toast('You are signed in.');
       }).catch(function (err) {
         el.removeAttribute('disabled');
         c.toast(err.message);
@@ -4386,6 +4615,18 @@
     });
   }
 
+  /* The caret into one box on the Admin screen, after the repaint that drew
+     it. Same deferral as focusEditor above, for the same reason. */
+  function focusAdminField(name) {
+    window.requestAnimationFrame(function () {
+      var box = document.querySelector('[data-admin-field="' + name + '"]');
+      if (!box) return;
+      box.focus();
+      try { box.setSelectionRange(box.value.length, box.value.length); }
+      catch (err) { /* Some browsers refuse this on a just-focused element. */ }
+    });
+  }
+
   function calHelpers() {
     return HC.screens.calHelpers;
   }
@@ -4407,6 +4648,34 @@
     HC.router.go({ name: 'admin', id: route.id, restore: true }, { force: true });
   }
 
+  /* Whichever of the two is on screen. Merging by hand is reachable from the
+     Admin list and from the Cal tab, and a handler that knew which one it was
+     on would be two handlers. Neither repaint does anything when its screen is
+     not the one showing, so calling both is the whole implementation. */
+  function repaintHere() {
+    repaintAdmin();
+    repaintCal();
+  }
+
+  /* adminRun's twin for the merge panel, and the difference is only which
+     screen's busy flag it sets. The Admin screen and the Cal tab each hold
+     their own, because each draws its own buttons; the merge in the middle is
+     one object in js/admin.js either way. */
+  function mergeRun(token, promise) {
+    var route = HC.router.current();
+    var h = (route && route.name === 'cal') ? calHelpers() : adminHelpers();
+
+    h.setBusy(token);
+    repaintHere();
+
+    return promise.catch(function (err) {
+      HC.components.toast(err.message || 'That did not go through. Try again in a moment.');
+    }).then(function () {
+      h.setBusy('');
+      repaintHere();
+    });
+  }
+
   /* Every keystroke on the Admin screen. Writes into the draft object and
      draws nothing, for the reason in the input listener above.
 
@@ -4418,6 +4687,14 @@
     var h = adminHelpers();
     var d = h.getDraft();
     var p = h.getPageDraft();
+
+    // The pinned banner's words, held until Save. Nothing is drawn and
+    // nothing is sent, which is what keeps the keyboard up. See bannerSection.
+    if (name === 'bannerMessage') {
+      var bd = h.getBannerDraft();
+      if (bd) bd.message = value;
+      return;
+    }
 
     if (name === 'setting') {
       debounceGlobal('setting-' + id, function () {
@@ -4742,9 +5019,37 @@
          href to openExternal() cancels the save and navigates instead, which
          is what broke Add to calendar in the browser. */
       var link = evt.target.closest && evt.target.closest('a[href]');
+
+      /* A scripture link inside a writing surface opens the verse sheet too.
+         Every other link in one is left alone, because a tap there is
+         somebody putting the caret in their own sentence. A scripture link is
+         the exception because it is the whole reason the journal turns typed
+         references into links: tapping "John 3:16" in your own entry should
+         show you John 3:16. The keyboard goes down first, so the sheet is not
+         half hidden behind it. */
+      if (link && link.closest('[contenteditable="true"]') &&
+          c.isScriptureHref(link.getAttribute('href')) && HC.verse &&
+          HC.bible.parseAll((link.textContent || '').trim()).length) {
+        evt.preventDefault();
+        if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+        HC.verse.open((link.textContent || '').trim());
+        return;
+      }
+
       if (link && !link.hasAttribute('download') &&
           !link.closest('[contenteditable="true"]')) {
         evt.preventDefault();
+        /* A scripture link opens the verse sheet, the same as a scripture row
+           does. The words of the link are the reference, because the editor
+           writes them that way; the href is only where to go when the sheet
+           cannot read them, which is what HC.verse.open() does with a
+           reference it does not understand. */
+        if (c.isScriptureHref(link.getAttribute('href')) && HC.verse) {
+          var ref = (link.textContent || '').trim();
+          if (HC.bible.parseAll(ref).length) HC.verse.open(ref);
+          else c.openExternal(link.getAttribute('href'));
+          return;
+        }
         c.openExternal(link.getAttribute('href'));
         return;
       }
@@ -4853,6 +5158,35 @@
       timers[id] = window.setTimeout(fn, 400);
     }
 
+    /* A journal box letting go of the caret is the moment its typed
+       references become links, on screen as well as in the store (which
+       links them on every save; see sanitize() in js/journal.js). Not while
+       typing: rewriting the markup under a live caret moves it. The input
+       event afterwards is what saves the linked version through the same
+       path as a keystroke. */
+    /* Moving the caret away from a reference finishes it, the same as typing
+       a space after it would: tapping somewhere else in the entry, or the
+       arrow keys. selectionchange is the only event that sees all of those,
+       and it is debounced because it fires on every step of a drag. */
+    var linkAfterMove = null;
+    document.addEventListener('selectionchange', function () {
+      window.clearTimeout(linkAfterMove);
+      linkAfterMove = window.setTimeout(function () {
+        var box = document.activeElement;
+        if (!box || !box.getAttribute || box.getAttribute('data-journal-body') === null) return;
+        if (HC.editor.liveLink(box)) box.dispatchEvent(new Event('input', { bubbles: true }));
+      }, 350);
+    });
+
+    document.addEventListener('focusout', function (evt) {
+      var el = evt.target;
+      if (!el || !el.getAttribute || el.getAttribute('data-journal-body') === null) return;
+      var linked = HC.bible.linkify(el.innerHTML);
+      if (linked === el.innerHTML) return;
+      el.innerHTML = linked;
+      el.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+
     document.addEventListener('input', function (evt) {
       var el = evt.target;
 
@@ -4953,6 +5287,10 @@
          once there are, so the back gesture and a reload both land on the
          real entry rather than on a blank draft. */
       if (el.getAttribute && el.getAttribute('data-journal-body') !== null) {
+        // A reference finished just now becomes a link before anything is
+        // saved. Not mid-composition: rewriting text under an IME or iOS
+        // dictation that has not committed yet loses what it was holding.
+        if (!evt.isComposing) HC.editor.liveLink(el);
         // A contenteditable, not a textarea: what was typed is markup, and it
         // is sanitized on the way into the store rather than here.
         debounce('journal-body', function () { saveEntryBody(el.innerHTML); });
@@ -5012,6 +5350,14 @@
         debounce('search', function () {
           HC.screens.searchHelpers.setQuery(el.value);
         });
+        return;
+      }
+
+      /* The search above the Admin users list. Not debounced and not
+         repainted: it hides and shows rows that are already drawn, which is
+         cheap enough to do on every letter and keeps the keyboard up. */
+      if (el.getAttribute && el.getAttribute('data-admin-user-search') !== null) {
+        adminHelpers().setUserSearch(el.value);
         return;
       }
 
@@ -5112,6 +5458,16 @@
       var remindWhat = evt.target.getAttribute && evt.target.getAttribute('data-remind');
       if (remindWhat) HC.reminders.setField(remindWhat, evt.target.value);
 
+      /* Which row a merge is aimed at. Repainted, unlike every other field on
+         this screen, and it is the one place that is right: picking a
+         different target is picking a different merge, so the button under it
+         has to come back to life and any preview of the old pairing has to go.
+         Nothing is written and nothing is asked of a model until the button. */
+      if (evt.target.hasAttribute && evt.target.hasAttribute('data-merge-target')) {
+        HC.admin.setMergeTarget(evt.target.value);
+        repaintHere();
+      }
+
       // The announcement picture. A file input only ever reports 'change',
       // never 'input', which is why this is here rather than above.
       if (evt.target.hasAttribute && evt.target.hasAttribute('data-admin-image')) {
@@ -5168,6 +5524,13 @@
     HC.content.primeFromCache();
 
     renderShell();
+
+    /* Maintenance mode, straight after the shell exists and before anything
+       is drawn into it. The cached content above is what it reads, so a phone
+       that was covered when it closed is covered again before Home is on the
+       glass, with or without signal. From here it listens for itself. See
+       js/maintenance.js. */
+    if (HC.maintenance) HC.maintenance.start();
     // The disc is drawn empty in the shell markup above and filled here,
     // once, because which of the two icons it holds is a question about the
     // theme applyPreferences() has just settled.
@@ -5420,6 +5783,10 @@
        it. */
     HC.highlight.init();
 
+    // The sheet a tapped scripture reference opens. Only its listeners; it
+    // draws nothing until somebody taps one.
+    HC.verse.init();
+
     HC.store.on('journal', function () {
       var route = HC.router.current();
       if (route && route.name === 'journal') HC.screens.journalHelpers.repaint();
@@ -5444,11 +5811,16 @@
       if (route && route.name === 'group') HC.screens.groupHelpers.repaint();
     });
 
-    // An APNs token is not permanent. It changes on restore from backup and
-    // sometimes on reinstall, and a church sending to a stale token gets
-    // silence rather than an error, so this re-registers on every launch
-    // where somebody has already asked for notifications.
+    // On a first launch this is the notification prompt, and a yes turns
+    // every switch on. On every launch after, it re-registers, because an
+    // APNs token is not permanent. See resumeNotifications in js/native.js.
     HC.native.resumeNotifications();
+
+    // Back to the front, perhaps from Settings with notifications newly
+    // allowed. Quiet: it only acts when iOS's answer has changed.
+    document.addEventListener('visibilitychange', function () {
+      if (document.visibilityState === 'visible') HC.native.resumeNotifications(true);
+    });
 
     /* Event reminders. Registers the tap listener that opens the Cal tab on
        the right day, and sweeps: an event somebody was waiting on may have

@@ -47,6 +47,10 @@
  * BadDeviceToken and looks exactly like a bug in your code. It is not. It is
  * this. See LAUNCH_TODO.md.
  *
+ * Since the review pushes, a token APNS_HOST refuses as BadDeviceToken is
+ * tried once on the other gateway before anything is given up on. See
+ * sendEitherGateway() for the phone that made that necessary.
+ *
  * DEPLOY
  *   supabase functions deploy send-push --no-verify-jwt
  */
@@ -60,7 +64,8 @@ type Topic =
   | 'test'
   | 'announcement'
   | 'announcement_review'
-  | 'event_review';
+  | 'event_review'
+  | 'banner';
 
 const TOPIC_COLUMN: Record<Topic, string | null> = {
   new_guide: 'wants_new_guide',
@@ -70,6 +75,10 @@ const TOPIC_COLUMN: Record<Topic, string | null> = {
   announcement_review: 'wants_announcement_review',
   event_review: 'wants_event_review',
   test: null, // a test goes to every active phone, on purpose
+  // The pinned banner, when an admin ticks "Notify everyone" beside Save. It
+  // is the church saying everybody needs to know this, so it goes to every
+  // active phone as well. See migration 0078.
+  banner: null,
 };
 
 /* The two topics that go to some phones rather than to all of them.
@@ -272,6 +281,30 @@ async function compose(
     };
   }
 
+  /* The pinned banner, read at send time rather than carried in, so the lock
+     screen can never say something Home does not. Off or empty is the null
+     case: an admin who took it down in the second between Save and here. */
+  if (topic === 'banner') {
+    const { data: rows } = await admin
+      .from('app_settings')
+      .select('key, value_bool, value_text')
+      .in('key', ['home_banner_on', 'home_banner_message']);
+
+    const on = (rows ?? []).find((r) => r.key === 'home_banner_on')?.value_bool === true;
+    const message = String(
+      (rows ?? []).find((r) => r.key === 'home_banner_message')?.value_text ?? '',
+    ).replace(/\s+/g, ' ').trim();
+
+    if (!on || !message) return null;
+
+    // Not firstSentence(): the banner is already one line, and cutting it at
+    // the first full stop would drop the half that says when.
+    return {
+      title: 'Home Church',
+      body: message.length > 178 ? message.slice(0, 177).trimEnd() + '\u2026' : message,
+    };
+  }
+
   /* The two review topics.
    *
    * COUNTED AT SEND TIME RATHER THAN CARRIED IN. The intake knows exactly how
@@ -342,7 +375,91 @@ function firstSentence(text: string): string {
 
 /* --------------------------------------------------------------- sending */
 
-interface SendOutcome { ok: boolean; retire: boolean; reason?: string; }
+/* @@ gateway:start */
+interface SendOutcome {
+  ok: boolean; retire: boolean; reason?: string; wrongGateway?: boolean;
+  // The request never got an HTTP answer: the connection dropped under it.
+  network?: boolean;
+}
+
+const PRODUCTION_HOST = 'api.push.apple.com';
+const SANDBOX_HOST = 'api.sandbox.push.apple.com';
+
+/* The gateway a token that APNS_HOST refused might belong to instead, or null
+   for a host that is neither of Apple's two (a proxy, a test double), where
+   there is no "other one" to guess at. */
+function otherGateway(host: string): string | null {
+  if (host === PRODUCTION_HOST) return SANDBOX_HOST;
+  if (host === SANDBOX_HOST) return PRODUCTION_HOST;
+  return null;
+}
+
+/* WHEN APPLE ANSWERS WITH THE CONNECTION RATHER THAN A STATUS. A refused
+ * token usually comes back as a plain 400. But APNs can also close the whole
+ * HTTP/2 connection (GOAWAY) and put the reason in the goodbye, and fetch()
+ * then throws instead of returning, with the reason buried in the error text:
+ *
+ *   http2 error: connection error received: not a result of an error
+ *   (b"{\"reason\":\"BadDeviceToken\"}")
+ *
+ * On 27 September that was a TestFlight phone sent to the sandbox first. It
+ * was read as "network trouble", so it was never tried on production, and a
+ * phone that was allowed notifications and on the list heard nothing. So the
+ * reason is read out of the error, and a BadDeviceToken found there means
+ * exactly what the 400 means.
+ */
+function fromNetworkError(err: unknown): SendOutcome {
+  const text = String(err);
+  if (/BadDeviceToken/.test(text)) {
+    return { ok: false, retire: true, reason: `GOAWAY BadDeviceToken`, wrongGateway: true };
+  }
+  return { ok: false, retire: false, reason: text, network: true };
+}
+
+/* ONE PHONE, TWO GATEWAYS, AND WHY THE SECRET IS NOT ENOUGH.
+ *
+ * APNS_HOST picks one gateway for every phone, and the phones do not agree.
+ * The admin's own phone runs whatever Xcode last put on it, which is a
+ * development build with a sandbox token; everybody else is on TestFlight or
+ * the App Store with a production one. So whichever way the secret is set,
+ * somebody gets BadDeviceToken. In September that somebody was the only admin
+ * phone, which meant every review push the intake asked for, after every
+ * newsletter, went to exactly one token and was refused. Then the sender
+ * retired it, the app re-registered it on the next launch, and the cycle
+ * repeated, with push_log saying "1 recipient, 0 delivered" each time.
+ *
+ * So a BadDeviceToken is taken to mean "wrong gateway" first and "dead phone"
+ * second: the token is tried once on the other gateway, and only a token both
+ * of them refuse is retired. The cost is one extra request per development
+ * phone per send, which on this church is a handful.
+ */
+async function sendEitherGateway(
+  host: string,
+  send: (host: string) => Promise<SendOutcome>,
+): Promise<SendOutcome> {
+  let first = await send(host);
+  // A dropped connection says nothing about the token, and every request
+  // in flight on it fails together when APNs closes it for somebody else's
+  // token. One more try opens a fresh one.
+  if (first.network) first = await send(host);
+  if (first.ok || !first.wrongGateway) return first;
+
+  const other = otherGateway(host);
+  if (!other) return first;
+
+  let second = await send(other);
+  if (second.network) second = await send(other);
+  if (second.ok) return second;
+
+  return {
+    ok: false,
+    // Retired only when both gateways say it is gone. A sandbox gateway that
+    // was merely unreachable is not evidence of anything.
+    retire: first.retire && second.retire,
+    reason: `${first.reason}; ${other}: ${second.reason}`,
+  };
+}
+/* @@ gateway:end */
 
 async function sendOne(
   host: string,
@@ -394,15 +511,19 @@ async function sendOne(
 
     // 410 Unregistered means the app was deleted from that phone. Apple is
     // explicit that continuing to send to it is a problem, and it is also just
-    // rude bookkeeping. BadDeviceToken usually means the wrong gateway, but it
-    // is equally dead for our purposes on this host.
+    // rude bookkeeping. BadDeviceToken usually means the wrong gateway, so it
+    // is only retired once the other gateway has refused it too; see
+    // sendEitherGateway().
     const retire = res.status === 410 ||
       reason === 'Unregistered' ||
       reason === 'BadDeviceToken';
 
-    return { ok: false, retire, reason: `${res.status} ${reason}` };
+    return {
+      ok: false, retire, reason: `${res.status} ${reason}`,
+      wrongGateway: reason === 'BadDeviceToken',
+    };
   } catch (err) {
-    return { ok: false, retire: false, reason: String(err) };
+    return fromNetworkError(err);
   }
 }
 
@@ -525,7 +646,9 @@ Deno.serve(async (req: Request) => {
   const teamId = Deno.env.get('APNS_TEAM_ID');
   const privateKey = Deno.env.get('APNS_PRIVATE_KEY');
   const bundleId = Deno.env.get('APNS_BUNDLE_ID');
-  const host = Deno.env.get('APNS_HOST') ?? 'api.push.apple.com';
+  // Trimmed for the same reason the intake trims its IMAP host: a pasted
+  // trailing space would stop this matching either gateway in otherGateway().
+  const host = (Deno.env.get('APNS_HOST') ?? '').trim() || PRODUCTION_HOST;
 
   if (!keyId || !teamId || !privateKey || !bundleId) {
     const missing = [
@@ -568,7 +691,9 @@ Deno.serve(async (req: Request) => {
   for (let i = 0; i < tokens.length; i += BATCH) {
     const slice = tokens.slice(i, i + BATCH);
     const results = await Promise.all(
-      slice.map((t) => sendOne(host, t, jwt, bundleId, note, topic, collapseId)),
+      slice.map((t) => sendEitherGateway(
+        host, (h) => sendOne(h, t, jwt, bundleId, note, topic, collapseId),
+      )),
     );
     results.forEach((r, n) => {
       if (r.ok) deliveredTokens.push(slice[n]);

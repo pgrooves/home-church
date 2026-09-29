@@ -23,7 +23,7 @@
 
   // Update this whenever the text below changes in a way that matters, and
   // confirm it before submitting to the App Store.
-  var EFFECTIVE = 'October 1, 2026';
+  var EFFECTIVE = 'September 23, 2026';
 
   /* ---------------------------------------------------------- small parts */
 
@@ -107,7 +107,7 @@
        than a line in a list, and it deserves the awkward paragraph as well as
        the reassuring one. See supabase/migrations/0023_journal.sql. */
     html += block('Your journal', [
-      'Anything you write in the Journal, and any note you attach to something you highlighted in a guide, is yours. Signed out, it never leaves your phone. Signed in, a copy is kept on our server so it is still there when you open the app on a new phone, and so that losing your phone does not lose what you wrote.',
+      'Anything you write in the Journal, and any note you attach to something you highlighted in a guide or a verse, is yours. Signed out, it never leaves your phone. Signed in, a copy is kept on our server so it is still there when you open the app on a new phone, and so that losing your phone does not lose what you wrote.',
       'No other account can read it. That is not a setting we chose and could change by accident, it is enforced by the database itself: a request for somebody else’s journal comes back empty, and there is no screen anywhere in this app, or in anything the church runs, that shows one person another person’s writing.',
       'Here is the part that would be easy to leave out. Your journal is stored as ordinary text, which means whoever administers our database could read it if they went looking, the same way it is true of your email at any company. We are not going to pretend otherwise by saying it is encrypted so that not even we can read it. That would need a key, and signing in here is a code sent to you rather than a password, so there is nothing to build a key from that would not either live on one phone, defeating the point of it following you, or be held by us, defeating the point of the key.',
       'What we can tell you is what we actually do: nobody at this church reads journals, there is no screen that would show one, and deleting an entry deletes it from our server too. If you would rather keep it all on your phone, do not sign in. Everything in the Journal works either way.',
@@ -127,7 +127,7 @@
 
     html += block('Signing in, which is the one part that does leave', [
       'Signing in is optional. Everything above works whether you sign in or not, and the app never asks you to. What signing in buys you is that Your information follows you to a new phone instead of starting over.',
-      'To sign in you give us an email address. We send a six digit code to it, and once you type the code back in you have an account. There is no password to forget or for us to lose.',
+      'To sign in you give us an email address. We send an eight digit code to it, and once you type the code back in you have an account. There is no password to forget or for us to lose.',
       'From that point on, whatever you have filled in under Your information is stored on our server as well as on your phone, so it can be there when you sign in somewhere else. That is your name, and any of these you chose to fill in: your birthday, your campus, your marital status, and your address. If you left a field blank it stays blank, and none of it is required to use the app.'
     ]);
 
@@ -165,14 +165,15 @@
     ]);
 
     html += block('When the app hands you off to somebody else', [
-      'Some things here are not ours. Giving opens Overflow. Messages open our podcast host or Spotify. Scripture opens BibleGateway. Baptism and Alpha open Church Center. Hosting a group opens Group Vitals. Sending us a prayer request opens a Google form. The email list opens Flodesk.',
+      'Some things here are not ours. Giving opens Overflow. Messages open our podcast host or Spotify. Read the full chapter, under a verse, opens YouVersion’s bible.com. Baptism and Alpha open Church Center. Hosting a group opens Group Vitals. Sending us a prayer request opens a Google form. The email list opens Flodesk.',
       'Each of those opens in your phone’s own browser, and once you are there you are on their site and under their privacy policy, not ours. Anything you type into one of their forms goes to them and to the church. It does not pass through this app, and we only ever see what you chose to send.'
     ]);
 
     html += list('The services this app depends on', [
       'Supabase, which stores the sermons, guides, and events the app downloads, and which stores your account if you make one. Their servers for this project are in Ohio, in the United States.',
       'Google, whose Gmail carries a message you send from the form on Connect to the church, in the same way it would carry an email you wrote to us yourself. They handle the sending and nothing else.',
-      'Resend, which delivers the six digit sign in code to your email address, and carries a message from the form on Connect on the occasions Gmail cannot. They handle the sending and nothing else.',
+      'Resend, which delivers the eight digit sign in code to your email address, and carries a message from the form on Connect on the occasions Gmail cannot. They handle the sending and nothing else.',
+      'YouVersion, which supplies the words of a verse when you tap a scripture reference. The request goes from our server to theirs and carries the passage and nothing else: not your network address, not your account, not which guide you were reading.',
       'Apple, which delivers notifications if you have turned them on.'
     ]);
 
@@ -331,7 +332,7 @@
       html += list('What is stored in your account', [
         'The email address you sign in with.',
         'Your name, and anything else you filled in under Your information: birthday, campus, marital status, and your address if you gave one.',
-        'Your journal, including anything you highlighted in a guide and whatever you wrote about it.'
+        'Your journal, including anything you highlighted in a guide or a verse and whatever you wrote about it.'
       ]);
     }
 

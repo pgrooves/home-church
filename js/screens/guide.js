@@ -291,7 +291,7 @@
 
   function scriptureSection(guide) {
     var body = '<div class="hc-scripture-list">';
-    guide.scriptures.forEach(function (s) { body += c.scriptureRow(s); });
+    guide.scriptures.forEach(function (s, i) { body += c.scriptureRow(s, i); });
     body += '</div>';
     return c.collapsible({
       id: 'scripture',

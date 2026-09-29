@@ -1089,7 +1089,7 @@ phone is not signed in, the greeting does not leave when it is finished. The
 house and "Welcome home." climb, and two buttons come up underneath them: **Log
 in with email** and **Continue as guest**. Choosing the first slides them off
 to the left and brings the address panel in from the right edge, and sending
-the code slides that one away for the panel the six digits are typed into. The
+the code slides that one away for the panel the eight digits are typed into. The
 code that arrives is the same code the Profile screen has always asked for,
 from the same `requestCode` in `js/auth.js`. Signing in ends with light coming
 out from behind the mark and the greeting changing its mind: *You're in!*
@@ -1110,10 +1110,38 @@ why the button's size and placement are a compliance question and not a taste
 one, and `tests/e2e/gate.js` for the whole flow driven in a browser, sign in,
 wrong code, guest, and Reduce Motion.
 
+### The one account that signs in with a password
+
+Almost everything above is the whole story: an address, eight digits, no
+passwords to manage or reset. The exception is a short list of addresses in
+`config.PASSWORD_ACCOUNTS`, which are asked for a password instead and are
+emailed nothing.
+
+It exists because of a rejection. Submission 1.0 (8) came back under
+Guideline 2.1 on September 17: the demo account signed in with an emailed
+code, so the reviewer was handed the login for the mailbox that code went
+to, and they never got into either. Whoever reviews this app cannot read our
+mail, and a password is what App Store Connect's demo credential fields are
+shaped for.
+
+**What it is not is a mode, or a door for reviewers.** There is no button
+for it, nothing on the first panel hints at it, and an address that is not
+on the list cannot reach the password field at all. It is a second kind of
+credential on two ordinary accounts, which is why it ships permanently
+rather than being taken back out after approval. `js/gate.js` forks to it
+before any code is requested; `js/screens/profile.js` does the same for the
+other place somebody can sign in, because the review notes point there.
+Being on the list grants nothing: Supabase still decides whether the
+password is right. See the comment beside the list in `js/config.js`, and
+"The two demo accounts" in `SUBMISSION_KIT.md`.
+
 ### The sign in email has to be edited by hand
 
 `js/auth.js` asks Supabase for a one time code and the Profile screen asks the
-person to type six digits. Out of the box Supabase emails a **magic link**
+person to type eight digits, which is what **Email OTP Length** is set to for
+this project. It is six out of the box, so if the app's fields and the code
+that arrives ever disagree, that setting is the first place to look and the
+one place to fix it. Out of the box Supabase emails a **magic link**
 instead. Nothing is wrong with the request, email OTP and magic link are the
 same endpoint and the same token, the only difference is what the email says,
 and the default templates say it with a link. So the app waits for a code that
@@ -1180,7 +1208,7 @@ Do not chase this by rewriting the email repeatedly. It reads as churn to the
 filters and the first item is doing most of the work.
 
 Putting the code in the subject line is the part people notice. It is what
-lets a phone show the six digits on the lock screen, and it is why iOS offers
+lets a phone show the eight digits on the lock screen, and it is why iOS offers
 to autofill them, which is what the `autocomplete="one-time-code"` on the
 Profile form is waiting for.
 

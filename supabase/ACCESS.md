@@ -12,15 +12,34 @@ rather than each carrying their own copy, so the two cannot drift.
 
 ## Which transport
 
-**Try the Supabase MCP server first.** It is the one that works from a phone,
-and this app is largely built from one. It reaches the project over Anthropic's
-own path, so the egress proxy that blocks `supabase.co` in web sessions does
-not apply. If `mcp__Supabase__execute_sql` is available, use it.
+**Try `scripts/hc_supabase.py` first.** It takes the service role key from
+`.env` at the repo root, or from `SUPABASE_SERVICE_ROLE_KEY` in the
+environment, and the project URL from `js/config.js`. The verbs are short,
+`upsert` refuses a row with no `id`, and nothing has to be hand quoted.
 
-**Otherwise use `scripts/hc_supabase.py`.** It needs `.env` at the repo root
-and a shell to run in, which means a real machine. It is the better tool when
-you have it: the verbs are shorter, `upsert` refuses a row with no `id`, and
-nothing has to be hand quoted.
+**This used to say to try MCP first, and that was wrong for three reasons**,
+all of which cost a week between them:
+
+- **It is not available everywhere.** A connector is enabled per chat, so a
+  scheduled session never has it and cannot be given it. The script runs
+  anywhere there is a shell.
+- **It prompts.** `Bash(python3 scripts/hc_supabase.py:*)` is allowlisted in
+  `.claude/settings.json`, so the script asks nobody for anything. An MCP tool
+  call puts an Allow once dialog in front of the pastor for every read and
+  every write, and on a phone there is no "don't ask again" on it.
+- **It was two code paths.** The same publish behaved differently on a Sunday
+  and on a Tuesday, which is exactly where a difference hides until it
+  matters.
+
+**Fall back to the Supabase MCP server** when the script cannot run: no shell,
+no key, or a repo you are not standing in. If `mcp__Supabase__execute_sql` is
+available it reaches the same project and writes the same rows.
+
+**`supabase.co` is reachable from a web session.** An earlier version of this
+file said the egress proxy blocks it and that MCP was the way around. That is
+no longer true here: the script talks to `https://<ref>.supabase.co` directly
+and so does the narration upload. Do not plan around a block that is not
+there, and do not reintroduce that claim without testing it first.
 
 **If neither is available**, say so plainly and stop before writing anything.
 Do not fall back to editing `js/data.js`. That file is the cold start seed, not
@@ -30,9 +49,56 @@ Symptoms worth recognizing, so you do not misdiagnose them:
 
 | What you see | What it means |
 |---|---|
-| `.env not found at the repo root` | No credentials here. Web session. Use MCP. |
+| `SUPABASE_URL not set` (or the key) | No credentials on this machine or in this environment. Use MCP. |
 | `CONNECT tunnel failed, response 403` | The proxy blocks `supabase.co`. Not a flaky network, do not retry. Use MCP. |
 | MCP server needs authorization | Not connected on this account. Use the script, or ask the pastor to connect it. |
+
+## The scheduled session, where neither transport used to exist
+
+A session nobody opened, fired by a Routine, is the one case where both
+transports used to be missing at once, and it is worth knowing why because the
+answer is not obvious from either half.
+
+**MCP is per chat, not per account.** The Supabase connector is connected at
+the org level and still arrives disabled in a fired session, because enabling
+it is something a person does in a conversation and a scheduled run has no
+conversation. A Routine created from inside a session cannot carry a connector
+grant with it either. So `mcp__Supabase__*` is simply absent there.
+
+**And there is no `.env`**, because `.env` is git ignored and the container is
+a fresh clone.
+
+That combination is "neither transport," and a Tuesday routine reported it
+every week rather than doing its job.
+
+**One environment variable is the way through**, set on the environment rather
+than in a file, because those reach every session in it including the ones
+nobody opened:
+
+```
+SUPABASE_SERVICE_ROLE_KEY=<the service_role key>
+```
+
+**That is the whole list.** `SUPABASE_URL` is not needed and should not be set:
+`hc_supabase.py` falls back to the URL in `js/config.js`, which is committed,
+served to every phone, and therefore no secret at all. One thing to configure
+instead of two, and the URL cannot drift from the app because it is the app's
+own value rather than a second copy of it.
+
+The order is `.env`, then the environment, then `js/config.js` for the URL
+alone. A machine with a real `.env` behaves exactly as it always did, a `.env`
+deliberately pointed at another project still wins, and nothing about any of
+this changes what a command does with the data.
+
+**The key is never derived.** No file in this repo holds it and none should.
+If it is missing the script refuses and says so.
+
+**`SUPABASE_SERVICE_ROLE_KEY` bypasses row level security**, which is the whole
+reason it can write the content tables, and putting it on the environment means
+every session in that environment can write every table. That is the same trust
+already given to a `.env` on the pastor's laptop, and it is worth saying out
+loud rather than discovering. It never belongs in `js/config.js`, in anything
+the app downloads, or in the repo.
 
 The project ref is **`ibqkumxfltfiuqevviji`**, "Home Church App". It is the one
 `js/config.js` points at. Confirm you are writing to that ref and not another

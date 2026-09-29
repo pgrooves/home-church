@@ -39,39 +39,63 @@ any, and adding one would undo the point.
 
 ## Step 1: Get the episode
 
-Try to fetch it yourself first:
+**Run the script. It finds the episode itself, from any session, with no key
+and no login:**
 
+```bash
+python3 scripts/spotify_episode.py
 ```
-https://open.spotify.com/show/7iJGZvY5MVm7CjPggvvPOa
-```
 
-That is `podcast.showUrl` in `js/data.js`, and it is the source of truth for
-the show. The episode links you want are on that page.
+That returns the latest episode as JSON: title, `episode_url`, `published_on`
+and `duration`, which is four of the five things this process needs. Use
+`--episode <id or URL>` for a specific one rather than the latest, which is
+what a late week or a backfill wants.
 
-**This fetch often fails, and that's expected.** Claude Code sessions running
-on the web go through an egress proxy that blocks `open.spotify.com` and the
-podcast host behind it, returning a 403. That is a policy denial, not a
-transient error. Don't retry it, don't try to route around it, and don't go
-looking for a mirror.
+**Do not ask the pastor for those four.** They are on Spotify and the script
+gets them. The one field it cannot get is the episode notes, and Step 4 says
+what to do about that.
 
-When the fetch fails, or when it succeeds but the page doesn't give you clean
-per-episode data, just ask:
+### Why there is a script, and why the obvious routes do not work
 
-> The episode fetch is blocked from this session. Paste me the new episode's
-> title, publish date, Spotify link, and description, and I'll take it from
-> there.
+This section exists because the obvious thing fails, the failure looks like a
+network problem rather than a page problem, and two weeks running a session
+read that failure as "ask the pastor" and made the asking the normal path.
 
-Either way, what you need per episode is:
+| Route | What actually happens |
+|---|---|
+| `open.spotify.com/show/<id>` | Loads fine. The episode list is drawn by JavaScript, so the HTML holds the show title and nothing else. **Not blocked, just empty.** |
+| `feeds.buzzsprout.com/<id>.rss` | `EGRESS_BLOCKED` by the proxy. So is `www.buzzsprout.com`. The RSS route is out of a web session entirely. |
+| `open.spotify.com/embed/show/<id>` | Spotify renders the latest episode into a `__NEXT_DATA__` blob, server side. **This is the one, and it is what the script reads.** |
+| `open.spotify.com/embed/episode/<id>` | Same, for one named episode. |
+
+**Never use WebFetch for this.** It converts the page to markdown and hands it
+to a summarizer, which throws the JSON away and returns prose. On the embed
+page it will cheerfully tell you the episode's title and silently lose the id,
+the date and the length, which are the three fields worth having. The script
+reads the bytes and parses them, which is the difference.
+
+**A blocked domain and an empty page are not the same failure.** `buzzsprout`
+returns `EGRESS_BLOCKED`, which is a policy denial: do not retry it, do not
+look for a mirror. `open.spotify.com` returns a page. If the show page looks
+useless, that is the JavaScript, and the embed is the answer, not the pastor.
+
+### What you need per episode
 
 - **Title**, exactly as the church wrote it, including capitalization
 - **Publish date**, the day it posted
 - **Spotify episode link**, the `open.spotify.com/episode/...` URL
-- **Description**, the episode notes
-- **Duration**, if it's given
+- **Duration**, which the script gives in whole minutes
+- **Description**, the episode notes, and this one is not on Spotify
 
 Don't invent any of these. An episode link you guessed at is worse than the
 show-level fallback that's already there, because the fallback always works
 and a wrong link is a dead end for whoever taps it.
+
+**If the script itself fails**, say what it printed and ask for the four
+fields as a fallback. That is the fallback now, not the opening move:
+
+> `spotify_episode.py` could not reach the embed page. Paste me the new
+> episode's title, publish date, Spotify link, and description.
 
 -----
 
@@ -197,6 +221,20 @@ real error, not a style issue.
 
 `summary` is an array of paragraphs, and it's what the Listen tab shows when
 someone opens a message. It comes from the episode's own notes.
+
+**Step 1 does not bring you this field**, and it is the only one it misses.
+The notes live on Buzzsprout, which the proxy blocks, and Spotify's embed
+payload has no description in it at all. So `summary` is the one thing worth
+asking about, on its own, after the other four are already written:
+
+> Published. The episode notes aren't reachable from this session, so
+> `summary` is still empty and Listen is falling back to the one-line
+> description. Paste the notes if you want them in.
+
+**Write the row without waiting for an answer.** An episode with a real title
+and a working link and no notes is the message published; an episode held back
+for its notes is a dead "Audio coming soon!" button on the Listen tab. The
+notes are an improvement on a published row, not a precondition for one.
 
 - **Use the episode description as written** where it's real content. Split
   it into paragraphs if it runs long. Don't rewrite it into the guide's
@@ -331,9 +369,21 @@ links, so it gets you everything except the one field backfill exists to
 fill. Useful for correcting titles and notes in bulk, then adding links by
 hand for the episodes that matter most.
 
-Both of these are blocked from web sessions by the egress proxy, the same as
-the show page. Backfill realistically runs from Claude Code on a machine with
-open network access, or from a pasted list.
+Both of these are blocked from web sessions by the egress proxy. The show page
+is not blocked, it is simply empty, which Step 1 explains at length.
+
+**The embed route works for backfill too**, one episode at a time:
+
+```bash
+python3 scripts/spotify_episode.py --episode <id or URL>
+```
+
+That is fine for the handful of messages somebody actually wants links on, and
+it needs no key and no machine with open network access. What it will not do
+is enumerate the show: the show embed carries only the latest episode, so
+there is no page-through, and you need the ids from somewhere. For a genuine
+whole-catalogue run the Web API above is still the right tool, from a machine
+that can reach it.
 
 ### The matching pass
 

@@ -75,7 +75,7 @@ neither is a defect:
       calls it from Your account and from Your data.
 
 - [x] **The sign in email templates send a code, not a link.** Done. The app
-      asks for six digits and Supabase's stock templates emailed a magic link
+      asks for eight digits and Supabase's stock templates emailed a magic link
       whose redirect no screen here handles, so sign in was broken end to end
       until both **Magic Link** and **Confirm signup** were rewritten to print
       `{{ .Token }}` and drop `{{ .ConfirmationURL }}`. Both, not one: Supabase
@@ -243,10 +243,18 @@ neither is a defect:
       policy, and it is the only one of the three that means you are not
       holding a child's home address at all.
 
-- [ ] **Confirm the effective date on both legal screens.** It reads
-      **August 11, 2026** right now. Change `EFFECTIVE` at the top of
-      `js/screens/legal.js` to the real launch date before you submit, then
-      re-run `node scripts/make_legal_pages.js` so the public pages match.
+- [x] **Confirm the effective date on both legal screens.** Set to
+      **September 20, 2026** and `legal/` regenerated, on the day the
+      password sign-in build went out. It had read October 1, which is a
+      policy dated in the future for anybody reading it before then,
+      reviewers included. Today's date is in effect rather than pending,
+      which is the safe direction to be wrong in: a policy that predates the
+      launch is ordinary, one that postdates it is a question.
+
+      If the launch slips far enough that this reads as stale, change
+      `EFFECTIVE` at the top of `js/screens/legal.js` and re-run
+      `node scripts/make_legal_pages.js` so the public pages match. It needs
+      a static server on :8770 first, see the header of that script.
 
       The policy itself has been rewritten for accounts and the pages under
       `legal/` are already regenerated, so the date is the only thing left in
@@ -538,7 +546,7 @@ above, under Before submission.)*
       not run on that origin, it runs on `capacitor://localhost`, and Site URL
       and Redirect URLs in the Supabase Auth dashboard have to know about it.
 
-      Your six digit code flow is more forgiving here than a magic link would
+      Your eight digit code flow is more forgiving here than a magic link would
       be, because typing a code back into the app needs no redirect at all, so
       there is a good chance this just works. **Do not take that on faith.**
       This is the classic failure where everything is fine in your home screen

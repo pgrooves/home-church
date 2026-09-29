@@ -32,7 +32,7 @@
 
   var cfg = HC.config || {};
   var CACHE_KEY = 'content';
-  var CACHE_VERSION = 14;     // bump when a mapping below changes shape
+  var CACHE_VERSION = 15;     // bump when a mapping below changes shape
   var TIMEOUT_MS = 12000;
 
   // The tables we pull, and the HC.data key each one fills. Adding another
@@ -233,10 +233,26 @@
      value on this calendar and no clock time expresses it. */
   function mapEvent(r) {
     var when = r.starts_at ? new Date(r.starts_at) : null;
+    var first = when ? localDate(when) : '';
+
+    /* EVERY DAY THIS EVENT RUNS ON, since migration 0074. `date` is still the
+       first of them and still means exactly what it always meant, so every
+       screen that only ever asked "when is this" goes on working untouched;
+       `dates` is what the Cal tab walks to draw a class on both its Sundays.
+
+       also_on holds plain dates and needs no conversion — unlike starts_at,
+       which is an instant and has to be read in the phone's own zone. A date
+       column is a day, and the 12th is the 12th wherever it is read. */
+    var also = Array.isArray(r.also_on)
+      ? r.also_on.map(function (d) { return String(d).slice(0, 10); })
+        .filter(function (d) { return d && d !== first; })
+      : [];
+
     return {
       id: r.id,
       title: str(r.title),
-      date: when ? localDate(when) : '',
+      date: first,
+      dates: first ? [first].concat(also).sort() : [],
       time: r.time_label ? str(r.time_label) : (when ? localTime(when) : ''),
       location: str(r.location),
       blurb: str(r.description),

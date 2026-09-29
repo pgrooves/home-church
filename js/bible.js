@@ -10,10 +10,16 @@
    says nothing found. Six kilobytes to make that impossible is a good trade,
    and it keeps the picker working with no signal, like everything else here.
 
-   THE NUMBERS ARE THE PROTESTANT CANON as the ESV and the KJV divide it,
-   which is what c.bibleUrl() links to. A handful of chapters are numbered
+   THE NUMBERS ARE THE PROTESTANT CANON as the NIV, the ESV and the KJV divide
+   it, which is what the verse sheet shows. A handful of chapters are numbered
    differently in other traditions; those translations are not what this app
-   sends people to, so this does not try to model them.
+   shows people, so this does not try to model them.
+
+   IT ALSO READS REFERENCES, which is the other half of the verse sheet in
+   js/verse.js: "Rom 12:1-2" in, a book, a chapter and a span of verses out,
+   and from those the USFM id YouVersion asks for (ROM.12.1-ROM.12.2) and the
+   bible.com page for when somebody wants the whole chapter. Still no network
+   and still nothing about screens, so it can be tested on its own.
    ========================================================================== */
 
 (function (HC) {
@@ -152,12 +158,366 @@
     return tail;
   }
 
+  /* ------------------------------------------------------------ the version
+
+     The one translation the verse sheet shows and the one bible.com opens.
+     The id is YouVersion's, from the licence on the church's developer
+     account. supabase/functions/bible-passage has the same number as its
+     default, and the two must agree, or the sheet says NIV over somebody
+     else's words and the chapter button opens a different Bible. */
+  var VERSION = { id: 111, abbreviation: 'NIV' };
+
+  /* ------------------------------------------------------------ USFM codes
+
+     The three letter ids YouVersion and bible.com both use, in the same order
+     as RAW above. Not derivable from the names: Judges is JDG, Philippians is
+     PHP, Song of Solomon is SNG. */
+  var USFM = (
+    'GEN EXO LEV NUM DEU JOS JDG RUT 1SA 2SA 1KI 2KI 1CH 2CH EZR NEH EST JOB ' +
+    'PSA PRO ECC SNG ISA JER LAM EZK DAN HOS JOL AMO OBA JON MIC NAM HAB ZEP ' +
+    'HAG ZEC MAL ' +
+    'MAT MRK LUK JHN ACT ROM 1CO 2CO GAL EPH PHP COL 1TH 2TH 1TI 2TI TIT PHM ' +
+    'HEB JAS 1PE 2PE 1JN 2JN 3JN JUD REV'
+  ).split(' ');
+
+  books.forEach(function (b) { b.usfm = USFM[b.index]; });
+
+  /* ------------------------------------------------------------ book names
+
+     Every way a guide, a transcript or a person writes a book, folded to one
+     key: lower case, no dots, no spaces, and a leading 1/2/3 whatever it was
+     spelled as. So "1 Cor.", "I Corinthians" and "First Corinthians" all
+     arrive as "1corinthians" or "1cor", and both of those are in here.
+
+     The full name of every book is added below from RAW; this list is only
+     the short forms. Two letter ones like "am" and "ac" are fine here because
+     this only ever reads something already known to be a reference. Finding
+     references inside ordinary sentences is a different job, and one where
+     "Am" and "Acts" in a sentence would be a problem. */
+  var SHORT = {
+    GEN: 'gen ge gn', EXO: 'exod exo ex', LEV: 'lev le lv', NUM: 'num nu nm nb',
+    DEU: 'deut deu dt', JOS: 'josh jos', JDG: 'judg jdg jg', RUT: 'ru rth',
+    '1SA': '1sam 1sa 1sm', '2SA': '2sam 2sa 2sm', '1KI': '1kgs 1ki 1kin 1kings',
+    '2KI': '2kgs 2ki 2kin 2kings', '1CH': '1chr 1ch 1chron', '2CH': '2chr 2ch 2chron',
+    EZR: 'ezr', NEH: 'neh', EST: 'esth est', JOB: 'jb',
+    PSA: 'ps psa psalm pss psm', PRO: 'prov pro prv', ECC: 'eccl ecc eccles qoh',
+    SNG: 'song songofsongs sos canticles', ISA: 'isa', JER: 'jer', LAM: 'lam',
+    EZK: 'ezek eze ezk', DAN: 'dan dn', HOS: 'hos', JOL: 'joel jl', AMO: 'am',
+    OBA: 'obad ob', JON: 'jon jnh', MIC: 'mic', NAM: 'nah', HAB: 'hab',
+    ZEP: 'zeph zep', HAG: 'hag', ZEC: 'zech zec', MAL: 'mal',
+    MAT: 'matt mt mat', MRK: 'mk mar mrk', LUK: 'lk luk', JHN: 'jn jhn joh',
+    ACT: 'ac', ROM: 'rom ro rm', '1CO': '1cor 1co', '2CO': '2cor 2co',
+    GAL: 'gal', EPH: 'eph ephes', PHP: 'phil php', COL: 'col',
+    '1TH': '1thess 1th 1thes', '2TH': '2thess 2th 2thes', '1TI': '1tim 1ti',
+    '2TI': '2tim 2ti', TIT: 'tit', PHM: 'philem phm phlm', HEB: 'heb',
+    JAS: 'jas jm', '1PE': '1pet 1pe 1pt', '2PE': '2pet 2pe 2pt',
+    '1JN': '1jn 1jo 1jhn', '2JN': '2jn 2jo 2jhn', '3JN': '3jn 3jo 3jhn',
+    JUD: 'jud', REV: 'rev re revelations'
+  };
+
+  function fold(name) {
+    return String(name || '').toLowerCase()
+      .replace(/^\s*(?:first|1st|iii|ii|i)\b/, function (m) {
+        return { first: '1', '1st': '1', i: '1', ii: '2', iii: '3' }[m.trim()] + ' ';
+      })
+      .replace(/^\s*(?:second|2nd)\b/, '2 ')
+      .replace(/^\s*(?:third|3rd)\b/, '3 ')
+      .replace(/[^a-z0-9]/g, '');
+  }
+
+  var byKey = {};
+  books.forEach(function (b) {
+    byKey[fold(b.name)] = b;
+    byKey[b.usfm.toLowerCase()] = b;
+    (SHORT[b.usfm] || '').split(' ').forEach(function (k) { if (k) byKey[k] = b; });
+  });
+
+  function findBook(name) {
+    return byKey[fold(name)] || null;
+  }
+
+  /* ------------------------------------------------------------ references
+
+     One passage, as parse() hands it back:
+
+       { book, chapter, verse, toChapter, toVerse }
+
+     verse is 0 for a whole chapter, and toChapter/toVerse are the far end,
+     equal to the near end for a single verse. Everything is checked against
+     the counts above, so a passage that comes out of here exists: John 3:40
+     is null, not a request that comes back empty.
+
+     What it reads:
+       John 3:16            John 3:16-18         John 3:16–4:2
+       John 3               John 3-4             Jude 4 (one chapter books)
+       Rom. 12:1-2          1 Cor 13             Psalm 23 (for Psalms)
+       John 3:16a           Jude                 Obadiah 1:4
+     */
+  function parse(text) {
+    var s = String(text || '')
+      .replace(/[‐-―−]/g, '-')     // every dash is a hyphen
+      .replace(/\s+/g, ' ')
+      .replace(/\s*([:.\-])\s*(?=\d)/g, '$1')      // "3 : 16 - 18" → "3:16-18"
+      .replace(/[\s,;.]+$/, '')
+      .trim();
+
+    var m = /^((?:[1-3]|i{1,3})?\s*[a-z][a-z .']*?)\s*(?:(\d+)(?:[:.](\d+)[a-z]?)?(?:-(\d+)(?:[:.](\d+))?[a-z]?)?)?$/i
+      .exec(s);
+    if (!m) return null;
+
+    var book = findBook(m[1]);
+    if (!book) return null;
+
+    var a = m[2] ? +m[2] : 0;
+    var b = m[3] ? +m[3] : 0;
+    var c = m[4] ? +m[4] : 0;
+    var d = m[5] ? +m[5] : 0;
+
+    var p;
+    if (!a) {
+      // A book on its own is only a passage when it is one chapter long.
+      if (book.chapters !== 1) return null;
+      p = { chapter: 1, verse: 0, toChapter: 1, toVerse: 0 };
+    } else if (book.chapters === 1 && !b) {
+      // Jude 4, Jude 3-5: the numbers are verses, the way people write them.
+      p = { chapter: 1, verse: a, toChapter: 1, toVerse: c || a };
+    } else if (!b) {
+      // John 3, John 3-4. A chapter range never has a verse on its far end.
+      if (d) return null;
+      p = { chapter: a, verse: 0, toChapter: c || a, toVerse: 0 };
+    } else if (d) {
+      p = { chapter: a, verse: b, toChapter: c, toVerse: d };   // 3:16-4:2
+    } else {
+      p = { chapter: a, verse: b, toChapter: a, toVerse: c || b };
+    }
+
+    p.book = book.name;
+    return valid(book, p) ? p : null;
+  }
+
+  function valid(book, p) {
+    if (p.chapter < 1 || p.toChapter < p.chapter || p.toChapter > book.chapters) return false;
+    if (!p.verse) return true;
+    if (p.verse > book.verses[p.chapter - 1]) return false;
+    if (p.toVerse < 1 || p.toVerse > book.verses[p.toChapter - 1]) return false;
+    return p.toChapter > p.chapter || p.toVerse >= p.verse;
+  }
+
+  /* Several passages in one string, the way the guides write them:
+
+       Matthew 10:1-4; Mark 3:31-35
+       Romans 12:1-2, 9-10          (the rest of the chapter, carried over)
+       John 15:15; 1 John 1:7; 5:4  (and the book, carried over)
+
+     Whatever will not read is skipped rather than failing the lot. */
+  function parseAll(text) {
+    var out = [];
+    var last = null;
+    String(text || '').split(/[;,]/).forEach(function (raw) {
+      var piece = raw.trim();
+      if (!piece) return;
+      var p = null;
+      if (/^(?:[1-3]\s*)?[a-z]/i.test(piece)) {
+        p = parse(piece);
+      } else if (last) {
+        var head = last.book + ' ';
+        // "9-10" after "12:1-2" means verses in chapter 12; "13" after "12" is chapter 13.
+        if (piece.indexOf(':') === -1 && last.verse) head += last.toChapter + ':';
+        p = parse(head + piece);
+      }
+      if (p) { out.push(p); last = p; }
+    });
+    return out;
+  }
+
+  /* How a parsed passage is written back, with reference() doing the common
+     cases so the two can never disagree about Jude. */
+  function label(p) {
+    if (!p) return '';
+    if (p.toChapter === p.chapter) {
+      return reference(p.book, p.chapter, p.verse, p.toVerse);
+    }
+    return p.verse
+      ? p.book + ' ' + p.chapter + ':' + p.verse + '-' + p.toChapter + ':' + p.toVerse
+      : p.book + ' ' + p.chapter + '-' + p.toChapter;
+  }
+
+  /* YouVersion's id for the passage: JHN.3.16, JHN.3.16-JHN.3.18, JHN.3,
+     MAT.5-MAT.7. The function checks the same shape before it asks. */
+  function usfm(p) {
+    var code = getBook(p.book).usfm;
+    var from = code + '.' + p.chapter + (p.verse ? '.' + p.verse : '');
+    var to = code + '.' + p.toChapter + (p.verse ? '.' + p.toVerse : '');
+    return from === to ? from : from + '-' + to;
+  }
+
+  /* bible.com, which opens the YouVersion app when it is installed and the
+     website when it is not. The chapter is what the verse sheet's button
+     opens; the passage is what a link in a journal entry points at. bible.com
+     writes a range inside one chapter as JHN.3.16-18 and has no form for one
+     that crosses chapters, so that falls back to the chapter it starts in. */
+  function chapterUrl(p) {
+    return 'https://www.bible.com/bible/' + VERSION.id + '/' +
+      getBook(p.book).usfm + '.' + p.chapter + '.' + VERSION.abbreviation;
+  }
+
+  function passageUrl(p) {
+    if (!p.verse || p.toChapter !== p.chapter) return chapterUrl(p);
+    return 'https://www.bible.com/bible/' + VERSION.id + '/' +
+      getBook(p.book).usfm + '.' + p.chapter + '.' + p.verse +
+      (p.toVerse > p.verse ? '-' + p.toVerse : '') + '.' + VERSION.abbreviation;
+  }
+
+  /* -------------------------------------------- references in ordinary words
+
+     The journal's half of the verse sheet. Somebody types "John 3:16" into an
+     entry, and once it is saved those letters become a link the sheet opens
+     from, the same as if they had used the scripture button.
+
+     STRICTER THAN parse(), on purpose. parse() is handed things already
+     known to be references; this is reading prose, where "Mark" is a name,
+     "Job" is work and "Am" starts a sentence. So:
+
+       the book has to start with a capital letter, as a book name does
+       two letter abbreviations are not books here (no "Ps 23", no "Jn 3")
+       a chapter number has to follow, so "Mark" alone is never a link
+       and parse() has to agree the chapter and verse exist, so "Mark 97"
+       stays words
+
+     Numbered books take their number as 1, 2 or 3 and nothing else, because
+     "I John 3" in a sentence is more often a person than a letter. */
+  var PROSE_SHORT = [
+    'Gen', 'Exod', 'Lev', 'Num', 'Deut', 'Josh', 'Judg', 'Sam', 'Kgs', 'Chr',
+    'Chron', 'Neh', 'Esth', 'Psa', 'Psalm', 'Prov', 'Eccl', 'Eccles', 'Isa',
+    'Jer', 'Lam', 'Ezek', 'Dan', 'Hos', 'Obad', 'Mic', 'Nah', 'Hab', 'Zeph',
+    'Hag', 'Zech', 'Mal', 'Matt', 'Rom', 'Cor', 'Gal', 'Eph', 'Phil', 'Col',
+    'Thess', 'Tim', 'Tit', 'Philem', 'Heb', 'Jas', 'Pet', 'Rev', 'Song of Songs'
+  ];
+
+  /* Every short form a book goes by, for the loose case below: "Jn 3:16",
+     "Ps 23:1", "gen 1:1". The digit that starts "1co" is the "1 " the
+     pattern already allows for, so it comes off here. */
+  var ANY_SHORT = [];
+  Object.keys(SHORT).forEach(function (code) {
+    SHORT[code].split(' ').forEach(function (k) {
+      var bare = k.replace(/^[1-3]/, '');
+      if (bare && ANY_SHORT.indexOf(bare) === -1) ANY_SHORT.push(bare);
+    });
+  });
+
+  var PROSE = (function () {
+    var names = {};
+    books.forEach(function (b) { names[b.name.replace(/^[1-3] /, '')] = true; });
+    PROSE_SHORT.forEach(function (n) { names[n] = true; });
+    ANY_SHORT.forEach(function (n) { names[n] = true; });
+    // Longest first, so "Song of Solomon" wins over "Song" and "Philemon"
+    // over "Phil".
+    var alt = Object.keys(names).sort(function (a, b) { return b.length - a.length; })
+      .map(function (n) { return n.replace(/ /g, '\\s+'); }).join('|');
+    // Case-insensitive; find() decides afterwards how much case matters.
+    return new RegExp(
+      '(^|[^A-Za-z0-9])((?:[1-3]\\s?)?(' + alt + ')(?:\\.\\s*|\\s+)\\d{1,3}' +
+      '(?:[:.]\\d{1,3}[ab]?(?:\\s?[-\u2013\u2014]\\s?\\d{1,3}(?:[:.]\\d{1,3})?[ab]?)?' +
+      '|\\s?[-\u2013\u2014]\\s?\\d{1,3})?)(?![0-9A-Za-z])', 'gi');
+  })();
+
+  /* Words that are books and also ordinary words, left alone in lower case
+     even with a verse after them: "my job 5:15 shift" is a time. */
+  var EVERYDAY = { job: 1, mark: 1, acts: 1, numbers: 1, song: 1, am: 1 };
+
+  /* Every reference in a run of plain text, as { start, end, text }.
+
+     HOW STRICT DEPENDS ON THE SHAPE. With a chapter AND a verse ("3:16"),
+     the shape is unmistakably scripture, so the book can be any case and
+     any short form: "john 3:16", "Jn 3:16", "ps 23:1". Two letter forms
+     still need their capital ("Ps", not "ps"), and the everyday words above
+     still need theirs. With only a chapter ("Psalm 23"), it has to look like
+     a book name somebody meant: a capital, and three letters or more, so
+     "Dan 3" can be a psalm-less person but "Mark was 5" never is. Either
+     way parse() has the last word, so the verse has to exist in the NIV. */
+  function find(text) {
+    var out = [];
+    var s = String(text || '');
+    var m;
+    PROSE.lastIndex = 0;
+    while ((m = PROSE.exec(s))) {
+      var ref = m[2];
+      var start = m.index + m[1].length;
+      var token = m[3];
+      var capital = /^[A-Z]/.test(token);
+      var bare = token.toLowerCase().replace(/\./g, '');
+      var verse = /\d[:.]\d/.test(ref);
+      var shortForm = bare.length <= 2;
+      var looksMeant = verse
+        ? (capital || (!shortForm && !EVERYDAY[bare]))
+        : (capital && !shortForm && (findFull(token) || PROSE_SHORT.indexOf(token) !== -1));
+      if (looksMeant && parse(ref)) out.push({ start: start, end: start + ref.length, text: ref });
+      // A zero width match cannot happen here, but a regex loop that trusts
+      // that is a regex loop that hangs the day it is wrong.
+      if (PROSE.lastIndex === m.index) PROSE.lastIndex++;
+    }
+    return out;
+  }
+
+  // Whether a token is a whole book name rather than an abbreviation.
+  function findFull(token) {
+    var t = token.toLowerCase();
+    return books.some(function (b) { return b.name.replace(/^[1-3] /, '').toLowerCase() === t; });
+  }
+
+  /* Markup in, the same markup out with every reference in its text turned
+     into a scripture link. Works on the string rather than the DOM, so the
+     same function serves the store (js/journal.js, on every save) and the
+     editor (on the way onto the screen, and when the writing box lets go).
+
+     Only text between tags is touched, and never text already inside an
+     <a>: a reference somebody linked on purpose, with the scripture button,
+     keeps the link it has. The words of a new link are exactly the words
+     that were typed, so "Rom 12:1-2" stays "Rom 12:1-2" on the page. */
+  function linkify(html) {
+    var parts = String(html || '').split(/(<[^>]*>)/);
+    var inLink = 0;
+    for (var i = 0; i < parts.length; i++) {
+      var part = parts[i];
+      if (!part) continue;
+      if (part.charAt(0) === '<') {
+        if (/^<a[\s>]/i.test(part)) inLink++;
+        else if (/^<\/a\s*>/i.test(part) && inLink) inLink--;
+        continue;
+      }
+      if (inLink) continue;
+      var hits = find(part);
+      if (!hits.length) continue;
+      var out = '';
+      var cursor = 0;
+      hits.forEach(function (h) {
+        var href = passageUrl(parseAll(h.text)[0]);
+        out += part.slice(cursor, h.start) +
+          '<a href="' + href.replace(/&/g, '&amp;').replace(/"/g, '&quot;') + '">' +
+          h.text + '</a>';
+        cursor = h.end;
+      });
+      parts[i] = out + part.slice(cursor);
+    }
+    return parts.join('');
+  }
+
   HC.bible = {
+    VERSION: VERSION,
+    find: find,
+    linkify: linkify,
     books: books,
     getBook: getBook,
+    findBook: findBook,
     chapterCount: chapterCount,
     verseCount: verseCount,
-    reference: reference
+    reference: reference,
+    parse: parse,
+    parseAll: parseAll,
+    label: label,
+    usfm: usfm,
+    chapterUrl: chapterUrl,
+    passageUrl: passageUrl
   };
 
 })(window.HC = window.HC || {});

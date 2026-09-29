@@ -51,6 +51,15 @@ const EMAIL = 'trey@e2e.test';
 const CODE = '123456';
 const NAME = 'Trey';
 
+/* The other way in, the one submission 1.0 (8) was rejected for not having.
+   An address on config.PASSWORD_ACCOUNTS is asked for a password instead of
+   being emailed a code, because whoever reviews this app cannot read our
+   mail. The whole point is that no code is ever sent, so this file counts
+   the codes that were. */
+const DEMO = 'demo.leader@e2e.test';
+const PASSWORD = 'a-real-password';
+const DEMO_NAME = 'Dana';
+
 const TYPES = {
   '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css',
   '.json': 'application/json', '.png': 'image/png', '.svg': 'image/svg+xml',
@@ -86,10 +95,13 @@ const ok = (label, good, detail) => {
 
 const CONFIG_STUB =
   '(function (HC) { HC.config = { SUPABASE_URL: ' + JSON.stringify(ORIGIN + '/supabase') +
-  ', SUPABASE_ANON_KEY: "anon-key" }; })(window.HC = window.HC || {});\n';
+  ', SUPABASE_ANON_KEY: "anon-key"' +
+  ', PASSWORD_ACCOUNTS: ' + JSON.stringify([DEMO]) +
+  ' }; })(window.HC = window.HC || {});\n';
 
 const otp = [];      // every address a code was asked for, in order
 const verified = []; // every code that was submitted
+const grants = [];   // every address that tried the password grant
 
 function body(req) {
   return new Promise(resolve => {
@@ -126,11 +138,31 @@ async function supabase(req, res, url) {
     });
   }
 
-  // The row a trigger makes beside every new user. Asked for as an object.
-  if (url.startsWith('/supabase/rest/v1/profiles')) {
+  /* The password grant. The refresh token comes through the same endpoint,
+     so what tells them apart is what was sent: GoTrue's password grant is
+     the one carrying a password. */
+  if (url.startsWith('/supabase/auth/v1/token') && sent.password !== undefined) {
+    grants.push(sent.email);
+    if (sent.password !== PASSWORD) {
+      // GoTrue's own wording, which js/auth.js is expected to replace.
+      return json(res, 400, {
+        error: 'invalid_grant', error_description: 'Invalid login credentials'
+      });
+    }
     return json(res, 200, {
-      id: 'e2e-user', first_name: NAME, role: 'member', can_host: false
+      access_token: 'access', refresh_token: 'refresh', expires_in: 3600,
+      user: { id: 'e2e-demo', email: DEMO }
     });
+  }
+
+  /* The row a trigger makes beside every new user. Asked for as an object.
+     The demo account comes back as a leader, because that is the whole
+     reason a reviewer is given one: Leader mode belongs to an account and
+     an account is the only way to see it. */
+  if (url.startsWith('/supabase/rest/v1/profiles')) {
+    return json(res, 200, req.url.indexOf('e2e-demo') !== -1
+      ? { id: 'e2e-demo', first_name: DEMO_NAME, role: 'member', can_host: true }
+      : { id: 'e2e-user', first_name: NAME, role: 'member', can_host: false });
   }
 
   // Everything else the app reaches for on boot: a project with no rows in
@@ -179,7 +211,15 @@ const scene = (page) => page.evaluate(() => {
     buttons: Array.prototype.slice
       .call(document.querySelectorAll('[data-panel="choose"] .hc-btn'))
       .map(b => b.textContent),
-    panels: { choose: panel('choose'), email: panel('email'), code: panel('code') },
+    panels: {
+      choose: panel('choose'), email: panel('email'),
+      code: panel('code'), password: panel('password')
+    },
+    /* How many panels are actually in the track's flow. The password panel
+       shares slot 2 with the code panel, so this is three at every moment
+       of every route through the gate, and a four would mean every panel is
+       a quarter of a rail that is three thirds wide. */
+    inFlow: document.querySelectorAll('.hc-gate__panel:not([hidden])').length,
     signedIn: window.HC.auth.isSignedIn()
   };
 });
@@ -394,6 +434,107 @@ async function waitForGate(page) {
 
   ok('continue as guest reaches Home', guest.view === 'home', guest.view);
   ok('and signs nobody into anything', guest.signedIn === false);
+
+  /* ------------------------------------------------------ the password door
+
+     What whoever reviews this app for Apple will do, on a phone that has
+     never been signed in on, in the order they will do it. Submission 1.0 (8)
+     was rejected under Guideline 2.1 because the only way in was a code
+     emailed to a mailbox the reviewer had to log into first, and they never
+     got past it. So the claims here are about what they see: that typing the
+     address on the list asks for a password rather than a code, that nothing
+     is emailed to anyone, and that what they arrive at is a leader's account,
+     since Leader mode is the feature the review notes are built around.
+
+     A context of its own, because the page above this is signed in and a
+     signed in phone is never shown the gate again. */
+
+  const reviewCtx = await browser.newContext({ viewport: { width: 390, height: 844 } });
+  const review = await reviewCtx.newPage();
+  review.on('pageerror', e => noise.push('pageerror: ' + String(e)));
+
+  await review.goto(ORIGIN + '/index.html');
+  await waitForGate(review);
+
+  const firstLook = await scene(review);
+  ok('a reviewer is shown the same two buttons everybody is shown',
+    firstLook.buttons.length === 2 && firstLook.buttons[0] === 'Log in with email',
+    JSON.stringify(firstLook.buttons));
+  ok('and nothing on the glass advertises a password',
+    (await review.textContent('[data-panel="choose"]')).toLowerCase().indexOf('password') === -1);
+  ok('three panels in the track, not four',
+    firstLook.inFlow === 3, String(firstLook.inFlow));
+
+  await review.click('[data-gate="email"]');
+  await review.waitForTimeout(900);
+
+  const codesBefore = otp.length;
+  await review.fill('#hc-gate-email', DEMO);
+  await review.click('[data-gate="send"]');
+  await review.waitForFunction(() => window.HC.gate.step() === 'password',
+    null, { timeout: 8000 });
+  await review.waitForTimeout(800);
+  const asked2 = await scene(review);
+
+  ok('the address on the list is asked for a password instead',
+    asked2.step === 'password', asked2.step);
+  ok('and no code was emailed to anybody to make that happen',
+    otp.length === codesBefore, JSON.stringify(otp));
+  ok('the password panel is squarely on screen, at the width of one panel',
+    asked2.panels.password.x === 0 && Math.abs(asked2.panels.password.w - 390) < 2,
+    JSON.stringify(asked2.panels.password));
+  ok('the code panel stepped out of the flow to make room for it',
+    asked2.inFlow === 3 &&
+    await review.evaluate(() => document.querySelector('[data-panel="code"]').hasAttribute('hidden')),
+    String(asked2.inFlow));
+  ok('the address panel left to the left, the same as every other step',
+    asked2.panels.email.x <= -380, JSON.stringify(asked2.panels.email));
+  ok('and the panel says who is signing in',
+    (await review.textContent('[data-panel="password"] [data-for]')).indexOf(DEMO) !== -1,
+    await review.textContent('[data-panel="password"] [data-for]'));
+
+  await review.fill('#hc-gate-password', 'not the password');
+  await review.click('[data-gate="password-verify"]');
+  await review.waitForTimeout(600);
+  ok('a wrong password is answered in the app\'s own words, not GoTrue\'s',
+    /did not match/.test(await errorIn(review, 'password')),
+    await errorIn(review, 'password'));
+  ok('and nobody is signed in on the strength of it',
+    (await scene(review)).signedIn === false);
+  ok('the button came back rather than staying spent',
+    await review.evaluate(() => !document.querySelector('[data-gate="password-verify"]')
+      .hasAttribute('disabled')));
+
+  await review.fill('#hc-gate-password', PASSWORD);
+  await review.click('[data-gate="password-verify"]');
+  await review.waitForFunction(() => document.querySelector('.hc-splash--in') !== null,
+    null, { timeout: 8000 });
+  const inNow = await scene(review);
+
+  ok('the right password signs the reviewer in',
+    inNow.signedIn && grants.indexOf(DEMO) !== -1, JSON.stringify(grants));
+  ok('through the password grant and never through /verify',
+    verified.indexOf(PASSWORD) === -1, JSON.stringify(verified));
+  ok('and the welcome is the same one everybody else gets',
+    inNow.greeting === 'You’re in!', inNow.greeting);
+
+  await review.waitForFunction(() => !document.getElementById('hc-splash'),
+    null, { timeout: 8000 });
+  const landed = await review.evaluate(() => ({
+    view: document.getElementById('app').getAttribute('data-view'),
+    greeting: (document.querySelector('.hc-home__greeting') || {}).textContent || '',
+    canHost: window.HC.store.getProfile().canHost
+  }));
+
+  ok('Home is underneath, the same as the code path', landed.view === 'home', landed.view);
+  ok('with the name off the account rather than off the phone',
+    landed.greeting.indexOf(DEMO_NAME) !== -1, landed.greeting);
+  /* The one that matters for the review notes. Leader mode belongs to the
+     account, so if can_host did not come down with the session, the reviewer
+     follows the walkthrough to a screen that tells them Leader mode is off
+     and the heart of the app is invisible. */
+  ok('and Leader mode on, which is the whole reason they were given this account',
+    landed.canHost === true, String(landed.canHost));
 
   ok('nothing threw along the way', noise.length === 0, noise.join('\n        '));
 

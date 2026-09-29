@@ -18,8 +18,10 @@ Supabase MCP server or `scripts/hc_supabase.py`, and gives the SQL equivalent
 of every script verb below. It also has the SQL form of `when`, which matters
 here more than in any other command.
 
-A missing `.env` or a refused connection is the ordinary shape of a web
-session, not a reason to stop. Use MCP. Confirm the project ref is
+A missing `.env` is the ordinary shape of a web session and no longer a
+problem: the script takes the key from the environment and the project URL
+from `js/config.js`, so it runs here too, and it is the one that does not
+put a permission prompt in front of the pastor. Confirm the project ref is
 `ibqkumxfltfiuqevviji`, stop only if neither transport is available, and never
 ask for a key in the chat.
 
@@ -47,6 +49,14 @@ come back later as corrections:
   this calendar and it is not a timestamp. When that is the answer, still pick
   an anchor time so the event sorts to the right place in the day, and put the
   human phrase in `time_label`. The app shows `time_label` when it is set.
+- **More than one day.** A class over two Sundays, a retreat across a weekend,
+  a serve week with three evenings: those are ONE event, not two or three.
+  `starts_at` is the first day and carries the only clock time; `also_on` is a
+  list of the other days, as plain dates. The Cal tab draws the event on every
+  day it names. See migration 0074.
+
+  Two different hours on two days is the one case that really is two events,
+  because somebody reading the calendar is deciding which to turn up to.
 
 Do not invent a date, a room, or a signup link. Ask.
 
@@ -101,6 +111,7 @@ not the UTC value, because that is what the person can actually check:
 ```
 Title       Baptism Sunday
 When        Sunday, August 23 2026, all three services
+Other days  none
 Where       216 Giuffrias Ave
 Signup      none
 Category    gathering
@@ -126,6 +137,7 @@ The row:
   "description": "...",
   "starts_at": "2026-08-23T14:30:00+00:00",
   "ends_at": null,
+  "also_on": null,                      // or ["2026-08-30"] for a second Sunday
   "time_label": "All three services",   // null when the clock time is the whole story
   "location": "216 Giuffrias Ave",
   "signup_url": null,

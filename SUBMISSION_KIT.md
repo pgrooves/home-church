@@ -124,26 +124,102 @@ signing in, and the host's moderation queue needs an account the church has
 marked as a group leader. Set this up before you submit, or section 7 has two
 blanks in it and a reviewer with no way to check the Guideline 1.2 controls.
 
-- [ ] In Supabase, **Authentication → Sign In / Providers → Email**, add two
-      **test OTPs**: one address for the host, one for the member, each with
-      a fixed six digit code. A test OTP means the code always works and no
-      email is sent, so a reviewer is never waiting on an inbox we control.
-      Use addresses that read as what they are, `applereview.host@` and
-      `applereview.member@` on the church domain.
-- [ ] Sign in once as each so the `profiles` row exists.
+> **September 20: this section was rewritten, because the version before it
+> described a feature that does not exist and submission 1.0 (8) was rejected
+> on September 17 for exactly that gap.**
+>
+> It told you to set up **email test OTPs** in the Supabase dashboard, fixed
+> codes that always work with no email sent. Supabase has that for phone
+> numbers and has never had it for email; it is an open feature request
+> against GoTrue and nothing more. So there was no way to follow this page,
+> and what went to Apple instead was the login for an Outlook mailbox with
+> the demo account's codes in it. The reviewer could not get into the
+> mailbox, or the code never arrived in it, and so they never got into the
+> app at all. Guideline 2.1, and a fortnight.
+>
+> The app now has a password path for a short list of addresses, in
+> `js/config.js`. What follows sets that up. **The mailbox is no longer in
+> the loop: nothing is ever sent to these addresses and nobody needs to be
+> able to read their mail.**
+
+Both addresses are already in `PASSWORD_ACCOUNTS` in `js/config.js`:
+
+| | Address | What it is for |
+|---|---|---|
+| Host | `homechurchappleader@outlook.com` | Leader mode, the moderation queue, and the App Store Connect demo credential fields |
+| Member | `homechurchappreview@outlook.com` | The second seat the Guideline 1.2 walkthrough needs, so Report and Block appear |
+
+They differ by five letters in the middle and nothing else. Copy them, from
+here or from the config file; do not retype them anywhere.
+
+- [ ] **Set a password on each one.** Both users already exist in Supabase
+      and are confirmed, which is the easy half. The hard half is that the
+      dashboard has no way to set a password on a user who already has an
+      account: the only button offers to *email* a reset link, which is the
+      mailbox this whole exercise exists to get out of. Two ways round it,
+      and the first is simpler:
+      - **Delete the user and add it again.** Authentication → Users, the
+        `...` menu → Delete user, then **Add user → Create new user** with
+        the same address, a password you choose, and **Auto Confirm User**
+        ticked. A demo account holds nothing worth keeping, and this way
+        there are no keys to handle. Ticking Auto Confirm is not optional:
+        an unconfirmed user cannot use the password grant, and a reviewer
+        meeting "Email not confirmed" is a reviewer who is not getting in.
+        Note that deleting the user takes its `profiles` row with it, so
+        Leader mode has to be granted again afterwards, below.
+      - **Or set it in place, from the SQL editor**, if you would rather not
+        delete anything. Supabase keeps pgcrypto in the `extensions` schema,
+        so both functions need naming in full:
+        ```sql
+        update auth.users
+        set encrypted_password = extensions.crypt(
+              'THE PASSWORD', extensions.gen_salt('bf'))
+        where email in ('homechurchappleader@outlook.com',
+                        'homechurchappreview@outlook.com');
+        ```
+        This writes straight into an `auth` table, which Supabase discourages
+        as a habit and which is fine as a one-off for two accounts nobody
+        depends on. Give the two accounts different passwords by running it
+        twice, one address at a time.
+- [ ] Check that **Authentication → Sign In / Providers → Email** still has
+      password sign-in enabled. It is on by default. If it was ever turned
+      off to make this a code-only church, the password path 400s on every
+      attempt and the whole of this section is decoration.
+- [ ] Sign in once as each, in the app, so the `profiles` row exists.
 - [ ] Turn Leader mode on for the host account. From an admin's phone that is
       Admin → Manage users → the Leader mode switch on their row, which is how
       the church does it. By hand it is still one column:
-      `update public.profiles set can_host = true where id =
-      (select id from auth.users where email = '…');`
+      `update public.profiles set can_host = true where id = (select id from
+      auth.users where email = 'homechurchappleader@outlook.com');`
+      Only the host account. The member account is a member on purpose:
+      half of what the Guideline 1.2 walkthrough shows is what somebody
+      without Leader mode sees.
       This is what the reviewer's Leader mode walkthrough in section 7 needs,
       not only the moderation queue: since migration 0036 the leader tools and
       the presentation view belong to the account rather than to the phone.
-- [ ] Fill both addresses and both codes into the review notes in section 7.
+- [ ] Fill both addresses and both passwords into the review notes in
+      section 7, and put the **host** pair into the App Store Connect demo
+      credential fields. That field takes one account; the member one lives
+      in the notes.
+- [ ] **Copy and paste the address into App Store Connect rather than typing
+      it.** The app matches what is typed against `PASSWORD_ACCOUNTS`
+      ignoring case and surrounding spaces and nothing else, and there is no
+      "have a password?" link on the sign-in screen to recover with: one was
+      considered and dropped, because it would be shown to a whole
+      congregation to help one person who was sent written instructions. A
+      mismatch means the reviewer is emailed a code at an address nobody is
+      watching, which is the September 17 rejection happening twice.
+- [ ] **Then prove it on a real device**, which is what replaces that link.
+      Type the address exactly as it now appears in the App Store Connect
+      field, confirm the panel that comes up asks for a password rather than
+      a code, and confirm the password gets you in. Two minutes, and it is
+      the only check that catches a typo in either place.
 - [ ] Walk the seven steps in section 7 yourself, on a device, exactly as
       written. If any step does not do what it says, fix the step or fix the
       app before a reviewer finds the difference.
 - [ ] Leave both accounts in place after approval. Apple re-reviews updates.
+      The password path is ordinary app behaviour and stays shipped; there
+      is nothing here to take back out of a later build, deliberately.
 
 -----
 
@@ -497,161 +573,96 @@ analytics, external links, and data collection that buy us nothing.
 
 ## 7. App Review notes
 
-Paste this into the Notes for Review field. **The Leader mode walkthrough is
+Paste this into the Notes for Review field, which caps at 4000 characters.
+This is 3849, which leaves room for CRLF line endings if App Store Connect
+counts them; check the count again if you edit it. **The Leader mode walkthrough is
 the most important thing in this entire document.** A reviewer who does not
 find Leader mode is assessing a reading app with two tabs that link outward,
 which is exactly the shape that fails Guideline 4.2.
 
 ```
-Thanks for reviewing. Home Church is the app for a single church in Metairie,
-Louisiana. A few notes to save you time.
+Home Church is the app for a single church in Metairie, Louisiana.
 
-ALMOST NOTHING NEEDS AN ACCOUNT
-Every screen is available on first launch without signing in, including the
-whole guide catalogue and every sermon. Two things are not. Writing in a
-group room needs an account, described below, because what a person writes
-there is shown to their group under their first name and that should not be
-anonymous. And Leader mode belongs to a person rather than to a phone: it
-lets somebody host a room and edit the questions their whole group answers,
-so the church grants it to the people who lead a group instead of leaving it
-as a switch anybody can turn on. We have supplied an account below that has
-it, so everything in it is one sign-in away.
+HOW TO SIGN IN — PLEASE READ THIS FIRST
+Type the email address, tap "Send me a code", and the app asks you for a
+PASSWORD rather than a code. Nothing is emailed and you need no mailbox.
 
-Signing in has no password. We send a six digit code to an email address and
-the account is created on first use, so you can sign in with any address you
-control. The two demo accounts below are configured so the codes never change
-and no email is sent.
+  Host account (a group leader)
+    Email: homechurchappleader@outlook.com
+    Password: __________________
+  Member account
+    Email: homechurchappreview@outlook.com
+    Password: __________________
+
+Submission 08792afe-55f3-4c13-b984-097eb4e91092 (1.0 build 8) was returned
+under 2.1: the demo account needed a mailbox to receive a code. Both
+accounts now use passwords, tested on a device.
+
+GETTING AROUND
+There is no tab bar. The round button in the bottom right opens the
+navigation, a full screen list. The circle in the top right opens Your
+account.
+
+LEADER MODE, WHICH IS THE HEART OF THE APP
+Almost everything works signed out. Leader mode does not: it belongs to a
+person rather than a phone, so the church grants it to whoever leads a
+group. It is easy to miss:
+
+  1. Circle in the top right, sign in with the Host account.
+  2. Round button in the bottom right, then GROUP.
+  3. Under "Leader mode — Host tonight", pick this week's guide and tap
+     "Open a room". The app mints a six digit code for the group.
+  4. Open GUIDE from the same menu, open any guide, tap "Start presentation
+     mode" — the one-question-at-a-time view leaders use while running a
+     meeting.
+
+  (As the Member account, or signed out, GROUP offers only a box for
+  somebody else's room code. That is the feature working, not an error.)
 
 DELETING AN ACCOUNT, GUIDELINE 5.1.1(v)
-Once signed in, account deletion is available in two places, both inside the
-app and neither requiring an email to us or a visit to a website:
+Two places, both in-app, neither needing an email to us or a website:
+"Delete my account" under Sign out in Your account, and again in Your data.
+Two taps, the second confirming. It deletes rather than deactivates. The
+separate "Erase everything on this phone" clears local data only and is
+deliberately not the same control.
 
-  1. Tap the circle in the top right corner to open Your account. "Delete my
-     account" sits directly under Sign out.
-  2. Or open Your account, then Your data, where the button sits beside the
-     copy explaining exactly what is removed.
+THE GROUP SCREEN, AND GUIDELINE 1.2
+A room is joined with a six digit code from a leader and carries that week's
+questions. Answers stay hidden until the host opens them one at a time.
+Rooms expire that night and are deleted after ninety days. There is no feed,
+no messaging, no directory, and no way to find a room without being handed
+its code.
 
-It takes two taps, the second confirming, and it deletes the account and
-everything synced to it from our server rather than deactivating it. The
-separate "Erase everything on this phone" button on that same screen clears
-local device data and is deliberately not the same control.
+The controls, all one tap deep:
 
-HOW TO SEE LEADER MODE, WHICH IS THE HEART OF THE APP
-This is not obvious and we would rather point you straight at it. Use the
-Host account at the bottom of these notes: Leader mode is already on for it,
-because the church turns it on for the people who lead a group.
+  * TERMS FIRST. The first attempt to write in a room hits a screen stating
+    the rules against objectionable content and asking for agreement. Our
+    server refuses the post too, so it cannot be skipped.
+  * FILTERING. Checked against a slur list on our server before storage, on
+    posting and on editing.
+  * REPORTING. Every note by somebody else carries a visible Report button.
+    It asks why, confirms, and names hello@homechurchnola.com as a second
+    route.
+  * A HOST QUEUE. Reports appear at the top of the room for the host, with
+    "Take it down" and "Leave it up". Our terms commit us to acting within
+    one day.
+  * BLOCKING. Beside Report on every note, enforced on our server. An
+    Unblock list sits at the bottom of the room.
 
-  1. Tap the circle in the top right corner of any screen. This opens
-     Your account.
-  2. Sign in with the Host email and code from the bottom of these notes.
-  3. Scroll to "Leader mode" and tap "Open leader tools" to see the roster
-     and prayer capture.
-  4. Then tap the Guide tab, open any guide, and tap "Start presentation
-     mode" at the top. That is the one question at a time view group
-     leaders use while running a meeting.
+Report and Block only appear on writing that is not your own. To see them:
+as the HOST, open a room and add a prayer request (the terms screen appears
+first). Sign in as the MEMBER, open GROUP, join with that code — both sit
+under the host's request. Sign back in as the HOST and rejoin: the report is
+at the top of the room. One device is enough. Posting a slur is refused and
+nothing is stored.
 
-  (Signed in as the Member account, or signed out, that section says Leader
-  mode is off and who turns it on. That is the feature working, not an
-  error: it is what everybody who is not leading a group sees.)
+GIVE TAKES NO PAYMENT IN THE APP
+It opens our giving provider, Overflow, in SFSafariViewController. No
+purchase or functionality is unlocked by giving and nothing is gated behind
+it — a charitable donation handoff, not a circumvention of in-app purchase.
+Course signups and sermon audio open in the system browser too.
 
-THE GROUP TAB, AND GUIDELINE 1.2
-One part of this app shows what a person writes to other people, and we want
-to be direct about it and about how it is moderated.
-
-A group room is a room a small group joins with a six digit code, given out
-by whoever is hosting that evening. The room carries that week's discussion
-questions. Each person types their own answer, the answers stay hidden until
-the host opens them one at a time, and the last section is prayer requests.
-The room expires the same night and is deleted after ninety days.
-
-There is nothing else like it in the app. Guide notes, the leader's roster,
-attendance, and locally saved prayer requests are still stored only on the
-device and shown to nobody. There is no feed, no messaging, no way to contact
-another user, no directory, and no way to find a room without being given its
-code by a person.
-
-The Guideline 1.2 controls are all one tap deep and all testable:
-
-  * TERMS BEFORE THE FIRST POST. The first time anyone tries to write in a
-    room, a screen states the rules against objectionable content and asks
-    them to agree. There is no way past it. Our server refuses the post as
-    well, so it cannot be skipped by anything.
-  * FILTERING. Posts are checked against a slur list on our server before
-    they are stored, on posting and on editing.
-  * REPORTING. Every note written by somebody else has a Report button on it,
-    in plain sight rather than behind a long press. Reporting asks why and
-    confirms, and names hello@homechurchnola.com as a second route.
-  * A HOST QUEUE. Reports appear immediately at the top of the room for
-    whoever is hosting it, with two buttons on each: "Take it down", which
-    removes it for everybody, and "Leave it up", which closes the report. We
-    commit in our terms to acting on anything sent to that address within 24
-    hours.
-  * BLOCKING. Next to Report on every note. Blocking somebody stops their
-    writing reaching you at all, enforced on our server rather than hidden on
-    screen. An Unblock list sits at the bottom of the room.
-
-TO TEST ALL OF THAT ON ONE DEVICE
-Reporting and blocking only appear on writing that is not your own, so this
-needs two accounts. Both are below, and both are configured as test accounts:
-the codes never change and no email is actually sent. One device is enough,
-because a room lives on our server and is still there when you sign back in.
-
-  Host account (marked as a group leader)
-    Email: __________________     Code: __________
-  Member account
-    Email: __________________     Code: __________
-
-  1. Tap the circle in the top right and sign in as the HOST.
-  2. Tap the Group tab, then "Open a room" under Leader mode. The app mints
-     a six digit room code. Write it down.
-  3. Scroll to Prayer requests at the bottom and add one. The terms screen
-     appears first, which is the agreement gate. Prayer requests are visible
-     to the room immediately, which is what makes the next step possible.
-  4. While you are here: type a slur into an answer box and post it. It is
-     refused with a message, and nothing is stored.
-  5. Tap the circle, sign out, and sign in as the MEMBER.
-  6. Group tab, type the room code, join. You will see the host's prayer
-     request with Report and Block underneath it. Try both.
-  7. Sign out, sign back in as the HOST, open the Group tab and type the same
-     room code. The report is at the top of the room, with "Take it down" and
-     "Leave it up".
-
-  (Signing out clears the room from the phone, which is why step 7 asks for
-  the code again. The room itself is on our server and unchanged.)
-
-If you would rather we walk through it live, or you want a second device set
-up, we are at hello@homechurchnola.com and will answer within the hour.
-
-ABOUT THE GIVE TAB
-Home Church is a church and the Give tab is how people donate. It takes no
-payment inside the app. Tapping the button opens our giving provider,
-Overflow, in SFSafariViewController, which is a system browser with its own
-chrome and a Done button. No purchase, digital content, or app functionality
-is unlocked by giving. Nothing is gated behind it. We are not circumventing
-in-app purchase, we are handing off to a charitable donation platform
-entirely outside the app.
-
-Several other buttons behave the same way and open in the system browser:
-baptism and course signups on Church Center, group hosting on Group Vitals,
-our email list on Flodesk, and sermon audio on our podcast host and Spotify.
-
-NOTIFICATIONS
-The app asks for notification permission only when a person turns one of the
-switches on in Your account, never at launch. Declining is respected: the
-switch goes back off rather than sitting on while nothing arrives.
-
-Two notices are sent, both from our own server: the small group guide when a
-new one is published, and a reminder the evening before our Sunday gathering.
-If you would like to see one during review, turn a switch on and let us know
-and we will send one to your device within a few minutes.
-
-IT IS BUILT TO WORK OFFLINE
-Guides, sermons, and notes are stored on the device. If you would like to
-check, put the phone in airplane mode and relaunch. The app opens to full
-content rather than an error, which is deliberate: our congregation opens it
-in a building with concrete walls every Sunday.
-
-Anything else, we are at hello@homechurchnola.com and will answer quickly.
+Anything else, hello@homechurchnola.com.
 ```
 
 -----

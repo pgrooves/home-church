@@ -43,15 +43,21 @@
   var draft = null;        // the announcement being written or edited
   var pageDraft = null;    // the content page being edited
   var groupBox = null;     // the home groups paragraph on Connect, being edited
+  var bannerDraft = null;  // the pinned banner's words, while Edit is open
   var busy = '';           // the id of whatever is mid network call
   var uploading = false;
+  var userQuery = '';      // what is typed in the box above the users list
+  var userFolds = {};      // which of Admins, Hosts and Members are open
 
   function resetDrafts() {
     draft = null;
     pageDraft = null;
     groupBox = null;
+    bannerDraft = null;
     busy = '';
     uploading = false;
+    userQuery = '';
+    userFolds = {};
   }
 
   /* -------------------------------------------------------------- helpers */
@@ -128,6 +134,18 @@
     return HC.admin.announcements().filter(function (a) {
       return a.id === id && !a.deleted_at;
     })[0] || null;
+  }
+
+  /* One date, out of whichever list on this screen happens to have it. The
+     dates queue and the duplicates list are two fetches and an approved event
+     is in neither, so the synced calendar every screen reads is the last
+     place to look. Only the merge panel asks, and only for a title. */
+  function eventById(id) {
+    var rows = HC.admin.pendingEvents().concat(HC.admin.eventDuplicates());
+    for (var i = 0; i < rows.length; i++) {
+      if (rows[i].id === id) return rows[i];
+    }
+    return (HC.data.events || []).filter(function (e) { return e.id === id; })[0] || null;
   }
 
   /* 'YYYY-MM-DD' in the phone's own zone. The date columns are plain dates,
@@ -993,6 +1011,12 @@
                 busy: busy === 'event-separate:' + row.id })
             : c.button('Approve', { action: 'admin-event-approve', id: row.id,
                 small: true, busy: busy === 'event-approve:' + row.id })) +
+          /* And the hand-picked merge, for the date the pass did not pair with
+             anything. Same backup as the one on an announcement row, and the
+             same reasoning; see the note beside it. */
+          c.button('Merge with', { action: 'admin-event-merge-with', id: row.id,
+            variant: 'secondary', small: true,
+            ariaLabel: 'Merge “' + row.title + '” into another date' }) +
           c.button('Discard', { action: 'admin-event-discard', id: row.id,
             variant: 'tertiary', small: true, busy: busy === 'event-discard:' + row.id }) +
         '</div>' +
@@ -1042,6 +1066,59 @@
       '</p>';
   }
 
+  /* ------------------------------------- the same thing, already on Home
+
+     THE HALF 0051 NEVER HAD, and the reason the church ended up with
+     Homecoming Gala twice. That migration only ever looked at drafts in the
+     queue: once something was approved, nothing compared it against anything
+     again, so a pair that only becomes obvious with both cards on Home had
+     nowhere to be noticed. Since 0075 the pass reads posted rows too, and what
+     it finds lands here.
+
+     Drawn below the two queues, exactly like its twin for dates, because
+     nothing in it is waiting on a decision: Home works today, it is just
+     saying one thing twice. This is the tidying somebody does when they have a
+     minute.
+
+     AND MERGE IS NOT THE PRIMARY BUTTON, for the same reason it is not in the
+     dates version: both of these are already live and the church has been
+     using them, so the tap that changes something should take more deciding
+     than the tap that says they are two things. */
+  function announcementDuplicatesSection(rows) {
+    var html = c.sectionHeader('', 'The same thing, twice');
+    html += '<p class="hc-caption hc-admin__intro-note">Both of these are on Home ' +
+      'already, and they look like one thing posted twice. Update it writes what ' +
+      'the newer one says onto the older card, keeps its place on Home, and puts ' +
+      'the other under Deleted. Post separately says they are two things and stops ' +
+      'asking.</p>';
+
+    rows.forEach(function (row) {
+      var keeps = announcementById(row.duplicate_of);
+      if (!keeps) return;
+
+      html += '<div class="hc-admin__item hc-admin__item--review">' +
+        '<div class="hc-admin__item-head">' +
+          '<p class="hc-eyebrow">' + c.esc(announcementStatus(row)) + '</p>' +
+          '<p class="hc-row__title">' + c.esc(row.title) + '</p>' +
+          (row.body ? '<p class="hc-caption">' + c.esc(row.body) + '</p>' : '') +
+          '<p class="hc-caption hc-admin__warn">Looks like the same thing as “' +
+            c.esc(keeps.title) + '”' +
+            (row.duplicate_note ? ': ' + c.esc(row.duplicate_note) : '') + '</p>' +
+          approvedNote('announcement', row.id, 'Approved by') +
+        '</div>' +
+        '<div class="hc-admin__item-actions">' +
+          c.button('Update it', { action: 'admin-review-apply-update', id: row.id,
+            variant: 'secondary', small: true, busy: busy === 'merge:' + row.id }) +
+          c.button('Post separately', { action: 'admin-review-keep-separate',
+            id: row.id, variant: 'tertiary', small: true,
+            busy: busy === 'separate:' + row.id }) +
+        '</div>' +
+      '</div>';
+    });
+
+    return html;
+  }
+
   /* ------------------------------------ the same night, already on the calendar
 
      The half of migration 0052 that has no equivalent upstairs. An announcement
@@ -1079,6 +1156,9 @@
         '<div class="hc-admin__item-actions">' +
           c.button('Merge', { action: 'admin-event-merge', id: row.id,
             variant: 'secondary', small: true, busy: busy === 'event-merge:' + row.id }) +
+          c.button('Merge with', { action: 'admin-event-merge-with', id: row.id,
+            variant: 'secondary', small: true,
+            ariaLabel: 'Merge “' + row.title + '” into a different date' }) +
           c.button('Keep both', { action: 'admin-event-keep-separate', id: row.id,
             variant: 'tertiary', small: true,
             busy: busy === 'event-separate:' + row.id }) +
@@ -1385,7 +1465,11 @@
   function announcementsSection() {
     var html = '<div class="hc-screen hc-admin">';
     html += announcementsBody();
-    if (!draft) html += groupBoxSection();
+    // The group box waits while the form is open, and now while a merge is
+    // open too, for the same reason: one decision on screen at a time, and a
+    // paragraph about home groups under "here is what this merge would say" is
+    // a second thing to read in the middle of the first.
+    if (!draft && !HC.admin.mergeState()) html += groupBoxSection();
     return html + '</div>';
   }
 
@@ -1393,6 +1477,24 @@
     var html = c.sectionHeader('For the church', 'Announcements', { flush: true, tag: 'h1' });
 
     if (draft) return html + announcementForm();
+
+    /* Merging by hand, which takes the screen over the same way the form does
+       and for the same reason: it is one decision being made, and a list of
+       other announcements behind it is a list of other decisions somebody
+       might tap by mistake. See mergePanel() in js/components.js, and the
+       block above startMerge() in js/admin.js for what the three steps are. */
+    var merging = HC.admin.mergeState();
+    if (merging) {
+      var from = merging.kind === 'event'
+        ? (eventById(merging.sourceId) || {}).title
+        : (announcementById(merging.sourceId) || {}).title;
+
+      return html + c.mergePanel(
+        merging,
+        HC.admin.mergeTargets(merging.kind, merging.sourceId),
+        { sourceTitle: from, busy: busy }
+      );
+    }
 
     html += newsletterNotice();
 
@@ -1460,8 +1562,21 @@
 
     var deleted = rows.filter(function (row) { return !!row.deleted_at; });
 
+    /* And the pairs already on Home, which is the half 0051 never had. Taken
+       out of the Posted list below so no announcement is drawn twice on one
+       screen with a different set of buttons each time — the same rule the
+       review queue follows. */
+    var saidTwice = rows.filter(function (row) {
+      return row.duplicate_of && row.review_state !== 'pending' && !row.deleted_at &&
+        !!announcementById(row.duplicate_of);
+    });
+    if (saidTwice.length) html += announcementDuplicatesSection(saidTwice);
+
+    var flagged = {};
+    saidTwice.forEach(function (row) { flagged[row.id] = true; });
+
     rows = rows.filter(function (row) {
-      return row.review_state !== 'pending' && !row.deleted_at;
+      return row.review_state !== 'pending' && !row.deleted_at && !flagged[row.id];
     });
 
     if (!rows.length) return html + deletedSection(deleted);
@@ -1488,7 +1603,14 @@
        postedOrder() is that list, said once in js/admin.js beside the two
        orderings it is made of. Live first, then everything that is not on Home
        today, which carries no arrows. */
-    var ordered = HC.admin.postedOrder();
+    /* Minus whatever is up in "The same thing, twice", so nothing is drawn
+       twice on one screen with a different set of buttons each time. `live`
+       is deliberately NOT filtered: it is the numbering the arrows write back
+       to Home with, and a list renumbered here would move the wrong card
+       there. A flagged pair is a state that lasts one tap. */
+    var ordered = HC.admin.postedOrder().filter(function (row) {
+      return !flagged[row.id];
+    });
 
     html += c.sectionHeader('', 'Posted');
 
@@ -1535,6 +1657,22 @@
             : '') +
           c.button('Edit', { action: 'admin-announcement-edit', id: row.id,
             variant: 'secondary', small: true }) +
+          /* MERGE WITH, the backup for everything the dedupe pass misses.
+             Everything above this screen is the robot getting better at
+             noticing two cards about one thing, and it will still miss one:
+             two titles with no word in common, a pair two months apart, a
+             newsletter that renames something completely. When that happens
+             the person looking at the list already knows the answer, and the
+             answer should be a button rather than a message to somebody.
+
+             Drawn on every posted row rather than only on flagged ones, which
+             is the whole difference from Update it above: a flag is the
+             robot's opinion and this is somebody's knowledge. Secondary, and
+             after Edit, because it is the rarer of the two by a long way and
+             because it ends with one of these rows in the Deleted drawer. */
+          c.button('Merge with', { action: 'admin-announcement-merge', id: row.id,
+            variant: 'secondary', small: true,
+            ariaLabel: 'Merge “' + row.title + '” into another announcement' }) +
           /* A way back from the archive box on Home, on the screen that is
              already showing every announcement whether it drew a card or not.
              Archiving is remembered on the phone, so the undo has to be on the
@@ -1640,8 +1778,27 @@
     return u.is_leader ? 'Leader' : 'Member';
   }
 
+  /* The three folds the list is split into. Hosts are the people with Leader
+     mode on: the switch is still called Leader mode, but what it is for is
+     hosting a group room, and that is the word an admin scanning for them has
+     in mind. An admin with Leader mode on is under Admins, the same rule as
+     personStanding() above. */
+  var USER_GROUPS = [
+    { key: 'admins',  title: 'Admins',  empty: 'No admins yet.' },
+    { key: 'hosts',   title: 'Hosts',   empty: 'Nobody has Leader mode on yet.' },
+    { key: 'members', title: 'Members', empty: 'No members yet.' }
+  ];
+
+  // Past this many people a fold stops growing and scrolls inside itself.
+  var USERS_VISIBLE = 10;
+
+  function userGroup(u) {
+    if (u.role === 'admin') return 'admins';
+    return u.is_leader ? 'hosts' : 'members';
+  }
+
   function usersSection() {
-    var html = '<div class="hc-screen hc-admin">';
+    var html = '<div class="hc-screen hc-admin hc-admin__users">';
     html += c.sectionHeader('For the church', 'Users', { flush: true, tag: 'h1' });
 
     var rows = HC.admin.users();
@@ -1657,81 +1814,204 @@
       'write announcements, edit content, and set what everybody else is. Nobody can ' +
       'change their own.</p>';
 
-    rows.forEach(function (u) {
-      var self = HC.admin.isSelf(u.id);
-      var isAdminRow = u.role === 'admin';
+    /* Filtered in place as somebody types, by filterUsers() below, rather than
+       by redrawing the screen: a redraw between two letters takes the
+       keyboard down. The value is drawn back in so a repaint for any other
+       reason, a switch tapped mid search, keeps what was typed. */
+    html += '<label class="hc-field hc-search__field">' +
+      '<span class="hc-visually-hidden">Search users</span>' +
+      '<span class="hc-search__box">' +
+        c.icon('search', 'hc-search__icon') +
+        '<input class="hc-input hc-search__input" type="search" data-admin-user-search ' +
+          'placeholder="Search by name or email" autocomplete="off" ' +
+          'autocorrect="off" autocapitalize="none" spellcheck="false" ' +
+          'value="' + c.esc(userQuery) + '">' +
+      '</span>' +
+    '</label>';
 
-      html += '<div class="hc-admin__item">' +
-        '<div class="hc-admin__item-head">' +
-          '<p class="hc-eyebrow">' + c.esc(personStanding(u)) +
-            (self ? ' · You' : '') + '</p>' +
-          '<p class="hc-row__title">' + c.esc(personName(u)) + '</p>' +
-          '<p class="hc-caption">' + c.esc(u.email || 'No email on file') + '</p>' +
-        '</div>';
+    var grouped = { admins: [], hosts: [], members: [] };
+    rows.forEach(function (u) { grouped[userGroup(u)].push(u); });
 
-      /* Leader mode, on the row rather than behind a second screen, because
-         this is the thing an admin comes here to do most often: somebody has
-         started leading a group and needs to be able to open a room on
-         Thursday.
-
-         MEMBERS ONLY, AND THAT IS THE WHOLE RULE. An admin already has
-         everything Leader mode grants and hosts a room without it (migration
-         0036), so a switch on an admin's row is one that changes nothing
-         anybody can see, whether it is your own row or somebody else's. The
-         line below says so instead. Demote an admin and the switch comes back
-         on their row, still holding whatever it held: the value is never
-         thrown away, it is only hidden while it cannot matter. */
-      if (isAdminRow) {
-        /* Your own row says this once, in the line under the buttons, rather
-           than twice in two stacked captions. */
-        if (!self) {
-          html += '<p class="hc-caption hc-admin__self">An admin has the leader tools ' +
-            'and can host a group room already. There is no Leader mode to turn on.</p>';
-        }
-      } else {
-        html += switchRow({
-          title: 'Leader mode',
-          sub: u.is_leader
-            ? 'On. Leader tools, and they can open a group room.'
-            : 'Off. Turn it on for somebody who leads a group.',
-          action: 'admin-leader',
-          id: u.id,
-          on: !!u.is_leader
-        });
-      }
-
-      html += '<div class="hc-admin__item-actions">';
-
-      /* The safety guard, drawn rather than merely enforced. A disabled button
-         with a reason under it is a better answer than a button that works
-         and then explains why it did not, and it is the same shape the
-         database gives back: hc_admin_set_role refuses this, and so does the
-         trigger underneath it. */
-      if (self) {
-        html += '<p class="hc-caption hc-admin__self">You cannot change your own role or ' +
-          'remove your own account here, and an admin has the leader tools already. ' +
-          'Deleting your account is under Your data.</p>';
-      } else {
-        html += c.button(isAdminRow ? 'Make a member' : 'Make an admin', {
-          action: 'admin-role',
-          id: u.id,
-          variant: 'secondary',
-          small: true,
-          busy: busy === 'role:' + u.id
-        });
-        html += c.button('Remove', {
-          action: 'admin-user-remove',
-          id: u.id,
-          variant: 'tertiary',
-          small: true,
-          busy: busy === 'remove:' + u.id
-        });
-      }
-
-      html += '</div></div>';
+    USER_GROUPS.forEach(function (g) {
+      var panelId = 'admin-users-' + g.key;
+      html += '<section class="hc-jfold hc-jfold--group" data-user-fold="' + g.key + '">' +
+        '<h2 class="hc-jfold__h">' +
+          '<button type="button" class="hc-jfold__toggle" data-action="admin-user-fold" ' +
+            'data-id="' + g.key + '" aria-expanded="false" aria-controls="' + panelId + '">' +
+            '<span class="hc-jfold__heading">' +
+              '<span class="hc-jfold__title">' + c.esc(g.title) + '</span>' +
+              '<span class="hc-jfold__rule" aria-hidden="true"></span>' +
+            '</span>' +
+            '<span class="hc-caption hc-jfold__count">' +
+              '<span data-user-count>' + grouped[g.key].length + '</span>' +
+              '<span class="hc-visually-hidden"> people</span>' +
+            '</span>' +
+            c.icon('chevronDown', 'hc-jfold__chevron') +
+          '</button>' +
+        '</h2>' +
+        '<div class="hc-jfold__panel" id="' + panelId + '" data-open="false">' +
+          '<div>' +
+            '<p class="hc-caption hc-admin__loading" data-user-empty>' + c.esc(g.empty) + '</p>' +
+            '<div class="hc-admin__users-list" data-user-list>';
+      grouped[g.key].forEach(function (u) { html += userItem(u); });
+      html += '</div></div></div></section>';
     });
 
     html += '</div>';
+    return html;
+  }
+
+  /* Every word typed has to turn up somewhere in the name or the email, in any
+     order, so "smith jo" finds Jo Smith. */
+  function userHaystack(u) {
+    return [u.first_name, u.last_name, u.email].filter(Boolean).join(' ').toLowerCase();
+  }
+
+  function setUserFold(fold, open) {
+    var toggle = fold.querySelector('[data-action="admin-user-fold"]');
+    var panel = fold.querySelector('.hc-jfold__panel');
+    if (toggle) toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+    if (panel) panel.setAttribute('data-open', open ? 'true' : 'false');
+  }
+
+  /* Shows who matches what is typed, updates each fold's count, and decides
+     which folds are open: while there is a search, every fold with somebody
+     in it opens and every empty one closes; with none, each is the way the
+     admin last left it, which on the way in is closed. */
+  function filterUsers(root) {
+    var terms = userQuery.trim().toLowerCase().split(/\s+/).filter(Boolean);
+
+    USER_GROUPS.forEach(function (g) {
+      var fold = root.querySelector('[data-user-fold="' + g.key + '"]');
+      if (!fold) return;
+
+      var shown = 0;
+      Array.prototype.forEach.call(fold.querySelectorAll('[data-user-search]'), function (item) {
+        var hay = item.getAttribute('data-user-search');
+        var match = terms.every(function (t) { return hay.indexOf(t) !== -1; });
+        item.hidden = !match;
+        if (match) shown++;
+      });
+
+      var count = fold.querySelector('[data-user-count]');
+      if (count) count.textContent = shown;
+
+      var empty = fold.querySelector('[data-user-empty]');
+      if (empty) {
+        empty.hidden = shown > 0;
+        empty.textContent = terms.length ? 'Nobody here matches.' : g.empty;
+      }
+
+      var list = fold.querySelector('[data-user-list]');
+      if (list) list.scrollTop = 0;
+
+      setUserFold(fold, terms.length ? shown > 0 : !!userFolds[g.key]);
+    });
+
+    sizeUserLists(root);
+  }
+
+  /* A fold with more than ten people in it is cut off at the bottom of the
+     tenth and scrolls from there. Measured rather than set as a height in
+     the stylesheet, because a row is taller with a Leader mode switch than
+     without one and taller again when a long name wraps. Rows keep their
+     layout while a fold is closed, so this works on a closed fold too, but
+     not before the screen is on the page: render() calls it again once it
+     is. */
+  function sizeUserLists(root) {
+    Array.prototype.forEach.call(root.querySelectorAll('[data-user-list]'), function (list) {
+      var visible = Array.prototype.filter.call(list.children, function (item) {
+        return !item.hidden;
+      });
+      var last = visible[USERS_VISIBLE - 1];
+      if (visible.length <= USERS_VISIBLE || !last.offsetHeight) {
+        list.style.maxHeight = '';
+        list.removeAttribute('data-scroll');
+        return;
+      }
+      list.style.maxHeight = (last.offsetTop + last.offsetHeight) + 'px';
+      list.setAttribute('data-scroll', 'true');
+    });
+  }
+
+  /* A phone turned on its side rewraps every row, so the cut moves with it. */
+  window.addEventListener('resize', function () {
+    if (document.querySelector('[data-user-list]')) sizeUserLists(document);
+  });
+
+  function userItem(u) {
+    var html = '';
+    var self = HC.admin.isSelf(u.id);
+    var isAdminRow = u.role === 'admin';
+
+    html += '<div class="hc-admin__item" data-user-search="' + c.esc(userHaystack(u)) + '">' +
+      '<div class="hc-admin__item-head">' +
+        '<p class="hc-eyebrow">' + c.esc(personStanding(u)) +
+          (self ? ' · You' : '') + '</p>' +
+        '<p class="hc-row__title">' + c.esc(personName(u)) + '</p>' +
+        '<p class="hc-caption">' + c.esc(u.email || 'No email on file') + '</p>' +
+      '</div>';
+
+    /* Leader mode, on the row rather than behind a second screen, because
+       this is the thing an admin comes here to do most often: somebody has
+       started leading a group and needs to be able to open a room on
+       Thursday.
+
+       MEMBERS ONLY, AND THAT IS THE WHOLE RULE. An admin already has
+       everything Leader mode grants and hosts a room without it (migration
+       0036), so a switch on an admin's row is one that changes nothing
+       anybody can see, whether it is your own row or somebody else's. The
+       line below says so instead. Demote an admin and the switch comes back
+       on their row, still holding whatever it held: the value is never
+       thrown away, it is only hidden while it cannot matter. */
+    if (isAdminRow) {
+      /* Your own row says this once, in the line under the buttons, rather
+         than twice in two stacked captions. */
+      if (!self) {
+        html += '<p class="hc-caption hc-admin__self">An admin has the leader tools ' +
+          'and can host a group room already. There is no Leader mode to turn on.</p>';
+      }
+    } else {
+      html += switchRow({
+        title: 'Leader mode',
+        sub: u.is_leader
+          ? 'On. Leader tools, and they can open a group room.'
+          : 'Off. Turn it on for somebody who leads a group.',
+        action: 'admin-leader',
+        id: u.id,
+        on: !!u.is_leader
+      });
+    }
+
+    html += '<div class="hc-admin__item-actions">';
+
+    /* The safety guard, drawn rather than merely enforced. A disabled button
+       with a reason under it is a better answer than a button that works
+       and then explains why it did not, and it is the same shape the
+       database gives back: hc_admin_set_role refuses this, and so does the
+       trigger underneath it. */
+    if (self) {
+      html += '<p class="hc-caption hc-admin__self">You cannot change your own role or ' +
+        'remove your own account here, and an admin has the leader tools already. ' +
+        'Deleting your account is under Your data.</p>';
+    } else {
+      html += c.button(isAdminRow ? 'Make a member' : 'Make an admin', {
+        action: 'admin-role',
+        id: u.id,
+        variant: 'secondary',
+        small: true,
+        busy: busy === 'role:' + u.id
+      });
+      html += c.button('Remove', {
+        action: 'admin-user-remove',
+        id: u.id,
+        variant: 'tertiary',
+        small: true,
+        busy: busy === 'remove:' + u.id
+      });
+    }
+
+    html += '</div></div>';
     return html;
   }
 
@@ -1914,7 +2194,10 @@
     /* 0066. Read by name in js/components.js, and it is the URL of the page
        every YouTube player in the app is framed through on a phone. Deleting
        it would take the video with it. See embed.html. */
-    home_embed_base: true
+    home_embed_base: true,
+    /* 0077. Read by name in js/maintenance.js, and deleting it while it was on
+       would be the quiet way to lift the cover with nobody deciding to. */
+    maintenance_mode_on: true
   };
 
   /* The Group tab's switch, as the app knows it rather than as the database
@@ -1989,6 +2272,147 @@
     return html;
   }
 
+  /* Maintenance mode: the whole app covered for everybody who is not an
+     admin, until an admin says otherwise. Carried whole for the same reason
+     GROUP_MODE is: the switch is drawn whether or not 0077 has ever run, and
+     the first tap writes this row. See js/maintenance.js. */
+  var MAINTENANCE = {
+    key: 'maintenance_mode_on',
+    label: 'Maintenance mode',
+    help: 'On covers the whole app for everybody except admins, with the house ' +
+      'and “We’ll be back soon.” It stays up until an admin turns this off.',
+    sortOrder: 5
+  };
+
+  // Same two sources and the same fallback as groupModeOn() above.
+  function maintenanceOn() {
+    var row = HC.admin.settings().filter(function (s) {
+      return s.key === MAINTENANCE.key;
+    })[0];
+    if (row) return !!row.value_bool;
+    return HC.data.setting(MAINTENANCE.key, false) === true;
+  }
+
+  /* The first thing on this screen, above Edit mode, because the afternoon
+     somebody needs it is not an afternoon to go looking for it. */
+  function maintenanceSection() {
+    var on = maintenanceOn();
+
+    var html = c.sectionHeader('', 'Maintenance mode');
+    html += switchRow({
+      title: 'Maintenance mode',
+      sub: on
+        ? 'On. Everybody except admins sees “We’ll be back soon.” and cannot use the app.'
+        : 'Off. The app is open to everybody as usual.',
+      action: 'admin-maintenance-toggle',
+      id: MAINTENANCE.key,
+      on: on
+    });
+    html += '<p class="hc-caption hc-admin__loading">' +
+      'For when something has gone wrong and the app needs to be out of ' +
+      'people’s hands while it is fixed. Members, leaders and signed out ' +
+      'phones get the house and “We’ll be back soon.” over the ' +
+      'whole app, including phones that are already open, within a minute. ' +
+      'Admins keep the app. Nothing is deleted, and it stays up until an admin ' +
+      'turns it off.</p>';
+
+    return html;
+  }
+
+  /* The pinned banner: the switch, and the sentence behind an Edit button.
+
+     WHY EDIT AND SAVE, when every other text box on this screen saves as you
+     type. Those are links pasted in one go. This is a sentence the whole
+     church reads, typed a word at a time, and saving each word put every half
+     written version of it on Home and repainted the screen under the cursor,
+     which is what threw the keyboard away after every space. Now nothing
+     leaves the phone until Save, and the box is never redrawn while it is
+     being typed in.
+
+     "Notify everyone" sits beside Save because the moment to tell people is
+     the moment the words are final. Saving with it on turns the banner on if
+     it was off, since a notification about a banner nobody can see is a
+     notification about nothing. The switch starts off every time Edit opens:
+     four hundred lock screens should never be the default. */
+  var BANNER_ON = {
+    key: 'home_banner_on',
+    label: 'Pinned banner',
+    help: 'Shows a single line at the very top of Home, above everything else. ' +
+      'Use it for the thing that cannot wait for an announcement.',
+    sortOrder: 10
+  };
+  var BANNER_MESSAGE_KEY = 'home_banner_message';
+
+  function settingRow(key) {
+    return HC.admin.settings().filter(function (s) { return s.key === key; })[0];
+  }
+
+  function bannerOn() {
+    var row = settingRow(BANNER_ON.key);
+    if (row) return !!row.value_bool;
+    return HC.data.setting(BANNER_ON.key, false) === true;
+  }
+
+  function bannerMessage() {
+    var row = settingRow(BANNER_MESSAGE_KEY);
+    if (row) return String(row.value_text || '');
+    return String(HC.data.setting(BANNER_MESSAGE_KEY, '') || '');
+  }
+
+  function bannerSection() {
+    var on = bannerOn();
+    var message = bannerMessage().trim();
+
+    var html = c.sectionHeader('', 'Pinned banner');
+    html += switchRow({
+      title: 'Pinned banner',
+      sub: on
+        ? (message ? 'On. The line below is at the top of Home for everybody.'
+                   : 'On, but there is nothing to show until it says something.')
+        : 'Off. Nothing is pinned to the top of Home.',
+      action: 'admin-banner-toggle',
+      id: BANNER_ON.key,
+      on: on
+    });
+
+    if (!bannerDraft) {
+      html += '<div class="hc-field">' +
+        '<span class="hc-field__label">Banner message</span>' +
+        '<p class="hc-admin__banner-text' + (message ? '' : ' hc-caption') + '">' +
+          c.esc(message || 'No message yet.') +
+        '</p>' +
+      '</div>';
+      html += '<div class="hc-admin__item-actions">' +
+        c.button(message ? 'Edit' : 'Write one', { action: 'admin-banner-edit',
+          variant: 'secondary', small: true }) +
+      '</div>';
+      return html;
+    }
+
+    html += textarea({
+      name: 'bannerMessage',
+      label: 'Banner message',
+      value: bannerDraft.message,
+      rows: 3,
+      help: 'One sentence. Nothing changes on Home until you tap Save.'
+    });
+    html += switchRow({
+      title: 'Notify everyone',
+      sub: 'Sends the banner to every phone as a notification when you save. ' +
+        'Turns the banner on if it is off.',
+      action: 'admin-banner-notify-toggle',
+      on: bannerDraft.notify
+    });
+    html += '<div class="hc-admin__item-actions">' +
+      c.button('Save', { action: 'admin-banner-save', small: true,
+        busy: busy === 'banner' }) +
+      c.button('Cancel', { action: 'admin-banner-cancel', variant: 'tertiary',
+        small: true, disabled: busy === 'banner' }) +
+    '</div>';
+
+    return html;
+  }
+
   /* Rows this screen deliberately does not draw in the list, because they are
      already drawn somewhere they mean more: the push default belongs on the
      Announcements screen, and Group mode is a section of its own a few inches
@@ -2002,10 +2426,17 @@
   var DRAWN_ELSEWHERE = {};
   DRAWN_ELSEWHERE[PUSH_DEFAULT_KEY] = true;
   DRAWN_ELSEWHERE[GROUP_MODE.key] = true;
+  DRAWN_ELSEWHERE[MAINTENANCE.key] = true;
+  DRAWN_ELSEWHERE[BANNER_ON.key] = true;
+  DRAWN_ELSEWHERE[BANNER_MESSAGE_KEY] = true;
 
   function settingsSection() {
     var html = '<div class="hc-screen hc-admin">';
     html += c.sectionHeader('For the church', 'App settings', { flush: true, tag: 'h1' });
+
+    // The emergency switch, first. Drawn before anything has been fetched,
+    // like Group mode, and for the same reason. See maintenanceSection.
+    html += maintenanceSection();
 
     // Above the seeded rows, so the first switch on this screen is the one an
     // admin came here to flip. It needs nothing fetched, which is also why it
@@ -2016,6 +2447,9 @@
     // Also drawn before anything has been fetched, and for a second reason:
     // there may be nothing to fetch. See groupModeSection.
     html += groupModeSection();
+
+    // The banner, with its own Edit and Save. See bannerSection.
+    html += bannerSection();
 
     var rows = HC.admin.settings().filter(function (s) {
       return !DRAWN_ELSEWHERE[s.key];
@@ -2028,7 +2462,7 @@
     html += c.sectionHeader('', 'Switches and messages');
 
     if (!rows.length) {
-      html += pending('settings', 'No settings yet.');
+      html += pending('settings', 'Nothing else here yet.');
     } else {
       rows.forEach(function (s) {
         if (s.kind === 'boolean') {
@@ -2118,7 +2552,13 @@
     if (id === 'settings') HC.admin.loadSettings();
 
     if (id === 'announcements') return c.el(announcementsSection());
-    if (id === 'users') return c.el(usersSection());
+    if (id === 'users') {
+      var usersEl = c.el(usersSection());
+      filterUsers(usersEl);
+      // Again once the screen is on the page, where the rows have a height.
+      requestAnimationFrame(function () { sizeUserLists(document); });
+      return usersEl;
+    }
     if (id === 'content') return c.el(contentSection());
     if (id === 'settings') return c.el(settingsSection());
 
@@ -2150,6 +2590,24 @@
     getGroupBox: function () { return groupBoxDraft(); },
     clearGroupBox: function () { groupBox = null; },
 
+    /* The users list. Both work on the screen as it is rather than redrawing
+       it, so typing keeps the keyboard up and a fold opens with its scroll
+       position intact. A fold tapped while there is a search opens or closes
+       for now only; clearing the search puts every fold back where the admin
+       left it. */
+    setUserSearch: function (value) {
+      userQuery = value || '';
+      filterUsers(document);
+    },
+    toggleUserFold: function (key) {
+      var fold = document.querySelector('[data-user-fold="' + key + '"]');
+      if (!fold) return;
+      var toggle = fold.querySelector('[data-action="admin-user-fold"]');
+      var open = !(toggle && toggle.getAttribute('aria-expanded') === 'true');
+      if (!userQuery.trim()) userFolds[key] = open;
+      setUserFold(fold, open);
+    },
+
     setBusy: function (value) { busy = value || ''; },
     setUploading: function (value) { uploading = !!value; },
 
@@ -2158,7 +2616,21 @@
        row to upsert and the value to move away from — and neither belongs in
        that file, because this screen is what draws the switch. */
     groupMode: function () { return GROUP_MODE; },
-    groupModeOn: groupModeOn
+    groupModeOn: groupModeOn,
+
+    // Maintenance mode, the same pair for the same handler shape.
+    maintenance: function () { return MAINTENANCE; },
+    maintenanceOn: maintenanceOn,
+
+    // The pinned banner: its switch, what it says, and the words being edited.
+    banner: function () { return BANNER_ON; },
+    bannerOn: bannerOn,
+    bannerMessageKey: function () { return BANNER_MESSAGE_KEY; },
+    getBannerDraft: function () { return bannerDraft; },
+    startBannerDraft: function () {
+      bannerDraft = { message: bannerMessage(), notify: false };
+    },
+    clearBannerDraft: function () { bannerDraft = null; }
   };
 
 })(window.HC = window.HC || {});

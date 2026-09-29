@@ -4,6 +4,12 @@
    over the words, the note sheet that opens underneath, and the plumbing that
    turns a browser Range into the anchor js/journal.js stores.
 
+   AND IN THE VERSE SHEET. The words of a tapped reference can be kept the
+   same way, wherever in the app the reference was tapped. js/verse.js draws
+   each paragraph with a data-hl-path of scripture:<passage>:<n> inside a
+   body carrying data-passage, and the entry that comes out has no guide,
+   the passage as its title, and lands in the Journal under Scripture.
+
    WHAT IS HIGHLIGHTABLE. Prose. The two summaries, the anchor paragraphs
    under Where it went, and the one-liners. Not the discussion questions and
    not the reflection prompts: both are drawn inside buttons and textareas,
@@ -77,8 +83,12 @@
     var block = blockOf(range.startContainer);
     if (!block) return null;
 
+    /* Two places carry highlightable words: a guide, whose reader names the
+       guide, and the verse sheet, whose body names the passage. A block in
+       neither is not somewhere a highlight can be kept. */
     var reader = block.closest('[data-guide]');
-    if (!reader) return null;
+    var passage = reader ? null : block.closest('[data-passage]');
+    if (!reader && !passage) return null;
 
     var text = block.textContent;
     var start = offsetWithin(block, range.startContainer, range.startOffset);
@@ -98,7 +108,9 @@
     var lead = text.slice(start, end).indexOf(quote);
 
     return {
-      guideId: reader.getAttribute('data-guide'),
+      guideId: reader ? reader.getAttribute('data-guide') : null,
+      // The reference as the sheet shows it, which becomes the entry's title.
+      scripture: passage ? passage.getAttribute('data-passage') : null,
       path: block.getAttribute('data-hl-path'),
       quote: quote,
       start: start + (lead > 0 ? lead : 0),
@@ -147,7 +159,9 @@
 
     var app = document.getElementById('app');
     app.appendChild(bar);
-    app.setAttribute('data-hlbar', 'true');
+    // Over the verse sheet the bar has to sit above the sheet rather than
+    // above the tab bar, which the sheet is covering. See the CSS.
+    app.setAttribute('data-hlbar', at.scripture ? 'sheet' : 'true');
   }
 
   /* ---------------------------------------------------------- the sheet
@@ -208,7 +222,7 @@
 
     var entry = HC.journal.get(el.getAttribute('data-entry'));
     if (el.parentNode) el.parentNode.removeChild(el);
-    if (entry && entry.guideId && entry.path) redraw(entry.guideId, entry.path);
+    if (entry && entry.path) redraw(entry.guideId, entry.path);
   }
 
   /* ------------------------------------------------------------- making one
@@ -220,12 +234,16 @@
   function create(withNote) {
     if (!pending) return;
     var at = pending;
-    var guide = HC.data.getGuide(at.guideId);
+    var guide = at.guideId ? HC.data.getGuide(at.guideId) : null;
 
+    /* A highlight in the verse sheet belongs to no guide. Its title is the
+       passage, which is what the Journal shows it under and what makes it
+       come up under the Scripture filter. */
     var entry = HC.journal.create({
       kind: 'highlight',
-      guideId: at.guideId,
+      guideId: at.guideId || null,
       guideTitle: guide ? HC.data.guideTitle(guide) : null,
+      title: at.scripture || '',
       path: at.path,
       quote: at.quote,
       start: at.start,
@@ -250,11 +268,21 @@
 
   /* Redraw one block rather than the screen. The reader is full of open and
      closed sections and a remembered scroll position, and rebuilding it to
-     paint one underline would throw all of that away. */
+     paint one underline would throw all of that away.
+
+     A scripture highlight redraws every paragraph of the verse sheet rather
+     than the one, because the same words can be marked from another passage
+     that overlaps this one; see forScripture() in js/journal.js. */
   function redraw(guideId, path) {
-    var block = document.querySelector('[data-hl-path="' + path + '"]');
-    if (!block) return;
-    block.innerHTML = HC.journal.marked(guideId, path, block.textContent);
+    var scripture = !guideId && HC.journal.isScripturePath(path);
+    var blocks = scripture
+      ? document.querySelectorAll('[data-passage] [data-hl-path]')
+      : [document.querySelector('[data-hl-path="' + path + '"]')];
+    Array.prototype.forEach.call(blocks, function (block) {
+      if (!block) return;
+      block.innerHTML = HC.journal.marked(
+        scripture ? null : guideId, block.getAttribute('data-hl-path'), block.textContent);
+    });
   }
 
   function open(id) {
@@ -291,9 +319,13 @@
   function onSelectionChange() {
     window.clearTimeout(settle);
     settle = window.setTimeout(function () {
-      // Never over a sheet: the note sheet contains its own writing surface,
-      // and selecting inside it is editing, not highlighting.
-      if (document.querySelector('.hc-sheet')) { hideBar(); return; }
+      /* Never over a sheet: the note sheet contains its own writing surface,
+         and selecting inside it is editing, not highlighting. The verse sheet
+         is the one exception, because its words are exactly what somebody
+         might want to keep, and only while it is the only sheet up. */
+      var sheets = document.querySelectorAll('.hc-sheet');
+      var verseOnly = sheets.length === 1 && sheets[0].getAttribute('data-sheet') === 'verse';
+      if (sheets.length && !verseOnly) { hideBar(); return; }
 
       // A locked journal has nowhere to put a highlight, and offering to make
       // one would draw a mark that is then not drawn. See marked().

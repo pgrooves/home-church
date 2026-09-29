@@ -39,7 +39,7 @@
   // Local to this screen, same pattern as the day/neighborhood filters on
   // Connect. Reset to idle whenever a code actually goes out or verifies.
   var authIdentifier = '';
-  var authStep = 'idle';   // idle | sent
+  var authStep = 'idle';   // idle | sent | password
 
   function field(name, label, value, autocomplete) {
     return '' +
@@ -91,6 +91,29 @@
           c.button('Sign out', { action: 'sign-out', variant: 'secondary' }) +
           c.button('Delete my account', { action: 'go-legal', id: 'data', variant: 'tertiary' }) +
         '</div>';
+    }
+
+    /* The same fork js/gate.js has, in the other place somebody can sign in.
+       It has to be in both: the gate is what a cold launch shows, and this
+       is where the App Review notes send a reviewer, so a password path that
+       existed in only one of them would work exactly half the time. What the
+       list is for is in js/config.js. */
+    if (authStep === 'password') {
+      return '' +
+        c.sectionHeader('Almost there', 'Enter your password') +
+        '<p class="hc-body-serif hc-account__copy">' + c.esc(authIdentifier) +
+          ' signs in with a password rather than an emailed code.</p>' +
+        '<form class="hc-form" data-auth-form="password" novalidate>' +
+          '<label class="hc-field">' +
+            '<span class="hc-field__label">Your password</span>' +
+            '<input class="hc-input" type="password" autocomplete="current-password" ' +
+              'autocapitalize="off" autocorrect="off" spellcheck="false" ' +
+              'name="password" placeholder="Your password">' +
+          '</label>' +
+          c.button('Sign in', { action: 'auth-password' }) +
+        '</form>' +
+        '<button type="button" class="hc-btn hc-btn--tertiary hc-mt-lg" data-action="auth-restart">' +
+          'Use a different email</button>';
     }
 
     if (authStep === 'sent') {
@@ -154,9 +177,11 @@
        nothing carries them up any more. Ask again when a feature needs one,
        and let that feature say what it needs it for.
 
-       CAMPUS STAYS. It is not personal, the column has been there since 0009,
-       and it is what a second location would filter events and notifications
-       on without inventing a new idea.
+       CAMPUS IS HIDDEN, NOT GONE. There is one location today, so asking
+       people to pick it is noise. The column (since 0009), the default in
+       js/store.js, and the FIELD_MAP entry in js/auth.js all stay, because
+       campus is what a second location would filter events and notifications
+       on. Bringing it back is one field() line in this function.
 
        ALREADY-SAVED ROWS ARE NOT TOUCHED BY THIS. The columns still exist and
        still hold whatever people typed. Clearing them is a separate, deliberate
@@ -168,7 +193,6 @@
           field('firstName', 'First name', p.firstName, 'given-name') +
           field('lastName', 'Last name', p.lastName, 'family-name') +
         '</div>' +
-        field('campus', 'Campus', p.campus, 'off') +
       '</div>' +
       note;
   }
@@ -349,6 +373,16 @@
       html += '<p class="hc-caption hc-profile__hint">These two are yours because ' +
         'you are an admin. Nobody else in the church is told what is in the queue, ' +
         'and nothing in it is on Home until you say so.</p>';
+    }
+
+    /* Said out loud because these switches no longer silence everything. The
+       pinned banner reaches every phone iOS allows, whatever is set here, and
+       a switch that looks like it turns something off when it does not is the
+       lie js/native.js keeps warning about. See resumeNotifications there. */
+    if (HC.native && HC.native.isNative()) {
+      html += '<p class="hc-caption hc-profile__hint">Urgent news from the church, ' +
+        'like a change to Sunday, reaches every phone that allows Home Church ' +
+        'notifications in Settings.</p>';
     }
 
     // Reading
