@@ -1405,6 +1405,32 @@ function eventDateFor(
    unreadable email is settled and reported the same morning. */
 const MAX_PARSE_ATTEMPTS = 4;
 
+/* And the hour, which is the half of that budget the count alone never held.
+
+   WHAT WENT WRONG WITHOUT IT. The count assumed attempts twenty minutes apart,
+   but the Fetch Announcements button is a run too. On the 29th of September
+   the Homecoming Gala email came in while Gemini was answering 503, somebody
+   tapped Fetch three times in five minutes to see it arrive, and the fourth
+   attempt landed at 22:20 — five minutes after the first. The email was marked
+   failed and read, and the twenty minute tick that would have got it at 22:40
+   never saw it again.
+
+   So running out takes both: the attempts spent AND an hour since the first of
+   them. Taps inside the hour still try the email, which is what a person
+   tapping Fetch wants, they just cannot bury it. */
+const GIVE_UP_AFTER_MINUTES = 60;
+
+/* Whether this is the last attempt an email gets. `firstTried` is the ledger
+   row's created_at, which is written by the first claim and never again. A row
+   with no readable clock is judged on the count alone, as it always was. */
+function outOfAttempts(attempts: number, firstTried: string | null | undefined, nowMs: number): boolean {
+  if (!Number.isFinite(attempts)) return true;
+  if (attempts < MAX_PARSE_ATTEMPTS) return false;
+  const first = Date.parse(String(firstTried ?? ''));
+  if (!Number.isFinite(first)) return true;
+  return nowMs - first >= GIVE_UP_AFTER_MINUTES * 60 * 1000;
+}
+
 /* How long a claim may sit before another run may take it.
    An Edge Function invocation cannot outlive its own timeout, so a row still
    marked `parsing` a quarter of an hour later is not a run in progress — it is
@@ -1417,6 +1443,7 @@ interface LedgerState {
   status?: string;
   attempts?: number;
   attempted_at?: string | null;
+  created_at?: string | null;
 }
 
 /* What this run may do with an email, given what the ledger already says about
@@ -1433,7 +1460,7 @@ function claimDecision(row: LedgerState | null | undefined, nowMs: number): 'new
 
   const status = String(row.status ?? '');
   const attempts = Number(row.attempts ?? 0);
-  const spent = !Number.isFinite(attempts) || attempts >= MAX_PARSE_ATTEMPTS;
+  const spent = outOfAttempts(attempts, row.created_at, nowMs);
 
   if (status === 'deferred') return spent ? 'skip' : 'retry';
 
@@ -2169,7 +2196,7 @@ Deno.serve(async (req: Request) => {
     const ids = candidates.map((c) => c.messageId);
     const { data: known, error: knownError } = await admin
       .from('newsletter_emails')
-      .select('message_id, status, attempts, attempted_at')
+      .select('message_id, status, attempts, attempted_at, created_at')
       .in('message_id', ids.length ? ids : ['']);
 
     if (knownError) throw new Error(`Could not read the ledger: ${knownError.message}`);
@@ -2252,6 +2279,9 @@ Deno.serve(async (req: Request) => {
         if (claimId === null) continue;
       }
 
+      // Out here so a deferral below can take it back off the run note.
+      let linkNote: string | null = null;
+
       try {
         const parts = textParts(raw);
         const html = parts.filter((p) => p.type === 'text/html').map((p) => p.text).join('\n');
@@ -2284,7 +2314,7 @@ Deno.serve(async (req: Request) => {
            drafts are fine and the email is parsed — but it is the one thing
            about this email a person would want to know before approving
            anything out of it. */
-        const linkNote = checked.notes.length
+        linkNote = checked.notes.length
           ? checked.notes.join(' ').slice(0, 500)
           : null;
         if (linkNote) linkNotes.push(linkNote);
@@ -2517,14 +2547,19 @@ Deno.serve(async (req: Request) => {
            Still no \Seen either way, until it is genuinely settled. */
         if (err instanceof TransientError) {
           const reason = String(err.message).slice(0, 400);
-          const spent = attempt >= MAX_PARSE_ATTEMPTS;
+          const spent = outOfAttempts(attempt, ledgerState.get(messageId)?.created_at, Date.now());
+
+          /* Nothing was drafted, so which footer links were merged is not news
+             yet, and next to "Gemini is busy" it reads like part of the error.
+             It is said again on the attempt that does produce drafts. */
+          if (linkNote) linkNotes.pop();
 
           if (claimId !== null) {
             await settleEmail(admin, claimId, {
               status: spent ? 'failed' : 'deferred',
               drafts: 0,
               note: spent
-                ? `Gave up after ${MAX_PARSE_ATTEMPTS} attempts. ${reason}`.slice(0, 500)
+                ? `Gave up after ${attempt} attempts. ${reason}`.slice(0, 500)
                 : reason,
             });
           }

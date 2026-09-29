@@ -65,9 +65,9 @@ if (start === -1 || end === -1 || end < start) {
 
 const fenced = stripTypeScriptTypes(source.slice(start, end));
 const box = vm.runInNewContext(
-  fenced + '\n({ claimDecision, MAX_PARSE_ATTEMPTS, CLAIM_STALE_MINUTES })');
+  fenced + '\n({ claimDecision, outOfAttempts, MAX_PARSE_ATTEMPTS, CLAIM_STALE_MINUTES, GIVE_UP_AFTER_MINUTES })');
 
-const { claimDecision, MAX_PARSE_ATTEMPTS, CLAIM_STALE_MINUTES } = box;
+const { claimDecision, outOfAttempts, MAX_PARSE_ATTEMPTS, CLAIM_STALE_MINUTES, GIVE_UP_AFTER_MINUTES } = box;
 
 const NOW = Date.parse('2026-09-11T14:20:00Z');
 const minutesAgo = (n) => new Date(NOW - n * 60000).toISOString();
@@ -106,6 +106,28 @@ ok('somehow past the budget',
 ok('a count that is not a number is not a licence',
   decide({ status: 'deferred', attempts: 'lots' }), 'skip');
 
+console.log('\n--- the budget is an hour, not just a count ---');
+
+/* The 29th of September: three taps on Fetch inside five minutes while Gemini
+   was answering 503 spent all four attempts, and the gala email was given up
+   on before the twenty minute tick ever got a turn at it. */
+ok('THE GALA: four quick taps do not spend the budget',
+  decide({ status: 'deferred', attempts: MAX_PARSE_ATTEMPTS, created_at: minutesAgo(5) }), 'retry');
+ok('nor do a dozen',
+  decide({ status: 'deferred', attempts: 12, created_at: minutesAgo(30) }), 'retry');
+ok('an hour after the first attempt, it is spent',
+  decide({ status: 'deferred', attempts: MAX_PARSE_ATTEMPTS, created_at: minutesAgo(GIVE_UP_AFTER_MINUTES) }), 'skip');
+ok('but an hour is not enough on its own',
+  decide({ status: 'deferred', attempts: 2, created_at: minutesAgo(300) }), 'retry');
+ok('a first attempt with no readable clock is judged on the count',
+  decide({ status: 'deferred', attempts: MAX_PARSE_ATTEMPTS, created_at: 'soon' }), 'skip');
+ok('the fourth attempt, five minutes in, is not the last',
+  outOfAttempts(MAX_PARSE_ATTEMPTS, minutesAgo(5), NOW), false);
+ok('the fourth attempt, an hour in, is',
+  outOfAttempts(MAX_PARSE_ATTEMPTS, minutesAgo(61), NOW), true);
+ok('the first attempt never is',
+  outOfAttempts(1, undefined, NOW), false);
+
 console.log('\n--- a claim somebody is holding ---');
 
 /* The tick and the Fetch Announcements button overlap in real use — three taps
@@ -142,6 +164,8 @@ console.log('\n--- the numbers themselves ---');
 /* Not arbitrary, and worth failing loudly if somebody edits one without
    meaning to: four attempts twenty minutes apart is about an hour of trying,
    and fifteen minutes is comfortably longer than any run can live. */
+ok('giving up takes at least a few ticks of the clock',
+  GIVE_UP_AFTER_MINUTES >= 40 && GIVE_UP_AFTER_MINUTES <= 24 * 60, true);
 ok('attempts are bounded at all', MAX_PARSE_ATTEMPTS >= 2 && MAX_PARSE_ATTEMPTS <= 10, true);
 ok('a claim goes stale after a run could possibly still be alive',
   CLAIM_STALE_MINUTES >= 5 && CLAIM_STALE_MINUTES <= 60, true);
