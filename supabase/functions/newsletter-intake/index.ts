@@ -529,7 +529,7 @@ function htmlToText(html: string): string {
       .replace(/<br\s*\/?>/gi, '\n')
       .replace(/<[^>]+>/g, ' '),
   )
-    .replace(/[ \t ]+/g, ' ')
+    .replace(/[ \t\u00a0]+/g, ' ')
     .replace(/ ?\n ?/g, '\n')
     .replace(/\n{3,}/g, '\n\n')
     .trim();
