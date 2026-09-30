@@ -5,6 +5,7 @@
     "allow": [
       "mcp__supabase",
       "mcp__Supabase",
+      "mcp__4f4ac40e-7820-4725-8f28-49f6aa217224",
 
       "mcp__supabase__list_projects",
       "mcp__supabase__list_tables",
