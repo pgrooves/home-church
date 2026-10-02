@@ -135,24 +135,20 @@ the name, "September 27" in the header), the card says so.
 If she edits a doc after you approved it, a new draft appears with the change.
 Nothing reaches families until you approve it.
 
-**One-time setup, in plain steps:**
+**One-time setup, in plain steps.** The director set the folder to
+**Anyone with the link: Viewer**, so no robot account is needed:
 
-1. **Make the robot account.** Go to console.cloud.google.com, signed in with
-   the Google account that has the Gemini key. Search **Google Drive API** and
-   click **Enable**. Search **Service accounts**, click **Create service
-   account**, name it `homekids-reader`, then **Create and continue**, then
-   **Done**.
-2. **Get its key.** Click `homekids-reader` → **Keys** tab → **Add key** →
-   **Create new key** → **JSON** → **Create**. A file downloads. Copy the
-   robot's email address from the same page.
-3. **Share the folder with the robot.** The director shares the lesson folder
-   with that robot email, as **Viewer**.
-4. **Give the key to Supabase.** Supabase → Project Settings → Edge Functions →
-   Secrets → add `HOMEKIDS_DRIVE_KEY`, and paste in everything inside the
-   downloaded file. Never paste the key anywhere else.
-5. **Turn it on** (Claude can do these two for you):
-   run `supabase/migrations/0082_homekids_drive.sql` in the SQL editor, then
+1. **Turn on Google Drive for the Gemini key.** Go to console.cloud.google.com,
+   signed in with the Google account that made the Gemini key, and pick that
+   key's project at the top. Search **Google Drive API** and click **Enable**.
+2. **Turn it on in Supabase** (Claude can do these two for you): run
+   `supabase/migrations/0082_homekids_drive.sql` in the SQL editor, then
    `supabase functions deploy homekids-drive --no-verify-jwt`.
+
+If the folder ever goes private again, the robot account route still works:
+create a service account, share the folder with its email as Viewer, and paste
+its JSON key into the secret `HOMEKIDS_DRIVE_KEY`. When that secret is set, the
+watcher uses it instead of the API key.
 
 **Check it can see the folder:**
 

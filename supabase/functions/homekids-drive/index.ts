@@ -24,7 +24,12 @@
  * client in newsletter-intake: forty lines we can read beat a dependency.
  *
  * SECRETS (Project Settings -> Edge Functions -> Secrets)
- *   HOMEKIDS_DRIVE_KEY         the robot's JSON key file, pasted whole
+ *   nothing new, while the folder is shared "Anyone with the link: Viewer":
+ *                              GEMINI_API_KEY reads it, once the Drive API is
+ *                              turned on for that key's Google Cloud project
+ *   HOMEKIDS_DRIVE_API_KEY     optional, a separate key for Drive instead
+ *   HOMEKIDS_DRIVE_KEY         only for a PRIVATE folder: the robot's JSON key
+ *                              file, pasted whole. Wins when it is set.
  *   HOMEKIDS_DRIVE_FOLDER      optional, the folder's id or link; defaults to
  *                              the folder the director shared in October 2026
  *   HC_NEWSLETTER_CRON_SECRET  already set; the same proof of "came from cron"
@@ -439,23 +444,52 @@ async function googleToken(keyJson: string): Promise<{ token: string; email: str
 
 interface DriveFile { id: string; name: string; mimeType: string; modifiedTime: string; webViewLink?: string }
 
-async function driveList(token: string, folder: string, depth = 0): Promise<DriveFile[]> {
+/* Two ways in, and the folder decides which.
+
+   A folder set to "Anyone with the link: Viewer" can be read with a plain
+   Google API key, the same kind of key Gemini already uses. That is how the
+   director's folder is shared since October 2026, and it means no robot
+   account at all: HOMEKIDS_DRIVE_API_KEY if set, otherwise GEMINI_API_KEY,
+   whose Google Cloud project only needs the Drive API turned on.
+
+   A private folder needs the robot (HOMEKIDS_DRIVE_KEY, the service account's
+   JSON), which signs in and sees only what was shared with its address. If
+   that secret is set it wins, so taking the folder private again later is a
+   secret and a share, not a code change. */
+type DriveAuth = { bearer?: string; key?: string };
+
+function driveFetch(auth: DriveAuth, url: string): Promise<Response> {
+  if (auth.key) {
+    return fetch(url + (url.includes('?') ? '&' : '?') + 'key=' + encodeURIComponent(auth.key));
+  }
+  return fetch(url, { headers: { Authorization: 'Bearer ' + auth.bearer } });
+}
+
+function driveRefusal(auth: DriveAuth, status: number): string {
+  if (auth.key && status === 403) {
+    return 'Google refused the API key. Turn on the Google Drive API for the Google Cloud ' +
+      'project the key belongs to (console.cloud.google.com, search "Google Drive API", Enable).';
+  }
+  return auth.key
+    ? 'Cannot see that folder. Its sharing has to be "Anyone with the link", as Viewer.'
+    : 'The robot cannot see that folder. Share it with the robot\'s email as Viewer.';
+}
+
+async function driveList(auth: DriveAuth, folder: string, depth = 0): Promise<DriveFile[]> {
   const out: DriveFile[] = [];
   let page = '';
   do {
     const q = encodeURIComponent(`'${folder}' in parents and trashed = false`);
-    const res = await fetch('https://www.googleapis.com/drive/v3/files?q=' + q +
+    const res = await driveFetch(auth, 'https://www.googleapis.com/drive/v3/files?q=' + q +
       '&fields=nextPageToken,files(id,name,mimeType,modifiedTime,webViewLink)&pageSize=200' +
       '&supportsAllDrives=true&includeItemsFromAllDrives=true' + (page ? '&pageToken=' + page : ''),
-      { headers: { Authorization: 'Bearer ' + token } });
-    if (res.status === 404) {
-      throw new Error('The robot cannot see that folder. Share it with the robot\'s email as Viewer.');
-    }
+    );
+    if (res.status === 404 || res.status === 403) throw new Error(driveRefusal(auth, res.status));
     if (!res.ok) throw new TransientError(`Drive answered ${res.status} listing the folder.`);
     const body = await res.json();
     for (const f of body.files ?? []) {
       // One level of subfolders, for a director who files by month.
-      if (f.mimeType === GFOLDER && depth < 1) out.push(...await driveList(token, f.id, depth + 1));
+      if (f.mimeType === GFOLDER && depth < 1) out.push(...await driveList(auth, f.id, depth + 1));
       else out.push(f);
     }
     page = body.nextPageToken ?? '';
@@ -463,11 +497,12 @@ async function driveList(token: string, folder: string, depth = 0): Promise<Driv
   return out;
 }
 
-async function driveDocx(token: string, f: DriveFile): Promise<Uint8Array> {
+async function driveDocx(auth: DriveAuth, f: DriveFile): Promise<Uint8Array> {
   const url = f.mimeType === GDOC
     ? `https://www.googleapis.com/drive/v3/files/${f.id}/export?mimeType=${encodeURIComponent(DOCX)}`
     : `https://www.googleapis.com/drive/v3/files/${f.id}?alt=media&supportsAllDrives=true`;
-  const res = await fetch(url, { headers: { Authorization: 'Bearer ' + token } });
+  const res = await driveFetch(auth, url);
+  if (res.status === 403 || res.status === 404) throw new Error(driveRefusal(auth, res.status));
   if (!res.ok) throw new TransientError(`Drive answered ${res.status} reading "${f.name}".`);
   return new Uint8Array(await res.arrayBuffer());
 }
@@ -528,7 +563,7 @@ Deno.serve(async (req: Request) => {
   const folderSetting = (Deno.env.get('HOMEKIDS_DRIVE_FOLDER') ?? '').trim();
   const folder = (folderSetting.match(/folders\/([\w-]+)/)?.[1]) || folderSetting || DEFAULT_FOLDER;
 
-  if (!keyJson) return json({ ok: false, note: 'Not set up yet: HOMEKIDS_DRIVE_KEY is missing from the secrets.' });
+  const apiKey = Deno.env.get('HOMEKIDS_DRIVE_API_KEY') || geminiKey;
   if (!geminiKey) return json({ ok: false, note: 'Not set up yet: GEMINI_API_KEY is missing.' });
 
   const url = Deno.env.get('SUPABASE_URL')!;
@@ -537,8 +572,16 @@ Deno.serve(async (req: Request) => {
   });
 
   try {
-    const { token, email } = await googleToken(keyJson);
-    const files = (await driveList(token, folder))
+    let auth: DriveAuth;
+    let email = 'none: reading a folder shared as "Anyone with the link" with an API key';
+    if (keyJson) {
+      const signedIn = await googleToken(keyJson);
+      auth = { bearer: signedIn.token };
+      email = signedIn.email;
+    } else {
+      auth = { key: apiKey };
+    }
+    const files = (await driveList(auth, folder))
       .filter((f) => f.mimeType === GDOC || f.mimeType === DOCX);
 
     if (body.probe) {
@@ -569,7 +612,7 @@ Deno.serve(async (req: Request) => {
         });
 
       try {
-        const { header, body: text } = await docxText(await driveDocx(token, f));
+        const { header, body: text } = await docxText(await driveDocx(auth, f));
         let groups = groupsIn(f.name + ' ' + header);
         if (!groups.length) groups = [...GROUP_KEYS];
 
