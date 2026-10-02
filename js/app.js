@@ -2238,6 +2238,26 @@
       }));
     },
 
+    /* A lesson from the Drive folder. The Sunday is read off the date box on
+       the card at the moment of the tap, so an admin who corrected it does
+       not have to save anything first. */
+    'admin-homekids-lesson-approve': function (el) {
+      var id = el.getAttribute('data-id');
+      var card = el.closest('[data-homekids-draft]');
+      var box = card && card.querySelector('[data-homekids-day]');
+      var day = box && /^\d{4}-\d{2}-\d{2}$/.test(box.value) ? box.value : null;
+      adminRun('homekids-lesson-approve:' + id, HC.admin.approveHomekidsLesson(id, day).then(function () {
+        HC.components.toast('The lesson is on the HomeKids page.');
+      }));
+    },
+
+    'admin-homekids-lesson-discard': function (el) {
+      var id = el.getAttribute('data-id');
+      adminRun('homekids-lesson-discard:' + id, HC.admin.discardHomekidsLesson(id).then(function () {
+        HC.components.toast('Lesson discarded. An edit to the doc will bring it back.');
+      }));
+    },
+
     'admin-homekids-discard': function (el) {
       var id = el.getAttribute('data-id');
       adminRun('homekids-discard:' + id, HC.admin.discardHomekids(id).then(function () {

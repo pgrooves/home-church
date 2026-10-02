@@ -173,7 +173,7 @@
        the two HomeKids emails, to parents and to volunteers, parsed into
        items that wait here for a yes before they reach the HomeKids page. */
     { id: 'homekids',      icon: 'kids',    title: 'HomeKids',
-      sub: 'Approve what the HomeKids emails said, before families see it.' },
+      sub: 'Approve each week’s lesson and what the emails said, before families see it.' },
     { id: 'users',         icon: 'group',   title: 'Manage users',
       sub: 'Who is here, who can edit, and who should not be.' },
     /* HIDDEN, not deleted. The page editor behind this row is one paragraph on
@@ -2538,9 +2538,72 @@
     '</div>';
   }
 
+  /* One lesson draft, readable top to bottom before it is approved: the
+     Sunday (editable, because the docs sometimes disagree with themselves),
+     which docs it came from, anything the watcher wants checked, and then the
+     guide itself as families will read it. */
+  var GROUP_NAMES = { champions: 'Champions', heroes: 'Heroes', legends: 'Legends + Warriors' };
+
+  function lessonDraftCard(row) {
+    var l = row.lesson || {};
+    var groups = l.groups || {};
+    var have = Object.keys(GROUP_NAMES).map(function (k) {
+      var ok = groups[k] && groups[k].questions && groups[k].questions.length;
+      return (ok ? '✓ ' : '… ') + GROUP_NAMES[k];
+    }).join('   ');
+    var files = (row.files || []).map(function (f) { return f.name; }).join(', ');
+
+    var preview = '';
+    if (l.big_idea) preview += '<p class="hc-eyebrow">Big idea</p><p class="hc-caption">' + c.esc(l.big_idea) + '</p>';
+    if (l.story && l.story.length) {
+      preview += '<p class="hc-eyebrow">Story</p>' +
+        l.story.map(function (p) { return '<p class="hc-caption">' + c.esc(p) + '</p>'; }).join('');
+    }
+    Object.keys(GROUP_NAMES).forEach(function (k) {
+      var g = groups[k];
+      if (!g || !g.questions || !g.questions.length) return;
+      preview += '<p class="hc-eyebrow">' + c.esc(GROUP_NAMES[k]) + '</p>' +
+        '<p class="hc-caption">' + g.questions.map(c.esc).join('<br>') +
+        (g.activity ? '<br><em>Try it: ' + c.esc(g.activity) + '</em>' : '') + '</p>';
+    });
+    if (l.prayer) preview += '<p class="hc-eyebrow">Prayer</p><p class="hc-caption">' + c.esc(l.prayer) + '</p>';
+    if (l.parent_note) preview += '<p class="hc-eyebrow">For parents</p><p class="hc-caption">' + c.esc(l.parent_note) + '</p>';
+
+    return '<div class="hc-admin__item hc-admin__item--review" data-homekids-draft="' + c.esc(row.id) + '">' +
+      '<div class="hc-admin__item-head">' +
+        '<p class="hc-eyebrow">From the lesson folder' + (l.passage ? ' · ' + c.esc(l.passage) : '') + '</p>' +
+        '<p class="hc-row__title">' + c.esc(l.title || 'Untitled lesson') + '</p>' +
+        '<p class="hc-caption">' + c.esc(have) + '</p>' +
+        (files ? '<p class="hc-caption">From: ' + c.esc(files) + '</p>' : '') +
+        (row.note ? '<p class="hc-caption hc-admin__review-dates">' + c.esc(row.note) + '</p>' : '') +
+        '<label class="hc-field"><span class="hc-field__label">Sunday</span>' +
+          '<input class="hc-input" type="date" data-homekids-day value="' + c.esc(row.taught_on || '') + '">' +
+        '</label>' +
+        '<details class="hc-admin__preview"><summary class="hc-caption">Read the whole guide</summary>' +
+          preview + '</details>' +
+      '</div>' +
+      '<div class="hc-admin__item-actions">' +
+        c.button('Approve', { action: 'admin-homekids-lesson-approve', id: row.id,
+          small: true, busy: busy === 'homekids-lesson-approve:' + row.id }) +
+        c.button('Discard', { action: 'admin-homekids-lesson-discard', id: row.id,
+          variant: 'tertiary', small: true, busy: busy === 'homekids-lesson-discard:' + row.id }) +
+      '</div>' +
+    '</div>';
+  }
+
   function homekidsSection() {
     var html = '<div class="hc-screen hc-admin">';
     html += c.sectionHeader('For the church', 'HomeKids', { flush: true, tag: 'h1' });
+
+    /* The lessons first: they are the weekly job. Drawn whatever the email
+       list below is doing, since the two are separate tables. */
+    if (HC.admin.ready('homekidsDrafts')) {
+      var drafts = HC.admin.homekidsDrafts();
+      html += c.sectionHeader('', 'Lessons to review');
+      html += drafts.length
+        ? drafts.map(lessonDraftCard).join('')
+        : '<p class="hc-caption">No new lessons waiting. New docs in the lesson folder show up here within the hour.</p>';
+    }
 
     if (!HC.admin.ready('homekids')) {
       return html + '<p class="hc-caption">Loading…</p></div>';
@@ -2553,7 +2616,7 @@
     var waiting = rows.filter(function (r) { return r.review_state === 'pending'; });
     var live = rows.filter(function (r) { return r.review_state === 'approved' && r.published; });
 
-    html += c.sectionHeader('', 'Needs review');
+    html += c.sectionHeader('', 'From the HomeKids emails');
     html += waiting.length
       ? waiting.map(function (r) { return homekidsCard(r, true); }).join('')
       : c.emptyState('Nothing waiting. Items from the HomeKids emails land here first.', 'kids');
@@ -2612,6 +2675,7 @@
     // under its button at the foot of the same section.
     if (id === 'announcements') HC.admin.loadGroupStatus();
     if (id === 'homekids') HC.admin.loadHomekids();
+    if (id === 'homekids') HC.admin.loadHomekidsDrafts();
     if (id === 'users') HC.admin.loadUsers();
     if (id === 'content') HC.admin.loadPages();
     if (id === 'settings') HC.admin.loadSettings();

@@ -4202,3 +4202,9 @@ button.hc-cal__day { cursor: pointer; }
 @media (prefers-reduced-motion: reduce) {
   .hc-kids-teacher { animation: none; }
 }
+
+/* Admin -> HomeKids: the whole drafted guide, folded under its card. */
+.hc-admin__preview { margin-top: var(--hc-space-sm); }
+.hc-admin__preview > summary { cursor: pointer; color: var(--hc-accent-deep); min-height: var(--hc-tap-min); display: flex; align-items: center; }
+.hc-admin__preview .hc-eyebrow { margin-top: var(--hc-space-md); }
+.hc-admin__preview .hc-caption + .hc-caption { margin-top: var(--hc-space-xs); }

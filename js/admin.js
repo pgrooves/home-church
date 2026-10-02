@@ -55,7 +55,9 @@
     approvals: null,
     // What the HomeKids emails said, every row including the drafts, from
     // migration 0081. Its own section on the Admin menu.
-    homekids: null
+    homekids: null,
+    // Lessons the Drive watcher wrote and nobody has approved yet, 0082.
+    homekidsDrafts: null
   };
   var inflight = {};
   var lastError = {};
@@ -358,6 +360,35 @@
 
   function homekidsUpdates() {
     return list('homekids');
+  }
+
+  /* The lessons the Drive watcher wrote from the director's docs, waiting.
+     Admins only by policy, and never in the app's own sync. */
+  function loadHomekidsDrafts() {
+    load('homekidsDrafts', function () {
+      return HC.auth.restFetch(
+        '/homekids_lesson_drafts?select=*&review_state=eq.pending&order=taught_on.asc');
+    });
+  }
+
+  function homekidsDrafts() {
+    return list('homekidsDrafts');
+  }
+
+  // p_taught_on is the date the admin confirmed, which wins over the draft's
+  // own when the doc's name and header disagreed. Null keeps the draft's.
+  function approveHomekidsLesson(id, day) {
+    return HC.auth.rpc('hc_admin_approve_homekids_lesson', { p_id: id, p_taught_on: day || null })
+      .then(function () {
+        invalidate('homekidsDrafts');
+        HC.content.refresh();
+      }, function (err) { invalidate('homekidsDrafts'); throw err; });
+  }
+
+  function discardHomekidsLesson(id) {
+    return HC.auth.rpc('hc_admin_discard_homekids_lesson', { p_id: id })
+      .then(function () { invalidate('homekidsDrafts'); },
+            function (err) { invalidate('homekidsDrafts'); throw err; });
   }
 
   function approveHomekids(id) {
@@ -1666,6 +1697,10 @@
     homekidsUpdates: homekidsUpdates,
     approveHomekids: approveHomekids,
     discardHomekids: discardHomekids,
+    loadHomekidsDrafts: loadHomekidsDrafts,
+    homekidsDrafts: homekidsDrafts,
+    approveHomekidsLesson: approveHomekidsLesson,
+    discardHomekidsLesson: discardHomekidsLesson,
 
     // The Cal tab's own three, which have nothing to do with the queue above.
     event: event,

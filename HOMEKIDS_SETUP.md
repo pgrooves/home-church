@@ -39,7 +39,8 @@ there; adding a fourth is that line plus the check in migration `0081`.
 | The ticks, the chosen group, the name on the card | the *homekids* block in `js/store.js` |
 | Reading the two emails | the *HomeKids* block in `supabase/functions/newsletter-intake/index.ts` |
 | Approving what the emails said | Admin → **HomeKids** |
-| Writing a lesson from the director's sheet | `/new-homekids` (`.claude/commands/new-homekids.md`) |
+| Lessons from the director's Drive folder, hourly | `supabase/functions/homekids-drive`, migration `0082` |
+| Writing a lesson by hand | `/new-homekids` (`.claude/commands/new-homekids.md`) |
 | Sample rows and the renders | `demo-homekids/` (`node demo-homekids/render.js`) |
 | Tests | `tests/homekids.test.js`, `supabase/tests/0081_homekids_test.sql` |
 
@@ -112,16 +113,62 @@ The reader is told to leave out children's names, allergies, medical details,
 phone numbers and addresses. Approving is still the real check, especially on
 the volunteers' side.
 
-## Plug-in 3. The lesson plans (when the director shares the folder)
+## Plug-in 3. The lesson plans, automatically from the Drive folder
 
-Run `/new-homekids` with the sheet: a link (if this session has a Google
-Drive connector), an exported `.xlsx`, or pasted rows. It writes the guide for
-all three groups, shows you the whole thing, waits for a yes, then publishes.
-Once a week, the way `/new-sermon` is.
+**How it works.** The director keeps saving her lesson docs in the shared
+folder, the way she already does. Every hour, at seven past, the
+`homekids-drive` watcher looks in the folder. For each new or edited doc it:
 
-The page always shows the most recent Sunday that has happened, so a lesson
-written ahead of time waits for its Sunday. The arrows step back through
-earlier weeks, and each week keeps its own ticks.
+1. reads it (Google Docs and uploaded Word files both work),
+2. works out which groups it is for from the name ("Champions & Heroes",
+   "Legends & Warriors") and which Sunday from the name or the header,
+3. has Gemini rewrite the teacher's plan as a family guide, leaving out
+   supplies, videos and classroom setup,
+4. adds it to that Sunday's draft in **Admin → HomeKids → Lessons to review**.
+
+The two docs for one Sunday become one guide. The card shows which groups are
+filled in ("✓ Champions ✓ Heroes … Legends + Warriors"), lets you read the whole
+guide, and lets you change the Sunday before you tap **Approve**. If the doc's
+name and its header disagree about the date (the first one did: "Oct 4th" in
+the name, "September 27" in the header), the card says so.
+
+If she edits a doc after you approved it, a new draft appears with the change.
+Nothing reaches families until you approve it.
+
+**One-time setup, in plain steps:**
+
+1. **Make the robot account.** Go to console.cloud.google.com, signed in with
+   the Google account that has the Gemini key. Search **Google Drive API** and
+   click **Enable**. Search **Service accounts**, click **Create service
+   account**, name it `homekids-reader`, then **Create and continue**, then
+   **Done**.
+2. **Get its key.** Click `homekids-reader` → **Keys** tab → **Add key** →
+   **Create new key** → **JSON** → **Create**. A file downloads. Copy the
+   robot's email address from the same page.
+3. **Share the folder with the robot.** The director shares the lesson folder
+   with that robot email, as **Viewer**.
+4. **Give the key to Supabase.** Supabase → Project Settings → Edge Functions →
+   Secrets → add `HOMEKIDS_DRIVE_KEY`, and paste in everything inside the
+   downloaded file. Never paste the key anywhere else.
+5. **Turn it on** (Claude can do these two for you):
+   run `supabase/migrations/0082_homekids_drive.sql` in the SQL editor, then
+   `supabase functions deploy homekids-drive --no-verify-jwt`.
+
+**Check it can see the folder:**
+
+```bash
+curl -X POST https://ibqkumxfltfiuqevviji.supabase.co/functions/v1/homekids-drive \
+  -H "x-hc-cron-secret: <the newsletter cron secret>" \
+  -H "Content-Type: application/json" -d '{"probe": true}'
+```
+
+It answers with the robot's email and the list of docs it can see. Swap
+`probe` for `dry_run` to see the guides it would write, without saving any.
+
+The folder is the one the director shared in October 2026. If she moves to a
+new folder, set the secret `HOMEKIDS_DRIVE_FOLDER` to the new folder's link.
+
+`/new-homekids` still works by hand, for a lesson that is not in the folder.
 
 ---
 
