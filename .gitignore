@@ -86,3 +86,4 @@ demo-*/*.html
 # of its own, deliberately, which is the right way round for this trade.
 /*.pdf
 !/Home Church slash commands.pdf
+demo-homekids/out/

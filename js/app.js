@@ -130,6 +130,22 @@
       title: 'Services',
       sub: 'Sunday times, the address, and a button to the map.'
     },
+    /* HomeKids, straight after Services and in the middle of the list, which
+       is where a parent looking for "what is my kid doing on Sunday" lands
+       after "what time is Sunday". Above the two courses because a family
+       opens it every week and a course is opened once.
+
+       Gated like Group, by a switch an admin can flip, because a summer with
+       no kids' lessons would otherwise be a tile that opens onto last May.
+       Unlike Group it defaults to on: an empty HomeKids page says warmly that
+       the first lesson is on its way, and that is worth showing. */
+    {
+      route: 'homekids',
+      icon: 'kids',
+      title: 'HomeKids',
+      sub: 'This week’s Bible story for kids, and news for families.',
+      gate: homekidsOn
+    },
     {
       route: 'practices',
       icon: 'practiceSabbath',
@@ -170,6 +186,13 @@
     return HC.data.setting('group_mode_on', false) === true;
   }
 
+  /* Is the HomeKids page showing this season. Same shape as groupModeOn
+     above, opposite fallback: true is the behaviour the app has without the
+     row, because the page is honest while it is empty. See migration 0081. */
+  function homekidsOn() {
+    return HC.data.setting('homekids_on', true) !== false;
+  }
+
   /* MODULES minus whatever the church has switched off. A module with no
      `gate` is always there; one with a gate is there when its gate says so,
      and a gate that says no takes the tile out of the list rather than
@@ -207,6 +230,7 @@
     connect: 'Connect',
     more: 'More',
     worship: 'Worship',
+    homekids: 'HomeKids',
     // The tile says Services and the screen's own header says Sunday
     // Gatherings, which is the church's name for it on their website. This is
     // the one the bar carries, because it is the one somebody tapped.
@@ -2204,6 +2228,23 @@
        and a one tap delete on a card somebody is reading for the first time is
        how a real date disappears on a mis-tap. */
 
+    /* HomeKids, the second queue the newsletter mailbox fills. Discard needs
+       no confirm, for the reason the announcement one does not: the row stays,
+       unpublished, and nothing is lost. */
+    'admin-homekids-approve': function (el) {
+      var id = el.getAttribute('data-id');
+      adminRun('homekids-approve:' + id, HC.admin.approveHomekids(id).then(function () {
+        HC.components.toast('On the HomeKids page.');
+      }));
+    },
+
+    'admin-homekids-discard': function (el) {
+      var id = el.getAttribute('data-id');
+      adminRun('homekids-discard:' + id, HC.admin.discardHomekids(id).then(function () {
+        HC.components.toast('Taken off the HomeKids page.');
+      }));
+    },
+
     'admin-event-approve': function (el) {
       var id = el.getAttribute('data-id');
       var row = HC.admin.pendingEvents().filter(function (e) { return e.id === id; })[0];
@@ -3443,6 +3484,29 @@
 
     'narrate-speed': function () {
       HC.narration.cycle();
+    },
+
+    /* HomeKids. Each one hands straight to the screen's own helpers, which
+       know what to repaint; this table only routes the tap. See
+       js/screens/homekids.js. */
+    'homekids-group': function (el) {
+      HC.screens.homekidsHelpers.pickGroup(el);
+    },
+
+    'homekids-check': function (el) {
+      if (HC.screens.homekidsHelpers.toggle(el)) HC.native.tap('Light');
+    },
+
+    'homekids-week': function (el) {
+      HC.screens.homekidsHelpers.step(el);
+    },
+
+    'homekids-show': function (el) {
+      HC.screens.homekidsHelpers.showTeacher(el);
+    },
+
+    'homekids-hide': function () {
+      HC.screens.homekidsHelpers.hideTeacher();
     },
 
     'toggle-check': function (el) {
@@ -5361,6 +5425,13 @@
         return;
       }
 
+      /* Whose list it is, on the HomeKids teacher card. Saved on every letter
+         and never repainted, for the caret's sake, like the Admin form below. */
+      if (el.getAttribute && el.getAttribute('data-homekids-name') !== null) {
+        HC.store.setKidsName(el.value);
+        return;
+      }
+
       if (el.getAttribute && el.getAttribute('data-journal-search') !== null) {
         debounce('journal-search', function () {
           HC.screens.journalHelpers.setSearch(el.value);
@@ -5606,6 +5677,7 @@
         connect: HC.screens.connect,
         more: HC.screens.more,
         worship: HC.screens.worship,
+        homekids: HC.screens.homekids,
         'when-where': HC.screens.whenWhere,
         cal: HC.screens.cal,
         practices: HC.screens.practices,

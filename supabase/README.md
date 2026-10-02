@@ -81,6 +81,8 @@ SQL that lists the tables.
 | `announcements` | The announcement cards at the top of Home, each with a date window, formatted words, any number of pictures, an optional YouTube video and an optional link | Home, Admin, the announcement's own page |
 | `reading_plans` | The Reading together plan, one row per plan | Home |
 | `worship_sets` | One Sunday's songs, in the order they were played, each with its album art and its links. No sermon title in here, deliberately: the screen reads that through to `podcasts` | Worship |
+| `homekids_lessons` | One Sunday's HomeKids lesson as a kids guide: story, big idea, memory verse, questions per age group, and the checklist families show the teacher. Written by `/new-homekids` | HomeKids |
+| `homekids_updates` | Items from the two weekly HomeKids emails, to parents and to volunteers. Written as pending drafts by `newsletter-intake`, approved in Admin, HomeKids | HomeKids |
 | `groups` | Small groups, night, host, neighborhood, and whether there is room | Connect |
 | `serve_teams` | The Lend a hand list | Connect |
 | `next_steps` | The next step cards | Connect |
@@ -292,6 +294,7 @@ Everything goes through slash commands in Claude Code:
 |---|---|
 | `/new-guide` | Sermon PDF to a full guide, into `js/data.js` and `guides` |
 | `/new-event` | Asks for what is missing, confirms, writes to `events` |
+| `/new-homekids` | Lesson plan sheet to a kids guide in `homekids_lessons` |
 | `/new-podcast` | Episode to `podcasts`, links its guide, puts the real title on the message |
 | `/new-announcement` | The announcement card on Home, with a date window so it retires itself |
 | `/edit-content` | Plain language fix to any row, shows current versus proposed, writes after you confirm |

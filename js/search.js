@@ -357,7 +357,7 @@
      Admin is off it because it fetches. */
   var DEEP = {
     home: true, listen: true, guide: true, connect: true,
-    worship: true, cal: true, practices: true, alpha: true, give: true,
+    worship: true, homekids: true, cal: true, practices: true, alpha: true, give: true,
     profile: true, privacy: true, terms: true, data: true
   };
 

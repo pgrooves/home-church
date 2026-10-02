@@ -569,6 +569,7 @@
        church calendar they have just erased. js/reminders.js listens for the
        'erased' event below and cancels them. */
     state.reminders = {};
+    homekids = null;
 
     emit('profile', state.profile);
     emit('roster', state.roster);
@@ -576,6 +577,84 @@
     emit('erased', { ok: ok });
 
     return ok;
+  }
+
+  /* ------------------------------------------------------------- homekids
+
+     A family's week with the kids guide, kept on this phone and nowhere else.
+     No account, no server: the reward is a parent and a kid showing the
+     teacher this screen on Sunday, and a sticker should never need a sign in.
+
+       { group: 'heroes',            which button the family last tapped
+         name: 'Ava and Leo',        optional, shown on the teacher card
+         lessons: { 'homekids-2026-10-04': { checked: { read: true } } } }
+
+     Ticks are keyed by the lesson id and the checklist item's id, both of
+     which are permanent once published, for the same reason a guide's are.
+     Read lazily, so a phone that never opens HomeKids never parses it.
+     ------------------------------------------------------------------- */
+
+  var homekids = null;
+
+  function kidsState() {
+    if (!homekids) {
+      var saved = storage.get('homekids', null);
+      homekids = saved && typeof saved === 'object' ? saved : {};
+      if (!homekids.lessons || typeof homekids.lessons !== 'object') homekids.lessons = {};
+    }
+    return homekids;
+  }
+
+  function persistKids() {
+    storage.set('homekids', kidsState());
+    emit('homekids', kidsState());
+  }
+
+  function kidsLesson(lessonId) {
+    var all = kidsState().lessons;
+    if (!all[lessonId] || typeof all[lessonId].checked !== 'object') {
+      all[lessonId] = { checked: {} };
+    }
+    return all[lessonId];
+  }
+
+  function kidsGroup() {
+    return kidsState().group || '';
+  }
+
+  function setKidsGroup(key) {
+    kidsState().group = String(key || '');
+    persistKids();
+  }
+
+  function kidsName() {
+    return kidsState().name || '';
+  }
+
+  function setKidsName(name) {
+    kidsState().name = String(name || '').slice(0, 60);
+    persistKids();
+  }
+
+  function isKidsChecked(lessonId, itemId) {
+    return kidsLesson(lessonId).checked[itemId] === true;
+  }
+
+  function toggleKidsChecked(lessonId, itemId) {
+    var bucket = kidsLesson(lessonId);
+    if (bucket.checked[itemId]) delete bucket.checked[itemId];
+    else bucket.checked[itemId] = true;
+    persistKids();
+    return bucket.checked[itemId] === true;
+  }
+
+  /* How many of THIS lesson's items are ticked. Counted against the list the
+     caller hands in rather than the keys stored, so an item the church took
+     off the checklist after somebody ticked it cannot push a family past
+     "all done". */
+  function kidsCheckedCount(lessonId, itemIds) {
+    var checked = kidsLesson(lessonId).checked;
+    return (itemIds || []).filter(function (id) { return checked[id] === true; }).length;
   }
 
   /* ------------------------------------------------------------ reminders
@@ -754,6 +833,14 @@
     getPrayers: getPrayers,
     addPrayer: addPrayer,
     removePrayer: removePrayer,
+
+    kidsGroup: kidsGroup,
+    setKidsGroup: setKidsGroup,
+    kidsName: kidsName,
+    setKidsName: setKidsName,
+    isKidsChecked: isKidsChecked,
+    toggleKidsChecked: toggleKidsChecked,
+    kidsCheckedCount: kidsCheckedCount,
 
     getReminders: getReminders,
     getReminder: getReminder,

@@ -2510,6 +2510,43 @@
     }
   ];
 
+  /* ------------------------------------------------------------------ homekids
+
+     The three Sunday morning groups, in the order the page offers them. Fixed
+     here rather than read from a table: they are how the church splits the
+     kids' hallway, they change about as often as the service times, and the
+     page needs their names on a phone that has never reached Supabase. The
+     keys are the same three words a lesson's `groups` column is keyed by, and
+     the database refuses any other. See migration 0081.
+
+     `tone` is which of the house's muted colours marks the group, so a kid
+     who cannot read yet can still find their own button. */
+  var homekidsGroups = [
+    { key: 'champions', name: 'Champions',          ages: '3 to 4',  tone: 'sage' },
+    { key: 'heroes',    name: 'Heroes',             ages: '5 to 6',  tone: 'amber' },
+    { key: 'legends',   name: 'Legends + Warriors', ages: '7 to 12', tone: 'brick' }
+  ];
+
+  /* One kids guide per Sunday, newest first. Empty on purpose until the
+     director's lesson plans are coming through: /new-homekids writes them to
+     Supabase, and an invented lesson baked into the build would be a Sunday
+     the kids never had. The page says so warmly while this is empty.
+
+       { id: 'homekids-2026-10-04', taughtOn: '2026-10-04',
+         title, passage, bigIdea,
+         memoryVerse: { text, reference },
+         story: [paragraph, ...],
+         groups: { champions: { questions: [...], activity }, heroes: {...}, legends: {...} },
+         checklist: [ { id: 'read', text: 'Read the story together' }, ... ],
+         prayer, parentNote } */
+  var homekidsLessons = [];
+
+  /* What the weekly HomeKids emails said, one item per row, to parents or to
+     volunteers. Empty for the same reason Instagram is: these arrive from the
+     newsletter intake once an admin approves them, and a frozen copy would be
+     last month's news. */
+  var homekidsUpdates = [];
+
   /* ------------------------------------------------------------------ export */
 
   HC.data = {
@@ -2528,6 +2565,9 @@
     tiktokPosts: tiktokPosts,
     homeMedia: homeMedia,
     worshipSets: worshipSets,
+    homekidsGroups: homekidsGroups,
+    homekidsLessons: homekidsLessons,
+    homekidsUpdates: homekidsUpdates,
     contentPages: contentPages,
     appSettings: appSettings,
     textOverrides: textOverrides,
@@ -2916,7 +2956,67 @@
        the screen draws the warm version of "not here" for both. */
     getAnnouncement: function (id) {
       return announcements.filter(function (a) { return a.id === id; })[0] || null;
+    },
+
+    /* ----------------------------------------------------------- homekids */
+
+    getHomekidsGroup: function (key) {
+      return homekidsGroups.filter(function (g) { return g.key === key; })[0] || null;
+    },
+
+    // Newest Sunday first, sorted here for the same reason worship sets are:
+    // a cached payload from before the table's `order` existed has none.
+    homekidsLessonsByDate: function () {
+      return homekidsLessons.slice().sort(function (a, b) {
+        if (a.taughtOn === b.taughtOn) return 0;
+        return a.taughtOn < b.taughtOn ? 1 : -1;
+      });
+    },
+
+    getHomekidsLesson: function (id) {
+      return homekidsLessons.filter(function (l) { return l.id === id; })[0] || null;
+    },
+
+    /* The lesson this week belongs to: the most recent Sunday that has
+       happened, because the guide is for the days after the lesson and the
+       checkmarks are shown to the teacher the Sunday after that. A lesson
+       published ahead of its Sunday waits until that morning, so a family
+       halfway through this week's list is not handed next week's. When every
+       lesson is still ahead, which is only ever the first week, the soonest
+       one answers rather than nothing.
+
+       `today` is 'YYYY-MM-DD' and optional; the tests pass one. */
+    currentHomekidsLesson: function (today) {
+      today = today || isoToday();
+      var all = this.homekidsLessonsByDate();
+      for (var i = 0; i < all.length; i++) {
+        if (all[i].taughtOn <= today) return all[i];
+      }
+      return all.length ? all[all.length - 1] : null;
+    },
+
+    /* What the emails said that is still true today, for one audience,
+       newest email first. ends_on is the first day an item is gone, the same
+       rule announcements keep. */
+    liveHomekidsUpdates: function (audience, today) {
+      today = today || isoToday();
+      return homekidsUpdates.filter(function (u) {
+        if (u.audience !== audience) return false;
+        if (u.endsOn && today >= u.endsOn) return false;
+        return true;
+      }).sort(function (a, b) {
+        var x = String(a.sentOn || a.createdAt || ''), y = String(b.sentOn || b.createdAt || '');
+        if (x !== y) return x < y ? 1 : -1;
+        return String(a.id) < String(b.id) ? -1 : 1;
+      });
     }
   };
+
+  function isoToday() {
+    var d = new Date();
+    return d.getFullYear() + '-' +
+      ('0' + (d.getMonth() + 1)).slice(-2) + '-' +
+      ('0' + d.getDate()).slice(-2);
+  }
 
 })(window.HC = window.HC || {});

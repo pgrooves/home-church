@@ -570,6 +570,7 @@ commands drive the rest:
 | `/new-event` | Asks for what is missing, confirms, writes to `events`, which the Cal tab draws |
 | `/new-podcast` | Episode to `podcasts`, links its guide and that Sunday's setlist, puts the real title on the message |
 | `/new-worship` | Sunday's songs to `worship_sets`, with their art, their links and their lyrics |
+| `/new-homekids` | The HomeKids director's lesson plan to `homekids_lessons`: the kids guide for all three groups, the checklist, and the note to parents. See `HOMEKIDS_SETUP.md` |
 | `/new-announcement` | The announcement card on Home, dated so it retires itself |
 | `/new-image` | A series' artwork to `series.art_url`, which is the tile on Listen, Guide and Home |
 | `/new-video` | A YouTube link to `app_settings.home_featured_video`, the frame under the greeting on Home |

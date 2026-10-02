@@ -714,6 +714,16 @@
              '<circle cx="6.6" cy="17.7" r="2.6" fill="currentColor" stroke="none"/>' +
              '<circle cx="16.6" cy="15.9" r="2.6" fill="currentColor" stroke="none"/>',
 
+    /* HomeKids. A balloon on its string: the one thing in a kids' hallway
+       nobody has to be told is for kids, drawn in the same hand as the rest,
+       24 grid, 1.5 stroke, rounded caps. */
+    kids: '<path d="M12 2.8c3 0 5.3 2.4 5.3 5.4 0 3.6-2.9 6.6-5.3 7.2-2.4-.6-5.3-3.6-5.3-7.2 0-3 2.3-5.4 5.3-5.4z"/>' +
+          '<path d="m10.9 15.4 1.1 1.4 1.1-1.4"/>' +
+          '<path d="M12 16.8c-.9 1.3.9 2.4 0 4.4"/>',
+
+    /* A five point star, for the prize at the end of a HomeKids week. */
+    star: '<path d="m12 3.2 2.6 5.5 6 .8-4.4 4.1 1.1 5.9L12 16.6l-5.3 2.9 1.1-5.9-4.4-4.1 6-.8z"/>',
+
     /* Journal. A page with a turned corner and two written lines, which is the
        doc glyph's cousin rather than a second notebook: `guide` is already a
        book and these two must not read as the same tile in a list. */

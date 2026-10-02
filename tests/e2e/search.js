@@ -218,7 +218,7 @@ async function type(page, text) {
     const was = titleEl.textContent;
     let widest = 0, widestName = '';
     ['Home', 'Cal', 'Connect', 'Listen', 'Guides'].concat(
-      (window.HC.modules || []).map(m => window.HC.titles[m.route] || m.route)
+      (window.HC.modules ? window.HC.modules() : []).map(m => window.HC.titles[m.route] || m.route)
     ).forEach(name => {
       titleEl.textContent = name;
       const w = titleEl.getBoundingClientRect().width;

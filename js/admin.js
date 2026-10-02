@@ -52,7 +52,10 @@
     eventDuplicates: null,
     // Who approved what, from migration 0043. An admin-only table, and the
     // only place the name of the person who tapped Approve is written down.
-    approvals: null
+    approvals: null,
+    // What the HomeKids emails said, every row including the drafts, from
+    // migration 0081. Its own section on the Admin menu.
+    homekids: null
   };
   var inflight = {};
   var lastError = {};
@@ -338,6 +341,42 @@
      different table and this screen has never had a reason to read it before,
      so there is nothing to filter. The policy from 0040 is what lets an admin
      see an unpublished one at all. */
+
+  /* ------------------------------------------------------------ homekids
+
+     The drafts the intake wrote from the two HomeKids emails, and everything
+     already approved, newest email first. Same read as announcements: the
+     policy in 0081 widens SELECT to admins, so this session sees the queue
+     and the app's own sync never does. */
+  function loadHomekids() {
+    load('homekids', function () {
+      return HC.auth.restFetch(
+        '/homekids_updates?select=*&review_state=neq.discarded' +
+        '&order=sent_on.desc.nullslast,created_at.desc');
+    });
+  }
+
+  function homekidsUpdates() {
+    return list('homekids');
+  }
+
+  function approveHomekids(id) {
+    return HC.auth.rpc('hc_admin_approve_homekids_update', { p_id: id })
+      .then(function () {
+        invalidate('homekids');
+        HC.content.refresh();
+      }, function (err) { invalidate('homekids'); throw err; });
+  }
+
+  // Discard is also how an approved item comes off the page: the row stays,
+  // unpublished, so a mis-tap loses nothing. See 0081 section 3.
+  function discardHomekids(id) {
+    return HC.auth.rpc('hc_admin_discard_homekids_update', { p_id: id })
+      .then(function () {
+        invalidate('homekids');
+        HC.content.refresh();
+      }, function (err) { invalidate('homekids'); throw err; });
+  }
 
   function loadPendingEvents() {
     load('events', function () {
@@ -1622,6 +1661,11 @@
 
     approveAnnouncement: approveAnnouncement,
     discardAnnouncement: discardAnnouncement,
+
+    loadHomekids: loadHomekids,
+    homekidsUpdates: homekidsUpdates,
+    approveHomekids: approveHomekids,
+    discardHomekids: discardHomekids,
 
     // The Cal tab's own three, which have nothing to do with the queue above.
     event: event,

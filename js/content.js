@@ -32,7 +32,7 @@
 
   var cfg = HC.config || {};
   var CACHE_KEY = 'content';
-  var CACHE_VERSION = 15;     // bump when a mapping below changes shape
+  var CACHE_VERSION = 16;     // bump when a mapping below changes shape
   var TIMEOUT_MS = 12000;
 
   // The tables we pull, and the HC.data key each one fills. Adding another
@@ -68,6 +68,17 @@
        this line existed arrives in no order at all. */
     { table: 'worship_sets',  target: 'worshipSets',   map: mapWorshipSet,
       order: 'served_on.desc' },
+
+    /* HomeKids, migration 0081. The lessons are the kids guide for each
+       Sunday, newest first, written by /new-homekids. The updates are what the
+       weekly HomeKids emails said, approved one at a time by an admin; the
+       sync reads with no session, so a draft still in the queue never lands
+       here. Both are empty until there is something real in them, and the
+       page says so rather than drawing a gap. */
+    { table: 'homekids_lessons', target: 'homekidsLessons', map: mapHomekidsLesson,
+      order: 'taught_on.desc', limit: 26 },
+    { table: 'homekids_updates', target: 'homekidsUpdates', map: mapHomekidsUpdate,
+      order: 'sent_on.desc.nullslast,created_at.desc', limit: 40 },
     // `order` matters here and nowhere else so far: Connect shows the first
     // group as "your group", and PostgREST returns rows in no guaranteed
     // order, so without this which group that is could change between fetches.
@@ -551,6 +562,68 @@
       // the screen matches on the date until /new-podcast fills this in.
       sermonId: r.sermon_id || null,
       songs: arr(r.songs).map(mapSong).filter(function (s) { return s.title; })
+    };
+  }
+
+  /* One kids guide. Total like every mapper here, and stricter than most,
+     because the person reading it may be four: a question with no words or a
+     checklist item with no id is dropped rather than drawn as an empty row,
+     and a missing age group is an empty object so the page falls back to the
+     shared guide instead of reading `undefined` aloud. Checklist ids are what
+     a family's ticks are stored under, so one without an id cannot be ticked
+     and is not shown. */
+  function mapHomekidsGroupBlock(v) {
+    v = v && typeof v === 'object' ? v : {};
+    return {
+      questions: arr(v.questions).map(str).filter(Boolean),
+      activity: str(v.activity)
+    };
+  }
+
+  function mapHomekidsLesson(r) {
+    var groups = r.groups && typeof r.groups === 'object' ? r.groups : {};
+    var verse = r.memory_verse && typeof r.memory_verse === 'object' ? r.memory_verse : null;
+    return {
+      id: r.id,
+      taughtOn: r.taught_on || null,
+      title: str(r.title),
+      passage: str(r.passage),
+      bigIdea: str(r.big_idea),
+      memoryVerse: verse && verse.text
+        ? { text: str(verse.text), reference: str(verse.reference) }
+        : null,
+      story: arr(r.story).map(str).filter(Boolean),
+      groups: {
+        champions: mapHomekidsGroupBlock(groups.champions),
+        heroes: mapHomekidsGroupBlock(groups.heroes),
+        legends: mapHomekidsGroupBlock(groups.legends)
+      },
+      checklist: arr(r.checklist).filter(function (c) {
+        return c && c.id && c.text;
+      }).map(function (c) {
+        return { id: str(c.id), text: str(c.text) };
+      }),
+      prayer: str(r.prayer),
+      parentNote: str(r.parent_note)
+    };
+  }
+
+  function mapHomekidsUpdate(r) {
+    return {
+      id: r.id,
+      audience: r.audience === 'volunteers' ? 'volunteers' : 'parents',
+      title: str(r.title),
+      summary: str(r.summary),
+      details: arr(r.details).map(str).filter(Boolean),
+      links: arr(r.links).filter(function (l) {
+        return l && typeof l.url === 'string' && /^https?:\/\//i.test(l.url);
+      }).map(function (l) {
+        return { label: str(l.label) || 'Open the link', url: l.url };
+      }),
+      happensOn: r.happens_on || null,
+      endsOn: r.ends_on || null,
+      sentOn: r.sent_on || null,
+      createdAt: r.created_at || null
     };
   }
 

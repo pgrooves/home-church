@@ -1,0 +1,123 @@
+{
+  "_note": "SAMPLE ROWS, NOT REAL CONTENT. Shaped exactly as the homekids_lessons and homekids_updates tables return them (migration 0081), so render.js can feed them through js/content.js the way Supabase will. Nothing here is ever published.",
+  "homekids_lessons": [
+    {
+      "id": "homekids-2026-09-27",
+      "taught_on": "2026-09-27",
+      "title": "Jesus Calms the Storm",
+      "passage": "Mark 4:35-41",
+      "big_idea": "Jesus is bigger than my biggest storm.",
+      "memory_verse": {
+        "text": "When I am afraid, I put my trust in you.",
+        "reference": "Psalm 56:3"
+      },
+      "story": [
+        "One evening Jesus and his friends got into a boat to cross a big lake. Jesus was tired, so he lay down in the back of the boat and fell fast asleep.",
+        "Then the wind started to blow. The waves got bigger and bigger, and water splashed into the boat. His friends were scared. They woke Jesus up and said, \"Teacher, don't you care that we're in trouble?\"",
+        "Jesus stood up and spoke to the wind and the waves: \"Quiet. Be still.\" And everything went calm. His friends looked at each other and asked, \"Who is this? Even the wind and the waves do what he says.\""
+      ],
+      "groups": {
+        "champions": {
+          "questions": [
+            "Where was Jesus when the storm started?",
+            "What did Jesus say to the wind?",
+            "What makes you feel scared? You can tell Jesus about it."
+          ],
+          "activity": "Fill the bathtub or a bowl and make big waves with your hands. Then say \"Quiet. Be still!\" and let the water go calm."
+        },
+        "heroes": {
+          "questions": [
+            "Why do you think Jesus's friends were so scared?",
+            "What happened when Jesus spoke to the storm?",
+            "What is one thing that feels like a storm for you right now?"
+          ],
+          "activity": "Draw the boat in the storm on one side of a paper, and the calm lake on the other. Put Jesus in both pictures."
+        },
+        "legends": {
+          "questions": [
+            "Jesus was asleep in the storm. What does that tell you about him?",
+            "His friends asked, \"Don't you care?\" Have you ever felt like that?",
+            "What does it look like to trust Jesus when something is still scary?",
+            "Who is someone going through a storm that you could pray for this week?"
+          ],
+          "activity": "Write Psalm 56:3 on a card and put it somewhere you'll see it every morning. Try to say it from memory by Saturday."
+        }
+      },
+      "checklist": [
+        { "id": "story", "text": "Read the story together" },
+        { "id": "verse", "text": "Say the memory verse to a grown up" },
+        { "id": "talk", "text": "Talk about your group's questions" },
+        { "id": "pray", "text": "Pray for someone who feels scared" }
+      ],
+      "prayer": "Jesus, you are bigger than every storm. When I feel scared, help me remember you are right here with me. Amen.",
+      "parent_note": "This week we learned that Jesus is with us when life gets loud. At bedtime, ask your kid what feels big or scary right now, and pray about it together.",
+      "published": true
+    },
+    {
+      "id": "homekids-2026-09-20",
+      "taught_on": "2026-09-20",
+      "title": "The Lost Sheep",
+      "passage": "Luke 15:1-7",
+      "big_idea": "God never stops looking for me.",
+      "memory_verse": {
+        "text": "The Son of Man came to look for the lost and save them.",
+        "reference": "Luke 19:10"
+      },
+      "story": [
+        "Jesus told a story about a shepherd with one hundred sheep. One day, one little sheep wandered off and got lost.",
+        "The shepherd left the other ninety-nine and searched and searched until he found it. Then he carried it home on his shoulders and threw a party."
+      ],
+      "groups": {
+        "champions": { "questions": ["How many sheep got lost?", "How did the shepherd feel when he found it?"], "activity": "Play hide and seek with a stuffed animal." },
+        "heroes": { "questions": ["Why did the shepherd keep looking?", "How does God feel about you?"], "activity": "Count to 100 together, then find the one missing number on a list a grown up writes." },
+        "legends": { "questions": ["Why would a shepherd leave 99 sheep for one?", "What does this story say about how God sees people?"], "activity": "Think of someone who might feel left out at school. Do one kind thing for them." }
+      },
+      "checklist": [
+        { "id": "story", "text": "Read the story together" },
+        { "id": "verse", "text": "Say the memory verse to a grown up" },
+        { "id": "kind", "text": "Do one kind thing for someone" }
+      ],
+      "prayer": "God, thank you for never giving up on me. Amen.",
+      "parent_note": "Ask your kid to tell you the story of the lost sheep in their own words.",
+      "published": true
+    }
+  ],
+  "homekids_updates": [
+    {
+      "id": "homekids-parents-fall-festival",
+      "audience": "parents",
+      "title": "Fall Festival, October 25",
+      "summary": "Costumes, games and a cake walk for the whole family after the 11am service.",
+      "details": ["Sunday, October 25, 12:30 to 2:30pm", "Kids can wear costumes (nothing scary, please)", "Bring a bag of candy for the trunk or treat"],
+      "links": [{ "label": "Sign up to bring a trunk", "url": "https://example.com/trunk" }],
+      "happens_on": "2026-10-25",
+      "ends_on": "2026-10-26",
+      "sent_on": "2026-09-29",
+      "published": true
+    },
+    {
+      "id": "homekids-parents-check-in",
+      "audience": "parents",
+      "title": "New check-in at the kids' hallway",
+      "summary": "Starting this Sunday, check your kids in at the kiosk by the HomeKids doors. Your pickup tag prints right there.",
+      "details": ["Bring your phone number, that's how we find your family", "Allergies print on the name tag"],
+      "links": [],
+      "happens_on": null,
+      "ends_on": null,
+      "sent_on": "2026-09-29",
+      "published": true
+    },
+    {
+      "id": "homekids-volunteers-training",
+      "audience": "volunteers",
+      "title": "Team huddle, Sunday 7:30am",
+      "summary": "Quick huddle in the Heroes room before first service. Coffee and donuts are on us.",
+      "details": ["Room assignments for October will be handed out", "New check-in kiosk walk-through"],
+      "links": [],
+      "happens_on": "2026-10-04",
+      "ends_on": "2026-10-05",
+      "sent_on": "2026-09-30",
+      "published": true
+    }
+  ]
+}

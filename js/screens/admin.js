@@ -169,6 +169,11 @@
        itself changed with the name. */
     { id: 'announcements', icon: 'home',    title: 'Manage Announcements',
       sub: 'Write the card on Home, and tell everybody about it.' },
+    /* Second, because it is the other queue the newsletter mailbox fills:
+       the two HomeKids emails, to parents and to volunteers, parsed into
+       items that wait here for a yes before they reach the HomeKids page. */
+    { id: 'homekids',      icon: 'kids',    title: 'HomeKids',
+      sub: 'Approve what the HomeKids emails said, before families see it.' },
     { id: 'users',         icon: 'group',   title: 'Manage users',
       sub: 'Who is here, who can edit, and who should not be.' },
     /* HIDDEN, not deleted. The page editor behind this row is one paragraph on
@@ -2502,6 +2507,65 @@
     return html;
   }
 
+  /* ================================================================ homekids
+
+     Two lists: what is waiting, and what families can see now. Each item
+     says which email it came from, because a volunteers' item approved onto
+     the parents' side would be the one mistake worth guarding against, and
+     the audience is fixed by the sender rules rather than by this screen. */
+
+  function homekidsCard(row, waiting) {
+    var who = row.audience === 'volunteers' ? 'For volunteers' : 'For parents';
+    var when = row.sent_on ? ' · email of ' + c.formatDate(row.sent_on) : '';
+    var details = Array.isArray(row.details) ? row.details : [];
+    return '<div class="hc-admin__item' + (waiting ? ' hc-admin__item--review' : '') + '">' +
+      '<div class="hc-admin__item-head">' +
+        '<p class="hc-eyebrow">' + c.esc(who + when) + '</p>' +
+        '<p class="hc-row__title">' + c.esc(row.title) + '</p>' +
+        (row.summary ? '<p class="hc-caption">' + c.esc(row.summary) + '</p>' : '') +
+        (details.length
+          ? '<p class="hc-caption">' + details.map(c.esc).join('<br>') + '</p>'
+          : '') +
+      '</div>' +
+      '<div class="hc-admin__item-actions">' +
+        (waiting
+          ? c.button('Approve', { action: 'admin-homekids-approve', id: row.id,
+              small: true, busy: busy === 'homekids-approve:' + row.id })
+          : '') +
+        c.button(waiting ? 'Discard' : 'Take down', { action: 'admin-homekids-discard', id: row.id,
+          variant: 'tertiary', small: true, busy: busy === 'homekids-discard:' + row.id }) +
+      '</div>' +
+    '</div>';
+  }
+
+  function homekidsSection() {
+    var html = '<div class="hc-screen hc-admin">';
+    html += c.sectionHeader('For the church', 'HomeKids', { flush: true, tag: 'h1' });
+
+    if (!HC.admin.ready('homekids')) {
+      return html + '<p class="hc-caption">Loading…</p></div>';
+    }
+    if (HC.admin.failed('homekids')) {
+      return html + c.emptyState('Could not reach the church’s servers. Try again in a moment.') + '</div>';
+    }
+
+    var rows = HC.admin.homekidsUpdates();
+    var waiting = rows.filter(function (r) { return r.review_state === 'pending'; });
+    var live = rows.filter(function (r) { return r.review_state === 'approved' && r.published; });
+
+    html += c.sectionHeader('', 'Needs review');
+    html += waiting.length
+      ? waiting.map(function (r) { return homekidsCard(r, true); }).join('')
+      : c.emptyState('Nothing waiting. Items from the HomeKids emails land here first.', 'kids');
+
+    html += c.sectionHeader('', 'On the HomeKids page');
+    html += live.length
+      ? live.map(function (r) { return homekidsCard(r, false); }).join('')
+      : '<p class="hc-caption">Nothing approved yet.</p>';
+
+    return html + '</div>';
+  }
+
   /* ================================================================== render */
 
   function render(route) {
@@ -2547,6 +2611,7 @@
     // And when the home groups box on Connect was last updated, for the line
     // under its button at the foot of the same section.
     if (id === 'announcements') HC.admin.loadGroupStatus();
+    if (id === 'homekids') HC.admin.loadHomekids();
     if (id === 'users') HC.admin.loadUsers();
     if (id === 'content') HC.admin.loadPages();
     if (id === 'settings') HC.admin.loadSettings();
@@ -2560,6 +2625,7 @@
       return usersEl;
     }
     if (id === 'content') return c.el(contentSection());
+    if (id === 'homekids') return c.el(homekidsSection());
     if (id === 'settings') return c.el(settingsSection());
 
     return c.el(menu());

@@ -1150,9 +1150,15 @@ async function askGemini(
   images: string[],
   emailDate: string,
   tuning: Record<string, unknown> = {},
+  /* A different job for the same machinery: its own prompt, its own schema,
+     and the key the answer's array sits under. Only the HomeKids emails pass
+     one (see the homekids block below); everything else here, the retries,
+     the fallback models and the truncation handling, is the same for both,
+     which is the reason this is a parameter and not a second function. */
+  spec?: { prompt: string; schema: unknown; key: string },
 ): Promise<Parsed[]> {
   const request = JSON.stringify({
-    contents: [{ role: 'user', parts: [{ text: prompt(text, links, images, emailDate) }] }],
+    contents: [{ role: 'user', parts: [{ text: spec ? spec.prompt : prompt(text, links, images, emailDate) }] }],
     generationConfig: {
       /* 1.0, which is Gemini 3's default, and not the 0.2 this used to
          ask for. Google's guidance for the Gemini 3 models is to leave
@@ -1177,7 +1183,7 @@ async function askGemini(
          once a week, and the tokens are only spent if they are used. */
       maxOutputTokens: 32768,
       responseMimeType: 'application/json',
-      responseSchema: SCHEMA,
+      responseSchema: spec ? spec.schema : SCHEMA,
       // Empty except on a dry run that asked for it. See `tuning` in main.
       ...tuning,
     },
@@ -1307,12 +1313,233 @@ async function askGemini(
     );
   }
 
-  const list = (parsed as { announcements?: unknown })?.announcements;
+  const key = spec ? spec.key : 'announcements';
+  const list = (parsed as Record<string, unknown>)?.[key];
   if (!Array.isArray(list)) {
-    throw new TransientError(`Gemini returned no announcements array (${finish}; ${spent}). Trying again next run.`);
+    throw new TransientError(`Gemini returned no ${key} array (${finish}; ${spent}). Trying again next run.`);
   }
   return list as Parsed[];
 }
+
+/* ========================================================================
+   HomeKids, the two other weekly emails
+
+   The kids ministry sends two emails a week of its own: one to parents, with
+   what is coming up for families, and one to volunteers, with what the team
+   needs to know. They arrive in this same mailbox once its address is on both
+   lists, and they must NOT become announcements on Home: they are for one
+   page, HomeKids, and for two different audiences on it.
+
+   HOW AN EMAIL IS RECOGNISED. Two secrets, each a comma separated list:
+
+     HOMEKIDS_PARENT_SENDERS      e.g. kids@homechurchnola.com
+     HOMEKIDS_VOLUNTEER_SENDERS   e.g. subject:HomeKids Team
+
+   A plain entry matches when it appears anywhere in the From header, so an
+   address or a display name both work. An entry starting `subject:` matches
+   the subject line instead, for the week the parents and volunteers emails
+   come from the same address. Case never matters. Volunteers is checked
+   first, because it is the narrower list and the one that must not leak onto
+   the parents' side of the page.
+
+   NEITHER SET MEANS THIS IS OFF, and nothing about the announcements reader
+   changes. That is the state this ships in, because nobody is on either list
+   yet. Setting the secrets is the whole of turning it on; no redeploy.
+
+   WHAT IT WRITES. One homekids_updates row per item, unpublished and pending,
+   which an admin approves from Admin -> HomeKids. The same rule announcements
+   live by, for the same reason: a model's reading of an email is a draft.
+
+   Everything between the two markers is evalled by tests/homekids.test.js, so
+   it stays self-contained: no imports, nothing from further up this file.
+   ===================================================================== */
+
+/* @@ homekids:start */
+
+type KidsAudience = 'parents' | 'volunteers';
+
+function kidsRules(value: string | null | undefined): string[] {
+  return String(value ?? '')
+    .split(',')
+    .map((r) => r.trim().replace(/^<|>$/g, '').trim().toLowerCase())
+    .filter(Boolean);
+}
+
+function kidsMatches(rules: string[], from: string, subject: string): boolean {
+  const f = String(from ?? '').toLowerCase();
+  const s = String(subject ?? '').toLowerCase();
+  return rules.some((rule) => {
+    if (rule.startsWith('subject:')) {
+      const want = rule.slice('subject:'.length).trim();
+      return !!want && s.includes(want);
+    }
+    return f.includes(rule);
+  });
+}
+
+function homekidsAudience(
+  from: string,
+  subject: string,
+  parentRules: string[],
+  volunteerRules: string[],
+): KidsAudience | null {
+  if (kidsMatches(volunteerRules, from, subject)) return 'volunteers';
+  if (kidsMatches(parentRules, from, subject)) return 'parents';
+  return null;
+}
+
+const HOMEKIDS_SCHEMA = {
+  type: 'object',
+  properties: {
+    items: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          title: { type: 'string' },
+          summary: { type: 'string' },
+          details: { type: 'array', items: { type: 'string' } },
+          links: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: { label: { type: 'string' }, url: { type: 'string' } },
+              required: ['url'],
+            },
+          },
+          happens_on: { type: 'string' },
+          ends_on: { type: 'string' },
+        },
+        required: ['title', 'summary'],
+      },
+    },
+  },
+  required: ['items'],
+};
+
+function homekidsPrompt(
+  audience: KidsAudience,
+  text: string,
+  links: Array<{ url: string; text: string }>,
+  emailDate: string,
+): string {
+  const who = audience === 'parents'
+    ? 'the PARENTS of kids in HomeKids, the church\'s Sunday morning kids ministry'
+    : 'the VOLUNTEERS who serve in HomeKids, the church\'s Sunday morning kids ministry';
+  return [
+    `You are turning this week's email to ${who} into short items for the HomeKids`,
+    'page of a church app. A person reviews every item before it is shown.',
+    '',
+    'Carry every concrete fact a reader would act on: dates, times, rooms, what to',
+    'bring, who to contact, deadlines, sign-up links. Never invent a fact, a date or a',
+    'URL. Write warmly and plainly, the way the church talks. Never use an em dash.',
+    'Never include a child\'s full name, a medical detail, an allergy, a phone number',
+    'or a home address, even if the email has one: those stay in the email.',
+    '',
+    `The email was sent on ${emailDate}. Resolve relative dates ("this Sunday") against`,
+    'that day, in America/Chicago.',
+    '',
+    'RULES',
+    '1. One item per separate thing. Skip greetings, sign-offs, the lesson recap if it',
+    '   only retells the Bible story, social links and unsubscribe footers.',
+    '2. title: short and specific, like a card title. Include the date if it has one.',
+    '3. summary: one or two sentences.',
+    '4. details: short facts, one per string. Empty array if there are none.',
+    '5. links: every link that belongs to the item, label taken from the button text,',
+    '   url copied EXACTLY from the candidate list. Never write a url not in the list.',
+    '6. happens_on: strict YYYY-MM-DD, the day the thing happens, only if the email',
+    '   names one.',
+    '7. ends_on: strict YYYY-MM-DD, the day AFTER the thing happens, so it leaves the',
+    '   page in time. Leave it out for anything ongoing.',
+    '8. If there is nothing worth showing, return an empty array.',
+    '',
+    'CANDIDATE LINKS',
+    links.length
+      ? links.map((l) => `- ${l.url}${l.text ? `  (link text: ${l.text})` : ''}`).join('\n')
+      : '- none',
+    '',
+    'EMAIL TEXT',
+    text,
+  ].join('\n');
+}
+
+const KIDS_ISO = /^\d{4}-\d{2}-\d{2}$/;
+
+function kidsDate(value: unknown): string | null {
+  const v = String(value ?? '').trim();
+  if (!KIDS_ISO.test(v)) return null;
+  const d = new Date(v + 'T12:00:00Z');
+  return Number.isNaN(d.getTime()) || d.toISOString().slice(0, 10) !== v ? null : v;
+}
+
+function kidsSlug(text: string): string {
+  return String(text ?? '')
+    .toLowerCase()
+    .normalize('NFKD').replace(/[̀-ͯ]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 48)
+    .replace(/-+$/g, '') || 'item';
+}
+
+/* Rows for homekids_updates, every field re-checked rather than trusted: the
+   schema fixes the shape and nothing fixes the contents. Links are filtered to
+   the ones the email actually contained, dates to real dates, and an ends_on
+   already behind `today` is dropped rather than filing the item away the day
+   it arrives. `taken` is every id already in the table, and grows as this
+   names rows, so two items with one title in one email still get two ids. */
+function homekidsRows(
+  items: unknown[],
+  audience: KidsAudience,
+  allowedLinks: string[],
+  sentOn: string,
+  today: string,
+  taken: Set<string>,
+): Array<Record<string, unknown>> {
+  const allowed = new Set(allowedLinks);
+  const rows: Array<Record<string, unknown>> = [];
+
+  for (const raw of (Array.isArray(items) ? items : []).slice(0, 10)) {
+    const item = (raw ?? {}) as Record<string, unknown>;
+    const title = String(item.title ?? '').trim().replace(/\s*—\s*/g, ', ').slice(0, 200);
+    if (!title) continue;
+
+    const links = (Array.isArray(item.links) ? item.links : [])
+      .map((l) => ({
+        label: String((l as Record<string, unknown>)?.label ?? '').trim().slice(0, 80),
+        url: String((l as Record<string, unknown>)?.url ?? '').trim(),
+      }))
+      .filter((l) => allowed.has(l.url))
+      .slice(0, 6);
+
+    const endsOn = kidsDate(item.ends_on);
+
+    const base = `homekids-${audience}-${kidsSlug(title)}`;
+    let id = base;
+    for (let n = 2; taken.has(id); n++) id = `${base}-${n}`;
+    taken.add(id);
+
+    rows.push({
+      id,
+      audience,
+      title,
+      summary: String(item.summary ?? '').trim().slice(0, 1200) || null,
+      details: (Array.isArray(item.details) ? item.details : [])
+        .map((d) => String(d ?? '').trim())
+        .filter(Boolean)
+        .slice(0, 12),
+      links,
+      happens_on: kidsDate(item.happens_on),
+      ends_on: endsOn && endsOn > today ? endsOn : null,
+      sent_on: kidsDate(sentOn),
+      published: false,
+      review_state: 'pending',
+    });
+  }
+  return rows;
+}
+
+/* @@ homekids:end */
 
 /* ========================================================================
    Turning what came back into rows
@@ -2185,6 +2412,12 @@ Deno.serve(async (req: Request) => {
   const model = (dryRun && typeof body.model === 'string' && body.model.trim())
     || Deno.env.get('GEMINI_MODEL') || DEFAULT_MODEL;
 
+  /* Which senders are the HomeKids emails. Empty, which is how this ships,
+     means none are and every email is read as the church newsletter exactly
+     as before. See the homekids block above. */
+  const kidsParents = kidsRules(Deno.env.get('HOMEKIDS_PARENT_SENDERS'));
+  const kidsVolunteers = kidsRules(Deno.env.get('HOMEKIDS_VOLUNTEER_SENDERS'));
+
   const missing = [
     !user && 'NEWSLETTER_IMAP_USER',
     !password && 'NEWSLETTER_IMAP_PASSWORD',
@@ -2220,6 +2453,10 @@ Deno.serve(async (req: Request) => {
      above and compose() in send-push. */
   let newDrafts = 0;
   let newEvents = 0;
+  // HomeKids drafts this run wrote, and the ids already taken in that table,
+  // read the first time a HomeKids email turns up and not before.
+  let newKids = 0;
+  let kidsTaken: Set<string> | null = null;
   // Emails left exactly as they were because something transient got in the
   // way. Counted rather than swallowed: a run whose only outcome was "Gemini
   // was busy" has to say so, or a week with no drafts looks like a week with
@@ -2335,6 +2572,7 @@ Deno.serve(async (req: Request) => {
       const subject = decodeHeaderWords(envelope.headers['subject'] ?? '').slice(0, 300);
       const fromAddr = decodeHeaderWords(envelope.headers['from'] ?? '').slice(0, 300);
       const dateHeader = envelope.headers['date'] ?? '';
+      const kidsAudience = homekidsAudience(fromAddr, subject, kidsParents, kidsVolunteers);
       const sentAt = dateHeader && !Number.isNaN(Date.parse(dateHeader))
         ? new Date(dateHeader).toISOString()
         : null;
@@ -2418,6 +2656,54 @@ Deno.serve(async (req: Request) => {
           // in it is relative to — the model is told it, and eventDateFor
           // resolves "9/20" against the same day so the two cannot disagree.
           const emailDay = (sentAt ?? new Date().toISOString()).slice(0, 10);
+
+          /* A HomeKids email goes to its own page and never to Home. Same
+             claim, same retries, same ledger and same model as a newsletter;
+             a different prompt, and rows in homekids_updates rather than in
+             announcements. Settles and moves on from here, so nothing below
+             this block ever sees it. */
+          if (kidsAudience) {
+            const kidsItems = await askGemini(
+              geminiKey!, model, text, links, images, emailDay, tuning,
+              { prompt: homekidsPrompt(kidsAudience, text, links, emailDay),
+                schema: HOMEKIDS_SCHEMA, key: 'items' },
+            );
+
+            if (!kidsTaken) {
+              const { data: kidsIds, error: kidsIdError } = await admin
+                .from('homekids_updates').select('id');
+              if (kidsIdError) throw new Error(`Could not read homekids_updates: ${kidsIdError.message}`);
+              kidsTaken = new Set((kidsIds ?? []).map((r) => r.id as string));
+            }
+
+            const kidsRows = homekidsRows(
+              kidsItems, kidsAudience, links.map((l) => l.url), emailDay, todayInChicago(), kidsTaken,
+            );
+
+            if (dryRun) {
+              preview.push({ subject, homekids: kidsAudience, drafts: kidsRows });
+              draftCount += kidsRows.length;
+              continue;
+            }
+
+            const emailId = claimId as number;
+            if (kidsRows.length) {
+              const { error: kidsError } = await admin.from('homekids_updates')
+                .insert(kidsRows.map((r) => ({ ...r, source_email_id: emailId })));
+              if (kidsError) throw new Error(`Could not write the HomeKids drafts: ${kidsError.message}`);
+            }
+
+            await settleEmail(admin, emailId, {
+              status: kidsRows.length ? 'parsed' : 'empty',
+              drafts: kidsRows.length,
+              note: `HomeKids, ${kidsAudience}. ${linkNote ?? ''}`.trim().slice(0, 500),
+            });
+            draftCount += kidsRows.length;
+            newKids += kidsRows.length;
+            parsedCount += 1;
+            await imap.markSeen(uid);
+            continue;
+          }
 
           const items = await askGemini(
             geminiKey!, model, text, links, images, emailDay, tuning,

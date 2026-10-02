@@ -45,7 +45,8 @@ CONFIG_JS = os.path.join(REPO_ROOT, "js", "config.js")
 # its name here and a probe row below, and that is all that changes.
 CONTENT_TABLES = ["series", "guides", "podcasts", "events", "announcements",
                   "reading_plans", "worship_sets", "groups", "serve_teams",
-                  "next_steps", "church_profile", "podcast_show"]
+                  "next_steps", "church_profile", "podcast_show",
+                  "homekids_lessons", "homekids_updates"]
 
 # What `verify` tries to insert as an anonymous user, per table. These have to
 # be valid rows, or PostgREST rejects them for the wrong reason: a payload
@@ -72,6 +73,10 @@ PROBE_ROWS = {
     "next_steps": {"title": "probe"},
     "church_profile": {"name": "probe"},
     "podcast_show": {"name": "probe"},
+    # Migration 0081. taught_on and title are the lesson's only not-nulls;
+    # audience is checked against two words, so the probe uses a real one.
+    "homekids_lessons": {"taught_on": "2000-01-01", "title": "probe"},
+    "homekids_updates": {"audience": "parents", "title": "probe"},
 }
 
 
