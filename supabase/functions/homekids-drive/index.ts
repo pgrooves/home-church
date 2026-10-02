@@ -51,6 +51,10 @@ const DEFAULT_MODEL = 'gemini-3.5-flash';
 const FALLBACK_MODELS = ['gemini-flash-latest', 'gemini-3.7-flash'];
 const MAX_FILES_PER_RUN = 4;
 const MAX_ATTEMPTS = 4;
+/* No new Gemini attempt starts after this. Supabase stops a function at about
+   150 seconds, and a run cut off there writes nothing, not even "try again";
+   one that stops itself here is recorded as deferred and retried next hour. */
+const GEMINI_BUDGET_MS = 90_000;
 const DOCX = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
 const GDOC = 'application/vnd.google-apps.document';
 const GFOLDER = 'application/vnd.google-apps.folder';
@@ -600,8 +604,11 @@ async function askGemini(
   const tried: string[] = [];
   // `only` pins one model, for a hand-run preview comparing models.
   const models = tuning._only ? [String(tuning._only)] : [model, ...FALLBACK_MODELS.filter((m) => m !== model)];
+  const began = Date.now();
+  tries:
   for (const m of models) {
     for (let i = 0; i < 2; i++) {
+      if (Date.now() - began > GEMINI_BUDGET_MS) { tried.push('out of time for this run'); break tries; }
       if (i) await new Promise((r) => setTimeout(r, 5000));
       let r: Response;
       try {
