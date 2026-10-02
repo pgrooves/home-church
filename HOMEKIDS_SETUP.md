@@ -136,14 +136,21 @@ If she edits a doc after you approved it, a new draft appears with the change.
 Nothing reaches families until you approve it.
 
 **One-time setup, in plain steps.** The director set the folder to
-**Anyone with the link: Viewer**, so no robot account is needed:
+**Anyone with the link: Viewer**, so no robot account is needed, only a plain
+Google API key. (The Gemini key from AI Studio does not work for this: Google
+answers "API keys are not supported by this API", because AI Studio now makes
+keys that only work for Gemini.)
 
-1. **Turn on Google Drive for the Gemini key.** Go to console.cloud.google.com,
-   signed in with the Google account that made the Gemini key, and pick that
-   key's project at the top. Search **Google Drive API** and click **Enable**.
-2. **Turn it on in Supabase** (Claude can do these two for you): run
-   `supabase/migrations/0082_homekids_drive.sql` in the SQL editor, then
-   `supabase functions deploy homekids-drive --no-verify-jwt`.
+1. **Turn on Google Drive.** console.cloud.google.com/apis/library/drive.googleapis.com,
+   pick the project, tap **Enable**. (Done October 2026.)
+2. **Make a plain key.** console.cloud.google.com/apis/credentials, tap
+   **Create credentials**, then **API key**. If it offers to "authenticate API
+   calls through a service account", leave that unticked. Copy the key.
+3. **Give it to Supabase.** Supabase, Project Settings, Edge Functions,
+   Secrets: add `HOMEKIDS_DRIVE_API_KEY` with the key as the value.
+
+The database half and the hourly check (7 minutes past each hour) were turned
+on in October 2026, and the `homekids-drive` function is deployed.
 
 If the folder ever goes private again, the robot account route still works:
 create a service account, share the folder with its email as Viewer, and paste

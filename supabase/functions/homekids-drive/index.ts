@@ -465,7 +465,23 @@ function driveFetch(auth: DriveAuth, url: string): Promise<Response> {
   return fetch(url, { headers: { Authorization: 'Bearer ' + auth.bearer } });
 }
 
+/* Google's own words for a refusal, which name the actual problem far more
+   precisely than a status code: "API keys are not supported by this API",
+   "Drive API has not been used in project ... or it is disabled", and so on. */
+async function googleSays(res: Response): Promise<string> {
+  const text = await res.text().catch(() => '');
+  try {
+    const e = JSON.parse(text)?.error;
+    return String(e?.message || e?.status || text).slice(0, 300);
+  } catch { return text.slice(0, 300); }
+}
+
 function driveRefusal(auth: DriveAuth, status: number): string {
+  if (auth.key && status === 401) {
+    return 'Google would not take this API key for Drive. The Gemini key from AI Studio may be ' +
+      'the kind that only works for Gemini: make a plain API key in Google Cloud (APIs & Services, ' +
+      'Credentials, Create credentials, API key) and save it as the secret HOMEKIDS_DRIVE_API_KEY.';
+  }
   if (auth.key && status === 403) {
     return 'Google refused the API key. Turn on the Google Drive API for the Google Cloud ' +
       'project the key belongs to (console.cloud.google.com, search "Google Drive API", Enable).';
@@ -484,8 +500,10 @@ async function driveList(auth: DriveAuth, folder: string, depth = 0): Promise<Dr
       '&fields=nextPageToken,files(id,name,mimeType,modifiedTime,webViewLink)&pageSize=200' +
       '&supportsAllDrives=true&includeItemsFromAllDrives=true' + (page ? '&pageToken=' + page : ''),
     );
-    if (res.status === 404 || res.status === 403) throw new Error(driveRefusal(auth, res.status));
-    if (!res.ok) throw new TransientError(`Drive answered ${res.status} listing the folder.`);
+    if (res.status === 404 || res.status === 403 || res.status === 401) {
+      throw new Error(driveRefusal(auth, res.status) + ' Google said: ' + await googleSays(res));
+    }
+    if (!res.ok) throw new TransientError(`Drive answered ${res.status} listing the folder. ${await googleSays(res)}`);
     const body = await res.json();
     for (const f of body.files ?? []) {
       // One level of subfolders, for a director who files by month.
@@ -502,7 +520,9 @@ async function driveDocx(auth: DriveAuth, f: DriveFile): Promise<Uint8Array> {
     ? `https://www.googleapis.com/drive/v3/files/${f.id}/export?mimeType=${encodeURIComponent(DOCX)}`
     : `https://www.googleapis.com/drive/v3/files/${f.id}?alt=media&supportsAllDrives=true`;
   const res = await driveFetch(auth, url);
-  if (res.status === 403 || res.status === 404) throw new Error(driveRefusal(auth, res.status));
+  if (res.status === 401 || res.status === 403 || res.status === 404) {
+    throw new Error(driveRefusal(auth, res.status) + ' Google said: ' + await googleSays(res));
+  }
   if (!res.ok) throw new TransientError(`Drive answered ${res.status} reading "${f.name}".`);
   return new Uint8Array(await res.arrayBuffer());
 }
