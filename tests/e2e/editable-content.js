@@ -95,7 +95,7 @@ const SLOTS = [
   'connect.step-note', 'connect.serve-sms-note', 'connect.add-to-calendar',
   'connect.eyebrow', 'connect.groups-eyebrow', 'connect.serve-eyebrow',
   'connect.events-eyebrow', 'connect.steps-eyebrow', 'connect.off-season-eyebrow',
-  'connect.serve-signup-eyebrow', 'connect.instagram-eyebrow',
+  'connect.serve-signup-eyebrow', 'connect.instagram-eyebrow', 'connect.tiktok-eyebrow',
   /* The Cal tab. connect.add-to-calendar above stays where it is and keeps
      its name: the button moved screens, and renaming its slot would silently
      drop an override the church had already written for it. */

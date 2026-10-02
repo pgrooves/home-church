@@ -671,6 +671,84 @@
     return html + '</ul></div>';
   }
 
+  /* --------------------------------------------------------- the TikTok rail
+     The same rail as Instagram's, directly under it, filled from tiktok_posts
+     by the tiktok-fetch Edge Function every hour (migration 0080). Same
+     markup, same classes, so the tiles are the same 148 square, the same
+     snap and the same See more tile at the end. A TikTok cover is a 9:16
+     still, so the square crops it to the middle, the way object-fit: cover
+     already does for every tile here.
+
+     Its own functions rather than a parameter on Instagram's, on purpose: the
+     Instagram rail is working and is left exactly as it was. Only the words
+     differ, and they differ in every place a person or a screen reader meets
+     them, so each is written out here once. */
+
+  function tiktokProfileUrl() {
+    var social = (HC.data.church.social || []).filter(function (s) {
+      return s.label === 'TikTok';
+    })[0];
+    return social ? social.url : '';
+  }
+
+  /* As tileLabel above, with TikTok's words. A photo-mode post is a slideshow
+     of stills, which is IMAGE, and the only kind that is not a video. */
+  function tiktokTileLabel(post) {
+    var first = String(post.caption || '').split('\n')[0].trim();
+    if (first.length > 120) {
+      first = first.slice(0, 119).replace(/\s+\S*$/, '') + '…';
+    }
+    var fallback = post.mediaType === 'IMAGE' ? 'TikTok photo post' : 'TikTok video';
+    var when = post.postedAt ? c.formatDate(String(post.postedAt).slice(0, 10)) : '';
+
+    function sentence(s) {
+      return /[.!?…]$/.test(s) ? s : s + '.';
+    }
+
+    return [first || fallback, when, 'Opens TikTok']
+      .filter(Boolean).map(sentence).join(' ');
+  }
+
+  function tiktokTile(post) {
+    return '' +
+      '<li class="hc-rail__item">' +
+        '<button type="button" class="hc-post" data-action="open-url" ' +
+          'data-media-fallback data-url="' + c.esc(post.permalink) + '" ' +
+          'aria-label="' + c.esc(tiktokTileLabel(post)) + '">' +
+          '<img class="hc-post__img" src="' + c.esc(post.imageUrl) + '" alt="" ' +
+            'loading="lazy" decoding="async">' +
+          (post.mediaType === 'VIDEO' ? c.playBadge() : '') +
+        '</button>' +
+      '</li>';
+  }
+
+  function tiktokRail() {
+    var posts = (HC.data.tiktokPosts || []).filter(function (p) {
+      return p.imageUrl && p.permalink;
+    });
+    if (!posts.length) return '';
+
+    var html = c.sectionHeader('Lately', 'On TikTok', { eyebrowSlot: 'connect.tiktok-eyebrow' }) +
+      '<div class="hc-rail">' +
+        '<ul class="hc-rail__track" role="list">';
+
+    posts.forEach(function (p) { html += tiktokTile(p); });
+
+    var profile = tiktokProfileUrl();
+    if (profile) {
+      html += '<li class="hc-rail__item">' +
+        '<button type="button" class="hc-post hc-post--more" data-action="open-url" ' +
+          'data-url="' + c.esc(profile) + '" ' +
+          'aria-label="See more on TikTok. Opens TikTok">' +
+          c.icon('arrowOut', 'hc-post__more-icon') +
+          '<span class="hc-post__more-label">See more</span>' +
+        '</button>' +
+      '</li>';
+    }
+
+    return html + '</ul></div>';
+  }
+
   /* EVENTS ARE NOT ON THIS SCREEN ANY MORE. They were the fourth section, and
      they are now the Cal tab, the second tile in the bar: a month you can
      walk through, with
@@ -790,6 +868,10 @@
     // unheaded region to a screen reader. Renders nothing at all until the
     // Instagram sync exists, so today this line is a no-op.
     html += instagramRail();
+
+    // Directly under Instagram's, and the same rule: nothing at all until
+    // tiktok_posts has a row.
+    html += tiktokRail();
 
     if (!church.groupsInSeason) {
       html += offSeason();
