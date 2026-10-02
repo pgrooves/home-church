@@ -1207,6 +1207,9 @@
 }
 
 .hc-latest__frame {
+  /* Relative so the TikTok frame's play badge, which is inset: 0, centres on
+     the picture rather than on the screen. */
+  position: relative;
   display: block;
   width: 100%;
   aspect-ratio: 4 / 3;

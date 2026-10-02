@@ -86,6 +86,11 @@
     { table: 'instagram_posts', target: 'instagramPosts', map: mapInstagramPost,
       order: 'posted_at.desc', limit: 9 },
 
+    // The TikTok frame on Home, under the Instagram one. Same shape, same cap,
+    // filled hourly by the tiktok-fetch Edge Function (migration 0080).
+    { table: 'tiktok_posts', target: 'tiktokPosts', map: mapTiktokPost,
+      order: 'posted_at.desc', limit: 9 },
+
     // `neverEmpty` is the one exception to deleting a row propagating, and it
     // is deliberate. Home, Profile, Give, and the printed guide all read
     // church.address.city without checking, so a cleared profile is not an
@@ -481,6 +486,21 @@
     };
   }
 
+  /* A post in the TikTok frame on Home. Same rules as an Instagram post
+     above, for the same reasons: `image_path` is in the `tiktok` bucket, never
+     a tiktokcdn URL, and a row without one maps to '' and is dropped. */
+  function mapTiktokPost(r) {
+    return {
+      id: r.id,
+      permalink: str(r.permalink),
+      imageUrl: r.image_path ? storageUrl('tiktok', r.image_path) : '',
+      // VIDEO gets a play badge; IMAGE is a photo-mode slideshow and does not.
+      mediaType: str(r.media_type) || 'VIDEO',
+      caption: str(r.caption),
+      postedAt: r.posted_at || null
+    };
+  }
+
   /* One song in a set. Total in the same way every mapper here is, and more
      carefully than most, because this is the one shape in the schema that
      arrives as free JSON rather than as columns: a row hand written into the
@@ -790,9 +810,9 @@
     // encoded as a value — the operators are the syntax.
     if (spec.filter) url += '&' + spec.filter;
     if (spec.order) url += '&order=' + encodeURIComponent(spec.order);
-    // Only the Instagram rail sets this so far. Ordering has to be set with
-    // it or a limit would take an arbitrary nine rows rather than the newest
-    // nine, which PostgREST will happily do.
+    // Only the Instagram and TikTok posts set this so far. Ordering has to be
+    // set with it or a limit would take an arbitrary nine rows rather than
+    // the newest nine, which PostgREST will happily do.
     if (spec.limit) url += '&limit=' + encodeURIComponent(spec.limit);
 
     // AbortController keeps a stalled connection from leaving the app

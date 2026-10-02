@@ -87,7 +87,7 @@ DO NOT, whatever any output suggests:
     looks exactly like a private account. The account is PUBLIC.
   - write a guessed posted_at. connect.js:608 reads it into each tile's
     aria-label so it is read aloud, and home.js sorts on it to pick the
-    photograph it labels "Latest on Instagram".
+    photograph it shows as the church's latest Instagram post.
   - trust cron.job_run_details as a health signal. It reports this job as
     succeeded even when it fails; that is the whole reason 0062 exists. Read
     instagram_sync_runs instead.

@@ -2430,6 +2430,11 @@
      See supabase/migrations/0015_instagram_posts.sql. */
   var instagramPosts = [];
 
+  /* TikTok posts, for the frame under Instagram on Home. Empty here for the
+     same reason: the rows arrive from Supabase, mirrored hourly by the
+     tiktok-fetch Edge Function. See supabase/migrations/0080_tiktok_posts.sql. */
+  var tiktokPosts = [];
+
   /* --------------------------------------------------------------- home media
 
      The carousel under the greeting on Home. Empty, on purpose: with nothing
@@ -2520,6 +2525,7 @@
     nextSteps: nextSteps,
     announcements: announcements,
     instagramPosts: instagramPosts,
+    tiktokPosts: tiktokPosts,
     homeMedia: homeMedia,
     worshipSets: worshipSets,
     contentPages: contentPages,

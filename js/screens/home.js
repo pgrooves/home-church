@@ -52,28 +52,59 @@
 
   /* WHY THIS SORTS RATHER THAN TAKING [0]. content.js asks PostgREST for these
      newest first, so the first element is almost always right. Almost is not
-     good enough for a screen that calls this post "latest" in front of a
-     congregation: change that order parameter for any reason and Home starts
-     presenting an old photograph as this week's news, silently. Sorting here
-     costs nothing on nine rows and makes the claim true on its own terms. */
-  function latestInstagram() {
-    var usable = (HC.data.instagramPosts || []).filter(function (p) {
+     good enough for a frame that stands in front of a congregation as the
+     church's latest post: change that order parameter for any reason and Home
+     starts presenting an old photograph as this week's news, silently.
+     Sorting here costs nothing on nine rows and makes the claim true on its
+     own terms. Instagram and TikTok both come through here. */
+  function newestPost(posts) {
+    var usable = (posts || []).filter(function (p) {
       return p.imageUrl && p.permalink;
     });
     if (!usable.length) return null;
 
-    var post = usable.slice().sort(function (a, b) {
+    return usable.slice().sort(function (a, b) {
       return String(b.postedAt || '') < String(a.postedAt || '') ? -1 : 1;
     })[0];
+  }
+
+  /* The eyebrow is the platform's name and nothing else. .hc-eyebrow sets it
+     in small tracked capitals, so it reads INSTAGRAM and TIKTOK on screen and
+     is spoken as the word rather than spelled out letter by letter. */
+  function latestInstagram() {
+    var post = newestPost(HC.data.instagramPosts);
+    if (!post) return null;
 
     return {
       id: 'instagram',
       kind: 'photo',
-      label: 'Latest on Instagram',
+      label: 'Instagram',
       imageUrl: post.imageUrl,
       url: post.permalink,
       caption: String(post.caption || '').trim(),
       leaves: 'Opens Instagram.'
+    };
+  }
+
+  /* Its own frame under Instagram's, the same 4:3 and the same width, rather
+     than a slide behind it: a TikTok one swipe away is a TikTok most people
+     never see. The cover is a 9:16 still cropped to the middle band, and it
+     is a still, not a player. A tap opens the post in TikTok, exactly as the
+     Instagram frame does, so the play badge on a video promises only what the
+     tap delivers. A photo-mode post carries no badge. */
+  function latestTiktok() {
+    var post = newestPost(HC.data.tiktokPosts);
+    if (!post) return null;
+
+    return {
+      id: 'tiktok',
+      kind: 'photo',
+      label: 'TikTok',
+      imageUrl: post.imageUrl,
+      url: post.permalink,
+      play: post.mediaType === 'VIDEO',
+      caption: String(post.caption || '').trim(),
+      leaves: 'Opens TikTok.'
     };
   }
 
@@ -125,6 +156,7 @@
           // deferring it would mean watching it arrive on every launch.
           '<img class="hc-latest__img" src="' + c.esc(item.imageUrl) + '" alt="" ' +
             'decoding="async">' +
+          (item.play ? c.playBadge() : '') +
         '</span>';
 
     return label + frame +
@@ -156,8 +188,7 @@
     return '<li class="hc-carousel__slide">' + body + '</li>';
   }
 
-  function mediaCarousel() {
-    var items = mediaSlides();
+  function mediaCarousel(items) {
     if (!items.length) return '';
 
     // One slide is not a carousel. No dots, and with nothing to scroll to the
@@ -775,7 +806,14 @@
        Same rule as every other block on this screen: no header unless there
        is something under it. On a week with no posts, no homeMedia and no
        social links, the heading would be a title over a gap. */
-    var media = mediaCarousel();
+    var media = mediaCarousel(mediaSlides());
+
+    /* TikTok, directly under Instagram and above the links, in the same
+       carousel markup with one slide in it: no dots, no scroll, and the same
+       frame, label and caption treatment as the block above, so the two read
+       as a pair. Nothing at all until tiktok_posts has a row. */
+    var tiktok = latestTiktok();
+    var tiktokFrame = tiktok ? mediaCarousel([tiktok]) : '';
 
     /* The social links sit under the photograph, but they do not depend on
        it. A week when nothing has been posted, or a sync that has broken, is
@@ -788,8 +826,9 @@
        they like. */
     var social = c.socialRow(HC.data.church.social);
 
-    if (media || social) html += c.sectionHeader('', 'Socials');
+    if (media || tiktokFrame || social) html += c.sectionHeader('', 'Socials');
     html += media;
+    html += tiktokFrame;
     html += social;
 
     /* From here down, every block is named. The headings carry no eyebrow, so
