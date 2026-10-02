@@ -246,6 +246,25 @@ function lessonDate(
 
 /* ------------------------------------------------------------ the model */
 
+/* The answer's shape, built per doc: only the groups this doc covers are in
+   it, and every list has a ceiling. An open-ended schema is where a model
+   that has lost its place keeps writing until the output budget runs out,
+   which is what the first run on a real lesson did. */
+function lessonSchema(groups: GroupKey[]) {
+  const schema = JSON.parse(JSON.stringify(LESSON_SCHEMA));
+  /* Only the groups. maxItems and nested `required` were tried first and made
+     every Gemini model answer 503 on a real lesson while a two word prompt
+     still got 200; the plain shape answers. Lengths are capped in code. */
+  schema.properties.groups.properties = Object.fromEntries(groups.map((k) => [k, {
+    type: 'object',
+    properties: {
+      questions: { type: 'array', items: { type: 'string' } },
+      activity: { type: 'string' },
+    },
+  }]));
+  return schema;
+}
+
 const LESSON_SCHEMA = {
   type: 'object',
   properties: {
@@ -271,7 +290,10 @@ const LESSON_SCHEMA = {
     prayer: { type: 'string' },
     parent_note: { type: 'string' },
   },
-  required: ['title', 'story', 'groups'],
+  /* parent_note and prayer are required because, left optional, Gemini left
+     the parent note out on every run on the first real lesson. Required at
+     this level is fine; nested `required` and maxItems were what made it 503. */
+  required: ['title', 'big_idea', 'story', 'groups', 'prayer', 'parent_note'],
 };
 
 function lessonPrompt(name: string, header: string, body: string, groups: GroupKey[]): string {
@@ -308,7 +330,7 @@ function lessonPrompt(name: string, header: string, body: string, groups: GroupK
     '  Turn the plan\'s ASK lines into questions and its ACT lines and games into the',
     '  activity, rewritten for home rather than a classroom.',
     ...groups.map((g) => '  ' + who[g]),
-    '- prayer: two or three sentences a child can pray, ending with Amen.',
+    '- prayer: two or three short sentences a child can pray, each said once.',
     '- parent_note: one or two sentences to the grown up: what was taught, and one',
     '  question to ask at bedtime.',
     '',
@@ -322,8 +344,26 @@ function lessonPrompt(name: string, header: string, body: string, groups: GroupK
 
 /* --------------------------------------------------------- the draft */
 
+/* A sentence or word said three times or more in a row is a model that lost
+   its place, which is how the first real lesson came back: a prayer ending in
+   "Amen." thirty thousand tokens long. One copy is kept. */
+function unloop(text: string): string {
+  return text
+    .replace(/(\b[^.!?\n]{1,80}[.!?])(?:\s+\1){2,}/g, '$1')
+    .replace(/\b(\w+)(?:[\s,]+\1\b){2,}/gi, '$1');
+}
+
 function s(v: unknown, max = 2000): string {
-  return String(v ?? '').replace(/\s*—\s*/g, ', ').trim().slice(0, max);
+  return unloop(String(v ?? '').replace(/\s*—\s*/g, ', ')).trim().slice(0, max);
+}
+
+/* The prayer ends with one Amen, added here. Everything from the first Amen
+   on is dropped: the first real lesson came back with a prayer that ran
+   "Amen. Amen. Amen..." until the budget ran out, and a later one with the
+   model's own second thoughts written after its Amen. */
+function prayerText(v: unknown): string {
+  const body = s(v, 800).split(/\bamen\b/i)[0].replace(/[\s,;:]+$/, '').trim();
+  return body ? body.replace(/([^.!?])$/, '$1.') + ' Amen.' : '';
 }
 
 function list(v: unknown, max = 8, len = 600): string[] {
@@ -369,7 +409,7 @@ function mergeLesson(
     big_idea: s(parsed.big_idea, 300),
     memory_verse: verse && s(verse.text) ? { text: s(verse.text, 400), reference: s(verse.reference, 80) } : null,
     story: list(parsed.story, 6, 1200),
-    prayer: s(parsed.prayer, 800),
+    prayer: prayerText(parsed.prayer),
     parent_note: s(parsed.parent_note, 800),
   };
 
@@ -529,18 +569,37 @@ async function driveDocx(auth: DriveAuth, f: DriveFile): Promise<Uint8Array> {
 
 /* ------------------------------------------------------------ Gemini */
 
-async function askGemini(apiKey: string, model: string, prompt: string): Promise<Record<string, unknown>> {
+/* Gemini writes every HomeKids guide; nothing else in the project does. The
+   answer comes back with the model that wrote it, which is stamped on the
+   draft as `_written_by`, so the Admin card can say so and nobody has to
+   take it on trust. */
+async function askGemini(
+  apiKey: string, model: string, prompt: string, schema: unknown,
+  tuning: Record<string, unknown> = {},
+): Promise<{ data: Record<string, unknown>; model: string }> {
   const request = JSON.stringify({
     contents: [{ role: 'user', parts: [{ text: prompt }] }],
     generationConfig: {
-      temperature: 1.0,
-      maxOutputTokens: 32768,
+      /* Measured on the director's first real lesson, October 2026. At 1.0
+         with the default thinking, gemini-3.5-flash ran away inside the
+         prayer every time, to the output ceiling. At 0.7 with thinking low it
+         wrote the whole guide in one go. Penalties would be the textbook fix
+         and this model refuses them ("Penalty is not enabled"). */
+      temperature: 0.7,
+      thinkingConfig: { thinkingLevel: 'low' },
+      /* A guide is about two thousand tokens. Sixteen thousand leaves room to
+         think and means a model stuck repeating itself fails in seconds and
+         hands over to the next Gemini model, rather than in two minutes. */
+      maxOutputTokens: 16384,
       responseMimeType: 'application/json',
-      responseSchema: LESSON_SCHEMA,
+      responseSchema: schema,
+      // Only ever set by a hand-run preview, to try a setting without a redeploy.
+      ...Object.fromEntries(Object.entries(tuning).filter(([k]) => !k.startsWith('_'))),
     },
   });
-  const models = [model, ...FALLBACK_MODELS.filter((m) => m !== model)];
-  let busy = '';
+  const tried: string[] = [];
+  // `only` pins one model, for a hand-run preview comparing models.
+  const models = tuning._only ? [String(tuning._only)] : [model, ...FALLBACK_MODELS.filter((m) => m !== model)];
   for (const m of models) {
     for (let i = 0; i < 2; i++) {
       if (i) await new Promise((r) => setTimeout(r, 5000));
@@ -548,21 +607,83 @@ async function askGemini(apiKey: string, model: string, prompt: string): Promise
       try {
         r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(m)}:generateContent?key=${encodeURIComponent(apiKey)}`,
           { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: request });
-      } catch (err) { busy = `Could not reach Gemini: ${(err as Error).message}`; continue; }
+      } catch (err) { tried.push(`${m}: could not reach Gemini (${(err as Error).message})`); continue; }
       if (r.ok) {
         const payload = await r.json();
         const raw = (payload?.candidates?.[0]?.content?.parts ?? [])
           .map((p: { text?: string }) => p?.text ?? '').join('').trim();
-        try { return JSON.parse(raw); } catch {
-          throw new TransientError(`Gemini did not finish its answer (${payload?.candidates?.[0]?.finishReason ?? '?'}).`);
+        try { return { data: JSON.parse(raw), model: m }; } catch {
+          /* Where the budget went, and how the answer ended, so a failure says
+             whether it was thinking or a runaway field. Then the next Gemini
+             model gets its go, rather than the whole doc waiting an hour. */
+          const usage = payload?.usageMetadata ?? {};
+          tried.push(`${m}: ${payload?.candidates?.[0]?.finishReason ?? '?'}, thinking ` +
+            `${usage.thoughtsTokenCount ?? 0}, answer ${usage.candidatesTokenCount ?? '?'} tokens, ` +
+            `ended "${raw.slice(-80)}"`);
+          break;
         }
       }
-      if (r.status === 429 || r.status >= 500) { busy = `Gemini is busy (${r.status}) on ${m}.`; continue; }
-      if (m !== model) break;
+      if (r.status === 429 || r.status >= 500) { tried.push(`${m}: busy (${r.status})`); continue; }
+      if (m !== model && !tuning._only) { tried.push(`${m}: ${r.status}, skipped`); break; }
       throw new Error(`Gemini returned ${r.status}: ${(await r.text()).slice(0, 200)}`);
     }
   }
-  throw new TransientError(busy || 'Gemini did not answer.');
+  // Every attempt, in order, so a busy last model cannot hide why the first ones failed.
+  throw new TransientError(('Gemini did not produce a guide. ' + tried.join(' | ')).slice(0, 1200));
+}
+
+/* ------------------------------------------------------------ one lesson */
+
+/* One teacher's doc to one Sunday's draft, by Gemini. The same path for a doc
+   read from Drive and for a lesson handed in directly (`lesson` in the body,
+   which is how /new-homekids sends one), so there is exactly one place where a
+   HomeKids guide is written and it is always Gemini. */
+async function draftFromLesson(
+  admin: ReturnType<typeof createClient>,
+  geminiKey: string, model: string,
+  doc: { id: string; name: string; header: string; text: string; modified: string; link?: string | null },
+  save: boolean,
+  tuning: Record<string, unknown> = {},
+): Promise<Record<string, unknown>> {
+  let groups = groupsIn(doc.name + ' ' + doc.header);
+  if (!groups.length) groups = [...GROUP_KEYS];
+
+  const answer = await askGemini(geminiKey, model,
+    lessonPrompt(doc.name, doc.header, doc.text.slice(0, 60000), groups),
+    lessonSchema(groups), tuning);
+  const parsed = answer.data;
+  const when = lessonDate(doc.name, doc.header, (parsed.date as string) || null, doc.modified);
+  const id = 'homekids-' + when.date;
+
+  // What the Sunday already has: a waiting draft, else the live lesson, else
+  // nothing. A draft that was approved or discarded starts over from whatever
+  // is live, so an edit after approval is a fresh proposal.
+  const { data: draftRow } = await admin.from('homekids_lesson_drafts').select('*').eq('id', id).maybeSingle();
+  let base: Record<string, unknown> | null = null;
+  let filesSoFar: Array<Record<string, unknown>> = [];
+  if (draftRow && draftRow.review_state === 'pending') {
+    base = draftRow.lesson as Record<string, unknown>;
+    filesSoFar = (draftRow.files as Array<Record<string, unknown>>) ?? [];
+  } else {
+    const { data: live } = await admin.from('homekids_lessons').select('*').eq('id', id).maybeSingle();
+    if (live) base = { ...live };
+  }
+
+  const lesson = mergeLesson(base, parsed, groups, doc.id, when.date);
+  lesson.source_url = lesson.source_url || doc.link || null;
+  lesson._written_by = 'Gemini (' + answer.model + ')';
+  const filesNext = [...filesSoFar.filter((x) => x.id !== doc.id), { id: doc.id, name: doc.name, groups }];
+  const missing = GROUP_KEYS.filter((g) => !((lesson.groups as Record<string, { questions?: string[] }>)[g]?.questions?.length));
+  const note = [when.note,
+    missing.length ? `Still waiting on the ${missing.join(' and ')} part.` : null,
+  ].filter(Boolean).join(' ') || null;
+
+  const draft = { id, taught_on: when.date, lesson, files: filesNext, note, review_state: 'pending' };
+  if (save) {
+    const { error } = await admin.from('homekids_lesson_drafts').upsert(draft);
+    if (error) throw new Error(`Could not save the draft: ${error.message}`);
+  }
+  return { draft, groups, note, written_by: lesson._written_by };
 }
 
 /* ------------------------------------------------------------ main */
@@ -573,7 +694,11 @@ Deno.serve(async (req: Request) => {
   if (!cronSecret) return json({ error: 'Not configured.' }, 500);
   if (!secretsMatch(req.headers.get('x-hc-cron-secret') ?? '', cronSecret)) return json({ error: 'No.' }, 401);
 
-  let body: { probe?: boolean; dry_run?: boolean; file?: string } = {};
+  let body: {
+    probe?: boolean; dry_run?: boolean; file?: string;
+    lesson?: { name?: string; header?: string; text?: string; save?: boolean;
+      generation_config?: Record<string, unknown> };
+  } = {};
   try { body = await req.json(); } catch { /* an empty body is a normal tick */ }
   const dryRun = body.dry_run === true;
 
@@ -590,6 +715,26 @@ Deno.serve(async (req: Request) => {
   const admin = createClient(url, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
+
+  /* A lesson handed in directly, not from Drive: the file name, the header and
+     the body text of one teacher's doc. Gemini writes the guide exactly as it
+     would for a Drive doc. Saved as a pending draft only when `save` is true;
+     otherwise it is a preview and nothing is written. */
+  if (body.lesson) {
+    const l = body.lesson;
+    if (!l.text || String(l.text).length < 200) return json({ ok: false, error: 'lesson.text is missing or too short.' });
+    try {
+      const out = await draftFromLesson(admin, geminiKey, model, {
+        id: 'pasted:' + String(l.name || 'lesson'), name: String(l.name || ''),
+        header: String(l.header || ''), text: String(l.text),
+        modified: new Date().toISOString().slice(0, 10),
+      }, l.save === true,
+      l.save !== true && l.generation_config && typeof l.generation_config === 'object' ? l.generation_config : {});
+      return json({ ok: true, saved: l.save === true, ...out });
+    } catch (err) {
+      return json({ ok: false, error: String((err as Error).message ?? err) });
+    }
+  }
 
   try {
     let auth: DriveAuth;
@@ -633,8 +778,6 @@ Deno.serve(async (req: Request) => {
 
       try {
         const { header, body: text } = await docxText(await driveDocx(auth, f));
-        let groups = groupsIn(f.name + ' ' + header);
-        if (!groups.length) groups = [...GROUP_KEYS];
 
         if (text.length < 200) {
           await record({ status: 'skipped', note: 'Too little text in the doc to be a lesson.' });
@@ -642,41 +785,13 @@ Deno.serve(async (req: Request) => {
           continue;
         }
 
-        const parsed = await askGemini(geminiKey, model, lessonPrompt(f.name, header, text.slice(0, 60000), groups));
-        const when = lessonDate(f.name, header, (parsed.date as string) || null, f.modifiedTime.slice(0, 10));
-        const id = 'homekids-' + when.date;
-
-        // What the Sunday already has: a waiting draft, else the live lesson,
-        // else nothing. A draft that was approved or discarded starts over from
-        // whatever is live, so an edit after approval is a fresh proposal.
-        const { data: draftRow } = await admin.from('homekids_lesson_drafts').select('*').eq('id', id).maybeSingle();
-        let base: Record<string, unknown> | null = null;
-        let filesSoFar: Array<Record<string, unknown>> = [];
-        if (draftRow && draftRow.review_state === 'pending') {
-          base = draftRow.lesson as Record<string, unknown>;
-          filesSoFar = (draftRow.files as Array<Record<string, unknown>>) ?? [];
-        } else {
-          const { data: live } = await admin.from('homekids_lessons').select('*').eq('id', id).maybeSingle();
-          if (live) base = { ...live };
-        }
-
-        const lesson = mergeLesson(base, parsed, groups, f.id, when.date);
-        lesson.source_url = lesson.source_url || f.webViewLink || null;
-        const filesNext = [...filesSoFar.filter((x) => x.id !== f.id), { id: f.id, name: f.name, groups }];
-        const missing = GROUP_KEYS.filter((g) => !((lesson.groups as Record<string, { questions?: string[] }>)[g]?.questions?.length));
-        const note = [when.note,
-          missing.length ? `Still waiting on the ${missing.join(' and ')} part.` : null,
-        ].filter(Boolean).join(' ') || null;
-
-        const draft = { id, taught_on: when.date, lesson, files: filesNext, note, review_state: 'pending' };
-        if (dryRun) {
-          results.push({ name: f.name, draft });
-        } else {
-          const { error } = await admin.from('homekids_lesson_drafts').upsert(draft);
-          if (error) throw new Error(`Could not save the draft: ${error.message}`);
-          await record({ status: 'read', draft_id: id, note });
-          results.push({ name: f.name, draft: id, groups, note });
-        }
+        const out = await draftFromLesson(admin, geminiKey, model, {
+          id: f.id, name: f.name, header, text,
+          modified: f.modifiedTime.slice(0, 10), link: f.webViewLink,
+        }, !dryRun);
+        const d = out.draft as Record<string, unknown>;
+        if (!dryRun) await record({ status: 'read', draft_id: d.id, note: out.note });
+        results.push(dryRun ? { name: f.name, ...out } : { name: f.name, draft: d.id, groups: out.groups, note: out.note, written_by: out.written_by });
       } catch (err) {
         const message = String((err as Error).message ?? err).slice(0, 500);
         const transient = err instanceof TransientError && attempts < MAX_ATTEMPTS;

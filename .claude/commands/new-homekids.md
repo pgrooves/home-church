@@ -60,57 +60,46 @@ What to pull out, whatever the sheet calls its columns:
 The sheet is for teachers, not families. It has room setups, supply lists and
 timing that do not belong on the page. Leave them out.
 
-## Step 2. Write the guide
+## Step 2. Gemini writes the guide
 
-The house voice, turned toward kids. Every rule from `/new-sermon` still holds,
-**zero em-dashes** above all, and these on top:
+**Gemini writes every HomeKids guide. Do not write one yourself.** The words
+families read come from the same Gemini prompt the hourly Drive watcher uses,
+so a lesson sent by hand and a lesson from the folder read the same and are
+reviewed the same way. That prompt, its rules for each age group and the
+checklist live in `supabase/functions/homekids-drive/index.ts`.
 
-- **Short sentences, everyday words.** Read every line as if aloud to a four
-  year old, then check a twelve year old would not roll their eyes.
-- **No fear, no guilt, no shame.** A storm can be scary in the story; the kid
-  reading is never told they are bad or behind.
-- **First names only for anybody at church**, and no child's name, ever.
+Send the lesson's text to the `homekids-drive` function as `lesson`, the same
+way the hourly tick reaches it: from SQL, with the cron secret read out of the
+vault so it never appears in the chat.
 
-Fields, in the shape the table wants:
+```sql
+select net.http_post(
+  url := 'https://ibqkumxfltfiuqevviji.supabase.co/functions/v1/homekids-drive',
+  headers := jsonb_build_object('Content-Type', 'application/json',
+    'x-hc-cron-secret', (select decrypted_secret from vault.decrypted_secrets
+                          where name = 'hc_newsletter_cron_secret')),
+  body := $hk${"lesson": {"name": "<file name>", "header": "<header line>",
+    "text": "<the lesson text>"}}$hk$::jsonb,
+  timeout_milliseconds := 150000);
+-- then, a minute later:
+select content from net._http_response where id = <the id it returned>;
+```
 
-- `title`, `passage`, `taught_on` (the Sunday, `YYYY-MM-DD`)
-- `big_idea`: one sentence a Champion can say back. Eight words is plenty.
-- `memory_verse`: `{ "text", "reference" }`, in a kid-friendly translation
-  (NIrV or ICB). If the sheet gives a verse, use it word for word.
-- `story`: two to four short paragraphs retelling the passage. Faithful to the
-  text, nothing added that is not in it.
-- `groups`: one block per group, all three, every week:
-  - `champions` (ages 3 to 4): two or three questions a preschooler can answer
-    with a word or a point, and an activity with the hands, a game, a motion.
-  - `heroes` (ages 5 to 6): three questions, one of them about their own week;
-    an activity they can mostly do on their own.
-  - `legends` (Legends + Warriors, 7 to 12): three or four questions with room
-    to think, one that asks them to do something for somebody else; an
-    activity with a little challenge in it.
-  Use the sheet's own questions and activities first, rewritten for a family at
-  home rather than a classroom. Write new ones only where the sheet has none.
-- `checklist`: three or four things a family does together during the week.
-  Short, doable, and the same for every group, because the teacher checks one
-  list. Each has a permanent `id`, a short word: `story`, `verse`, `talk`,
-  `pray`, `kind`, `try`. Keep the ids the same from week to week where the
-  meaning is the same; they key the ticks on people's phones.
-- `prayer`: two or three sentences a kid can pray, ending in Amen.
-- `parent_note`: one or two sentences to the grown up. What was taught, and
-  one question to ask at bedtime.
-- `source_url`: the sheet's link, if there is one. Not shown on the page.
-
-The id is `homekids-` plus the Sunday: `homekids-2026-10-04`. Check it is free.
+Without `"save": true` that is a preview and nothing is written. If Gemini is
+busy (503) or runs out of room, the reply lists every model it tried and why;
+wait a few minutes and send it again rather than writing the guide another way.
 
 ## Step 3. Show it and wait
 
-Show the finished row as the page would read it, top to bottom: the big idea,
-the story, the verse, each group's questions and activity, the prayer, the
-checklist, the note to parents. Then the JSON. **Wait for a yes.**
+Show Gemini's guide as the page would read it, top to bottom: the big idea,
+the story, each group's questions and activity, the prayer, the note to
+parents, and the line saying which Gemini model wrote it. **Wait for a yes.**
 
-## Step 4. Publish
+## Step 4. Save it for approval
 
-`upsert homekids_lessons` with `published: true`. The page picks it up on the
-next content refresh; nothing else needs touching.
+Send the same request again with `"save": true`. It lands in Admin, HomeKids,
+Lessons to review, where Approve puts it on the page. Do not write to
+`homekids_lessons` directly.
 
 ## Step 5. Confirm
 

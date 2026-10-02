@@ -42,7 +42,7 @@ if (start === -1 || end < start) {
 }
 
 const D = vm.runInNewContext(stripTypeScriptTypes(source.slice(start, end)) +
-  '\n({ docxText, groupsIn, dateIn, lessonDate, mergeLesson, checklistFor, lessonPrompt })',
+  '\n({ docxText, groupsIn, dateIn, lessonDate, mergeLesson, checklistFor, lessonPrompt, unloop, prayerText, lessonSchema })',
   { TextDecoder, TextEncoder, DataView, Uint8Array, Blob, Response, DecompressionStream, Date, Object, JSON });
 
 /* ------------------------------------------------- a .docx, built by hand */
@@ -193,11 +193,35 @@ const body = doc([
   const dashed = D.mergeLesson(null, { title: 'One — two', story: ['x'], groups: {} }, ['heroes'], 'f', '2026-10-04');
   ok('an em dash from the model never reaches the page', dashed.title, 'One, two');
 
+  console.log('\n--- a model that loses its place ---');
+  ok('a prayer stuck on Amen comes back with one',
+    D.prayerText('Jesus, help me love everyone. Amen. Amen. Amen. Amen. Amen.'),
+    'Jesus, help me love everyone. Amen.');
+  ok('the model talking to itself after its Amen is cut off',
+    D.prayerText('Help us love others. Amen and ever, amen. Wait, the prompt says do not write the word Amen.'),
+    'Help us love others. Amen.');
+  ok('a prayer with no Amen gets one', D.prayerText('God, thank you for loving me.'),
+    'God, thank you for loving me. Amen.');
+  ok('a sentence said over and over is said once',
+    D.unloop('God loves you. God loves you. God loves you. God loves you.'), 'God loves you.');
+  ok('a word stuck on repeat is said once', D.unloop('so so so so happy'), 'so happy');
+  ok('ordinary text is left alone', D.unloop('Jonah sat. God grew a plant. Jonah smiled.'),
+    'Jonah sat. God grew a plant. Jonah smiled.');
+  const merged = D.mergeLesson(null, { title: 'T', story: ['x'], groups: {},
+    prayer: 'Help me. Amen. Amen. Amen.' }, ['heroes'], 'f', '2026-10-04');
+  ok('and the merge uses it', merged.prayer, 'Help me. Amen.');
+  const schema = D.lessonSchema(['champions', 'heroes']);
+  ok('the answer shape holds only the groups this doc covers',
+    Object.keys(schema.properties.groups.properties), ['champions', 'heroes']);
+  ok('with no list limits, which made Gemini answer 503',
+    JSON.stringify(schema).includes('maxItems'), false);
+
   console.log('\n--- the prompt ---');
   const prompt = D.lessonPrompt('Oct 4th Champions & Heroes', 'Home Kids', 'body', ['champions', 'heroes']);
   ok('asks only for the groups this doc covers', /fill ONLY these: champions, heroes\./.test(prompt), true);
   ok('and leaves the classroom out', /supplies, room setup, videos/.test(prompt), true);
   ok('and does not invent a memory verse', /ONLY if the plan gives one/.test(prompt), true);
+  ok('and does not mention Amen at all, which is what confused it', /amen/i.test(prompt), false);
 
   console.log('\n' + pass + ' passed, ' + fail + ' failed.');
   if (fail) process.exit(1);

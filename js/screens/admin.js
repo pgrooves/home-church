@@ -2575,6 +2575,10 @@
         '<p class="hc-row__title">' + c.esc(l.title || 'Untitled lesson') + '</p>' +
         '<p class="hc-caption">' + c.esc(have) + '</p>' +
         (files ? '<p class="hc-caption">From: ' + c.esc(files) + '</p>' : '') +
+        /* Who wrote the family version. Gemini writes every one of these, and
+           the watcher stamps the model on the draft so this line is a fact
+           read off the row rather than a promise. */
+        '<p class="hc-caption">Written by ' + c.esc(l._written_by || 'Gemini') + '</p>' +
         (row.note ? '<p class="hc-caption hc-admin__review-dates">' + c.esc(row.note) + '</p>' : '') +
         '<label class="hc-field"><span class="hc-field__label">Sunday</span>' +
           '<input class="hc-input" type="date" data-homekids-day value="' + c.esc(row.taught_on || '') + '">' +
