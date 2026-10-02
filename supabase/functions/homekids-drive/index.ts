@@ -49,12 +49,19 @@ import { createClient } from 'jsr:@supabase/supabase-js@2';
 const DEFAULT_FOLDER = '118rywZT5bU4b1VfmF0S2Ae6ZNex-e4RW';
 const DEFAULT_MODEL = 'gemini-3.5-flash';
 const FALLBACK_MODELS = ['gemini-flash-latest', 'gemini-3.7-flash'];
-const MAX_FILES_PER_RUN = 4;
+const MAX_FILES_PER_RUN = 20;  // skips are instant; RUN_START_BUDGET_MS paces the Gemini work
+/* No new doc is started after this point in a run. Gemini takes thirty to
+   sixty seconds a doc, and Supabase stops a function at about 150. */
+const RUN_START_BUDGET_MS = 45_000;
+/* A lesson whose Sunday is further back than this is not drafted: the page
+   shows the most recent Sunday, and a queue of September lessons in October
+   is work for nobody. */
+const OLDEST_DAYS = 7;
 const MAX_ATTEMPTS = 4;
 /* No new Gemini attempt starts after this. Supabase stops a function at about
    150 seconds, and a run cut off there writes nothing, not even "try again";
    one that stops itself here is recorded as deferred and retried next hour. */
-const GEMINI_BUDGET_MS = 90_000;
+const GEMINI_BUDGET_MS = 70_000;
 const DOCX = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
 const GDOC = 'application/vnd.google-apps.document';
 const GFOLDER = 'application/vnd.google-apps.folder';
@@ -551,7 +558,7 @@ async function driveList(auth: DriveAuth, folder: string, depth = 0): Promise<Dr
     const body = await res.json();
     for (const f of body.files ?? []) {
       // One level of subfolders, for a director who files by month.
-      if (f.mimeType === GFOLDER && depth < 1) out.push(...await driveList(auth, f.id, depth + 1));
+      if (f.mimeType === GFOLDER && depth < 3) out.push(...await driveList(auth, f.id, depth + 1));
       else out.push(f);
     }
     page = body.nextPageToken ?? '';
@@ -652,6 +659,8 @@ async function draftFromLesson(
   save: boolean,
   tuning: Record<string, unknown> = {},
 ): Promise<Record<string, unknown>> {
+  /* A pasted lesson with no group in its name or header is for all three;
+     a Drive doc never gets here without one (see the skip in the loop). */
   let groups = groupsIn(doc.name + ' ' + doc.header);
   if (!groups.length) groups = [...GROUP_KEYS];
 
@@ -753,12 +762,15 @@ Deno.serve(async (req: Request) => {
     } else {
       auth = { key: apiKey };
     }
-    const files = (await driveList(auth, folder))
-      .filter((f) => f.mimeType === GDOC || f.mimeType === DOCX);
+    const everything = await driveList(auth, folder);
+    const files = everything.filter((f) => f.mimeType === GDOC || f.mimeType === DOCX);
 
+    // Everything the folder holds, readable or not, so an empty `docs` can be
+    // told apart from a folder of PDFs or one the key cannot see into.
     if (body.probe) {
       return json({ ok: true, probe: true, robot: email, folder,
-        docs: files.map((f) => ({ name: f.name, modified: f.modifiedTime })) });
+        docs: files.map((f) => ({ name: f.name, modified: f.modifiedTime })),
+        everything: everything.map((f) => ({ name: f.name, type: f.mimeType })) });
     }
 
     const { data: ledgerRows } = await admin.from('homekids_drive_files').select('*');
@@ -773,8 +785,15 @@ Deno.serve(async (req: Request) => {
     }).sort((a, b) => a.modifiedTime.localeCompare(b.modifiedTime)).slice(0, MAX_FILES_PER_RUN);
 
     const results: unknown[] = [];
+    const runStart = Date.now();
+    const today = new Date().toISOString().slice(0, 10);
+    const oldest = new Date(Date.now() - OLDEST_DAYS * 86400000).toISOString().slice(0, 10);
 
     for (const f of todo) {
+      if (Date.now() - runStart > RUN_START_BUDGET_MS) {
+        results.push({ name: f.name, waiting: 'next run' });
+        continue;
+      }
       const prior = ledger.get(f.id);
       const sameVersion = prior && new Date(prior.modified_time as string).getTime() === new Date(f.modifiedTime).getTime();
       const attempts = sameVersion ? Number(prior!.attempts ?? 0) + 1 : 1;
@@ -784,6 +803,21 @@ Deno.serve(async (req: Request) => {
         });
 
       try {
+        /* Before Drive or Gemini is asked anything: a doc for a group the page
+           does not have (Explorers, so far), or for a Sunday long gone. */
+        const named = groupsIn(f.name);
+        const nameDate = dateIn(f.name, f.modifiedTime.slice(0, 10));
+        if (!named.length && !body.file) {
+          await record({ status: 'skipped', note: 'Not for Champions, Heroes or Legends + Warriors.' });
+          results.push({ name: f.name, skipped: 'not one of the three groups' });
+          continue;
+        }
+        if (nameDate && nameDate < oldest && !body.file) {
+          await record({ status: 'skipped', note: `For ${nameDate}, more than ${OLDEST_DAYS} days before ${today}.` });
+          results.push({ name: f.name, skipped: 'an old Sunday' });
+          continue;
+        }
+
         const { header, body: text } = await docxText(await driveDocx(auth, f));
 
         if (text.length < 200) {

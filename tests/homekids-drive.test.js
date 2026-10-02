@@ -132,6 +132,12 @@ const body = doc([
   ok('Legends & Warriors', Array.from(D.groupsIn('Oct 4th Legends & Warriors')), ['legends']);
   ok('either word of the third group is enough', Array.from(D.groupsIn('Warriors lesson')), ['legends']);
   ok('a doc that names none', Array.from(D.groupsIn('Jonah week 3')), []);
+  // The folder's real names, October 2026, trailing space and all.
+  ok('"Oct 11th Legends and Warriors "', Array.from(D.groupsIn('Oct 11th Legends and Warriors ')), ['legends']);
+  ok('"Sept 27th Champions & Heroes "', Array.from(D.groupsIn('Sept 27th Champions & Heroes ')), ['champions', 'heroes']);
+  ok('"Sept 20th Explorers " is none of the three, so it is skipped rather than written over all of them',
+    Array.from(D.groupsIn('Sept 20th Explorers ')), []);
+  ok('"Sept 27th" is the 27th of September', D.dateIn('Sept 27th Champions & Heroes ', '2026-09-24'), '2026-09-27');
 
   console.log('\n--- which Sunday ---');
   ok('"Oct 4th" in a name', D.dateIn('Oct 4th Champions & Heroes', '2026-10-01'), '2026-10-04');
