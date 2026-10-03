@@ -77,12 +77,34 @@
      Sunday, then the two courses, then Give. Nothing entered or left the list
      in the move.
 
-     GROUP IS FIRST AND USUALLY IS NOT HERE AT ALL, which is the second half
+     GROUP LEADS THE TOP GROUP AND USUALLY IS NOT HERE AT ALL, which is the second half
      of the change. See visibleModules() below: when group mode is off the row
      starts at Journal and everything under it moves up a slot, which is the
-     whole of what "hidden" means here. */
+     whole of what "hidden" means here. HomeKids sits ahead of it in the row
+     but is drawn with the tabs, below the hairline; see its note. */
   var MODULES = [
-    /* First, and gated. When the church is running rooms this is the tile
+    /* HomeKids, first in the row and drawn with the tabs. The church asked
+       for it in the overlay's bold group, as the line straight above Guide,
+       because a family opens it every week the way they open Guide, and the
+       bold group is where the weekly things are. FIRST IN THE ROW SO THE DRAG
+       AGREES: the overlay reads bottom to top in lane order, so the line above
+       Guide has to be the stop a drag left off Guide reaches. `menu: 'tabs'`
+       is the only thing that moves it across the hairline; see paintMenu.
+       In the bar it stays behind •••, which has no room for a sixth tab.
+
+       Gated like Group, by a switch an admin can flip, because a summer with
+       no kids' lessons would otherwise be a line that opens onto last May.
+       Unlike Group it defaults to on: an empty HomeKids page says warmly that
+       the first lesson is on its way, and that is worth showing. */
+    {
+      route: 'homekids',
+      icon: 'kids',
+      title: 'HomeKids',
+      sub: 'This week’s Bible story for kids, and news for families.',
+      gate: homekidsOn,
+      menu: 'tabs'
+    },
+    /* First in the top group, and gated. When the church is running rooms this is the tile
        somebody opens on a Thursday night, which is the most-opened thing
        behind ••• and belongs at the top of it. When it is not, it is not
        drawn: `gate` is what says so, and the row simply starts at Journal. */
@@ -129,22 +151,6 @@
       icon: 'pin',
       title: 'Services',
       sub: 'Sunday times, the address, and a button to the map.'
-    },
-    /* HomeKids, straight after Services and in the middle of the list, which
-       is where a parent looking for "what is my kid doing on Sunday" lands
-       after "what time is Sunday". Above the two courses because a family
-       opens it every week and a course is opened once.
-
-       Gated like Group, by a switch an admin can flip, because a summer with
-       no kids' lessons would otherwise be a tile that opens onto last May.
-       Unlike Group it defaults to on: an empty HomeKids page says warmly that
-       the first lesson is on its way, and that is worth showing. */
-    {
-      route: 'homekids',
-      icon: 'kids',
-      title: 'HomeKids',
-      sub: 'This week’s Bible story for kids, and news for families.',
-      gate: homekidsOn
     },
     {
       route: 'practices',
@@ -1012,7 +1018,7 @@
      where nothing works. See the header of js/admin.js. */
   function navItems() {
     var tiles = visibleModules().map(function (m) {
-      return { route: m.route, icon: m.icon, title: m.title, action: 'go-module', id: m.route };
+      return { route: m.route, icon: m.icon, title: m.title, action: 'go-module', id: m.route, menu: m.menu };
     });
 
     if (HC.admin && HC.admin.isAdmin()) {
@@ -1101,9 +1107,14 @@
     var route = HC.router.current();
     var here = route ? route.name : '';
 
-    var more = navItems().slice().reverse().map(function (m) {
-      return menuLink(m, here);
-    }).join('');
+    var items = navItems();
+    function lines(list) {
+      return list.slice().reverse().map(function (m) { return menuLink(m, here); }).join('');
+    }
+    var more = lines(items.filter(function (m) { return m.menu !== 'tabs'; }));
+    // Modules the church wants with the weekly five, above Guide. See HomeKids
+    // in MODULES.
+    var promoted = lines(items.filter(function (m) { return m.menu === 'tabs'; }));
 
     /* tabsOnly(), not TAB_META: ••• is a tile in the bar and nothing at all
        here, because this list has no overflow for it to point at. And the
@@ -1121,7 +1132,7 @@
          when they need them. A label here would be the app talking about its
          own navigation, which is the thing this screen exists to stop. */
       '<div class="hc-navmenu__split"><span class="hc-navmenu__rule"></span></div>' +
-      '<div class="hc-navmenu__group hc-navmenu__group--tabs">' + tabs + '</div>';
+      '<div class="hc-navmenu__group hc-navmenu__group--tabs">' + promoted + tabs + '</div>';
   }
 
   function openMenu() {

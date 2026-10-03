@@ -240,9 +240,12 @@ if (typeof stripTypeScriptTypes !== 'function' || start === -1 || end < start) {
 
 console.log('\n--- where it sits ---');
 const appSrc = read('js/app.js');
-const order = ['when-where', 'homekids', 'practices'].map(r => appSrc.indexOf("route: '" + r + "'"));
-ok('HomeKids sits between Services and Practices, the middle of the top half',
-  order[0] > 0 && order[0] < order[1] && order[1] < order[2], true);
+const order = ['homekids', 'group'].map(r => appSrc.indexOf("route: '" + r + "'"));
+ok('HomeKids is first in the row, the stop straight after Guide',
+  order[0] > 0 && order[0] < order[1], true);
+ok('and the overlay draws it with the tabs, in bold above Guide',
+  /route: 'homekids'[\s\S]{0,200}menu: 'tabs'/.test(appSrc) &&
+  /group--tabs">' \+ promoted \+ tabs/.test(appSrc), true);
 ok('and it has a screen behind it', /homekids: HC\.screens\.homekids/.test(appSrc), true);
 ok('and index.html loads it', /js\/screens\/homekids\.js/.test(read('index.html')), true);
 

@@ -70,8 +70,8 @@ function modules(settings) {
   return sandbox.window.HC.modules().map((m) => m.route);
 }
 
-const WITHOUT = ['journal', 'worship', 'when-where', 'homekids', 'practices', 'alpha', 'give'];
-const WITH = ['group'].concat(WITHOUT);
+const WITHOUT = ['homekids', 'journal', 'worship', 'when-where', 'practices', 'alpha', 'give'];
+const WITH = ['homekids', 'group'].concat(WITHOUT.slice(1));
 
 /* ------------------------------------------------------------------- off */
 
@@ -103,11 +103,14 @@ ok('the switch is on, so Group is back and it is first',
 
 console.log('\n--- the order, which is a decision ---\n');
 
-ok('Group leads, then what you wrote in it, then Sunday',
-   modules({ group_mode_on: true }).slice(0, 3), ['group', 'journal', 'worship']);
+ok('HomeKids first, straight after Guide, where the overlay draws it with the tabs',
+   modules({ group_mode_on: true })[0], 'homekids');
 
-ok('Services, then HomeKids, before the two courses, and Give last',
-   modules({ group_mode_on: true }).slice(3), ['when-where', 'homekids', 'practices', 'alpha', 'give']);
+ok('then Group, what you wrote in it, then Sunday',
+   modules({ group_mode_on: true }).slice(1, 4), ['group', 'journal', 'worship']);
+
+ok('Services before the two courses, and Give last',
+   modules({ group_mode_on: true }).slice(4), ['when-where', 'practices', 'alpha', 'give']);
 
 /* HomeKids has a switch of its own, the other way round from Group: on
    unless the church says off, because an empty HomeKids page is honest and
@@ -119,8 +122,8 @@ ok('and the church switching it off takes the tile away, nothing else',
    modules({ homekids_on: false }),
    WITHOUT.filter((r) => r !== 'homekids'));
 
-ok('hiding Group moves Journal into the first slot rather than leaving a gap',
-   modules({})[0], 'journal');
+ok('hiding Group moves Journal up into its slot rather than leaving a gap',
+   modules({})[1], 'journal');
 
 console.log('\n' + pass + ' passed, ' + fail + ' failed');
 process.exit(fail ? 1 : 0);
