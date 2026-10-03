@@ -49,17 +49,27 @@ Last updated: 2026-10-03, first build.
 
 **Open / Closed (Trey, 2026-10-03):** under the logo everybody sees
 "Cafe Is Open!" (green) or "Cafe is Closed." (red), his exact words.
-Whoever is in Cafe mode flips it with two big Open / Closed buttons, both on
-the Coffee page (Cafe mode card) and at the top of the queue. Stored as
-`app_settings.cafe_open_on` = the church date it was opened ('' when
-closed); open only while that date is today, so it closes itself at
-midnight. `hc_cafe_set_open(bool)` (Cafe mode only). Closed = no orders,
-enforced in cafe-checkout (`isOpenToday`). Phones re-ask every 30s while the
-menu or order is on screen. This replaced the earlier "Taking orders" pause
-switch (0085 drops it if a draft was ever applied). Hidden from the App
-settings list.
+- **Schedule (default):** open Sundays from `cafe_opens_at` 07:50 (10 min
+  before the 8:00 service) to `cafe_closes_at` 11:20, church time.
+  ASSUMPTION: Trey said "20 minutes after the third service"; read as after
+  the 11:00 service *starts*. If he meant after it ends, change
+  `cafe_closes_at` in Admin, App settings (no code change). The 11:45 pickup
+  time was replaced with 11:15 so no pickup falls after closing; pickups
+  after `cafe_closes_at` are refused on a scheduled day.
+- **Off day override:** Cafe mode people get Open / Closed buttons (Coffee
+  page card and top of the queue). Tapping the opposite of the schedule
+  writes `cafe_open_override` = "open YYYY-MM-DD" / "closed YYYY-MM-DD",
+  which wins for that date only; tapping the one the schedule already says,
+  or "Back to the schedule now", clears it. Opened by hand on an off day,
+  any pickup time is allowed. `hc_cafe_set_open('open'|'closed'|'schedule')`.
+- Same rule in `openState` (`_shared/cafe.mjs`, enforced by cafe-checkout)
+  and `HC.cafe.openState` (app); `tests/cafe.test.js` checks they agree.
+  Phones re-ask every 30s on the menu and order screens and repaint when
+  the clock crosses open/close time.
+- Replaced the earlier "Taking orders" switch and the one-day `cafe_open_on`
+  draft (0085 deletes both rows if a draft was ever applied).
 
-**Counter (`cafe` route, id `queue`):** stats, Open / Closed,
+**Counter (`cafe` route, id `queue`):** stats, Open / Closed (schedule note),
 orders grouped by pickup time, Start / Ready, notify <name> / Picked up, undo
 links, recent picked up list. Polls every 8s. Visible to `can_run_cafe` or
 admins.
@@ -119,8 +129,10 @@ also sits between them on an admin's phone). Only shows when `cafe_on`.
 
 **Defaults chosen without an answer from Trey (change any time):**
 - Prices $3.00/$3.50 hot, $4.00/$4.75 cold brew (`cafe_menu_items`).
-- Pickup times 7:40, 7:50, 8:45 / 9:10, 9:20, 10:15 / 10:40, 10:50, 11:45
-  (`cafe_slots`).
+- Pickup times 7:40, 7:50, 8:45 / 9:10, 9:20, 10:15 / 10:40, 10:50, 11:15
+  (`cafe_slots`). Note 7:40 is before the 7:50 opening, so it can only be
+  picked on a day the counter opened early by hand; drop or move it once the
+  real times are known.
 - 8 drinks per time. Tips off. Tax 0% until set (Admin, App settings).
 - Cancellations and refunds: done by the owner in Square. There is no
   Cancel button in the queue yet.

@@ -98,9 +98,21 @@ const MENU = [
   ok('late Saturday night in New Orleans is still Saturday',
     C.churchDay(new Date('2026-10-04T03:30:00Z')), '2026-10-03');
 
-  ok('open on the day it was opened', C.isOpenToday('2026-10-04', '2026-10-04'), true);
-  ok('closed the next morning if nobody closed it', C.isOpenToday('2026-10-04', '2026-10-11'), false);
-  ok('closed when empty', C.isOpenToday('', '2026-10-04'), false);
+  const sun = (minutes, override, extra) => C.openState(Object.assign({
+    override: override || '', day: '2026-10-04', minutes, sunday: true }, extra || {}));
+  ok('closed at 7:49 on a Sunday', sun(7 * 60 + 49).open, false);
+  ok('open at 7:50, ten before the first service', sun(7 * 60 + 50), { open: true, by: 'schedule', opensAt: '07:50', closesAt: '11:20' });
+  ok('open at 11:19', sun(11 * 60 + 19).open, true);
+  ok('closed at 11:20, twenty after the third service', sun(11 * 60 + 20).open, false);
+  ok('closed on a Saturday morning', C.openState({ override: '', day: '2026-10-03', minutes: 9 * 60, sunday: false }).open, false);
+  ok('open on a Saturday when every day is on', C.openState({ override: '', day: '2026-10-03', minutes: 9 * 60, sunday: false, everyDay: true }).open, true);
+  ok('the counter can close an off Sunday', sun(9 * 60, 'closed 2026-10-04'), { open: false, by: 'counter', opensAt: '07:50', closesAt: '11:20' });
+  ok('the counter can open outside the schedule', sun(14 * 60, 'open 2026-10-04').open, true);
+  ok('and the counter on a Saturday', C.openState({ override: 'open 2026-10-03', day: '2026-10-03', minutes: 18 * 60, sunday: false }).open, true);
+  ok('last week’s closed does not carry over', sun(9 * 60, 'closed 2026-09-27'), { open: true, by: 'schedule', opensAt: '07:50', closesAt: '11:20' });
+  ok('the times come from the settings', sun(12 * 60, '', { closesAt: '12:30' }).open, true);
+  ok('9:20 on a Sunday is 9:20 church time',
+    C.churchMinutes(new Date('2026-10-04T14:20:00Z')), 9 * 60 + 20);
 
   const slot = { id: '0920', pickup_time: '09:20', active: true };
   const at = (iso) => new Date(iso);
@@ -116,6 +128,9 @@ const MENU = [
   ok('full when the drinks reach capacity',
     C.slotProblem({ slot, day: '2026-10-04', now: at('2026-10-04T13:00:00Z'), load: 8, capacity: 8 }),
     'That pickup time is full. Pick another.');
+  ok('a pickup after closing is refused',
+    C.slotProblem({ slot: { id: '1145', pickup_time: '11:45' }, day: '2026-10-04', now: at('2026-10-04T13:00:00Z'), closesAt: '11:20' }),
+    'That pickup time is after the cafe closes. Pick an earlier one.');
   ok('capacity 0 means no limit',
     C.slotProblem({ slot, day: '2026-10-04', now: at('2026-10-04T13:00:00Z'), load: 80, capacity: 0 }), null);
 
@@ -193,6 +208,16 @@ const MENU = [
   ok('same summary', lines.map((l) => phone.describe(phoneMenu, l).summary),
     C.priceCart(MENU, lines).lines.map((l) => l.summary));
   ok('same tax', phone.tax(750, '9.75'), C.taxCents(750, '9.75'));
+  const cases = [
+    { override: '', day: '2026-10-04', minutes: 470, sunday: true },
+    { override: '', day: '2026-10-04', minutes: 469, sunday: true },
+    { override: '', day: '2026-10-04', minutes: 680, sunday: true },
+    { override: 'closed 2026-10-04', day: '2026-10-04', minutes: 540, sunday: true },
+    { override: 'open 2026-10-03', day: '2026-10-03', minutes: 900, sunday: false },
+    { override: 'closed 2026-09-27', day: '2026-10-04', minutes: 540, sunday: true },
+    { override: '', day: '2026-10-03', minutes: 540, sunday: false, everyDay: true }
+  ].map((x) => Object.assign({ opensAt: '07:50', closesAt: '11:20' }, x));
+  ok('same open or closed, every case', cases.map((x) => phone.openState(x)), cases.map((x) => C.openState(x)));
 
   console.log('\n' + pass + ' passed, ' + fail + ' failed.');
   if (fail) process.exit(1);

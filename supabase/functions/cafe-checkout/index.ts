@@ -39,7 +39,8 @@
 
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 import {
-  CafeError, priceCart, taxCents, cleanName, churchDay, churchInstant, slotProblem, isOpenToday,
+  CafeError, priceCart, taxCents, cleanName, churchDay, churchInstant, churchMinutes, slotProblem,
+  openState, isSunday,
   paymentLinkBody, totalsFromLink, squareBase, SQUARE_VERSION,
 } from '../_shared/cafe.mjs';
 
@@ -183,7 +184,16 @@ async function create(
     throw new CafeError('The cafe is not taking orders in the app right now.', 409);
   }
   const day = churchDay();
-  if (!isOpenToday(settingText(settings, 'cafe_open_on', ''), day)) {
+  const open = openState({
+    override: settingText(settings, 'cafe_open_override', ''),
+    day,
+    minutes: churchMinutes(),
+    sunday: isSunday(day),
+    everyDay: settingBool(settings, 'cafe_every_day', false),
+    opensAt: settingText(settings, 'cafe_opens_at', '07:50'),
+    closesAt: settingText(settings, 'cafe_closes_at', '11:20'),
+  });
+  if (!open.open) {
     throw new CafeError('The cafe is closed right now. Ordering ahead opens when it does.', 409);
   }
 
@@ -204,7 +214,10 @@ async function create(
 
   const problem = slotProblem({
     slot, day,
-    everyDay: settingBool(settings, 'cafe_every_day', false),
+    // Opened by hand on an off day, the counter is there for as long as it
+    // says, so only the schedule's closing time limits the pickup times.
+    everyDay: settingBool(settings, 'cafe_every_day', false) || open.by === 'counter',
+    closesAt: open.by === 'schedule' ? open.closesAt : '',
     load: load + priced.drinks - 1,
     capacity: Number.isFinite(capacity) ? capacity : 0,
   });

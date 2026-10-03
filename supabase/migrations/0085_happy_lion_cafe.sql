@@ -30,12 +30,16 @@
 --   cafe_on             The Coffee page in the ••• menu. OFF until the church
 --                       turns it on, unlike HomeKids, Practices and Alpha:
 --                       a page that takes money is not one to discover early.
---   cafe_open_on        Open or closed, from the counter. Holds the church
---                       date the cafe was opened on, or nothing when closed,
---                       and the cafe is open only while that date is today,
---                       so a counter that forgets to close is closed by
---                       midnight. Closed means no orders, and the Coffee page
---                       says so in red under the logo.
+--   cafe_opens_at       The Sunday schedule: open from 7:50, ten minutes
+--   cafe_closes_at      before the 8:00 service, to 11:20, twenty after the
+--                       11:00. Church time. Open means orders are taken and
+--                       the Coffee page says so in green under the logo;
+--                       closed, in red, and no orders.
+--   cafe_open_override  The counter's Open and Closed, for an off day: 'open
+--                       2026-10-04' or 'closed 2026-10-04' beats the schedule
+--                       for that one date and is ignored after it, so the
+--                       next Sunday is back on the schedule without anybody
+--                       remembering to undo it. Empty follows the schedule.
 --   cafe_every_day      Orders on any day, not only Sunday. For testing.
 --   cafe_tax_percent    Sales tax added to every order, as a percent.
 --   cafe_tips_on        Square's checkout page offers a tip.
@@ -301,7 +305,7 @@ insert into public.cafe_slots (id, service, pickup_time, sort_order)
 values
   ('0740', '8:00',  '07:40', 10), ('0750', '8:00',  '07:50', 20), ('0845', '8:00',  '08:45', 30),
   ('0910', '9:30',  '09:10', 40), ('0920', '9:30',  '09:20', 50), ('1015', '9:30',  '10:15', 60),
-  ('1040', '11:00', '10:40', 70), ('1050', '11:00', '10:50', 80), ('1145', '11:00', '11:45', 90)
+  ('1040', '11:00', '10:40', 70), ('1050', '11:00', '10:50', 80), ('1115', '11:00', '11:15', 90)
 on conflict (id) do nothing;
 
 
@@ -392,8 +396,14 @@ values
   ('cafe_on', 'Happy Lion Cafe page',
    'Off takes Coffee out of the ••• menu for everybody. Orders already paid for stay in the queue.',
    'boolean', false, null, 38),
-  ('cafe_open_on', 'Cafe: open today',
-   'Set from the counter with Open and Closed. The date the cafe was opened, empty when closed.',
+  ('cafe_opens_at', 'Cafe: opens at',
+   'On Sundays, church time, 24 hour, for example 07:50. Ten minutes before the first service.',
+   'text', null, '07:50', 58),
+  ('cafe_closes_at', 'Cafe: closes at',
+   'On Sundays, church time, 24 hour, for example 11:20. Twenty minutes after the third service.',
+   'text', null, '11:20', 59),
+  ('cafe_open_override', 'Cafe: open or closed today',
+   'Set from the counter with Open and Closed, for one day only. Empty follows the Sunday schedule.',
    'text', null, '', 60),
   ('cafe_every_day', 'Cafe: orders every day',
    'For testing. Off means orders can only be placed for Sunday morning, on Sunday morning.',
@@ -646,25 +656,35 @@ $$;
 revoke all on function public.hc_cafe_set_status(uuid, text) from public, anon, authenticated;
 grant execute on function public.hc_cafe_set_status(uuid, text) to authenticated;
 
--- Open and Closed, from the counter. Open writes today's church date, closed
--- writes nothing; see cafe_open_on in the header. Returns the date it wrote.
-create or replace function public.hc_cafe_set_open(p_on boolean)
+-- Open and Closed, from the counter, for today only. 'open' and 'closed'
+-- write that word and today's church date into cafe_open_override, which
+-- beats the Sunday schedule until midnight; 'schedule' clears it. Returns
+-- what it wrote.
+drop function if exists public.hc_cafe_set_open(boolean);
+
+create or replace function public.hc_cafe_set_open(p_state text)
 returns text
 language plpgsql
 security definer
 set search_path = public
 as $$
 declare
-  v_value text := case when coalesce(p_on, false)
-                       then public.hc_cafe_today()::text else '' end;
+  v_value text;
 begin
   if not public.hc_is_barista() then
     raise exception 'The cafe counter only.' using errcode = 'insufficient_privilege';
   end if;
 
+  if p_state not in ('open', 'closed', 'schedule') then
+    raise exception 'Open, closed, or schedule.' using errcode = '22023';
+  end if;
+
+  v_value := case when p_state = 'schedule' then ''
+                  else p_state || ' ' || public.hc_cafe_today()::text end;
+
   insert into public.app_settings (key, label, help, kind, value_bool, value_text, sort_order)
-  values ('cafe_open_on', 'Cafe: open today',
-          'Set from the counter with Open and Closed. The date the cafe was opened, empty when closed.',
+  values ('cafe_open_override', 'Cafe: open or closed today',
+          'Set from the counter with Open and Closed, for one day only. Empty follows the Sunday schedule.',
           'text', null, v_value, 60)
   on conflict (key) do update set value_text = excluded.value_text;
 
@@ -672,13 +692,15 @@ begin
 end;
 $$;
 
-revoke all on function public.hc_cafe_set_open(boolean) from public, anon, authenticated;
-grant execute on function public.hc_cafe_set_open(boolean) to authenticated;
+revoke all on function public.hc_cafe_set_open(text) from public, anon, authenticated;
+grant execute on function public.hc_cafe_set_open(text) to authenticated;
 
 -- An earlier draft of this file had a pause switch in place of Open and
 -- Closed. Gone, so a project that ran that draft is left with one control.
 drop function if exists public.hc_cafe_set_taking_orders(boolean);
-delete from public.app_settings where key = 'cafe_taking_orders';
+delete from public.app_settings where key in ('cafe_taking_orders', 'cafe_open_on');
+delete from public.cafe_slots where id = '1145'
+   and not exists (select 1 from public.cafe_orders where slot_id = '1145');
 
 
 -- ---------------------------------------------------------------------------

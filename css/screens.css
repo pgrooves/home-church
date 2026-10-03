@@ -4480,3 +4480,5 @@ html.hc-cafe-sheet-open, html.hc-cafe-sheet-open body { overflow: hidden; }
 .hc-cafe-pause { padding-top: var(--hc-space-xs); }
 .hc-cafe-pause > .hc-cafe-status { margin-top: 0; }
 .hc-cafe-pause__note { margin-top: var(--hc-space-sm); text-align: center; }
+.hc-cafe-oc__note { margin: var(--hc-space-sm) 0 0; text-align: center; }
+.hc-cafe-oc__back { font: inherit; font-weight: 600; color: var(--hc-accent-deep); text-decoration: underline; min-height: 32px; }

@@ -67,7 +67,7 @@ function answer(url, accept) {
   if (/\/rest\/v1\/app_settings/.test(url)) {
     let rows = SAMPLE.app_settings.map(r => {
       if (r.key === 'cafe_on' && answer.cafeOff) return Object.assign({}, r, { value_bool: false });
-      if (r.key === 'cafe_open_on' && answer.closed) return Object.assign({}, r, { value_text: '' });
+      if (r.key === 'cafe_open_override' && answer.closed) return Object.assign({}, r, { value_text: 'closed 2026-10-04' });
       return r;
     });
     const only = (url.match(/key=eq\.([a-z_]+)/) || [])[1];
@@ -238,6 +238,12 @@ async function go(page, route) {
   page = await phone(browser, { customer: true });
   await go(page, { name: 'cafe' });
   await page.screenshot({ path: path.join(OUT, '11-customer-closed.png'), clip: { x: 0, y: 0, width: 390, height: 560 } });
+  errors.push(...page.errors);
+  await page.close();
+  page = await phone(browser, { height: 700 });
+  await go(page, { name: 'cafe', id: 'queue' });
+  await page.waitForTimeout(800);
+  await shot(page, '13-queue-closed-off-day.png');
   errors.push(...page.errors);
   await page.close();
   page = await phone(browser, { customer: true, dark: true });

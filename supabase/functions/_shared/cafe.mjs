@@ -136,13 +136,38 @@ export function churchDay(now = new Date(), tz = CHURCH_TZ) {
   return `${p.year}-${p.month}-${p.day}`;
 }
 
+function minutesOf(time) {
+  const m = /^(\d{1,2}):(\d{2})/.exec(String(time ?? '').trim());
+  return m ? Number(m[1]) * 60 + Number(m[2]) : null;
+}
+
+/** Minutes past midnight on the church clock. */
+export function churchMinutes(now = new Date(), tz = CHURCH_TZ) {
+  const p = parts(now, tz);
+  return Number(p.hour) * 60 + Number(p.minute);
+}
+
 /**
- * Open or closed. The counter's Open writes the church date into
- * cafe_open_on and Closed empties it, so the cafe is open only on the day it
- * was opened, and one nobody closed is closed again by midnight.
+ * Open or closed, and why.
+ *
+ * THE SCHEDULE: on Sunday (or every day, while cafe_every_day is on for
+ * testing) from opensAt to closesAt, church time. By default 7:50, ten
+ * minutes before the 8:00 service, to 11:20, twenty after the 11:00.
+ *
+ * THE COUNTER: cafe_open_override is "open YYYY-MM-DD" or "closed
+ * YYYY-MM-DD", from the Open and Closed buttons, and it beats the schedule
+ * for that date only. Anything else, including yesterday's, is ignored, so
+ * an off day never carries over to the next Sunday.
+ *
+ * Returns { open, by: 'counter' | 'schedule', opensAt, closesAt }.
  */
-export function isOpenToday(openOn, day) {
-  return !!openOn && String(openOn).trim() === day;
+export function openState({ override, day, minutes, sunday, everyDay = false, opensAt = '07:50', closesAt = '11:20' }) {
+  const o = /^(open|closed)\s+(\d{4}-\d{2}-\d{2})$/.exec(String(override ?? '').trim());
+  if (o && o[2] === day) return { open: o[1] === 'open', by: 'counter', opensAt, closesAt };
+  const from = minutesOf(opensAt);
+  const to = minutesOf(closesAt);
+  const open = (sunday || everyDay) && from != null && to != null && minutes >= from && minutes < to;
+  return { open, by: 'schedule', opensAt, closesAt };
 }
 
 export function isSunday(day) {
@@ -175,9 +200,13 @@ export const SLOT_CUTOFF_MINUTES = 5;
  * Whether a pickup time can be ordered for right now, and why not.
  * Returns null when it can, or the sentence to show when it cannot.
  */
-export function slotProblem({ slot, day, now = new Date(), everyDay = false, load = 0, capacity = 0 }) {
+export function slotProblem({ slot, day, now = new Date(), everyDay = false, load = 0, capacity = 0, closesAt = '' }) {
   if (!slot || slot.active === false) return 'That pickup time is not offered.';
   if (!everyDay && !isSunday(day)) return 'Ordering opens Sunday morning.';
+  const close = minutesOf(closesAt);
+  if (close != null && minutesOf(slot.pickup_time) > close) {
+    return 'That pickup time is after the cafe closes. Pick an earlier one.';
+  }
   const at = churchInstant(day, slot.pickup_time);
   if (at.getTime() - now.getTime() < SLOT_CUTOFF_MINUTES * 60000) {
     return 'That pickup time has passed. Pick a later one.';

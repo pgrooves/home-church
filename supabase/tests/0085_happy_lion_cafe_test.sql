@@ -141,31 +141,36 @@ begin;
     $$select public.hc_cafe_set_status('cf100000-0000-0000-0000-000000000001', 'paid')$$,
     'cannot go to');
   select t_check('the counter opens the cafe for today',
-    public.hc_cafe_set_open(true), public.hc_cafe_today()::text);
+    public.hc_cafe_set_open('open'), 'open ' || public.hc_cafe_today()::text);
 commit;
 
 select t_check('ready is stamped',
   (select ready_at is not null from public.cafe_orders where id = 'cf100000-0000-0000-0000-000000000001'), true);
-select t_check('open is today''s date',
-  (select value_text from public.app_settings where key = 'cafe_open_on'), public.hc_cafe_today()::text);
+select t_check('the override names today',
+  (select value_text from public.app_settings where key = 'cafe_open_override'), 'open ' || public.hc_cafe_today()::text);
+select t_check('the Sunday schedule opens at 7:50',
+  (select value_text from public.app_settings where key = 'cafe_opens_at'), '07:50');
+select t_check('and closes at 11:20',
+  (select value_text from public.app_settings where key = 'cafe_closes_at'), '11:20');
 
 begin;
   set local role authenticated;
   set local request.jwt.claims = '{"sub":"cf000000-0000-0000-0000-000000000003"}';
   select t_raises_like('a customer cannot open or close the cafe',
-    $$select public.hc_cafe_set_open(false)$$, 'counter only');
+    $$select public.hc_cafe_set_open('closed')$$, 'counter only');
 rollback;
 
 begin;
   set local role authenticated;
   set local request.jwt.claims = '{"sub":"cf000000-0000-0000-0000-000000000002"}';
-  select t_check('closing clears it', public.hc_cafe_set_open(false), '');
+  select t_check('closed for today', public.hc_cafe_set_open('closed'), 'closed ' || public.hc_cafe_today()::text);
+  select t_raises_like('only three answers',
+    $$select public.hc_cafe_set_open('maybe')$$, 'open, closed, or schedule');
+  select t_check('back to the schedule clears it', public.hc_cafe_set_open('schedule'), '');
 commit;
 
-select t_check('closed is empty',
-  (select value_text from public.app_settings where key = 'cafe_open_on'), '');
-select t_check('the old pause switch is gone',
-  (select count(*)::int from public.app_settings where key = 'cafe_taking_orders'), 0);
+select t_check('the old switches are gone',
+  (select count(*)::int from public.app_settings where key in ('cafe_taking_orders', 'cafe_open_on')), 0);
 
 begin;
   set local role anon;

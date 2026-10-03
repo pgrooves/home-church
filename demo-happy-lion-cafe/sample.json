@@ -36,10 +36,24 @@
       "sort_order": 64
     },
     {
-      "key": "cafe_open_on",
-      "label": "Cafe: open today",
+      "key": "cafe_opens_at",
+      "label": "Cafe: opens at",
       "kind": "text",
-      "value_text": "2026-10-04",
+      "value_text": "07:50",
+      "sort_order": 58
+    },
+    {
+      "key": "cafe_closes_at",
+      "label": "Cafe: closes at",
+      "kind": "text",
+      "value_text": "11:20",
+      "sort_order": 59
+    },
+    {
+      "key": "cafe_open_override",
+      "label": "Cafe: open or closed today",
+      "kind": "text",
+      "value_text": "",
       "sort_order": 60
     }
   ],

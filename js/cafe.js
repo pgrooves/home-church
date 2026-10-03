@@ -209,49 +209,96 @@
     return HC.data.setting('cafe_every_day', false) === true;
   }
 
-  /* OPEN OR CLOSED, set from the counter. cafe_open_on holds the church date
-     the cafe was opened on and nothing when it is closed, so it is open only
-     while that date is today: a counter that forgets to close is closed by
-     midnight, and the page can never say open on a Tuesday. The same rule as
-     isOpenToday in supabase/functions/_shared/cafe.mjs, which is what refuses
-     an order when it is closed. */
-  function openOn() {
-    return String(HC.data.setting('cafe_open_on', '') || '').trim();
+  /* OPEN OR CLOSED.
+
+     THE SCHEDULE: on Sunday, church time, from cafe_opens_at to
+     cafe_closes_at, by default 7:50 (ten minutes before the 8:00 service) to
+     11:20 (twenty after the 11:00). cafe_every_day stretches it to every day
+     for testing.
+
+     THE COUNTER: Open and Closed write cafe_open_override, "open 2026-10-04"
+     or "closed 2026-10-04", for an off day. It beats the schedule for that one
+     date and nothing after it, so the next Sunday is back on the schedule
+     without anybody remembering to undo it.
+
+     The same rule as openState in supabase/functions/_shared/cafe.mjs, which
+     is what refuses an order while closed; tests/cafe.test.js runs both. */
+  function minutesOf(time) {
+    var m = /^(\d{1,2}):(\d{2})/.exec(String(time == null ? '' : time).trim());
+    return m ? Number(m[1]) * 60 + Number(m[2]) : null;
+  }
+
+  function openState(o) {
+    var hit = /^(open|closed)\s+(\d{4}-\d{2}-\d{2})$/.exec(String(o.override == null ? '' : o.override).trim());
+    if (hit && hit[2] === o.day) {
+      return { open: hit[1] === 'open', by: 'counter', opensAt: o.opensAt, closesAt: o.closesAt };
+    }
+    var from = minutesOf(o.opensAt), to = minutesOf(o.closesAt);
+    var open = !!(o.sunday || o.everyDay) && from != null && to != null &&
+      o.minutes >= from && o.minutes < to;
+    return { open: open, by: 'schedule', opensAt: o.opensAt, closesAt: o.closesAt };
+  }
+
+  function setting(key, fallback) {
+    var v = HC.data.setting(key, fallback);
+    return v == null || v === '' ? fallback : v;
+  }
+
+  function currentState() {
+    var now = churchNow();
+    return openState({
+      override: HC.data.setting('cafe_open_override', ''),
+      day: now.day,
+      minutes: now.minutes,
+      sunday: now.sunday,
+      everyDay: everyDay(),
+      opensAt: setting('cafe_opens_at', '07:50'),
+      closesAt: setting('cafe_closes_at', '11:20')
+    });
   }
 
   function isOpen() {
-    var on = openOn();
-    return !!on && on === churchNow().day;
+    return currentState().open;
   }
 
-  /* Write a fresh answer into the settings this phone already holds, so the
-     next draw reads it the same way it reads everything else. */
-  function rememberOpen(value) {
-    var rows = (HC.data && HC.data.appSettings) || [];
-    var row = rows.filter(function (s) { return s.key === 'cafe_open_on'; })[0];
-    if (row) row.value = value || '';
-    else rows.push({ key: 'cafe_open_on', label: 'Cafe: open today', help: '', kind: 'text', value: value || '', sortOrder: 60 });
+  /* '7:50' from '07:50', for the sentences that say when. */
+  function clockText(time) {
+    var m = minutesOf(time);
+    if (m == null) return String(time || '');
+    var h = Math.floor(m / 60), mm = m % 60;
+    return (h % 12 === 0 ? 12 : h % 12) + ':' + ('0' + mm).slice(-2);
+  }
+
+  var LIVE_KEYS = ['cafe_open_override', 'cafe_opens_at', 'cafe_closes_at', 'cafe_every_day'];
+
+  /* Write fresh answers into the settings this phone already holds, so the
+     next draw reads them the same way it reads everything else. */
+  function remember(rows) {
+    var held = (HC.data && HC.data.appSettings) || [];
+    rows.forEach(function (r) {
+      var value = typeof r.value_bool === 'boolean' && r.value_text == null ? r.value_bool : (r.value_text || '');
+      var row = held.filter(function (s) { return s.key === r.key; })[0];
+      if (row) row.value = value;
+      else held.push({ key: r.key, label: '', help: '', kind: typeof value === 'boolean' ? 'boolean' : 'text', value: value, sortOrder: 60 });
+    });
   }
 
   /* Ask the database straight away rather than waiting for the next content
-     refresh, because open and closed change on a Sunday morning while
+     refresh, because the counter can open or close on a Sunday morning while
      somebody is looking at the page. Read like the rest of app_settings, with
-     the publishable key and no session. Resolves to whether that changed
-     anything, and quietly to false when offline. */
+     the publishable key and no session, and quietly nothing when offline. */
   function refreshOpen() {
-    if (!HC.auth || !HC.auth.isConfigured()) return Promise.resolve(false);
-    var before = isOpen();
-    return HC.auth.publicGet('/app_settings?key=eq.cafe_open_on&select=value_text').then(function (rows) {
-      if (!Array.isArray(rows)) return false;
-      rememberOpen(rows[0] ? rows[0].value_text : '');
-      return isOpen() !== before;
-    }).catch(function () { return false; });
+    if (!HC.auth || !HC.auth.isConfigured()) return Promise.resolve();
+    return HC.auth.publicGet('/app_settings?key=in.(' + LIVE_KEYS.join(',') +
+      ')&select=key,value_bool,value_text').then(function (rows) {
+      if (Array.isArray(rows)) remember(rows);
+    }).catch(function () {});
   }
 
-  /* The counter's Open and Closed. */
-  function setOpen(on) {
-    return HC.auth.rpc('hc_cafe_set_open', { p_on: !!on }).then(function (value) {
-      rememberOpen(typeof value === 'string' ? value : (on ? churchNow().day : ''));
+  /* The counter's Open and Closed, for today, or 'schedule' to hand it back. */
+  function setOpen(state) {
+    return HC.auth.rpc('hc_cafe_set_open', { p_state: state }).then(function (value) {
+      remember([{ key: 'cafe_open_override', value_text: typeof value === 'string' ? value : '' }]);
       return isOpen();
     });
   }
@@ -261,15 +308,22 @@
      for the morning of: on Sunday, or any day when the church has switched
      on cafe_every_day to test. */
   function closedReason() {
-    if (!isOpen()) {
-      return 'Ordering ahead opens when the cafe does.';
-    }
+    var st = currentState();
     var now = churchNow();
-    if (!now.sunday && !everyDay()) {
-      return 'Ordering ahead opens Sunday morning. See you in the lobby.';
+    if (!st.open) {
+      if (st.by === 'counter') return 'The cafe is closed today. See you next Sunday.';
+      var from = minutesOf(st.opensAt);
+      if ((now.sunday || everyDay()) && from != null && now.minutes < from) {
+        return 'Ordering ahead opens at ' + clockText(st.opensAt) + '.';
+      }
+      return 'Ordering ahead opens Sunday at ' + clockText(st.opensAt) + '.';
     }
-    var open = slots().some(function (s) { return slotMinutes(s) - now.minutes >= 5; });
-    if (!open) return 'That’s it for ordering ahead today. The counter is still open in the lobby.';
+    var close = st.by === 'schedule' ? minutesOf(st.closesAt) : null;
+    var left = slots().some(function (s) {
+      var m = slotMinutes(s);
+      return m - now.minutes >= 5 && (close == null || m <= close);
+    });
+    if (!left) return 'That’s it for ordering ahead today. The counter is still open in the lobby.';
     return '';
   }
 
@@ -278,6 +332,8 @@
   function slotGroups(load, drinks) {
     var now = churchNow();
     var cap = parseInt(HC.data.setting('cafe_slot_capacity', '8'), 10) || 0;
+    var st = currentState();
+    var close = st.by === 'schedule' ? minutesOf(st.closesAt) : null;
     var groups = [];
     slots().slice().sort(function (a, b) { return (a.sortOrder || 0) - (b.sortOrder || 0); })
       .forEach(function (s) {
@@ -288,7 +344,7 @@
         g.slots.push({
           id: s.id,
           label: clock(s),
-          past: slotMinutes(s) - now.minutes < 5,
+          past: slotMinutes(s) - now.minutes < 5 || (close != null && slotMinutes(s) > close),
           full: limit > 0 && taken + (drinks || 1) > limit
         });
       });
@@ -407,6 +463,9 @@
     queue: queue,
     setStatus: setStatus,
     isOpen: isOpen,
+    openState: openState,
+    currentState: currentState,
+    clockText: clockText,
     refreshOpen: refreshOpen,
     setOpen: setOpen
   };

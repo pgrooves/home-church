@@ -47,7 +47,8 @@
     openOrders: [],
     ticket: null,       // { id, order, ahead, error }
     queue: { rows: null, error: '', busy: '' },
-    opening: false
+    opening: false,
+    shownOpen: null
   };
 
   var timers = { ticket: null, queue: null, open: null };
@@ -103,6 +104,7 @@
 
   function openBadge() {
     var open = HC.cafe.isOpen();
+    state.shownOpen = open;
     return '<p class="hc-cafe-status hc-cafe-status--' + (open ? 'open' : 'closed') + '" ' +
       'role="status" data-cafe-status>' +
       '<span class="hc-cafe-status__dot" aria-hidden="true"></span>' +
@@ -122,7 +124,21 @@
         'aria-pressed="' + pressed + '"' + (busy ? ' disabled' : '') + '>' + label + '</button>';
     }
     return '<div class="hc-cafe-oc" role="group" aria-label="Is the cafe open?">' +
-      btn(true, 'Open') + btn(false, 'Closed') + '</div>';
+      btn(true, 'Open') + btn(false, 'Closed') + '</div>' +
+      '<p class="hc-caption hc-cafe-oc__note">' + scheduleNote() + '</p>';
+  }
+
+  /* Under the two buttons: who decided, and for how long. */
+  function scheduleNote() {
+    var st = HC.cafe.currentState();
+    var hours = HC.cafe.clockText(st.opensAt) + ' to ' + HC.cafe.clockText(st.closesAt);
+    if (st.by === 'counter') {
+      return c.esc((st.open ? 'Opened' : 'Closed') + ' by hand for today. The Sunday schedule, ' +
+        hours + ', is back tomorrow. ') +
+        '<button type="button" class="hc-cafe-oc__back" data-action="cafe" data-cafe="open-state" data-id="schedule">' +
+        'Back to the schedule now</button>';
+    }
+    return c.esc('Following the Sunday schedule, ' + hours + '. Tap the other one for an off day.');
   }
 
   function cart() {
@@ -561,10 +577,7 @@
       '<div class="hc-cafe-stat"><b>' + drinks(done) + '</b><span>done today</span></div>' +
     '</div>';
 
-    html += '<div class="hc-cafe-pause">' + openBadge() + openControl() +
-      '<p class="hc-caption hc-cafe-pause__note">' + (HC.cafe.isOpen()
-        ? 'Everybody sees the cafe is open, and can order ahead. It closes on its own at midnight.'
-        : 'Everybody sees the cafe is closed, and nobody can order ahead.') + '</p></div>';
+    html += '<div class="hc-cafe-pause">' + openBadge() + openControl() + '</div>';
 
     if (q.error) html += '<p class="hc-cafe-error" role="alert">' + c.esc(q.error) + '</p>';
 
@@ -658,9 +671,13 @@
      line green on a phone that was already looking. Repaints only when it
      changed. */
   function watchOpen(id) {
+    // Repaints when the answer changed, whether the counter flipped it or the
+    // clock crossed 7:50 or 11:20 while somebody was looking.
     function check() {
       if (state.opening) return;
-      HC.cafe.refreshOpen().then(function (changed) { if (changed && here(id)) paint(); });
+      HC.cafe.refreshOpen().then(function () {
+        if (here(id) && HC.cafe.isOpen() !== state.shownOpen) paint();
+      });
     }
     check();
     timers.open = setInterval(check, 30000);
@@ -839,14 +856,28 @@
         loadQueue();
       });
     },
+    /* Open, Closed, or back to the schedule. Tapping whichever one the
+       schedule would say anyway hands today back to the schedule rather than
+       pinning it, so the counter never has to think about which it is. */
     'open-state': function (el) {
-      var on = el.getAttribute('data-id') === 'open';
-      if (state.opening || on === HC.cafe.isOpen()) return;
+      var want = el.getAttribute('data-id');
+      if (state.opening) return;
+      var st = HC.cafe.currentState();
+      var sched = HC.cafe.openState({
+        override: '', day: HC.cafe.churchNow().day, minutes: HC.cafe.churchNow().minutes,
+        sunday: HC.cafe.churchNow().sunday, everyDay: HC.data.setting('cafe_every_day', false) === true,
+        opensAt: st.opensAt, closesAt: st.closesAt
+      });
+      var next = want === 'schedule' ? 'schedule'
+        : ((want === 'open') === sched.open ? 'schedule' : want);
+      if (next === 'schedule' && st.by === 'schedule') return;
       state.opening = true;
       paint();
-      HC.cafe.setOpen(on).then(function (open) {
+      HC.cafe.setOpen(next).then(function (open) {
         HC.native.tap('Medium');
-        c.toast(open ? 'The cafe is open. Everybody can see it.' : 'The cafe is closed.');
+        c.toast(next === 'schedule'
+          ? 'Back on the Sunday schedule. The cafe is ' + (open ? 'open.' : 'closed.')
+          : open ? 'The cafe is open for today. Everybody can see it.' : 'The cafe is closed for today.');
       }).catch(function (err) {
         c.toast((err && err.message) || 'That did not go through.');
       }).then(function () {
