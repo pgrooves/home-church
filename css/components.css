@@ -1036,10 +1036,10 @@
    empty glass on a tall phone, and using them is what lets every line fit
    without the top group scrolling.
 
-   THE ROOM GOES INTO THE LINES, NOT THE MIDDLE. The two groups stay a short
-   rule apart, as they always were, and fitMenu opens up the leading until
-   the list reaches the top. Anything left once the leading is at its widest
-   sits above Settings, at the outside, never between the groups. */
+   SPARE ROOM GOES TO THE OUTSIDE. The two groups stay a short rule apart and
+   the lines keep their spacing; the list sits down by the button and on a
+   tall phone the room left over is above Settings, never between the
+   groups and never stretched through the lines. */
 .hc-navmenu__panel {
   display: flex;
   flex-direction: column;
