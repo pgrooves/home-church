@@ -4,8 +4,8 @@
    WHAT IS PINNED HERE, in the order a week happens:
 
      which lesson       the page shows the most recent Sunday that has
-                        happened, never next week's early, and something rather
-                        than nothing in the very first week.
+                        happened; a lesson approved early stays hidden, arrows
+                        included, until the morning of its Sunday.
      the ticks          stored per lesson and per item, counted against the
                         lesson's own list, and survive a reload.
      the emails         a HomeKids email is recognised by the two secrets and
@@ -110,7 +110,7 @@ let w = app();
 const mappers = load(w, SAMPLE);
 const D = w.HC.data;
 
-ok('newest Sunday first', D.homekidsLessonsByDate().map(l => l.taughtOn), ['2026-09-27', '2026-09-20']);
+ok('newest Sunday first', D.homekidsLessonsByDate('2026-10-02').map(l => l.taughtOn), ['2026-09-27', '2026-09-20']);
 ok('the Friday after a lesson shows that lesson',
   D.currentHomekidsLesson('2026-10-02').id, 'homekids-2026-09-27');
 ok('a week runs Sunday to Saturday: the last Saturday of it still shows its Sunday',
@@ -119,8 +119,13 @@ ok('on the Sunday itself, that Sunday',
   D.currentHomekidsLesson('2026-09-27').id, 'homekids-2026-09-27');
 ok('the Saturday before, still last week',
   D.currentHomekidsLesson('2026-09-26').id, 'homekids-2026-09-20');
-ok('before any lesson has been taught, the soonest one rather than nothing',
-  D.currentHomekidsLesson('2026-09-01').id, 'homekids-2026-09-20');
+ok('a lesson approved early is hidden until its Sunday, arrows included',
+  D.homekidsLessonsByDate('2026-09-26').map(l => l.taughtOn), ['2026-09-20']);
+ok('and cannot be opened by id before then',
+  [D.getHomekidsLesson('homekids-2026-09-27', '2026-09-26'), D.getHomekidsLesson('homekids-2026-09-27', '2026-09-27').id],
+  [null, 'homekids-2026-09-27']);
+ok('before the first Sunday there is nothing yet, which the page draws warmly',
+  D.currentHomekidsLesson('2026-09-01'), null);
 
 const empty = app();
 ok('no lessons at all is null, which the page draws warmly',

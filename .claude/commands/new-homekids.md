@@ -112,4 +112,5 @@ Two or three lines: the title, the Sunday, and that it is on HomeKids. Stop.
 - Do not copy the teacher's supply list, room setup or timings onto the page.
 - Do not change a checklist item's `id` on a lesson already published.
 - Do not put a lesson on a Sunday it was not taught. The page shows the most
-  recent Sunday that has happened, so an early publish simply waits.
+  recent Sunday that has happened, and a lesson approved early stays hidden
+  until the morning of its Sunday, so publishing ahead is safe.

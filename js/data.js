@@ -2966,35 +2966,45 @@
       return homekidsGroups.filter(function (g) { return g.key === key; })[0] || null;
     },
 
-    // Newest Sunday first, sorted here for the same reason worship sets are:
-    // a cached payload from before the table's `order` existed has none.
-    homekidsLessonsByDate: function () {
-      return homekidsLessons.slice().sort(function (a, b) {
+    /* Newest Sunday first, sorted here for the same reason worship sets are:
+       a cached payload from before the table's `order` existed has none.
+
+       ONLY SUNDAYS THAT HAVE ARRIVED. A lesson approved early stays out of
+       sight, arrows and all, until the morning of its Sunday, and then it is
+       simply the newest one here, which makes it the page's default. So the
+       director can upload a month ahead and families meet each guide on its
+       own Sunday, with last week's staying put until then. The date is the
+       phone's own, so it turns over at the family's midnight. */
+    homekidsLessonsByDate: function (today) {
+      today = today || isoToday();
+      return homekidsLessons.filter(function (l) {
+        return l.taughtOn && l.taughtOn <= today;
+      }).sort(function (a, b) {
         if (a.taughtOn === b.taughtOn) return 0;
         return a.taughtOn < b.taughtOn ? 1 : -1;
       });
     },
 
-    getHomekidsLesson: function (id) {
-      return homekidsLessons.filter(function (l) { return l.id === id; })[0] || null;
+    // A lesson by id, if its Sunday has arrived. An old link to a week that
+    // has not happened yet lands on this week's instead.
+    getHomekidsLesson: function (id, today) {
+      today = today || isoToday();
+      return homekidsLessons.filter(function (l) {
+        return l.id === id && l.taughtOn && l.taughtOn <= today;
+      })[0] || null;
     },
 
     /* The lesson this week belongs to: the most recent Sunday that has
        happened, because the guide is for the days after the lesson and the
-       checkmarks are shown to the teacher the Sunday after that. A lesson
-       published ahead of its Sunday waits until that morning, so a family
-       halfway through this week's list is not handed next week's. When every
-       lesson is still ahead, which is only ever the first week, the soonest
-       one answers rather than nothing.
+       checkmarks are shown to the teacher the Sunday after that. A week runs
+       Sunday to Saturday: the 4th is the default through the 10th, and the
+       11th takes over that Sunday morning. Lessons further ahead are hidden
+       (see homekidsLessonsByDate), so before the first Sunday there is
+       nothing yet and the page says so warmly.
 
        `today` is 'YYYY-MM-DD' and optional; the tests pass one. */
     currentHomekidsLesson: function (today) {
-      today = today || isoToday();
-      var all = this.homekidsLessonsByDate();
-      for (var i = 0; i < all.length; i++) {
-        if (all[i].taughtOn <= today) return all[i];
-      }
-      return all.length ? all[all.length - 1] : null;
+      return this.homekidsLessonsByDate(today)[0] || null;
     },
 
     /* What the emails said that is still true today, for one audience,
