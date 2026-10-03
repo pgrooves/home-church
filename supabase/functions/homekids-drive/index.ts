@@ -299,12 +299,14 @@ const LESSON_SCHEMA = {
       }])),
     },
     prayer: { type: 'string' },
+    parent_summary: { type: 'string' },
     parent_note: { type: 'string' },
   },
-  /* parent_note and prayer are required because, left optional, Gemini left
-     the parent note out on every run on the first real lesson. Required at
-     this level is fine; nested `required` and maxItems were what made it 503. */
-  required: ['title', 'big_idea', 'story', 'groups', 'prayer', 'parent_note'],
+  /* The two parent fields and prayer are required because, left optional,
+     Gemini left the parent note out on every run on the first real lesson.
+     Required at this level is fine; nested `required` and maxItems were what
+     made it 503. */
+  required: ['title', 'big_idea', 'story', 'groups', 'prayer', 'parent_summary', 'parent_note'],
 };
 
 function lessonPrompt(name: string, header: string, body: string, groups: GroupKey[]): string {
@@ -342,14 +344,52 @@ function lessonPrompt(name: string, header: string, body: string, groups: GroupK
     '  activity, rewritten for home rather than a classroom.',
     ...groups.map((g) => '  ' + who[g]),
     '- prayer: two or three short sentences a child can pray, each said once.',
-    '- parent_note: one or two sentences to the grown up: what was taught, and one',
-    '  question to ask at bedtime.',
+    '- parent_summary: two or three sentences to the grown up, read BEFORE the story:',
+    '  what the kids learned on Sunday and the one truth to carry through the week.',
+    '  No bedtime question here.',
+    '- parent_note: one or two sentences to the grown up, read at the END of the',
+    '  guide: tie the teaching up in a line, then one question to ask at bedtime.',
+    '  Start the question with "At bedtime,".',
     '',
     `FILE NAME: ${name}`,
     `HEADER: ${header || '(none)'}`,
     '',
     'LESSON PLAN',
     body,
+  ].join('\n');
+}
+
+/* The two parent sections on their own, for a lesson written before there
+   were two. Gemini reads the finished guide rather than the teacher's plan, so
+   what it says to parents matches what the page already says to the kids. */
+const PARENTS_SCHEMA = {
+  type: 'object',
+  properties: { parent_summary: { type: 'string' }, parent_note: { type: 'string' } },
+  required: ['parent_summary', 'parent_note'],
+};
+
+function parentsPrompt(lesson: Record<string, unknown>): string {
+  const story = Array.isArray(lesson.story) ? (lesson.story as string[]).join('\n') : '';
+  return [
+    'This is a finished church kids guide that families read at home in the week after',
+    'Sunday. Write the two short notes to the grown up that go on it.',
+    '',
+    'VOICE. Short sentences and everyday words. Warm, never guilt or shame. Never use an',
+    'em dash; use commas. No exclamation marks. Never name a child or a teacher. Never',
+    'add a Bible fact that is not in the guide.',
+    '',
+    'FIELDS',
+    '- parent_summary: two or three sentences, read BEFORE the story: what the kids',
+    '  learned on Sunday and the one truth to carry through the week. No bedtime question.',
+    '- parent_note: one or two sentences, read at the END of the guide: tie the teaching',
+    '  up in a line, then one question to ask at bedtime. Start the question with',
+    '  "At bedtime,".',
+    '',
+    `TITLE: ${lesson.title ?? ''}`,
+    `PASSAGE: ${lesson.passage ?? ''}`,
+    `BIG IDEA: ${lesson.big_idea ?? ''}`,
+    'STORY:',
+    story,
   ].join('\n');
 }
 
@@ -421,6 +461,7 @@ function mergeLesson(
     memory_verse: verse && s(verse.text) ? { text: s(verse.text, 400), reference: s(verse.reference, 80) } : null,
     story: list(parsed.story, 6, 1200),
     prayer: prayerText(parsed.prayer),
+    parent_summary: s(parsed.parent_summary, 800),
     parent_note: s(parsed.parent_note, 800),
   };
 
@@ -712,6 +753,7 @@ Deno.serve(async (req: Request) => {
 
   let body: {
     probe?: boolean; dry_run?: boolean; file?: string;
+    parents?: { save?: boolean; redo?: boolean };
     lesson?: { name?: string; header?: string; text?: string; save?: boolean;
       generation_config?: Record<string, unknown> };
   } = {};
@@ -750,6 +792,43 @@ Deno.serve(async (req: Request) => {
     } catch (err) {
       return json({ ok: false, error: String((err as Error).message ?? err) });
     }
+  }
+
+  /* Every lesson and waiting draft without a parent_summary gets both parent
+     sections from Gemini. A preview unless `save`; `redo` rewrites ones that
+     already have them. Live lessons are updated in place: this fills in a
+     section the page grew, it does not change the teaching. */
+  if (body.parents) {
+    const save = body.parents.save === true;
+    const redo = body.parents.redo === true;
+    const results: Array<Record<string, unknown>> = [];
+    const began = Date.now();
+    const { data: lessons } = await admin.from('homekids_lessons').select('*');
+    const { data: drafts } = await admin.from('homekids_lesson_drafts').select('*').eq('review_state', 'pending');
+    const todo = [
+      ...(lessons ?? []).map((l) => ({ table: 'homekids_lessons', id: l.id as string, lesson: l as Record<string, unknown> })),
+      ...(drafts ?? []).map((d) => ({ table: 'homekids_lesson_drafts', id: d.id as string, lesson: d.lesson as Record<string, unknown> })),
+    ].filter((t) => redo || !t.lesson.parent_summary);
+    for (const t of todo) {
+      if (Date.now() - began > RUN_START_BUDGET_MS) { results.push({ id: t.id, waiting: 'next run' }); continue; }
+      try {
+        const answer = await askGemini(geminiKey, model, parentsPrompt(t.lesson), PARENTS_SCHEMA);
+        const parent_summary = s(answer.data.parent_summary, 800);
+        const parent_note = s(answer.data.parent_note, 800);
+        if (!parent_summary || !parent_note) throw new Error('Gemini left a parent section empty.');
+        if (save) {
+          const { error } = t.table === 'homekids_lessons'
+            ? await admin.from('homekids_lessons').update({ parent_summary, parent_note }).eq('id', t.id)
+            : await admin.from('homekids_lesson_drafts').update({
+              lesson: { ...t.lesson, parent_summary, parent_note } }).eq('id', t.id);
+          if (error) throw new Error(error.message);
+        }
+        results.push({ table: t.table, id: t.id, parent_summary, parent_note, written_by: 'Gemini (' + answer.model + ')' });
+      } catch (err) {
+        results.push({ table: t.table, id: t.id, error: String((err as Error).message ?? err) });
+      }
+    }
+    return json({ ok: true, saved: save, results });
   }
 
   try {

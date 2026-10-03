@@ -42,7 +42,7 @@ if (start === -1 || end < start) {
 }
 
 const D = vm.runInNewContext(stripTypeScriptTypes(source.slice(start, end)) +
-  '\n({ docxText, groupsIn, dateIn, lessonDate, mergeLesson, checklistFor, lessonPrompt, unloop, prayerText, lessonSchema })',
+  '\n({ docxText, groupsIn, dateIn, lessonDate, mergeLesson, checklistFor, lessonPrompt, unloop, prayerText, lessonSchema, parentsPrompt, PARENTS_SCHEMA })',
   { TextDecoder, TextEncoder, DataView, Uint8Array, Blob, Response, DecompressionStream, Date, Object, JSON });
 
 /* ------------------------------------------------- a .docx, built by hand */
@@ -228,6 +228,23 @@ const body = doc([
   ok('and leaves the classroom out', /supplies, room setup, videos/.test(prompt), true);
   ok('and does not invent a memory verse', /ONLY if the plan gives one/.test(prompt), true);
   ok('and does not mention Amen at all, which is what confused it', /amen/i.test(prompt), false);
+
+  console.log('\n--- two notes to parents ---');
+  const twoNotes = D.lessonSchema(['heroes']);
+  ok('every guide must have both notes to parents',
+    ['parent_summary', 'parent_note'].every((k) => twoNotes.required.includes(k) && twoNotes.properties[k]), true);
+  ok('the first is read before the story, with no bedtime question',
+    /parent_summary: [\s\S]*BEFORE the story[\s\S]*No bedtime question/.test(prompt), true);
+  ok('the second closes the guide with what to ask at bedtime',
+    /parent_note: [\s\S]*END of the[\s\S]*"At bedtime,"/.test(prompt), true);
+  const both = D.mergeLesson(null, { title: 'T', story: ['x'], groups: {},
+    parent_summary: 'The kids learned — God sees them.', parent_note: 'At bedtime, ask who saw you.' },
+    ['heroes'], 'f', '2026-10-04');
+  ok('both are carried into the draft, dashes and all cleaned',
+    [both.parent_summary, both.parent_note], ['The kids learned, God sees them.', 'At bedtime, ask who saw you.']);
+  const pp = D.parentsPrompt({ title: 'Jesus Sees Nathanael', big_idea: 'Jesus knows you.', story: ['Under a tree.'] });
+  ok('the catch-up pass reads the finished guide', /Jesus Sees Nathanael[\s\S]*Jesus knows you\.[\s\S]*Under a tree\./.test(pp), true);
+  ok('and must return both notes', D.PARENTS_SCHEMA.required, ['parent_summary', 'parent_note']);
 
   console.log('\n' + pass + ' passed, ' + fail + ' failed.');
   if (fail) process.exit(1);

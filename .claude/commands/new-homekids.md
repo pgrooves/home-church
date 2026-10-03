@@ -92,8 +92,10 @@ wait a few minutes and send it again rather than writing the guide another way.
 ## Step 3. Show it and wait
 
 Show Gemini's guide as the page would read it, top to bottom: the big idea,
-the story, each group's questions and activity, the prayer, the note to
-parents, and the line saying which Gemini model wrote it. **Wait for a yes.**
+the first note to parents (what the kids learned), the story, each group's
+questions and activity, the prayer, the second note to parents (the bedtime
+question), and the line saying which Gemini model wrote it. Every guide has
+both notes to parents; the schema requires them. **Wait for a yes.**
 
 ## Step 4. Save it for approval
 

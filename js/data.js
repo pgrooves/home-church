@@ -2538,7 +2538,9 @@
          story: [paragraph, ...],
          groups: { champions: { questions: [...], activity }, heroes: {...}, legends: {...} },
          checklist: [ { id: 'read', text: 'Read the story together' }, ... ],
-         prayer, parentNote } */
+         prayer, parentSummary, parentNote }
+       parentSummary is the first For parents, under the big idea; parentNote
+       the second, at the end, with the bedtime question. */
   var homekidsLessons = [];
 
   /* What the weekly HomeKids emails said, one item per row, to parents or to

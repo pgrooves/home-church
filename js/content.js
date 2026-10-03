@@ -32,7 +32,7 @@
 
   var cfg = HC.config || {};
   var CACHE_KEY = 'content';
-  var CACHE_VERSION = 16;     // bump when a mapping below changes shape
+  var CACHE_VERSION = 17;     // bump when a mapping below changes shape
   var TIMEOUT_MS = 12000;
 
   // The tables we pull, and the HC.data key each one fills. Adding another
@@ -604,6 +604,7 @@
         return { id: str(c.id), text: str(c.text) };
       }),
       prayer: str(r.prayer),
+      parentSummary: str(r.parent_summary),
       parentNote: str(r.parent_note)
     };
   }

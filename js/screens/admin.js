@@ -2555,6 +2555,7 @@
 
     var preview = '';
     if (l.big_idea) preview += '<p class="hc-eyebrow">Big idea</p><p class="hc-caption">' + c.esc(l.big_idea) + '</p>';
+    if (l.parent_summary) preview += '<p class="hc-eyebrow">For parents, before the story</p><p class="hc-caption">' + c.esc(l.parent_summary) + '</p>';
     if (l.story && l.story.length) {
       preview += '<p class="hc-eyebrow">Story</p>' +
         l.story.map(function (p) { return '<p class="hc-caption">' + c.esc(p) + '</p>'; }).join('');
@@ -2567,7 +2568,7 @@
         (g.activity ? '<br><em>Try it: ' + c.esc(g.activity) + '</em>' : '') + '</p>';
     });
     if (l.prayer) preview += '<p class="hc-eyebrow">Prayer</p><p class="hc-caption">' + c.esc(l.prayer) + '</p>';
-    if (l.parent_note) preview += '<p class="hc-eyebrow">For parents</p><p class="hc-caption">' + c.esc(l.parent_note) + '</p>';
+    if (l.parent_note) preview += '<p class="hc-eyebrow">For parents, at bedtime</p><p class="hc-caption">' + c.esc(l.parent_note) + '</p>';
 
     return '<div class="hc-admin__item hc-admin__item--review" data-homekids-draft="' + c.esc(row.id) + '">' +
       '<div class="hc-admin__item-head">' +

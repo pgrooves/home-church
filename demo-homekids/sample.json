@@ -44,14 +44,27 @@
         }
       },
       "checklist": [
-        { "id": "story", "text": "Read the story together" },
-        { "id": "verse", "text": "Say the memory verse to a grown up" },
-        { "id": "talk", "text": "Talk about your group's questions" },
-        { "id": "pray", "text": "Pray for someone who feels scared" }
+        {
+          "id": "story",
+          "text": "Read the story together"
+        },
+        {
+          "id": "verse",
+          "text": "Say the memory verse to a grown up"
+        },
+        {
+          "id": "talk",
+          "text": "Talk about your group's questions"
+        },
+        {
+          "id": "pray",
+          "text": "Pray for someone who feels scared"
+        }
       ],
       "prayer": "Jesus, you are bigger than every storm. When I feel scared, help me remember you are right here with me. Amen.",
-      "parent_note": "This week we learned that Jesus is with us when life gets loud. At bedtime, ask your kid what feels big or scary right now, and pray about it together.",
-      "published": true
+      "parent_note": "Jesus is with us when life gets loud. At bedtime, ask your kid what feels big or scary right now, and pray about it together.",
+      "published": true,
+      "parent_summary": "This week the kids learned how Jesus calmed a wild storm with just a few words. The big truth to carry through the week: Jesus is bigger than anything that scares us."
     },
     {
       "id": "homekids-2026-09-20",
@@ -68,18 +81,46 @@
         "The shepherd left the other ninety-nine and searched and searched until he found it. Then he carried it home on his shoulders and threw a party."
       ],
       "groups": {
-        "champions": { "questions": ["How many sheep got lost?", "How did the shepherd feel when he found it?"], "activity": "Play hide and seek with a stuffed animal." },
-        "heroes": { "questions": ["Why did the shepherd keep looking?", "How does God feel about you?"], "activity": "Count to 100 together, then find the one missing number on a list a grown up writes." },
-        "legends": { "questions": ["Why would a shepherd leave 99 sheep for one?", "What does this story say about how God sees people?"], "activity": "Think of someone who might feel left out at school. Do one kind thing for them." }
+        "champions": {
+          "questions": [
+            "How many sheep got lost?",
+            "How did the shepherd feel when he found it?"
+          ],
+          "activity": "Play hide and seek with a stuffed animal."
+        },
+        "heroes": {
+          "questions": [
+            "Why did the shepherd keep looking?",
+            "How does God feel about you?"
+          ],
+          "activity": "Count to 100 together, then find the one missing number on a list a grown up writes."
+        },
+        "legends": {
+          "questions": [
+            "Why would a shepherd leave 99 sheep for one?",
+            "What does this story say about how God sees people?"
+          ],
+          "activity": "Think of someone who might feel left out at school. Do one kind thing for them."
+        }
       },
       "checklist": [
-        { "id": "story", "text": "Read the story together" },
-        { "id": "verse", "text": "Say the memory verse to a grown up" },
-        { "id": "kind", "text": "Do one kind thing for someone" }
+        {
+          "id": "story",
+          "text": "Read the story together"
+        },
+        {
+          "id": "verse",
+          "text": "Say the memory verse to a grown up"
+        },
+        {
+          "id": "kind",
+          "text": "Do one kind thing for someone"
+        }
       ],
       "prayer": "God, thank you for never giving up on me. Amen.",
       "parent_note": "Ask your kid to tell you the story of the lost sheep in their own words.",
-      "published": true
+      "published": true,
+      "parent_summary": "This week the kids learned about the shepherd who left ninety nine sheep to find the one that was lost."
     }
   ],
   "homekids_updates": [
@@ -88,8 +129,17 @@
       "audience": "parents",
       "title": "Fall Festival, October 25",
       "summary": "Costumes, games and a cake walk for the whole family after the 11am service.",
-      "details": ["Sunday, October 25, 12:30 to 2:30pm", "Kids can wear costumes (nothing scary, please)", "Bring a bag of candy for the trunk or treat"],
-      "links": [{ "label": "Sign up to bring a trunk", "url": "https://example.com/trunk" }],
+      "details": [
+        "Sunday, October 25, 12:30 to 2:30pm",
+        "Kids can wear costumes (nothing scary, please)",
+        "Bring a bag of candy for the trunk or treat"
+      ],
+      "links": [
+        {
+          "label": "Sign up to bring a trunk",
+          "url": "https://example.com/trunk"
+        }
+      ],
       "happens_on": "2026-10-25",
       "ends_on": "2026-10-26",
       "sent_on": "2026-09-29",
@@ -100,7 +150,10 @@
       "audience": "parents",
       "title": "New check-in at the kids' hallway",
       "summary": "Starting this Sunday, check your kids in at the kiosk by the HomeKids doors. Your pickup tag prints right there.",
-      "details": ["Bring your phone number, that's how we find your family", "Allergies print on the name tag"],
+      "details": [
+        "Bring your phone number, that's how we find your family",
+        "Allergies print on the name tag"
+      ],
       "links": [],
       "happens_on": null,
       "ends_on": null,
@@ -112,7 +165,10 @@
       "audience": "volunteers",
       "title": "Team huddle, Sunday 7:30am",
       "summary": "Quick huddle in the Heroes room before first service. Coffee and donuts are on us.",
-      "details": ["Room assignments for October will be handed out", "New check-in kiosk walk-through"],
+      "details": [
+        "Room assignments for October will be handed out",
+        "New check-in kiosk walk-through"
+      ],
       "links": [],
       "happens_on": "2026-10-04",
       "ends_on": "2026-10-05",

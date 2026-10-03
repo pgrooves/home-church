@@ -9,18 +9,18 @@
         buttons with a colour each, because some of the people tapping them
         cannot read yet. The choice is remembered on the phone and changes
         the questions and the activity further down, nothing else.
-     2. This week's kids guide. The big idea in one sentence, then For
-        parents (the note to parents and what the weekly HomeKids email said),
-        then the Bible story retold for kids, the memory verse, questions and
-        something to do for the group picked above, and a short prayer. The
-        same guide serves all three groups: the story is shared, the
-        conversation is not. Before the first lesson, For parents sits under
-        the empty state instead.
+     2. This week's kids guide. The big idea in one sentence, then a first
+        For parents saying what the kids learned, then the Bible story
+        retold for kids, the memory verse, questions and something to do for
+        the group picked above, and a short prayer. The same guide serves
+        all three groups: the story is shared, the conversation is not.
      3. The checklist and the prize. A few things to do together during the
         week, each one a big tick box. Next Sunday the family shows the
         teacher the ticks, and the kid gets to pick from the prize box. The
         teacher card is the same ticks, large, with the kid's name on it.
-     4. For volunteers. What the email to volunteers said, folded away,
+     4. For parents, the second one. The teaching tied up with what to ask
+        at bedtime, then what the weekly HomeKids email to parents said.
+     5. For volunteers. What the email to volunteers said, folded away,
         because most people reading this page are not on the team.
 
    WHERE IT COMES FROM. The lessons are written by /new-homekids from the
@@ -248,6 +248,19 @@
     return c.card(html, { edge: true });
   }
 
+  /* The first For parents, straight under the big idea and ahead of the
+     story: what the kids learned on Sunday, so the grown up holding the phone
+     knows what this week is for before reading it aloud. The second, at the
+     end, closes the guide with what to ask at bedtime. Gemini writes both. */
+  function parentSummary(lesson) {
+    if (!lesson.parentSummary) return '';
+    return '<section class="hc-kids-section">' +
+      c.sectionHeader('What we learned', 'For parents',
+        { eyebrowSlot: 'homekids.summary-eyebrow' }) +
+      '<p class="hc-body-serif hc-kids-parent-note">' + c.esc(lesson.parentSummary) + '</p>' +
+    '</section>';
+  }
+
   function forParents(lesson) {
     var news = HC.data.liveHomekidsUpdates('parents');
     var note = lesson && lesson.parentNote;
@@ -317,9 +330,7 @@
       var index = lessons.indexOf(lesson);
       html += weekHead(lesson, index, lessons.length);
       html += bigIdea(lesson);
-      // Straight under the big idea, ahead of the story: the parent holding
-      // the phone reads what this week is for before reading it aloud.
-      html += forParents(lesson);
+      html += parentSummary(lesson);
       html += story(lesson);
       html += memoryVerse(lesson);
       html += '<section class="hc-kids-section" data-kids-group-block>' +
@@ -328,7 +339,7 @@
       html += checklist(lesson);
     }
 
-    if (!lesson) html += forParents(lesson);
+    html += forParents(lesson);
     html += forVolunteers();
 
     html += '</div>';

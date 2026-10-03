@@ -130,6 +130,8 @@ console.log('\n--- mapping ---');
 const lesson = D.getHomekidsLesson('homekids-2026-09-27');
 ok('all three groups are present', Object.keys(lesson.groups), ['champions', 'heroes', 'legends']);
 ok('the memory verse is carried', lesson.memoryVerse.reference, 'Psalm 56:3');
+ok('both notes to parents are carried, the summary and the bedtime one',
+  [/^This week the kids learned/.test(lesson.parentSummary), /At bedtime/.test(lesson.parentNote)], [true, true]);
 
 const thin = mappers.lesson({ id: 'homekids-thin', taught_on: '2026-10-04', title: 'Thin',
   groups: { heroes: { questions: ['One', null, ''] } },
