@@ -39,7 +39,7 @@
 
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 import {
-  CafeError, priceCart, taxCents, cleanName, churchDay, churchInstant, slotProblem,
+  CafeError, priceCart, taxCents, cleanName, churchDay, churchInstant, slotProblem, isOpenToday,
   paymentLinkBody, totalsFromLink, squareBase, SQUARE_VERSION,
 } from '../_shared/cafe.mjs';
 
@@ -182,8 +182,9 @@ async function create(
   if (!settingBool(settings, 'cafe_on', false)) {
     throw new CafeError('The cafe is not taking orders in the app right now.', 409);
   }
-  if (!settingBool(settings, 'cafe_taking_orders', true)) {
-    throw new CafeError('The cafe has paused orders for a few minutes. Try again soon.', 409);
+  const day = churchDay();
+  if (!isOpenToday(settingText(settings, 'cafe_open_on', ''), day)) {
+    throw new CafeError('The cafe is closed right now. Ordering ahead opens when it does.', 409);
   }
 
   const cupName = cleanName(body.cup_name);
@@ -193,7 +194,6 @@ async function create(
   if (menuError) throw menuError;
   const priced = priceCart(menu ?? [], body.lines as unknown[]);
 
-  const day = churchDay();
   const { data: slot }: { data: Row } = await db
     .from('cafe_slots').select('*').eq('id', String(body.slot_id ?? '')).maybeSingle();
 

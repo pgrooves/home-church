@@ -209,12 +209,60 @@
     return HC.data.setting('cafe_every_day', false) === true;
   }
 
+  /* OPEN OR CLOSED, set from the counter. cafe_open_on holds the church date
+     the cafe was opened on and nothing when it is closed, so it is open only
+     while that date is today: a counter that forgets to close is closed by
+     midnight, and the page can never say open on a Tuesday. The same rule as
+     isOpenToday in supabase/functions/_shared/cafe.mjs, which is what refuses
+     an order when it is closed. */
+  function openOn() {
+    return String(HC.data.setting('cafe_open_on', '') || '').trim();
+  }
+
+  function isOpen() {
+    var on = openOn();
+    return !!on && on === churchNow().day;
+  }
+
+  /* Write a fresh answer into the settings this phone already holds, so the
+     next draw reads it the same way it reads everything else. */
+  function rememberOpen(value) {
+    var rows = (HC.data && HC.data.appSettings) || [];
+    var row = rows.filter(function (s) { return s.key === 'cafe_open_on'; })[0];
+    if (row) row.value = value || '';
+    else rows.push({ key: 'cafe_open_on', label: 'Cafe: open today', help: '', kind: 'text', value: value || '', sortOrder: 60 });
+  }
+
+  /* Ask the database straight away rather than waiting for the next content
+     refresh, because open and closed change on a Sunday morning while
+     somebody is looking at the page. Read like the rest of app_settings, with
+     the publishable key and no session. Resolves to whether that changed
+     anything, and quietly to false when offline. */
+  function refreshOpen() {
+    if (!HC.auth || !HC.auth.isConfigured()) return Promise.resolve(false);
+    var before = isOpen();
+    return HC.auth.publicGet('/app_settings?key=eq.cafe_open_on&select=value_text').then(function (rows) {
+      if (!Array.isArray(rows)) return false;
+      rememberOpen(rows[0] ? rows[0].value_text : '');
+      return isOpen() !== before;
+    }).catch(function () { return false; });
+  }
+
+  /* The counter's Open and Closed. */
+  function setOpen(on) {
+    return HC.auth.rpc('hc_cafe_set_open', { p_on: !!on }).then(function (value) {
+      rememberOpen(typeof value === 'string' ? value : (on ? churchNow().day : ''));
+      return isOpen();
+    });
+  }
+
   /* Whether this phone can order at all right now, and the warm sentence for
-     when it cannot. Ordering is for the morning of: on Sunday, or any day
-     when the church has switched on cafe_every_day to test. */
+     when it cannot. The counter has to have opened the cafe, and ordering is
+     for the morning of: on Sunday, or any day when the church has switched
+     on cafe_every_day to test. */
   function closedReason() {
-    if (HC.data.setting('cafe_taking_orders', true) === false) {
-      return 'The cafe has paused orders for a few minutes. Check back soon, or come say hi at the counter.';
+    if (!isOpen()) {
+      return 'Ordering ahead opens when the cafe does.';
     }
     var now = churchNow();
     if (!now.sunday && !everyDay()) {
@@ -327,9 +375,6 @@
     return HC.auth.rpc('hc_cafe_set_status', { p_order: orderId, p_status: status });
   }
 
-  function setTakingOrders(on) {
-    return HC.auth.rpc('hc_cafe_set_taking_orders', { p_on: !!on });
-  }
 
   HC.cafe = {
     menu: menu,
@@ -361,7 +406,9 @@
     isBarista: isBarista,
     queue: queue,
     setStatus: setStatus,
-    setTakingOrders: setTakingOrders
+    isOpen: isOpen,
+    refreshOpen: refreshOpen,
+    setOpen: setOpen
   };
 
 })(window.HC = window.HC || {});

@@ -47,7 +47,19 @@ Last updated: 2026-10-03, first build.
   queue / Making / Ready tracker. Toast and haptic when it turns ready.
 - Push "Your coffee's ready" to the phone the order was placed from.
 
-**Counter (`cafe` route, id `queue`):** stats, Taking orders switch (pause),
+**Open / Closed (Trey, 2026-10-03):** under the logo everybody sees
+"Cafe Is Open!" (green) or "Cafe is Closed." (red), his exact words.
+Whoever is in Cafe mode flips it with two big Open / Closed buttons, both on
+the Coffee page (Cafe mode card) and at the top of the queue. Stored as
+`app_settings.cafe_open_on` = the church date it was opened ('' when
+closed); open only while that date is today, so it closes itself at
+midnight. `hc_cafe_set_open(bool)` (Cafe mode only). Closed = no orders,
+enforced in cafe-checkout (`isOpenToday`). Phones re-ask every 30s while the
+menu or order is on screen. This replaced the earlier "Taking orders" pause
+switch (0085 drops it if a draft was ever applied). Hidden from the App
+settings list.
+
+**Counter (`cafe` route, id `queue`):** stats, Open / Closed,
 orders grouped by pickup time, Start / Ready, notify <name> / Picked up, undo
 links, recent picked up list. Polls every 8s. Visible to `can_run_cafe` or
 admins.

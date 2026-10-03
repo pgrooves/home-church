@@ -4439,3 +4439,44 @@ html.hc-cafe-sheet-open, html.hc-cafe-sheet-open body { overflow: hidden; }
   border-bottom: var(--hc-hairline) solid var(--hc-rule); font: 400 15px var(--hc-sans); color: var(--hc-mid);
 }
 .hc-cafe-done button { min-height: 32px; font: 600 13px var(--hc-sans); color: var(--hc-accent-deep); }
+
+/* Open or closed, under the logo on Coffee and at the top of the queue.
+   Green and red are the system's own success and error, which keep their
+   contrast on both themes. */
+.hc-cafe-status {
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  width: fit-content; margin: var(--hc-space-base) auto 0;
+  padding: 10px 18px; border-radius: var(--hc-radius-pill);
+  font: 700 18px/22px var(--hc-sans); letter-spacing: 0.01em;
+}
+.hc-cafe-status__dot { width: 12px; height: 12px; border-radius: 50%; flex: none; }
+.hc-cafe-status--open { color: var(--hc-success); background: rgba(95,115,85,0.12); }
+.hc-cafe-status--open .hc-cafe-status__dot { background: var(--hc-success); box-shadow: 0 0 0 4px rgba(95,115,85,0.22); }
+.hc-cafe-status--closed { color: var(--hc-error); background: rgba(139,74,63,0.10); }
+.hc-cafe-status--closed .hc-cafe-status__dot { background: var(--hc-error); box-shadow: 0 0 0 4px rgba(139,74,63,0.18); }
+:root[data-theme="dark"] .hc-cafe-status--open { color: #9DB58F; background: rgba(157,181,143,0.14); }
+:root[data-theme="dark"] .hc-cafe-status--open .hc-cafe-status__dot { background: #9DB58F; }
+:root[data-theme="dark"] .hc-cafe-status--closed { color: #D9897A; background: rgba(217,137,122,0.14); }
+:root[data-theme="dark"] .hc-cafe-status--closed .hc-cafe-status__dot { background: #D9897A; }
+.hc-cafe-status + .hc-cafe__open { margin-top: var(--hc-space-sm); }
+
+/* The counter's Open and Closed, two big buttons. */
+.hc-cafe-oc { display: flex; gap: var(--hc-space-sm); margin-top: var(--hc-space-md); }
+.hc-cafe-oc__btn {
+  flex: 1; min-height: 52px; border-radius: var(--hc-radius-md);
+  border: 1px solid var(--hc-rule); background: var(--hc-paper);
+  font: 700 17px/1 var(--hc-sans); color: var(--hc-mid);
+}
+.hc-cafe-oc__btn--open[aria-pressed="true"] { background: var(--hc-success); border-color: var(--hc-success); color: #FFFFFF; }
+.hc-cafe-oc__btn--closed[aria-pressed="true"] { background: var(--hc-error); border-color: var(--hc-error); color: #FFFFFF; }
+.hc-cafe-oc__btn[disabled] { opacity: 0.6; }
+
+.hc-cafe-counter__queue {
+  display: flex; align-items: center; justify-content: space-between; width: 100%;
+  min-height: var(--hc-tap-min); margin-top: var(--hc-space-sm);
+  font: 500 17px/22px var(--hc-serif); color: var(--hc-ink);
+}
+.hc-cafe-counter__chev { width: 20px; height: 20px; color: var(--hc-mid); }
+.hc-cafe-pause { padding-top: var(--hc-space-xs); }
+.hc-cafe-pause > .hc-cafe-status { margin-top: 0; }
+.hc-cafe-pause__note { margin-top: var(--hc-space-sm); text-align: center; }

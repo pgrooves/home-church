@@ -30,7 +30,12 @@
 --   cafe_on             The Coffee page in the ••• menu. OFF until the church
 --                       turns it on, unlike HomeKids, Practices and Alpha:
 --                       a page that takes money is not one to discover early.
---   cafe_taking_orders  Whoever runs the counter can pause new orders.
+--   cafe_open_on        Open or closed, from the counter. Holds the church
+--                       date the cafe was opened on, or nothing when closed,
+--                       and the cafe is open only while that date is today,
+--                       so a counter that forgets to close is closed by
+--                       midnight. Closed means no orders, and the Coffee page
+--                       says so in red under the logo.
 --   cafe_every_day      Orders on any day, not only Sunday. For testing.
 --   cafe_tax_percent    Sales tax added to every order, as a percent.
 --   cafe_tips_on        Square's checkout page offers a tip.
@@ -387,9 +392,9 @@ values
   ('cafe_on', 'Happy Lion Cafe page',
    'Off takes Coffee out of the ••• menu for everybody. Orders already paid for stay in the queue.',
    'boolean', false, null, 38),
-  ('cafe_taking_orders', 'Cafe: taking orders',
-   'Off pauses new orders in the app. Whoever runs the counter can flip this from the queue too.',
-   'boolean', true, null, 60),
+  ('cafe_open_on', 'Cafe: open today',
+   'Set from the counter with Open and Closed. The date the cafe was opened, empty when closed.',
+   'text', null, '', 60),
   ('cafe_every_day', 'Cafe: orders every day',
    'For testing. Off means orders can only be placed for Sunday morning, on Sunday morning.',
    'boolean', false, null, 61),
@@ -641,25 +646,39 @@ $$;
 revoke all on function public.hc_cafe_set_status(uuid, text) from public, anon, authenticated;
 grant execute on function public.hc_cafe_set_status(uuid, text) to authenticated;
 
--- The pause switch, for the counter. Admins can flip it in App settings too.
-create or replace function public.hc_cafe_set_taking_orders(p_on boolean)
-returns void
+-- Open and Closed, from the counter. Open writes today's church date, closed
+-- writes nothing; see cafe_open_on in the header. Returns the date it wrote.
+create or replace function public.hc_cafe_set_open(p_on boolean)
+returns text
 language plpgsql
 security definer
 set search_path = public
 as $$
+declare
+  v_value text := case when coalesce(p_on, false)
+                       then public.hc_cafe_today()::text else '' end;
 begin
   if not public.hc_is_barista() then
     raise exception 'The cafe counter only.' using errcode = 'insufficient_privilege';
   end if;
 
-  update public.app_settings set value_bool = coalesce(p_on, false)
-   where key = 'cafe_taking_orders';
+  insert into public.app_settings (key, label, help, kind, value_bool, value_text, sort_order)
+  values ('cafe_open_on', 'Cafe: open today',
+          'Set from the counter with Open and Closed. The date the cafe was opened, empty when closed.',
+          'text', null, v_value, 60)
+  on conflict (key) do update set value_text = excluded.value_text;
+
+  return v_value;
 end;
 $$;
 
-revoke all on function public.hc_cafe_set_taking_orders(boolean) from public, anon, authenticated;
-grant execute on function public.hc_cafe_set_taking_orders(boolean) to authenticated;
+revoke all on function public.hc_cafe_set_open(boolean) from public, anon, authenticated;
+grant execute on function public.hc_cafe_set_open(boolean) to authenticated;
+
+-- An earlier draft of this file had a pause switch in place of Open and
+-- Closed. Gone, so a project that ran that draft is left with one control.
+drop function if exists public.hc_cafe_set_taking_orders(boolean);
+delete from public.app_settings where key = 'cafe_taking_orders';
 
 
 -- ---------------------------------------------------------------------------

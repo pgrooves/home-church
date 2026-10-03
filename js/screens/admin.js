@@ -2234,7 +2234,7 @@
        read by name in js/cafe.js and the cafe-checkout Edge Function, which
        is where the money is, so none of them is offered for deletion. */
     cafe_on: true,
-    cafe_taking_orders: true,
+    cafe_open_on: true,
     cafe_every_day: true,
     cafe_tips_on: true,
     cafe_tax_percent: true,
@@ -2542,6 +2542,9 @@
   DRAWN_ELSEWHERE[MAINTENANCE.key] = true;
   DRAWN_ELSEWHERE[BANNER_ON.key] = true;
   DRAWN_ELSEWHERE[BANNER_MESSAGE_KEY] = true;
+  // Open and Closed live at the cafe counter, as two buttons. A date in a
+  // text box here would only be a way to get it wrong.
+  DRAWN_ELSEWHERE.cafe_open_on = true;
 
   function settingsSection() {
     var html = '<div class="hc-screen hc-admin">';

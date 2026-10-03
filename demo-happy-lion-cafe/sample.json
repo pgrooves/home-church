@@ -8,13 +8,6 @@
       "sort_order": 38
     },
     {
-      "key": "cafe_taking_orders",
-      "label": "Cafe: taking orders",
-      "kind": "boolean",
-      "value_bool": true,
-      "sort_order": 60
-    },
-    {
       "key": "cafe_every_day",
       "label": "Cafe: orders every day",
       "kind": "boolean",
@@ -41,6 +34,13 @@
       "kind": "text",
       "value_text": "8",
       "sort_order": 64
+    },
+    {
+      "key": "cafe_open_on",
+      "label": "Cafe: open today",
+      "kind": "text",
+      "value_text": "2026-10-04",
+      "sort_order": 60
     }
   ],
   "profile": {

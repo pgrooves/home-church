@@ -140,13 +140,32 @@ begin;
   select t_raises_like('ready cannot jump back to paid',
     $$select public.hc_cafe_set_status('cf100000-0000-0000-0000-000000000001', 'paid')$$,
     'cannot go to');
-  select public.hc_cafe_set_taking_orders(false);
+  select t_check('the counter opens the cafe for today',
+    public.hc_cafe_set_open(true), public.hc_cafe_today()::text);
 commit;
 
 select t_check('ready is stamped',
   (select ready_at is not null from public.cafe_orders where id = 'cf100000-0000-0000-0000-000000000001'), true);
-select t_check('the counter paused orders',
-  (select value_bool from public.app_settings where key = 'cafe_taking_orders'), false);
+select t_check('open is today''s date',
+  (select value_text from public.app_settings where key = 'cafe_open_on'), public.hc_cafe_today()::text);
+
+begin;
+  set local role authenticated;
+  set local request.jwt.claims = '{"sub":"cf000000-0000-0000-0000-000000000003"}';
+  select t_raises_like('a customer cannot open or close the cafe',
+    $$select public.hc_cafe_set_open(false)$$, 'counter only');
+rollback;
+
+begin;
+  set local role authenticated;
+  set local request.jwt.claims = '{"sub":"cf000000-0000-0000-0000-000000000002"}';
+  select t_check('closing clears it', public.hc_cafe_set_open(false), '');
+commit;
+
+select t_check('closed is empty',
+  (select value_text from public.app_settings where key = 'cafe_open_on'), '');
+select t_check('the old pause switch is gone',
+  (select count(*)::int from public.app_settings where key = 'cafe_taking_orders'), 0);
 
 begin;
   set local role anon;

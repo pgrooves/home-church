@@ -46,10 +46,11 @@
     error: '',
     openOrders: [],
     ticket: null,       // { id, order, ahead, error }
-    queue: { rows: null, error: '', busy: '' }
+    queue: { rows: null, error: '', busy: '' },
+    opening: false
   };
 
-  var timers = { ticket: null, queue: null };
+  var timers = { ticket: null, queue: null, open: null };
 
   function cafeOn() {
     return HC.data.setting('cafe_on', false) === true;
@@ -95,6 +96,35 @@
     return now.sunday ? 'Taking orders for this ' + label : 'Taking orders for ' + label;
   }
 
+  /* Open or closed, in green or red, straight under the logo. The words are
+     the church's own. */
+  var OPEN_LINE = 'Cafe Is Open!';
+  var CLOSED_LINE = 'Cafe is Closed.';
+
+  function openBadge() {
+    var open = HC.cafe.isOpen();
+    return '<p class="hc-cafe-status hc-cafe-status--' + (open ? 'open' : 'closed') + '" ' +
+      'role="status" data-cafe-status>' +
+      '<span class="hc-cafe-status__dot" aria-hidden="true"></span>' +
+      c.esc(open ? OPEN_LINE : CLOSED_LINE) + '</p>';
+  }
+
+  /* The counter's two buttons. The same pair on the Coffee page and at the
+     top of the queue, so whoever is behind the counter can flip it from
+     either. */
+  function openControl() {
+    var open = HC.cafe.isOpen();
+    var busy = state.opening;
+    function btn(on, label) {
+      var pressed = on === open;
+      return '<button type="button" class="hc-cafe-oc__btn hc-cafe-oc__btn--' + (on ? 'open' : 'closed') + '" ' +
+        'data-action="cafe" data-cafe="open-state" data-id="' + (on ? 'open' : 'closed') + '" ' +
+        'aria-pressed="' + pressed + '"' + (busy ? ' disabled' : '') + '>' + label + '</button>';
+    }
+    return '<div class="hc-cafe-oc" role="group" aria-label="Is the cafe open?">' +
+      btn(true, 'Open') + btn(false, 'Closed') + '</div>';
+  }
+
   function cart() {
     return HC.cafe.cart();
   }
@@ -119,13 +149,12 @@
     var html = logo();
     var closed = HC.cafe.closedReason();
 
+    html += openBadge();
     html += '<p class="hc-caption hc-cafe__open">' +
       (!cafeOn()
-        ? '<span class="hc-cafe__dot hc-cafe__dot--off"></span>Only people in Cafe mode can see this page. ' +
+        ? 'Only people in Cafe mode can see this page. ' +
           'An admin turns it on for everybody under App settings, Pages.'
-        : closed
-        ? '<span class="hc-cafe__dot hc-cafe__dot--off"></span>' + c.esc(closed)
-        : '<span class="hc-cafe__dot"></span>' + c.esc(dayLine())) +
+        : c.esc(closed || dayLine())) +
     '</p>';
 
     // Somebody who paid and closed the app finds their ticket again here.
@@ -139,10 +168,13 @@
     });
 
     if (HC.cafe.isBarista()) {
-      html += '<button type="button" class="hc-card hc-card--quiet hc-cafe-counter" data-action="cafe" data-cafe="queue">' +
+      html += '<div class="hc-card hc-card--quiet hc-cafe-counter">' +
         '<span class="hc-eyebrow hc-eyebrow--legible">Cafe mode</span>' +
-        '<span class="hc-cafe-mine__line">Open the queue</span>' +
-      '</button>';
+        openControl() +
+        '<button type="button" class="hc-cafe-counter__queue" data-action="cafe" data-cafe="queue">' +
+          '<span>Open the queue</span>' + c.icon('chevronRight', 'hc-cafe-counter__chev') +
+        '</button>' +
+      '</div>';
     }
 
     html += c.sectionHeader('In the lobby, Sunday mornings', 'Order ahead', { tag: 'h1' });
@@ -529,11 +561,10 @@
       '<div class="hc-cafe-stat"><b>' + drinks(done) + '</b><span>done today</span></div>' +
     '</div>';
 
-    var taking = HC.data.setting('cafe_taking_orders', true) !== false;
-    html += '<button type="button" class="hc-switch-row hc-cafe-pause" data-action="cafe" data-cafe="taking" role="switch" aria-checked="' + taking + '">' +
-      '<span class="hc-row__body"><span class="hc-row__label">Taking orders</span>' +
-      '<span class="hc-caption hc-switch-row__sub">' + (taking ? 'On. Off pauses new orders in the app.' : 'Paused. Nobody can order ahead until this is back on.') + '</span></span>' +
-      '<span class="hc-switch" aria-hidden="true" aria-checked="' + taking + '"><span class="hc-switch__knob"></span></span></button>';
+    html += '<div class="hc-cafe-pause">' + openBadge() + openControl() +
+      '<p class="hc-caption hc-cafe-pause__note">' + (HC.cafe.isOpen()
+        ? 'Everybody sees the cafe is open, and can order ahead. It closes on its own at midnight.'
+        : 'Everybody sees the cafe is closed, and nobody can order ahead.') + '</p></div>';
 
     if (q.error) html += '<p class="hc-cafe-error" role="alert">' + c.esc(q.error) + '</p>';
 
@@ -604,8 +635,8 @@
 
   function loadQueue() {
     if (!HC.cafe.isBarista() || !HC.cafe.signedIn()) return Promise.resolve();
-    return HC.cafe.queue().then(function (rows) {
-      state.queue.rows = rows || [];
+    return Promise.all([HC.cafe.queue(), HC.cafe.refreshOpen()]).then(function (got) {
+      state.queue.rows = got[0] || [];
       state.queue.error = '';
     }).catch(function (err) {
       state.queue.error = (err && err.message) || 'Could not reach the queue.';
@@ -619,6 +650,20 @@
   function stopTimers() {
     if (timers.ticket) { clearInterval(timers.ticket); timers.ticket = null; }
     if (timers.queue) { clearInterval(timers.queue); timers.queue = null; }
+    if (timers.open) { clearInterval(timers.open); timers.open = null; }
+  }
+
+  /* Open or closed, asked again now and every thirty seconds while the menu
+     or the order is on screen, so the counter opening at 7:30 turns the
+     line green on a phone that was already looking. Repaints only when it
+     changed. */
+  function watchOpen(id) {
+    function check() {
+      if (state.opening) return;
+      HC.cafe.refreshOpen().then(function (changed) { if (changed && here(id)) paint(); });
+    }
+    check();
+    timers.open = setInterval(check, 30000);
   }
 
   /* Live only while somebody is looking: a ticket every five seconds, the
@@ -646,11 +691,13 @@
         state.load = load;
         if (here('order')) paint();
       });
+      watchOpen('order');
     } else {
       HC.cafe.myOpenOrders().then(function (rows) {
         state.openOrders = Array.isArray(rows) ? rows : [];
         if (here('')) paint();
       });
+      watchOpen('');
     }
   }
 
@@ -792,15 +839,19 @@
         loadQueue();
       });
     },
-    taking: function () {
-      var on = HC.data.setting('cafe_taking_orders', true) === false;
-      HC.cafe.setTakingOrders(on).then(function () {
-        var row = (HC.data.appSettings || []).filter(function (s) { return s.key === 'cafe_taking_orders'; })[0];
-        if (row) row.value = on;
-        c.toast(on ? 'Taking orders again.' : 'Orders paused.');
-        paint();
+    'open-state': function (el) {
+      var on = el.getAttribute('data-id') === 'open';
+      if (state.opening || on === HC.cafe.isOpen()) return;
+      state.opening = true;
+      paint();
+      HC.cafe.setOpen(on).then(function (open) {
+        HC.native.tap('Medium');
+        c.toast(open ? 'The cafe is open. Everybody can see it.' : 'The cafe is closed.');
       }).catch(function (err) {
         c.toast((err && err.message) || 'That did not go through.');
+      }).then(function () {
+        state.opening = false;
+        paint();
       });
     }
   };

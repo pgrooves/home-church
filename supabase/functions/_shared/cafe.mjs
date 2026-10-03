@@ -136,6 +136,15 @@ export function churchDay(now = new Date(), tz = CHURCH_TZ) {
   return `${p.year}-${p.month}-${p.day}`;
 }
 
+/**
+ * Open or closed. The counter's Open writes the church date into
+ * cafe_open_on and Closed empties it, so the cafe is open only on the day it
+ * was opened, and one nobody closed is closed again by midnight.
+ */
+export function isOpenToday(openOn, day) {
+  return !!openOn && String(openOn).trim() === day;
+}
+
 export function isSunday(day) {
   const [y, m, d] = day.split('-').map(Number);
   return new Date(Date.UTC(y, m - 1, d)).getUTCDay() === 0;

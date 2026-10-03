@@ -98,6 +98,10 @@ const MENU = [
   ok('late Saturday night in New Orleans is still Saturday',
     C.churchDay(new Date('2026-10-04T03:30:00Z')), '2026-10-03');
 
+  ok('open on the day it was opened', C.isOpenToday('2026-10-04', '2026-10-04'), true);
+  ok('closed the next morning if nobody closed it', C.isOpenToday('2026-10-04', '2026-10-11'), false);
+  ok('closed when empty', C.isOpenToday('', '2026-10-04'), false);
+
   const slot = { id: '0920', pickup_time: '09:20', active: true };
   const at = (iso) => new Date(iso);
   ok('open on Sunday morning',

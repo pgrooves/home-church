@@ -65,7 +65,14 @@ function serve() {
 function answer(url, accept) {
   const send = (body) => ({ status: 200, contentType: 'application/json', body: JSON.stringify(body) });
   if (/\/rest\/v1\/app_settings/.test(url)) {
-    return send(SAMPLE.app_settings.map(r => r.key === 'cafe_on' && answer.cafeOff ? Object.assign({}, r, { value_bool: false }) : r));
+    let rows = SAMPLE.app_settings.map(r => {
+      if (r.key === 'cafe_on' && answer.cafeOff) return Object.assign({}, r, { value_bool: false });
+      if (r.key === 'cafe_open_on' && answer.closed) return Object.assign({}, r, { value_text: '' });
+      return r;
+    });
+    const only = (url.match(/key=eq\.([a-z_]+)/) || [])[1];
+    if (only) rows = rows.filter(r => r.key === only);
+    return send(rows);
   }
   if (/\/rpc\/hc_admin_list_users/.test(url)) return send(SAMPLE.users);
   if (/\/rest\/v1\/profiles/.test(url)) return send(/pgrst\.object/.test(accept) ? SAMPLE.profile : [SAMPLE.profile]);
@@ -106,10 +113,10 @@ async function phone(browser, opts) {
   await page.reload();
   await page.waitForFunction(() => window.HC && window.HC.router, null, { timeout: 15000 });
   await pastTheGate(page);
-  await page.evaluate((dark) => {
-    window.HC.store.updateProfile({ theme: dark ? 'dark' : 'light', firstName: 'Trey', canRunCafe: true });
+  await page.evaluate((o) => {
+    window.HC.store.updateProfile({ theme: o.dark ? 'dark' : 'light', firstName: 'Trey', canRunCafe: !o.customer });
     window.HC.store.applyPreferences();
-  }, !!opts.dark);
+  }, { dark: !!opts.dark, customer: !!opts.customer });
   if (opts.admin) {
     await page.evaluate(() => window.HC.store.updateProfile({ role: 'admin' }));
   }
@@ -220,6 +227,25 @@ async function go(page, route) {
   errors.push(...page.errors);
   await page.close();
   answer.cafeOff = false;
+
+  // Open and closed, as a customer sees it under the logo.
+  page = await phone(browser, { customer: true });
+  await go(page, { name: 'cafe' });
+  await page.screenshot({ path: path.join(OUT, '10-customer-open.png'), clip: { x: 0, y: 0, width: 390, height: 560 } });
+  errors.push(...page.errors);
+  await page.close();
+  answer.closed = true;
+  page = await phone(browser, { customer: true });
+  await go(page, { name: 'cafe' });
+  await page.screenshot({ path: path.join(OUT, '11-customer-closed.png'), clip: { x: 0, y: 0, width: 390, height: 560 } });
+  errors.push(...page.errors);
+  await page.close();
+  page = await phone(browser, { customer: true, dark: true });
+  await go(page, { name: 'cafe' });
+  await page.screenshot({ path: path.join(OUT, '12-customer-closed-dark.png'), clip: { x: 0, y: 0, width: 390, height: 560 } });
+  errors.push(...page.errors);
+  await page.close();
+  answer.closed = false;
 
   await browser.close();
   server.close();
