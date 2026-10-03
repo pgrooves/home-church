@@ -1456,7 +1456,7 @@
       .then(function () { invalidate('users'); });
   }
 
-  /* The Happy Lion Cafe counter, migration 0085. The same rule and the same
+  /* Cafe mode, the Happy Lion Cafe counter, migration 0085. The same rule and the same
      self guard as Leader mode; hc_admin_set_barista refuses it too. */
   function setBarista(id, on) {
     if (isSelf(id)) {

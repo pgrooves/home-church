@@ -1,34 +1,203 @@
 {
   "app_settings": [
-    { "key": "cafe_on", "label": "Happy Lion Cafe page", "kind": "boolean", "value_bool": true, "sort_order": 38 },
-    { "key": "cafe_taking_orders", "label": "Cafe: taking orders", "kind": "boolean", "value_bool": true, "sort_order": 60 },
-    { "key": "cafe_every_day", "label": "Cafe: orders every day", "kind": "boolean", "value_bool": false, "sort_order": 61 },
-    { "key": "cafe_tips_on", "label": "Cafe: ask for a tip", "kind": "boolean", "value_bool": false, "sort_order": 62 },
-    { "key": "cafe_tax_percent", "label": "Cafe: sales tax percent", "kind": "text", "value_text": "9.2", "sort_order": 63 },
-    { "key": "cafe_slot_capacity", "label": "Cafe: drinks per pickup time", "kind": "text", "value_text": "8", "sort_order": 64 }
+    {
+      "key": "cafe_on",
+      "label": "Happy Lion Cafe page",
+      "kind": "boolean",
+      "value_bool": true,
+      "sort_order": 38
+    },
+    {
+      "key": "cafe_taking_orders",
+      "label": "Cafe: taking orders",
+      "kind": "boolean",
+      "value_bool": true,
+      "sort_order": 60
+    },
+    {
+      "key": "cafe_every_day",
+      "label": "Cafe: orders every day",
+      "kind": "boolean",
+      "value_bool": false,
+      "sort_order": 61
+    },
+    {
+      "key": "cafe_tips_on",
+      "label": "Cafe: ask for a tip",
+      "kind": "boolean",
+      "value_bool": false,
+      "sort_order": 62
+    },
+    {
+      "key": "cafe_tax_percent",
+      "label": "Cafe: sales tax percent",
+      "kind": "text",
+      "value_text": "9.2",
+      "sort_order": 63
+    },
+    {
+      "key": "cafe_slot_capacity",
+      "label": "Cafe: drinks per pickup time",
+      "kind": "text",
+      "value_text": "8",
+      "sort_order": 64
+    }
   ],
-  "profile": { "id": "11111111-1111-1111-1111-111111111111", "first_name": "Trey", "role": "member", "can_host": false, "can_run_cafe": true },
-  "slot_load": [ { "slot_id": "0910", "drinks": 8 } ],
+  "profile": {
+    "id": "11111111-1111-1111-1111-111111111111",
+    "first_name": "Trey",
+    "role": "member",
+    "can_host": false,
+    "can_run_cafe": true
+  },
+  "slot_load": [
+    {
+      "slot_id": "0910",
+      "drinks": 8
+    }
+  ],
   "order": {
-    "id": "22222222-2222-2222-2222-222222222222", "status": "paid", "ticket_no": 14, "cup_name": "Trey",
-    "slot_id": "0920", "pickup_at": "2026-10-04T14:20:00Z", "drinks": 2, "service_day": "2026-10-04",
-    "subtotal_cents": 750, "tax_cents": 69, "tip_cents": 0, "total_cents": 819, "checkout_url": "https://example.org",
-    "created_at": "2026-10-04T13:05:00Z", "ready_at": null,
+    "id": "22222222-2222-2222-2222-222222222222",
+    "status": "paid",
+    "ticket_no": 14,
+    "cup_name": "Trey",
+    "slot_id": "0920",
+    "pickup_at": "2026-10-04T14:20:00Z",
+    "drinks": 2,
+    "service_day": "2026-10-04",
+    "subtotal_cents": 750,
+    "tax_cents": 69,
+    "tip_cents": 0,
+    "total_cents": 819,
+    "checkout_url": "https://example.org",
+    "created_at": "2026-10-04T13:05:00Z",
+    "ready_at": null,
     "items": [
-      { "name": "Hot Coffee", "size_label": "16 oz", "summary": "Half & half, regular · 2 sugar", "price_cents": 350 },
-      { "name": "Cold Brew", "size_label": "12 oz", "summary": "2% milk, light · 1 Splenda", "price_cents": 400 }
+      {
+        "name": "Hot Coffee",
+        "size_label": "16 oz",
+        "summary": "Half & half, regular · 2 sugar",
+        "price_cents": 350
+      },
+      {
+        "name": "Cold Brew",
+        "size_label": "12 oz",
+        "summary": "2% milk, light · 1 Splenda",
+        "price_cents": 400
+      }
     ]
   },
   "queue": [
-    { "id": "q1", "ticket_no": 14, "cup_name": "Trey", "slot_id": "0920", "pickup_at": "2026-10-04T14:20:00Z", "status": "making", "drinks": 2,
-      "items": [ { "name": "Hot Coffee", "size_label": "16 oz", "summary": "Half & half, regular · 2 sugar" },
-                 { "name": "Cold Brew", "size_label": "12 oz", "summary": "2% milk, light · 1 Splenda" } ] },
-    { "id": "q2", "ticket_no": 15, "cup_name": "Laura", "slot_id": "0920", "pickup_at": "2026-10-04T14:20:00Z", "status": "paid", "drinks": 1,
-      "items": [ { "name": "Cold Brew", "size_label": "16 oz", "summary": "" } ] },
-    { "id": "q0", "ticket_no": 12, "cup_name": "Stephen", "slot_id": "0910", "pickup_at": "2026-10-04T14:10:00Z", "status": "ready", "drinks": 1,
-      "items": [ { "name": "Hot Coffee", "size_label": "12 oz", "summary": "Black" } ] },
-    { "id": "q3", "ticket_no": 16, "cup_name": "Marcus", "slot_id": "1015", "pickup_at": "2026-10-04T15:15:00Z", "status": "paid", "drinks": 1,
-      "items": [ { "name": "Hot Coffee", "size_label": "12 oz", "summary": "2% milk, extra · 1 Splenda" } ] },
-    { "id": "q9", "ticket_no": 9, "cup_name": "Ana", "slot_id": "0845", "pickup_at": "2026-10-04T13:45:00Z", "status": "picked_up", "drinks": 3, "items": [] }
+    {
+      "id": "q1",
+      "ticket_no": 14,
+      "cup_name": "Trey",
+      "slot_id": "0920",
+      "pickup_at": "2026-10-04T14:20:00Z",
+      "status": "making",
+      "drinks": 2,
+      "items": [
+        {
+          "name": "Hot Coffee",
+          "size_label": "16 oz",
+          "summary": "Half & half, regular · 2 sugar"
+        },
+        {
+          "name": "Cold Brew",
+          "size_label": "12 oz",
+          "summary": "2% milk, light · 1 Splenda"
+        }
+      ]
+    },
+    {
+      "id": "q2",
+      "ticket_no": 15,
+      "cup_name": "Laura",
+      "slot_id": "0920",
+      "pickup_at": "2026-10-04T14:20:00Z",
+      "status": "paid",
+      "drinks": 1,
+      "items": [
+        {
+          "name": "Cold Brew",
+          "size_label": "16 oz",
+          "summary": ""
+        }
+      ]
+    },
+    {
+      "id": "q0",
+      "ticket_no": 12,
+      "cup_name": "Stephen",
+      "slot_id": "0910",
+      "pickup_at": "2026-10-04T14:10:00Z",
+      "status": "ready",
+      "drinks": 1,
+      "items": [
+        {
+          "name": "Hot Coffee",
+          "size_label": "12 oz",
+          "summary": "Black"
+        }
+      ]
+    },
+    {
+      "id": "q3",
+      "ticket_no": 16,
+      "cup_name": "Marcus",
+      "slot_id": "1015",
+      "pickup_at": "2026-10-04T15:15:00Z",
+      "status": "paid",
+      "drinks": 1,
+      "items": [
+        {
+          "name": "Hot Coffee",
+          "size_label": "12 oz",
+          "summary": "2% milk, extra · 1 Splenda"
+        }
+      ]
+    },
+    {
+      "id": "q9",
+      "ticket_no": 9,
+      "cup_name": "Ana",
+      "slot_id": "0845",
+      "pickup_at": "2026-10-04T13:45:00Z",
+      "status": "picked_up",
+      "drinks": 3,
+      "items": []
+    }
+  ],
+  "users": [
+    {
+      "id": "aa000000-0000-0000-0000-000000000001",
+      "email": "trey@example.org",
+      "first_name": "Trey",
+      "last_name": "",
+      "role": "admin",
+      "is_leader": false,
+      "is_barista": false,
+      "created_at": "2026-01-01T00:00:00Z"
+    },
+    {
+      "id": "aa000000-0000-0000-0000-000000000002",
+      "email": "owner@example.org",
+      "first_name": "Cafe",
+      "last_name": "Owner",
+      "role": "member",
+      "is_leader": false,
+      "is_barista": true,
+      "created_at": "2026-02-01T00:00:00Z"
+    },
+    {
+      "id": "aa000000-0000-0000-0000-000000000003",
+      "email": "laura@example.org",
+      "first_name": "Laura",
+      "last_name": "",
+      "role": "member",
+      "is_leader": true,
+      "is_barista": false,
+      "created_at": "2026-03-01T00:00:00Z"
+    }
   ]
 }

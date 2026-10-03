@@ -120,7 +120,10 @@
     var closed = HC.cafe.closedReason();
 
     html += '<p class="hc-caption hc-cafe__open">' +
-      (closed
+      (!cafeOn()
+        ? '<span class="hc-cafe__dot hc-cafe__dot--off"></span>Only people in Cafe mode can see this page. ' +
+          'An admin turns it on for everybody under App settings, Pages.'
+        : closed
         ? '<span class="hc-cafe__dot hc-cafe__dot--off"></span>' + c.esc(closed)
         : '<span class="hc-cafe__dot"></span>' + c.esc(dayLine())) +
     '</p>';
@@ -137,7 +140,7 @@
 
     if (HC.cafe.isBarista()) {
       html += '<button type="button" class="hc-card hc-card--quiet hc-cafe-counter" data-action="cafe" data-cafe="queue">' +
-        '<span class="hc-eyebrow hc-eyebrow--legible">Behind the counter</span>' +
+        '<span class="hc-eyebrow hc-eyebrow--legible">Cafe mode</span>' +
         '<span class="hc-cafe-mine__line">Open the queue</span>' +
       '</button>';
     }
@@ -508,7 +511,7 @@
   function queueView() {
     var html = c.sectionHeader('Happy Lion Cafe · Behind the counter', 'The queue', { flush: true, tag: 'h1' });
     if (!HC.cafe.isBarista()) {
-      return html + c.emptyState('The queue is for whoever runs the cafe counter. An admin can add you under Manage users.', 'coffee');
+      return html + c.emptyState('The queue is for whoever runs the cafe. An admin turns on Cafe mode for you under Manage users.', 'coffee');
     }
     var q = state.queue;
     if (q.error && !q.rows) return html + c.emptyState(q.error, 'coffee');
@@ -827,7 +830,7 @@
   function body(r) {
     var id = (r && r.id) || '';
     if (id === 'queue') return queueView();
-    if (!cafeOn()) {
+    if (!cafeOn() && !HC.cafe.isBarista()) {
       return logo() + c.emptyState(OFF_LINE, 'coffee');
     }
     if (id === 'order') return orderView();

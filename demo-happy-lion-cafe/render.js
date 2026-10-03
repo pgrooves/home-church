@@ -64,7 +64,10 @@ function serve() {
 
 function answer(url, accept) {
   const send = (body) => ({ status: 200, contentType: 'application/json', body: JSON.stringify(body) });
-  if (/\/rest\/v1\/app_settings/.test(url)) return send(SAMPLE.app_settings);
+  if (/\/rest\/v1\/app_settings/.test(url)) {
+    return send(SAMPLE.app_settings.map(r => r.key === 'cafe_on' && answer.cafeOff ? Object.assign({}, r, { value_bool: false }) : r));
+  }
+  if (/\/rpc\/hc_admin_list_users/.test(url)) return send(SAMPLE.users);
   if (/\/rest\/v1\/profiles/.test(url)) return send(/pgrst\.object/.test(accept) ? SAMPLE.profile : [SAMPLE.profile]);
   if (/\/rpc\/hc_cafe_slot_load/.test(url)) return send(SAMPLE.slot_load);
   if (/\/rpc\/hc_cafe_ahead/.test(url)) return send(3);
@@ -107,7 +110,10 @@ async function phone(browser, opts) {
     window.HC.store.updateProfile({ theme: dark ? 'dark' : 'light', firstName: 'Trey', canRunCafe: true });
     window.HC.store.applyPreferences();
   }, !!opts.dark);
-  await page.waitForFunction(() => window.HC.data.setting('cafe_on', false) === true, null, { timeout: 15000 });
+  if (opts.admin) {
+    await page.evaluate(() => window.HC.store.updateProfile({ role: 'admin' }));
+  }
+  await page.waitForFunction((off) => window.HC.data.setting('cafe_on', !off) === !off, !!opts.cafeOff, { timeout: 15000 });
   page.errors = errors;
   return page;
 }
@@ -186,6 +192,34 @@ async function go(page, route) {
   await shot(page, '07-menu-dark.png');
   errors.push(...page.errors);
   await page.close();
+
+  // Manage users, the cafe owner's row open: Cafe mode, beside Leader mode.
+  page = await phone(browser, { height: 1400, admin: true });
+  await go(page, { name: 'admin', id: 'users' });
+  await page.waitForTimeout(800);
+  await page.evaluate(() => {
+    const fold = document.querySelector('[data-action="admin-user-fold"][data-id="members"]');
+    if (fold) fold.click();
+  });
+  await page.waitForTimeout(500);
+  await page.evaluate(() => {
+    const el = document.querySelector('[data-action="admin-barista"]');
+    if (el) document.getElementById('hc-scroll').scrollTop += el.getBoundingClientRect().top - 420;
+  });
+  await page.waitForTimeout(300);
+  await shot(page, '08-manage-users-cafe-mode.png');
+  errors.push(...page.errors);
+  await page.close();
+
+  // The owner, in Cafe mode, before the church has turned the page on: Coffee
+  // is in his menu, and the page says nobody else can see it yet.
+  answer.cafeOff = true;
+  page = await phone(browser, { cafeOff: true });
+  await go(page, { name: 'cafe' });
+  await shot(page, '09-cafe-mode-page-off.png');
+  errors.push(...page.errors);
+  await page.close();
+  answer.cafeOff = false;
 
   await browser.close();
   server.close();

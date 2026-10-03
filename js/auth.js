@@ -557,7 +557,7 @@
          rather than leaving whatever this phone last held. Same defaulting as
          role directly below, for the same reason. */
       patch.canHost = !!(remote && remote.can_host === true);
-      /* The Happy Lion Cafe counter, migration 0085. The same one way rule:
+      /* Cafe mode, the Happy Lion Cafe counter, migration 0085. One way:
          an admin grants it under Manage users and the phone only reads it. */
       patch.canRunCafe = !!(remote && remote.can_run_cafe === true);
       /* Same one-way rule as can_host above, and it matters more here. role is

@@ -53,7 +53,13 @@ links, recent picked up list. Polls every 8s. Visible to `can_run_cafe` or
 admins.
 
 **Admin:** Pages has "Happy Lion Cafe page" (`cafe_on`, OFF by default).
-Manage users has a "Cafe counter" switch per member. App settings lists the
+Manage users has a **Cafe mode** switch per member, beside Leader mode
+(Trey's name for it, 2026-10-03). Cafe mode = `profiles.can_run_cafe`;
+admins have it implicitly. It grants the queue, Start / Ready (the push to
+the customer) / Picked up / undo, and pausing orders. People in Cafe mode
+see Coffee in their menu even while `cafe_on` is off, with a line saying
+nobody else can see it, so the owner can set up before launch. The users
+list tags them "Cafe" (or "Leader · Cafe"). App settings lists the
 other cafe settings (taking orders, every day for testing, tips, tax
 percent, drinks per pickup time).
 
@@ -169,8 +175,8 @@ To test in sandbox:
 - [ ] In the app as an admin: turn on Happy Lion Cafe page, turn on "Cafe:
       orders every day" to test on a weekday, set tax percent.
 - [ ] Place an order, pay with a Square sandbox test card (4111 1111 1111
-      1111, any future date, CVV 111, any ZIP), check the ticket, give an
-      account Cafe counter, mark it ready, confirm the push.
+      1111, any future date, CVV 111, any ZIP), check the ticket, turn on
+      Cafe mode for an account, mark it ready, confirm the push.
 
 Decisions still open:
 - [ ] Real prices, pickup times, capacity, tips, tax rate.
@@ -184,7 +190,7 @@ Go live with the owner:
       `cafe_menu_items` now; mapping sizes to his Square catalog variation ids
       (`sizes[].square_variation_id`) makes his reports itemized properly.
 - [ ] Owner's account connected (A or B), production webhook + key.
-- [ ] Turn `cafe_every_day` off. Give the owner's account Cafe counter.
+- [ ] Turn `cafe_every_day` off. Turn on Cafe mode for the owner's account.
 - [ ] A real $1 order end to end, then refund it in Square.
 
 ---

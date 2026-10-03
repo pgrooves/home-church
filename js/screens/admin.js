@@ -1780,6 +1780,9 @@
      the order they matter in: an admin can do everything a leader can. */
   function personStanding(u) {
     if (u.role === 'admin') return 'Admin';
+    // Cafe mode rides alongside, since it says what somebody does on a
+    // Sunday rather than what tier they are.
+    if (u.is_barista) return u.is_leader ? 'Leader · Cafe' : 'Cafe';
     return u.is_leader ? 'Leader' : 'Member';
   }
 
@@ -1817,7 +1820,8 @@
       'A member reads, writes in their own journal, and joins a group room. A leader ' +
       'also gets the leader tools and can host one. An admin can do all of that, and ' +
       'write announcements, edit content, and set what everybody else is. Nobody can ' +
-      'change their own.</p>';
+      'change their own. Cafe mode, on top of any of them, runs the Happy Lion Cafe: ' +
+      'the queue, and telling people their coffee is ready.</p>';
 
     /* Filtered in place as somebody types, by filterUsers() below, rather than
        by redrawing the screen: a redraw between two letters takes the
@@ -1988,13 +1992,16 @@
       });
     }
 
-    /* The Happy Lion Cafe counter, the same shape as Leader mode and for
-       members only for the same reason: an admin already works the queue. */
+    /* Cafe mode, the Happy Lion Cafe's counter. The same shape as Leader mode
+       and for members only for the same reason: an admin already has it. On,
+       somebody gets the queue: the orders as they are paid, Start, Ready
+       (which tells the person who ordered), Picked up, and the switch that
+       pauses ordering. The database checks it on every one of those. */
     if (!isAdminRow) {
       html += switchRow({
-        title: 'Cafe counter',
+        title: 'Cafe mode',
         sub: u.is_barista
-          ? 'On. They can see the Happy Lion Cafe queue and mark drinks ready.'
+          ? 'On. They run the Happy Lion Cafe queue and tell people their coffee is ready.'
           : 'Off. Turn it on for whoever runs the cafe on Sunday.',
         action: 'admin-barista',
         id: u.id,

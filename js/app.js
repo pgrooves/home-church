@@ -224,9 +224,15 @@
   }
 
   /* The Coffee page. Off without the row, the opposite of the three above,
-     for the reason given where it sits in MODULES. */
+     for the reason given where it sits in MODULES.
+
+     AND ALWAYS THERE FOR SOMEBODY IN CAFE MODE, the way the queue has to be:
+     the owner sets up and tests before the church turns the page on, and
+     pausing it for everybody must not take it away from the counter. The
+     page itself tells them when nobody else can see it. */
   function cafeOn() {
-    return HC.data.setting('cafe_on', false) === true;
+    if (HC.data.setting('cafe_on', false) === true) return true;
+    return !!(HC.cafe && HC.cafe.signedIn() && HC.cafe.isBarista());
   }
 
   /* MODULES minus whatever the church has switched off. A module with no
@@ -2677,7 +2683,7 @@
       }));
     },
 
-    // The cafe counter, beside Leader mode and the same in every way.
+    // Cafe mode, beside Leader mode and the same in every way.
     'admin-barista': function (el) {
       var id = el.getAttribute('data-id');
       var person = HC.admin.users().filter(function (u) { return u.id === id; })[0];
@@ -2691,8 +2697,8 @@
         var name = [person.first_name, person.last_name].filter(Boolean).join(' ') ||
           person.email || 'They';
         HC.components.toast(on
-          ? name + ' can work the Happy Lion Cafe queue now.'
-          : name + ' is off the cafe counter.');
+          ? 'Cafe mode is on for ' + name + '. They can run the queue now.'
+          : 'Cafe mode is off for ' + name + '.');
       }));
     },
 
@@ -5764,6 +5770,10 @@
        the right one rather than under the default for a frame. */
     applyNavStyle();
     HC.store.on('profile', applyNavStyle);
+    /* Cafe mode lands on the profile a beat after sign in, and it puts Coffee
+       in the row for the owner even while the page is off for everybody
+       else, so the row is synced again when it does. Cheap and idempotent. */
+    HC.store.on('profile', function () { syncModules(); });
     watchScroll();
 
     /* Edit mode's idle clock and the two listeners that feed it. Wired on
