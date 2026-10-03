@@ -1157,8 +1157,10 @@
      who is signed in, four pages can be switched off, and more are coming.
 
      So the real list is measured on the real screen. The panel already uses
-     the whole height (see .hc-navmenu__panel); if the lines still do not fit,
-     the leading comes in first, a few percent at a time, down to just over
+     the whole height (see .hc-navmenu__panel). With room to spare the leading
+     opens up until the list fills it, so the space is spread through the
+     lines rather than left as a hole between the groups. If the lines do not
+     fit, the leading comes in first, a few percent at a time, down to just over
      half, and only then the letters, by at most a seventh. Measured while the
      layer is still invisible, so nobody sees it settle.
 
@@ -1179,6 +1181,10 @@
         menuPanel.scrollHeight > menuPanel.clientHeight + 1;
     }
     apply();
+    // Room to spare: open the leading up, a little at a time, until the list
+    // reaches the top or the lines are as airy as they should ever get.
+    while (!over() && fit < 1.4) { fit = Math.round((fit + 0.02) * 100) / 100; apply(); }
+    if (over() && fit > 1) { fit = Math.round((fit - 0.02) * 100) / 100; apply(); }
     while (over() && fit > 0.6) { fit = Math.round((fit - 0.04) * 100) / 100; apply(); }
     while (over() && type > 0.86) { type = Math.round((type - 0.02) * 100) / 100; apply(); }
     top.scrollTop = top.scrollHeight;

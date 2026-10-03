@@ -1034,10 +1034,16 @@
    rather than a button's height above it: Home is centred and the button is
    in the corner, so they never meet. Those two bands were about 180pt of
    empty glass on a tall phone, and using them is what lets every line fit
-   without the top group scrolling. */
+   without the top group scrolling.
+
+   THE ROOM GOES INTO THE LINES, NOT THE MIDDLE. The two groups stay a short
+   rule apart, as they always were, and fitMenu opens up the leading until
+   the list reaches the top. Anything left once the leading is at its widest
+   sits above Settings, at the outside, never between the groups. */
 .hc-navmenu__panel {
   display: flex;
   flex-direction: column;
+  justify-content: flex-end;
   flex: 1 1 auto;
   min-height: 0;
   padding: calc(env(safe-area-inset-top) + var(--hc-space-base))
@@ -1073,8 +1079,8 @@
    across the middle of it, so the rule floats between the lists rather than
    being welded to the bottom of one. */
 .hc-navmenu__split {
-  flex: 1 1 auto;
-  min-height: var(--hc-space-base);
+  flex: 0 0 auto;
+  height: calc(var(--hc-space-lg) + 8px);
   display: grid;
   place-items: center;
 }
