@@ -1133,6 +1133,13 @@
          own navigation, which is the thing this screen exists to stop. */
       '<div class="hc-navmenu__split"><span class="hc-navmenu__rule"></span></div>' +
       '<div class="hc-navmenu__group hc-navmenu__group--tabs">' + promoted + tabs + '</div>';
+
+    /* If the top group is taller than the room it has, open it at its foot.
+       The line nearest the rule is the most reached for (Group, when the
+       church is running rooms) and the one at the top the least (Settings),
+       so the overflow should hide the top. Starting at 0 hid Group. */
+    var top = menuPanel.querySelector('.hc-navmenu__group--more');
+    if (top) top.scrollTop = top.scrollHeight;
   }
 
   function openMenu() {

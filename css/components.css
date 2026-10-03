@@ -1146,21 +1146,25 @@
 
 /* A SHORT PHONE, WITH EVERY LINE THERE IS.
 
-   The longest this list ever gets is nine in the top group: the seven modules,
-   then Admin on an admin's phone, then Settings. On a 667pt screen, once the
-   header and the button's footprint are taken off, there are about 487pt to
-   put nine of those and five of the others in, and at the sizes above that is
-   four lines more than fits. The top group would scroll, which works, and
+   The longest this list ever gets is nine in the top group: Group and the
+   five modules under it, then Admin on an admin's phone, then Settings; and
+   six in the bottom group, HomeKids over the five tabs. On a 667pt screen,
+   once the header and the button's footprint are taken off, there are about
+   487pt for all fifteen, and at the sizes above that is four lines more than
+   fits. The top group would scroll, which works, and
    which also means Group, the line this church reaches for most on a Thursday
    night, would be the one below the fold.
 
    So the rows come in rather than the list going over. Nothing changes about
    the type sizes, which are what say which group is which; only the leading,
-   which is the thing there is least reason to defend. 9 x 26 and 5 x 38 is
-   424, and the gap between them keeps the rest. */
+   which is the thing there is least reason to defend. 9 x 26 and 6 x 34 is
+   438, and the gap between them keeps the rest. It was 5 x 38 until HomeKids
+   joined the bottom group, and that one extra line is what pushed Group below
+   the fold on an admin's phone. If it ever overflows again, paintMenu opens
+   the top group scrolled to its foot, so it is Settings that goes, not Group. */
 @media (max-height: 720px) {
   .hc-navmenu__group--more .hc-navmenu__link { line-height: 26px; }
-  .hc-navmenu__group--tabs .hc-navmenu__link { line-height: 38px; }
+  .hc-navmenu__group--tabs .hc-navmenu__link { line-height: 34px; }
 }
 
 /* Anywhere that is not a word. Tapping it closes the overlay without going
