@@ -1028,14 +1028,22 @@
    them. On a tall phone that gap is generous; on a short one the rule is
    pushed up against the top group and the top group starts to scroll, which
    is the right thing to give up first. */
+/* THE WHOLE SCREEN IS THE MENU'S. The top group starts just under the
+   status bar rather than under the header, which the overlay blurs anyway,
+   and the bottom group comes down until Home sits level with the button
+   rather than a button's height above it: Home is centred and the button is
+   in the corner, so they never meet. Those two bands were about 180pt of
+   empty glass on a tall phone, and using them is what lets every line fit
+   without the top group scrolling. */
 .hc-navmenu__panel {
   display: flex;
   flex-direction: column;
   flex: 1 1 auto;
   min-height: 0;
-  padding: calc(var(--hc-header-h) + env(safe-area-inset-top) + var(--hc-space-lg))
+  padding: calc(env(safe-area-inset-top) + var(--hc-space-base))
            var(--hc-screen-pad)
-           calc(var(--hc-chrome-space) + env(safe-area-inset-bottom) + var(--hc-space-base));
+           calc(env(safe-area-inset-bottom) + var(--hc-chrome-inset)
+                + (var(--hc-navfab-size) - var(--hc-navmenu-tabs-lh)) / 2);
 }
 
 .hc-navmenu__group {
@@ -1049,6 +1057,8 @@
 .hc-navmenu__group--more {
   flex: 0 1 auto;
   min-height: 0;
+  /* A last resort only. fitMenu in js/app.js tightens the lines until they
+     fit, so on any phone this app runs on the top group does not scroll. */
   overflow-y: auto;
   gap: 2px;
   -webkit-overflow-scrolling: touch;
@@ -1064,7 +1074,7 @@
    being welded to the bottom of one. */
 .hc-navmenu__split {
   flex: 1 1 auto;
-  min-height: var(--hc-space-lg);
+  min-height: var(--hc-space-base);
   display: grid;
   place-items: center;
 }
@@ -1100,17 +1110,26 @@
   transition: color var(--hc-dur-fast) var(--hc-ease);
 }
 
+/* The sizes come from two numbers fitMenu sets: --hc-navmenu-fit shrinks
+   the leading, and --hc-navmenu-type the letters, and only once the leading
+   has given all it can. Both are 1 on a phone with room. */
+.hc-navmenu {
+  --hc-navmenu-fit: 1;
+  --hc-navmenu-type: 1;
+  --hc-navmenu-tabs-lh: calc(44px * var(--hc-navmenu-fit));
+}
+
 .hc-navmenu__group--more .hc-navmenu__link {
   font-weight: 600;
-  font-size: 13px;
-  line-height: 32px;
+  font-size: calc(13px * var(--hc-navmenu-type));
+  line-height: calc(32px * var(--hc-navmenu-fit));
   letter-spacing: 0.16em;
 }
 
 .hc-navmenu__group--tabs .hc-navmenu__link {
   font-weight: 800;
-  font-size: 20px;
-  line-height: 44px;
+  font-size: calc(20px * var(--hc-navmenu-type));
+  line-height: var(--hc-navmenu-tabs-lh);
   letter-spacing: 0.10em;
   color: var(--hc-navmenu-ink);
 }
@@ -1144,28 +1163,11 @@
   border-radius: var(--hc-radius-sm);
 }
 
-/* A SHORT PHONE, WITH EVERY LINE THERE IS.
-
-   The longest this list ever gets is nine in the top group: Group and the
-   five modules under it, then Admin on an admin's phone, then Settings; and
-   six in the bottom group, HomeKids over the five tabs. On a 667pt screen,
-   once the header and the button's footprint are taken off, there are about
-   487pt for all fifteen, and at the sizes above that is four lines more than
-   fits. The top group would scroll, which works, and
-   which also means Group, the line this church reaches for most on a Thursday
-   night, would be the one below the fold.
-
-   So the rows come in rather than the list going over. Nothing changes about
-   the type sizes, which are what say which group is which; only the leading,
-   which is the thing there is least reason to defend. 9 x 26 and 6 x 34 is
-   438, and the gap between them keeps the rest. It was 5 x 38 until HomeKids
-   joined the bottom group, and that one extra line is what pushed Group below
-   the fold on an admin's phone. If it ever overflows again, paintMenu opens
-   the top group scrolled to its foot, so it is Settings that goes, not Group. */
-@media (max-height: 720px) {
-  .hc-navmenu__group--more .hc-navmenu__link { line-height: 26px; }
-  .hc-navmenu__group--tabs .hc-navmenu__link { line-height: 34px; }
-}
+/* A SHORT PHONE, WITH EVERY LINE THERE IS. Not a media query any more: the
+   number of lines changes with who is signed in and which pages the church
+   has switched on, and one more is coming, so fitMenu in js/app.js measures
+   the real list on the real screen and brings the leading in until it fits.
+   See there. */
 
 /* Anywhere that is not a word. Tapping it closes the overlay without going
    anywhere, which is the same intention the x is, so it is the same handler.

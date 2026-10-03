@@ -122,6 +122,15 @@ ok('and the church switching it off takes the tile away, nothing else',
    modules({ homekids_on: false }),
    WITHOUT.filter((r) => r !== 'homekids'));
 
+ok('Practices and Alpha are there on a phone that has never reached Supabase',
+   ['practices', 'alpha'].every((r) => modules({}).indexOf(r) !== -1), true);
+
+ok('turning Practices off takes it out and leaves the rest in order',
+   modules({ practices_on: false }), WITHOUT.filter((r) => r !== 'practices'));
+
+ok('turning Alpha off takes it out and leaves the rest in order',
+   modules({ alpha_on: false }), WITHOUT.filter((r) => r !== 'alpha'));
+
 ok('hiding Group moves Journal up into its slot rather than leaving a gap',
    modules({})[1], 'journal');
 

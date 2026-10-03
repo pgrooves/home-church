@@ -815,7 +815,7 @@ under the same `frame-src` the Practices and Alpha players have always had. See
 ### Group mode, the switch that adds and removes a tab
 
 **The Group tab ships off, and one switch brings it back for the whole church
-at once.** It is at **Settings → Admin → App settings**, under *The Group tab*,
+at once.** It is at **Settings → Admin → App settings**, under *Pages*,
 directly below Edit mode. `app_settings.group_mode_on` is the whole feature:
 off, and there is no Group anywhere in the app — no tile in the ••• sheet, no
 stop on the sideways swipe, no row on the More screen, no result in search, and
@@ -823,6 +823,11 @@ the route itself draws a short "not right now" rather than a room. On, and
 everything is exactly as it was. It reaches phones that are already open: the
 sheet redraws with one fewer tile on the next content refresh rather than
 waiting for a cold start.
+
+The same *Pages* section has switches for **HomeKids**, **Practicing the Way**
+and **Alpha** (`homekids_on`, `practices_on`, `alpha_on`, migrations 0081 and
+0084). Unlike Group they default to on; off takes the page out of the •••
+menu, the swipe and search for everybody, and nothing is deleted.
 
 **The switch is on the screen whether or not the row exists.** Every other row
 under *Switches and messages* is a list of what happens to be in `app_settings`,

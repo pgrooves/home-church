@@ -2202,7 +2202,13 @@
     home_embed_base: true,
     /* 0077. Read by name in js/maintenance.js, and deleting it while it was on
        would be the quiet way to lift the cover with nobody deciding to. */
-    maintenance_mode_on: true
+    maintenance_mode_on: true,
+    /* 0081 and 0084. The three page switches drawn under "Pages" with Group
+       mode, read by name in js/app.js. On is their fallback, so deleting one
+       would quietly put a page the church had hidden back in the menu. */
+    homekids_on: true,
+    practices_on: true,
+    alpha_on: true
   };
 
   /* The Group tab's switch, as the app knows it rather than as the database
@@ -2240,6 +2246,49 @@
     return HC.data.setting(GROUP_MODE.key, false) === true;
   }
 
+  /* The other pages that can be hidden, drawn with Group mode under "Pages".
+     Carried whole for the reason GROUP_MODE is: the switch is drawn whether or
+     not its row exists, and the first tap writes exactly this. Unlike Group
+     they default to ON, which is what js/app.js falls back to without a row. */
+  var PAGE_SWITCHES = [
+    {
+      key: 'homekids_on',
+      title: 'HomeKids',
+      label: 'HomeKids page',
+      help: 'Off takes HomeKids out of the ••• menu for everybody. Nothing is ' +
+        'deleted: lessons, updates and every family’s checkmarks come back ' +
+        'exactly as they were when this goes on again.',
+      sortOrder: 35
+    },
+    {
+      key: 'practices_on',
+      title: 'Practicing the Way',
+      label: 'Practices page',
+      help: 'Off takes Practices out of the ••• menu for everybody. Nothing is ' +
+        'deleted, and it comes back exactly as it was when this goes on again.',
+      sortOrder: 36
+    },
+    {
+      key: 'alpha_on',
+      title: 'Alpha',
+      label: 'Alpha page',
+      help: 'Off takes Alpha out of the ••• menu for everybody. Nothing is ' +
+        'deleted, and it comes back exactly as it was when this goes on again.',
+      sortOrder: 37
+    }
+  ];
+
+  function pageSwitch(key) {
+    return PAGE_SWITCHES.filter(function (p) { return p.key === key; })[0] || null;
+  }
+
+  // Same two sources as groupModeOn(), with on as the fallback.
+  function pageOn(key) {
+    var row = HC.admin.settings().filter(function (s) { return s.key === key; })[0];
+    if (row) return !!row.value_bool;
+    return HC.data.setting(key, true) !== false;
+  }
+
   /* Its own section, above the list.
 
      A SWITCH THAT ADDS AND REMOVES A TAB IS NOT A ROW IN A LIST. Everything
@@ -2257,7 +2306,7 @@
   function groupModeSection() {
     var on = groupModeOn();
 
-    var html = c.sectionHeader('', 'The Group tab');
+    var html = c.sectionHeader('', 'Pages');
     html += switchRow({
       title: 'Group mode',
       sub: on
@@ -2273,6 +2322,19 @@
       'answer and prayer request stays where it is and comes back exactly as it ' +
       'was left. Who can open a room is separate, and is set per person under ' +
       'Manage users.</p>';
+
+    PAGE_SWITCHES.forEach(function (p) {
+      var shown = pageOn(p.key);
+      html += switchRow({
+        title: p.title,
+        sub: shown
+          ? 'On. ' + p.title + ' is in the ••• menu for everybody.'
+          : 'Off. ' + p.title + ' is hidden from the ••• menu for everybody, and the rest move up a slot.',
+        action: 'admin-page-toggle',
+        id: p.key,
+        on: shown
+      });
+    });
 
     return html;
   }
@@ -2431,6 +2493,7 @@
   var DRAWN_ELSEWHERE = {};
   DRAWN_ELSEWHERE[PUSH_DEFAULT_KEY] = true;
   DRAWN_ELSEWHERE[GROUP_MODE.key] = true;
+  PAGE_SWITCHES.forEach(function (p) { DRAWN_ELSEWHERE[p.key] = true; });
   DRAWN_ELSEWHERE[MAINTENANCE.key] = true;
   DRAWN_ELSEWHERE[BANNER_ON.key] = true;
   DRAWN_ELSEWHERE[BANNER_MESSAGE_KEY] = true;
@@ -2752,6 +2815,10 @@
        that file, because this screen is what draws the switch. */
     groupMode: function () { return GROUP_MODE; },
     groupModeOn: groupModeOn,
+
+    // HomeKids, Practices and Alpha: the same pair, by key.
+    pageSwitch: pageSwitch,
+    pageOn: pageOn,
 
     // Maintenance mode, the same pair for the same handler shape.
     maintenance: function () { return MAINTENANCE; },

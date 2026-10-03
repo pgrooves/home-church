@@ -156,7 +156,8 @@
       route: 'practices',
       icon: 'practiceSabbath',
       title: 'Practices',
-      sub: 'Nine practices of Jesus, a few sessions each.'
+      sub: 'Nine practices of Jesus, a few sessions each.',
+      gate: practicesOn
     },
     /* Straight after Practices, and next to it rather than next to Give,
        because these two are the same kind of thing: somebody else's course,
@@ -167,7 +168,8 @@
       route: 'alpha',
       icon: 'alpha',
       title: 'Alpha',
-      sub: 'Dinner, a short film, and any question you want to ask.'
+      sub: 'Dinner, a short film, and any question you want to ask.',
+      gate: alphaOn
     },
     {
       route: 'give',
@@ -197,6 +199,16 @@
      row, because the page is honest while it is empty. See migration 0081. */
   function homekidsOn() {
     return HC.data.setting('homekids_on', true) !== false;
+  }
+
+  /* Practices and Alpha, the same shape as HomeKids: on unless an admin has
+     turned them off under App settings, Pages. See migration 0084. */
+  function practicesOn() {
+    return HC.data.setting('practices_on', true) !== false;
+  }
+
+  function alphaOn() {
+    return HC.data.setting('alpha_on', true) !== false;
   }
 
   /* MODULES minus whatever the church has switched off. A module with no
@@ -516,6 +528,9 @@
     menu = document.getElementById('hc-navmenu');
     menuPanel = document.getElementById('hc-navmenu-panel');
     menuScrim = document.getElementById('hc-navmenu-scrim');
+    // A phone turned on its side, or a browser bar sliding away, while the
+    // menu is up changes the room it has. See fitMenu.
+    window.addEventListener('resize', function () { if (menuOpen) fitMenu(); });
     tabbar = document.getElementById('hc-tabbar');
     sheet = document.getElementById('hc-oversheet');
     sheetGrid = document.getElementById('hc-oversheet-grid');
@@ -1134,13 +1149,41 @@
       '<div class="hc-navmenu__split"><span class="hc-navmenu__rule"></span></div>' +
       '<div class="hc-navmenu__group hc-navmenu__group--tabs">' + promoted + tabs + '</div>';
 
-    /* If the top group is taller than the room it has, open it at its foot.
-       The line nearest the rule is the most reached for (Group, when the
-       church is running rooms) and the one at the top the least (Settings),
-       so the overflow should hide the top. Starting at 0 hid Group. */
-    var top = menuPanel.querySelector('.hc-navmenu__group--more');
-    if (top) top.scrollTop = top.scrollHeight;
+    fitMenu();
   }
+
+  /* EVERY LINE ON SCREEN, NOTHING SCROLLING. The church asked for the menu to
+     hold still, and the list is not a fixed length: Admin comes and goes with
+     who is signed in, four pages can be switched off, and more are coming.
+
+     So the real list is measured on the real screen. The panel already uses
+     the whole height (see .hc-navmenu__panel); if the lines still do not fit,
+     the leading comes in first, a few percent at a time, down to just over
+     half, and only then the letters, by at most a seventh. Measured while the
+     layer is still invisible, so nobody sees it settle.
+
+     If even that is not enough the top group scrolls, as a last resort, and
+     it opens at its foot: the line nearest the rule is the one reached for
+     most (Group, when the church is running rooms) and Settings at the top
+     the least, so it is Settings that goes. */
+  function fitMenu() {
+    var top = menuPanel.querySelector('.hc-navmenu__group--more');
+    if (!top) return;
+    var fit = 1, type = 1;
+    function apply() {
+      menu.style.setProperty('--hc-navmenu-fit', String(fit));
+      menu.style.setProperty('--hc-navmenu-type', String(type));
+    }
+    function over() {
+      return top.scrollHeight > top.clientHeight + 1 ||
+        menuPanel.scrollHeight > menuPanel.clientHeight + 1;
+    }
+    apply();
+    while (over() && fit > 0.6) { fit = Math.round((fit - 0.04) * 100) / 100; apply(); }
+    while (over() && type > 0.86) { type = Math.round((type - 0.02) * 100) / 100; apply(); }
+    top.scrollTop = top.scrollHeight;
+  }
+
 
   function openMenu() {
     paintMenu();
@@ -2726,6 +2769,18 @@
        creates it, so bailing on a missing row would be bailing on precisely
        the tap that matters. js/screens/admin.js carries what to write and
        HC.admin.saveSwitch upserts it. */
+    /* HomeKids, Practices and Alpha, shown or hidden for the whole church.
+       Same shape as Group mode below; the key on the switch says which. */
+    'admin-page-toggle': function (el) {
+      var h = HC.screens.adminHelpers;
+      var meta = h.pageSwitch(el.getAttribute('data-id'));
+      if (!meta) return;
+      var next = !h.pageOn(meta.key);
+      setSwitch(el, next);
+      HC.native.tap('Light');
+      adminRun('setting:' + meta.key, HC.admin.saveSwitch(meta, next));
+    },
+
     'admin-group-mode-toggle': function (el) {
       var meta = HC.screens.adminHelpers.groupMode();
       var next = !HC.screens.adminHelpers.groupModeOn();
