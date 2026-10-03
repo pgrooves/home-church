@@ -2979,20 +2979,25 @@
       return homekidsLessons.filter(function (l) { return l.id === id; })[0] || null;
     },
 
-    /* The lesson this week belongs to: the most recent Sunday that has
-       happened, because the guide is for the days after the lesson and the
-       checkmarks are shown to the teacher the Sunday after that. A lesson
-       published ahead of its Sunday waits until that morning, so a family
-       halfway through this week's list is not handed next week's. When every
-       lesson is still ahead, which is only ever the first week, the soonest
-       one answers rather than nothing.
+    /* The lesson for the week somebody is in. A week runs Monday to Sunday,
+       the way the church asked for it, so all week the page shows the lesson
+       for the coming Sunday, and on Sunday the lesson being taught that
+       morning. Tuesday the 29th and Saturday the 3rd both open on Sunday the
+       4th; Monday the 5th moves on to the 11th.
+
+       If that Sunday has no lesson yet, the newest one before it answers, so
+       a week the director has not uploaded is never an empty page. If every
+       lesson is still further ahead, the soonest answers rather than nothing.
 
        `today` is 'YYYY-MM-DD' and optional; the tests pass one. */
     currentHomekidsLesson: function (today) {
       today = today || isoToday();
+      var d = new Date(today + 'T12:00:00Z');
+      d.setUTCDate(d.getUTCDate() + ((7 - d.getUTCDay()) % 7));
+      var sunday = d.toISOString().slice(0, 10);
       var all = this.homekidsLessonsByDate();
       for (var i = 0; i < all.length; i++) {
-        if (all[i].taughtOn <= today) return all[i];
+        if (all[i].taughtOn <= sunday) return all[i];
       }
       return all.length ? all[all.length - 1] : null;
     },

@@ -3,9 +3,9 @@
 
    WHAT IS PINNED HERE, in the order a week happens:
 
-     which lesson       the page shows the most recent Sunday that has
-                        happened, never next week's early, and something rather
-                        than nothing in the very first week.
+     which lesson       a week runs Monday to Sunday and the page shows that
+                        week's Sunday, the newest earlier one if it has none,
+                        and something rather than nothing in the very first week.
      the ticks          stored per lesson and per item, counted against the
                         lesson's own list, and survive a reload.
      the emails         a HomeKids email is recognised by the two secrets and
@@ -111,13 +111,17 @@ const mappers = load(w, SAMPLE);
 const D = w.HC.data;
 
 ok('newest Sunday first', D.homekidsLessonsByDate().map(l => l.taughtOn), ['2026-09-27', '2026-09-20']);
-ok('the Friday after a lesson shows that lesson',
-  D.currentHomekidsLesson('2026-10-02').id, 'homekids-2026-09-27');
+ok('a week runs Monday to Sunday: the Monday before shows the coming Sunday',
+  D.currentHomekidsLesson('2026-09-21').id, 'homekids-2026-09-27');
+ok('and so does the Saturday the day before it',
+  D.currentHomekidsLesson('2026-09-26').id, 'homekids-2026-09-27');
 ok('on the Sunday itself, that Sunday',
   D.currentHomekidsLesson('2026-09-27').id, 'homekids-2026-09-27');
-ok('the Saturday before, still last week',
-  D.currentHomekidsLesson('2026-09-26').id, 'homekids-2026-09-20');
-ok('before any lesson has been taught, the soonest one rather than nothing',
+ok('the Sunday before belongs to its own week',
+  D.currentHomekidsLesson('2026-09-20').id, 'homekids-2026-09-20');
+ok('a week with no lesson uploaded yet shows the newest one before it',
+  D.currentHomekidsLesson('2026-10-02').id, 'homekids-2026-09-27');
+ok('before any lesson week, the soonest one rather than nothing',
   D.currentHomekidsLesson('2026-09-01').id, 'homekids-2026-09-20');
 
 const empty = app();
