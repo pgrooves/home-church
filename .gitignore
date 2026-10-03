@@ -88,3 +88,4 @@ demo-*/*.html
 !/Home Church slash commands.pdf
 demo-homekids/out/
 demo-happy-lion-cafe/out/
+demo-happy-lion-cafe/out-app/

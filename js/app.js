@@ -176,6 +176,18 @@
       icon: 'give',
       title: 'Give',
       sub: 'Through Overflow, in your own browser.'
+    },
+    /* The Happy Lion Cafe, in the lobby on Sunday mornings. Straight after
+       Give, which puts it between Give and Settings in the menu, where the
+       church asked for it. Gated, and unlike the other gated pages OFF until
+       an admin turns it on (migration 0085): a page that takes money is not
+       one to find before the cafe is ready for it. */
+    {
+      route: 'cafe',
+      icon: 'coffee',
+      title: 'Coffee',
+      sub: 'Order ahead from the Happy Lion Cafe in the lobby.',
+      gate: cafeOn
     }
   ];
 
@@ -209,6 +221,12 @@
 
   function alphaOn() {
     return HC.data.setting('alpha_on', true) !== false;
+  }
+
+  /* The Coffee page. Off without the row, the opposite of the three above,
+     for the reason given where it sits in MODULES. */
+  function cafeOn() {
+    return HC.data.setting('cafe_on', false) === true;
   }
 
   /* MODULES minus whatever the church has switched off. A module with no
@@ -263,6 +281,9 @@
     practice: 'Practice',
     alpha: 'Alpha',
     give: 'Give',
+    // The menu says Coffee and the page says Happy Lion Cafe under the logo.
+    // Its three pushed views name themselves, see emitViewChange.
+    cafe: 'Coffee',
     journal: 'Journal',
     'journal-entry': 'Your entry',
     // The menu carries this the way any stop does, once the screen scrolls.
@@ -839,6 +860,9 @@
     if (route.name === 'practice' && HC.practices) {
       var here = HC.practices.get(route.id);
       if (here && here.title) named = here.title;
+    }
+    if (route.name === 'cafe' && route.id && HC.screens.cafeHelpers) {
+      named = HC.screens.cafeHelpers.titleFor(route);
     }
     title.textContent = named;
 
@@ -1842,6 +1866,12 @@
       HC.router.go({ name: 'guide' });
     },
 
+    /* The Happy Lion Cafe. One action for every tap on the Coffee page, with
+       data-cafe naming the verb, so js/screens/cafe.js owns its own. */
+    'cafe': function (el) {
+      HC.screens.cafeHelpers.act(el);
+    },
+
     /* --------------------------------------------------- the journal pill
 
        Both halves of the round trip between a guide and what you wrote about
@@ -2644,6 +2674,25 @@
         HC.components.toast(on
           ? name + ' can host a group room now.'
           : 'Leader mode is off for ' + name + '.');
+      }));
+    },
+
+    // The cafe counter, beside Leader mode and the same in every way.
+    'admin-barista': function (el) {
+      var id = el.getAttribute('data-id');
+      var person = HC.admin.users().filter(function (u) { return u.id === id; })[0];
+      if (!person) return;
+
+      var on = !person.is_barista;
+      setSwitch(el, on);
+      HC.native.tap('Light');
+
+      adminRun('barista:' + id, HC.admin.setBarista(id, on).then(function () {
+        var name = [person.first_name, person.last_name].filter(Boolean).join(' ') ||
+          person.email || 'They';
+        HC.components.toast(on
+          ? name + ' can work the Happy Lion Cafe queue now.'
+          : name + ' is off the cafe counter.');
       }));
     },
 
@@ -5372,6 +5421,12 @@
            changes what is on the screen, so there is no repaint to make, and
            the state exists only so that tapping a filter chip further down
            does not take a half written message with it. */
+        // The name for the cup, on Coffee. Kept in the screen's own state.
+        if (el.getAttribute('data-cafe-field')) {
+          HC.screens.cafeHelpers.input(el);
+          return;
+        }
+
         var contactField = el.getAttribute('data-contact-field');
         if (contactField) {
           HC.screens.connectHelpers.setContactField(contactField, el.value);
@@ -5780,6 +5835,7 @@
         journal: HC.screens.journal,
         'journal-entry': HC.screens.journalEntry,
         give: HC.screens.give,
+        cafe: HC.screens.cafe,
         search: HC.screens.search,
         profile: HC.screens.profile,
         admin: HC.screens.admin,

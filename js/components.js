@@ -721,6 +721,17 @@
           '<path d="m10.9 15.4 1.1 1.4 1.1-1.4"/>' +
           '<path d="M12 16.8c-.9 1.3.9 2.4 0 4.4"/>',
 
+    /* Coffee, the Happy Lion Cafe. A mug with steam, in the same hand as the
+       rest: 24 grid, 1.5 stroke, rounded caps. `coffee` is the tile in the
+       menu and a hot drink on the cafe's menu; `iced` is cold brew. */
+    coffee: '<path d="M5 10h11v5a5 5 0 0 1-5 5h-1a5 5 0 0 1-5-5z"/>' +
+            '<path d="M16 11.5h1.5a2.5 2.5 0 0 1 0 5H16"/>' +
+            '<path d="M8.5 3.5c-.8 1 .8 1.8 0 3M11.5 3c-.8 1.2.8 2 0 3.5M14.5 3.5c-.8 1 .8 1.8 0 3"/>',
+    iced: '<path d="M6.5 6h11l-1.4 14a1.5 1.5 0 0 1-1.5 1.3H9.4a1.5 1.5 0 0 1-1.5-1.3z"/>' +
+          '<path d="M13 6l2-3.5"/><path d="M7.2 11h9.6"/>' +
+          '<rect x="9.3" y="13.2" width="2.6" height="2.6" rx=".6"/>' +
+          '<rect x="12.4" y="15.4" width="2.6" height="2.6" rx=".6"/>',
+
     /* A five point star, for the prize at the end of a HomeKids week. */
     star: '<path d="m12 3.2 2.6 5.5 6 .8-4.4 4.1 1.1 5.9L12 16.6l-5.3 2.9 1.1-5.9-4.4-4.1 6-.8z"/>',
 

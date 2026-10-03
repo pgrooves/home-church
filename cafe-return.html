@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Happy Lion Cafe</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<!--
+  ===========================================================================
+  Home Church, back from Square's checkout
+
+  Where Square sends somebody after they have paid for a Happy Lion Cafe
+  order (checkout_options.redirect_url, set by the cafe-checkout Edge
+  Function). It is a page on the church's GitHub Pages site because Square
+  needs an https address and the packaged app does not have one.
+
+  It does nothing but say so. The app opened Square in its own browser sheet
+  and is waiting underneath: closing the sheet is the way back, and the app
+  checks the order with Square the moment it comes back into view. Nothing
+  here reads the URL or talks to anything, so there is nothing on it to trust.
+  ===========================================================================
+-->
+<style>
+  :root { --paper: #F7F4EF; --ink: #111111; --mid: #6D6864; --rule: #C8C0B0; }
+  @media (prefers-color-scheme: dark) {
+    :root { --paper: #1A1918; --ink: #F2EEE7; --mid: #9A938A; --rule: #3A3633; }
+    img { filter: invert(1) brightness(0.95); }
+  }
+  html, body { margin: 0; background: var(--paper); color: var(--ink); }
+  body {
+    min-height: 100vh; display: flex; flex-direction: column; align-items: center;
+    justify-content: center; padding: 32px 20px; box-sizing: border-box; text-align: center;
+    font: 16px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+  img { width: 150px; height: auto; }
+  h1 { font-size: 26px; line-height: 32px; margin: 28px 0 8px; font-weight: 600; }
+  p { margin: 0 auto; max-width: 320px; color: var(--mid); }
+  hr { width: 64px; border: 0; border-top: 0.5px solid var(--rule); margin: 22px auto; }
+</style>
+</head>
+<body>
+  <img src="assets/img/happy-lion-cafe.svg" alt="Happy Lion Cafe">
+  <h1>You’re in line.</h1>
+  <p>Close this page to get back to the Home Church app. Your ticket number is waiting there, and we’ll let you know when your coffee is ready.</p>
+  <hr>
+  <p>Paid by mistake, or need to change something? Find us at the cafe counter in the lobby.</p>
+</body>
+</html>

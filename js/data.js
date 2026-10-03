@@ -2549,6 +2549,36 @@
      last month's news. */
   var homekidsUpdates = [];
 
+  /* ------------------------------------------------------- happy lion cafe
+
+     The Coffee page's menu and pickup times, migration 0085. The same two
+     drinks and nine times that migration seeds, so a phone that has never
+     reached Supabase can still draw the menu. Ordering itself needs the
+     network and a sign in, so nothing here can be bought from a stale copy:
+     the price that is charged is always the one in the database. */
+  var CAFE_LEVELS = ['none', 'light', 'regular', 'extra'];
+  var CAFE_OPTIONS = [
+    { key: 'half_and_half', label: 'Half & half', short: 'Half & half', group: 'Milk', type: 'level', levels: CAFE_LEVELS },
+    { key: 'two_percent', label: '2% milk', short: '2% milk', group: 'Milk', type: 'level', levels: CAFE_LEVELS },
+    { key: 'sugar', label: 'Sugar', short: 'sugar', group: 'Sweetener', type: 'count', max: 4, unit: 'Packets' },
+    { key: 'splenda', label: 'Splenda', short: 'Splenda', group: 'Sweetener', type: 'count', max: 4, unit: 'Packets' }
+  ];
+  var cafeMenu = [
+    { id: 'hot-coffee', name: 'Hot Coffee', blurb: 'Our house drip, brewed fresh each service.',
+      icon: 'hot', sortOrder: 10, available: true, options: CAFE_OPTIONS,
+      sizes: [{ key: '12oz', label: '12 oz', price_cents: 300 }, { key: '16oz', label: '16 oz', price_cents: 350 }] },
+    { id: 'cold-brew', name: 'Cold Brew', blurb: 'Slow steeped overnight, served over ice.',
+      icon: 'cold', sortOrder: 20, available: true, options: CAFE_OPTIONS,
+      sizes: [{ key: '12oz', label: '12 oz', price_cents: 400 }, { key: '16oz', label: '16 oz', price_cents: 475 }] }
+  ];
+  var cafeSlots = [
+    ['0740', '8:00', '07:40'], ['0750', '8:00', '07:50'], ['0845', '8:00', '08:45'],
+    ['0910', '9:30', '09:10'], ['0920', '9:30', '09:20'], ['1015', '9:30', '10:15'],
+    ['1040', '11:00', '10:40'], ['1050', '11:00', '10:50'], ['1145', '11:00', '11:45']
+  ].map(function (s, i) {
+    return { id: s[0], service: s[1], pickupTime: s[2], capacity: null, sortOrder: (i + 1) * 10, active: true };
+  });
+
   /* ------------------------------------------------------------------ export */
 
   HC.data = {
@@ -2570,6 +2600,8 @@
     homekidsGroups: homekidsGroups,
     homekidsLessons: homekidsLessons,
     homekidsUpdates: homekidsUpdates,
+    cafeMenu: cafeMenu,
+    cafeSlots: cafeSlots,
     contentPages: contentPages,
     appSettings: appSettings,
     textOverrides: textOverrides,

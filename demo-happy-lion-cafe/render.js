@@ -1,40 +1,194 @@
 /* ===========================================================================
-   Happy Lion Cafe, mockups. Not wired into the app yet: mockup.src.html draws
-   the seven screens with the app's real stylesheets and the cafe logo, and
-   this writes one PNG per screen.
+   Coffee, rendered from the real app with sample rows.
 
-     node demo-happy-lion-cafe/render.js [out-dir]   # default: demo-happy-lion-cafe/out
+   Not the mockup (that is render-mockup.js). This serves the repo exactly as
+   the phone loads it, signs a pretend person in, fixes the clock to a Sunday
+   morning, and answers the cafe's REST and function calls from sample.json.
+   Every other Supabase call is refused, so nothing touches the live project
+   and nothing reaches Square.
+
+     node demo-happy-lion-cafe/render.js [out-dir]   # default: demo-happy-lion-cafe/out-app
+
+   Writes PNGs: the ••• menu with Coffee in it, the menu, a drink's sheet, the
+   order with pickup times, the ticket, the counter's queue, the menu in dark,
+   and Admin's Pages switches.
    =========================================================================== */
 'use strict';
 
 const { chromium } = require('playwright-core');
+const http = require('http');
 const fs = require('fs');
 const path = require('path');
+const pastTheGate = require('../tests/e2e/past-the-gate');
 
-const OUT = path.resolve(process.argv[2] || path.join(__dirname, 'out'));
-const NAMES = ['1-menu', '2-customize', '3-checkout', '4-order-status',
-  '5-barista-queue', '6-admin-settings', '7-menu-dark'];
+const ROOT = path.join(__dirname, '..');
+const OUT = path.resolve(process.argv[2] || path.join(__dirname, 'out-app'));
+const PORT = Number(process.env.HC_CAFE_PORT || 8253);
+const SAMPLE = JSON.parse(fs.readFileSync(path.join(__dirname, 'sample.json'), 'utf8'));
+
+// Sunday 4 October 2026, 8:30 in the morning in New Orleans.
+const SUNDAY = new Date('2026-10-04T13:30:00Z');
+
+const TYPES = {
+  '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css',
+  '.json': 'application/json', '.png': 'image/png', '.svg': 'image/svg+xml',
+  '.woff2': 'font/woff2', '.webmanifest': 'application/manifest+json'
+};
 
 function chrome() {
   if (process.env.HC_E2E_CHROME) return process.env.HC_E2E_CHROME;
   const root = process.env.PLAYWRIGHT_BROWSERS_PATH || '/opt/pw-browsers';
-  const dirs = fs.readdirSync(root).filter(d => /^chromium-/.test(d)).sort().reverse();
-  for (const d of dirs) {
-    const exe = path.join(root, d, 'chrome-linux', 'chrome');
-    if (fs.existsSync(exe)) return exe;
-  }
+  try {
+    const dirs = fs.readdirSync(root).filter(d => /^chromium-/.test(d)).sort().reverse();
+    for (const d of dirs) {
+      const exe = path.join(root, d, 'chrome-linux', 'chrome');
+      if (fs.existsSync(exe)) return exe;
+    }
+  } catch (e) { /* fall through */ }
   return undefined;
+}
+
+function serve() {
+  const server = http.createServer((req, res) => {
+    let p = decodeURIComponent(req.url.split('?')[0]);
+    if (p === '/') p = '/index.html';
+    const file = path.join(ROOT, p);
+    if (!file.startsWith(ROOT) || !fs.existsSync(file) || fs.statSync(file).isDirectory()) {
+      res.writeHead(404); res.end('not here'); return;
+    }
+    res.writeHead(200, { 'Content-Type': TYPES[path.extname(file)] || 'application/octet-stream' });
+    res.end(fs.readFileSync(file));
+  });
+  return new Promise(resolve => server.listen(PORT, () => resolve(server)));
+}
+
+function answer(url, accept) {
+  const send = (body) => ({ status: 200, contentType: 'application/json', body: JSON.stringify(body) });
+  if (/\/rest\/v1\/app_settings/.test(url)) return send(SAMPLE.app_settings);
+  if (/\/rest\/v1\/profiles/.test(url)) return send(/pgrst\.object/.test(accept) ? SAMPLE.profile : [SAMPLE.profile]);
+  if (/\/rpc\/hc_cafe_slot_load/.test(url)) return send(SAMPLE.slot_load);
+  if (/\/rpc\/hc_cafe_ahead/.test(url)) return send(3);
+  if (/\/rpc\/hc_cafe_queue/.test(url)) return send(SAMPLE.queue);
+  if (/\/rest\/v1\/cafe_orders/.test(url)) {
+    return send(/pgrst\.object/.test(accept) ? SAMPLE.order : (/status=in/.test(url) ? [SAMPLE.order] : []));
+  }
+  if (/\/functions\/v1\/cafe-checkout/.test(url)) return send({ status: 'paid', ticket_no: 14 });
+  return { status: 404, body: '[]' };
+}
+
+async function phone(browser, opts) {
+  const page = await browser.newPage({
+    viewport: { width: 390, height: opts.height || 844 },
+    deviceScaleFactor: 2, hasTouch: true,
+    colorScheme: opts.dark ? 'dark' : 'light'
+  });
+  const errors = [];
+  page.on('pageerror', e => errors.push(String(e)));
+  await page.clock.setFixedTime(SUNDAY);
+
+  await page.route('**/*.supabase.co/**', route => {
+    const req = route.request();
+    return route.fulfill(answer(req.url(), req.headers().accept || ''));
+  });
+
+  await page.goto('http://127.0.0.1:' + PORT + '/index.html');
+  await page.waitForFunction(() => window.HC && window.HC.router, null, { timeout: 15000 });
+  // A pretend session, an hour from expiring, so nothing tries to refresh it.
+  await page.evaluate((p) => {
+    window.HC.store.storage.set('session', {
+      accessToken: 'demo', refreshToken: 'demo', expiresAt: Date.now() + 3600000,
+      user: { id: p.id, email: 'trey@example.org' }
+    });
+  }, SAMPLE.profile);
+  await page.reload();
+  await page.waitForFunction(() => window.HC && window.HC.router, null, { timeout: 15000 });
+  await pastTheGate(page);
+  await page.evaluate((dark) => {
+    window.HC.store.updateProfile({ theme: dark ? 'dark' : 'light', firstName: 'Trey', canRunCafe: true });
+    window.HC.store.applyPreferences();
+  }, !!opts.dark);
+  await page.waitForFunction(() => window.HC.data.setting('cafe_on', false) === true, null, { timeout: 15000 });
+  page.errors = errors;
+  return page;
+}
+
+async function go(page, route) {
+  await page.evaluate(r => window.HC.router.go(r, { force: true }), route);
+  await page.waitForTimeout(900);
 }
 
 (async () => {
   fs.mkdirSync(OUT, { recursive: true });
+  const server = await serve();
   const browser = await chromium.launch({ executablePath: chrome() });
-  const page = await browser.newPage({ viewport: { width: 3200, height: 2300 }, deviceScaleFactor: 2 });
-  await page.goto('file://' + path.join(__dirname, 'mockup.src.html'));
-  await page.waitForTimeout(600);
-  for (let i = 0; i < NAMES.length; i++) {
-    await page.locator('#s' + (i + 1)).screenshot({ path: path.join(OUT, NAMES[i] + '.png') });
-  }
+  const errors = [];
+  const shot = (page, name) => page.screenshot({ path: path.join(OUT, name) });
+
+  // The ••• menu, with Coffee between Give and Settings.
+  let page = await phone(browser, {});
+  await go(page, { name: 'home' });
+  await page.click('#hc-navfab');
+  await page.waitForTimeout(700);
+  await shot(page, '01-nav-menu.png');
+  errors.push(...page.errors);
+  await page.close();
+
+  // The menu, with two drinks already in the order.
+  page = await phone(browser, {});
+  await page.evaluate(() => {
+    window.HC.cafe.clearCart();
+    window.HC.cafe.addLine({ item_id: 'hot-coffee', size: '16oz', options: { half_and_half: 'regular', sugar: 2 } });
+    window.HC.cafe.addLine({ item_id: 'cold-brew', size: '12oz', options: { two_percent: 'light', splenda: 1 } });
+  });
+  await go(page, { name: 'cafe' });
+  await shot(page, '02-menu.png');
+
+  // A drink's sheet.
+  await page.click('[data-cafe="open"][data-id="hot-coffee"]');
+  await page.waitForTimeout(300);
+  await page.click('[data-cafe="size"][data-id="16oz"]');
+  await page.click('[data-cafe="level"][data-key="half_and_half"][data-id="regular"]');
+  await page.click('[data-cafe="more"][data-key="sugar"]');
+  await page.click('[data-cafe="more"][data-key="sugar"]');
+  await page.waitForTimeout(500);
+  await shot(page, '03-drink-sheet.png');
+  await page.evaluate(() => document.querySelector('[data-cafe="close"]').click());
+
+  // The order, a time picked.
+  await go(page, { name: 'cafe', id: 'order' });
+  await page.click('[data-cafe="slot"][data-id="0920"]');
+  await page.waitForTimeout(300);
+  await page.setViewportSize({ width: 390, height: 1500 });
+  await page.waitForTimeout(300);
+  await shot(page, '04-order.png');
+  errors.push(...page.errors);
+  await page.close();
+
+  // The ticket.
+  page = await phone(browser, {});
+  await go(page, { name: 'cafe', id: 't-' + SAMPLE.order.id });
+  await page.waitForTimeout(800);
+  await shot(page, '05-ticket.png');
+  errors.push(...page.errors);
+  await page.close();
+
+  // The counter.
+  page = await phone(browser, { height: 1700 });
+  await go(page, { name: 'cafe', id: 'queue' });
+  await page.waitForTimeout(800);
+  await shot(page, '06-queue.png');
+  errors.push(...page.errors);
+  await page.close();
+
+  // The menu, dark.
+  page = await phone(browser, { dark: true });
+  await go(page, { name: 'cafe' });
+  await shot(page, '07-menu-dark.png');
+  errors.push(...page.errors);
+  await page.close();
+
   await browser.close();
-  console.log('wrote ' + NAMES.length + ' images to ' + OUT);
+  server.close();
+  console.log('wrote', fs.readdirSync(OUT).length, 'images to', OUT);
+  if (errors.length) { console.log('page errors:\n  ' + errors.join('\n  ')); process.exit(1); }
 })();

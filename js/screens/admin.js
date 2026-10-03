@@ -1988,6 +1988,20 @@
       });
     }
 
+    /* The Happy Lion Cafe counter, the same shape as Leader mode and for
+       members only for the same reason: an admin already works the queue. */
+    if (!isAdminRow) {
+      html += switchRow({
+        title: 'Cafe counter',
+        sub: u.is_barista
+          ? 'On. They can see the Happy Lion Cafe queue and mark drinks ready.'
+          : 'Off. Turn it on for whoever runs the cafe on Sunday.',
+        action: 'admin-barista',
+        id: u.id,
+        on: !!u.is_barista
+      });
+    }
+
     html += '<div class="hc-admin__item-actions">';
 
     /* The safety guard, drawn rather than merely enforced. A disabled button
@@ -2208,7 +2222,16 @@
        would quietly put a page the church had hidden back in the menu. */
     homekids_on: true,
     practices_on: true,
-    alpha_on: true
+    alpha_on: true,
+    /* 0085, the Happy Lion Cafe. cafe_on is drawn under "Pages"; the rest are
+       read by name in js/cafe.js and the cafe-checkout Edge Function, which
+       is where the money is, so none of them is offered for deletion. */
+    cafe_on: true,
+    cafe_taking_orders: true,
+    cafe_every_day: true,
+    cafe_tips_on: true,
+    cafe_tax_percent: true,
+    cafe_slot_capacity: true
   };
 
   /* The Group tab's switch, as the app knows it rather than as the database
@@ -2275,6 +2298,18 @@
       help: 'Off takes Alpha out of the ••• menu for everybody. Nothing is ' +
         'deleted, and it comes back exactly as it was when this goes on again.',
       sortOrder: 37
+    },
+    /* The one page here that is off until somebody turns it on, which is
+       what `fallback` says: it takes money, and the cafe has to be ready for
+       it first. See migration 0085 and the ledger in .claude/ledgers. */
+    {
+      key: 'cafe_on',
+      title: 'Happy Lion Cafe',
+      label: 'Happy Lion Cafe page',
+      help: 'Off takes Coffee out of the ••• menu for everybody. Orders already ' +
+        'paid for stay in the queue at the counter.',
+      sortOrder: 38,
+      fallback: false
     }
   ];
 
@@ -2282,10 +2317,13 @@
     return PAGE_SWITCHES.filter(function (p) { return p.key === key; })[0] || null;
   }
 
-  // Same two sources as groupModeOn(), with on as the fallback.
+  // Same two sources as groupModeOn(), with on as the fallback unless the
+  // page says otherwise (Coffee does).
   function pageOn(key) {
     var row = HC.admin.settings().filter(function (s) { return s.key === key; })[0];
     if (row) return !!row.value_bool;
+    var meta = pageSwitch(key);
+    if (meta && meta.fallback === false) return HC.data.setting(key, false) === true;
     return HC.data.setting(key, true) !== false;
   }
 

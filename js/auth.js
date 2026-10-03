@@ -338,7 +338,7 @@
          be drawn at all. canHost joined this line with migration 0036, when
          Leader mode stopped being a switch and became something the church
          grants. */
-      HC.store.updateProfile({ role: 'member', canHost: false });
+      HC.store.updateProfile({ role: 'member', canHost: false, canRunCafe: false });
     });
   }
 
@@ -557,6 +557,9 @@
          rather than leaving whatever this phone last held. Same defaulting as
          role directly below, for the same reason. */
       patch.canHost = !!(remote && remote.can_host === true);
+      /* The Happy Lion Cafe counter, migration 0085. The same one way rule:
+         an admin grants it under Manage users and the phone only reads it. */
+      patch.canRunCafe = !!(remote && remote.can_run_cafe === true);
       /* Same one-way rule as can_host above, and it matters more here. role is
          not in FIELD_MAP, so toRemote() cannot carry it back up: a local edit
          to it is unsendable by construction rather than merely unintended.

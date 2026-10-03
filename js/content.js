@@ -114,6 +114,14 @@
     { table: 'content_pages', target: 'contentPages', map: mapContentPage,
       order: 'sort_order.asc,title.asc' },
 
+    /* The Happy Lion Cafe, migration 0085: what can be ordered and when it
+       can be picked up. Read like any other content so the menu draws with no
+       signal; what is charged is priced again on the server. */
+    { table: 'cafe_menu_items', target: 'cafeMenu', map: mapCafeItem,
+      order: 'sort_order.asc,name.asc', whole: true },
+    { table: 'cafe_slots', target: 'cafeSlots', map: mapCafeSlot,
+      order: 'sort_order.asc', whole: true },
+
     /* App-wide switches. Read with the publishable key like everything else
        here, which is what lets a signed out phone see the pinned banner.
 
@@ -625,6 +633,30 @@
       endsOn: r.ends_on || null,
       sentOn: r.sent_on || null,
       createdAt: r.created_at || null
+    };
+  }
+
+  function mapCafeItem(r) {
+    return {
+      id: r.id,
+      name: str(r.name),
+      blurb: str(r.blurb),
+      icon: r.icon === 'cold' ? 'cold' : 'hot',
+      sizes: arr(r.sizes),
+      options: arr(r.options),
+      sortOrder: r.sort_order == null ? 0 : r.sort_order,
+      available: r.available !== false
+    };
+  }
+
+  function mapCafeSlot(r) {
+    return {
+      id: r.id,
+      service: str(r.service),
+      pickupTime: str(r.pickup_time),
+      capacity: r.capacity == null ? null : Number(r.capacity),
+      sortOrder: r.sort_order == null ? 0 : r.sort_order,
+      active: r.active !== false
     };
   }
 

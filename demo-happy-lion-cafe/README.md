@@ -1,12 +1,18 @@
-# Happy Lion Cafe, mockups
+# Happy Lion Cafe, rendered
 
-The ordering page for the lobby cafe, drawn before it is built. A mockup, not
-the app: `mockup.src.html` uses the app's real stylesheets and the cafe logo
-(`assets/img/happy-lion-cafe.svg`) with sample orders and placeholder prices.
+Two renders of the Coffee page.
 
-    node demo-happy-lion-cafe/render.js [out-dir]     # default: demo-happy-lion-cafe/out
+    node demo-happy-lion-cafe/render.js [out-dir]          # the real app, default out-app/
+    node demo-happy-lion-cafe/render-mockup.js [out-dir]   # the signed-off mockup, default out/
 
-Screens: menu, drink options, checkout with pickup times, order status with
-the ready notification, the barista queue, the Admin switch, and the menu in
-dark mode. The plan and what is still needed live in
+`render.js` serves this repo as the phone loads it, signs a pretend person
+in, fixes the clock to Sunday 4 October 2026 at 8:30, and answers the cafe's
+REST and function calls from `sample.json`. Everything else is refused, so
+nothing reaches the live project or Square. It writes the ••• menu, the menu,
+a drink's sheet, the order with pickup times, a ticket, the counter's queue,
+and the menu in dark.
+
+`mockup.src.html` is the design that was signed off before building.
+
+The plan, the Square setup and what is still needed live in
 `.claude/ledgers/happy-lion-cafe.md`.
