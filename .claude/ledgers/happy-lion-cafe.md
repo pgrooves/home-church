@@ -241,3 +241,30 @@ Go live with the owner:
   threshold matching the original ink coverage; the lettering was redrawn as
   paths from measured strokes. Swap in a higher resolution original if one
   turns up; keep the file name.
+
+---
+
+## Rollback (to the app as it was before the cafe, 2026-10-03)
+
+Marker: branch **`rollback/pre-happy-lion-cafe`** on GitHub, pinned to
+`main` at `cae68a1` ("Navigation: centre the whole block on the screen"),
+which is the app code and the Supabase function code that were live before
+any cafe change. The cafe was never merged into `main`, so the app itself
+needs nothing; only Supabase changed.
+
+Live before the cafe went in (checked 2026-10-03): last migration in the
+list `blocked_signin_emails`; 13 Edge Functions; `send-push` at version 20,
+identical to `supabase/functions/send-push/index.ts` on the marker;
+`hc_admin_list_users` as 0036 left it; `hc_send_push` and the
+`push_log_topic_known` check as 0078 left them.
+
+To roll back Supabase:
+1. SQL Editor: run `supabase/rollback/0085_happy_lion_cafe_down.sql` (on the
+   cafe branch). One transaction. Tested: removes every cafe table, function,
+   setting and the `can_run_cafe` column, restores the two functions and the
+   check exactly, and is safe to run twice. It deletes cafe orders (Square
+   keeps its own payment records).
+2. Edge Functions: delete `cafe-checkout` and `cafe-square-webhook`.
+3. Redeploy `send-push` from the marker branch's
+   `supabase/functions/send-push/index.ts`, verify_jwt OFF.
+4. Optional: remove the `SQUARE_*` and `CAFE_RETURN_URL` secrets.
