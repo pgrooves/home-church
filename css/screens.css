@@ -4208,3 +4208,277 @@ button.hc-cal__day { cursor: pointer; }
 .hc-admin__preview > summary { cursor: pointer; color: var(--hc-accent-deep); min-height: var(--hc-tap-min); display: flex; align-items: center; }
 .hc-admin__preview .hc-eyebrow { margin-top: var(--hc-space-md); }
 .hc-admin__preview .hc-caption + .hc-caption { margin-top: var(--hc-space-xs); }
+
+/* ==========================================================================
+   Coffee, the Happy Lion Cafe. js/screens/cafe.js.
+   Built from the same cards, eyebrows and buttons as everything else, with
+   the cafe's own logo at the top in place of a photograph.
+   ========================================================================== */
+
+.hc-cafe__logo { width: 150px; margin: 0 auto; color: var(--hc-ink); }
+.hc-cafe__logo img { display: block; width: 100%; height: auto; }
+.hc-cafe__logo--small { width: 110px; }
+/* The logo is one colour, drawn in ink. On the dark theme it is drawn in the
+   dark theme's ink instead, which is the same picture inverted. */
+:root[data-theme="dark"] .hc-cafe__logo img { filter: invert(1) brightness(0.95); }
+
+.hc-cafe__open { text-align: center; margin: var(--hc-space-md) 0 0; }
+.hc-cafe__dot {
+  display: inline-block; width: 7px; height: 7px; border-radius: 50%;
+  background: var(--hc-success); margin-right: var(--hc-space-sm); vertical-align: 1px;
+}
+.hc-cafe__dot--off { background: var(--hc-warning); }
+.hc-cafe__lede { margin: 0 0 var(--hc-space-base); }
+.hc-cafe__more { text-align: center; margin-top: var(--hc-space-lg); }
+
+.hc-cafe-mine, .hc-cafe-counter { margin-top: var(--hc-space-base); display: flex; flex-direction: column; gap: 4px; }
+.hc-cafe-mine__line { font: 500 17px/22px var(--hc-serif); color: var(--hc-ink); }
+
+/* A drink on the menu. */
+.hc-cafe-item { display: flex; align-items: center; gap: 14px; }
+.hc-cafe-item[aria-disabled="true"] { opacity: 0.6; }
+.hc-cafe-item__art {
+  flex: none; width: 64px; height: 64px; border-radius: 10px; display: grid; place-items: center;
+  background: var(--hc-paper); border: var(--hc-hairline) solid var(--hc-rule); color: var(--hc-ink);
+}
+.hc-cafe-item__icon { width: 34px; height: 34px; }
+.hc-cafe-item__body { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.hc-cafe-item__name { font: 500 19px/24px var(--hc-serif); letter-spacing: -0.01em; }
+.hc-cafe-item__price { font: 400 14px/20px var(--hc-sans); color: var(--hc-mid); margin-top: 2px; }
+.hc-cafe-item__add {
+  flex: none; width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center;
+  background: var(--hc-dark); color: var(--hc-on-dark); font: 400 22px/1 var(--hc-sans);
+}
+
+/* The bar that says what is in the order, beside the menu button. */
+.hc-cafe-cartbar {
+  position: fixed; z-index: 44;
+  left: var(--hc-screen-pad);
+  right: calc(var(--hc-navfab-size) + var(--hc-chrome-inset) * 2);
+  bottom: calc(var(--hc-chrome-inset) + env(safe-area-inset-bottom) + 6px);
+  height: 52px; padding: 0 var(--hc-space-base);
+  display: flex; align-items: center; gap: var(--hc-space-sm);
+  border-radius: var(--hc-radius-md); background: var(--hc-dark); color: var(--hc-on-dark);
+  font: 600 var(--hc-button)/var(--hc-button-line) var(--hc-sans);
+  box-shadow: var(--hc-shadow-modal);
+}
+#app[data-nav="bar"] .hc-cafe-cartbar {
+  right: var(--hc-screen-pad);
+  bottom: calc(var(--hc-tabbar-h) + env(safe-area-inset-bottom) + var(--hc-space-md));
+}
+.hc-cafe-cartbar__n {
+  width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center;
+  background: var(--hc-on-dark); color: var(--hc-dark); font-size: 13px;
+}
+.hc-cafe-cartbar__label { flex: 1; text-align: left; }
+
+/* The drink's sheet. On <body>, over the chrome, under the toast. */
+.hc-cafe-sheet { position: fixed; inset: 0; z-index: 58; }
+.hc-cafe-sheet__scrim { position: absolute; inset: 0; background: var(--hc-overlay); border: 0; padding: 0; width: 100%;
+  animation: hc-cafe-fade var(--hc-dur-base) var(--hc-ease); }
+.hc-cafe-sheet__panel {
+  position: absolute; left: 0; right: 0; bottom: 0; max-height: 92vh; overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  background: var(--hc-paper); color: var(--hc-ink);
+  border-radius: 16px 16px 0 0; box-shadow: var(--hc-shadow-sheet);
+  padding: 10px var(--hc-screen-pad) calc(var(--hc-space-lg) + env(safe-area-inset-bottom));
+  animation: hc-cafe-up var(--hc-dur-sheet) var(--hc-ease-enter);
+}
+.hc-cafe-sheet[data-settled="true"] .hc-cafe-sheet__panel,
+.hc-cafe-sheet[data-settled="true"] .hc-cafe-sheet__scrim { animation: none; }
+@keyframes hc-cafe-up { from { transform: translateY(30%); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes hc-cafe-fade { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+  .hc-cafe-sheet__panel, .hc-cafe-sheet__scrim { animation: none; }
+}
+.hc-cafe-sheet__grab { width: 36px; height: 4px; border-radius: 2px; background: var(--hc-rule); margin: 0 auto 14px; }
+.hc-cafe-sheet__title {
+  font: 500 var(--hc-display-m)/var(--hc-display-m-line) var(--hc-serif);
+  letter-spacing: -0.015em; margin: 4px 0 2px;
+}
+.hc-cafe-sheet__blurb { margin: 0; }
+html.hc-cafe-sheet-open, html.hc-cafe-sheet-open body { overflow: hidden; }
+
+.hc-cafe__label {
+  display: block; margin: 22px 0 10px;
+  font: 600 var(--hc-eyebrow)/var(--hc-eyebrow-line) var(--hc-sans);
+  letter-spacing: var(--hc-track-eyebrow); text-transform: uppercase; color: var(--hc-accent-deep);
+}
+.hc-cafe__label--gap { margin-top: 28px; }
+
+.hc-cafe-seg {
+  display: flex; padding: 3px; gap: 3px; border-radius: var(--hc-radius-md);
+  background: var(--hc-paper-sunk); border: var(--hc-hairline) solid var(--hc-rule);
+}
+.hc-cafe-seg__opt {
+  flex: 1; min-height: var(--hc-tap-min); padding: 8px 0; border-radius: var(--hc-radius-sm);
+  font: 500 15px/20px var(--hc-sans); color: var(--hc-mid); display: flex; flex-direction: column; align-items: center;
+}
+.hc-cafe-seg__opt span { font-weight: 400; font-size: 12px; line-height: 16px; }
+.hc-cafe-seg__opt[aria-checked="true"] { background: var(--hc-paper); color: var(--hc-ink); box-shadow: 0 1px 3px rgba(26,25,24,0.12); }
+:root[data-theme="dark"] .hc-cafe-seg__opt[aria-checked="true"] { background: var(--hc-cream); }
+
+.hc-cafe-opt {
+  display: flex; align-items: center; gap: var(--hc-space-md); min-height: 54px; flex-wrap: wrap;
+  border-top: var(--hc-hairline) solid var(--hc-rule); padding: 6px 0;
+}
+.hc-cafe-opts .hc-cafe-opt:last-child { border-bottom: var(--hc-hairline) solid var(--hc-rule); }
+.hc-cafe-opt__name { flex: 1; min-width: 90px; font: 400 var(--hc-body-sans)/22px var(--hc-sans); display: flex; flex-direction: column; }
+.hc-cafe-opt__name small { color: var(--hc-mid); font-size: 13px; line-height: 18px; }
+.hc-cafe-levels { display: flex; gap: 4px; flex-wrap: wrap; }
+.hc-cafe-level {
+  min-height: 36px; padding: 0 10px; border-radius: var(--hc-radius-pill);
+  border: var(--hc-hairline) solid var(--hc-rule); font: 500 13px/1 var(--hc-sans); color: var(--hc-mid);
+}
+.hc-cafe-level[aria-checked="true"] { background: var(--hc-dark); border-color: var(--hc-dark); color: var(--hc-on-dark); }
+.hc-cafe-step { display: flex; align-items: center; gap: var(--hc-space-md); }
+.hc-cafe-step b { font: 600 16px var(--hc-sans); min-width: 14px; text-align: center; }
+.hc-cafe-step__btn {
+  width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center;
+  border: var(--hc-hairline) solid var(--hc-rule); background: var(--hc-cream);
+  font: 400 18px/1 var(--hc-sans); color: var(--hc-ink);
+}
+.hc-cafe-step__btn[disabled] { color: var(--hc-rule); }
+
+.hc-cafe-wide.hc-btn { display: flex; width: 100%; justify-content: space-between; margin-top: 22px; }
+
+/* Your order. */
+.hc-cafe-lines { margin-top: var(--hc-space-base); }
+.hc-cafe-line { display: flex; gap: var(--hc-space-md); padding: 14px 0; border-top: var(--hc-hairline) solid var(--hc-rule); }
+.hc-cafe-line:last-child { border-bottom: var(--hc-hairline) solid var(--hc-rule); }
+.hc-cafe-line__body { flex: 1; min-width: 0; }
+.hc-cafe-line__name { font: 500 17px/22px var(--hc-serif); }
+.hc-cafe-line__mods { font: 400 13px/18px var(--hc-sans); color: var(--hc-mid); margin-top: 2px; }
+.hc-cafe-line__price { font: 500 16px/22px var(--hc-sans); }
+.hc-cafe-line__edit { display: flex; gap: 6px; margin-top: 4px; color: var(--hc-accent-deep); font: 600 13px var(--hc-sans); }
+.hc-cafe-line__edit button { min-height: 32px; color: var(--hc-accent-deep); font: inherit; }
+.hc-cafe-line__edit span { line-height: 32px; }
+.hc-cafe-addmore { margin-top: var(--hc-space-sm); min-height: var(--hc-tap-min); font: 600 14px var(--hc-sans); color: var(--hc-accent-deep); }
+
+.hc-cafe-svc { margin-top: 14px; }
+.hc-cafe-svc__h { font: 600 14px/20px var(--hc-sans); }
+.hc-cafe-chips { display: flex; flex-wrap: wrap; gap: var(--hc-space-sm); margin-top: var(--hc-space-sm); }
+.hc-cafe-chip {
+  min-height: 40px; min-width: 64px; padding: 0 14px; border-radius: var(--hc-radius-pill);
+  border: var(--hc-hairline) solid var(--hc-rule); background: var(--hc-paper);
+  font: 500 14px/1 var(--hc-sans); color: var(--hc-ink);
+}
+.hc-cafe-chip[aria-pressed="true"] { background: var(--hc-dark); color: var(--hc-on-dark); border-color: var(--hc-dark); }
+.hc-cafe-chip[disabled] { color: var(--hc-rule); }
+.hc-cafe-chip--full[disabled] { text-decoration: line-through; }
+
+.hc-cafe-name { width: 100%; box-sizing: border-box; }
+.hc-cafe-totals { margin-top: 22px; }
+.hc-cafe-totals > div { display: flex; justify-content: space-between; font: 400 15px/26px var(--hc-sans); color: var(--hc-mid); }
+.hc-cafe-totals .hc-cafe-totals__big { color: var(--hc-ink); font-weight: 600; font-size: 17px; }
+.hc-cafe-error { margin: var(--hc-space-md) 0 0; color: var(--hc-error); font: 500 14px/20px var(--hc-sans); }
+.hc-cafe-hint { margin-top: var(--hc-space-sm); text-align: center; }
+.hc-cafe-square { margin-top: var(--hc-space-sm); text-align: center; }
+.hc-cafe-note { margin-top: var(--hc-space-lg); }
+.hc-cafe-signin { margin-top: var(--hc-space-lg); }
+.hc-cafe-signin .hc-body-serif { margin: 0 0 var(--hc-space-md); }
+.hc-cafe-actions { display: flex; flex-direction: column; gap: var(--hc-space-sm); margin-top: var(--hc-space-lg); }
+
+/* The ticket. */
+.hc-cafe-ticket { margin-top: 18px; text-align: center; padding: 26px var(--hc-card-pad); }
+.hc-cafe-ticket__big {
+  font: 800 54px/1 var(--hc-sans-display); letter-spacing: -0.02em; margin: 10px 0 8px;
+}
+.hc-cafe-ticket__big--words { font-size: 26px; line-height: 32px; }
+.hc-cafe-ticket__when { margin: 0; }
+.hc-cafe-ticket--ready { box-shadow: inset 0 0 0 1.5px var(--hc-success); }
+.hc-cafe-track { list-style: none; display: flex; padding: 0; margin: 26px 4px 0; }
+.hc-cafe-track__s { flex: 1; position: relative; text-align: center; font: 500 12px/16px var(--hc-sans); color: var(--hc-mid); }
+.hc-cafe-track__s::before {
+  content: ""; display: block; position: relative; z-index: 1;
+  width: 14px; height: 14px; margin: 0 auto 8px; border-radius: 50%;
+  border: 1.5px solid var(--hc-rule); background: var(--hc-cream); box-sizing: border-box;
+}
+.hc-cafe-track__s::after {
+  content: ""; position: absolute; top: 6px; left: -50%; width: 100%; height: 1.5px; background: var(--hc-rule);
+}
+.hc-cafe-track__s:first-child::after { display: none; }
+.hc-cafe-track__s.is-done { color: var(--hc-ink); }
+.hc-cafe-track__s.is-done::before { background: var(--hc-success); border-color: var(--hc-success); }
+.hc-cafe-track__s.is-done::after { background: var(--hc-success); }
+.hc-cafe-track__s.is-now::before { box-shadow: 0 0 0 4px rgba(95,115,85,0.2); }
+
+/* The counter. */
+.hc-cafe-stats { display: flex; gap: var(--hc-space-sm); margin-top: var(--hc-space-base); }
+.hc-cafe-stat { flex: 1; background: var(--hc-cream); border-radius: var(--hc-radius-lg); padding: 12px 14px; }
+.hc-cafe-stat b { display: block; font: 800 26px/1.1 var(--hc-sans-display); }
+.hc-cafe-stat span { font: 400 12px/16px var(--hc-sans); color: var(--hc-mid); }
+.hc-cafe-pause { margin-top: var(--hc-space-base); }
+.hc-cafe-pause .hc-row__body, .hc-cafe-pause .hc-row__label { display: flex; flex-direction: column; flex: 1; }
+.hc-cafe-pause .hc-switch-row__sub { margin-top: 2px; }
+.hc-cafe-grp {
+  display: flex; justify-content: space-between; margin: 22px 0 0;
+  font: 600 var(--hc-eyebrow)/var(--hc-eyebrow-line) var(--hc-sans);
+  letter-spacing: var(--hc-track-eyebrow); text-transform: uppercase; color: var(--hc-mid);
+}
+.hc-cafe-tick { background: var(--hc-cream); border-radius: var(--hc-radius-lg); padding: var(--hc-space-base); margin-top: 10px; }
+.hc-cafe-tick--making { border-left: 3px solid var(--hc-warning); border-top-left-radius: 4px; border-bottom-left-radius: 4px; }
+.hc-cafe-tick--ready { border-left: 3px solid var(--hc-success); border-top-left-radius: 4px; border-bottom-left-radius: 4px; }
+.hc-cafe-tick__top { display: flex; justify-content: space-between; align-items: baseline; gap: var(--hc-space-sm); }
+.hc-cafe-tick__who { font: 600 18px/24px var(--hc-sans); }
+.hc-cafe-tick__no { font: 600 13px var(--hc-sans); color: var(--hc-accent-deep); }
+.hc-cafe-tag {
+  display: inline-block; vertical-align: 2px; margin-left: 6px; padding: 4px 7px; border-radius: var(--hc-radius-pill);
+  background: var(--hc-paper); color: var(--hc-warning);
+  font: 600 10px/1 var(--hc-sans); letter-spacing: 0.1em; text-transform: uppercase;
+}
+.hc-cafe-tick--ready .hc-cafe-tag { color: var(--hc-success); }
+.hc-cafe-tick__d { list-style: none; margin: 10px 0 0; padding: 0; font: 400 15px/22px var(--hc-sans); }
+.hc-cafe-tick__d small { display: block; color: var(--hc-mid); font-size: 13px; line-height: 18px; margin-bottom: 4px; }
+.hc-cafe-tick__a { display: flex; gap: var(--hc-space-sm); margin-top: var(--hc-space-md); }
+.hc-cafe-tick__a .hc-btn { flex: 1; }
+.hc-btn.hc-cafe-readybtn { background: var(--hc-success); border-color: var(--hc-success); color: #FFFFFF; }
+.hc-cafe-undo { margin-top: var(--hc-space-sm); min-height: 32px; font: 600 13px var(--hc-sans); color: var(--hc-accent-deep); }
+.hc-cafe-done {
+  display: flex; justify-content: space-between; align-items: center; padding: 8px 0;
+  border-bottom: var(--hc-hairline) solid var(--hc-rule); font: 400 15px var(--hc-sans); color: var(--hc-mid);
+}
+.hc-cafe-done button { min-height: 32px; font: 600 13px var(--hc-sans); color: var(--hc-accent-deep); }
+
+/* Open or closed, under the logo on Coffee and at the top of the queue.
+   Green and red are the system's own success and error, which keep their
+   contrast on both themes. */
+.hc-cafe-status {
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  width: fit-content; margin: var(--hc-space-base) auto 0;
+  padding: 10px 18px; border-radius: var(--hc-radius-pill);
+  font: 700 18px/22px var(--hc-sans); letter-spacing: 0.01em;
+}
+.hc-cafe-status__dot { width: 12px; height: 12px; border-radius: 50%; flex: none; }
+.hc-cafe-status--open { color: var(--hc-success); background: rgba(95,115,85,0.12); }
+.hc-cafe-status--open .hc-cafe-status__dot { background: var(--hc-success); box-shadow: 0 0 0 4px rgba(95,115,85,0.22); }
+.hc-cafe-status--closed { color: var(--hc-error); background: rgba(139,74,63,0.10); }
+.hc-cafe-status--closed .hc-cafe-status__dot { background: var(--hc-error); box-shadow: 0 0 0 4px rgba(139,74,63,0.18); }
+:root[data-theme="dark"] .hc-cafe-status--open { color: #9DB58F; background: rgba(157,181,143,0.14); }
+:root[data-theme="dark"] .hc-cafe-status--open .hc-cafe-status__dot { background: #9DB58F; }
+:root[data-theme="dark"] .hc-cafe-status--closed { color: #D9897A; background: rgba(217,137,122,0.14); }
+:root[data-theme="dark"] .hc-cafe-status--closed .hc-cafe-status__dot { background: #D9897A; }
+.hc-cafe-status + .hc-cafe__open { margin-top: var(--hc-space-sm); }
+
+/* The counter's Open and Closed, two big buttons. */
+.hc-cafe-oc { display: flex; gap: var(--hc-space-sm); margin-top: var(--hc-space-md); }
+.hc-cafe-oc__btn {
+  flex: 1; min-height: 52px; border-radius: var(--hc-radius-md);
+  border: 1px solid var(--hc-rule); background: var(--hc-paper);
+  font: 700 17px/1 var(--hc-sans); color: var(--hc-mid);
+}
+.hc-cafe-oc__btn--open[aria-pressed="true"] { background: var(--hc-success); border-color: var(--hc-success); color: #FFFFFF; }
+.hc-cafe-oc__btn--closed[aria-pressed="true"] { background: var(--hc-error); border-color: var(--hc-error); color: #FFFFFF; }
+.hc-cafe-oc__btn[disabled] { opacity: 0.6; }
+
+.hc-cafe-counter__queue {
+  display: flex; align-items: center; justify-content: space-between; width: 100%;
+  min-height: var(--hc-tap-min); margin-top: var(--hc-space-sm);
+  font: 500 17px/22px var(--hc-serif); color: var(--hc-ink);
+}
+.hc-cafe-counter__chev { width: 20px; height: 20px; color: var(--hc-mid); }
+.hc-cafe-pause { padding-top: var(--hc-space-xs); }
+.hc-cafe-pause > .hc-cafe-status { margin-top: 0; }
+.hc-cafe-pause__note { margin-top: var(--hc-space-sm); text-align: center; }
+.hc-cafe-oc__note { margin: var(--hc-space-sm) 0 0; text-align: center; }
+.hc-cafe-oc__back { font: inherit; font-weight: 600; color: var(--hc-accent-deep); text-decoration: underline; min-height: 32px; }

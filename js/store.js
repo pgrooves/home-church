@@ -135,6 +135,9 @@
        Manage users and this side only ever reads it. Same one way rule as
        role below, cleared on sign out for the same reason. */
     canHost: false,
+    /* The cafe counter, mirrored from profiles.can_run_cafe the same way.
+       Presentation only: the queue functions check the database. */
+    canRunCafe: false,
     /* member or admin, mirrored from profiles.role by js/auth.js on every
        sign in and session refresh. Read only on this side: nothing in the app
        writes it, the database refuses the write anyway (migration 0025), and

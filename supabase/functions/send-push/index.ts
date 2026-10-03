@@ -65,7 +65,8 @@ type Topic =
   | 'announcement'
   | 'announcement_review'
   | 'event_review'
-  | 'banner';
+  | 'banner'
+  | 'cafe_ready';
 
 const TOPIC_COLUMN: Record<Topic, string | null> = {
   new_guide: 'wants_new_guide',
@@ -79,7 +80,19 @@ const TOPIC_COLUMN: Record<Topic, string | null> = {
   // is the church saying everybody needs to know this, so it goes to every
   // active phone as well. See migration 0078.
   banner: null,
+  // One phone: the one the cafe order was placed from. See ONE_PHONE below.
+  cafe_ready: null,
 };
+
+/* The topic that goes to exactly one phone, named by the row it is about.
+ *
+ * A Happy Lion Cafe order carries the token of the phone it was placed from,
+ * and "your coffee's ready" is for that phone and no other. The token is
+ * still looked up in device_tokens and has to be active there, so a phone
+ * that has since turned notifications off, or that APNs has retired, is not
+ * written to just because an order remembers it. See migration 0085.
+ */
+const ONE_PHONE: ReadonlySet<Topic> = new Set<Topic>(['cafe_ready']);
 
 /* The two topics that go to some phones rather than to all of them.
  *
@@ -359,6 +372,30 @@ async function compose(
     };
   }
 
+  /* The cafe. Read at send time from the order the counter just marked
+   ready; an order that has gone back to making in the meantime says
+   nothing. */
+  if (topic === 'cafe_ready') {
+    if (!ref) return null;
+
+    const { data } = await admin
+      .from('cafe_orders')
+      .select('cup_name, status, ticket_no')
+      .eq('id', ref)
+      .maybeSingle();
+    const order = data as { cup_name?: string; status?: string } | null;
+
+    if (!order || order.status !== 'ready') return null;
+
+    const name = String(order.cup_name ?? '').trim();
+    return {
+      title: 'Your coffee’s ready',
+      body: name
+        ? `${name}, it’s waiting at the Happy Lion counter.`
+        : 'It’s waiting at the Happy Lion counter.',
+    };
+  }
+
   return null;
 }
 
@@ -621,6 +658,24 @@ Deno.serve(async (req: Request) => {
     query = query.in('admin_user_id', ids);
   }
 
+  if (ONE_PHONE.has(topic)) {
+    const { data } = await admin
+      .from('cafe_orders')
+      .select('push_token')
+      .eq('id', ref ?? '')
+      .maybeSingle();
+    const order = data as { push_token?: string | null } | null;
+
+    if (!order?.push_token) {
+      await admin.from('push_log').insert({
+        topic, skipped: true, note: 'The order has no phone to tell.',
+      });
+      return json({ ok: true, skipped: true, recipients: 0 });
+    }
+
+    query = query.eq('token', order.push_token);
+  }
+
   const { data: rows, error: readError } = await query;
   if (readError) {
     await admin.from('push_log').insert({
@@ -682,7 +737,8 @@ Deno.serve(async (req: Request) => {
   const retire: string[] = [];
 
   // See the note next to apns-collapse-id in sendOne().
-  const collapseId = topic === 'announcement' && ref ? `announcement:${ref}` : topic;
+  const collapseId = (topic === 'announcement' || topic === 'cafe_ready') && ref
+    ? `${topic}:${ref}` : topic;
 
   // Batched rather than all at once. This church is small enough that it will
   // never matter, and a congregation-sized list opening 400 sockets at once

@@ -1456,6 +1456,16 @@
       .then(function () { invalidate('users'); });
   }
 
+  /* Cafe mode, the Happy Lion Cafe counter, migration 0085. The same rule and the same
+     self guard as Leader mode; hc_admin_set_barista refuses it too. */
+  function setBarista(id, on) {
+    if (isSelf(id)) {
+      return Promise.reject(new Error('You cannot change your own tier.'));
+    }
+    return HC.auth.rpc('hc_admin_set_barista', { p_user: id, p_on: !!on })
+      .then(function () { invalidate('users'); });
+  }
+
   function removeUser(id) {
     if (isSelf(id)) {
       return Promise.reject(new Error(
@@ -1728,6 +1738,7 @@
     loadUsers: loadUsers,
     setRole: setRole,
     setLeader: setLeader,
+    setBarista: setBarista,
     removeUser: removeUser,
 
     pages: function () { return list('pages'); },

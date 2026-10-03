@@ -1780,6 +1780,9 @@
      the order they matter in: an admin can do everything a leader can. */
   function personStanding(u) {
     if (u.role === 'admin') return 'Admin';
+    // Cafe mode rides alongside, since it says what somebody does on a
+    // Sunday rather than what tier they are.
+    if (u.is_barista) return u.is_leader ? 'Leader · Cafe' : 'Cafe';
     return u.is_leader ? 'Leader' : 'Member';
   }
 
@@ -1817,7 +1820,8 @@
       'A member reads, writes in their own journal, and joins a group room. A leader ' +
       'also gets the leader tools and can host one. An admin can do all of that, and ' +
       'write announcements, edit content, and set what everybody else is. Nobody can ' +
-      'change their own.</p>';
+      'change their own. Cafe mode, on top of any of them, runs the Happy Lion Cafe: ' +
+      'the queue, and telling people their coffee is ready.</p>';
 
     /* Filtered in place as somebody types, by filterUsers() below, rather than
        by redrawing the screen: a redraw between two letters takes the
@@ -1985,6 +1989,23 @@
         action: 'admin-leader',
         id: u.id,
         on: !!u.is_leader
+      });
+    }
+
+    /* Cafe mode, the Happy Lion Cafe's counter. The same shape as Leader mode
+       and for members only for the same reason: an admin already has it. On,
+       somebody gets the queue: the orders as they are paid, Start, Ready
+       (which tells the person who ordered), Picked up, and the switch that
+       pauses ordering. The database checks it on every one of those. */
+    if (!isAdminRow) {
+      html += switchRow({
+        title: 'Cafe mode',
+        sub: u.is_barista
+          ? 'On. They run the Happy Lion Cafe queue and tell people their coffee is ready.'
+          : 'Off. Turn it on for whoever runs the cafe on Sunday.',
+        action: 'admin-barista',
+        id: u.id,
+        on: !!u.is_barista
       });
     }
 
@@ -2208,7 +2229,18 @@
        would quietly put a page the church had hidden back in the menu. */
     homekids_on: true,
     practices_on: true,
-    alpha_on: true
+    alpha_on: true,
+    /* 0085, the Happy Lion Cafe. cafe_on is drawn under "Pages"; the rest are
+       read by name in js/cafe.js and the cafe-checkout Edge Function, which
+       is where the money is, so none of them is offered for deletion. */
+    cafe_on: true,
+    cafe_open_override: true,
+    cafe_opens_at: true,
+    cafe_closes_at: true,
+    cafe_every_day: true,
+    cafe_tips_on: true,
+    cafe_tax_percent: true,
+    cafe_slot_capacity: true
   };
 
   /* The Group tab's switch, as the app knows it rather than as the database
@@ -2275,6 +2307,18 @@
       help: 'Off takes Alpha out of the ••• menu for everybody. Nothing is ' +
         'deleted, and it comes back exactly as it was when this goes on again.',
       sortOrder: 37
+    },
+    /* The one page here that is off until somebody turns it on, which is
+       what `fallback` says: it takes money, and the cafe has to be ready for
+       it first. See migration 0085 and the ledger in .claude/ledgers. */
+    {
+      key: 'cafe_on',
+      title: 'Happy Lion Cafe',
+      label: 'Happy Lion Cafe page',
+      help: 'Off takes Coffee out of the ••• menu for everybody. Orders already ' +
+        'paid for stay in the queue at the counter.',
+      sortOrder: 38,
+      fallback: false
     }
   ];
 
@@ -2282,10 +2326,13 @@
     return PAGE_SWITCHES.filter(function (p) { return p.key === key; })[0] || null;
   }
 
-  // Same two sources as groupModeOn(), with on as the fallback.
+  // Same two sources as groupModeOn(), with on as the fallback unless the
+  // page says otherwise (Coffee does).
   function pageOn(key) {
     var row = HC.admin.settings().filter(function (s) { return s.key === key; })[0];
     if (row) return !!row.value_bool;
+    var meta = pageSwitch(key);
+    if (meta && meta.fallback === false) return HC.data.setting(key, false) === true;
     return HC.data.setting(key, true) !== false;
   }
 
@@ -2497,6 +2544,9 @@
   DRAWN_ELSEWHERE[MAINTENANCE.key] = true;
   DRAWN_ELSEWHERE[BANNER_ON.key] = true;
   DRAWN_ELSEWHERE[BANNER_MESSAGE_KEY] = true;
+  // Open and Closed live at the cafe counter, as two buttons. A date in a
+  // text box here would only be a way to get it wrong.
+  DRAWN_ELSEWHERE.cafe_open_override = true;
 
   function settingsSection() {
     var html = '<div class="hc-screen hc-admin">';

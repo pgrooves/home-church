@@ -66,6 +66,11 @@
     return stops().concat(tail);
   }
 
+  /* Stops whose views with an id are pushed views of them: the Admin menu
+     and its sections, and Coffee with your order, a ticket and the counter
+     queue. See isStop below. */
+  var PUSHED_WITH_ID = { admin: true, cafe: true };
+
   // Old route names kept alive so a link or a restored history entry from
   // before a rename still lands somewhere real.
   var ALIASES = { watch: 'listen' };
@@ -270,7 +275,7 @@
        the drag runs one screen past the row. */
     isStop: function (route) {
       if (!route) return false;
-      if (route.name === 'admin' && route.id) return false;
+      if (PUSHED_WITH_ID[route.name] && route.id) return false;
       return stops().indexOf(route.name) !== -1;
     },
 
@@ -285,7 +290,7 @@
        excluded here for the same reason isStop excludes them. */
     laneIndex: function (route) {
       if (!route) return -1;
-      if (route.name === 'admin' && route.id) return -1;
+      if (PUSHED_WITH_ID[route.name] && route.id) return -1;
       return lane().indexOf(route.name);
     }
   };
