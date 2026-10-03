@@ -1036,20 +1036,20 @@
    empty glass on a tall phone, and using them is what lets every line fit
    without the top group scrolling.
 
-   SPARE ROOM GOES TO THE OUTSIDE. The two groups stay a short rule apart and
-   the lines keep their spacing; the list sits down by the button and on a
-   tall phone the room left over is above Settings, never between the
-   groups and never stretched through the lines. */
+   CENTRED, AS ONE BLOCK. The two groups stay a short rule apart and the
+   lines keep their spacing; the whole block sits in the middle of the
+   screen, with any spare room split evenly above Settings and below Home,
+   never between the groups and never stretched through the lines. The
+   padding is the same at both ends, the larger of the two safe areas, so
+   the middle of the panel is the middle of the screen. */
 .hc-navmenu__panel {
   display: flex;
   flex-direction: column;
-  justify-content: flex-end;
+  justify-content: center;
   flex: 1 1 auto;
   min-height: 0;
-  padding: calc(env(safe-area-inset-top) + var(--hc-space-base))
-           var(--hc-screen-pad)
-           calc(env(safe-area-inset-bottom) + var(--hc-chrome-inset)
-                + (var(--hc-navfab-size) - var(--hc-navmenu-tabs-lh)) / 2);
+  padding: calc(max(env(safe-area-inset-top), env(safe-area-inset-bottom)) + var(--hc-space-base))
+           var(--hc-screen-pad);
 }
 
 .hc-navmenu__group {
