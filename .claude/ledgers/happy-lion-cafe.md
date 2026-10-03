@@ -20,8 +20,8 @@ secrets. Those live only as Supabase Edge Function secrets (names below).
 | Code: database, functions, app screens, admin | **Built** on branch `claude/happy-lion-cafe-ordering-y8zove` |
 | Tests | `tests/cafe.test.js` (57), `supabase/tests/0085_happy_lion_cafe_test.sql` (26); full `npm test` green |
 | Real app render | `node demo-happy-lion-cafe/render.js` (7 screens, sample data, no network) |
-| Migration 0085 applied to the live project | **Not yet** (needs Trey or a session with Supabase access) |
-| Functions deployed | **Not yet** |
+| Migration 0085 applied to the live project | **Done 2026-10-03, except 2 statements** (see "Live state") |
+| Functions deployed | **Done 2026-10-03**: cafe-checkout v1, cafe-square-webhook v1, send-push v21 |
 | Square sandbox secrets set (Trey's account) | **Waiting on Trey** |
 | End to end sandbox test order | Not yet |
 | Swap to cafe owner's production account | Not yet, needs owner |
@@ -268,3 +268,33 @@ To roll back Supabase:
 3. Redeploy `send-push` from the marker branch's
    `supabase/functions/send-push/index.ts`, verify_jwt OFF.
 4. Optional: remove the `SQUARE_*` and `CAFE_RETURN_URL` secrets.
+
+
+---
+
+## Live state (2026-10-03, after applying)
+
+Applied through the Supabase connector (claude.ai "Supabase" MCP; the
+repo's `.mcp.json` "supabase" server still fails with a proxy 403). The
+connector holds any DROP/DELETE for a confirmation that never reaches the
+session and times out after 60s, so 0085 went in as six non-destructive
+migrations: `0085a_cafe_mode_column`, `0085b_cafe_mode_functions`,
+`0085c_cafe_mode_grants`, `0085d_cafe_tables`, `0085e_cafe_functions`,
+`0085f_cafe_push_sender`. Same SQL as 0085, with `create or replace trigger`
+in place of drop + create, and without the draft-cleanup deletes (nothing to
+clean on a fresh project).
+
+**Still to run, by a person, in the SQL Editor:**
+`supabase/manual/0085_finish_in_sql_editor.sql` (push_log learns
+`cafe_ready`; `hc_admin_list_users` gains `is_barista`). Until then the
+coffee-ready push still sends but is not logged, and the Cafe mode switch in
+Manage users draws as off (setting it still works).
+
+Checked after: 4 cafe tables, 2 menu items, 9 pickup times, 8 settings
+(`cafe_on` false), 10 cafe functions; `cafe-square-webhook` answers "Not
+configured" (no secrets yet); `cafe-checkout` refuses a caller with no
+sign-in; `hc_send_push('test', true)` dry run reached send-push v21 and
+counted 37 phones, nothing sent.
+
+Nothing is visible in the live app: the app code is not merged, and the
+Coffee page is off.
