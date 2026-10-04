@@ -383,7 +383,8 @@
     var chosenOk = false;
     html += '<p class="hc-cafe__label hc-cafe__label--gap">When will you pick it up?</p>';
     groups.forEach(function (g) {
-      html += '<div class="hc-cafe-svc"><div class="hc-cafe-svc__h">Around the ' + c.esc(g.service) + ' service</div>' +
+      html += '<div class="hc-cafe-svc"><div class="hc-cafe-svc__h">' +
+        (g.asap ? 'Right now' : 'Around the ' + c.esc(g.service) + ' service') + '</div>' +
         '<div class="hc-cafe-chips">';
       g.slots.forEach(function (s) {
         var off = s.past || s.full;
@@ -430,12 +431,13 @@
 
   function statusLine(o) {
     var at = slotLabel(o.slot_id);
+    var asap = o.slot_id === HC.cafe.ASAP;
     if (o.status === 'pending_payment') return 'Waiting on payment';
     if (o.status === 'ready') return 'Ready now at the counter';
     if (o.status === 'picked_up') return 'Picked up. Enjoy.';
     if (o.status === 'cancelled') return 'Cancelled';
-    if (o.status === 'making') return 'Being made now, for ' + at;
-    return 'In the queue for ' + at;
+    if (o.status === 'making') return asap ? 'Being made now' : 'Being made now, for ' + at;
+    return asap ? 'In the queue, ready as soon as it’s made' : 'In the queue for ' + at;
   }
 
   var STEPS = [
@@ -489,8 +491,10 @@
         '<p class="hc-cafe-ticket__big">#' + c.esc(o.ticket_no || '') + '</p>' +
         (ready
           ? '<p class="hc-body-serif hc-cafe-ticket__when">Waiting for you at the counter, ' + c.esc(o.cup_name) + '.</p>'
-          : '<p class="hc-body-serif hc-cafe-ticket__when">Ready at <b>' + c.esc(at) + '</b>' +
-              (service ? ', around the ' + c.esc(service) + ' service' : '') + '</p>' +
+          : (o.slot_id === HC.cafe.ASAP
+              ? '<p class="hc-body-serif hc-cafe-ticket__when">Ready <b>as soon as it’s made</b></p>'
+              : '<p class="hc-body-serif hc-cafe-ticket__when">Ready at <b>' + c.esc(at) + '</b>' +
+                (service ? ', around the ' + c.esc(service) + ' service' : '') + '</p>') +
             (t.ahead != null
               ? '<p class="hc-caption">' + (t.ahead === 0 ? 'You’re next.' : t.ahead === 1 ? '1 drink ahead of yours' : c.esc(t.ahead) + ' drinks ahead of yours') + '</p>'
               : '')) +
@@ -596,7 +600,8 @@
     });
 
     groups.forEach(function (g) {
-      html += '<p class="hc-cafe-grp"><span>Due ' + c.esc(slotLabel(g.slot)) + '</span><span>' +
+      html += '<p class="hc-cafe-grp"><span>' +
+        (g.slot === HC.cafe.ASAP ? 'As soon as it’s ready' : 'Due ' + c.esc(slotLabel(g.slot))) + '</span><span>' +
         g.rows.length + (g.rows.length === 1 ? ' order' : ' orders') + '</span></p>';
       g.rows.forEach(function (r) { html += ticketCard(r); });
     });

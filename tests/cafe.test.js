@@ -131,6 +131,12 @@ const MENU = [
   ok('a pickup after closing is refused',
     C.slotProblem({ slot: { id: '1145', pickup_time: '11:45' }, day: '2026-10-04', now: at('2026-10-04T13:00:00Z'), closesAt: '11:20' }),
     'That pickup time is after the cafe closes. Pick an earlier one.');
+  ok('as soon as it is ready, when the counter opened it',
+    C.asapProblem(sun(19 * 60, 'open 2026-10-04')), null);
+  ok('not on an ordinary Sunday run by the schedule',
+    C.asapProblem(sun(9 * 60)), 'That pickup time is not offered.');
+  ok('not when closed',
+    C.asapProblem(sun(9 * 60, 'closed 2026-10-04')), 'The cafe is closed right now. Ordering ahead opens when it does.');
   ok('capacity 0 means no limit',
     C.slotProblem({ slot, day: '2026-10-04', now: at('2026-10-04T13:00:00Z'), load: 80, capacity: 0 }), null);
 

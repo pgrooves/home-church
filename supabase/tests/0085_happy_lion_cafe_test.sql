@@ -58,7 +58,7 @@ on conflict (name) do nothing;
 select t_check('two drinks on the menu',
   (select count(*)::int from public.cafe_menu_items), 2);
 select t_check('nine pickup times',
-  (select count(*)::int from public.cafe_slots), 9);
+  (select count(*)::int from public.cafe_slots where active), 9);
 select t_check('the page ships switched off',
   (select value_bool from public.app_settings where key = 'cafe_on'), false);
 
@@ -177,3 +177,7 @@ begin;
   select t_raises_like('a stranger reads no orders',
     $$select count(*) from public.cafe_orders$$, 'permission denied');
 rollback;
+
+-- 0086 ------------------------------------------------------------------------
+select t_check('the as soon as it is ready slot exists, inactive',
+  (select active from public.cafe_slots where id = 'asap'), false);

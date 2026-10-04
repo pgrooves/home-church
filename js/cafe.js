@@ -318,6 +318,8 @@
       }
       return 'Ordering ahead opens Sunday at ' + clockText(st.opensAt) + '.';
     }
+    // Opened by hand there is always "as soon as it's ready" to pick.
+    if (asapOffered()) return '';
     var close = st.by === 'schedule' ? minutesOf(st.closesAt) : null;
     var left = slots().some(function (s) {
       var m = slotMinutes(s);
@@ -325,6 +327,21 @@
     });
     if (!left) return 'That’s it for ordering ahead today. The counter is still open in the lobby.';
     return '';
+  }
+
+  /* AS SOON AS IT'S READY. When the counter has opened the cafe by hand (an
+     off day, an evening event, a test on a Saturday) the Sunday pickup times
+     may all be behind it, which would leave Open with nothing to order. So
+     whenever the counter has opened it, the first choice is "as soon as it's
+     ready": a pickup roughly ten minutes out, decided by the server. On an
+     ordinary Sunday, run by the schedule, it is not offered. The slot is the
+     'asap' row in cafe_slots, inactive so it never joins the list on its own
+     (migration 0086). */
+  var ASAP = 'asap';
+
+  function asapOffered() {
+    var st = currentState();
+    return st.open && st.by === 'counter';
   }
 
   /* The pickup times grouped under their service, each marked full or past.
@@ -348,6 +365,11 @@
           full: limit > 0 && taken + (drinks || 1) > limit
         });
       });
+    if (asapOffered()) {
+      groups.unshift({ service: '', asap: true, slots: [{
+        id: ASAP, label: 'As soon as it’s ready', past: false, full: false
+      }] });
+    }
     return groups;
   }
 
@@ -463,6 +485,8 @@
     queue: queue,
     setStatus: setStatus,
     isOpen: isOpen,
+    ASAP: ASAP,
+    asapOffered: asapOffered,
     openState: openState,
     currentState: currentState,
     clockText: clockText,
