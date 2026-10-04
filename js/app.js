@@ -5681,6 +5681,11 @@
          only 'change', once, when the picker is dismissed. Setting the same
          value twice costs nothing; missing it entirely means Remind me acts
          on the default rather than on what somebody picked. */
+      // The cafe's pickup time, answered on the iOS wheel. See 'input' above.
+      if (evt.target.getAttribute && evt.target.getAttribute('data-cafe-field') === 'pickup') {
+        HC.screens.cafeHelpers.input(evt.target);
+      }
+
       var remindWhat = evt.target.getAttribute && evt.target.getAttribute('data-remind');
       if (remindWhat) HC.reminders.setField(remindWhat, evt.target.value);
 

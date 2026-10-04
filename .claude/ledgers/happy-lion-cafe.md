@@ -319,3 +319,28 @@ Scheduled Sundays are unchanged.
 Note on function version numbers: setting secrets bumps every function's
 version without changing its code (all went +5 when the five SQUARE_*
 secrets were set on 2026-10-03). Compare `ezbr_sha256`, not the version.
+
+## 2026-10-04: chosen pickup times, Square email fix, cart bar (0087)
+
+- **Square keys verified.** Webhook answers 401 "Bad signature." (both
+  webhook secrets set). A real checkout attempt on 2026-10-04 03:18 UTC
+  reached Square and was refused with `CONFLICTING_PARAMETERS: Only one of
+  [fulfillment, buyer_email]`, which proves the access token and location
+  are good. Fixed: the email now goes on the pickup recipient
+  (`recipient.email_address`), never `pre_populated_data.buyer_email`.
+- **Pickup times are chosen, not fixed.** Trey: "i want the user to select
+  which time limited to 10 minutes before first service and 20 minutes after
+  the last". The order screen is a dropdown of every 5 minutes from
+  `cafe_opens_at` to `cafe_closes_at` (7:50 to 11:20), never sooner than 5
+  minutes out, each labelled against the nearest service ("9:20, before the
+  9:30 service"). Opened by hand: "As soon as it's ready" first, then from
+  now to closing or an hour out, whichever is later. Same rule on both sides
+  (`pickupTimes` in `_shared/cafe.mjs` and `js/cafe.js`, parity-tested).
+  The phone sends `pickup_time: 'HH:MM'`; the order points at the inactive
+  `'pick'` slot row (`0087_cafe_chosen_pickup.sql`, applied live) with the
+  time in `pickup_at`. Capacity (`cafe_slot_capacity`) now counts drinks due
+  within 5 minutes either side. Fixed slot ids still accepted from old phones.
+- **Cart bar vs. the way-up arrow.** While "View order" is on screen the
+  to-top disc stands down (`#app:has(.hc-cafe-cartbar) .hc-disc--top`), the
+  same way it does for the highlight bar.
+- cafe-checkout deployed v8.

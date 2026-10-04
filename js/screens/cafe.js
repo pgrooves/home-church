@@ -39,9 +39,8 @@
 
   var state = {
     sheet: null,        // { itemId, key, size, options } while a drink is open
-    slotId: null,
+    pickup: null,
     name: null,
-    load: {},
     busy: false,
     error: '',
     openOrders: [],
@@ -149,14 +148,15 @@
     return HC.cafe.subtotal(HC.cafe.menu(), cart());
   }
 
-  function slotLabel(slotId) {
-    var s = (HC.data.cafeSlots || []).filter(function (x) { return x.id === slotId; })[0];
-    return s ? HC.cafe.clock(s) : '';
+  /* An order's pickup time, '9:25', and the service it is nearest, '9:30'. */
+  function pickupLabel(o) {
+    return o && o.pickup_at ? HC.cafe.pickupClock(o.pickup_at) : '';
   }
 
-  function slotService(slotId) {
-    var s = (HC.data.cafeSlots || []).filter(function (x) { return x.id === slotId; })[0];
-    return s ? s.service : '';
+  function pickupService(o) {
+    var m = o ? HC.cafe.pickupMinutes(o.pickup_at) : null;
+    var svc = m == null ? null : HC.cafe.nearestService(m);
+    return svc == null ? '' : HC.cafe.clockText(HC.cafe.hhmm(svc));
   }
 
   /* ------------------------------------------------------------- menu */
@@ -379,25 +379,26 @@
       return html;
     }
 
-    var groups = HC.cafe.slotGroups(state.load, lines.length);
-    var chosenOk = false;
-    html += '<p class="hc-cafe__label hc-cafe__label--gap">When will you pick it up?</p>';
-    groups.forEach(function (g) {
-      html += '<div class="hc-cafe-svc"><div class="hc-cafe-svc__h">' +
-        (g.asap ? 'Right now' : 'Around the ' + c.esc(g.service) + ' service') + '</div>' +
-        '<div class="hc-cafe-chips">';
-      g.slots.forEach(function (s) {
-        var off = s.past || s.full;
-        var on = !off && state.slotId === s.id;
-        if (on) chosenOk = true;
-        html += '<button type="button" class="hc-cafe-chip' + (s.full && !s.past ? ' hc-cafe-chip--full' : '') + '" ' +
-          'data-action="cafe" data-cafe="slot" data-id="' + c.esc(s.id) + '" aria-pressed="' + on + '"' +
-          (off ? ' disabled aria-label="' + c.esc(s.label + (s.past ? ', passed' : ', full')) + '"' : '') + '>' +
-          c.esc(s.label) + '</button>';
-      });
-      html += '</div></div>';
-    });
-    if (!chosenOk) state.slotId = null;
+    var times = HC.cafe.pickupTimes();
+    var asapOk = HC.cafe.asapOffered();
+    var picks = times.map(HC.cafe.hhmm);
+    if (asapOk) picks.unshift(HC.cafe.ASAP);
+    if (picks.indexOf(state.pickup) < 0) state.pickup = null;
+
+    html += '<label class="hc-cafe__label hc-cafe__label--gap" for="hc-cafe-pickup">When will you pick it up?</label>' +
+      '<select id="hc-cafe-pickup" class="hc-input hc-select hc-cafe-pickup" data-cafe-field="pickup">' +
+        '<option value=""' + (state.pickup ? '' : ' selected') + ' disabled>Choose a time</option>' +
+        (asapOk ? '<option value="' + HC.cafe.ASAP + '"' + (state.pickup === HC.cafe.ASAP ? ' selected' : '') +
+          '>As soon as it’s ready</option>' : '') +
+        times.map(function (m) {
+          var v = HC.cafe.hhmm(m);
+          var svc = HC.cafe.nearestService(m);
+          var at = svc == null ? '' : HC.cafe.clockText(HC.cafe.hhmm(svc)) + ' service';
+          var note = !at ? '' : m < svc ? ', before the ' + at : m === svc ? ', as the ' + at + ' starts' : ', after the ' + at;
+          return '<option value="' + v + '"' + (state.pickup === v ? ' selected' : '') + '>' +
+            c.esc(HC.cafe.clockText(v) + note) + '</option>';
+        }).join('') +
+      '</select>';
 
     var name = state.name == null ? HC.cafe.cupName() : state.name;
     html += '<label class="hc-cafe__label hc-cafe__label--gap" for="hc-cafe-name">Name for the cup</label>' +
@@ -414,14 +415,14 @@
 
     if (state.error) html += '<p class="hc-cafe-error" role="alert">' + c.esc(state.error) + '</p>';
 
-    var ready = !!state.slotId && !!String(name || '').trim();
+    var ready = !!state.pickup && !!String(name || '').trim();
     html += '<button type="button" class="hc-btn hc-btn--primary hc-cafe-wide" data-action="cafe" data-cafe="pay"' +
       (!ready || state.busy ? ' disabled' : '') + (state.busy ? ' aria-busy="true"' : '') + '>' +
       '<span>' + (state.busy ? 'Opening Square…' : 'Pay and send to the cafe') + '</span>' +
       '<span>' + c.esc(HC.cafe.money(sub + tax)) + '</span></button>';
     if (!ready && !state.busy) {
       html += '<p class="hc-caption hc-cafe-hint">' +
-        (state.slotId ? 'Add a name for the cup to keep going.' : 'Pick a time to keep going.') + '</p>';
+        (state.pickup ? 'Add a name for the cup to keep going.' : 'Choose a time to keep going.') + '</p>';
     }
     html += '<p class="hc-caption hc-cafe-square">Secure checkout by Square. Apple Pay, card, or Cash App.</p>';
     return html;
@@ -430,7 +431,7 @@
   /* ----------------------------------------------------------- ticket */
 
   function statusLine(o) {
-    var at = slotLabel(o.slot_id);
+    var at = pickupLabel(o);
     var asap = o.slot_id === HC.cafe.ASAP;
     if (o.status === 'pending_payment') return 'Waiting on payment';
     if (o.status === 'ready') return 'Ready now at the counter';
@@ -466,8 +467,8 @@
     }
 
     var o = t.order;
-    var at = slotLabel(o.slot_id);
-    var service = slotService(o.slot_id);
+    var at = pickupLabel(o);
+    var service = pickupService(o);
 
     if (o.status === 'pending_payment') {
       html += '<div class="hc-card hc-cafe-ticket">' +
@@ -594,14 +595,15 @@
     live.slice().sort(function (a, b) {
       return String(a.pickup_at).localeCompare(String(b.pickup_at)) || (a.ticket_no - b.ticket_no);
     }).forEach(function (r) {
-      var g = groups.filter(function (x) { return x.slot === r.slot_id; })[0];
-      if (!g) { g = { slot: r.slot_id, rows: [] }; groups.push(g); }
+      var key = r.slot_id === HC.cafe.ASAP ? HC.cafe.ASAP : pickupLabel(r);
+      var g = groups.filter(function (x) { return x.slot === key; })[0];
+      if (!g) { g = { slot: key, rows: [] }; groups.push(g); }
       g.rows.push(r);
     });
 
     groups.forEach(function (g) {
       html += '<p class="hc-cafe-grp"><span>' +
-        (g.slot === HC.cafe.ASAP ? 'As soon as it’s ready' : 'Due ' + c.esc(slotLabel(g.slot))) + '</span><span>' +
+        (g.slot === HC.cafe.ASAP ? 'As soon as it’s ready' : 'Due ' + c.esc(g.slot)) + '</span><span>' +
         g.rows.length + (g.rows.length === 1 ? ' order' : ' orders') + '</span></p>';
       g.rows.forEach(function (r) { html += ticketCard(r); });
     });
@@ -709,10 +711,6 @@
       loadQueue();
       timers.queue = setInterval(loadQueue, 8000);
     } else if (id === 'order') {
-      HC.cafe.slotLoad().then(function (load) {
-        state.load = load;
-        if (here('order')) paint();
-      });
       watchOpen('order');
     } else {
       HC.cafe.myOpenOrders().then(function (rows) {
@@ -806,21 +804,16 @@
     },
     queue: function () { HC.router.go({ name: 'cafe', id: 'queue' }); },
     ticket: function (el) { HC.router.go({ name: 'cafe', id: 't-' + el.getAttribute('data-id') }); },
-    slot: function (el) {
-      state.slotId = el.getAttribute('data-id');
-      state.error = '';
-      paint();
-    },
     pay: function () {
       if (state.busy) return;
       var name = String(state.name == null ? HC.cafe.cupName() : state.name).trim();
-      if (!state.slotId || !name) return;
+      if (!state.pickup || !name) return;
       state.busy = true;
       state.error = '';
       paint();
-      HC.cafe.checkout(state.slotId, name).then(function (res) {
+      HC.cafe.checkout(state.pickup, name).then(function (res) {
         state.busy = false;
-        state.slotId = null;
+        state.pickup = null;
         state.ticket = { id: res.order_id, order: null, ahead: null, error: '' };
         HC.router.go({ name: 'cafe', id: 't-' + res.order_id }, { replace: true });
         c.openExternal(res.checkout_url);
@@ -828,8 +821,6 @@
         state.busy = false;
         state.error = (err && err.message) || 'The cafe could not take that order. Try again in a moment.';
         paint();
-        // A time that filled up while somebody was choosing.
-        HC.cafe.slotLoad().then(function (load) { state.load = load; if (here('order')) paint(); });
       });
     },
     reopen: function () {
@@ -898,6 +889,15 @@
   }
 
   function input(el) {
+    // The pickup time. A <select> reports both 'input' and 'change', and the
+    // iOS wheel only the second, once; repaint once per actual change.
+    if (el.getAttribute('data-cafe-field') === 'pickup') {
+      if (el.value === (state.pickup || '')) return;
+      state.pickup = el.value || null;
+      state.error = '';
+      paint();
+      return;
+    }
     if (el.getAttribute('data-cafe-field') !== 'name') return;
     var had = !!String(state.name == null ? HC.cafe.cupName() : state.name).trim();
     state.name = el.value;
@@ -906,9 +906,9 @@
     // being empty, so typing does not rebuild the field under the caret.
     if (had !== has) {
       var btn = document.querySelector('[data-cafe="pay"]');
-      if (btn) btn.disabled = !(has && state.slotId) || state.busy;
+      if (btn) btn.disabled = !(has && state.pickup) || state.busy;
       var hint = document.querySelector('.hc-cafe-hint');
-      if (hint && has && state.slotId) hint.remove();
+      if (hint && has && state.pickup) hint.remove();
     }
   }
 

@@ -3,10 +3,12 @@
  *
  * TWO ACTIONS, ONE SIGNED IN CALLER.
  *
- *   { action: 'create', lines, slot_id, cup_name, push_token? }
+ *   { action: 'create', lines, pickup_time | slot_id, cup_name, push_token? }
  *     Prices the order from cafe_menu_items (never from the phone), checks the
- *     pickup time is open and not full, asks Square for a payment link with
- *     the order on it, stores the order as pending_payment and hands back
+ *     pickup time is open and not full (a chosen 'HH:MM', or slot_id 'asap'
+ *     for as soon as it is ready; a fixed slot id still works for a phone
+ *     that has not picked up the new screen yet), asks Square for a payment
+ *     link with the order on it, stores the order as pending_payment and hands back
  *     { order_id, checkout_url }. The phone opens that URL in the in-app
  *     browser; Square's own page takes the money.
  *
@@ -40,7 +42,7 @@
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 import {
   CafeError, priceCart, taxCents, cleanName, churchDay, churchInstant, churchMinutes, slotProblem,
-  openState, isSunday, ASAP_SLOT, ASAP_MINUTES, asapProblem,
+  openState, isSunday, ASAP_SLOT, ASAP_MINUTES, asapProblem, PICK_SLOT, pickupProblem,
   paymentLinkBody, totalsFromLink, squareBase, SQUARE_VERSION,
 } from '../_shared/cafe.mjs';
 
@@ -204,29 +206,48 @@ async function create(
   if (menuError) throw menuError;
   const priced = priceCart(menu ?? [], body.lines as unknown[]);
 
+  const capacitySetting = parseInt(settingText(settings, 'cafe_slot_capacity', '0'), 10);
+  const chosen = typeof body.pickup_time === 'string' && body.pickup_time.trim()
+    ? body.pickup_time.trim() : null;
+  const slotId = chosen ? PICK_SLOT : String(body.slot_id ?? '');
+
   const { data: slot }: { data: Row } = await db
-    .from('cafe_slots').select('*').eq('id', String(body.slot_id ?? '')).maybeSingle();
+    .from('cafe_slots').select('*').eq('id', slotId).maybeSingle();
+  if (!slot) throw new CafeError('That pickup time is not offered.', 409);
 
-  const { data: loadRows } = await db.rpc('hc_cafe_slot_load', { p_day: day });
-  const load = ((loadRows ?? []) as { slot_id: string; drinks: number }[])
-    .find((r) => r.slot_id === slot?.id)?.drinks ?? 0;
-  const capacity = slot?.capacity ?? parseInt(settingText(settings, 'cafe_slot_capacity', '0'), 10);
-
-  const asap = slot?.id === ASAP_SLOT;
-  const problem = asap ? asapProblem(open) : slotProblem({
-    slot, day,
-    // Opened by hand on an off day, the counter is there for as long as it
-    // says, so only the schedule's closing time limits the pickup times.
-    everyDay: settingBool(settings, 'cafe_every_day', false) || open.by === 'counter',
-    closesAt: open.by === 'schedule' ? open.closesAt : '',
-    load: load + priced.drinks - 1,
-    capacity: Number.isFinite(capacity) ? capacity : 0,
-  });
+  let problem: string | null;
+  let pickupAt: Date;
+  if (chosen) {
+    // The time first, so nothing below is handed a time that is not one.
+    const minutes = churchMinutes();
+    problem = pickupProblem({ time: chosen, open, minutes });
+    pickupAt = problem ? new Date() : churchInstant(day, chosen);
+    if (!problem) {
+      problem = pickupProblem({
+        time: chosen, open, minutes,
+        load: (await drinksAround(db, day, pickupAt)) + priced.drinks,
+        capacity: Number.isFinite(capacitySetting) ? capacitySetting : 0,
+      });
+    }
+  } else if (slot.id === ASAP_SLOT) {
+    pickupAt = new Date(Date.now() + ASAP_MINUTES * 60000);
+    problem = asapProblem(open);
+  } else {
+    const { data: loadRows } = await db.rpc('hc_cafe_slot_load', { p_day: day });
+    const load = ((loadRows ?? []) as { slot_id: string; drinks: number }[])
+      .find((r) => r.slot_id === slot.id)?.drinks ?? 0;
+    const capacity = slot.capacity ?? capacitySetting;
+    pickupAt = churchInstant(day, slot.pickup_time);
+    problem = slotProblem({
+      slot, day,
+      everyDay: settingBool(settings, 'cafe_every_day', false) || open.by === 'counter',
+      closesAt: open.by === 'schedule' ? open.closesAt : '',
+      load: load + priced.drinks - 1,
+      capacity: Number.isFinite(capacity) ? capacity : 0,
+    });
+  }
   if (problem) throw new CafeError(problem, 409);
 
-  const pickupAt = asap
-    ? new Date(Date.now() + ASAP_MINUTES * 60000)
-    : churchInstant(day, slot.pickup_time);
   const taxPercent = settingText(settings, 'cafe_tax_percent', '0');
   const tax = taxCents(priced.subtotal_cents, taxPercent);
 
@@ -278,6 +299,26 @@ async function create(
   if (insertError) throw insertError;
 
   return { order_id: orderId, checkout_url: paymentLink.url, total_cents: totals.total_cents };
+}
+
+/**
+ * Drinks already due within five minutes either side of a chosen time, which
+ * is what cafe_slot_capacity limits for chosen times. Counted the same way
+ * hc_cafe_slot_load counts: paid or further on, or still being paid for.
+ */
+async function drinksAround(db: Db, day: string, at: Date): Promise<number> {
+  const { data, error } = await db
+    .from('cafe_orders')
+    .select('drinks, status, created_at')
+    .eq('service_day', day)
+    .gte('pickup_at', new Date(at.getTime() - 5 * 60000).toISOString())
+    .lte('pickup_at', new Date(at.getTime() + 5 * 60000).toISOString());
+  if (error) throw error;
+  const fresh = Date.now() - 20 * 60000;
+  return ((data ?? []) as Row[])
+    .filter((o) => ['paid', 'making', 'ready', 'picked_up'].includes(o.status) ||
+      (o.status === 'pending_payment' && new Date(o.created_at).getTime() > fresh))
+    .reduce((n, o) => n + (o.drinks || 0), 0);
 }
 
 /* --------------------------------------------------------------- refresh */
