@@ -193,6 +193,20 @@ export function churchInstant(day, time, tz = CHURCH_TZ) {
   return new Date(guess);
 }
 
+/**
+ * "As soon as it's ready", offered only while the counter has opened the
+ * cafe by hand (see openState). The 'asap' row in cafe_slots exists so an
+ * order can point at it; it is inactive so it never shows on its own.
+ */
+export const ASAP_SLOT = 'asap';
+export const ASAP_MINUTES = 10;
+
+export function asapProblem(open) {
+  if (!open || !open.open) return 'The cafe is closed right now. Ordering ahead opens when it does.';
+  if (open.by !== 'counter') return 'That pickup time is not offered.';
+  return null;
+}
+
 /** Minutes before a pickup time that ordering for it closes. */
 export const SLOT_CUTOFF_MINUTES = 5;
 

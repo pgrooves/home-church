@@ -298,3 +298,24 @@ counted 37 phones, nothing sent.
 
 Nothing is visible in the live app: the app code is not merged, and the
 Coffee page is off.
+
+
+## 2026-10-04: "As soon as it's ready" (0086)
+
+Trey tested on a Saturday evening after tapping Open: the page said Open but
+"That's it for ordering ahead today", because every pickup time is a Sunday
+morning time. His rule: **when the cafe is opened by hand, it is fully
+working.** So while the counter has opened it (override "open <today>"), the
+order screen offers **As soon as it's ready** first (pickup = now + 10 min,
+set by cafe-checkout), and the "that's it for today" line never shows.
+Scheduled Sundays are unchanged.
+
+- `cafe_slots` row `asap` (inactive, so it never lists itself), migration
+  `0086_cafe_asap_slot.sql`, applied live 2026-10-04.
+- `asapProblem` in `_shared/cafe.mjs`; cafe-checkout deployed with it.
+- Ticket says "Ready as soon as it's made"; queue groups it "As soon as it's
+  ready".
+
+Note on function version numbers: setting secrets bumps every function's
+version without changing its code (all went +5 when the five SQUARE_*
+secrets were set on 2026-10-03). Compare `ezbr_sha256`, not the version.

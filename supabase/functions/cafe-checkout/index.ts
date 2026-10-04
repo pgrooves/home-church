@@ -40,7 +40,7 @@
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 import {
   CafeError, priceCart, taxCents, cleanName, churchDay, churchInstant, churchMinutes, slotProblem,
-  openState, isSunday,
+  openState, isSunday, ASAP_SLOT, ASAP_MINUTES, asapProblem,
   paymentLinkBody, totalsFromLink, squareBase, SQUARE_VERSION,
 } from '../_shared/cafe.mjs';
 
@@ -212,7 +212,8 @@ async function create(
     .find((r) => r.slot_id === slot?.id)?.drinks ?? 0;
   const capacity = slot?.capacity ?? parseInt(settingText(settings, 'cafe_slot_capacity', '0'), 10);
 
-  const problem = slotProblem({
+  const asap = slot?.id === ASAP_SLOT;
+  const problem = asap ? asapProblem(open) : slotProblem({
     slot, day,
     // Opened by hand on an off day, the counter is there for as long as it
     // says, so only the schedule's closing time limits the pickup times.
@@ -223,7 +224,9 @@ async function create(
   });
   if (problem) throw new CafeError(problem, 409);
 
-  const pickupAt = churchInstant(day, slot.pickup_time);
+  const pickupAt = asap
+    ? new Date(Date.now() + ASAP_MINUTES * 60000)
+    : churchInstant(day, slot.pickup_time);
   const taxPercent = settingText(settings, 'cafe_tax_percent', '0');
   const tax = taxCents(priced.subtotal_cents, taxPercent);
 
