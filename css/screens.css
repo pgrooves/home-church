@@ -4266,6 +4266,15 @@ button.hc-cal__day { cursor: pointer; }
   right: var(--hc-screen-pad);
   bottom: calc(var(--hc-tabbar-h) + env(safe-area-inset-bottom) + var(--hc-space-md));
 }
+/* The bar sits in the row the way up disc uses, and is the thing being asked
+   on this screen, so while it is there the disc stands down, the same as it
+   does for Note this / Highlight (#app[data-hlbar]). The menu is one short
+   screen; there is little to go back up to. */
+#app:has(.hc-cafe-cartbar) .hc-disc--top {
+  opacity: 0;
+  transform: translateY(10px) scale(0.86);
+  pointer-events: none;
+}
 .hc-cafe-cartbar__n {
   width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center;
   background: var(--hc-on-dark); color: var(--hc-dark); font-size: 13px;
@@ -4355,18 +4364,7 @@ html.hc-cafe-sheet-open, html.hc-cafe-sheet-open body { overflow: hidden; }
 .hc-cafe-line__edit span { line-height: 32px; }
 .hc-cafe-addmore { margin-top: var(--hc-space-sm); min-height: var(--hc-tap-min); font: 600 14px var(--hc-sans); color: var(--hc-accent-deep); }
 
-.hc-cafe-svc { margin-top: 14px; }
-.hc-cafe-svc__h { font: 600 14px/20px var(--hc-sans); }
-.hc-cafe-chips { display: flex; flex-wrap: wrap; gap: var(--hc-space-sm); margin-top: var(--hc-space-sm); }
-.hc-cafe-chip {
-  min-height: 40px; min-width: 64px; padding: 0 14px; border-radius: var(--hc-radius-pill);
-  border: var(--hc-hairline) solid var(--hc-rule); background: var(--hc-paper);
-  font: 500 14px/1 var(--hc-sans); color: var(--hc-ink);
-}
-.hc-cafe-chip[aria-pressed="true"] { background: var(--hc-dark); color: var(--hc-on-dark); border-color: var(--hc-dark); }
-.hc-cafe-chip[disabled] { color: var(--hc-rule); }
-.hc-cafe-chip--full[disabled] { text-decoration: line-through; }
-
+.hc-cafe-pickup { width: 100%; box-sizing: border-box; }
 .hc-cafe-name { width: 100%; box-sizing: border-box; }
 .hc-cafe-totals { margin-top: 22px; }
 .hc-cafe-totals > div { display: flex; justify-content: space-between; font: 400 15px/26px var(--hc-sans); color: var(--hc-mid); }

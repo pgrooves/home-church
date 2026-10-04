@@ -140,6 +140,45 @@ const MENU = [
   ok('capacity 0 means no limit',
     C.slotProblem({ slot, day: '2026-10-04', now: at('2026-10-04T13:00:00Z'), load: 80, capacity: 0 }), null);
 
+  console.log('\n--- a time somebody chooses ---');
+
+  const sched = (minutes) => C.openState({ override: '', day: '2026-10-04', minutes, sunday: true });
+  const byHand = (minutes) => C.openState({ override: 'open 2026-10-03', day: '2026-10-03', minutes, sunday: false });
+  const t0 = C.pickupTimes({ open: sched(470), minutes: 470 });
+  ok('Sunday at 7:50, from 7:55 (five minutes out) ...', C.hhmm(t0[0]), '07:55');
+  ok('... to 11:20, twenty after the last service', C.hhmm(t0[t0.length - 1]), '11:20');
+  ok('every five minutes', t0.length, (680 - 475) / 5 + 1);
+  ok('mid morning, rounded up past five minutes from now',
+    C.hhmm(C.pickupTimes({ open: sched(9 * 60 + 33), minutes: 9 * 60 + 33 })[0]), '09:40');
+  ok('closed, nothing to choose', C.pickupTimes({ open: sched(12 * 60), minutes: 12 * 60 }), []);
+  ok('the last minutes before closing have nothing left',
+    C.pickupTimes({ open: sched(678), minutes: 678 }), []);
+  const sat = C.pickupTimes({ open: byHand(15 * 60), minutes: 15 * 60 });
+  ok('opened by hand on Saturday afternoon, from 3:05 ...', C.hhmm(sat[0]), '15:05');
+  ok('... an hour out', C.hhmm(sat[sat.length - 1]), '16:05');
+  const early = C.pickupTimes({ open: byHand(7 * 60), minutes: 7 * 60 });
+  ok('opened by hand early, still runs to closing', C.hhmm(early[early.length - 1]), '11:20');
+  ok('a time in the window is fine',
+    C.pickupProblem({ time: '09:25', open: sched(540), minutes: 540 }), null);
+  ok('a time already gone is refused',
+    C.pickupProblem({ time: '09:02', open: sched(540), minutes: 540 }), 'That pickup time has passed. Pick a later one.');
+  ok('before opening is refused the same way',
+    C.pickupProblem({ time: '07:30', open: sched(440 + 30), minutes: 470 }), 'That pickup time has passed. Pick a later one.');
+  ok('after closing is refused',
+    C.pickupProblem({ time: '11:45', open: sched(540), minutes: 540 }), 'That pickup time is after the cafe closes. Pick an earlier one.');
+  ok('off the five minutes is refused',
+    C.pickupProblem({ time: '09:27', open: sched(540), minutes: 540 }), 'That pickup time is not offered.');
+  ok('nonsense is refused',
+    C.pickupProblem({ time: 'soon', open: sched(540), minutes: 540 }), 'Pick a time to pick it up.');
+  ok('when closed, closed',
+    C.pickupProblem({ time: '09:25', open: sched(12 * 60), minutes: 12 * 60 }),
+    'The cafe is closed right now. Ordering ahead opens when it does.');
+  ok('busy around that time',
+    C.pickupProblem({ time: '09:25', open: sched(540), minutes: 540, load: 9, capacity: 8 }),
+    'That time is busy. Pick one a little earlier or later.');
+  ok('right at capacity is fine',
+    C.pickupProblem({ time: '09:25', open: sched(540), minutes: 540, load: 8, capacity: 8 }), null);
+
   console.log('\n--- what Square is asked for ---');
 
   const body = C.paymentLinkBody({
@@ -158,6 +197,10 @@ const MENU = [
   ok('tax as an order tax', body.order.taxes, [{ uid: 'sales-tax', name: 'Sales tax', percentage: '9.75', scope: 'ORDER' }]);
   ok('no tip unless asked', body.checkout_options.allow_tipping, false);
   ok('back to our page', body.checkout_options.redirect_url, 'https://example.org/back');
+  // Square: "Only one of [fulfillment, buyer_email] fields should be set."
+  ok('no buyer_email beside a pickup', body.pre_populated_data, undefined);
+  ok('the email on the pickup instead',
+    body.order.fulfillments[0].pickup_details.recipient.email_address, 'trey@example.org');
 
   const linked = C.paymentLinkBody({
     orderId: 'o', locationId: 'L', taxPercent: '0',
@@ -224,6 +267,11 @@ const MENU = [
     { override: '', day: '2026-10-03', minutes: 540, sunday: false, everyDay: true }
   ].map((x) => Object.assign({ opensAt: '07:50', closesAt: '11:20' }, x));
   ok('same open or closed, every case', cases.map((x) => phone.openState(x)), cases.map((x) => C.openState(x)));
+  ok('same pickup times, every case',
+    cases.map((x) => phone.pickupTimesFor({ open: phone.openState(x), minutes: x.minutes })),
+    cases.map((x) => C.pickupTimes({ open: C.openState(x), minutes: x.minutes })));
+  ok('same 09:25', phone.hhmm(565), C.hhmm(565));
+  ok('pickup_at on the church clock', phone.pickupClock('2026-10-04T14:25:00Z'), '9:25');
 
   console.log('\n' + pass + ' passed, ' + fail + ' failed.');
   if (fail) process.exit(1);

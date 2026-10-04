@@ -155,6 +155,11 @@ async function go(page, route) {
   });
   await go(page, { name: 'cafe' });
   await shot(page, '02-menu.png');
+  // Scrolled, where the way up disc would come up under the order bar.
+  await page.evaluate(() => { const s = document.querySelector('#hc-main, .hc-main, main') || document.scrollingElement; s.scrollTop = 600; s.dispatchEvent(new Event('scroll')); });
+  await page.waitForTimeout(500);
+  await shot(page, '02b-menu-scrolled.png');
+  console.log('to-top disc opacity with the order bar:', await page.$eval('#hc-totop', (d) => getComputedStyle(d).opacity + ' show=' + d.getAttribute('data-show')));
 
   // A drink's sheet.
   await page.click('[data-cafe="open"][data-id="hot-coffee"]');
@@ -169,7 +174,8 @@ async function go(page, route) {
 
   // The order, a time picked.
   await go(page, { name: 'cafe', id: 'order' });
-  await page.click('[data-cafe="slot"][data-id="0920"]');
+  console.log('pickup choices:', await page.$$eval('#hc-cafe-pickup option', (os) => os.map((o) => o.textContent)));
+  await page.selectOption('#hc-cafe-pickup', '09:20');
   await page.waitForTimeout(300);
   await page.setViewportSize({ width: 390, height: 1500 });
   await page.waitForTimeout(300);

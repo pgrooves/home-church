@@ -320,12 +320,7 @@
     }
     // Opened by hand there is always "as soon as it's ready" to pick.
     if (asapOffered()) return '';
-    var close = st.by === 'schedule' ? minutesOf(st.closesAt) : null;
-    var left = slots().some(function (s) {
-      var m = slotMinutes(s);
-      return m - now.minutes >= 5 && (close == null || m <= close);
-    });
-    if (!left) return 'That’s it for ordering ahead today. The counter is still open in the lobby.';
+    if (!pickupTimes().length) return 'That’s it for ordering ahead today. The counter is still open in the lobby.';
     return '';
   }
 
@@ -344,33 +339,71 @@
     return st.open && st.by === 'counter';
   }
 
-  /* The pickup times grouped under their service, each marked full or past.
-     `load` is drinks already spoken for per slot, from hc_cafe_slot_load. */
-  function slotGroups(load, drinks) {
-    var now = churchNow();
-    var cap = parseInt(HC.data.setting('cafe_slot_capacity', '8'), 10) || 0;
-    var st = currentState();
-    var close = st.by === 'schedule' ? minutesOf(st.closesAt) : null;
-    var groups = [];
-    slots().slice().sort(function (a, b) { return (a.sortOrder || 0) - (b.sortOrder || 0); })
-      .forEach(function (s) {
-        var g = groups.filter(function (x) { return x.service === s.service; })[0];
-        if (!g) { g = { service: s.service, slots: [] }; groups.push(g); }
-        var limit = s.capacity == null ? cap : s.capacity;
-        var taken = (load && load[s.id]) || 0;
-        g.slots.push({
-          id: s.id,
-          label: clock(s),
-          past: slotMinutes(s) - now.minutes < 5 || (close != null && slotMinutes(s) > close),
-          full: limit > 0 && taken + (drinks || 1) > limit
-        });
-      });
-    if (asapOffered()) {
-      groups.unshift({ service: '', asap: true, slots: [{
-        id: ASAP, label: 'As soon as it’s ready', past: false, full: false
-      }] });
+  /* PICKUP AT A TIME SOMEBODY CHOOSES. Every five minutes the cafe is open
+     for: run by the schedule, cafe_opens_at to cafe_closes_at and never
+     sooner than five minutes from now; opened by hand, from now to closing
+     or an hour out, whichever is later. The same function as pickupTimes in
+     supabase/functions/_shared/cafe.mjs, which is what the server holds an
+     order to, and tests/cafe.test.js keeps the two the same. Minutes past
+     midnight, church time. */
+  var PICK_STEP = 5, PICK_REACH = 60, CUTOFF = 5;
+
+  function pickupTimesFor(o) {
+    var open = o.open;
+    if (!open || !open.open) return [];
+    var opens = minutesOf(open.opensAt), closes = minutesOf(open.closesAt);
+    var from = o.minutes + CUTOFF, to;
+    if (open.by === 'schedule') {
+      if (opens != null) from = Math.max(from, opens);
+      to = closes == null ? -1 : closes;
+    } else {
+      to = Math.max(closes == null ? 0 : closes, from + PICK_REACH);
     }
-    return groups;
+    from = Math.ceil(from / PICK_STEP) * PICK_STEP;
+    to = Math.min(to, 24 * 60 - PICK_STEP);
+    var out = [];
+    for (var m = from; m <= to; m += PICK_STEP) out.push(m);
+    return out;
+  }
+
+  function pickupTimes() {
+    return pickupTimesFor({ open: currentState(), minutes: churchNow().minutes });
+  }
+
+  /* 570 as '09:30', what cafe-checkout is sent. */
+  function hhmm(m) {
+    return ('0' + Math.floor(m / 60)).slice(-2) + ':' + ('0' + (m % 60)).slice(-2);
+  }
+
+  /* The service a time is nearest, for the label beside it: '9:30'. */
+  function nearestService(m) {
+    var best = null;
+    slots().forEach(function (s) {
+      var svc = minutesOf(s.service);
+      if (svc == null) return;
+      if (best == null || Math.abs(svc - m) < Math.abs(best - m)) best = svc;
+    });
+    return best;
+  }
+
+  /* An order's pickup time on the church clock, from pickup_at: minutes past
+     midnight, and as the church says it, '9:25'. */
+  function pickupMinutes(iso) {
+    var d = new Date(iso);
+    if (!iso || isNaN(d.getTime())) return null;
+    try {
+      var out = {};
+      new Intl.DateTimeFormat('en-US', { timeZone: TZ, hourCycle: 'h23', hour: '2-digit', minute: '2-digit' })
+        .formatToParts(d).forEach(function (p) { out[p.type] = p.value; });
+      return Number(out.hour) * 60 + Number(out.minute);
+    } catch (e) {
+      return d.getHours() * 60 + d.getMinutes();
+    }
+  }
+
+  function pickupClock(iso) {
+    var m = pickupMinutes(iso);
+    return m == null ? '' : clockText(hhmm(m));
   }
 
   /* ----------------------------------------------------------------- calls */
@@ -379,16 +412,8 @@
     return !!(HC.auth && HC.auth.isConfigured() && HC.auth.isSignedIn());
   }
 
-  function slotLoad() {
-    if (!signedIn()) return Promise.resolve({});
-    return HC.auth.rpc('hc_cafe_slot_load', { p_day: churchNow().day }).then(function (rows) {
-      var out = {};
-      (rows || []).forEach(function (r) { out[r.slot_id] = r.drinks; });
-      return out;
-    }).catch(function () { return {}; });
-  }
-
-  function checkout(slotId, name) {
+  /* `pickup` is ASAP or a chosen time, '09:25'. */
+  function checkout(pickup, name) {
     var lines = liveCart().map(function (l) {
       return { item_id: l.item_id, size: l.size, options: l.options || {} };
     });
@@ -396,7 +421,8 @@
     return HC.auth.callFunction('/cafe-checkout', {
       action: 'create',
       lines: lines,
-      slot_id: slotId,
+      slot_id: pickup === ASAP ? ASAP : undefined,
+      pickup_time: pickup === ASAP ? undefined : pickup,
       cup_name: name,
       push_token: storage().get('pushToken', null)
     }, 'The cafe could not take that order. Try again in a moment.').then(function (res) {
@@ -472,9 +498,13 @@
     churchNow: churchNow,
     clock: clock,
     closedReason: closedReason,
-    slotGroups: slotGroups,
+    pickupTimes: pickupTimes,
+    pickupTimesFor: pickupTimesFor,
+    pickupClock: pickupClock,
+    pickupMinutes: pickupMinutes,
+    nearestService: nearestService,
+    hhmm: hhmm,
     signedIn: signedIn,
-    slotLoad: slotLoad,
     checkout: checkout,
     refresh: refresh,
     order: order,

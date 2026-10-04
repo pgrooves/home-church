@@ -181,3 +181,7 @@ rollback;
 -- 0086 ------------------------------------------------------------------------
 select t_check('the as soon as it is ready slot exists, inactive',
   (select active from public.cafe_slots where id = 'asap'), false);
+
+-- 0087 ------------------------------------------------------------------------
+select t_check('the chosen time slot exists, inactive',
+  (select active from public.cafe_slots where id = 'pick'), false);

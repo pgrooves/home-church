@@ -229,6 +229,69 @@ export function slotProblem({ slot, day, now = new Date(), everyDay = false, loa
   return null;
 }
 
+/* --------------------------------------------------------- chosen times */
+
+/**
+ * PICKUP AT A TIME SOMEBODY CHOOSES. Rather than a short list of fixed times,
+ * the phone offers every five minutes the cafe is open for, and the order
+ * points at the 'pick' row in cafe_slots (inactive, like 'asap', migration
+ * 0087) with the time itself in pickup_at.
+ *
+ * THE WINDOW. Run by the schedule it is cafe_opens_at to cafe_closes_at (ten
+ * minutes before the first service to twenty after the last), and never
+ * sooner than SLOT_CUTOFF_MINUTES from now. Opened by hand at the counter it
+ * starts from now, and runs to closing or an hour out, whichever is later, so
+ * an off day has times to pick too.
+ *
+ * pickupTimes is the list, in minutes past midnight, church time; js/cafe.js
+ * has the same function and tests/cafe.test.js holds the two together.
+ */
+export const PICK_SLOT = 'pick';
+export const PICK_STEP = 5;
+export const PICK_REACH_MINUTES = 60;
+
+export function pickupTimes({ open, minutes }) {
+  if (!open || !open.open) return [];
+  const opens = minutesOf(open.opensAt);
+  const closes = minutesOf(open.closesAt);
+  let from = minutes + SLOT_CUTOFF_MINUTES;
+  let to;
+  if (open.by === 'schedule') {
+    if (opens != null) from = Math.max(from, opens);
+    to = closes ?? -1;
+  } else {
+    to = Math.max(closes ?? 0, from + PICK_REACH_MINUTES);
+  }
+  from = Math.ceil(from / PICK_STEP) * PICK_STEP;
+  to = Math.min(to, 24 * 60 - PICK_STEP);
+  const out = [];
+  for (let m = from; m <= to; m += PICK_STEP) out.push(m);
+  return out;
+}
+
+/** 570 as '09:30', the way cafe-checkout is sent a chosen time. */
+export function hhmm(m) {
+  return String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0');
+}
+
+/**
+ * Whether a chosen time can be ordered for, and why not. `load` is drinks
+ * already due within five minutes either side of it, this order included.
+ */
+export function pickupProblem({ time, open, minutes, load = 0, capacity = 0 }) {
+  if (!open || !open.open) return 'The cafe is closed right now. Ordering ahead opens when it does.';
+  const m = /^\d{1,2}:\d{2}$/.test(String(time ?? '').trim()) ? minutesOf(time) : null;
+  if (m == null) return 'Pick a time to pick it up.';
+  const times = pickupTimes({ open, minutes });
+  if (!times.includes(m)) {
+    if (times.length && m > times[times.length - 1]) return 'That pickup time is after the cafe closes. Pick an earlier one.';
+    if (!times.length || m < times[0]) return 'That pickup time has passed. Pick a later one.';
+    return 'That pickup time is not offered.';
+  }
+  if (capacity > 0 && load > capacity) return 'That time is busy. Pick one a little earlier or later.';
+  return null;
+}
+
 /* ---------------------------------------------------------------- square */
 
 export const SQUARE_VERSION = '2024-10-17';
@@ -305,7 +368,10 @@ export function paymentLinkBody({
     },
   };
   if (redirectUrl) body.checkout_options.redirect_url = redirectUrl;
-  if (email) body.pre_populated_data = { buyer_email: email };
+  // Square refuses buyer_email in pre_populated_data on an order that has a
+  // fulfillment (CONFLICTING_PARAMETERS), so the email rides on the pickup's
+  // recipient instead, where it still reaches the owner's order screen.
+  if (email) order.fulfillments[0].pickup_details.recipient.email_address = email;
   return body;
 }
 
