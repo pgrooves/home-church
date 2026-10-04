@@ -8,6 +8,8 @@
  * WHO CALLS IT. pg_cron, hourly, through `public.hc_push_tick()` in migration
  * 0012. The tick decides in America/Chicago local time whether the current
  * hour is one we send in, and calls `hc_send_push(topic)`, which posts here.
+ * Since 0089 the new guide goes out at 1pm Sunday if it was posted before
+ * noon, and at 8am Monday otherwise.
  * You can also call it by hand for a test, which is the only sane way to prove
  * push works before a Monday arrives.
  *
@@ -185,7 +187,39 @@ async function apnsToken(keyId: string, teamId: string, privateKeyPem: string): 
    switch that asked for it is worse than no notification.
    ---------------------------------------------------------------------- */
 
-interface Note { title: string; body: string; }
+interface Note {
+  title: string;
+  body: string;
+  // new_guide only: the guides this send covers, stamped push_announced_at
+  // once it has gone out so the next send does not announce them again.
+  guideIds?: string[];
+}
+
+/* @@ guide-note:start */
+/* The new guide notice, worded for a glance at the lock screen. A greeting
+   that fits the moment it lands (1pm Sunday, or 8am Monday), then the one
+   fact: the guide is live, and which sermon of which series it is. The series
+   title, never the sermon's working title, because the series is the name
+   the church actually uses on Sunday. */
+function guideGreeting(now: Date): string {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/Chicago', weekday: 'short', hour: 'numeric', hour12: false,
+  }).formatToParts(now);
+  const weekday = parts.find((p) => p.type === 'weekday')?.value;
+  const hour = Number(parts.find((p) => p.type === 'hour')?.value);
+  if (weekday === 'Sun') return 'Happy Sunday!';
+  if (hour < 12) return 'Good morning!';
+  return 'Hi there!';
+}
+
+function guideBody(seriesTitle: string | null, part: number | null): string {
+  const series = String(seriesTitle ?? '').trim();
+  if (!series) return 'This week’s guide is live in the app.';
+  return part && part > 0
+    ? `This week’s guide is live in the app: ${series}, Part ${part}.`
+    : `This week’s guide is live in the app: ${series}.`;
+}
+/* @@ guide-note:end */
 
 async function compose(
   topic: Topic,
@@ -214,41 +248,63 @@ async function compose(
   }
 
   if (topic === 'new_guide') {
-    // Only announce a guide that actually appeared since the last time we
-    // announced one. A Monday with no new guide should be silent, not a
-    // weekly lie. This is why push_log exists.
-    const { data: lastRun } = await admin
-      .from('push_log')
-      .select('ran_at')
-      .eq('topic', 'new_guide')
-      .eq('skipped', false)
-      .order('ran_at', { ascending: false })
-      .limit(1)
-      .maybeSingle();
+    /* Only announce a guide nobody has been told about yet. A send with no
+       new guide should be silent, not a weekly lie.
 
-    // First ever run has no watermark. Use the last week rather than the whole
-    // history, so switching this on does not announce a guide from March.
-    const since = lastRun?.ran_at ?? new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString();
+       Two clocks call this (see migration 0089): Sunday at 1pm, passing the
+       noon cutoff as `ref` so only guides posted before noon go out, and
+       Monday at 8am with no cutoff, which takes whatever is still waiting.
+       The guide row carries push_announced_at, so a guide posted at 12:30 on
+       Sunday is skipped at 1pm and still found on Monday.
 
-    const { data: guide } = await admin
+       Bounded to the last week, so a guide from March that somehow never got
+       stamped is not announced as this week's. */
+    const since = new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString();
+    const cutoff = ref && !Number.isNaN(Date.parse(ref)) ? new Date(ref).toISOString() : null;
+
+    let pending = admin
       .from('guides')
-      .select('id, theme_title, subtitle, created_at')
+      .select('id, series_id, preached_on, created_at')
       .eq('published', true)
-      .gt('created_at', since)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle();
+      .is('push_announced_at', null)
+      .gt('created_at', since);
+    if (cutoff) pending = pending.lt('created_at', cutoff);
 
+    const { data: guides } = await pending
+      .order('created_at', { ascending: false })
+      .limit(20);
+
+    const guide = guides?.[0];
     if (!guide) return null;
 
-    // theme_title is nullable and is null on every row today, so the generic
-    // line is the one that will actually ship. Kept the specific one because
-    // it costs nothing and reads better the day somebody fills the field in.
+    let seriesTitle: string | null = null;
+    let part: number | null = null;
+    if (guide.series_id) {
+      const { data: series } = await admin
+        .from('series')
+        .select('title')
+        .eq('id', guide.series_id)
+        .maybeSingle();
+      seriesTitle = series?.title ?? null;
+
+      // Which sermon of the series this is, counted the way 0055 counts it
+      // for the reading plan: distinct published Sundays up to this one.
+      if (guide.preached_on) {
+        const { data: sundays } = await admin
+          .from('guides')
+          .select('preached_on')
+          .eq('series_id', guide.series_id)
+          .eq('published', true)
+          .not('preached_on', 'is', null)
+          .lte('preached_on', guide.preached_on);
+        part = new Set((sundays ?? []).map((r) => r.preached_on)).size || null;
+      }
+    }
+
     return {
-      title: 'This week’s guide is up',
-      body: guide.theme_title
-        ? String(guide.theme_title)
-        : 'Open it before your group meets.',
+      title: guideGreeting(new Date()),
+      body: guideBody(seriesTitle, part),
+      guideIds: guides!.map((g) => g.id as string),
     };
   }
 
@@ -592,7 +648,8 @@ Deno.serve(async (req: Request) => {
     return json({ error: `Unknown topic: ${String(body.topic)}` }, 400);
   }
   const dryRun = body.dry_run === true;
-  // Only `announcement` uses this. Everything else composes itself.
+  // The row a send is about (announcement, cafe_ready), or for new_guide the
+  // "posted before" cutoff the Sunday clock passes. See migration 0089.
   const ref = typeof body.ref === 'string' && body.ref ? body.ref : null;
 
   const url = Deno.env.get('SUPABASE_URL');
@@ -690,7 +747,17 @@ Deno.serve(async (req: Request) => {
     return json({ ok: true, dry_run: true, topic, recipients: tokens.length, note });
   }
 
+  // A guide is announced once, whether or not anybody had the switch on, so
+  // a phone that turns it on next week is not told about this one then.
+  const markAnnounced = async () => {
+    if (!note.guideIds?.length) return;
+    await admin.from('guides')
+      .update({ push_announced_at: new Date().toISOString() })
+      .in('id', note.guideIds);
+  };
+
   if (tokens.length === 0) {
+    await markAnnounced();
     await admin.from('push_log').insert({
       topic, skipped: true, note: 'No phones have asked for this one.',
     });
@@ -771,6 +838,8 @@ Deno.serve(async (req: Request) => {
       .update({ last_push_at: new Date().toISOString(), failure_count: 0, last_error: null })
       .in('token', deliveredTokens);
   }
+
+  await markAnnounced();
 
   const delivered = deliveredTokens.length;
   const failed = tokens.length - delivered;

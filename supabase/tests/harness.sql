@@ -393,6 +393,7 @@ create table public.guides (
   preached_on          date,
   reflection_questions jsonb not null default '[]'::jsonb,
   published            boolean not null default true,
+  created_at           timestamptz not null default now(),
   updated_at           timestamptz not null default now()
 );
 

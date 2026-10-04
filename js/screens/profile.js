@@ -15,7 +15,7 @@
      receive, and the row under it is what that choice means in practice. That
      second half is the part that goes stale, when the church moves the send
      from Monday morning to Sunday night. */
-  var NOTIFY_GUIDE = 'Monday morning, once a week';
+  var NOTIFY_GUIDE = 'Sunday afternoon, or Monday morning if it posts late';
   var NOTIFY_SUNDAY = 'Saturday evening, service times and address';
   var NOTIFY_NEWS = 'When the church posts something on purpose';
   /* The two admin ones. Not editable, unlike the three above, and the
