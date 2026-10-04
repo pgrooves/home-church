@@ -1644,6 +1644,16 @@
     });
   }
 
+  /* Where the Reading plan card on Home goes, on whichever plan is current.
+     An RPC rather than a PATCH because a phone may not write URLs into
+     reading_plans (0031); the function checks it is a link first. An empty
+     string takes the link off. Waits for the refresh so App settings redraws
+     with the saved link rather than the old one. See 0088. */
+  function setReadingPlanLink(url) {
+    return HC.auth.rpc('hc_admin_set_reading_plan_link', { p_url: url || '' })
+      .then(function () { return HC.content.refresh(); });
+  }
+
   function deleteSetting(key) {
     return HC.auth.restFetch('/app_settings?key=eq.' + encodeURIComponent(key), {
       method: 'DELETE',
@@ -1752,7 +1762,8 @@
     saveSwitch: saveSwitch,
     notifyBanner: notifyBanner,
     createSetting: createSetting,
-    deleteSetting: deleteSetting
+    deleteSetting: deleteSetting,
+    setReadingPlanLink: setReadingPlanLink
   };
 
 })(window.HC = window.HC || {});

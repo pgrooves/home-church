@@ -226,5 +226,27 @@ function plan(over) {
 })();
 
 
+/* ------------------------------------------- switched off between series */
+
+/* App settings can take the card off Home while the next series' plan is not
+   ready. The row is absent until an admin first taps the switch, and absent
+   has to mean shown, or every phone that has never fetched app_settings would
+   lose the plan. See 0088. */
+(function () {
+  const HC = load('2026-05-10');
+  const H = HC.screens.homeHelpers;
+  const settings = HC.data.appSettings;
+  settings.length = 0;
+  ok('with no switch row, the plan is on Home', H.readingPlanShown(plan()), true);
+
+  settings.push({ key: 'reading_plan_on', value: false });
+  ok('switched off, it is not', H.readingPlanShown(plan()), false);
+
+  settings[0].value = true;
+  ok('switched back on, it is again', H.readingPlanShown(plan()), true);
+  ok('and a plan with no title is never drawn', H.readingPlanShown(plan({ title: '' })), false);
+})();
+
+
 console.log('\n' + pass + ' passed, ' + fail + ' failed.');
 process.exit(fail ? 1 : 0);

@@ -2230,6 +2230,10 @@
     homekids_on: true,
     practices_on: true,
     alpha_on: true,
+    /* 0088. Read by name in js/screens/home.js, and drawn in its own
+       Reading plan section. On is its fallback, so deleting it would quietly
+       put a plan the church had hidden back on Home. */
+    reading_plan_on: true,
     /* 0085, the Happy Lion Cafe. cafe_on is drawn under "Pages"; the rest are
        read by name in js/cafe.js and the cafe-checkout Edge Function, which
        is where the money is, so none of them is offered for deletion. */
@@ -2527,6 +2531,81 @@
     return html;
   }
 
+  /* The reading plan: whether Home shows it, and where it goes when tapped.
+
+     A new series does not always arrive with its plan ready, and the old plan
+     sitting on Home under the new series, stuck on its last week, is worse
+     than no plan at all. So the switch takes the card off Home for everybody
+     until the next one is ready. Same shape as the page switches above: on
+     without a row, and the first tap writes one. See 0088.
+
+     THE LINK IS THE PLAN'S OWN, not a second copy in app_settings. It is the
+     first of the current plan's resources, which is what Home already opens,
+     so a new plan arriving with its own link is never shadowed by an old
+     override. It saves through hc_admin_set_reading_plan_link, which checks
+     it is a link, and it waits for Save like the banner does: a URL saved a
+     keystroke at a time is a broken button on Home for every keystroke. */
+  var READING_PLAN_ON = {
+    key: 'reading_plan_on',
+    label: 'Reading plan on Home',
+    help: 'Off takes the Reading plan card off Home for everybody. Nothing is ' +
+      'deleted, and it comes back exactly as it was when this goes on again.',
+    sortOrder: 39
+  };
+  var readingPlanLinkDraft = null;   // what is typed in the box, until Save
+
+  function readingPlanOn() {
+    var row = settingRow(READING_PLAN_ON.key);
+    if (row) return !!row.value_bool;
+    return HC.data.setting(READING_PLAN_ON.key, true) !== false;
+  }
+
+  function readingPlanLink() {
+    var plan = HC.data.readingPlan || {};
+    var first = (plan.resources || [])[0];
+    return first && first.url ? String(first.url) : '';
+  }
+
+  function readingPlanSection() {
+    var plan = HC.data.readingPlan;
+    var title = plan && plan.title ? plan.title : '';
+    var on = readingPlanOn();
+
+    var html = c.sectionHeader('', 'Reading plan');
+    html += switchRow({
+      title: 'Reading plan on Home',
+      sub: on
+        ? (title ? 'On. “' + title + '” is on Home for everybody.'
+                 : 'On, but there is no reading plan to show yet.')
+        : 'Off. Home has no Reading plan card, for anybody.',
+      action: 'admin-reading-plan-toggle',
+      id: READING_PLAN_ON.key,
+      on: on
+    });
+    html += '<p class="hc-caption hc-admin__loading">' +
+      'Turn it off between series, while the next plan is not ready yet. ' +
+      'Nothing is deleted.</p>';
+
+    if (!plan || !plan.id) return html;
+
+    html += field({
+      name: 'readingPlanLink',
+      label: 'Reading plan link',
+      type: 'url',
+      inputmode: 'url',
+      placeholder: 'https://',
+      value: readingPlanLinkDraft == null ? readingPlanLink() : readingPlanLinkDraft,
+      help: 'Where the card on Home goes when tapped, for “' + title + '”. ' +
+        'Leave it empty and the card shows without a link.'
+    });
+    html += '<div class="hc-admin__item-actions">' +
+      c.button('Save link', { action: 'admin-reading-plan-link-save', small: true,
+        busy: busy === 'reading-plan-link' }) +
+    '</div>';
+
+    return html;
+  }
+
   /* Rows this screen deliberately does not draw in the list, because they are
      already drawn somewhere they mean more: the push default belongs on the
      Announcements screen, and Group mode is a section of its own a few inches
@@ -2544,6 +2623,7 @@
   DRAWN_ELSEWHERE[MAINTENANCE.key] = true;
   DRAWN_ELSEWHERE[BANNER_ON.key] = true;
   DRAWN_ELSEWHERE[BANNER_MESSAGE_KEY] = true;
+  DRAWN_ELSEWHERE[READING_PLAN_ON.key] = true;
   // Open and Closed live at the cafe counter, as two buttons. A date in a
   // text box here would only be a way to get it wrong.
   DRAWN_ELSEWHERE.cafe_open_override = true;
@@ -2568,6 +2648,9 @@
 
     // The banner, with its own Edit and Save. See bannerSection.
     html += bannerSection();
+
+    // The reading plan, its switch and its link. See readingPlanSection.
+    html += readingPlanSection();
 
     var rows = HC.admin.settings().filter(function (s) {
       return !DRAWN_ELSEWHERE[s.key];
@@ -2882,7 +2965,15 @@
     startBannerDraft: function () {
       bannerDraft = { message: bannerMessage(), notify: false };
     },
-    clearBannerDraft: function () { bannerDraft = null; }
+    clearBannerDraft: function () { bannerDraft = null; },
+
+    // The reading plan: its switch, its link, and the link being typed.
+    readingPlan: function () { return READING_PLAN_ON; },
+    readingPlanOn: readingPlanOn,
+    readingPlanLink: readingPlanLink,
+    getReadingPlanLinkDraft: function () { return readingPlanLinkDraft; },
+    setReadingPlanLinkDraft: function (value) { readingPlanLinkDraft = value; },
+    clearReadingPlanLinkDraft: function () { readingPlanLinkDraft = null; }
   };
 
 })(window.HC = window.HC || {});

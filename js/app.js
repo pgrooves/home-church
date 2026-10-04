@@ -2947,6 +2947,42 @@
       }));
     },
 
+    /* The Reading plan card on Home, on or off for the whole church. Same
+       shape as the page switches: drawn whether or not its row exists, and
+       the first tap writes it. */
+    'admin-reading-plan-toggle': function (el) {
+      var h = HC.screens.adminHelpers;
+      var next = !h.readingPlanOn();
+      setSwitch(el, next);
+      HC.native.tap('Light');
+      adminRun('setting:' + h.readingPlan().key, HC.admin.saveSwitch(h.readingPlan(), next));
+    },
+
+    /* The plan's link, on Save only. An address pasted without its https://
+       gets one, since that is what a phone's share sheet usually leaves off,
+       and anything that still is not a link stops here with the same words
+       the database would have used. */
+    'admin-reading-plan-link-save': function () {
+      var h = HC.screens.adminHelpers;
+      var typed = h.getReadingPlanLinkDraft();
+      var url = String(typed == null ? h.readingPlanLink() : typed).trim();
+
+      if (url && !/^https?:\/\//i.test(url) && /^[^\s\/]+\.[^\s]+$/.test(url)) {
+        url = 'https://' + url;
+      }
+      if (url && !/^https?:\/\/\S+$/i.test(url)) {
+        HC.components.toast('That does not look like a link. Paste the whole address, starting with https://.');
+        return;
+      }
+
+      adminRun('reading-plan-link', HC.admin.setReadingPlanLink(url).then(function () {
+        h.clearReadingPlanLinkDraft();
+        HC.components.toast(url
+          ? 'Saved. The reading plan on Home opens the new link.'
+          : 'Saved. The reading plan on Home has no link now.');
+      }));
+    },
+
     'admin-setting-delete': function (el) {
       var key = el.getAttribute('data-id');
       var row = HC.admin.settings().filter(function (s) { return s.key === key; })[0];
@@ -4906,6 +4942,12 @@
     if (name === 'bannerMessage') {
       var bd = h.getBannerDraft();
       if (bd) bd.message = value;
+      return;
+    }
+
+    // The reading plan's link, held until Save. See readingPlanSection.
+    if (name === 'readingPlanLink') {
+      h.setReadingPlanLinkDraft(value);
       return;
     }
 

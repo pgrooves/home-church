@@ -654,9 +654,17 @@
      against whatever is in it. No plan at all renders nothing and Home drops
      the section, rather than printing "undefined" or dividing by zero in
      front of a congregation. */
+  /* Whether Home has a reading plan to draw at all. No plan, or one switched
+     off under App settings, usually between series while the next plan is
+     not ready, and the section goes. On without a row. See 0088. */
+  function readingPlanShown(plan) {
+    if (!plan || !plan.title) return false;
+    return HC.data.setting('reading_plan_on', true) !== false;
+  }
+
   function readingPlanRow() {
     var plan = HC.data.readingPlan;
-    if (!plan || !plan.title) return '';
+    if (!readingPlanShown(plan)) return '';
 
     var total = plan.totalWeeks || 0;
     var week = planWeek(plan);
@@ -870,6 +878,7 @@
   HC.screens.homeHelpers = {
     planWeek: planWeek,
     planReading: planReading,
+    readingPlanShown: readingPlanShown,
 
     /* The two halves of the announcement list, out where a test can reach
        them without a DOM. Both are pure functions of HC.data and the archive

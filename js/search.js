@@ -524,7 +524,9 @@
       }));
     });
 
-    if (d.readingPlan) {
+    // Not while it is switched off on Home, since that is where it leads.
+    if (d.readingPlan && d.readingPlan.title &&
+        HC.data.setting('reading_plan_on', true) !== false) {
       out.push(entry({
         kind: 'Reading plan',
         title: d.readingPlan.title,
