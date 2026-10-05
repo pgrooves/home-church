@@ -1205,6 +1205,14 @@
 
     html += '<p class="hc-caption hc-admin__warn">' + esc(p.note) + '</p>';
 
+    /* Said only when it is true. Gemini was busy and the backup model wrote
+       this wording, and the person about to put it on Home should read it
+       knowing that. content-merge sends null whenever Gemini wrote it. */
+    if (p.written_by) {
+      html += '<p class="hc-caption hc-admin__warn">Written by ' + esc(p.written_by) +
+        ', because Gemini was busy. Read it closely before saving.</p>';
+    }
+
     html += '<dl class="hc-merge__diff">';
     (p.changes || []).forEach(function (change) {
       html += '<dt class="hc-caption hc-merge__field">' + esc(change.label) + '</dt>' +

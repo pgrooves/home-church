@@ -59,6 +59,8 @@
  *
  * SECRETS, all shared project-wide and already set for the newsletter intake:
  *   HC_NEWSLETTER_CRON_SECRET, GEMINI_API_KEY, GEMINI_MODEL (optional)
+ *   GROQ_API_KEY, GROQ_MODEL (both optional): asked only when Gemini is busy.
+ *   See supabase/functions/_shared/groq.mjs.
  *
  * BY HAND:
  *   curl -X POST https://ibqkumxfltfiuqevviji.supabase.co/functions/v1/announcement-dedupe \
@@ -75,6 +77,7 @@
  */
 
 import { createClient } from 'jsr:@supabase/supabase-js@2';
+import { askGroq, geminiWasBusy, GROQ_LABEL } from '../_shared/groq.mjs';
 
 const DEFAULT_MODEL = 'gemini-3.5-flash';
 
@@ -226,13 +229,18 @@ interface Answer {
   whats_new?: string;
 }
 
+/* The answers, and who gave them: null for Gemini, GROQ_LABEL when Gemini was
+   busy and the backup answered. Who it was ends up in the note the admin
+   reads, so a flag from the backup says so. */
 async function ask(
   apiKey: string,
   model: string,
   drafts: Row[],
   candidates: Row[],
-): Promise<Answer[]> {
-  let res: Response;
+): Promise<{ answers: Answer[]; by: string | null }> {
+  const text = prompt(drafts, candidates);
+  let res: Response | null = null;
+  let busy = '';
   try {
     res = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`,
@@ -240,7 +248,7 @@ async function ask(
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          contents: [{ role: 'user', parts: [{ text: prompt(drafts, candidates) }] }],
+          contents: [{ role: 'user', parts: [{ text }] }],
           generationConfig: {
             temperature: 0.1,
             maxOutputTokens: 8192,
@@ -251,23 +259,42 @@ async function ask(
       },
     );
   } catch (err) {
-    throw new TransientError(`Could not reach Gemini: ${String((err as Error).message ?? err)}`);
+    busy = `Could not reach Gemini: ${String((err as Error).message ?? err)}`;
   }
 
-  if (!res.ok) {
+  if (!res || !res.ok) {
     /* Left completely alone on a busy model, which is what makes the tick safe
        to leave running: dedupe_checked_at stays null, so the next tick five
        minutes later tries the same rows again. The one thing that must never
        happen here is a row marked checked because the model was busy — that
-       is a duplicate that silently never gets caught. */
-    if (res.status === 429) {
-      throw new TransientError('Gemini is rate limiting us. The announcements are untouched and the next tick tries again.');
+       is a duplicate that silently never gets caught.
+
+       BUSY GOES TO GROQ FIRST, when its key is set, and only busy does. A
+       Groq failure of any kind lands in the same TransientError as before. */
+    if (res && !geminiWasBusy(res.status)) {
+      const detail = await res.text().catch(() => '');
+      throw new Error(`Gemini returned ${res.status}: ${detail.slice(0, 300)}`);
     }
-    if (res.status >= 500) {
-      throw new TransientError(`Gemini is busy (${res.status}). The announcements are untouched and the next tick tries again.`);
+    if (res) {
+      busy = res.status === 429
+        ? 'Gemini is rate limiting us.'
+        : `Gemini is busy (${res.status}).`;
     }
-    const detail = await res.text().catch(() => '');
-    throw new Error(`Gemini returned ${res.status}: ${detail.slice(0, 300)}`);
+
+    const groqKey = Deno.env.get('GROQ_API_KEY');
+    if (groqKey) {
+      const backup = await askGroq({
+        apiKey: groqKey, model: Deno.env.get('GROQ_MODEL'), prompt: text,
+        schema: SCHEMA, temperature: 0.1, maxTokens: 4096,
+      });
+      if (backup.ok) {
+        console.warn(`announcement-dedupe: ${busy} Answered by ${backup.model}.`);
+        const results = (backup.value as { results?: unknown }).results;
+        return { answers: Array.isArray(results) ? results as Answer[] : [], by: GROQ_LABEL };
+      }
+      busy += ` ${backup.reason}`;
+    }
+    throw new TransientError(`${busy} The announcements are untouched and the next tick tries again.`);
   }
 
   const payload = await res.json();
@@ -280,7 +307,7 @@ async function ask(
   }
 
   const parsed = JSON.parse(raw);
-  return Array.isArray(parsed?.results) ? parsed.results : [];
+  return { answers: Array.isArray(parsed?.results) ? parsed.results : [], by: null };
 }
 
 /* Which of two rows the church keeps. Posted beats waiting, because it is the
@@ -413,7 +440,7 @@ async function run(
     };
   }
 
-  const answers = await ask(apiKey, model, drafted, everything);
+  const { answers, by } = await ask(apiKey, model, drafted, everything);
 
   const byDraft = new Map(answers.map((a) => [String(a.draft_id ?? ''), a]));
   const stamp = new Date().toISOString();
@@ -458,7 +485,11 @@ async function run(
       const keep = survivor(draft, other);
       const lose = keep.id === draft.id ? other : draft;
       const target = root(keep.id, byId);
-      const note = String(answer?.whats_new ?? '').trim().slice(0, 200) || null;
+      const said = String(answer?.whats_new ?? '').trim().slice(0, 200);
+      /* Signed when the backup made the call, in the note the review card
+         prints after "Looks like an update to". The admin deciding whether to
+         merge should know which model thought these were the same thing. */
+      const note = by ? `${said || 'Same thing.'} (Checked by ${by}.)` : said || null;
 
       /* The flag goes on the loser, which is not always the row being checked:
          a newsletter draft matched against an older draft leaves the older one

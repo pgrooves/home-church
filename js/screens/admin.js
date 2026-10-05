@@ -877,6 +877,17 @@
       c.esc(lead + ' ' + (note.approved_by_name || 'an admin')) + c.esc(when) + '</p>';
   }
 
+  /* Which model drafted this, said only when it was the backup. The newsletter
+     intake asks Groq when Gemini is busy and stamps written_by on what it
+     wrote (migration 0089). The wording came from a different model than
+     usual, and whoever approves it should read it knowing that. Nothing on
+     a row Gemini or a person wrote. */
+  function writtenByNote(row) {
+    if (!row || !row.written_by) return '';
+    return '<p class="hc-caption hc-admin__warn">Drafted by ' + c.esc(row.written_by) +
+      ' because Gemini was busy. Read it closely before approving.</p>';
+  }
+
   function reviewSection(rows) {
     var html = c.sectionHeader('', 'Needs review');
     html += '<p class="hc-caption hc-admin__intro-note">Parsed out of the newsletter ' +
@@ -902,6 +913,7 @@
         '<div class="hc-admin__item-head">' +
           '<p class="hc-eyebrow">' + c.esc(from) + '</p>' +
           '<p class="hc-row__title">' + c.esc(row.title) + '</p>' +
+          writtenByNote(row) +
           (row.body ? '<p class="hc-caption">' + c.esc(row.body) + '</p>' : '') +
           (updates
             ? '<p class="hc-caption hc-admin__warn">Looks like an update to “' +
@@ -1002,6 +1014,7 @@
         '<div class="hc-admin__item-head">' +
           '<p class="hc-eyebrow">' + c.esc(eventWhen(row)) + '</p>' +
           '<p class="hc-row__title">' + c.esc(row.title) + '</p>' +
+          writtenByNote(row) +
           (row.location
             ? '<p class="hc-caption">' + c.esc(row.location) + '</p>'
             : '<p class="hc-caption hc-admin__review-dates">No location given.</p>') +
@@ -1154,6 +1167,7 @@
         '<div class="hc-admin__item-head">' +
           '<p class="hc-eyebrow">' + c.esc(eventWhen(row)) + '</p>' +
           '<p class="hc-row__title">' + c.esc(row.title) + '</p>' +
+          writtenByNote(row) +
           (row.location ? '<p class="hc-caption">' + c.esc(row.location) + '</p>' : '') +
           sameNightNote(row) +
           approvedNote('event', row.id, 'Approved by') +

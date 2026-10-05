@@ -55,6 +55,8 @@
  *
  * SECRETS, shared project-wide and already set for the newsletter intake:
  *   GEMINI_API_KEY, GEMINI_MODEL (optional)
+ *   GROQ_API_KEY, GROQ_MODEL (both optional): asked only when Gemini is busy,
+ *   and the preview then says so. See supabase/functions/_shared/groq.mjs.
  *
  * DEPLOY
  *   supabase functions deploy content-merge
@@ -64,6 +66,7 @@
  */
 
 import { createClient } from 'jsr:@supabase/supabase-js@2';
+import { askGroq, geminiWasBusy, GROQ_LABEL } from '../_shared/groq.mjs';
 
 const DEFAULT_MODEL = 'gemini-3.5-flash';
 const CHURCH_TZ = 'America/Chicago';
@@ -286,13 +289,16 @@ function eventDays(r: Row): string[] {
 
 /* ------------------------------------------------------------- the model */
 
+/* The model's answer, and who gave it: null for Gemini, GROQ_LABEL when Gemini
+   was busy and the backup answered. The preview carries that through to the
+   admin, who is about to put these words on Home. */
 async function ask(
   apiKey: string,
   model: string,
   text: string,
   schema: unknown,
-): Promise<Record<string, unknown>> {
-  let res: Response;
+): Promise<{ said: Record<string, unknown>; by: string | null }> {
+  let res: Response | null = null;
   try {
     res = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`,
@@ -311,7 +317,26 @@ async function ask(
       },
     );
   } catch (err) {
-    throw new Error(`Could not reach the model: ${String((err as Error).message ?? err)}`);
+    console.error('content-merge: could not reach Gemini', String((err as Error).message ?? err));
+  }
+
+  /* Busy goes to the backup when its key is set, before the admin is told to
+     try again. Somebody is standing at this button; a minute's wait is the
+     thing worth saving them. */
+  if (!res || geminiWasBusy(res.status)) {
+    const groqKey = Deno.env.get('GROQ_API_KEY');
+    if (groqKey) {
+      const backup = await askGroq({
+        apiKey: groqKey, model: Deno.env.get('GROQ_MODEL'), prompt: text,
+        schema, temperature: 0.2, maxTokens: 4096,
+      });
+      if (backup.ok) {
+        console.warn(`content-merge: Gemini ${res ? res.status : 'unreachable'}, answered by ${backup.model}`);
+        return { said: backup.value as Record<string, unknown>, by: GROQ_LABEL };
+      }
+      console.error('content-merge: backup failed too.', backup.reason);
+    }
+    if (!res) throw new Error('Could not reach the model. Try again in a minute.');
   }
 
   if (res.status === 429) {
@@ -332,7 +357,7 @@ async function ask(
     throw new Error(`The model returned nothing to read (${reason}).`);
   }
 
-  return JSON.parse(raw);
+  return { said: JSON.parse(raw), by: null };
 }
 
 /* ---------------------------------------------------------- the two merges */
@@ -597,10 +622,11 @@ Deno.serve(async (req: Request) => {
   }
 
   let said: Record<string, unknown>;
+  let by: string | null;
   try {
-    said = kind === 'announcement'
+    ({ said, by } = kind === 'announcement'
       ? await ask(geminiKey, model, announcementPrompt(keep, other), ANNOUNCEMENT_SCHEMA)
-      : await ask(geminiKey, model, eventPrompt(keep, other), EVENT_SCHEMA);
+      : await ask(geminiKey, model, eventPrompt(keep, other), EVENT_SCHEMA));
   } catch (err) {
     return json({ error: String((err as Error).message ?? err) }, 502);
   }
@@ -631,5 +657,7 @@ Deno.serve(async (req: Request) => {
          'The other one adds something. What changes is below.'),
     fields: merged.fields,
     changes: merged.changes,
+    // Null when Gemini wrote it, as it nearly always will. See ask().
+    written_by: by,
   });
 });

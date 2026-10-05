@@ -58,6 +58,10 @@
  *                               account password and NOT a 2FA backup code
  *   GEMINI_API_KEY              from Google AI Studio
  *   GEMINI_MODEL                optional, defaults below
+ *   GROQ_API_KEY                optional, from console.groq.com. Asked only
+ *                               when every Gemini model is busy, and never
+ *                               for a HomeKids email. See _shared/groq.mjs.
+ *   GROQ_MODEL                  optional, defaults in _shared/groq.mjs
  *
  * TWO MODES FOR WHEN IT IS NOT WORKING, both POSTed with the same secret:
  *   {"probe": true}     opens the socket, logs in, counts the inbox, and
@@ -81,6 +85,7 @@
  */
 
 import { createClient } from 'jsr:@supabase/supabase-js@2';
+import { askGroq, GROQ_LABEL } from '../_shared/groq.mjs';
 
 /* The model, overridable by secret so a model being retired or getting
    congested is a dashboard edit rather than a redeploy. Neither of those is
@@ -1142,6 +1147,26 @@ function fallbackModels(primary: string): string[] {
   return [...new Set(list)].filter((m) => m !== primary);
 }
 
+/* An insert of newly parsed drafts, which carries written_by when the backup
+   wrote them. If migration 0089 has not been run the column does not exist,
+   and the insert is tried once more without it: losing the label is a
+   nuisance, losing the newsletter is the thing this whole file exists to
+   prevent. Returns the error, or null. */
+async function insertDrafts(
+  admin: ReturnType<typeof createClient>,
+  table: 'announcements' | 'events',
+  rows: Array<Record<string, unknown>>,
+): Promise<{ message: string } | null> {
+  const { error } = await admin.from(table).insert(rows);
+  if (!error || !/written_by/.test(error.message) || !rows.some((r) => 'written_by' in r)) {
+    return error;
+  }
+  console.error(`newsletter-intake: ${table}.written_by is missing, run migration 0089. Writing without the label.`);
+  const bare = rows.map(({ written_by: _drop, ...rest }) => rest);
+  const retry = await admin.from(table).insert(bare);
+  return retry.error;
+}
+
 async function askGemini(
   apiKey: string,
   model: string,
@@ -1156,9 +1181,10 @@ async function askGemini(
      the fallback models and the truncation handling, is the same for both,
      which is the reason this is a parameter and not a second function. */
   spec?: { prompt: string; schema: unknown; key: string },
-): Promise<Parsed[]> {
+): Promise<{ items: Parsed[]; by: string | null }> {
+  const asked = spec ? spec.prompt : prompt(text, links, images, emailDate);
   const request = JSON.stringify({
-    contents: [{ role: 'user', parts: [{ text: spec ? spec.prompt : prompt(text, links, images, emailDate) }] }],
+    contents: [{ role: 'user', parts: [{ text: asked }] }],
     generationConfig: {
       /* 1.0, which is Gemini 3's default, and not the 0.2 this used to
          ask for. Google's guidance for the Gemini 3 models is to leave
@@ -1252,6 +1278,28 @@ async function askGemini(
   }
 
   if (!res) {
+    /* EVERY GEMINI MODEL WAS BUSY. The backup gets one go, when its key is
+       set, with the same prompt word for word, and only for a newsletter.
+       Never for a HomeKids email (a `spec`): what families read is written by
+       Gemini or waits for it. Whatever Groq drafts is stamped written_by so
+       the review queue says so, and lands in the same pending queue as
+       everything else here. A Groq failure of any kind is the same
+       TransientError this always was. */
+    const groqKey = spec ? undefined : Deno.env.get('GROQ_API_KEY');
+    if (groqKey) {
+      const backup = await askGroq({
+        apiKey: groqKey, model: Deno.env.get('GROQ_MODEL'), prompt: asked,
+        schema: SCHEMA, temperature: 1.0, maxTokens: 8192,
+      });
+      const list = backup.ok
+        ? (backup.value as Record<string, unknown>).announcements
+        : undefined;
+      if (backup.ok && Array.isArray(list)) {
+        console.warn(`newsletter-intake: ${busy} Answered by ${backup.model}.`);
+        return { items: list as Parsed[], by: GROQ_LABEL };
+      }
+      busy += ` ${backup.ok ? 'Groq returned no announcements array.' : backup.reason}`;
+    }
     throw new TransientError(
       `${busy || 'Gemini did not answer.'} Tried ${models.join(', ')}. ` +
       'The newsletter is untouched and the next run will try again.',
@@ -1318,7 +1366,7 @@ async function askGemini(
   if (!Array.isArray(list)) {
     throw new TransientError(`Gemini returned no ${key} array (${finish}; ${spent}). Trying again next run.`);
   }
-  return list as Parsed[];
+  return { items: list as Parsed[], by: null };
 }
 
 /* ========================================================================
@@ -2663,7 +2711,7 @@ Deno.serve(async (req: Request) => {
              announcements. Settles and moves on from here, so nothing below
              this block ever sees it. */
           if (kidsAudience) {
-            const kidsItems = await askGemini(
+            const { items: kidsItems } = await askGemini(
               geminiKey!, model, text, links, images, emailDay, tuning,
               { prompt: homekidsPrompt(kidsAudience, text, links, emailDay),
                 schema: HOMEKIDS_SCHEMA, key: 'items' },
@@ -2705,9 +2753,14 @@ Deno.serve(async (req: Request) => {
             continue;
           }
 
-          const items = await askGemini(
+          const { items, by: writtenBy } = await askGemini(
             geminiKey!, model, text, links, images, emailDay, tuning,
           );
+          /* Who drafted these, on every row they become, and only when it
+             was the backup: the review queue prints it so whoever approves
+             knows to read closely. Absent, not null, when Gemini wrote them,
+             so a database without migration 0089 never sees the column. */
+          const stamp = writtenBy ? { written_by: writtenBy } : {};
 
           const allowedLinks = links.map((l) => l.url);
 
@@ -2792,6 +2845,7 @@ Deno.serve(async (req: Request) => {
                 // different decision from the wording of a card.
                 published: false,
                 review_state: 'pending',
+                ...stamp,
               }
               : null;
 
@@ -2847,6 +2901,7 @@ Deno.serve(async (req: Request) => {
               review_state: 'pending',
               source: 'newsletter',
               pinned: false,
+              ...stamp,
             };
           }).filter(Boolean) as Array<Record<string, unknown>>;
 
@@ -2856,7 +2911,7 @@ Deno.serve(async (req: Request) => {
               'Read it, but nothing in it looked like an announcement.', linkNote,
             ].filter(Boolean).join(' ').slice(0, 500);
           } else if (dryRun) {
-            preview.push({ subject, drafts: rows, links: linkNote });
+            preview.push({ subject, drafts: rows, links: linkNote, written_by: writtenBy });
             draftCount += rows.length;
           } else {
             /* The ledger row is already there — the claim above wrote it
@@ -2879,7 +2934,7 @@ Deno.serve(async (req: Request) => {
                announcement referring to an event that does not exist, which
                the database refuses outright. */
             if (events.length) {
-              const { error: eventError } = await admin.from('events').insert(events);
+              const eventError = await insertDrafts(admin, 'events', events);
               if (eventError) {
                 throw new Error(`Could not write the events: ${eventError.message}`);
               }
@@ -2889,13 +2944,16 @@ Deno.serve(async (req: Request) => {
             }
 
             const withSource = rows.map((r) => ({ ...r, source_email_id: emailId }));
-            const { error: insertError } = await admin.from('announcements').insert(withSource);
+            const insertError = await insertDrafts(admin, 'announcements', withSource);
             if (insertError) {
               throw new Error(`Could not write the drafts: ${insertError.message}`);
             }
 
             await settleEmail(admin, emailId, {
-              status: 'parsed', drafts: rows.length, note: linkNote,
+              status: 'parsed',
+              drafts: rows.length,
+              note: [writtenBy ? `Gemini was busy; drafted by ${writtenBy}.` : null, linkNote]
+                .filter(Boolean).join(' ').slice(0, 500) || null,
             });
 
             draftCount += rows.length;
