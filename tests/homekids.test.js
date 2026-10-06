@@ -156,6 +156,8 @@ const oct = app();
 ok('on the last Sunday, October is the four weeks that are already over, oldest first',
   oct.HC.data.homekidsMonthLessons('2026-10', '2026-10-25').map(l => l.taughtOn),
   ['2026-09-27', '2026-10-04', '2026-10-11', '2026-10-18']);
+ok('the card says which days October covers, Sunday to Saturday',
+  oct.HC.data.homekidsMonthSpan('2026-10', '2026-10-25'), { from: '2026-09-27', to: '2026-10-24' });
 ok('and that Sunday’s own lesson waits for November',
   oct.HC.data.homekidsMonthLessons('2026-11', '2026-10-25').map(l => l.taughtOn), ['2026-10-25']);
 ok('which is the report the page opens on that morning',

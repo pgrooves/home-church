@@ -4237,6 +4237,8 @@ button.hc-cal__day { cursor: pointer; }
 
 .hc-kids-report__month .hc-kids-teacher__title { margin-top: 0; }
 
+.hc-kids-report__span { margin-top: 2px; }
+
 .hc-kids-report__week {
   margin-top: var(--hc-space-lg);
   padding-top: var(--hc-space-base);

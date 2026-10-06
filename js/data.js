@@ -3076,6 +3076,17 @@
       }).reverse();
     },
 
+    /* The days a month's report covers, from its first lesson's Sunday to the
+       Saturday its last week ends on, so the card can say "Sep 27 to Oct 24"
+       and a September date in October's report reads as meant. */
+    homekidsMonthSpan: function (month, today) {
+      var lessons = this.homekidsMonthLessons(month, today);
+      if (!lessons.length) return null;
+      var p = this.homekidsWeekEnds(lessons[lessons.length - 1]).split('-').map(Number);
+      var last = new Date(Date.UTC(p[0], p[1] - 1, p[2] - 1)).toISOString().slice(0, 10);
+      return { from: lessons[0].taughtOn, to: last };
+    },
+
     // The month the report opens on: this one, or the newest that has weeks.
     homekidsReportMonth: function (today) {
       today = today || isoToday();

@@ -619,7 +619,8 @@
      lesson on pages of its own so it can be read again at the kitchen table.
      js/screens/homekids.js gathers the month and hands it over as
 
-       { monthLabel: 'October 2026', name: 'Ava and Leo',
+       { monthLabel: 'October 2026', spanLabel: '4 weeks, Sep 27 to Oct 24',
+         name: 'Ava and Leo',
          group: { key, name, ages } or null,
          groups: every group, for when the family has not picked one,
          weeks: [ { lesson, checked: { itemId: true } }, ... ] }   oldest first
@@ -817,7 +818,8 @@
       { text: report.name ? 'A month of HomeKids with ' + report.name : 'A month of HomeKids',
         style: TYPE.coverSubtitle, before: 6 },
       { divider: true, before: 18 },
-      { text: weeks.length + (weeks.length === 1 ? ' week' : ' weeks') + ' · ' +
+      { text: (report.spanLabel ||
+          weeks.length + (weeks.length === 1 ? ' week' : ' weeks')) + ' · ' +
           done + ' of ' + total + ' done',
         style: TYPE.coverMeta, before: 18 },
       { text: report.group ? report.group.name + ' · ages ' + report.group.ages : '',

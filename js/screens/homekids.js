@@ -671,6 +671,18 @@
     return c.monthNames[parseInt(p[1], 10) - 1] + ' ' + p[0];
   }
 
+  // "4 weeks, Sep 27 to Oct 24", so a September date in October reads as meant.
+  function spanLabel(month) {
+    var span = HC.data.homekidsMonthSpan(month);
+    if (!span) return '';
+    var n = HC.data.homekidsMonthLessons(month).length;
+    var short = function (iso) {
+      return c.monthNames[parseInt(iso.slice(5, 7), 10) - 1].slice(0, 3) + ' ' +
+        parseInt(iso.slice(8, 10), 10);
+    };
+    return n + (n === 1 ? ' week, ' : ' weeks, ') + short(span.from) + ' to ' + short(span.to);
+  }
+
   function weekTally(lesson) {
     var ids = lesson.checklist.map(function (i) { return i.id; });
     return { done: HC.store.kidsCheckedCount(lesson.id, ids), total: ids.length };
@@ -683,6 +695,7 @@
     return {
       month: month,
       monthLabel: monthLabel(month),
+      spanLabel: spanLabel(month),
       name: HC.store.kidsName(),
       group: HC.data.getHomekidsGroup(HC.store.kidsGroup()),
       groups: HC.data.homekidsGroups || [],
@@ -749,6 +762,7 @@
             'data-step="-1" aria-label="The month after"' + (at <= 0 ? ' disabled' : '') + '>' +
             c.icon('chevronRight', 'hc-cal__step-icon') + '</button>' +
         '</div>' +
+        '<p class="hc-caption hc-kids-report__span">' + c.esc(spanLabel(month)) + '</p>' +
         '<label class="hc-kids-teacher__name">' +
           '<span class="hc-caption">Whose report is this?</span>' +
           '<input class="hc-input" type="text" data-homekids-name autocomplete="off" ' +

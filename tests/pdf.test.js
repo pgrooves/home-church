@@ -385,7 +385,8 @@ const GROUPS = [
 ];
 
 const kidsReport = {
-  monthLabel: 'October 2026', name: 'Ava and Leo', group: null, groups: GROUPS,
+  monthLabel: 'October 2026', spanLabel: '4 weeks, Sep 27 to Oct 24',
+  name: 'Ava and Leo', group: null, groups: GROUPS,
   weeks: [
     { lesson: kidsLesson('k1', '2026-09-27', 'Brave Like David'), checked: { story: true, verse: true, pray: true } },
     { lesson: kidsLesson('k2', '2026-10-04', 'The Lost Sheep'), checked: { story: true } },
@@ -425,7 +426,8 @@ const kidsLines = linesOf(kidsPdf);
 ok('the kids month opens on a branded cover',
   says(kidsLines[0], 'HOME CHURCH · HOMEKIDS') && says(kidsLines[0], 'October 2026'), true);
 ok('with whose month it is', says(kidsLines[0], 'A month of HomeKids with Ava and Leo'), true);
-ok('and the month’s tally', says(kidsLines[0], '4 WEEKS · 5 OF 12 DONE'), true);
+ok('and the days it covers, with the month’s tally',
+  says(kidsLines[0], '4 WEEKS, SEP 27 TO OCT 24 · 5 OF 12 DONE'), true);
 ok('the checklist comes first, straight after the cover',
   says(kidsLines[1], 'This month’s checklist'), true);
 ok('each week says how it went', anywhere(kidsLines, '1 of 3 done'), true);
