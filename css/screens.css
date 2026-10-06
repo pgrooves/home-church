@@ -4073,6 +4073,18 @@ button.hc-cal__day { cursor: pointer; }
 
 .hc-kids-progress { margin-top: var(--hc-space-md); text-align: center; }
 
+.hc-kids-saved {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--hc-space-xs);
+  margin-top: var(--hc-space-xs);
+  color: var(--hc-success);
+}
+
+.hc-kids-saved[hidden] { display: none; }
+.hc-kids-saved__icon { width: 16px; height: 16px; flex: none; }
+
 .hc-kids-show { margin-top: var(--hc-space-base); }
 
 /* ---- for parents, for volunteers ---- */
@@ -4214,6 +4226,39 @@ button.hc-cal__day { cursor: pointer; }
 }
 
 .hc-kids-teacher__foot { margin-top: var(--hc-space-sm); }
+
+/* The monthly report: the same card, a month at a time. */
+.hc-kids-report__month {
+  display: grid;
+  grid-template-columns: var(--hc-tap-min) 1fr var(--hc-tap-min);
+  align-items: center;
+  margin-top: var(--hc-space-xs);
+}
+
+.hc-kids-report__month .hc-kids-teacher__title { margin-top: 0; }
+
+.hc-kids-report__week {
+  margin-top: var(--hc-space-lg);
+  padding-top: var(--hc-space-base);
+  border-top: 1px solid var(--hc-rule);
+  text-align: left;
+}
+
+.hc-kids-report__week .hc-kids-teacher__list { margin-top: var(--hc-space-xs); }
+
+.hc-kids-report__lesson {
+  margin-top: 2px;
+  font-family: var(--hc-serif);
+  font-weight: 500;
+  font-size: 19px;
+  line-height: 1.3;
+  color: var(--hc-ink);
+}
+
+.hc-kids-report__tally { margin-top: 2px; }
+.hc-kids-report__week[data-done="true"] .hc-kids-report__tally { color: var(--hc-ink); }
+
+.hc-kids-report__pdf { margin-top: var(--hc-space-lg); width: 100%; }
 
 @media (prefers-reduced-motion: reduce) {
   .hc-kids-teacher { animation: none; }

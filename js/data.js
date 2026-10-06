@@ -3039,6 +3039,51 @@
       return this.homekidsLessonsByDate(today)[0] || null;
     },
 
+    /* THE MONTHLY REPORT, and which weeks belong to which month.
+
+       A family shows the teacher on the last Sunday of the month. A week's
+       ticks are done in the seven days after its lesson, so a week counts
+       toward the month of the Sunday it ends on, not the one it starts on:
+       the lesson taught on October 25 is still being worked through that
+       Sunday, and it lands in November's report. So October's report on
+       October 25 is the four weeks that started on September 27, October 4,
+       11 and 18, every one of them finished by the time it is shown.
+
+       Months are 'YYYY-MM'. `today` is optional, the tests pass one. */
+    homekidsWeekEnds: function (lesson) {
+      var p = String(lesson.taughtOn).split('-').map(Number);
+      var d = new Date(Date.UTC(p[0], p[1] - 1, p[2] + 7));
+      return d.toISOString().slice(0, 10);
+    },
+
+    homekidsReportMonths: function (today) {
+      var self = this;
+      var seen = {};
+      return this.homekidsLessonsByDate(today).map(function (l) {
+        return self.homekidsWeekEnds(l).slice(0, 7);
+      }).filter(function (m) {
+        if (seen[m]) return false;
+        seen[m] = true;
+        return true;
+      });
+    },
+
+    // Oldest week first, the order a month is lived in.
+    homekidsMonthLessons: function (month, today) {
+      var self = this;
+      return this.homekidsLessonsByDate(today).filter(function (l) {
+        return self.homekidsWeekEnds(l).slice(0, 7) === month;
+      }).reverse();
+    },
+
+    // The month the report opens on: this one, or the newest that has weeks.
+    homekidsReportMonth: function (today) {
+      today = today || isoToday();
+      var months = this.homekidsReportMonths(today);
+      var now = today.slice(0, 7);
+      return months.indexOf(now) !== -1 ? now : (months[0] || null);
+    },
+
     /* What the emails said that is still true today, for one audience,
        newest email first. ends_on is the first day an item is gone, the same
        rule announcements keep. */

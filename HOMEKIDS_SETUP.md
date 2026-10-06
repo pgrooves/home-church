@@ -7,9 +7,19 @@ between **Practices** and **Services**. It has three jobs:
    after it is taught: the big idea, the story, the memory verse, questions and
    an activity for the family's age group, and a prayer.
 2. **The checklist and the prize box.** Three or four things a family does
-   together during the week. Each one is a big tick box. Next Sunday the family
-   taps **Show my teacher** and holds up the card; a full card earns a pick
-   from the prize box. The ticks live on the phone only, no account needed.
+   together during the week. Each one is a big tick box, saved on the phone the
+   moment it is tapped ("Weekly progress saved on this phone"). On the last
+   Sunday of the month the family taps **Monthly report** and holds up the
+   card: every week of the month, its ticks, and a total. **Download as PDF**
+   on the card saves the month as a Home Church branded PDF (the checklist
+   first, then each week's lesson on pages of its own) through the share sheet,
+   where Save to Files is. The ticks live on the phone only, no account needed.
+
+   A week counts toward the month of the Sunday it **ends** on, so the report
+   shown on the last Sunday holds only weeks that are already over: October's
+   is the weeks that began September 27, October 4, 11 and 18, and the lesson
+   taught on October 25 starts November's. The arrows on the card step back
+   through earlier months.
 3. **The two HomeKids emails.** What the weekly email to parents said, and,
    folded away underneath, what the email to volunteers said. Both arrive
    through the same mailbox reader as the church newsletter, and both wait for

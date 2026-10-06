@@ -1759,6 +1759,7 @@
     }
 
     function asHtml() {
+      if (!opts.html) return Promise.resolve(false);
       return opts.html().then(function (html) {
         return HC.native.shareFile(opts.name + '.html', html, 'text/html', opts.title);
       });
@@ -3703,8 +3704,44 @@
       HC.screens.homekidsHelpers.hideCalendar();
     },
 
-    'homekids-show': function (el) {
-      HC.screens.homekidsHelpers.showTeacher(el);
+    'homekids-report': function () {
+      HC.screens.homekidsHelpers.showReport();
+    },
+
+    'homekids-report-step': function (el) {
+      HC.screens.homekidsHelpers.stepReport(el);
+    },
+
+    /* The month as a PDF, with that month's lessons after the ticks, so a
+       family can keep it. On a phone it goes to the share sheet like every
+       other document here, where Save to Files is; in a browser it simply
+       downloads. There is no HTML sheet to fall back to for this one. */
+    'homekids-report-pdf': function (el) {
+      var report = HC.screens.homekidsHelpers.reportData(el.getAttribute('data-id'));
+      if (!report.weeks.length) return;
+      var name = 'homekids-' + report.month;
+      var title = 'HomeKids, ' + report.monthLabel;
+
+      if (!HC.native.isNative()) {
+        try {
+          var doc = HC.printPdf.kidsMonth(report);
+          var binary = atob(doc);
+          var bytes = new Uint8Array(binary.length);
+          for (var i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+          if (!HC.native.downloadInBrowser(name + '.pdf', bytes, 'application/pdf')) throw new Error('no download');
+        } catch (err) {
+          console.error('homekids: could not build the monthly report.', err);
+          c.toast('Could not put that together. Try again in a moment.');
+        }
+        return;
+      }
+
+      c.toast('Getting the report ready.');
+      handOverSheet({
+        name: name,
+        title: title,
+        pdf: function () { return HC.printPdf.kidsMonth(report); }
+      });
     },
 
     'homekids-hide': function () {

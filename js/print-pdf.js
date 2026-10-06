@@ -612,10 +612,241 @@
     return s.done();
   }
 
+  /* ------------------------------------------------------- the kids month
+
+     A family's HomeKids month, to keep on the phone: the ticks first, the
+     way they are shown to the teacher on the last Sunday, then each week's
+     lesson on pages of its own so it can be read again at the kitchen table.
+     js/screens/homekids.js gathers the month and hands it over as
+
+       { monthLabel: 'October 2026', name: 'Ava and Leo',
+         group: { key, name, ages } or null,
+         groups: every group, for when the family has not picked one,
+         weeks: [ { lesson, checked: { itemId: true } }, ... ] }   oldest first
+
+     so nothing in here reaches for the phone's storage. */
+
+  var BOX = 12;   // a tick box, in points
+
+  function tickBox(s, top, on) {
+    var page = s.page();
+    var x = s.left;
+    if (on) {
+      page.rect(x, top, BOX, BOX, ACCENT);
+      page.stroke([[x + 2.8, top + 6.3], [x + 5.1, top + 8.7], [x + 9.4, top + 3.6]], PAPER, 1.6);
+      return;
+    }
+    var t = 0.9;
+    page.rect(x, top, BOX, t, MID);
+    page.rect(x, top + BOX - t, BOX, t, MID);
+    page.rect(x, top, t, BOX, MID);
+    page.rect(x + BOX - t, top, t, BOX, MID);
+  }
+
+  function weekOf(lesson) {
+    return 'Week of ' + HC.components.formatDate(lesson.taughtOn);
+  }
+
+  function weekTally(week) {
+    var items = week.lesson.checklist || [];
+    var done = items.filter(function (i) { return week.checked[i.id] === true; }).length;
+    return { done: done, total: items.length };
+  }
+
+  // A labelled part of a lesson, kept with the first line of what follows.
+  function part(s, label, first, style, w) {
+    s.need(TYPE.sectionHd.leading + 11 + (first ? s.height(first, style || TYPE.body, w) : 0));
+    s.para(label, TYPE.sectionHd, { after: 4 });
+    s.rule({ after: 9 });
+  }
+
+  // Numbered, with the number hanging in the margin the way a guide's dashes do.
+  function numbered(s, list) {
+    list.forEach(function (q, i) {
+      var rows = s.lines(q, TYPE.item, s.width - 18);
+      s.need(rows.length * TYPE.item.leading);
+      s.page().text(String(i + 1), s.left,
+        HC.pdf.baseline(s.at(), TYPE.item.size, TYPE.item.leading),
+        { font: 'Helvetica-Bold', size: 9, color: ACCENT });
+      s.para(q, TYPE.item, { x: s.left + 18, after: 6 });
+    });
+  }
+
+  function kidsChecklistPages(s, report) {
+    var itemW = s.width - BOX - 10;
+    var h3 = styled('h2', { size: 15, leading: 19 });
+
+    s.open();
+    heading(s, 'Show your teacher', 'This month’s checklist', TYPE.item.leading * 2);
+
+    report.weeks.forEach(function (week) {
+      var lesson = week.lesson;
+      var items = lesson.checklist || [];
+      var tally = weekTally(week);
+
+      // The whole week together if it fits, so a teacher never turns a page
+      // halfway through somebody's Tuesday.
+      var block = TYPE.eyebrow.leading + 2 + s.height(lesson.title, h3) + 8 + TYPE.note.leading + 14;
+      items.forEach(function (i) { block += s.height(i.text, TYPE.item, itemW) + 6; });
+      s.need(block);
+
+      s.para(weekOf(lesson), TYPE.eyebrow, { after: 2 });
+      s.para(lesson.title, h3, { after: 4 });
+      s.rule({ after: 8 });
+
+      items.forEach(function (item) {
+        s.need(s.height(item.text, TYPE.item, itemW));
+        tickBox(s, s.at() + (TYPE.item.leading - BOX) / 2, week.checked[item.id] === true);
+        s.para(item.text, TYPE.item, { x: s.left + BOX + 10, width: itemW, after: 6 });
+      });
+
+      s.para(tally.done + ' of ' + tally.total + ' done', TYPE.note, { after: 14 });
+    });
+
+    var done = 0, total = 0, full = 0;
+    report.weeks.forEach(function (week) {
+      var t = weekTally(week);
+      done += t.done;
+      total += t.total;
+      if (t.total && t.done >= t.total) full++;
+    });
+    var all = total > 0 && done >= total;
+    var big = styled('h2', { size: 26, leading: 30 });
+    var line = all
+      ? 'Every box, every week. Time for the prize box.'
+      : full + ' of ' + report.weeks.length + (report.weeks.length === 1 ? ' week' : ' weeks') +
+        ' with every box ticked.';
+    var h = 14 + big.leading + 4 + s.height(line, TYPE.liner, s.width - 28) + 14;
+
+    s.need(h);
+    s.panel(s.left, s.at(), s.width, h, CARD);
+    s.panel(s.left, s.at(), 2, h, ACCENT);
+    s.gap(14);
+    s.para(done + ' of ' + total + ' this month', big, { x: s.left + 14, width: s.width - 28, after: 4 });
+    s.para(line, TYPE.liner, { x: s.left + 14, width: s.width - 28 });
+    s.gap(14);
+  }
+
+  function kidsLessonPages(s, report, week) {
+    var lesson = week.lesson;
+
+    s.open();
+    heading(s, weekOf(lesson) + (lesson.passage ? ' · ' + lesson.passage : ''), lesson.title,
+            TYPE.body.leading * 2);
+
+    if (lesson.bigIdea) {
+      var ideaH = 12 + TYPE.eyebrow.leading + 2 + s.height(lesson.bigIdea, TYPE.liner, s.width - 28) + 12;
+      s.need(ideaH);
+      s.panel(s.left, s.at(), s.width, ideaH, CARD);
+      s.panel(s.left, s.at(), 2, ideaH, ACCENT);
+      s.gap(12);
+      s.para('The big idea', TYPE.eyebrow, { x: s.left + 14, after: 2 });
+      s.para(lesson.bigIdea, TYPE.liner, { x: s.left + 14, width: s.width - 28 });
+      s.gap(12 + 16);
+    }
+
+    if (lesson.parentSummary) {
+      part(s, 'For parents', lesson.parentSummary);
+      s.para(lesson.parentSummary, TYPE.body, { after: 16 });
+    }
+
+    if ((lesson.story || []).length) {
+      part(s, 'The story', lesson.story[0]);
+      lesson.story.forEach(function (p) { s.para(p, TYPE.body, { after: 9 }); });
+      s.gap(7);
+    }
+
+    var verse = lesson.memoryVerse;
+    if (verse && verse.text) {
+      var quote = '“' + verse.text + '”';
+      s.need(TYPE.sectionHd.leading + 11 + s.height(quote, TYPE.liner) + TYPE.ref.leading);
+      part(s, 'Memory verse');
+      s.para(quote, TYPE.liner, { after: 3 });
+      s.para(verse.reference, TYPE.ref, { after: 16 });
+    }
+
+    /* The questions for the family's own group. A family that never picked
+       one gets all three, each under its name, rather than none. */
+    var picked = report.group ? [report.group] : (report.groups || []);
+    var blocks = picked.map(function (g) {
+      var b = (lesson.groups && lesson.groups[g.key]) || {};
+      return { group: g, questions: b.questions || [], activity: b.activity || '' };
+    }).filter(function (b) { return b.questions.length || b.activity; });
+
+    if (blocks.length) {
+      var firstBlock = blocks[0];
+      part(s, 'Talk about it', firstBlock.questions[0] || firstBlock.activity, TYPE.item, s.width - 18);
+      blocks.forEach(function (b) {
+        if (blocks.length > 1 || !report.group) {
+          s.need(TYPE.who.leading + TYPE.item.leading);
+          s.para(b.group.name + ' · ages ' + b.group.ages, TYPE.who, { after: 4 });
+        }
+        numbered(s, b.questions);
+        if (b.activity) {
+          s.need(TYPE.eyebrow.leading + s.height(b.activity, TYPE.body));
+          s.para('Try it this week', TYPE.eyebrow, { after: 2 });
+          s.para(b.activity, TYPE.body, { after: 6 });
+        }
+        s.gap(8);
+      });
+    }
+
+    if (lesson.prayer) {
+      part(s, 'Pray together', lesson.prayer, TYPE.liner);
+      s.para(lesson.prayer, TYPE.liner, { after: 16 });
+    }
+
+    if (lesson.parentNote) {
+      part(s, 'From the HomeKids team', lesson.parentNote);
+      s.para(lesson.parentNote, TYPE.body, { after: 16 });
+    }
+  }
+
+  function kidsMonth(report) {
+    if (!report || !(report.weeks || []).length) throw new Error('There are no weeks in this month.');
+
+    var weeks = report.weeks;
+    var done = 0, total = 0;
+    weeks.forEach(function (w) { var t = weekTally(w); done += t.done; total += t.total; });
+
+    var s = sheet({ title: 'HomeKids · ' + report.monthLabel });
+
+    s.centred([
+      { text: 'Home Church · HomeKids', style: TYPE.coverEyebrow },
+      { text: report.monthLabel, style: TYPE.coverTitle, before: 10 },
+      { text: report.name ? 'A month of HomeKids with ' + report.name : 'A month of HomeKids',
+        style: TYPE.coverSubtitle, before: 6 },
+      { divider: true, before: 18 },
+      { text: weeks.length + (weeks.length === 1 ? ' week' : ' weeks') + ' · ' +
+          done + ' of ' + total + ' done',
+        style: TYPE.coverMeta, before: 18 },
+      { text: report.group ? report.group.name + ' · ages ' + report.group.ages : '',
+        style: TYPE.coverNote, before: 26 },
+      { text: weeks.map(function (w) { return w.lesson.title; }).join(' · '),
+        style: TYPE.coverNote, before: report.group ? 0 : 26 }
+    ]);
+
+    kidsChecklistPages(s, report);
+    weeks.forEach(function (w) { kidsLessonPages(s, report, w); });
+
+    var last = weeks[weeks.length - 1].lesson.memoryVerse;
+    var site = String((HC.data && HC.data.church && HC.data.church.websiteUrl) || '')
+      .replace(/^https?:\/\//, '').replace(/\/$/, '');
+    s.centred([
+      { text: last && last.text ? '“' + last.text + '”' : '', style: TYPE.quote },
+      { text: last && last.text ? last.reference : '', style: TYPE.quoteRef, before: 12 },
+      { text: ['Home Church', 'HomeKids', site].filter(Boolean).join(' · '),
+        style: TYPE.wordmark, before: 34 }
+    ]);
+
+    return s.done();
+  }
+
   HC.printPdf = {
     guide: guide,
     night: night,
     journal: journal,
+    kidsMonth: kidsMonth,
     sheet: sheet,
     TYPE: TYPE
   };

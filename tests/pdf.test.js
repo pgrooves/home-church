@@ -355,6 +355,101 @@ ok('and draws no empty lines on its cover',
   sparseLines[0].every(l => l.text.trim() !== ''), true);
 ok('and nothing off the page', offPage(sparsePdf), []);
 
+/* The HomeKids month, which a family keeps on a phone. Long lessons on
+   purpose, so every part has to break across pages, and one family that never
+   picked a group, so all three groups' questions are drawn. */
+const kidsLesson = (id, day, title) => ({
+  id, taughtOn: day, title, passage: 'Psalm 56',
+  bigIdea: 'When I am afraid, I can trust God.',
+  parentSummary: LONG.repeat(2),
+  story: [LONG.repeat(3), LONG.repeat(3), LONG.repeat(2)],
+  memoryVerse: { text: 'When I am afraid, I put my trust in you.', reference: 'Psalm 56:3' },
+  groups: {
+    champions: { questions: ['Who is with you when you are scared?', LONG], activity: LONG },
+    heroes: { questions: [LONG, 'What helps you be brave?'], activity: 'Draw it.' },
+    legends: { questions: [LONG, LONG], activity: '' }
+  },
+  checklist: [
+    { id: 'story', text: 'Read the story together' },
+    { id: 'verse', text: 'Say the memory verse at breakfast three days this week, out loud, together' },
+    { id: 'pray', text: 'Pray before bed' }
+  ],
+  prayer: 'God, thank you that you are always with us. Amen.',
+  parentNote: LONG
+});
+
+const GROUPS = [
+  { key: 'champions', name: 'Champions', ages: '3 to 4' },
+  { key: 'heroes', name: 'Heroes', ages: '5 to 6' },
+  { key: 'legends', name: 'Legends + Warriors', ages: '7 to 12' }
+];
+
+const kidsReport = {
+  monthLabel: 'October 2026', name: 'Ava and Leo', group: null, groups: GROUPS,
+  weeks: [
+    { lesson: kidsLesson('k1', '2026-09-27', 'Brave Like David'), checked: { story: true, verse: true, pray: true } },
+    { lesson: kidsLesson('k2', '2026-10-04', 'The Lost Sheep'), checked: { story: true } },
+    { lesson: kidsLesson('k3', '2026-10-11', 'Jesus Calms the Storm'), checked: {} },
+    { lesson: kidsLesson('k4', '2026-10-18', 'A Friend Like Jonathan'), checked: { pray: true } }
+  ]
+};
+
+/* NOTHING DRAWN ON TOP OF ANYTHING ELSE. Two lines of text on one page whose
+   baselines sit closer than the smaller of them is tall, and whose runs share
+   any of the page's width, are two lines printed over each other. */
+function overlaps(base64) {
+  const bad = [];
+  linesOf(base64).forEach((lines, page) => {
+    for (let i = 0; i < lines.length; i++) {
+      for (let j = i + 1; j < lines.length; j++) {
+        const a = lines[i], b = lines[j];
+        const aw = HC.pdf.measure(a.text, a.font, a.size, a.tracking);
+        const bw = HC.pdf.measure(b.text, b.font, b.size, b.tracking);
+        const sideBySide = a.x + aw <= b.x || b.x + bw <= a.x;
+        if (!sideBySide && Math.abs(a.y - b.y) < Math.min(a.size, b.size) * 0.9) {
+          bad.push('page ' + (page + 1) + ': ' + a.text.slice(0, 20) + ' / ' + b.text.slice(0, 20));
+        }
+      }
+    }
+  });
+  return bad;
+}
+
+const clash = HC.pdf.create();
+clash.page().text('One line', 72, 100, { size: 11 }).text('Another', 80, 104, { size: 11 });
+ok('the overlap check does catch two lines printed over each other',
+  overlaps(clash.toBase64()).length, 1);
+
+const kidsPdf = HC.printPdf.kidsMonth(kidsReport);
+const kidsLines = linesOf(kidsPdf);
+ok('the kids month opens on a branded cover',
+  says(kidsLines[0], 'HOME CHURCH · HOMEKIDS') && says(kidsLines[0], 'October 2026'), true);
+ok('with whose month it is', says(kidsLines[0], 'A month of HomeKids with Ava and Leo'), true);
+ok('and the month’s tally', says(kidsLines[0], '4 WEEKS · 5 OF 12 DONE'), true);
+ok('the checklist comes first, straight after the cover',
+  says(kidsLines[1], 'This month’s checklist'), true);
+ok('each week says how it went', anywhere(kidsLines, '1 of 3 done'), true);
+ok('every lesson starts a page of its own',
+  ['Brave Like David', 'The Lost Sheep', 'Jesus Calms the Storm', 'A Friend Like Jonathan']
+    .every(t => kidsLines.some((p, i) => i > 1 && says(p.slice(0, 5), t))), true);
+ok('a family with no group gets every group’s questions',
+  anywhere(kidsLines, 'LEGENDS + WARRIORS · AGES 7 TO 12'), true);
+ok('the ticked boxes are drawn with a tick',
+  /1 J 1 j\n[\s\S]*? l\nS/.test(Buffer.from(kidsPdf, 'base64').toString('binary')), true);
+ok('it closes on the last memory verse', says(kidsLines[kidsLines.length - 1], 'PSALM 56:3'), true);
+ok('nothing in the kids month is drawn off the page', offPage(kidsPdf), []);
+ok('and nothing is drawn over anything else', overlaps(kidsPdf), []);
+ok('the guide does not overlap itself either', overlaps(guidePdf), []);
+
+const picked = HC.printPdf.kidsMonth(Object.assign({}, kidsReport,
+  { name: '', group: GROUPS[1], weeks: kidsReport.weeks.slice(0, 1) }));
+const pickedLines = linesOf(picked);
+ok('a family that picked a group gets only theirs',
+  anywhere(pickedLines, 'What helps you be brave?') &&
+  !anywhere(pickedLines, 'Who is with you when you are scared?'), true);
+ok('and no name leaves no hole', says(pickedLines[0], 'A month of HomeKids'), true);
+ok('nothing drawn over anything else there either', overlaps(picked), []);
+
 // Every document has to survive being handed nothing.
 function throws(fn) {
   try { fn(); return false; } catch (err) { return true; }
@@ -362,6 +457,7 @@ function throws(fn) {
 ok('a guide that does not exist refuses', throws(() => HC.printPdf.guide('nope')), true);
 ok('a night with no room refuses', throws(() => HC.printPdf.night({})), true);
 ok('an empty journal refuses', throws(() => HC.printPdf.journal([])), true);
+ok('an empty month refuses', throws(() => HC.printPdf.kidsMonth({ weeks: [] })), true);
 
 console.log('\n' + pass + ' passed, ' + fail + ' failed');
 process.exit(fail ? 1 : 0);

@@ -356,6 +356,22 @@
         return page;
       },
 
+      /* An open line through a few points, with round ends and joins. The one
+         shape here a rectangle cannot make, which is the tick in a HomeKids
+         box. Rules stay rectangles, for the reason above. */
+      stroke: function (points, color, width) {
+        if (!points || points.length < 2) return page;
+        ops.push('q');
+        ops.push(colorOp(color || '#000000') + ' RG');
+        ops.push(num(width || 1) + ' w 1 J 1 j');
+        points.forEach(function (pt, i) {
+          ops.push(num(pt[0]) + ' ' + num(doc.height - pt[1]) + (i ? ' l' : ' m'));
+        });
+        ops.push('S');
+        ops.push('Q');
+        return page;
+      },
+
       stream: function () { return ops.join('\n'); }
     };
 

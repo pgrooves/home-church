@@ -15,9 +15,11 @@
         the group picked above, and a short prayer. The same guide serves
         all three groups: the story is shared, the conversation is not.
      3. The checklist and the prize. A few things to do together during the
-        week, each one a big tick box. Next Sunday the family shows the
-        teacher the ticks, and the kid gets to pick from the prize box. The
-        teacher card is the same ticks, large, with the kid's name on it.
+        week, each one a big tick box, saved on the phone the moment it is
+        tapped. On the last Sunday of the month the family opens the Monthly
+        report, the month's ticks large with the kid's name on it, shows the
+        teacher, and the kid gets to pick from the prize box. The report can
+        be saved as a PDF with the month's lessons in it to read again.
      4. For parents, the second one. The teaching tied up with what to ask
         at bedtime, then what the weekly HomeKids email to parents said.
      5. For volunteers. What the email to volunteers said, folded away,
@@ -45,8 +47,10 @@
   var c = HC.components;
 
   var NO_LESSON_YET = 'The first HomeKids guide lands here after Sunday. Check back soon.';
-  var REWARD_LINE = 'Tick each one off as you do it this week. Next Sunday, show your ' +
-    'HomeKids teacher, and you get to pick something from the prize box.';
+  var REWARD_LINE = 'Tick each one off as you do it this week. On the last Sunday of the ' +
+    'month, open your monthly report and show your HomeKids teacher to pick something ' +
+    'from the prize box.';
+  var SAVED_LINE = 'Weekly progress saved on this phone.';
   var PICK_A_GROUP = 'Tap your group up top to see your questions.';
   var NO_PARENT_NEWS = 'News from the HomeKids team shows up here each week.';
 
@@ -217,9 +221,18 @@
 
   function progressText(done, total) {
     if (!total) return '';
-    if (done >= total) return 'All ' + total + ' done. Show your teacher on Sunday.';
+    if (done >= total) return 'All ' + total + ' done this week. Great job.';
     if (!done) return total + ' to do this week.';
     return done + ' of ' + total + ' done. Keep going.';
+  }
+
+  /* Ticks save the moment they are tapped (js/store.js), so there is no
+     Save button to forget. This line is the reassurance one would have
+     given, and it only appears once there is something to have saved. */
+  function savedLine(done) {
+    return '<p class="hc-caption hc-kids-saved" data-kids-saved' + (done ? '' : ' hidden') + '>' +
+      c.icon('check', 'hc-kids-saved__icon') + '<span>' + c.esc(SAVED_LINE) + '</span>' +
+    '</p>';
   }
 
   function checkItem(lesson, item) {
@@ -259,8 +272,8 @@
         '<p class="hc-caption hc-kids-progress" data-kids-progress aria-live="polite">' +
           c.esc(progressText(done, ids.length)) +
         '</p>' +
-        c.button('Show my teacher', { action: 'homekids-show', id: lesson.id,
-          className: 'hc-kids-show' }) +
+        savedLine(done) +
+        c.button('Monthly report', { action: 'homekids-report', className: 'hc-kids-show' }) +
       '</section>';
   }
 
@@ -434,6 +447,8 @@
     var screen = el.closest('.hc-kids');
     var line = screen && screen.querySelector('[data-kids-progress]');
     if (line) line.textContent = progressText(done, ids.length);
+    var saved = screen && screen.querySelector('[data-kids-saved]');
+    if (saved) saved.hidden = !done;
     var reward = screen && screen.querySelector('[data-kids-reward]');
     if (reward) {
       if (done >= ids.length) reward.setAttribute('data-done', 'true');
@@ -639,55 +654,147 @@
     if (open && open.parentNode) open.parentNode.removeChild(open);
   }
 
-  /* The card a family holds up on Sunday. Drawn over everything, with the
-     ticks large, the lesson it belongs to, and whose list it is. Built and
-     appended here rather than routed to, because it is a moment and not a
-     place: there is nothing to come back to, and the back gesture should
-     still mean the screen underneath. */
-  function showTeacher(el) {
-    var lesson = HC.data.getHomekidsLesson(el.getAttribute('data-id'));
-    if (!lesson) return;
+  /* ------------------------------------------------------ the monthly report
+
+     The card a family holds up on the last Sunday of the month. Drawn over
+     everything, with every week's ticks large, the lessons they belong to,
+     and whose month it is. Built and appended here rather than routed to,
+     because it is a moment and not a place: there is nothing to come back
+     to, and the back gesture should still mean the screen underneath.
+
+     Which weeks make a month is HC.data's call (homekidsMonthLessons): a
+     week belongs to the month of the Sunday it ends on, so the report shown
+     on the last Sunday holds only weeks that are already over. The arrows
+     step through every month that has a week in it. */
+  function monthLabel(month) {
+    var p = month.split('-');
+    return c.monthNames[parseInt(p[1], 10) - 1] + ' ' + p[0];
+  }
+
+  function weekTally(lesson) {
+    var ids = lesson.checklist.map(function (i) { return i.id; });
+    return { done: HC.store.kidsCheckedCount(lesson.id, ids), total: ids.length };
+  }
+
+  /* Everything the PDF needs, gathered from the phone here so js/print-pdf.js
+     never reads storage. */
+  function reportData(month) {
+    var lessons = HC.data.homekidsMonthLessons(month);
+    return {
+      month: month,
+      monthLabel: monthLabel(month),
+      name: HC.store.kidsName(),
+      group: HC.data.getHomekidsGroup(HC.store.kidsGroup()),
+      groups: HC.data.homekidsGroups || [],
+      weeks: lessons.map(function (lesson) {
+        var checked = {};
+        lesson.checklist.forEach(function (i) {
+          if (HC.store.isKidsChecked(lesson.id, i.id)) checked[i.id] = true;
+        });
+        return { lesson: lesson, checked: checked };
+      })
+    };
+  }
+
+  function reportWeek(lesson) {
+    var t = weekTally(lesson);
+    return '' +
+      '<section class="hc-kids-report__week"' +
+          (t.total && t.done >= t.total ? ' data-done="true"' : '') + '>' +
+        '<p class="hc-eyebrow hc-kids-report__when">Week of ' +
+          c.esc(c.formatDate(lesson.taughtOn)) + '</p>' +
+        '<h3 class="hc-kids-report__lesson">' + c.esc(lesson.title) + '</h3>' +
+        '<ul class="hc-kids-teacher__list" role="list">' +
+          lesson.checklist.map(function (item) {
+            var on = HC.store.isKidsChecked(lesson.id, item.id);
+            return '<li class="hc-kids-teacher__item"' + (on ? ' data-on="true"' : '') + '>' +
+              '<span class="hc-kids-teacher__mark" aria-hidden="true">' +
+                c.icon(on ? 'star' : 'check') + '</span>' +
+              '<span>' + c.esc(item.text) + '</span>' +
+              '<span class="hc-visually-hidden">' + (on ? ', done' : ', not yet') + '</span>' +
+            '</li>';
+          }).join('') +
+        '</ul>' +
+        '<p class="hc-caption hc-kids-report__tally">' + t.done + ' of ' + t.total + ' done</p>' +
+      '</section>';
+  }
+
+  function reportCard(month) {
+    var months = HC.data.homekidsReportMonths();
+    var at = months.indexOf(month);
+    var lessons = HC.data.homekidsMonthLessons(month);
+
+    var done = 0, total = 0, full = 0;
+    lessons.forEach(function (l) {
+      var t = weekTally(l);
+      done += t.done;
+      total += t.total;
+      if (t.total && t.done >= t.total) full++;
+    });
+    var all = total > 0 && done >= total;
+    var label = monthLabel(month);
+
+    return '' +
+      '<div class="hc-kids-teacher__card"' + (all ? ' data-done="true"' : '') + '>' +
+        '<button type="button" class="hc-kids-teacher__close" data-action="homekids-hide" ' +
+          'aria-label="Close">' + c.icon('close') + '</button>' +
+        '<p class="hc-eyebrow hc-kids-teacher__eyebrow">HomeKids · Monthly report</p>' +
+        '<div class="hc-kids-report__month">' +
+          '<button type="button" class="hc-cal__step" data-action="homekids-report-step" ' +
+            'data-step="1" aria-label="The month before"' +
+            (at < 0 || at >= months.length - 1 ? ' disabled' : '') + '>' +
+            c.icon('chevronLeft', 'hc-cal__step-icon') + '</button>' +
+          '<h2 class="hc-kids-teacher__title">' + c.esc(label) + '</h2>' +
+          '<button type="button" class="hc-cal__step" data-action="homekids-report-step" ' +
+            'data-step="-1" aria-label="The month after"' + (at <= 0 ? ' disabled' : '') + '>' +
+            c.icon('chevronRight', 'hc-cal__step-icon') + '</button>' +
+        '</div>' +
+        '<label class="hc-kids-teacher__name">' +
+          '<span class="hc-caption">Whose report is this?</span>' +
+          '<input class="hc-input" type="text" data-homekids-name autocomplete="off" ' +
+            'placeholder="Your name" value="' + c.esc(HC.store.kidsName()) + '">' +
+        '</label>' +
+        lessons.map(reportWeek).join('') +
+        '<p class="hc-kids-teacher__count">' + done + ' of ' + total + '</p>' +
+        '<p class="hc-caption hc-kids-teacher__foot">' +
+          c.esc(all
+            ? 'Every box, every week. Time for the prize box.'
+            : full + ' of ' + lessons.length + (lessons.length === 1 ? ' week' : ' weeks') +
+              ' with every box ticked. Nice work this month.') +
+        '</p>' +
+        c.button('Download as PDF', { action: 'homekids-report-pdf', id: month,
+          variant: 'secondary', className: 'hc-kids-report__pdf' }) +
+      '</div>';
+  }
+
+  function showReport(month) {
+    month = month || HC.data.homekidsReportMonth();
+    if (!month) return;
     hideTeacher();
 
-    var ids = lesson.checklist.map(function (i) { return i.id; });
-    var done = HC.store.kidsCheckedCount(lesson.id, ids);
-    var all = done >= ids.length && ids.length > 0;
-
-    var html = '' +
-      '<div class="hc-kids-teacher" role="dialog" aria-modal="true" aria-label="Show your teacher" data-kids-teacher>' +
-        '<div class="hc-kids-teacher__card"' + (all ? ' data-done="true"' : '') + '>' +
-          '<button type="button" class="hc-kids-teacher__close" data-action="homekids-hide" ' +
-            'aria-label="Close">' + c.icon('close') + '</button>' +
-          '<p class="hc-eyebrow hc-kids-teacher__eyebrow">HomeKids · ' +
-            c.esc(c.formatDate(lesson.taughtOn)) + '</p>' +
-          '<h2 class="hc-kids-teacher__title">' + c.esc(lesson.title) + '</h2>' +
-          '<label class="hc-kids-teacher__name">' +
-            '<span class="hc-caption">Whose list is this?</span>' +
-            '<input class="hc-input" type="text" data-homekids-name autocomplete="off" ' +
-              'placeholder="Your name" value="' + c.esc(HC.store.kidsName()) + '">' +
-          '</label>' +
-          '<ul class="hc-kids-teacher__list" role="list">' +
-            lesson.checklist.map(function (item) {
-              var on = HC.store.isKidsChecked(lesson.id, item.id);
-              return '<li class="hc-kids-teacher__item"' + (on ? ' data-on="true"' : '') + '>' +
-                '<span class="hc-kids-teacher__mark" aria-hidden="true">' +
-                  c.icon(on ? 'star' : 'check') + '</span>' +
-                '<span>' + c.esc(item.text) + '</span>' +
-                '<span class="hc-visually-hidden">' + (on ? ', done' : ', not yet') + '</span>' +
-              '</li>';
-            }).join('') +
-          '</ul>' +
-          '<p class="hc-kids-teacher__count">' + done + ' of ' + ids.length + '</p>' +
-          '<p class="hc-caption hc-kids-teacher__foot">' +
-            c.esc(all ? 'Every one. Time for the prize box.' : 'Nice work this week.') +
-          '</p>' +
-        '</div>' +
-      '</div>';
-
-    var layer = c.el(html);
+    var layer = c.el('' +
+      '<div class="hc-kids-teacher" role="dialog" aria-modal="true" ' +
+          'aria-label="Monthly report" data-kids-teacher data-month="' + c.esc(month) + '">' +
+        reportCard(month) +
+      '</div>');
     document.body.appendChild(layer);
     var close = layer.querySelector('.hc-kids-teacher__close');
     if (close) close.focus({ preventScroll: true });
+  }
+
+  // The arrows: +1 is an older month, because the list is newest first.
+  function stepReport(el) {
+    var layer = document.querySelector('[data-kids-teacher]');
+    if (!layer) return;
+    var months = HC.data.homekidsReportMonths();
+    var at = months.indexOf(layer.getAttribute('data-month')) +
+      (parseInt(el.getAttribute('data-step'), 10) || 0);
+    if (at < 0 || at >= months.length) return;
+    layer.setAttribute('data-month', months[at]);
+    layer.innerHTML = reportCard(months[at]);
+    var step = layer.querySelector('[data-action="homekids-report-step"][data-step="' +
+      el.getAttribute('data-step') + '"]');
+    if (step && !step.disabled) step.focus({ preventScroll: true });
   }
 
   function hideTeacher() {
@@ -722,7 +829,9 @@
     stepCalendar: stepCalendar,
     pickFromCalendar: pickFromCalendar,
     hideCalendar: hideCalendar,
-    showTeacher: showTeacher,
+    showReport: showReport,
+    stepReport: stepReport,
+    reportData: reportData,
     hideTeacher: hideTeacher,
     progressText: progressText
   };

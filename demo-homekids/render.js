@@ -10,7 +10,7 @@
      node demo-homekids/render.js [out-dir]
 
    Writes PNGs: the ••• overlay with HomeKids in it, the page top to bottom in
-   light and dark, the teacher card, and the empty state the page shows today.
+   light and dark, the monthly report and the PDF it saves, and the empty state the page shows today.
    =========================================================================== */
 'use strict';
 
@@ -162,12 +162,33 @@ async function phone(browser, opts) {
   errors.push(...page.errors);
   await page.close();
 
-  // 5. The teacher card, all four done, with a name on it.
+  // 5. The monthly report, all four done, with a name on it, then the month
+  //    before, then the PDF it saves (a browser download here).
   page = await phone(browser, { group: 'legends', ticks: ['story', 'verse', 'talk', 'pray'],
     name: 'Ava and Leo' });
-  await page.evaluate(() => document.querySelector('[data-action="homekids-show"]').click());
+  await page.evaluate(() => {
+    const el = document.querySelector('[data-kids-reward]');
+    document.getElementById('hc-scroll').scrollTop += el.getBoundingClientRect().top - 140;
+  });
+  await page.waitForTimeout(400);
+  await page.screenshot({ path: path.join(OUT, '06-checklist-saved.png') });
+  await page.evaluate(() => document.querySelector('[data-action="homekids-report"]').click());
   await page.waitForTimeout(500);
-  await page.screenshot({ path: path.join(OUT, '06-show-your-teacher.png') });
+  await page.screenshot({ path: path.join(OUT, '06a-monthly-report.png') });
+  await page.evaluate(() => {
+    const card = document.querySelector('.hc-kids-teacher__card');
+    card.scrollTop = card.scrollHeight;
+  });
+  await page.waitForTimeout(200);
+  await page.screenshot({ path: path.join(OUT, '06b-monthly-report-end.png') });
+  const [download] = await Promise.all([
+    page.waitForEvent('download', { timeout: 10000 }),
+    page.evaluate(() => document.querySelector('[data-action="homekids-report-pdf"]').click())
+  ]);
+  await download.saveAs(path.join(OUT, '06c-' + download.suggestedFilename()));
+  await page.evaluate(() => document.querySelector('[data-action="homekids-report-step"][data-step="1"]').click());
+  await page.waitForTimeout(300);
+  await page.screenshot({ path: path.join(OUT, '06d-monthly-report-month-before.png') });
   errors.push(...page.errors);
   await page.close();
 
