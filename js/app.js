@@ -3526,7 +3526,7 @@
        sized at and whichever way the writing runs. */
     'worship-week': function (el) {
       var head = el.closest('.hc-worship__head');
-      var rail = head ? head.querySelector('[data-worship-rail]') : null;
+      var rail = head ? head.querySelector('[data-carousel]') : null;
       var track = rail ? rail.firstElementChild : null;
       if (!track) return;
 
@@ -3682,8 +3682,25 @@
       if (HC.screens.homekidsHelpers.toggle(el)) HC.native.tap('Light');
     },
 
+    // The week header on HomeKids is the same carousel, so the same chevrons.
     'homekids-week': function (el) {
-      HC.screens.homekidsHelpers.step(el);
+      actions['worship-week'](el);
+    },
+
+    'homekids-calendar': function () {
+      HC.screens.homekidsHelpers.openCalendar();
+    },
+
+    'homekids-cal-step': function (el) {
+      HC.screens.homekidsHelpers.stepCalendar(el);
+    },
+
+    'homekids-cal-pick': function (el) {
+      HC.screens.homekidsHelpers.pickFromCalendar(el);
+    },
+
+    'homekids-cal-close': function () {
+      HC.screens.homekidsHelpers.hideCalendar();
     },
 
     'homekids-show': function (el) {
@@ -5387,6 +5404,11 @@
            arrangement, same reason it is here rather than in the screen. */
         if (rail.hasAttribute('data-worship-rail') && HC.screens.worshipHelpers) {
           HC.screens.worshipHelpers.selectWeek(rail, index);
+        }
+
+        // And HomeKids, whose week header redraws the lesson under it.
+        if (rail.hasAttribute('data-kids-rail') && HC.screens.homekidsHelpers) {
+          HC.screens.homekidsHelpers.selectLesson(rail, index);
         }
       });
     }, true);

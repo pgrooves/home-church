@@ -3878,10 +3878,22 @@ button.hc-cal__day { cursor: pointer; }
 /* ---- the week ---- */
 
 .hc-kids-week { margin-top: var(--hc-space-xl); }
-/* The Sunday swipes sideways (js/screens/homekids.js), so only vertical
-   panning is left to the browser here. */
-.hc-kids-week[data-kids-swipe] { touch-action: pan-y; }
-.hc-kids-week[data-kids-swipe] .hc-worship-week { -webkit-user-select: none; user-select: none; }
+/* Each Sunday's slide is one tap target: a tap lifts the calendar sheet
+   (js/screens/homekids.js), a sideways drag still scrolls the rail. */
+.hc-kids-week__open {
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.hc-kids-week__open:active .hc-kids-week__title { opacity: 0.7; }
+.hc-kids-week__cal {
+  display: inline-block;
+  width: 13px;
+  height: 13px;
+  margin-left: 6px;
+  vertical-align: -2px;
+}
+.hc-kids-cal__head { justify-content: center; margin-top: var(--hc-space-sm); }
+.hc-kids-cal__label { min-width: 9em; }
 .hc-kids-week__title { margin-top: 6px; }
 .hc-kids-week__passage { margin-top: var(--hc-space-xs); color: var(--hc-mid); }
 

@@ -31,10 +31,12 @@
 
    THE TICKS NEVER LEAVE THE PHONE. See the homekids block in js/store.js.
 
-   WEEKS. The lesson on screen is this week's unless the route carries an id,
-   which is how the arrows step back through earlier Sundays. The id is on the
-   route rather than in a variable here so the back gesture and a content
-   refresh both land on the week somebody was looking at.
+   WEEKS. The lesson on screen is this week's unless the route carries an id.
+   The week header is a carousel like Worship's: swiping it (or the arrows)
+   redraws the lesson below and quietly moves the route's id along with it,
+   and tapping it opens a calendar of the Sundays that have a lesson. The id
+   is on the route rather than in a variable here so the back gesture and a
+   content refresh both land on the week somebody was looking at.
    ========================================================================== */
 
 (function (HC) {
@@ -106,32 +108,70 @@
 
   /* ------------------------------------------------------------ the lesson */
 
-  function weekHead(lesson, index, count) {
-    var arrows = count > 1
-      ? '<button type="button" class="hc-worship__arrow hc-worship__arrow--prev" ' +
-            'data-action="homekids-week" data-step="-1"' + (index <= 0 ? ' disabled' : '') +
-            ' aria-label="A more recent Sunday">' + c.icon('chevronLeft') + '</button>' +
-        '<button type="button" class="hc-worship__arrow hc-worship__arrow--next" ' +
-            'data-action="homekids-week" data-step="1"' + (index >= count - 1 ? ' disabled' : '') +
-            ' aria-label="An earlier Sunday">' + c.icon('chevronRight') + '</button>'
-      : '';
-
-    // data-no-swipe keeps js/swipe.js off this strip: a sideways drag here
-    // turns the Sunday rather than the tab. See the swipe below step().
+  /* THE HEADER IS A CAROUSEL, the same one as the week header on Worship:
+     one slide per Sunday, newest first, dots underneath, chevrons either
+     side. Swiping it redraws the lesson below (selectLesson), and js/app.js
+     does the scrolling, the snapping and the dots exactly as it does there.
+     A tap on the slide lifts a calendar to jump straight to a date. */
+  function weekSlide(lesson, i) {
     return '' +
-      '<div class="hc-worship__head hc-kids-week"' +
-        (count > 1 ? ' data-no-swipe data-kids-swipe' : '') + '>' +
-        arrows +
-        '<div class="hc-worship-week">' +
+      '<li class="hc-carousel__slide hc-worship-week hc-kids-week__slide">' +
+        '<div class="hc-kids-week__open" role="button" tabindex="0" data-action="homekids-calendar" ' +
+            'aria-label="' + c.esc(c.formatDate(lesson.taughtOn) + ', ' + lesson.title +
+              '. Pick a different Sunday') + '">' +
           '<p class="hc-eyebrow hc-worship-week__date">' +
-            (index === 0 ? 'This week · ' : '') + c.esc(c.formatDate(lesson.taughtOn)) +
+            (i === 0 ? 'This week · ' : '') + c.esc(c.formatDate(lesson.taughtOn)) +
+            c.icon('calendar', 'hc-kids-week__cal') +
           '</p>' +
           '<h2 class="hc-display-l hc-kids-week__title">' + c.esc(lesson.title) + '</h2>' +
           (lesson.passage
             ? '<p class="hc-caption hc-kids-week__passage">' + c.esc(lesson.passage) + '</p>'
             : '') +
         '</div>' +
+      '</li>';
+  }
+
+  function weekRail(lessons, index) {
+    var many = lessons.length > 1;
+    var dots = many
+      ? '<ol class="hc-carousel__dots" aria-hidden="true">' +
+          lessons.map(function (l, i) {
+            return '<li class="hc-carousel__dot" data-dot' +
+              (i === index ? ' data-on="true"' : '') + '></li>';
+          }).join('') +
+        '</ol>'
+      : '';
+
+    var arrows = many
+      ? '<button type="button" class="hc-worship__arrow hc-worship__arrow--prev" ' +
+            'data-action="homekids-week" data-step="-1" data-week-prev' +
+            (index <= 0 ? ' disabled' : '') +
+            ' aria-label="A more recent Sunday">' + c.icon('chevronLeft') + '</button>' +
+        '<button type="button" class="hc-worship__arrow hc-worship__arrow--next" ' +
+            'data-action="homekids-week" data-step="1" data-week-next' +
+            (index >= lessons.length - 1 ? ' disabled' : '') +
+            ' aria-label="An earlier Sunday">' + c.icon('chevronRight') + '</button>'
+      : '';
+
+    return '' +
+      '<div class="hc-worship__head hc-kids-week">' +
+        arrows +
+        '<div class="hc-carousel hc-worship__carousel">' +
+          '<div class="hc-carousel__viewport" data-carousel data-kids-rail>' +
+            '<ul class="hc-carousel__track" role="list">' +
+              lessons.map(weekSlide).join('') +
+            '</ul>' +
+          '</div>' +
+          dots +
+        '</div>' +
       '</div>';
+  }
+
+  function paintArrows(wrap, index, count) {
+    var prev = wrap.querySelector('[data-week-prev]');
+    var next = wrap.querySelector('[data-week-next]');
+    if (prev) prev.disabled = index <= 0;
+    if (next) next.disabled = index >= count - 1;
   }
 
   function bigIdea(lesson) {
@@ -311,13 +351,34 @@
     return HC.data.currentHomekidsLesson();
   }
 
+  /* Everything below the rail that belongs to one Sunday. Its own function
+     because a swipe redraws exactly this and nothing above it. */
+  function lessonBody(lesson, chosen) {
+    var html = '';
+    if (lesson) {
+      html += bigIdea(lesson);
+      html += parentSummary(lesson);
+      html += story(lesson);
+      html += memoryVerse(lesson);
+      html += '<section class="hc-kids-section" data-kids-group-block>' +
+        groupBlock(lesson, chosen) + '</section>';
+      html += prayer(lesson);
+      html += checklist(lesson);
+    }
+    return html + forParents(lesson);
+  }
+
   function render(route) {
     var lessons = HC.data.homekidsLessonsByDate();
     var lesson = lessonFor(route, lessons);
     var chosen = HC.store.kidsGroup();
+    var index = lesson ? Math.max(lessons.indexOf(lesson), 0) : 0;
 
     var html = '<div class="hc-screen hc-kids"' +
-      (lesson ? ' data-kids-lesson="' + c.esc(lesson.id) + '"' : '') + '>';
+      (lesson
+        ? ' data-kids-lesson="' + c.esc(lesson.id) + '" data-index="' + index + '"' +
+          ' data-lesson-ids="' + c.esc(lessons.map(function (l) { return l.id; }).join(',')) + '"'
+        : '') + '>';
 
     html += c.sectionHeader('For kids and families', 'HomeKids',
       { flush: true, tag: 'h1', eyebrowSlot: 'homekids.eyebrow' });
@@ -330,23 +391,16 @@
         { slot: 'homekids.empty', value: empty,
           label: 'what HomeKids says before the first lesson is up' });
     } else {
-      var index = lessons.indexOf(lesson);
-      html += weekHead(lesson, index, lessons.length);
-      html += bigIdea(lesson);
-      html += parentSummary(lesson);
-      html += story(lesson);
-      html += memoryVerse(lesson);
-      html += '<section class="hc-kids-section" data-kids-group-block>' +
-        groupBlock(lesson, chosen) + '</section>';
-      html += prayer(lesson);
-      html += checklist(lesson);
+      html += weekRail(lessons, index);
     }
 
-    html += forParents(lesson);
+    html += '<div data-kids-body>' + lessonBody(lesson, chosen) + '</div>';
     html += forVolunteers();
 
     html += '</div>';
-    return c.el(html);
+    var el = c.el(html);
+    restoreRail(el);
+    return el;
   }
 
   /* ----------------------------------------------------------- the taps */
@@ -388,124 +442,202 @@
     return on;
   }
 
-  /* by is +1 for an earlier Sunday and -1 for a more recent one. Read off the
-     arrow's data-step when it is not given, which is how a tap arrives. */
-  function step(el, by) {
-    if (by == null) by = parseInt(el.getAttribute('data-step'), 10) || 0;
-    var lesson = screenLesson(el);
+  /* Told by js/app.js when the week rail settles on a slide, the way
+     selectWeek is on Worship. Redraws the lesson under the rail and moves the
+     address to that Sunday without rebuilding the screen, so the rail is not
+     pulled out from under the thumb that is still on it. Does nothing on the
+     frames where the slide has not actually changed, which is nearly all of
+     them. */
+  function selectLesson(rail, index) {
+    var wrap = rail.closest ? rail.closest('.hc-kids') : null;
+    if (!wrap || String(index) === wrap.getAttribute('data-index')) return;
+
+    var ids = (wrap.getAttribute('data-lesson-ids') || '').split(',');
+    var lesson = HC.data.getHomekidsLesson(ids[index]);
+    if (!lesson) return;
+
+    wrap.setAttribute('data-index', String(index));
+    wrap.setAttribute('data-kids-lesson', lesson.id);
+    var body = wrap.querySelector('[data-kids-body]');
+    if (body) body.innerHTML = lessonBody(lesson, HC.store.kidsGroup());
+    paintArrows(wrap, index, ids.length);
+    if (HC.router.replaceCurrent) HC.router.replaceCurrent({ name: 'homekids', id: lesson.id });
+  }
+
+  /* Puts the rail on the lesson the route asked for. After the frame,
+     because a scroller that is not yet on the page has no width to measure,
+     and instantly, because this is where the screen opens and not a move.
+     Measured against the track for the reason restoreRails gives on Group. */
+  function restoreRail(root) {
+    var rail = root.querySelector && root.querySelector('[data-kids-rail]');
+    if (!rail || !window.requestAnimationFrame) return;
+    window.requestAnimationFrame(function () {
+      var at = parseInt(root.getAttribute('data-index'), 10) || 0;
+      var track = rail.firstElementChild;
+      var slide = track && track.children[at];
+      if (!slide) return;
+      rail.style.scrollBehavior = 'auto';
+      rail.scrollLeft = slide.offsetLeft - track.offsetLeft;
+      rail.style.scrollBehavior = '';
+    });
+  }
+
+  /* Slides the rail to a lesson, as if a thumb had. The scroll it causes is
+     what tells selectLesson, exactly as with the arrows. */
+  function railTo(id) {
+    var wrap = document.querySelector('.hc-kids[data-lesson-ids]');
+    var rail = wrap && wrap.querySelector('[data-kids-rail]');
+    var track = rail && rail.firstElementChild;
+    if (!track) return;
+    var ids = (wrap.getAttribute('data-lesson-ids') || '').split(',');
+    var slide = track.children[ids.indexOf(id)];
+    if (!slide) return;
+    var still = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    rail.scrollTo({ left: slide.offsetLeft - track.offsetLeft, behavior: still ? 'auto' : 'smooth' });
+  }
+
+  /* ------------------------------------------------------- the calendar
+
+     A tap on the week header lifts a month calendar with every Sunday that
+     has a lesson marked, so a family looking for the one from a month ago
+     picks it out by date rather than swiping through every week between.
+     The month grid is the Cal tab's, class for class, so it reads as the
+     same calendar. */
+  var calMonth = null;   // { year, month } the sheet is showing
+
+  function isoOf(year, month, day) {
+    return year + '-' + (month < 9 ? '0' : '') + (month + 1) + '-' + (day < 10 ? '0' : '') + day;
+  }
+
+  function monthKey(year, month) { return year * 12 + month; }
+
+  function monthOfIso(iso) {
+    return { year: parseInt(iso.slice(0, 4), 10), month: parseInt(iso.slice(5, 7), 10) - 1 };
+  }
+
+  function matrix(year, month) {
+    var cal = HC.screens.calHelpers;
+    if (cal && cal.monthMatrix) return cal.monthMatrix(year, month);
+    var lead = new Date(year, month, 1).getDay();
+    var days = new Date(year, month + 1, 0).getDate();
+    var cells = [], i, weeks = [];
+    for (i = 0; i < lead; i++) cells.push(0);
+    for (i = 1; i <= days; i++) cells.push(i);
+    while (cells.length % 7) cells.push(0);
+    for (i = 0; i < cells.length; i += 7) weeks.push(cells.slice(i, i + 7));
+    return weeks;
+  }
+
+  function calendarBody(showingId) {
     var lessons = HC.data.homekidsLessonsByDate();
-    var next = lessons[lessons.indexOf(lesson) + by];
-    if (!next) return false;
-    HC.router.go({ name: 'homekids', id: next.id }, { replace: true });
-    return true;
+    var byDay = {};
+    lessons.forEach(function (l) { byDay[l.taughtOn] = l; });
+    var newest = monthOfIso(lessons[0].taughtOn);
+    var oldest = monthOfIso(lessons[lessons.length - 1].taughtOn);
+    var here = monthKey(calMonth.year, calMonth.month);
+    var today = isoOf(new Date().getFullYear(), new Date().getMonth(), new Date().getDate());
+    var label = c.monthNames[calMonth.month] + ' ' + calMonth.year;
+
+    var html = '' +
+      '<div class="hc-cal__head hc-kids-cal__head">' +
+        '<div class="hc-cal__stepper">' +
+          '<button type="button" class="hc-cal__step" data-action="homekids-cal-step" ' +
+            'data-step="-1" aria-label="The month before"' +
+            (here <= monthKey(oldest.year, oldest.month) ? ' disabled' : '') + '>' +
+            c.icon('chevronLeft', 'hc-cal__step-icon') + '</button>' +
+          '<span class="hc-cal__stepper-label hc-kids-cal__label">' + c.esc(label) + '</span>' +
+          '<button type="button" class="hc-cal__step" data-action="homekids-cal-step" ' +
+            'data-step="1" aria-label="The month after"' +
+            (here >= monthKey(newest.year, newest.month) ? ' disabled' : '') + '>' +
+            c.icon('chevronRight', 'hc-cal__step-icon') + '</button>' +
+        '</div>' +
+      '</div>' +
+      '<div class="hc-cal__grid" role="grid" aria-label="' + c.esc(label) + '">' +
+        '<div class="hc-cal__row hc-cal__row--head" role="row">' +
+          c.dayNames.map(function (name) {
+            return '<span class="hc-cal__dow" role="columnheader" aria-label="' + c.esc(name) + '">' +
+              c.esc(name.slice(0, 1)) + '</span>';
+          }).join('') +
+        '</div>';
+
+    matrix(calMonth.year, calMonth.month).forEach(function (week) {
+      html += '<div class="hc-cal__row" role="row">';
+      week.forEach(function (day) {
+        if (!day) { html += '<span class="hc-cal__cell" role="gridcell"></span>'; return; }
+        var iso = isoOf(calMonth.year, calMonth.month, day);
+        var lesson = byDay[iso];
+        var open = lesson && lesson.id === showingId;
+        var classes = 'hc-cal__day' + (lesson ? ' hc-cal__day--has' : '') +
+          (iso === today ? ' hc-cal__day--today' : '') + (open ? ' hc-cal__day--open' : '');
+        html += '<span class="hc-cal__cell" role="gridcell">';
+        if (lesson) {
+          html += '<button type="button" class="' + classes + '" data-action="homekids-cal-pick" ' +
+            'data-id="' + c.esc(lesson.id) + '" aria-pressed="' + (open ? 'true' : 'false') + '" ' +
+            'aria-label="' + c.esc(c.formatDate(iso) + ', ' + lesson.title) + '">' +
+            '<span class="hc-cal__day-num">' + day + '</span>' +
+            '<span class="hc-cal__dot" aria-hidden="true"></span>' +
+          '</button>';
+        } else {
+          html += '<span class="' + classes + '"><span class="hc-cal__day-num">' + day + '</span></span>';
+        }
+        html += '</span>';
+      });
+      html += '</div>';
+    });
+
+    return html + '</div>' +
+      '<p class="hc-caption hc-sheet__note">Each marked Sunday has a HomeKids lesson. Tap one to open it.</p>';
   }
 
-  /* SWIPING THE SUNDAY. The arrows sit at the bottom edge of a phone's reach,
-     right beside the notches on the index rail, and a thumb meant for the
-     right arrow too easily lands on the rail instead. So the date, the title
-     and the passage between the arrows are a handle of their own: drag them
-     left for an earlier Sunday, right for a more recent one, the way the
-     arrows point.
-
-     The strip carries data-no-swipe, so js/swipe.js leaves it alone and a drag
-     here never also turns the tab. The same two numbers decide the axis
-     (LOCK_SLOP and AXIS_BIAS there), so a drag that is mostly vertical is a
-     scroll in both places. The title follows the finger while it moves, and
-     pulls back with resistance at either end where there is no Sunday to go
-     to. */
-  var SWIPE_SLOP = 10;     // px before the gesture has to say which way it goes
-  var SWIPE_AXIS = 1.2;    // horizontal has to beat vertical by this much
-  var SWIPE_COMMIT = 56;   // px of travel that turns the Sunday on release
-  var SWIPE_FLICK = 0.4;   // px per ms that turns it on a shorter, quick flick
-  var SWIPE_FLICK_MIN = 24;
-  var SWIPE_EDGE = 0.3;    // how much of the finger the title follows at an end
-
-  var drag = null;
-
-  function swipeHas(strip, by) {
-    var arrow = strip.querySelector('[data-action="homekids-week"][data-step="' + by + '"]');
-    return !!arrow && !arrow.disabled;
+  function showingLessonId() {
+    var wrap = document.querySelector('.hc-kids[data-kids-lesson]');
+    return wrap ? wrap.getAttribute('data-kids-lesson') : null;
   }
 
-  function swipeMove(dx) {
-    var face = drag.face;
-    if (!face) return;
-    var by = dx < 0 ? 1 : -1;
-    if (!swipeHas(drag.strip, by)) dx *= SWIPE_EDGE;
-    face.style.transform = dx ? 'translateX(' + dx + 'px)' : '';
-    face.style.opacity = String(Math.max(0.35, 1 - Math.abs(dx) / 260));
+  function openCalendar() {
+    var lessons = HC.data.homekidsLessonsByDate();
+    if (!lessons.length) return;
+    hideCalendar();
+    var id = showingLessonId();
+    var showing = HC.data.getHomekidsLesson(id) || lessons[0];
+    calMonth = monthOfIso(showing.taughtOn);
+
+    var layer = c.el('' +
+      '<div class="hc-sheet hc-kids-cal" data-sheet="homekids-cal" data-kids-cal role="dialog" ' +
+          'aria-modal="true" aria-label="Pick a Sunday">' +
+        '<button type="button" class="hc-sheet__scrim" data-action="homekids-cal-close" ' +
+          'tabindex="-1" aria-hidden="true"></button>' +
+        '<div class="hc-sheet__panel">' +
+          '<div class="hc-sheet__head">' +
+            '<p class="hc-eyebrow">Pick a Sunday</p>' +
+            '<button type="button" class="hc-sheet__close" data-action="homekids-cal-close" ' +
+              'aria-label="Close">' + c.icon('close') + '</button>' +
+          '</div>' +
+          '<div data-kids-cal-body>' + calendarBody(showing.id) + '</div>' +
+        '</div>' +
+      '</div>');
+    (document.getElementById('app') || document.body).appendChild(layer);
   }
 
-  function swipeBack(face) {
-    if (!face) return;
-    face.style.transition = 'transform 0.2s ease, opacity 0.2s ease';
-    face.style.transform = '';
-    face.style.opacity = '';
-    window.setTimeout(function () { face.style.transition = ''; }, 220);
+  function stepCalendar(el) {
+    var body = document.querySelector('[data-kids-cal-body]');
+    if (!body || !calMonth) return;
+    var to = monthKey(calMonth.year, calMonth.month) + (parseInt(el.getAttribute('data-step'), 10) || 0);
+    calMonth = { year: Math.floor(to / 12), month: to % 12 };
+    body.innerHTML = calendarBody(showingLessonId());
+    var sheet = document.querySelector('[data-kids-cal]');
+    if (sheet) sheet.setAttribute('data-settled', 'true');   // no second slide-in
   }
 
-  function onSwipeStart(evt) {
-    drag = null;
-    if (!evt.touches || evt.touches.length !== 1) return;
-    var strip = evt.target && evt.target.closest && evt.target.closest('[data-kids-swipe]');
-    if (!strip) return;
-    var t = evt.touches[0];
-    drag = {
-      strip: strip,
-      face: strip.querySelector('.hc-worship-week'),
-      x: t.clientX, y: t.clientY,
-      dx: 0, at: Date.now(), v: 0,
-      locked: false
-    };
+  function pickFromCalendar(el) {
+    hideCalendar();
+    railTo(el.getAttribute('data-id'));
   }
 
-  function onSwipeMove(evt) {
-    if (!drag) return;
-    if (evt.touches.length !== 1) { swipeBack(drag.face); drag = null; return; }
-    var t = evt.touches[0];
-    var dx = t.clientX - drag.x;
-    var dy = t.clientY - drag.y;
-
-    if (!drag.locked) {
-      if (Math.abs(dy) > SWIPE_SLOP && Math.abs(dy) >= Math.abs(dx)) { drag = null; return; }
-      if (Math.abs(dx) < SWIPE_SLOP || Math.abs(dx) < Math.abs(dy) * SWIPE_AXIS) return;
-      drag.locked = true;
-      drag.x += dx < 0 ? -SWIPE_SLOP : SWIPE_SLOP;   // start from under the finger
-      dx = t.clientX - drag.x;
-    }
-
-    if (evt.cancelable) evt.preventDefault();
-    var now = Date.now();
-    if (now > drag.at) drag.v = (dx - drag.dx) / (now - drag.at);
-    drag.at = now;
-    drag.dx = dx;
-    swipeMove(dx);
+  function hideCalendar() {
+    var open = document.querySelector('[data-kids-cal]');
+    if (open && open.parentNode) open.parentNode.removeChild(open);
   }
-
-  function onSwipeEnd() {
-    if (!drag) return;
-    var d = drag;
-    drag = null;
-    if (!d.locked) return;
-
-    var by = d.dx < 0 ? 1 : -1;
-    var far = Math.abs(d.dx) > SWIPE_COMMIT;
-    var flick = Math.abs(d.v) > SWIPE_FLICK && Math.abs(d.dx) > SWIPE_FLICK_MIN &&
-                (d.v < 0) === (by > 0);
-    if ((far || flick) && swipeHas(d.strip, by) && step(d.strip, by)) return;
-    swipeBack(d.face);
-  }
-
-  function onSwipeCancel() {
-    if (drag) swipeBack(drag.face);
-    drag = null;
-  }
-
-  document.addEventListener('touchstart', onSwipeStart, { passive: true });
-  // Not passive: once the drag is sideways it is not also a scroll.
-  document.addEventListener('touchmove', onSwipeMove, { passive: false });
-  document.addEventListener('touchend', onSwipeEnd, { passive: true });
-  document.addEventListener('touchcancel', onSwipeCancel, { passive: true });
 
   /* The card a family holds up on Sunday. Drawn over everything, with the
      ticks large, the lesson it belongs to, and whose list it is. Built and
@@ -564,9 +696,20 @@
   }
 
   // Leaving the screen, or Escape, puts the card away.
-  if (HC.store && HC.store.on) HC.store.on('view', hideTeacher);
+  if (HC.store && HC.store.on) {
+    HC.store.on('view', hideTeacher);
+    HC.store.on('view', hideCalendar);
+  }
   document.addEventListener('keydown', function (evt) {
-    if (evt.key === 'Escape') hideTeacher();
+    if (evt.key === 'Escape') { hideTeacher(); hideCalendar(); }
+    // The week slide is a div with role="button", so it answers the keys a
+    // button would.
+    var t = evt.target;
+    if ((evt.key === 'Enter' || evt.key === ' ') && t && t.classList &&
+        t.classList.contains('hc-kids-week__open')) {
+      evt.preventDefault();
+      openCalendar();
+    }
   });
 
   HC.screens = HC.screens || {};
@@ -574,7 +717,11 @@
   HC.screens.homekidsHelpers = {
     pickGroup: pickGroup,
     toggle: toggle,
-    step: step,
+    selectLesson: selectLesson,
+    openCalendar: openCalendar,
+    stepCalendar: stepCalendar,
+    pickFromCalendar: pickFromCalendar,
+    hideCalendar: hideCalendar,
     showTeacher: showTeacher,
     hideTeacher: hideTeacher,
     progressText: progressText
