@@ -116,8 +116,11 @@
             ' aria-label="An earlier Sunday">' + c.icon('chevronRight') + '</button>'
       : '';
 
+    // data-no-swipe keeps js/swipe.js off this strip: a sideways drag here
+    // turns the Sunday rather than the tab. See the swipe below step().
     return '' +
-      '<div class="hc-worship__head hc-kids-week">' +
+      '<div class="hc-worship__head hc-kids-week"' +
+        (count > 1 ? ' data-no-swipe data-kids-swipe' : '') + '>' +
         arrows +
         '<div class="hc-worship-week">' +
           '<p class="hc-eyebrow hc-worship-week__date">' +
@@ -385,13 +388,124 @@
     return on;
   }
 
-  function step(el) {
+  /* by is +1 for an earlier Sunday and -1 for a more recent one. Read off the
+     arrow's data-step when it is not given, which is how a tap arrives. */
+  function step(el, by) {
+    if (by == null) by = parseInt(el.getAttribute('data-step'), 10) || 0;
     var lesson = screenLesson(el);
     var lessons = HC.data.homekidsLessonsByDate();
-    var next = lessons[lessons.indexOf(lesson) + (parseInt(el.getAttribute('data-step'), 10) || 0)];
-    if (!next) return;
+    var next = lessons[lessons.indexOf(lesson) + by];
+    if (!next) return false;
     HC.router.go({ name: 'homekids', id: next.id }, { replace: true });
+    return true;
   }
+
+  /* SWIPING THE SUNDAY. The arrows sit at the bottom edge of a phone's reach,
+     right beside the notches on the index rail, and a thumb meant for the
+     right arrow too easily lands on the rail instead. So the date, the title
+     and the passage between the arrows are a handle of their own: drag them
+     left for an earlier Sunday, right for a more recent one, the way the
+     arrows point.
+
+     The strip carries data-no-swipe, so js/swipe.js leaves it alone and a drag
+     here never also turns the tab. The same two numbers decide the axis
+     (LOCK_SLOP and AXIS_BIAS there), so a drag that is mostly vertical is a
+     scroll in both places. The title follows the finger while it moves, and
+     pulls back with resistance at either end where there is no Sunday to go
+     to. */
+  var SWIPE_SLOP = 10;     // px before the gesture has to say which way it goes
+  var SWIPE_AXIS = 1.2;    // horizontal has to beat vertical by this much
+  var SWIPE_COMMIT = 56;   // px of travel that turns the Sunday on release
+  var SWIPE_FLICK = 0.4;   // px per ms that turns it on a shorter, quick flick
+  var SWIPE_FLICK_MIN = 24;
+  var SWIPE_EDGE = 0.3;    // how much of the finger the title follows at an end
+
+  var drag = null;
+
+  function swipeHas(strip, by) {
+    var arrow = strip.querySelector('[data-action="homekids-week"][data-step="' + by + '"]');
+    return !!arrow && !arrow.disabled;
+  }
+
+  function swipeMove(dx) {
+    var face = drag.face;
+    if (!face) return;
+    var by = dx < 0 ? 1 : -1;
+    if (!swipeHas(drag.strip, by)) dx *= SWIPE_EDGE;
+    face.style.transform = dx ? 'translateX(' + dx + 'px)' : '';
+    face.style.opacity = String(Math.max(0.35, 1 - Math.abs(dx) / 260));
+  }
+
+  function swipeBack(face) {
+    if (!face) return;
+    face.style.transition = 'transform 0.2s ease, opacity 0.2s ease';
+    face.style.transform = '';
+    face.style.opacity = '';
+    window.setTimeout(function () { face.style.transition = ''; }, 220);
+  }
+
+  function onSwipeStart(evt) {
+    drag = null;
+    if (!evt.touches || evt.touches.length !== 1) return;
+    var strip = evt.target && evt.target.closest && evt.target.closest('[data-kids-swipe]');
+    if (!strip) return;
+    var t = evt.touches[0];
+    drag = {
+      strip: strip,
+      face: strip.querySelector('.hc-worship-week'),
+      x: t.clientX, y: t.clientY,
+      dx: 0, at: Date.now(), v: 0,
+      locked: false
+    };
+  }
+
+  function onSwipeMove(evt) {
+    if (!drag) return;
+    if (evt.touches.length !== 1) { swipeBack(drag.face); drag = null; return; }
+    var t = evt.touches[0];
+    var dx = t.clientX - drag.x;
+    var dy = t.clientY - drag.y;
+
+    if (!drag.locked) {
+      if (Math.abs(dy) > SWIPE_SLOP && Math.abs(dy) >= Math.abs(dx)) { drag = null; return; }
+      if (Math.abs(dx) < SWIPE_SLOP || Math.abs(dx) < Math.abs(dy) * SWIPE_AXIS) return;
+      drag.locked = true;
+      drag.x += dx < 0 ? -SWIPE_SLOP : SWIPE_SLOP;   // start from under the finger
+      dx = t.clientX - drag.x;
+    }
+
+    if (evt.cancelable) evt.preventDefault();
+    var now = Date.now();
+    if (now > drag.at) drag.v = (dx - drag.dx) / (now - drag.at);
+    drag.at = now;
+    drag.dx = dx;
+    swipeMove(dx);
+  }
+
+  function onSwipeEnd() {
+    if (!drag) return;
+    var d = drag;
+    drag = null;
+    if (!d.locked) return;
+
+    var by = d.dx < 0 ? 1 : -1;
+    var far = Math.abs(d.dx) > SWIPE_COMMIT;
+    var flick = Math.abs(d.v) > SWIPE_FLICK && Math.abs(d.dx) > SWIPE_FLICK_MIN &&
+                (d.v < 0) === (by > 0);
+    if ((far || flick) && swipeHas(d.strip, by) && step(d.strip, by)) return;
+    swipeBack(d.face);
+  }
+
+  function onSwipeCancel() {
+    if (drag) swipeBack(drag.face);
+    drag = null;
+  }
+
+  document.addEventListener('touchstart', onSwipeStart, { passive: true });
+  // Not passive: once the drag is sideways it is not also a scroll.
+  document.addEventListener('touchmove', onSwipeMove, { passive: false });
+  document.addEventListener('touchend', onSwipeEnd, { passive: true });
+  document.addEventListener('touchcancel', onSwipeCancel, { passive: true });
 
   /* The card a family holds up on Sunday. Drawn over everything, with the
      ticks large, the lesson it belongs to, and whose list it is. Built and

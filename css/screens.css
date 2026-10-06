@@ -3878,6 +3878,10 @@ button.hc-cal__day { cursor: pointer; }
 /* ---- the week ---- */
 
 .hc-kids-week { margin-top: var(--hc-space-xl); }
+/* The Sunday swipes sideways (js/screens/homekids.js), so only vertical
+   panning is left to the browser here. */
+.hc-kids-week[data-kids-swipe] { touch-action: pan-y; }
+.hc-kids-week[data-kids-swipe] .hc-worship-week { -webkit-user-select: none; user-select: none; }
 .hc-kids-week__title { margin-top: 6px; }
 .hc-kids-week__passage { margin-top: var(--hc-space-xs); color: var(--hc-mid); }
 
