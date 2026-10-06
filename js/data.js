@@ -3041,16 +3041,13 @@
 
     /* THE MONTHLY REPORT, and which weeks belong to which month.
 
-       Plain calendar months, by the Sunday the lesson was taught: October's
-       report is the lessons taught in October, and a week that started on
-       September 27 is September's, wherever its seven days run to.
-
-       A family shows the teacher on the last Sunday of the month, which is
-       also the morning that Sunday's lesson is taught. So that last week is
-       in the report but not over, and a week that is not over yet is shown
-       as still going and left out of the month's total (homekidsWeekOver),
-       rather than counting against a family for ticks nobody could have
-       done yet. It ends the Sunday after its lesson.
+       A family shows the teacher on the last Sunday of the month. A week's
+       ticks are done in the seven days after its lesson, so a week counts
+       toward the month of the Sunday it ends on, not the one it starts on:
+       the lesson taught on October 25 is still being worked through that
+       Sunday, and it lands in November's report. So October's report on
+       October 25 is the four weeks that started on September 27, October 4,
+       11 and 18, every one of them finished by the time it is shown.
 
        Months are 'YYYY-MM'. `today` is optional, the tests pass one. */
     homekidsWeekEnds: function (lesson) {
@@ -3059,14 +3056,11 @@
       return d.toISOString().slice(0, 10);
     },
 
-    homekidsWeekOver: function (lesson, today) {
-      return this.homekidsWeekEnds(lesson) <= (today || isoToday());
-    },
-
     homekidsReportMonths: function (today) {
+      var self = this;
       var seen = {};
       return this.homekidsLessonsByDate(today).map(function (l) {
-        return l.taughtOn.slice(0, 7);
+        return self.homekidsWeekEnds(l).slice(0, 7);
       }).filter(function (m) {
         if (seen[m]) return false;
         seen[m] = true;
@@ -3076,8 +3070,9 @@
 
     // Oldest week first, the order a month is lived in.
     homekidsMonthLessons: function (month, today) {
+      var self = this;
       return this.homekidsLessonsByDate(today).filter(function (l) {
-        return l.taughtOn.slice(0, 7) === month;
+        return self.homekidsWeekEnds(l).slice(0, 7) === month;
       }).reverse();
     },
 
