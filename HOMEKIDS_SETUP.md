@@ -15,11 +15,11 @@ between **Practices** and **Services**. It has three jobs:
    first, then each week's lesson on pages of its own) through the share sheet,
    where Save to Files is. The ticks live on the phone only, no account needed.
 
-   A week counts toward the month of the Sunday it **ends** on, so the report
-   shown on the last Sunday holds only weeks that are already over: October's
-   is the weeks that began September 27, October 4, 11 and 18, and the lesson
-   taught on October 25 starts November's. The arrows on the card step back
-   through earlier months.
+   A month is the lessons **taught** in that calendar month. On the last
+   Sunday, that morning's lesson is in the report but marked "still going",
+   and it stays out of the month's total and the prize line until its week
+   is over, so a family is never short for ticks nobody could have done yet.
+   The arrows on the card step back through earlier months.
 3. **The two HomeKids emails.** What the weekly email to parents said, and,
    folded away underneath, what the email to volunteers said. Both arrive
    through the same mailbox reader as the church newsletter, and both wait for

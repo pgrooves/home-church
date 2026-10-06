@@ -390,7 +390,9 @@ const kidsReport = {
     { lesson: kidsLesson('k1', '2026-09-27', 'Brave Like David'), checked: { story: true, verse: true, pray: true } },
     { lesson: kidsLesson('k2', '2026-10-04', 'The Lost Sheep'), checked: { story: true } },
     { lesson: kidsLesson('k3', '2026-10-11', 'Jesus Calms the Storm'), checked: {} },
-    { lesson: kidsLesson('k4', '2026-10-18', 'A Friend Like Jonathan'), checked: { pray: true } }
+    { lesson: kidsLesson('k4', '2026-10-18', 'A Friend Like Jonathan'), checked: { pray: true } },
+    // Taught this morning, the last Sunday: drawn, but not counted yet.
+    { lesson: kidsLesson('k5', '2026-10-25', 'Jonah Goes to Nineveh'), checked: { story: true }, inProgress: true }
   ]
 };
 
@@ -425,12 +427,17 @@ const kidsLines = linesOf(kidsPdf);
 ok('the kids month opens on a branded cover',
   says(kidsLines[0], 'HOME CHURCH · HOMEKIDS') && says(kidsLines[0], 'October 2026'), true);
 ok('with whose month it is', says(kidsLines[0], 'A month of HomeKids with Ava and Leo'), true);
-ok('and the month’s tally', says(kidsLines[0], '4 WEEKS · 5 OF 12 DONE'), true);
+ok('and the month’s tally, over the weeks that are over',
+  says(kidsLines[0], '5 WEEKS · 5 OF 12 DONE'), true);
+ok('the week taught that morning says it is still going',
+  anywhere(kidsLines, 'This week, still going. It counts once the week is over.'), true);
+ok('and the total leaves it out', anywhere(kidsLines, '5 of 12 this month'), true);
 ok('the checklist comes first, straight after the cover',
   says(kidsLines[1], 'This month’s checklist'), true);
 ok('each week says how it went', anywhere(kidsLines, '1 of 3 done'), true);
 ok('every lesson starts a page of its own',
-  ['Brave Like David', 'The Lost Sheep', 'Jesus Calms the Storm', 'A Friend Like Jonathan']
+  ['Brave Like David', 'The Lost Sheep', 'Jesus Calms the Storm', 'A Friend Like Jonathan',
+   'Jonah Goes to Nineveh']
     .every(t => kidsLines.some((p, i) => i > 1 && says(p.slice(0, 5), t))), true);
 ok('a family with no group gets every group’s questions',
   anywhere(kidsLines, 'LEGENDS + WARRIORS · AGES 7 TO 12'), true);
@@ -449,6 +456,12 @@ ok('a family that picked a group gets only theirs',
   !anywhere(pickedLines, 'Who is with you when you are scared?'), true);
 ok('and no name leaves no hole', says(pickedLines[0], 'A month of HomeKids'), true);
 ok('nothing drawn over anything else there either', overlaps(picked), []);
+
+// The month's first Sunday: one week, taught that morning, nothing to total.
+const fresh = linesOf(HC.printPdf.kidsMonth(Object.assign({}, kidsReport,
+  { weeks: kidsReport.weeks.slice(4) })));
+ok('a month with only this week in it still makes a document, with no empty total',
+  says(fresh[0], '1 WEEK') && !anywhere(fresh, '0 of 0 this month'), true);
 
 // Every document has to survive being handed nothing.
 function throws(fn) {

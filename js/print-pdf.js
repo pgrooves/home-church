@@ -622,9 +622,12 @@
        { monthLabel: 'October 2026', name: 'Ava and Leo',
          group: { key, name, ages } or null,
          groups: every group, for when the family has not picked one,
-         weeks: [ { lesson, checked: { itemId: true } }, ... ] }   oldest first
+         weeks: [ { lesson, checked: { itemId: true }, inProgress }, ... ] }
+                                                               oldest first
 
-     so nothing in here reaches for the phone's storage. */
+     so nothing in here reaches for the phone's storage. A week in progress
+     is the one taught that very Sunday: its boxes are drawn, but it says it
+     is still going and stays out of the month's total. */
 
   var BOX = 12;   // a tick box, in points
 
@@ -651,6 +654,20 @@
     var items = week.lesson.checklist || [];
     var done = items.filter(function (i) { return week.checked[i.id] === true; }).length;
     return { done: done, total: items.length };
+  }
+
+  // The month's total, over the weeks that are over.
+  function monthTally(weeks) {
+    var out = { done: 0, total: 0, full: 0, weeks: 0 };
+    weeks.forEach(function (week) {
+      if (week.inProgress) return;
+      var t = weekTally(week);
+      out.weeks++;
+      out.done += t.done;
+      out.total += t.total;
+      if (t.total && t.done >= t.total) out.full++;
+    });
+    return out;
   }
 
   // A labelled part of a lesson, kept with the first line of what follows.
@@ -700,21 +717,18 @@
         s.para(item.text, TYPE.item, { x: s.left + BOX + 10, width: itemW, after: 6 });
       });
 
-      s.para(tally.done + ' of ' + tally.total + ' done', TYPE.note, { after: 14 });
+      s.para(week.inProgress
+        ? 'This week, still going. It counts once the week is over.'
+        : tally.done + ' of ' + tally.total + ' done', TYPE.note, { after: 14 });
     });
 
-    var done = 0, total = 0, full = 0;
-    report.weeks.forEach(function (week) {
-      var t = weekTally(week);
-      done += t.done;
-      total += t.total;
-      if (t.total && t.done >= t.total) full++;
-    });
-    var all = total > 0 && done >= total;
+    var m = monthTally(report.weeks);
+    if (!m.weeks) return;
+    var all = m.total > 0 && m.done >= m.total;
     var big = styled('h2', { size: 26, leading: 30 });
     var line = all
       ? 'Every box, every week. Time for the prize box.'
-      : full + ' of ' + report.weeks.length + (report.weeks.length === 1 ? ' week' : ' weeks') +
+      : m.full + ' of ' + m.weeks + (m.weeks === 1 ? ' week' : ' weeks') +
         ' with every box ticked.';
     var h = 14 + big.leading + 4 + s.height(line, TYPE.liner, s.width - 28) + 14;
 
@@ -722,7 +736,7 @@
     s.panel(s.left, s.at(), s.width, h, CARD);
     s.panel(s.left, s.at(), 2, h, ACCENT);
     s.gap(14);
-    s.para(done + ' of ' + total + ' this month', big, { x: s.left + 14, width: s.width - 28, after: 4 });
+    s.para(m.done + ' of ' + m.total + ' this month', big, { x: s.left + 14, width: s.width - 28, after: 4 });
     s.para(line, TYPE.liner, { x: s.left + 14, width: s.width - 28 });
     s.gap(14);
   }
@@ -806,8 +820,7 @@
     if (!report || !(report.weeks || []).length) throw new Error('There are no weeks in this month.');
 
     var weeks = report.weeks;
-    var done = 0, total = 0;
-    weeks.forEach(function (w) { var t = weekTally(w); done += t.done; total += t.total; });
+    var m = monthTally(weeks);
 
     var s = sheet({ title: 'HomeKids · ' + report.monthLabel });
 
@@ -817,8 +830,8 @@
       { text: report.name ? 'A month of HomeKids with ' + report.name : 'A month of HomeKids',
         style: TYPE.coverSubtitle, before: 6 },
       { divider: true, before: 18 },
-      { text: weeks.length + (weeks.length === 1 ? ' week' : ' weeks') + ' · ' +
-          done + ' of ' + total + ' done',
+      { text: weeks.length + (weeks.length === 1 ? ' week' : ' weeks') +
+          (m.weeks ? ' · ' + m.done + ' of ' + m.total + ' done' : ''),
         style: TYPE.coverMeta, before: 18 },
       { text: report.group ? report.group.name + ' · ages ' + report.group.ages : '',
         style: TYPE.coverNote, before: 26 },

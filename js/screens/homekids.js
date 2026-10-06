@@ -662,9 +662,10 @@
      because it is a moment and not a place: there is nothing to come back
      to, and the back gesture should still mean the screen underneath.
 
-     Which weeks make a month is HC.data's call (homekidsMonthLessons): a
-     week belongs to the month of the Sunday it ends on, so the report shown
-     on the last Sunday holds only weeks that are already over. The arrows
+     Which weeks make a month is HC.data's call (homekidsMonthLessons): the
+     lessons taught in that calendar month. On the last Sunday the newest of
+     them was taught that morning, so a week that is not over yet says it is
+     still going and stays out of the total and the prize line. The arrows
      step through every month that has a week in it. */
   function monthLabel(month) {
     var p = month.split('-');
@@ -691,16 +692,18 @@
         lesson.checklist.forEach(function (i) {
           if (HC.store.isKidsChecked(lesson.id, i.id)) checked[i.id] = true;
         });
-        return { lesson: lesson, checked: checked };
+        return { lesson: lesson, checked: checked,
+                 inProgress: !HC.data.homekidsWeekOver(lesson) };
       })
     };
   }
 
   function reportWeek(lesson) {
     var t = weekTally(lesson);
+    var going = !HC.data.homekidsWeekOver(lesson);
     return '' +
       '<section class="hc-kids-report__week"' +
-          (t.total && t.done >= t.total ? ' data-done="true"' : '') + '>' +
+          (!going && t.total && t.done >= t.total ? ' data-done="true"' : '') + '>' +
         '<p class="hc-eyebrow hc-kids-report__when">Week of ' +
           c.esc(c.formatDate(lesson.taughtOn)) + '</p>' +
         '<h3 class="hc-kids-report__lesson">' + c.esc(lesson.title) + '</h3>' +
@@ -715,7 +718,10 @@
             '</li>';
           }).join('') +
         '</ul>' +
-        '<p class="hc-caption hc-kids-report__tally">' + t.done + ' of ' + t.total + ' done</p>' +
+        '<p class="hc-caption hc-kids-report__tally">' +
+          (going ? 'This week, still going. It counts once the week is over.'
+                 : t.done + ' of ' + t.total + ' done') +
+        '</p>' +
       '</section>';
   }
 
@@ -724,8 +730,10 @@
     var at = months.indexOf(month);
     var lessons = HC.data.homekidsMonthLessons(month);
 
+    // Only weeks that are over count toward the month.
+    var over = lessons.filter(function (l) { return HC.data.homekidsWeekOver(l); });
     var done = 0, total = 0, full = 0;
-    lessons.forEach(function (l) {
+    over.forEach(function (l) {
       var t = weekTally(l);
       done += t.done;
       total += t.total;
@@ -755,12 +763,14 @@
             'placeholder="Your name" value="' + c.esc(HC.store.kidsName()) + '">' +
         '</label>' +
         lessons.map(reportWeek).join('') +
-        '<p class="hc-kids-teacher__count">' + done + ' of ' + total + '</p>' +
+        (over.length ? '<p class="hc-kids-teacher__count">' + done + ' of ' + total + '</p>' : '') +
         '<p class="hc-caption hc-kids-teacher__foot">' +
-          c.esc(all
-            ? 'Every box, every week. Time for the prize box.'
-            : full + ' of ' + lessons.length + (lessons.length === 1 ? ' week' : ' weeks') +
-              ' with every box ticked. Nice work this month.') +
+          c.esc(!over.length
+            ? 'The month’s first week is still going. Check back on Sunday.'
+            : all
+              ? 'Every box, every week. Time for the prize box.'
+              : full + ' of ' + over.length + (over.length === 1 ? ' week' : ' weeks') +
+                ' with every box ticked. Nice work this month.') +
         '</p>' +
         c.button('Download as PDF', { action: 'homekids-report-pdf', id: month,
           variant: 'secondary', className: 'hc-kids-report__pdf' }) +

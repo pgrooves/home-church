@@ -139,29 +139,32 @@ ok('a week ends the Sunday after its lesson',
 ok('across a year without a timezone slip',
   D.homekidsWeekEnds({ taughtOn: '2026-12-27' }), '2027-01-03');
 ok('months with weeks in them, newest first',
-  D.homekidsReportMonths('2026-10-02'), ['2026-10', '2026-09']);
-ok('a week belongs to the month it ends in',
-  [D.homekidsMonthLessons('2026-09', '2026-10-02').map(l => l.id),
-   D.homekidsMonthLessons('2026-10', '2026-10-02').map(l => l.id)],
-  [['homekids-2026-09-20'], ['homekids-2026-09-27']]);
-ok('the report opens on this month',
-  D.homekidsReportMonth('2026-10-02'), '2026-10');
-ok('or the newest month that has a week, once the lessons stop',
-  D.homekidsReportMonth('2026-11-15'), '2026-10');
+  D.homekidsReportMonths('2026-10-02'), ['2026-09']);
+ok('a week belongs to the month it was taught in',
+  D.homekidsMonthLessons('2026-09', '2026-10-02').map(l => l.id),
+  ['homekids-2026-09-20', 'homekids-2026-09-27']);
+ok('so a September lesson is never in October’s report',
+  D.homekidsMonthLessons('2026-10', '2026-10-02').length, 0);
+ok('the report opens on this month, or the newest month with a week',
+  [D.homekidsReportMonth('2026-09-30'), D.homekidsReportMonth('2026-10-02')], ['2026-09', '2026-09']);
 
 // A real October, shown on its last Sunday.
 const oct = app();
 ['2026-09-27', '2026-10-04', '2026-10-11', '2026-10-18', '2026-10-25'].forEach(day =>
   oct.HC.data.homekidsLessons.push({ id: 'k-' + day, taughtOn: day, title: day, checklist: [] }));
-ok('on the last Sunday, October is the four weeks that are already over, oldest first',
-  oct.HC.data.homekidsMonthLessons('2026-10', '2026-10-25').map(l => l.taughtOn),
-  ['2026-09-27', '2026-10-04', '2026-10-11', '2026-10-18']);
-ok('and that Sunday’s own lesson waits for November',
-  oct.HC.data.homekidsMonthLessons('2026-11', '2026-10-25').map(l => l.taughtOn), ['2026-10-25']);
-ok('which is the report the page opens on that morning',
-  oct.HC.data.homekidsReportMonth('2026-10-25'), '2026-10');
+const OD = oct.HC.data;
+ok('on the last Sunday, October is its own four lessons, oldest first',
+  OD.homekidsMonthLessons('2026-10', '2026-10-25').map(l => l.taughtOn),
+  ['2026-10-04', '2026-10-11', '2026-10-18', '2026-10-25']);
+ok('and the report opens on October that morning', OD.homekidsReportMonth('2026-10-25'), '2026-10');
+ok('that morning’s week is still going, the three before it are over',
+  OD.homekidsMonthLessons('2026-10', '2026-10-25').map(l => OD.homekidsWeekOver(l, '2026-10-25')),
+  [true, true, true, false]);
+ok('a week is over the Sunday after its lesson, not the Saturday',
+  [OD.homekidsWeekOver({ taughtOn: '2026-10-25' }, '2026-10-31'),
+   OD.homekidsWeekOver({ taughtOn: '2026-10-25' }, '2026-11-01')], [false, true]);
 ok('a lesson not yet taught is in no month',
-  oct.HC.data.homekidsMonthLessons('2026-11', '2026-10-24').length, 0);
+  OD.homekidsMonthLessons('2026-10', '2026-10-24').length, 3);
 
 /* --------------------------------------------------------------- mapping */
 
