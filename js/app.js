@@ -104,6 +104,21 @@
       gate: homekidsOn,
       menu: 'tabs'
     },
+    /* The Happy Lion Cafe, in the lobby on Sunday mornings. Straight after
+       HomeKids and drawn with the tabs, which puts it at the top of the bold
+       group, above HomeKids, where the church asked for it; a drag left off
+       it reaches Group, or Journal when Group is hidden. Gated, and unlike
+       the other gated pages OFF until an admin turns it on (migration 0085):
+       a page that takes money is not one to find before the cafe is ready
+       for it. */
+    {
+      route: 'cafe',
+      icon: 'coffee',
+      title: 'Coffee',
+      sub: 'Order ahead from the Happy Lion Cafe in the lobby.',
+      gate: cafeOn,
+      menu: 'tabs'
+    },
     /* First in the top group, and gated. When the church is running rooms this is the tile
        somebody opens on a Thursday night, which is the most-opened thing
        behind ••• and belongs at the top of it. When it is not, it is not
@@ -176,19 +191,6 @@
       icon: 'give',
       title: 'Give',
       sub: 'Through Overflow, in your own browser.'
-    },
-    /* The Happy Lion Cafe, in the lobby on Sunday mornings. Straight after
-       Give, which puts it between Give and Settings in the menu, where the
-       church asked for it. Gated, and unlike the other gated pages OFF until
-       an admin turns it on (migration 0085): a page that takes money is not
-       one to find before the cafe is ready for it. */
-    {
-      route: 'cafe',
-      icon: 'coffee',
-      title: 'Coffee',
-      sub: 'Order ahead from the Happy Lion Cafe in the lobby.',
-      gate: cafeOn,
-      menu: 'tabs'
     }
   ];
 
