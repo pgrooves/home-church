@@ -187,7 +187,8 @@
       icon: 'coffee',
       title: 'Coffee',
       sub: 'Order ahead from the Happy Lion Cafe in the lobby.',
-      gate: cafeOn
+      gate: cafeOn,
+      menu: 'tabs'
     }
   ];
 
