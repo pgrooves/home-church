@@ -242,34 +242,36 @@ Go live with the owner:
   threshold matching the original ink coverage; the lettering was redrawn as
   paths from measured strokes. Swap in a higher resolution original if one
   turns up; keep the file name.
-- 2026-10-08: The lion walks in place and sips on the Coffee page (Trey:
-  "the design shouldn't change at all... his stance shouldn't change"; then,
-  of a first cut that only rocked each leg a few degrees, "I said walk in
-  place"). `happy-lion-cafe-walking.svg` is the same path cut by masks into
-  a paper puppet: the near leg (shorts, leg, shoe) swings up 12 degrees from
-  a hip under the hem and tucks under the shirt; the far leg kicks back 22
-  degrees from the crotch; the tail swings; every 7s the arm lifts the cup
-  and the head leans in. The shirt and the near leg are filled with
-  var(--hc-paper) to hide what passes behind them, so the page draws the
-  file inline (fetched once in `js/screens/cafe.js`), with the still logo
-  standing in until it arrives and always for reduced motion. Each leg's
-  mask also copies the ink just past its cut (the near leg's sides under
-  the hem, the far thigh's hidden edge), so joints slide rather than open
-  and the resting pose is the still logo. SMIL, because Safari plays it;
-  `paint()` carries the svg and its clock over a repaint. cafe-return.html
-  and the mockups keep the still logo. If the still logo is ever replaced,
-  the walking one has to be recut to match. The far thigh's lower line runs
-  on behind the near leg (hidden by its fill) so no gap opens between the
-  legs when the near knee lifts (Trey, 2026-10-08). The steam is the one
-  part redrawn (Trey: it should rise like real steam, not swing in step): a
-  stroke the weight of the drawing's lines, a plain S that snakes straight up
-  over the cup: a wave travelling up the column, widening a little as it
-  rises, no curl at the top and no lean (Trey: a curl to the right "looks
-  like a worm"). 32 shapes on its own 3.6s loop (SMIL animate on d), held
-  upright through the sip. The traced
-  steam is masked out. The phone app only gets it
-  after a rebuild (`npm run ios:open`); the web app on GitHub Pages gets it
-  on push.
+- 2026-10-08: The lion strides in place and sips on the Coffee page.
+  History, all Trey's calls the same day: first a few degrees of rocking
+  ("I said walk in place"), then a knee lift and back kick ("there's a gap
+  between the legs" fixed), then a full stride, previewed as an artifact and
+  approved before it went to main. `happy-lion-cafe-walking.svg` is the
+  still logo's own path cut by masks into a paper puppet:
+  - Legs: both swing from a hip under the hem at (88,97), near +32 and far
+    -40 degrees, so they pass each other: one full step with each foot every
+    1.8s, the swinging foot lifted, the whole lion riding up 2.2 as the legs
+    pass. Each foot turns at its own ankle (near shoe at the notch, far boot
+    across its shin) to land heel first, roll flat and push off the toes.
+    The tail rides the hips, turned back most of the way.
+  - Sip, every 7.2s: the whole arm comes up 30 degrees from the shoulder so
+    the cup reaches his mouth, the head tips in 6 degrees, holds, lowers.
+    The torso's side under the arm and the sleeve's underside fade in only
+    while the arm is up.
+  - Occlusion: the shirt, near leg, near shoe, sleeve and cup are filled
+    with var(--hc-paper), so the page draws the file inline (fetched once in
+    `js/screens/cafe.js`; the still logo stands in until it arrives and for
+    reduced motion). Hidden-at-rest extras: the near shorts run on up under
+    the shirt, the far thigh's front edge runs up behind the near leg. Each
+    piece's mask copies the ink just past its cut so joints slide.
+  - Steam: the one redrawn part, an S that snakes straight up over the cup,
+    32 shapes on its own 3.6s loop, held upright and faded out during the
+    sip ("looks like a worm" ruled out a curl at the top).
+  - At rest every piece is in place: the still logo, apart from the steam.
+  The generator lives outside the repo; the SVG's own comment says how it
+  is built. If the still logo is ever replaced, the walking one has to be
+  recut to match. The phone app only gets it after a rebuild (`npm run
+  ios:open`); the web app on GitHub Pages gets it on push.
 
 ---
 
