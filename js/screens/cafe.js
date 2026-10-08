@@ -34,7 +34,7 @@
   // The lion walks in place and sips, in the SVG itself, so it plays only
   // while this page is up. Reduced motion gets the still logo, which is the
   // same picture: an img does not always pass that setting into its SVG.
-  var LOGO = 'assets/img/happy-lion-cafe-walking.svg';
+  var LOGO = 'assets/img/happy-lion-cafe-walking.svg?v=2';
   var LOGO_STILL = 'assets/img/happy-lion-cafe.svg';
   var MENU_LEDE = 'Pick your drink, choose when you’ll grab it, and it’ll be waiting at the counter.';
   var OFF_LINE = 'The cafe isn’t taking orders in the app right now. Come say hi at the counter in the lobby.';

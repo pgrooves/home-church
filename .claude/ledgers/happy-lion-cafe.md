@@ -245,7 +245,7 @@ Go live with the owner:
 - 2026-10-08: The lion walks in place and sips on the Coffee page (Trey:
   "the design shouldn't change at all... his stance shouldn't change").
   `happy-lion-cafe-walking.svg` is the same path, cut at the joints by masks
-  into head, arm + cup, steam, tail and each leg; CSS keyframes inside the
+  into head, arm + cup, steam, tail and each leg; SMIL animateTransform in the
   SVG turn each a few degrees about its joint (1.6s step, 7s sip). At rest
   it is pixel for pixel the still logo. Each joint's pivot sits where the
   cut lines slide along themselves, and a small circle in the moving piece's
@@ -253,7 +253,10 @@ Go live with the owner:
   (`LOGO_STILL` in `js/screens/cafe.js`); `paint()` carries the img over so a
   repaint doesn't restart his step. cafe-return.html and the mockups keep
   the still logo. If the still logo is ever replaced, the walking one has to
-  be recut to match.
+  be recut to match. First cut used CSS keyframes; switched to SMIL the same
+  day because Safari is not reliable about CSS animation inside an img, and
+  plays SMIL there. The phone only sees it after a rebuild (`npm run
+  ios:open`, run from Xcode); iOS Reduce Motion shows the still logo.
 
 ---
 
