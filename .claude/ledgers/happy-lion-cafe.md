@@ -16,6 +16,7 @@ secrets. Those live only as Supabase Edge Function secrets (names below).
 | Step | State |
 |---|---|
 | Logo vectorized | Done, `assets/img/happy-lion-cafe.svg` |
+| Logo walks on the Coffee page | Done 2026-10-08, `assets/img/happy-lion-cafe-walking.svg` |
 | Mockups | Done, signed off by Trey 2026-10-03 (`demo-happy-lion-cafe/mockup.src.html`) |
 | Code: database, functions, app screens, admin | **Built** on branch `claude/happy-lion-cafe-ordering-y8zove` |
 | Tests | `tests/cafe.test.js` (57), `supabase/tests/0085_happy_lion_cafe_test.sql` (26); full `npm test` green |
@@ -241,6 +242,18 @@ Go live with the owner:
   threshold matching the original ink coverage; the lettering was redrawn as
   paths from measured strokes. Swap in a higher resolution original if one
   turns up; keep the file name.
+- 2026-10-08: The lion walks in place and sips on the Coffee page (Trey:
+  "the design shouldn't change at all... his stance shouldn't change").
+  `happy-lion-cafe-walking.svg` is the same path, cut at the joints by masks
+  into head, arm + cup, steam, tail and each leg; CSS keyframes inside the
+  SVG turn each a few degrees about its joint (1.6s step, 7s sip). At rest
+  it is pixel for pixel the still logo. Each joint's pivot sits where the
+  cut lines slide along themselves, and a small circle in the moving piece's
+  mask overlaps the cut so no gap opens. Reduced motion gets the still file
+  (`LOGO_STILL` in `js/screens/cafe.js`); `paint()` carries the img over so a
+  repaint doesn't restart his step. cafe-return.html and the mockups keep
+  the still logo. If the still logo is ever replaced, the walking one has to
+  be recut to match.
 
 ---
 

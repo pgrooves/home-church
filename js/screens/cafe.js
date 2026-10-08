@@ -31,7 +31,11 @@
 
   var c = HC.components;
 
-  var LOGO = 'assets/img/happy-lion-cafe.svg';
+  // The lion walks in place and sips, in the SVG itself, so it plays only
+  // while this page is up. Reduced motion gets the still logo, which is the
+  // same picture: an img does not always pass that setting into its SVG.
+  var LOGO = 'assets/img/happy-lion-cafe-walking.svg';
+  var LOGO_STILL = 'assets/img/happy-lion-cafe.svg';
   var MENU_LEDE = 'Pick your drink, choose when you’ll grab it, and it’ll be waiting at the counter.';
   var OFF_LINE = 'The cafe isn’t taking orders in the app right now. Come say hi at the counter in the lobby.';
 
@@ -66,20 +70,30 @@
   }
 
   /* Repaint in place: the body of whichever view is on screen, without a
-     new route, so the scroll position and a half typed name both survive. */
+     new route, so the scroll position and a half typed name both survive.
+     The logo's img is carried over too, so the lion keeps walking through a
+     repaint instead of starting his step again. */
   function paint() {
     var root = document.querySelector('[data-cafe-root]');
     if (!root) return;
     var r = route();
+    var was = root.querySelector('.hc-cafe__logo img');
     root.innerHTML = body(r || { name: 'cafe' });
+    var now = root.querySelector('.hc-cafe__logo img');
+    if (was && now && was.getAttribute('src') === now.getAttribute('src')) now.parentNode.replaceChild(was, now);
     paintSheet();
   }
 
   /* ---------------------------------------------------------- pieces */
 
+  function reduced() {
+    return window.matchMedia &&
+           window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  }
+
   function logo(cls) {
     return '<div class="hc-cafe__logo ' + (cls || '') + '">' +
-      '<img src="' + LOGO + '" alt="Happy Lion Cafe" width="150" height="180">' +
+      '<img src="' + (reduced() ? LOGO_STILL : LOGO) + '" alt="Happy Lion Cafe" width="150" height="180">' +
     '</div>';
   }
 
