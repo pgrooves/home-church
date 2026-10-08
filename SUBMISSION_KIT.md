@@ -279,6 +279,21 @@ bring it with you. It works with no signal.
 ```
 (122)
 
+### What's New in This Version, v1.1 (required for an update, 4000 characters)
+
+```
+HomeKids: each Sunday's kids lesson, retold for families at home, with a
+story, a memory verse, questions for your child's age group, a prayer, and a
+weekly checklist for the prize box. Save the month as a PDF.
+
+Coffee: order ahead from the Happy Lion Cafe in our lobby on Sunday mornings.
+Pick a pickup time, pay with Apple Pay or a card, and get a notification when
+your drink is ready.
+
+Plus smaller fixes throughout.
+```
+(about 390) Change the last line if there is something worth naming.
+
 ### Description
 
 ```
@@ -323,6 +338,19 @@ IT WORKS WITH NO SIGNAL
 Guides, sermons, and your notes are saved on your phone. Church buildings and
 living rooms are not known for reception. The app opens to this week's
 material whether or not you have bars.
+
+HOMEKIDS
+
+Each Sunday's kids lesson, retold for families: the big idea, the story, a
+memory verse, questions and an activity for your child's age group, and a
+prayer. Tick off the week's checklist together and bring the
+monthly report to the prize box. The ticks stay on your phone.
+
+COFFEE
+
+Order ahead from the Happy Lion Cafe in our lobby on Sunday mornings. Choose
+your drink and a pickup time, pay through Square with Apple Pay or a card,
+and the app tells you when it is ready.
 
 EVERYTHING ELSE
 
@@ -422,8 +450,16 @@ ship a mix of both, the tonal difference shows.
 
 ## 5. App Privacy questionnaire, filled in
 
-**Answer as of v1: accounts ON**, email one time codes with Resend as the
-sender, fonts bundled, push registration present but no sender behind it.
+**Answer as of v1.1: accounts ON, Happy Lion Cafe ON.** Email one time codes
+with Resend as the sender, fonts bundled, push live, coffee orders paid
+through Square's hosted checkout.
+
+**What changed for v1.1, the update after build 16.** Two rows, both from the
+Coffee page. **Purchases** is new, and **Device ID** flips to Linked. In App
+Store Connect, App Privacy is edited on the app, not on a build, and what you
+publish there shows on the live store page straight away, so make these two
+changes on the day you submit v1.1, not before. HomeKids changes nothing in
+this table: everything it keeps stays on the phone.
 
 **This section was rewritten when sign in went live.** The previous version
 answered for an app with no accounts and it is preserved nowhere, on purpose,
@@ -441,12 +477,14 @@ memory.
 | **Physical Address** | Yes | Yes | No | App Functionality |
 | **Other Data** | Yes | Yes | No | App Functionality |
 | **User ID** | Yes | Yes | No | App Functionality |
-| **Device ID** | Yes | **No** | No | App Functionality |
+| **Device ID** | Yes | **Yes** (changed in v1.1) | No | App Functionality |
 | **Other User Content** | Yes | Yes | No | App Functionality |
+| **Purchases → Purchase History** | Yes (new in v1.1) | Yes | No | App Functionality |
 
-Everything else: **Not Collected.** Specifically no Health, no Financial Info,
-no Location, no Sensitive Info, no Contacts, no Browsing History, no Search
-History, no Usage Data, no Diagnostics, no Purchases.
+Everything else: **Not Collected.** Specifically no Health, no Financial Info
+(Payment Info included, see below), no Location, no Sensitive Info, no
+Contacts, no Browsing History, no Search History, no Usage Data, no
+Diagnostics.
 
 **Notes on each one that needs explaining:**
 
@@ -463,9 +501,22 @@ History, no Usage Data, no Diagnostics, no Purchases.
   over-declaring costs nothing and the code path exists.
 - **User ID** is the Supabase auth uuid. It is the primary key of the profile
   row, so it is unambiguously collected and linked.
-- **Device ID** is the APNs push token, not linked to the account. Note that
-  the token is only ever registered in a native build, and nothing sends to it
-  yet. See the notification note in section 7 before answering this one.
+- **Device ID** is the APNs push token. **Linked since v1.1.** The broadcast
+  table, `device_tokens`, still has no account column, but a coffee order
+  (`cafe_orders`, migration 0085) stores the token of the phone that placed
+  it beside the account that placed it, so "Your coffee is ready" reaches the
+  right phone. Admin phones already carried their account for review
+  notifications (migration 0043). Apple asks per data type, so one linked
+  path makes the type Linked.
+- **Purchase History** is the coffee order: items, price, pickup time, the
+  name for the cup, and the account. Kept until the account is deleted, which
+  cascades to the orders.
+- **Payment Info is not collected.** Card, Apple Pay, and Cash App details are
+  entered on Square's hosted checkout page, opened in
+  `SFSafariViewController`, and never reach the app or our server. We get
+  back paid or not paid. Square is the one collecting it, under its own
+  policy, which the privacy policy says. The email address and the cup name
+  that go to Square are already covered by Email Address and Name.
 - **Other User Content** is the one line in this table that grew. It now
   covers three different things and the last two are the substantial ones.
     - The Connect forms, which open in the system browser and post to Church
@@ -484,8 +535,8 @@ History, no Usage Data, no Diagnostics, no Purchases.
   locally saved prayer requests are **not** part of this answer. They never
   leave the device and Apple does not ask you to declare what does not leave.
 
-**This table is also the privacy manifest.** The eight rows above are the same
-eight entries in `ios-config/PrivacyInfo.xcprivacy`, including which ones are
+**This table is also the privacy manifest.** The nine rows above are the same
+nine entries in `ios-config/PrivacyInfo.xcprivacy`, including which ones are
 Linked, and `npm run preflight` fails if they stop matching. Change one and
 change all three: the table, the manifest, and the `DECLARED` list in
 `scripts/preflight.js` that holds them together.
@@ -530,7 +581,7 @@ new submissions in September 2026**, so you will be answering those too.
 | Mature or suggestive themes | None |
 | Medical or wellness topics | None |
 | Violent themes | None |
-| In-app purchases | No |
+| In-app purchases | No (Coffee is not IAP, see below) |
 | User generated content | **Yes**, Group tab only, moderated |
 | Social media capabilities | **No** |
 | Unrestricted web access | **No**, see below |
@@ -565,6 +616,17 @@ for one evening and is gone.
 defensible either way, but the question is aimed at apps that embed a browser
 as a feature. Answering Yes would push the rating to 17+ or 18+ for nothing.
 
+**In-app purchases: still No in v1.1.** Coffee takes money, but for drinks
+picked up in the lobby, through Square's checkout page. That is a purchase of
+physical goods outside in-app purchase, which Guideline 3.1.3(e) requires,
+and it is not what this question means. Nothing in the app is unlocked by
+paying.
+
+**HomeKids changes no answer.** It is a family devotional page: Bible stories
+retold for kids, questions, and a prayer, all approved by a person before it
+appears. No new content descriptor applies, and nothing a child types leaves
+the phone.
+
 **Do not use the Kids Category.** Families use this app, but it is not
 directed at children, and the Kids Category carries heavy restrictions on
 analytics, external links, and data collection that buy us nothing.
@@ -573,19 +635,45 @@ analytics, external links, and data collection that buy us nothing.
 
 ## 7. App Review notes
 
-Paste this into the Notes for Review field, which caps at 4000 characters.
-This is 3849, which leaves room for CRLF line endings if App Store Connect
-counts them; check the count again if you edit it. **The Leader mode walkthrough is
-the most important thing in this entire document.** A reviewer who does not
-find Leader mode is assessing a reading app with two tabs that link outward,
-which is exactly the shape that fails Guideline 4.2.
+**Rewritten for v1.1, the update after build 16.** Paste this into the Notes
+for Review field, which caps at 4000 characters. This is about 3060, or about
+3130 if App Store Connect counts CRLF line endings; check again if you edit
+it. The v1 text, which build 16 was approved on, is in git history. Two
+things were cut to make room for Coffee and HomeKids: the line about build 8
+being returned for a demo account that needed a mailbox (Apple has since
+approved builds that use the passwords), and the step-by-step for seeing a
+report land in the host queue (Report and Block are still described and
+still one tap deep).
+
+**Coffee is the section a reviewer will poke at, and three things have to be
+true on the day you submit,** or these notes describe something the reviewer
+cannot see:
+
+1. **Admin, Pages, "Happy Lion Cafe page" is ON.** It ships off. A reviewer
+   who cannot find Coffee is reviewing an app with an undisclosed payments
+   feature that turns on later, which is Guideline 2.3.1, and that is the
+   expensive way to find out.
+2. **Square is on the production account, not sandbox.** A reviewer who does
+   go through checkout should see a real Square page, not a test one.
+3. **Attach the screen recording** the notes promise, in App Review
+   Information, Attachment. Ordering only opens on Sunday mornings and review
+   almost never happens then, so the recording is how a reviewer sees an
+   order go from menu to ticket to "ready". Record it on a real phone on a
+   Sunday, or on any day after tapping Open from the counter (Cafe mode), and
+   tap Closed again straight after. Show: the menu, a drink's options, the
+   order with a pickup time, Square's checkout page, the ticket with its
+   number, and the ready notification.
+
+**The Leader mode walkthrough is still the most important part of these notes.**
+A reviewer who does not find Leader mode is assessing a reading app with two
+tabs that link outward, which is exactly the shape that fails Guideline 4.2.
 
 ```
 Home Church is the app for a single church in Metairie, Louisiana.
 
-HOW TO SIGN IN — PLEASE READ THIS FIRST
-Type the email address, tap "Send me a code", and the app asks you for a
-PASSWORD rather than a code. Nothing is emailed and you need no mailbox.
+SIGNING IN — PLEASE READ FIRST
+Type the email, tap "Send me a code", and the app asks for a PASSWORD
+instead. Nothing is emailed and you need no mailbox.
 
   Host account (a group leader)
     Email: homechurchappleader@outlook.com
@@ -594,73 +682,59 @@ PASSWORD rather than a code. Nothing is emailed and you need no mailbox.
     Email: homechurchappreview@outlook.com
     Password: __________________
 
-Submission 08792afe-55f3-4c13-b984-097eb4e91092 (1.0 build 8) was returned
-under 2.1: the demo account needed a mailbox to receive a code. Both
-accounts now use passwords, tested on a device.
-
 GETTING AROUND
-There is no tab bar. The round button in the bottom right opens the
-navigation, a full screen list. The circle in the top right opens Your
-account.
+No tab bar. The round button bottom right opens the navigation. The circle
+top right opens Your account.
 
-LEADER MODE, WHICH IS THE HEART OF THE APP
-Almost everything works signed out. Leader mode does not: it belongs to a
-person rather than a phone, so the church grants it to whoever leads a
-group. It is easy to miss:
+NEW IN THIS VERSION
 
-  1. Circle in the top right, sign in with the Host account.
-  2. Round button in the bottom right, then GROUP.
-  3. Under "Leader mode — Host tonight", pick this week's guide and tap
-     "Open a room". The app mints a six digit code for the group.
-  4. Open GUIDE from the same menu, open any guide, tap "Start presentation
-     mode" — the one-question-at-a-time view leaders use while running a
-     meeting.
+COFFEE — order ahead from the cafe in our lobby
+Drinks are physical goods, made and picked up at the church, so payment
+uses Square's hosted checkout in SFSafariViewController, not in-app
+purchase (3.1.3(e)). Nothing digital is sold or unlocked.
+  * Ordering is open Sundays 7:50–11:20 a.m. Central only. Any other time
+    the page says "Cafe is Closed." and the menu cannot be ordered from.
+    That is intended. A screen recording of a full order is attached.
+  * The menu works signed out. Ordering needs sign-in because the order
+    belongs to a person: its ticket number, place in line, and the
+    "your coffee is ready" notification.
+  * You never need to complete a payment.
 
-  (As the Member account, or signed out, GROUP offers only a box for
-  somebody else's room code. That is the feature working, not an error.)
+HOMEKIDS — a kids guide for families
+Navigation > HOMEKIDS. Each Sunday's lesson retold for three age groups,
+with a weekly checklist and a monthly report a family can save as a PDF.
+Ticks stay on the phone. No sign-in, no account, nothing collected.
 
-DELETING AN ACCOUNT, GUIDELINE 5.1.1(v)
-Two places, both in-app, neither needing an email to us or a website:
-"Delete my account" under Sign out in Your account, and again in Your data.
-Two taps, the second confirming. It deletes rather than deactivates. The
-separate "Erase everything on this phone" clears local data only and is
-deliberately not the same control.
+LEADER MODE, THE HEART OF THE APP
+Leader mode belongs to a person, so the church grants it:
+  1. Top right circle, sign in as Host.
+  2. Navigation > GROUP. Under "Leader mode — Host tonight", pick this
+     week's guide and tap "Open a room". You get a six digit code.
+  3. Navigation > GUIDE, open a guide, "Start presentation mode".
+(As Member or signed out, GROUP offers only a box for a room code. That is
+the feature working.)
 
-THE GROUP SCREEN, AND GUIDELINE 1.2
-A room is joined with a six digit code from a leader and carries that week's
-questions. Answers stay hidden until the host opens them one at a time.
-Rooms expire that night and are deleted after ninety days. There is no feed,
-no messaging, no directory, and no way to find a room without being handed
-its code.
+DELETING AN ACCOUNT, 5.1.1(v)
+In-app, two places: "Delete my account" under Sign out in Your account,
+and in Your data. Two taps. It deletes, with coffee orders and journal.
 
-The controls, all one tap deep:
-
-  * TERMS FIRST. The first attempt to write in a room hits a screen stating
-    the rules against objectionable content and asking for agreement. Our
-    server refuses the post too, so it cannot be skipped.
-  * FILTERING. Checked against a slur list on our server before storage, on
-    posting and on editing.
-  * REPORTING. Every note by somebody else carries a visible Report button.
-    It asks why, confirms, and names hello@homechurchnola.com as a second
-    route.
-  * A HOST QUEUE. Reports appear at the top of the room for the host, with
-    "Take it down" and "Leave it up". Our terms commit us to acting within
-    one day.
-  * BLOCKING. Beside Report on every note, enforced on our server. An
-    Unblock list sits at the bottom of the room.
-
-Report and Block only appear on writing that is not your own. To see them:
-as the HOST, open a room and add a prayer request (the terms screen appears
-first). Sign in as the MEMBER, open GROUP, join with that code — both sit
-under the host's request. Sign back in as the HOST and rejoin: the report is
-at the top of the room. One device is enough. Posting a slur is refused and
-nothing is stored.
+THE GROUP SCREEN, 1.2
+A room is joined with a code from a leader. No feed, no messaging, no
+directory. Rooms are deleted after ninety days.
+  * TERMS FIRST. The first post hits a screen with the rules and asks for
+    agreement. Our server refuses the post too.
+  * FILTERING against a slur list on our server, on posting and editing.
+  * REPORT on every note by somebody else; it names
+    hello@homechurchnola.com as a second route.
+  * A HOST QUEUE of reports with "Take it down" and "Leave it up". We act
+    on reports within one day.
+  * BLOCK beside Report, enforced on our server, with an Unblock list.
+To see them: as HOST, open a room and add a prayer request. As MEMBER,
+GROUP, join with that code. Report and Block sit under the host's note.
 
 GIVE TAKES NO PAYMENT IN THE APP
-It opens our giving provider, Overflow, in SFSafariViewController. No
-purchase or functionality is unlocked by giving and nothing is gated behind
-it — a charitable donation handoff, not a circumvention of in-app purchase.
-Course signups and sermon audio open in the system browser too.
+It opens Overflow in SFSafariViewController. A donation handoff; nothing
+is unlocked by giving.
 
 Anything else, hello@homechurchnola.com.
 ```
@@ -750,6 +824,45 @@ the church's finance side able to answer that in one sentence.
 
 Check `Home Church NOLA` is available before you build the listing around it.
 Do not put the name in the keywords field.
+
+### New in v1.1: what Coffee and HomeKids add to this list
+
+HomeKids adds nothing here. It collects nothing, needs no sign in, links
+nowhere unexpected, and every word on it was approved by a person. Coffee
+adds four, in the order I would expect them.
+
+**A. Guideline 2.1, "we could not test the cafe." The likeliest.** Ordering is
+only open Sunday mornings, and review happens on weekdays. The notes in
+section 7 say so up front and promise a screen recording; **attach it**. If
+they still ask, reply with the recording again and offer to open the cafe by
+hand for a window they name: Cafe mode, Open, and Closed again after. While it
+is open it is open for everybody, so keep that window short.
+
+**B. Guideline 5.1.1, "registration required to purchase."** Apple does reject
+shops that make people make an account before they can buy. Our answer is
+that the menu and the cart work signed out, sign in is an email and nothing
+else, and the account is what the order needs: the ticket, the place in line,
+and the ready notification all belong to a person. Prepared response:
+
+> Browsing the menu and building an order work without signing in. Sign in is
+> asked for only at Pay, and it is an email address with no password and no
+> other personal information. The account is what makes the order work: it is
+> how we show the customer their ticket number and place in line, and how we
+> send the "your coffee is ready" notification to the phone that ordered it.
+> Accounts can be deleted from inside the app at any time.
+
+If that is not enough, the fix is guest ordering: the order is tied to the
+phone instead of an account, which means changes to `cafe-checkout`, the
+`cafe_orders` read policy, and the ticket screen. A real piece of work, so
+not built speculatively.
+
+**C. Guideline 3.1.1, mistaking Square for a way round in-app purchase.**
+Unlikely, and pre-empted in the notes. Drinks are physical goods consumed
+outside the app, which 3.1.3(e) says must not use in-app purchase.
+
+**D. Guideline 2.3.1, a feature switched on after review.** Only a risk if
+Coffee is off on the day you submit and turned on later. See section 7: turn
+it on first.
 
 -----
 

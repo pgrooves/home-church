@@ -171,14 +171,15 @@ function legal() {
    ===================================================================== */
 
 const DECLARED = {
-  NSPrivacyCollectedDataTypeDeviceID: false,        // the APNs token, unlinked
+  NSPrivacyCollectedDataTypeDeviceID: true,         // the APNs token, linked by cafe orders
   NSPrivacyCollectedDataTypeName: true,
   NSPrivacyCollectedDataTypeEmailAddress: true,
   NSPrivacyCollectedDataTypePhoneNumber: true,
   NSPrivacyCollectedDataTypePhysicalAddress: true,
   NSPrivacyCollectedDataTypeOtherDataTypes: true,   // birthday, gender, campus, marital status
   NSPrivacyCollectedDataTypeUserID: true,
-  NSPrivacyCollectedDataTypeOtherUserContent: true  // rooms, journal, Connect forms
+  NSPrivacyCollectedDataTypeOtherUserContent: true, // rooms, journal, Connect forms
+  NSPrivacyCollectedDataTypePurchaseHistory: true   // Happy Lion Cafe orders
 };
 
 function manifest() {

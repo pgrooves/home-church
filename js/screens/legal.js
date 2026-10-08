@@ -23,7 +23,7 @@
 
   // Update this whenever the text below changes in a way that matters, and
   // confirm it before submitting to the App Store.
-  var EFFECTIVE = 'September 23, 2026';
+  var EFFECTIVE = 'October 8, 2026';
 
   /* ---------------------------------------------------------- small parts */
 
@@ -78,7 +78,7 @@
 
     html += block('The short version', [
       'Almost everything you do in this app stays on your phone. We do not track you, there is no analytics, there is no advertising, and we do not sell your information to anyone. That is not a promise we are making for now. It is how the app is built.',
-      'Four things leave, and all four are things you choose. Signing in, which puts your email address and whatever you have filled in under Your information on our server so they follow you to another phone. Your journal, once you are signed in, so what you write follows you too. Writing in a group room, which is the point of a room: what you write there is read by the people in it. And writing to us from the form at the top of Connect, which becomes an email to the church office. You can delete the first three from inside the app whenever you like, and the fourth is an email you sent us, which we will delete if you ask.'
+      'Five things leave, and all five are things you choose. Signing in, which puts your email address and whatever you have filled in under Your information on our server so they follow you to another phone. Your journal, once you are signed in, so what you write follows you too. Writing in a group room, which is the point of a room: what you write there is read by the people in it. Writing to us from the form at the top of Connect, which becomes an email to the church office. And ordering a coffee from the Happy Lion Cafe, which sends your order, the name for your cup, and your email address to Square so they can take the payment. You can delete the first three, and your coffee orders, from inside the app whenever you like. The message from Connect is an email you sent us, which we will delete if you ask.'
     ]);
 
     html += list('What stays on your phone, and only on your phone', [
@@ -94,6 +94,13 @@
          reminding about the Serve Day. It is not, and this is where a reader
          looking for that finds it. See the header of js/reminders.js. */
       'Reminders you set yourself about an event on the calendar. Your phone holds them and sends them to itself. The church is not told which events you asked about, or that you asked.',
+      /* HomeKids, added with the page behind •••. A family's ticks are kept
+         here on purpose and nowhere else (the homekids block in
+         js/store.js), and the name on the monthly report is often a child's
+         first name, which is exactly why it is worth saying out loud that it
+         never leaves the phone. */
+      'On HomeKids, which age group you chose, the boxes your family ticked, and any name you put on the monthly report. The church does not see any of it, and neither does your child’s teacher unless you hold up the screen.',
+      'A coffee order while you are still choosing it, and the name you like on your cup. Nothing is sent until you tap Pay.',
       'Dark mode and text size.',
       'Your journal, for as long as you are not signed in.'
     ]);
@@ -138,13 +145,18 @@
     html += block('What actually leaves your phone', [
       'Content. The app downloads sermons, guides, events, and the church’s own details so you always have this week’s material, and keeps a copy so it still works when you have no signal. That is an ordinary web request, and like any web request it includes your device’s network address. We do not use it to work out who you are and we do not build a profile from it.',
       'Notifications, if you turn them on. Apple gives us an anonymous token for your device, and we keep it alongside which of the switches you turned on, so we know what to send and what not to. None of it is attached to your name, your email, or your account: a row here says that some phone wants the Monday guide notice, never whose phone it is. Turning the switches off stops the sending, and we retire the token when your phone tells Apple the app is gone.',
+      /* The cafe is the second exception, and the first one anybody but an
+         admin meets. cafe_orders keeps the token of the phone that placed
+         the order beside the account that placed it (migration 0085), so
+         "Your coffee is ready" reaches the right pocket. */
+      'There are two exceptions. The first is a coffee order. So that the app can tell you your drink is ready, the order remembers which phone it was placed from, and that order belongs to your account, so for that order your phone’s token does sit beside your account. It is used for that one notification and nothing else.',
       /* The exception to the paragraph above, and it is written out rather
          than quietly making that paragraph a little bit untrue. Nothing here
          applies to anybody but the handful of people who run the app, and it
          only says about them a thing the church set by hand in the first
          place. Migration 0043 makes the same argument at length on the
          database's side. */
-      'There is one exception, and it applies to the few people who run the app for the church. An admin can be notified that something is waiting for them to approve, and a notification like that has to go to a person rather than to whoever asked, so on an admin’s own phone that token does carry their account. It is set when they turn those two switches on, it comes off when they sign out or switch them back off, and it says nothing about them the church did not already know. If you are not an admin, this paragraph is not about you and your token stays anonymous.'
+      'The second applies to the few people who run the app for the church. An admin can be notified that something is waiting for them to approve, and a notification like that has to go to a person rather than to whoever asked, so on an admin’s own phone that token does carry their account. It is set when they turn those two switches on, it comes off when they sign out or switch them back off, and it says nothing about them the church did not already know. If you are not an admin, this paragraph is not about you and your token stays anonymous.'
     ]);
 
     /* The contact form at the top of Connect, added after the group rooms and
@@ -164,8 +176,21 @@
       'If you would rather not use the form, the church’s email address is on the same screen and in this policy, and it reaches the same people.'
     ]);
 
+    /* The Coffee page, added with the Happy Lion Cafe. It is the fourth thing
+       in this app that sends what somebody chose somewhere, and the first that
+       involves money, so it gets the same treatment as the three above. What
+       is stored is cafe_orders in migration 0085; what Square is sent is
+       squareOrderBody in supabase/functions/_shared/cafe.mjs; what the counter
+       sees is hc_cafe_queue, which hands back no email and no token. */
+    html += block('Ordering coffee', [
+      'The Coffee page lets you order ahead from the Happy Lion Cafe, the cafe in our lobby on Sunday mornings. You have to be signed in to order, so that the order is yours and the app can tell you when it is ready.',
+      'When you tap Pay, our server keeps a record of the order: what you ordered, the pickup time you chose, the name for your cup, what it cost, and that it was your account that ordered it. The people working the counter see the name for the cup, what goes in it, and the pickup time. They do not see your email address.',
+      'Paying happens on Square’s checkout page, which opens on top of the app. We send Square the order, the name for your cup, and your email address, so the order reaches the cafe with a way to reach you about it. Your card details, or your Apple Pay or Cash App payment, go to Square and never pass through this app or reach us. All we learn back is whether the order was paid. Square’s own privacy policy covers its checkout page.',
+      'Your orders stay in your account until you delete the account, which deletes them from our server too. Square keeps its own record of the payment, the way any card processor does, under its own policy and the law.'
+    ]);
+
     html += block('When the app hands you off to somebody else', [
-      'Some things here are not ours. Giving opens Overflow. Messages open our podcast host or Spotify. Read the full chapter, under a verse, opens YouVersion’s bible.com. Baptism and Alpha open Church Center. Hosting a group opens Group Vitals. Sending us a prayer request opens a Google form. The email list opens Flodesk.',
+      'Some things here are not ours. Giving opens Overflow. Paying for a coffee opens Square. Messages open our podcast host or Spotify. Read the full chapter, under a verse, opens YouVersion’s bible.com. Baptism and Alpha open Church Center. Hosting a group opens Group Vitals. Sending us a prayer request opens a Google form. The email list opens Flodesk.',
       'Each of those opens in your phone’s own browser, and once you are there you are on their site and under their privacy policy, not ours. Anything you type into one of their forms goes to them and to the church. It does not pass through this app, and we only ever see what you chose to send.'
     ]);
 
@@ -174,6 +199,16 @@
       'Google, whose Gmail carries a message you send from the form on Connect to the church, in the same way it would carry an email you wrote to us yourself. They handle the sending and nothing else.',
       'Resend, which delivers the eight digit sign in code to your email address, and carries a message from the form on Connect on the occasions Gmail cannot. They handle the sending and nothing else.',
       'YouVersion, which supplies the words of a verse when you tap a scripture reference. The request goes from our server to theirs and carries the passage and nothing else: not your network address, not your account, not which guide you were reading.',
+      'Square, which runs the checkout page when you pay for a coffee and takes the payment on the cafe’s behalf. It receives your order, the name for your cup, and your email address.',
+      /* Said here so nobody has to wonder. Gemini, with Groq as a backup when
+         Gemini is busy, drafts announcements from the church newsletter and
+         the HomeKids guide from the teachers' lesson plans (newsletter-intake,
+         homekids-drive, content-merge, group-status). Every input is the
+         church's own writing, every output waits for a person to approve it,
+         and nothing a member of the app wrote or entered is ever sent. If
+         that last part ever changes, Guideline 5.1.2(i) wants it disclosed
+         here and permission asked first. */
+      'Google’s Gemini, with Groq as a backup, which help the church turn its own newsletters and the HomeKids teachers’ lesson plans into drafts that a person reads and approves before anything appears in the app. They are given the church’s writing and nothing else: nothing you write in this app, and nothing about you, is ever sent to them.',
       'Apple, which delivers notifications if you have turned them on.'
     ]);
 
@@ -184,6 +219,7 @@
     html += block('How long we keep it', [
       'Whatever is on your phone stays there until you remove it. If you have an account, what is in it stays until you delete the account, and then it is gone from our server rather than hidden or marked inactive.',
       'Group rooms are the exception, and they delete themselves. Ninety days after a room is opened, the room and everything written in it is removed. Long enough that a group can look back at a night, short enough that a hard season somebody wrote about in March is not still sitting on a server in December.',
+      'Coffee orders are kept as a record of the sale for as long as your account exists, and go with it when you delete it.',
       'Our copy of a message sent from the form on Connect goes the same way, after a hundred and eighty days. That copy is a safety net under the email, not a record we keep; the email itself sits in the church’s mailbox like any other, and we will delete that too if you ask.',
       'One thing that ninety days does not reach. If whoever hosted a room sent the night out as a document, that file is on the phones it went to, and we cannot delete it for you. It is worth asking them.'
     ]);
@@ -195,7 +231,8 @@
 
     html += block('Children', [
       'This app is for a whole church, and families use it. It is not aimed at children and we do not advertise to anybody.',
-      'We do not knowingly create an account for a child under 13. If your child has made one, email us and we will delete it and everything in it. Parents, the notes, rosters, and prayer requests a child might write in the app never leave their phone at all, so there is nothing on our side to ask us about.'
+      'We do not knowingly create an account for a child under 13. If your child has made one, email us and we will delete it and everything in it. Parents, the notes, rosters, and prayer requests a child might write in the app never leave their phone at all, so there is nothing on our side to ask us about.',
+      'HomeKids is written for parents to use with their children, and it collects nothing. The boxes your family ticks and any name you put on the monthly report stay on your phone, and the kids guide is the same for everybody who opens it.'
     ]);
 
     html += block('If this changes', [
@@ -220,7 +257,7 @@
     ]);
 
     html += block('What this is', [
-      'Home Church makes this app for our congregation and for anyone else who wants it. Sermons, small group guides, what is coming up, and a way to find us on a Sunday.'
+      'Home Church makes this app for our congregation and for anyone else who wants it. Sermons, small group guides, a kids guide for families, what is coming up, a way to order a coffee before the service, and a way to find us on a Sunday.'
     ]);
 
     html += block('Using it', [
@@ -248,6 +285,19 @@
     html += block('The sheet at the end of the night', [
       'Whoever hosts a room can turn the evening into one document and send it to the group. Everything the room wrote goes on it, including answers the group never got round to opening, and the prayer requests. That is what the button says before you tap it.',
       'Once that document leaves the app it is a file on somebody’s phone and we cannot reach it. Deleting what you wrote afterwards does not take it off a sheet that has already gone out. Worth knowing before you write, and worth a leader thinking about before they send.'
+    ]);
+
+    /* The Coffee page. The first thing in this app that takes money, so the
+       terms say plainly who is selling what, who takes the payment, and what
+       to do when an order goes wrong. Refunds are done by the cafe in Square;
+       there is no cancel button in the app (see .claude/ledgers/
+       happy-lion-cafe.md), which is why the counter and the email are the
+       routes named here. */
+    html += block('Ordering coffee', [
+      'The Happy Lion Cafe, in our lobby, makes and sells the drinks. The Coffee page is a way to order ahead and pay before you arrive. Payment is taken by Square on the cafe’s behalf, on Square’s own checkout page, and the price, any tax, and the total are shown before you pay.',
+      'Pick up your drink at the time you chose, at the counter in the lobby, under the name you gave for the cup. Please only order what you mean to collect.',
+      'If something goes wrong, a drink that is not right, an order that was cancelled, or a charge with no ticket, tell whoever is at the counter, or email us. Refunds are made by the cafe through Square, back to the way you paid.',
+      'The cafe can be closed, run out of something, or stop taking orders in the app on any given day, and the app says so when it is.'
     ]);
 
     html += block('What we can do', [
@@ -324,6 +374,8 @@
       'Your journal, and your checkmarks on every guide you have opened.',
       'Your group roster, attendance, and private notes.',
       'Prayer requests saved in Leader mode.',
+      'Your family’s ticks on HomeKids, and the name on the monthly report.',
+      'A coffee order you have not paid for yet, and the name you like on your cup.',
       'Dark mode and text size.',
       'A saved copy of this week’s sermons and guides, so the app works with no signal.'
     ]);
@@ -332,7 +384,8 @@
       html += list('What is stored in your account', [
         'The email address you sign in with.',
         'Your name, and anything else you filled in under Your information: birthday, campus, marital status, and your address if you gave one.',
-        'Your journal, including anything you highlighted in a guide or a verse and whatever you wrote about it.'
+        'Your journal, including anything you highlighted in a guide or a verse and whatever you wrote about it.',
+        'Your coffee orders: what you ordered, the name for the cup, the pickup time, and what it cost.'
       ]);
     }
 
@@ -351,7 +404,7 @@
       '</div>';
     } else if (confirmingAccount) {
       html += block('Are you sure', [
-        'Your account and everything synced to it are removed from the church’s server, and you are signed out. That includes your journal: every entry, every highlight, and everything you wrote about them. There is no undo. What is saved on this phone stays until you erase that too, so if you want it all gone, use both buttons.'
+        'Your account and everything synced to it are removed from the church’s server, and you are signed out. That includes your journal: every entry, every highlight, and everything you wrote about them, and your coffee orders. There is no undo. What is saved on this phone stays until you erase that too, so if you want it all gone, use both buttons.'
       ]);
       html += '<div class="hc-data__action hc-data__action--confirm">' +
         c.button('Yes, delete my account', { action: 'account-delete-confirm' }) +

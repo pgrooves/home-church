@@ -524,7 +524,7 @@
         target: HC.data.church, field: 'tagline',
         value: HC.data.church.tagline, label: 'the church’s tagline', rows: 3 }
     );
-    html += '<p class="hc-caption hc-about__version">Version 1.0</p>';
+    html += '<p class="hc-caption hc-about__version">Version 1.1</p>';
     html += contentLine();
     if (!HC.store.storage.available) {
       html += '<p class="hc-caption hc-about__warn">Your browser is not saving anything right now, so notes and checkmarks will not survive a reload. Private browsing usually does this.</p>';

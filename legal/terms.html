@@ -246,6 +246,13 @@
   --hc-hl-noted: color-mix(in srgb, var(--hc-accent) 78%, transparent);
 
   --hc-gold:        #D7BA85;
+  /* The light that crosses a scripture reference, css/components.css. A
+     shade deeper than the gold above, because it is drawn inside taupe text
+     on paper rather than as a surface, and the brand gold on paper nearly
+     disappears. */
+  --hc-scripture-glint:    #C0913C;
+  --hc-scripture-glint-hi: #E8BC62;
+  --hc-scripture-glow:     rgba(214, 164, 72, 0.55);
   --hc-gold-ink:    #1A1918;
   --hc-gold-halo:   rgba(255,252,246,0.55);
   --hc-gold-skin:      linear-gradient(178deg, rgba(233,208,158,0.86), rgba(206,177,122,0.82));
@@ -319,6 +326,11 @@
   --hc-hl-noted: color-mix(in srgb, var(--hc-accent) 42%, transparent);
 
   --hc-gold:        #CBAC74;
+  /* Brighter on dark, the other way round: the text is already light, so
+     the light crossing it has to be lighter still to be seen at all. */
+  --hc-scripture-glint:    #EBCB8B;
+  --hc-scripture-glint-hi: #FFF3D6;
+  --hc-scripture-glow:     rgba(240, 210, 150, 0.50);
   --hc-gold-ink:    #F4EFE6;
   --hc-gold-halo:   rgba(12,11,10,0.55);
   --hc-gold-skin:      linear-gradient(178deg, rgba(226,197,141,0.86), rgba(190,158,100,0.80));
@@ -1675,14 +1687,28 @@ button, .hc-tab, .hc-eyebrow, .hc-numeral, .hc-section__toggle,
    them. On a tall phone that gap is generous; on a short one the rule is
    pushed up against the top group and the top group starts to scroll, which
    is the right thing to give up first. */
+/* THE WHOLE SCREEN IS THE MENU'S. The top group starts just under the
+   status bar rather than under the header, which the overlay blurs anyway,
+   and the bottom group comes down until Home sits level with the button
+   rather than a button's height above it: Home is centred and the button is
+   in the corner, so they never meet. Those two bands were about 180pt of
+   empty glass on a tall phone, and using them is what lets every line fit
+   without the top group scrolling.
+
+   CENTRED, AS ONE BLOCK. The two groups stay a short rule apart and the
+   lines keep their spacing; the whole block sits in the middle of the
+   screen, with any spare room split evenly above Settings and below Home,
+   never between the groups and never stretched through the lines. The
+   padding is the same at both ends, the larger of the two safe areas, so
+   the middle of the panel is the middle of the screen. */
 .hc-navmenu__panel {
   display: flex;
   flex-direction: column;
+  justify-content: center;
   flex: 1 1 auto;
   min-height: 0;
-  padding: calc(var(--hc-header-h) + env(safe-area-inset-top) + var(--hc-space-lg))
-           var(--hc-screen-pad)
-           calc(var(--hc-chrome-space) + env(safe-area-inset-bottom) + var(--hc-space-base));
+  padding: calc(max(env(safe-area-inset-top), env(safe-area-inset-bottom)) + var(--hc-space-base))
+           var(--hc-screen-pad);
 }
 
 .hc-navmenu__group {
@@ -1696,6 +1722,8 @@ button, .hc-tab, .hc-eyebrow, .hc-numeral, .hc-section__toggle,
 .hc-navmenu__group--more {
   flex: 0 1 auto;
   min-height: 0;
+  /* A last resort only. fitMenu in js/app.js tightens the lines until they
+     fit, so on any phone this app runs on the top group does not scroll. */
   overflow-y: auto;
   gap: 2px;
   -webkit-overflow-scrolling: touch;
@@ -1710,8 +1738,8 @@ button, .hc-tab, .hc-eyebrow, .hc-numeral, .hc-section__toggle,
    across the middle of it, so the rule floats between the lists rather than
    being welded to the bottom of one. */
 .hc-navmenu__split {
-  flex: 1 1 auto;
-  min-height: var(--hc-space-lg);
+  flex: 0 0 auto;
+  height: calc(var(--hc-space-lg) + 8px);
   display: grid;
   place-items: center;
 }
@@ -1747,17 +1775,26 @@ button, .hc-tab, .hc-eyebrow, .hc-numeral, .hc-section__toggle,
   transition: color var(--hc-dur-fast) var(--hc-ease);
 }
 
+/* The sizes come from two numbers fitMenu sets: --hc-navmenu-fit shrinks
+   the leading, and --hc-navmenu-type the letters, and only once the leading
+   has given all it can. Both are 1 on a phone with room. */
+.hc-navmenu {
+  --hc-navmenu-fit: 1;
+  --hc-navmenu-type: 1;
+  --hc-navmenu-tabs-lh: calc(44px * var(--hc-navmenu-fit));
+}
+
 .hc-navmenu__group--more .hc-navmenu__link {
   font-weight: 600;
-  font-size: 13px;
-  line-height: 32px;
+  font-size: calc(13px * var(--hc-navmenu-type));
+  line-height: calc(32px * var(--hc-navmenu-fit));
   letter-spacing: 0.16em;
 }
 
 .hc-navmenu__group--tabs .hc-navmenu__link {
   font-weight: 800;
-  font-size: 20px;
-  line-height: 44px;
+  font-size: calc(20px * var(--hc-navmenu-type));
+  line-height: var(--hc-navmenu-tabs-lh);
   letter-spacing: 0.10em;
   color: var(--hc-navmenu-ink);
 }
@@ -1791,24 +1828,11 @@ button, .hc-tab, .hc-eyebrow, .hc-numeral, .hc-section__toggle,
   border-radius: var(--hc-radius-sm);
 }
 
-/* A SHORT PHONE, WITH EVERY LINE THERE IS.
-
-   The longest this list ever gets is nine in the top group: the seven modules,
-   then Admin on an admin's phone, then Settings. On a 667pt screen, once the
-   header and the button's footprint are taken off, there are about 487pt to
-   put nine of those and five of the others in, and at the sizes above that is
-   four lines more than fits. The top group would scroll, which works, and
-   which also means Group, the line this church reaches for most on a Thursday
-   night, would be the one below the fold.
-
-   So the rows come in rather than the list going over. Nothing changes about
-   the type sizes, which are what say which group is which; only the leading,
-   which is the thing there is least reason to defend. 9 x 26 and 5 x 38 is
-   424, and the gap between them keeps the rest. */
-@media (max-height: 720px) {
-  .hc-navmenu__group--more .hc-navmenu__link { line-height: 26px; }
-  .hc-navmenu__group--tabs .hc-navmenu__link { line-height: 38px; }
-}
+/* A SHORT PHONE, WITH EVERY LINE THERE IS. Not a media query any more: the
+   number of lines changes with who is signed in and which pages the church
+   has switched on, and one more is coming, so fitMenu in js/app.js measures
+   the real list on the real screen and brings the leading in until it fits.
+   See there. */
 
 /* Anywhere that is not a word. Tapping it closes the overlay without going
    anywhere, which is the same intention the x is, so it is the same handler.
@@ -3725,6 +3749,91 @@ a.hc-card:active { background: var(--hc-paper-sunk); }
 }
 
 /* --------------------------------------------------------------------------
+   Scripture you can tap
+   Every reference that opens the verse sheet says so the same way: a little
+   heavier than the words around it, and every four and a half seconds a
+   band of gold light crosses it, left to right, with a soft glow while it
+   does, the way the light crosses the house on the splash screen. Then still
+   again: it is a hint that the words do something, not a thing to watch.
+
+   HOW. The text is painted by its own background, clipped to the letters.
+   The background is the text's colour with one narrow band of the glint in
+   the middle, three times wider than the words, and walking it from one end
+   to the other carries the band across. currentColor rather than a token,
+   so it is the same taupe or ink the words already were in either theme,
+   and the hairline under a link keeps its own colour because a border is
+   not text.
+
+   WHERE. Anything that opens the sheet:
+     a scripture link in a journal entry, a note or an announcement, found by
+       its href, because those are markup somebody wrote and carry no class
+     the scripture rows on a guide, cascading down the list, one row a beat
+       after the one above (--hc-glint-at, set by scriptureRow())
+     the passage under a verse highlight on its journal entry
+
+   REDUCE MOTION keeps the weight and drops the light. The global rule in
+   base.css shortens durations rather than removing animations, and an
+   infinite animation shortened to nothing is a flicker, so it is switched
+   off by name here instead.
+   -------------------------------------------------------------------------- */
+
+a[href^="https://www.bible.com/bible/"],
+a[href^="https://www.biblegateway.com/"],
+.hc-row[data-action="open-scripture"] .hc-row__title,
+.hc-entry__ref {
+  font-weight: 600;
+  background-image: linear-gradient(100deg,
+    currentColor 36%,
+    var(--hc-scripture-glint) 44%,
+    var(--hc-scripture-glint-hi) 50%,
+    var(--hc-scripture-glint) 56%,
+    currentColor 64%);
+  background-size: 260% 100%;
+  background-position: 100% 0;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: hc-scripture-glint 4.5s cubic-bezier(0.45, 0, 0.35, 1) infinite;
+  animation-delay: var(--hc-glint-at, 0.8s);
+}
+
+/* Still for a little over half of the four and a half seconds, then one
+   pass of about two, and while the light is on the words they glow a
+   little, gold, the way the mark does on the splash screen.
+
+   The glow is a filter rather than a text-shadow on purpose: the letters
+   are transparent and painted by the background, and a text-shadow is
+   drawn on top of that background, which would cover the gold with a
+   blur. A drop-shadow filter is applied to what was painted, so it glows
+   around the light instead of over it.
+
+   The delay above staggers where in that cycle each reference starts, which
+   is what makes a guide's list of rows light up one after another rather
+   than all at once. */
+@keyframes hc-scripture-glint {
+  0%, 55% { background-position: 100% 0; filter: none; }
+  70%     { filter: drop-shadow(0 0 5px var(--hc-scripture-glow)); }
+  88%     { filter: drop-shadow(0 0 5px var(--hc-scripture-glow)); }
+  100%    { background-position: 0% 0; filter: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  a[href^="https://www.bible.com/bible/"],
+  a[href^="https://www.biblegateway.com/"],
+  .hc-row[data-action="open-scripture"] .hc-row__title,
+  .hc-entry__ref { animation: none; }
+}
+
+/* A selection inside a reference has to be readable, and transparent letters
+   over a selection highlight are not. While selected they are simply the
+   colour they were. */
+a[href^="https://www.bible.com/bible/"]::selection,
+a[href^="https://www.biblegateway.com/"]::selection,
+.hc-row[data-action="open-scripture"] .hc-row__title::selection {
+  -webkit-text-fill-color: currentColor;
+}
+
+/* --------------------------------------------------------------------------
    The sheet
    One overlay, from the bottom, used by the scripture picker. The app's only
    modal, and it stays that way unless something else genuinely cannot be a
@@ -4418,6 +4527,66 @@ a.hc-card:active { background: var(--hc-paper-sunk); }
 }
 
 /* ==========================================================================
+   Maintenance mode
+
+   The screen above, held. Same layer, same house, same face for the words,
+   with "We'll be back soon." where the welcome would be. Drawn by
+   js/maintenance.js over everything, the splash and its gate included, and
+   none of it animates: this is the settled frame of the greeting, and it
+   stays on the glass until an admin turns the switch off.
+   ========================================================================== */
+
+.hc-maintenance { z-index: 100; }
+
+.hc-maintenance__mark { display: block; width: 92px; height: auto; }
+
+.hc-maintenance .hc-splash__greeting {
+  animation: none;
+  opacity: 1;
+  transform: none;
+}
+
+.hc-maintenance__foot {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: calc(var(--hc-space-lg) + env(safe-area-inset-bottom));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0 var(--hc-space-xl);
+}
+
+/* Where Loading sits on the splash, and just as quiet. An admin needs to be
+   able to find it; nobody else needs to notice it. */
+.hc-maintenance__link {
+  background: none;
+  border: 0;
+  padding: var(--hc-space-sm) var(--hc-space-base);
+  min-height: var(--hc-tap-min);
+  font-family: var(--hc-sans);
+  font-size: var(--hc-caption);
+  line-height: var(--hc-caption-line);
+  color: var(--hc-mid);
+  opacity: 0.7;
+}
+
+.hc-maintenance__form {
+  width: 100%;
+  max-width: 320px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--hc-space-sm);
+}
+
+.hc-maintenance__note {
+  margin: 0;
+  min-height: var(--hc-caption-line);
+  text-align: center;
+  color: var(--hc-mid);
+}
+
+/* ==========================================================================
    The way in
 
    What the screen above becomes on a phone that is not signed in: the same
@@ -4688,6 +4857,16 @@ a.hc-card:active { background: var(--hc-paper-sunk); }
 
 .hc-index[hidden] { display: none !important; }
 
+/* The page, while the rail has the finger. A touch that lands on a flying
+   page cannot be refused from a touch listener on a phone — the scroll owns
+   it before the listener runs — so the scroll is taken away instead: no
+   overflow, no fling, no pan. js/index-rail.js still moves the page itself,
+   because a script can scroll what a thumb cannot. See hold() there. */
+.hc-scroll[data-index-held] {
+  overflow-y: hidden;
+  touch-action: none;
+}
+
 /* The written column, the card and the veil come and go together. */
 .hc-index[data-state="off"] ~ .hc-index__titles,
 .hc-index[data-state="off"] ~ .hc-index__card,
@@ -4856,9 +5035,19 @@ a.hc-card:active { background: var(--hc-paper-sunk); }
 
    role="status" rather than role="alert", so a screen reader reads it when it
    reaches it instead of interrupting whatever is being read.
+
+   STICKY, THE WAY THE STRIP BELOW IS FIXED. It starts where it always sat,
+   above the greeting, and when Home scrolls it stops against the bottom of
+   the top bar, or of the pinned strip when there is one, and stays there. It
+   is sticky and not fixed because it belongs to Home and not to the shell:
+   the other tabs never draw it, so it leaves when Home does. Nothing between
+   it and .hc-scroll clips overflow, which is what sticky needs to work.
    -------------------------------------------------------------------------- */
 
 .hc-pinned {
+  position: sticky;
+  z-index: 5;                  /* over Home's cards, under all of the chrome */
+  top: calc(var(--hc-header-h) + var(--hc-pin-h, 0px) + env(safe-area-inset-top));
   background: var(--hc-accent-deep);
   border-radius: var(--hc-radius-sm);
   padding: var(--hc-space-md) var(--hc-space-base);
@@ -6394,6 +6583,9 @@ a.hc-card:active { background: var(--hc-paper-sunk); }
 }
 
 .hc-latest__frame {
+  /* Relative so the TikTok frame's play badge, which is inset: 0, centres on
+     the picture rather than on the screen. */
+  position: relative;
   display: block;
   width: 100%;
   aspect-ratio: 4 / 3;
@@ -7047,6 +7239,119 @@ a.hc-card:active { background: var(--hc-paper-sunk); }
   flex-direction: column;
   gap: var(--hc-space-sm);
   margin-top: var(--hc-space-base);
+}
+
+/* The folds. A guide's heading is drawn the way a section header is, eyebrow,
+   title and the short accent rule, only it is a button with a count and a
+   chevron leading it. A month inside it is the same fold one size down: no
+   eyebrow, no rule, a hairline above it the way archive rows sit. */
+.hc-jfold--group { margin-top: var(--hc-space-xl); }
+
+.hc-jfold__h { margin: 0; }
+
+.hc-jfold__toggle {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--hc-space-md);
+  width: 100%;
+  min-height: var(--hc-tap-min);
+  padding: 0 0 0 calc(20px + var(--hc-space-md));
+  text-align: left;
+  color: var(--hc-ink);
+}
+
+.hc-jfold__heading {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: block;
+}
+
+.hc-jfold__heading .hc-eyebrow { display: block; }
+
+.hc-jfold__title {
+  display: block;
+  font-family: var(--hc-sans-display);
+  font-weight: 800;
+  font-size: calc(25px * var(--hc-text-scale));
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+}
+
+.hc-jfold--group .hc-eyebrow + .hc-jfold__title { margin-top: 8px; }
+
+.hc-jfold__rule {
+  display: block;
+  margin-top: 12px;
+  width: 22%;
+  min-width: 56px;
+  height: 0.75px;
+  background: var(--hc-accent);
+}
+
+.hc-jfold__count {
+  flex: 0 0 auto;
+  align-self: center;
+  padding: 0 var(--hc-space-sm);
+  border-radius: var(--hc-radius-pill);
+  background: var(--hc-cream);
+  color: var(--hc-mid);
+}
+
+.hc-jfold__chevron {
+  position: absolute;
+  left: 0;
+  top: 10px;
+  width: 20px;
+  height: 20px;
+  stroke: var(--hc-accent-deep);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: transform var(--hc-dur-base) var(--hc-ease);
+}
+
+.hc-jfold__toggle[aria-expanded="true"] .hc-jfold__chevron { transform: rotate(180deg); }
+
+.hc-jfold--month {
+  margin-top: var(--hc-space-base);
+  padding-top: var(--hc-space-sm);
+  border-top: var(--hc-hairline) solid var(--hc-rule);
+}
+
+.hc-jfold--month .hc-jfold__toggle { align-items: center; }
+
+.hc-jfold--month .hc-jfold__title {
+  font-size: calc(18px * var(--hc-text-scale));
+  font-weight: 700;
+}
+
+.hc-jfold--month .hc-jfold__chevron { top: 50%; margin-top: -10px; }
+
+.hc-jfold--month .hc-jfold__toggle[aria-expanded="true"] .hc-jfold__chevron {
+  transform: rotate(180deg);
+}
+
+.hc-jfold__panel {
+  overflow: hidden;
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows var(--hc-dur-base) var(--hc-ease);
+}
+
+.hc-jfold__panel[data-open="true"] { grid-template-rows: 1fr; }
+
+.hc-jfold__panel > div {
+  min-height: 0;
+  /* A closed fold's cards are still in the tree, so hide them from the tab
+     order and a screen reader too, once the fold has finished closing. */
+  visibility: hidden;
+  transition: visibility 0s linear var(--hc-dur-base);
+}
+
+.hc-jfold__panel[data-open="true"] > div {
+  visibility: visible;
+  transition-delay: 0s;
 }
 
 .hc-jcard {
@@ -7758,6 +8063,36 @@ a.hc-card:active { background: var(--hc-paper-sunk); }
 }
 
 .hc-admin__item-actions .hc-btn { margin-top: 0; }
+
+/* Users, split into Admins, Hosts and Members under the search box. The folds
+   are the Journal's, and a row a search has left out is hidden outright. */
+.hc-admin__users [hidden] { display: none; }
+
+/* The list is the positioned box so a row's offsetTop is measured from it,
+   which is what sizeUserLists() in js/screens/admin.js cuts it off at. Past
+   ten people it scrolls inside itself, and the scroll stops at its own ends
+   rather than carrying on into the page behind it. flow-root so the first
+   row's margin stays inside the list whether or not it is scrolling, or the
+   cut would land a margin's width short of the tenth row. */
+.hc-admin__users-list {
+  position: relative;
+  display: flow-root;
+}
+
+.hc-admin__users-list[data-scroll="true"] {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  border-bottom: var(--hc-hairline) solid var(--hc-rule);
+}
+
+/* The pinned banner's sentence on App settings while it is not being edited.
+   Read as the words themselves, not as a disabled box. */
+.hc-admin__banner-text {
+  margin: 4px 0 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
 
 .hc-admin__loading,
 .hc-admin__self {
@@ -8845,6 +9180,746 @@ button.hc-cal__day { cursor: pointer; }
    question somebody asks of a row and not the first. */
 .hc-event__more-days { color: var(--hc-mid); }
 
+/* --------------------------------------------------------------------------
+   HomeKids
+   The one page in the app read by somebody who may be four. Everything here is
+   the house style turned up a notch rather than a second style: the same
+   paper, cream and taupe, the same eyebrow over a heavy title, with bigger
+   targets, bigger reading type, and one colour per age group so a kid who
+   cannot read yet can still find their own button. The colours are the
+   house's muted three, sage, amber and brick, never anything brighter.
+
+   The one moment of delight is the design system's own: a finished checklist
+   gets a soft warm wash and a gold star. No confetti, no bounce.
+   -------------------------------------------------------------------------- */
+
+.hc-kids { --hc-kids-tone: var(--hc-accent-deep); }
+
+/* ---- the three groups ---- */
+
+.hc-kids-groups {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--hc-space-sm);
+  margin-top: var(--hc-space-base);
+}
+
+.hc-kids-group--sage  { --hc-kids-tone: var(--hc-success); }
+.hc-kids-group--amber { --hc-kids-tone: var(--hc-warning); }
+.hc-kids-group--brick { --hc-kids-tone: var(--hc-error); }
+
+.hc-kids-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 4px;
+  min-height: 88px;
+  padding: var(--hc-space-md) var(--hc-space-xs);
+  border-radius: var(--hc-radius-lg);
+  border: 1px solid var(--hc-rule);
+  background: transparent;
+  color: var(--hc-ink);
+  text-align: center;
+  transition: background var(--hc-dur-fast) var(--hc-ease),
+              border-color var(--hc-dur-fast) var(--hc-ease);
+}
+
+.hc-kids-group__dot {
+  width: 14px;
+  height: 14px;
+  border-radius: var(--hc-radius-pill);
+  background: var(--hc-kids-tone);
+}
+
+.hc-kids-group__name {
+  font-family: var(--hc-sans-display);
+  font-weight: 800;
+  font-size: calc(14px * var(--hc-text-scale));
+  line-height: 1.15;
+}
+
+.hc-kids-group__ages {
+  font-family: var(--hc-sans);
+  font-size: calc(var(--hc-caption) * var(--hc-text-scale));
+  color: var(--hc-mid);
+}
+
+.hc-kids-group[aria-pressed="true"] {
+  background: var(--hc-cream);
+  border-color: var(--hc-kids-tone);
+  box-shadow: inset 0 0 0 1px var(--hc-kids-tone);
+}
+
+/* ---- the week ---- */
+
+.hc-kids-week { margin-top: var(--hc-space-xl); }
+/* Each Sunday's slide is one tap target: a tap lifts the calendar sheet
+   (js/screens/homekids.js), a sideways drag still scrolls the rail. */
+.hc-kids-week__open {
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.hc-kids-week__open:active .hc-kids-week__title { opacity: 0.7; }
+.hc-kids-week__cal {
+  display: inline-block;
+  width: 13px;
+  height: 13px;
+  margin-left: 6px;
+  vertical-align: -2px;
+}
+.hc-kids-cal__head { justify-content: center; margin-top: var(--hc-space-sm); }
+.hc-kids-cal__label { min-width: 9em; }
+.hc-kids-week__title { margin-top: 6px; }
+.hc-kids-week__passage { margin-top: var(--hc-space-xs); color: var(--hc-mid); }
+
+.hc-kids-idea {
+  margin-top: var(--hc-space-lg);
+  padding: var(--hc-card-pad);
+  border-radius: var(--hc-radius-lg);
+  background: var(--hc-cream);
+  border-left: 4px solid var(--hc-gold);
+  text-align: center;
+}
+
+.hc-kids-idea__text {
+  margin-top: var(--hc-space-sm);
+  font-family: var(--hc-sans-display);
+  font-weight: 800;
+  font-size: calc(21px * var(--hc-text-scale));
+  line-height: 1.3;
+  color: var(--hc-ink);
+}
+
+.hc-kids-section { margin-top: var(--hc-section-top); }
+.hc-kids-section > .hc-section-header { margin-top: 0; }
+
+/* Read aloud, so a step bigger than the body type and a little looser. */
+.hc-kids-story {
+  font-family: var(--hc-serif);
+  font-size: calc(18px * var(--hc-text-scale));
+  line-height: 1.6;
+  color: var(--hc-ink);
+}
+
+.hc-kids-story + .hc-kids-story { margin-top: var(--hc-space-base); }
+
+.hc-kids-prayer { font-style: oblique 8deg; }
+
+/* ---- what changes with the group ---- */
+
+.hc-kids-nudge {
+  padding: var(--hc-space-base);
+  border-radius: var(--hc-radius-lg);
+  border: 1px dashed var(--hc-rule);
+  text-align: center;
+  font-family: var(--hc-serif);
+  font-style: oblique 8deg;
+  color: var(--hc-mid);
+}
+
+.hc-kids-block + .hc-kids-block { margin-top: var(--hc-space-lg); }
+.hc-kids-block__eyebrow { margin-bottom: var(--hc-space-sm); }
+.hc-kids-block > .hc-section-header { margin-top: 0; }
+
+.hc-kids-questions { list-style: none; margin: 0; padding: 0; }
+
+.hc-kids-question {
+  display: grid;
+  grid-template-columns: 32px 1fr;
+  gap: var(--hc-space-md);
+  align-items: start;
+  padding: var(--hc-space-md) 0;
+  border-top: var(--hc-hairline) solid var(--hc-rule);
+}
+
+.hc-kids-question__n {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--hc-radius-pill);
+  background: var(--hc-cream);
+  font-family: var(--hc-sans-display);
+  font-weight: 800;
+  font-size: 15px;
+  color: var(--hc-accent-deep);
+}
+
+.hc-kids-question__text {
+  font-family: var(--hc-serif);
+  font-size: calc(var(--hc-question) * var(--hc-text-scale));
+  line-height: 1.5;
+  padding-top: 3px;
+}
+
+.hc-kids-activity {
+  padding: var(--hc-card-pad);
+  border-radius: var(--hc-radius-lg);
+  background: var(--hc-cream);
+  font-family: var(--hc-serif);
+  font-size: calc(var(--hc-question) * var(--hc-text-scale));
+  line-height: 1.5;
+}
+
+/* ---- the checklist and the prize ---- */
+
+.hc-kids-reward {
+  display: grid;
+  grid-template-columns: 36px 1fr;
+  gap: var(--hc-space-md);
+  align-items: start;
+  padding: var(--hc-space-base);
+  border-radius: var(--hc-radius-lg);
+  background: var(--hc-paper-sunk);
+  transition: background var(--hc-dur-base) var(--hc-ease);
+}
+
+.hc-kids-reward__star svg {
+  width: 36px;
+  height: 36px;
+  color: var(--hc-gold);
+  transition: fill var(--hc-dur-base) var(--hc-ease);
+}
+
+.hc-kids-reward__text {
+  font-family: var(--hc-serif);
+  font-size: calc(var(--hc-body-serif) * var(--hc-text-scale));
+  line-height: 1.5;
+  color: var(--hc-ink);
+}
+
+.hc-kids-reward[data-done="true"] {
+  background: color-mix(in srgb, var(--hc-gold) 26%, var(--hc-cream));
+}
+
+.hc-kids-reward[data-done="true"] .hc-kids-reward__star svg { fill: var(--hc-gold); }
+
+.hc-kids-checks { margin-top: var(--hc-space-md); }
+
+.hc-kids-check {
+  display: grid;
+  grid-template-columns: 36px 1fr;
+  gap: var(--hc-space-md);
+  align-items: center;
+  width: 100%;
+  min-height: 60px;
+  padding: var(--hc-space-md) 0;
+  text-align: left;
+  border-top: var(--hc-hairline) solid var(--hc-rule);
+}
+
+.hc-kids-check:last-child { border-bottom: var(--hc-hairline) solid var(--hc-rule); }
+
+.hc-kids-check__box {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  border: 1.5px solid var(--hc-rule);
+  transition: background var(--hc-dur-fast) var(--hc-ease),
+              border-color var(--hc-dur-fast) var(--hc-ease);
+}
+
+.hc-kids-check__tick {
+  width: 20px;
+  height: 20px;
+  stroke: var(--hc-on-dark);
+  stroke-width: 2.4;
+  opacity: 0;
+  transition: opacity var(--hc-dur-fast) var(--hc-ease);
+}
+
+.hc-kids-check__text {
+  font-family: var(--hc-serif);
+  font-size: calc(var(--hc-question) * var(--hc-text-scale));
+  line-height: 1.4;
+  color: var(--hc-ink);
+}
+
+.hc-kids-check[aria-pressed="true"] .hc-kids-check__box {
+  background: var(--hc-success);
+  border-color: var(--hc-success);
+}
+
+.hc-kids-check[aria-pressed="true"] .hc-kids-check__tick { opacity: 1; }
+
+.hc-kids-progress { margin-top: var(--hc-space-md); text-align: center; }
+
+.hc-kids-saved {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--hc-space-xs);
+  margin-top: var(--hc-space-xs);
+  color: var(--hc-success);
+}
+
+.hc-kids-saved[hidden] { display: none; }
+.hc-kids-saved__icon { width: 16px; height: 16px; flex: none; }
+
+.hc-kids-show { margin-top: var(--hc-space-base); }
+
+/* ---- for parents, for volunteers ---- */
+
+.hc-kids-parent-note { margin-bottom: var(--hc-space-base); }
+
+.hc-kids-update__title {
+  font-family: var(--hc-serif);
+  font-weight: 500;
+  font-size: calc(19px * var(--hc-text-scale));
+  line-height: 1.3;
+}
+
+.hc-kids-update__when { margin-bottom: var(--hc-space-xs); }
+.hc-kids-update__summary { margin-top: var(--hc-space-sm); }
+
+.hc-kids-update__details {
+  margin: var(--hc-space-sm) 0 0;
+  padding-left: 1.1em;
+  font-family: var(--hc-serif);
+  font-size: calc(15px * var(--hc-text-scale));
+  line-height: 1.5;
+  color: var(--hc-ink);
+}
+
+.hc-kids-update__links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--hc-space-xs) var(--hc-space-base);
+  margin-top: var(--hc-space-sm);
+}
+
+.hc-kids .hc-section { margin-top: var(--hc-section-top); }
+
+/* ---- the card a family shows the teacher ---- */
+
+.hc-kids-teacher {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: calc(env(safe-area-inset-top) + var(--hc-space-lg)) var(--hc-screen-pad)
+           calc(env(safe-area-inset-bottom) + var(--hc-space-lg));
+  background: var(--hc-overlay);
+  animation: hc-kids-fade var(--hc-dur-base) var(--hc-ease-enter);
+}
+
+@keyframes hc-kids-fade { from { opacity: 0; } to { opacity: 1; } }
+
+.hc-kids-teacher__card {
+  position: relative;
+  width: 100%;
+  max-width: 420px;
+  max-height: 100%;
+  overflow-y: auto;
+  padding: var(--hc-space-xl) var(--hc-card-pad) var(--hc-space-lg);
+  border-radius: 20px;
+  background: var(--hc-paper);
+  box-shadow: var(--hc-shadow-modal);
+  text-align: center;
+}
+
+.hc-kids-teacher__card[data-done="true"] {
+  background: color-mix(in srgb, var(--hc-gold) 18%, var(--hc-paper));
+}
+
+.hc-kids-teacher__close {
+  position: absolute;
+  top: var(--hc-space-sm);
+  right: var(--hc-space-sm);
+  width: var(--hc-tap-min);
+  height: var(--hc-tap-min);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--hc-mid);
+}
+
+.hc-kids-teacher__close svg { width: 22px; height: 22px; }
+
+.hc-kids-teacher__title {
+  margin-top: var(--hc-space-sm);
+  font-family: var(--hc-sans-display);
+  font-weight: 800;
+  font-size: 26px;
+  line-height: 1.2;
+  color: var(--hc-ink);
+}
+
+.hc-kids-teacher__name {
+  display: block;
+  margin-top: var(--hc-space-base);
+  text-align: left;
+}
+
+.hc-kids-teacher__name .hc-input { margin-top: var(--hc-space-xs); text-align: center; }
+
+.hc-kids-teacher__list {
+  list-style: none;
+  margin: var(--hc-space-lg) 0 0;
+  padding: 0;
+  text-align: left;
+}
+
+.hc-kids-teacher__item {
+  display: grid;
+  grid-template-columns: 32px 1fr;
+  gap: var(--hc-space-md);
+  align-items: center;
+  padding: var(--hc-space-sm) 0;
+  font-family: var(--hc-serif);
+  font-size: 17px;
+  line-height: 1.35;
+  color: var(--hc-mid);
+}
+
+.hc-kids-teacher__item[data-on="true"] { color: var(--hc-ink); }
+
+.hc-kids-teacher__mark svg {
+  width: 28px;
+  height: 28px;
+  color: var(--hc-rule);
+}
+
+.hc-kids-teacher__item[data-on="true"] .hc-kids-teacher__mark svg {
+  color: var(--hc-gold);
+  fill: var(--hc-gold);
+}
+
+.hc-kids-teacher__count {
+  margin-top: var(--hc-space-lg);
+  font-family: var(--hc-sans-display);
+  font-weight: 800;
+  font-size: 44px;
+  line-height: 1;
+  color: var(--hc-ink);
+}
+
+.hc-kids-teacher__foot { margin-top: var(--hc-space-sm); }
+
+/* The monthly report: the same card, a month at a time. */
+.hc-kids-report__month {
+  display: grid;
+  grid-template-columns: var(--hc-tap-min) 1fr var(--hc-tap-min);
+  align-items: center;
+  margin-top: var(--hc-space-xs);
+}
+
+.hc-kids-report__month .hc-kids-teacher__title { margin-top: 0; }
+
+.hc-kids-report__span { margin-top: 2px; }
+
+.hc-kids-report__week {
+  margin-top: var(--hc-space-lg);
+  padding-top: var(--hc-space-base);
+  border-top: 1px solid var(--hc-rule);
+  text-align: left;
+}
+
+.hc-kids-report__week .hc-kids-teacher__list { margin-top: var(--hc-space-xs); }
+
+.hc-kids-report__lesson {
+  margin-top: 2px;
+  font-family: var(--hc-serif);
+  font-weight: 500;
+  font-size: 19px;
+  line-height: 1.3;
+  color: var(--hc-ink);
+}
+
+.hc-kids-report__tally { margin-top: 2px; }
+.hc-kids-report__week[data-done="true"] .hc-kids-report__tally { color: var(--hc-ink); }
+
+.hc-kids-report__pdf { margin-top: var(--hc-space-lg); width: 100%; }
+
+@media (prefers-reduced-motion: reduce) {
+  .hc-kids-teacher { animation: none; }
+}
+
+/* Admin -> HomeKids: the whole drafted guide, folded under its card. */
+.hc-admin__preview { margin-top: var(--hc-space-sm); }
+.hc-admin__preview > summary { cursor: pointer; color: var(--hc-accent-deep); min-height: var(--hc-tap-min); display: flex; align-items: center; }
+.hc-admin__preview .hc-eyebrow { margin-top: var(--hc-space-md); }
+.hc-admin__preview .hc-caption + .hc-caption { margin-top: var(--hc-space-xs); }
+
+/* ==========================================================================
+   Coffee, the Happy Lion Cafe. js/screens/cafe.js.
+   Built from the same cards, eyebrows and buttons as everything else, with
+   the cafe's own logo at the top in place of a photograph.
+   ========================================================================== */
+
+.hc-cafe__logo { width: 150px; margin: 0 auto; color: var(--hc-ink); }
+.hc-cafe__logo img { display: block; width: 100%; height: auto; }
+.hc-cafe__logo--small { width: 110px; }
+/* The logo is one colour, drawn in ink. On the dark theme it is drawn in the
+   dark theme's ink instead, which is the same picture inverted. */
+:root[data-theme="dark"] .hc-cafe__logo img { filter: invert(1) brightness(0.95); }
+
+.hc-cafe__open { text-align: center; margin: var(--hc-space-md) 0 0; }
+.hc-cafe__dot {
+  display: inline-block; width: 7px; height: 7px; border-radius: 50%;
+  background: var(--hc-success); margin-right: var(--hc-space-sm); vertical-align: 1px;
+}
+.hc-cafe__dot--off { background: var(--hc-warning); }
+.hc-cafe__lede { margin: 0 0 var(--hc-space-base); }
+.hc-cafe__more { text-align: center; margin-top: var(--hc-space-lg); }
+
+.hc-cafe-mine, .hc-cafe-counter { margin-top: var(--hc-space-base); display: flex; flex-direction: column; gap: 4px; }
+.hc-cafe-mine__line { font: 500 17px/22px var(--hc-serif); color: var(--hc-ink); }
+
+/* A drink on the menu. */
+.hc-cafe-item { display: flex; align-items: center; gap: 14px; }
+.hc-cafe-item[aria-disabled="true"] { opacity: 0.6; }
+.hc-cafe-item__art {
+  flex: none; width: 64px; height: 64px; border-radius: 10px; display: grid; place-items: center;
+  background: var(--hc-paper); border: var(--hc-hairline) solid var(--hc-rule); color: var(--hc-ink);
+}
+.hc-cafe-item__icon { width: 34px; height: 34px; }
+.hc-cafe-item__body { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.hc-cafe-item__name { font: 500 19px/24px var(--hc-serif); letter-spacing: -0.01em; }
+.hc-cafe-item__price { font: 400 14px/20px var(--hc-sans); color: var(--hc-mid); margin-top: 2px; }
+.hc-cafe-item__add {
+  flex: none; width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center;
+  background: var(--hc-dark); color: var(--hc-on-dark); font: 400 22px/1 var(--hc-sans);
+}
+
+/* The bar that says what is in the order, beside the menu button. */
+.hc-cafe-cartbar {
+  position: fixed; z-index: 44;
+  left: var(--hc-screen-pad);
+  right: calc(var(--hc-navfab-size) + var(--hc-chrome-inset) * 2);
+  bottom: calc(var(--hc-chrome-inset) + env(safe-area-inset-bottom) + 6px);
+  height: 52px; padding: 0 var(--hc-space-base);
+  display: flex; align-items: center; gap: var(--hc-space-sm);
+  border-radius: var(--hc-radius-md); background: var(--hc-dark); color: var(--hc-on-dark);
+  font: 600 var(--hc-button)/var(--hc-button-line) var(--hc-sans);
+  box-shadow: var(--hc-shadow-modal);
+}
+#app[data-nav="bar"] .hc-cafe-cartbar {
+  right: var(--hc-screen-pad);
+  bottom: calc(var(--hc-tabbar-h) + env(safe-area-inset-bottom) + var(--hc-space-md));
+}
+/* The bar sits in the row the way up disc uses, and is the thing being asked
+   on this screen, so while it is there the disc stands down, the same as it
+   does for Note this / Highlight (#app[data-hlbar]). The menu is one short
+   screen; there is little to go back up to. */
+#app:has(.hc-cafe-cartbar) .hc-disc--top {
+  opacity: 0;
+  transform: translateY(10px) scale(0.86);
+  pointer-events: none;
+}
+.hc-cafe-cartbar__n {
+  width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center;
+  background: var(--hc-on-dark); color: var(--hc-dark); font-size: 13px;
+}
+.hc-cafe-cartbar__label { flex: 1; text-align: left; }
+
+/* The drink's sheet. On <body>, over the chrome, under the toast. */
+.hc-cafe-sheet { position: fixed; inset: 0; z-index: 58; }
+.hc-cafe-sheet__scrim { position: absolute; inset: 0; background: var(--hc-overlay); border: 0; padding: 0; width: 100%;
+  animation: hc-cafe-fade var(--hc-dur-base) var(--hc-ease); }
+.hc-cafe-sheet__panel {
+  position: absolute; left: 0; right: 0; bottom: 0; max-height: 92vh; overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  background: var(--hc-paper); color: var(--hc-ink);
+  border-radius: 16px 16px 0 0; box-shadow: var(--hc-shadow-sheet);
+  padding: 10px var(--hc-screen-pad) calc(var(--hc-space-lg) + env(safe-area-inset-bottom));
+  animation: hc-cafe-up var(--hc-dur-sheet) var(--hc-ease-enter);
+}
+.hc-cafe-sheet[data-settled="true"] .hc-cafe-sheet__panel,
+.hc-cafe-sheet[data-settled="true"] .hc-cafe-sheet__scrim { animation: none; }
+@keyframes hc-cafe-up { from { transform: translateY(30%); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes hc-cafe-fade { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+  .hc-cafe-sheet__panel, .hc-cafe-sheet__scrim { animation: none; }
+}
+.hc-cafe-sheet__grab { width: 36px; height: 4px; border-radius: 2px; background: var(--hc-rule); margin: 0 auto 14px; }
+.hc-cafe-sheet__title {
+  font: 500 var(--hc-display-m)/var(--hc-display-m-line) var(--hc-serif);
+  letter-spacing: -0.015em; margin: 4px 0 2px;
+}
+.hc-cafe-sheet__blurb { margin: 0; }
+html.hc-cafe-sheet-open, html.hc-cafe-sheet-open body { overflow: hidden; }
+
+.hc-cafe__label {
+  display: block; margin: 22px 0 10px;
+  font: 600 var(--hc-eyebrow)/var(--hc-eyebrow-line) var(--hc-sans);
+  letter-spacing: var(--hc-track-eyebrow); text-transform: uppercase; color: var(--hc-accent-deep);
+}
+.hc-cafe__label--gap { margin-top: 28px; }
+
+.hc-cafe-seg {
+  display: flex; padding: 3px; gap: 3px; border-radius: var(--hc-radius-md);
+  background: var(--hc-paper-sunk); border: var(--hc-hairline) solid var(--hc-rule);
+}
+.hc-cafe-seg__opt {
+  flex: 1; min-height: var(--hc-tap-min); padding: 8px 0; border-radius: var(--hc-radius-sm);
+  font: 500 15px/20px var(--hc-sans); color: var(--hc-mid); display: flex; flex-direction: column; align-items: center;
+}
+.hc-cafe-seg__opt span { font-weight: 400; font-size: 12px; line-height: 16px; }
+.hc-cafe-seg__opt[aria-checked="true"] { background: var(--hc-paper); color: var(--hc-ink); box-shadow: 0 1px 3px rgba(26,25,24,0.12); }
+:root[data-theme="dark"] .hc-cafe-seg__opt[aria-checked="true"] { background: var(--hc-cream); }
+
+.hc-cafe-opt {
+  display: flex; align-items: center; gap: var(--hc-space-md); min-height: 54px; flex-wrap: wrap;
+  border-top: var(--hc-hairline) solid var(--hc-rule); padding: 6px 0;
+}
+.hc-cafe-opts .hc-cafe-opt:last-child { border-bottom: var(--hc-hairline) solid var(--hc-rule); }
+.hc-cafe-opt__name { flex: 1; min-width: 90px; font: 400 var(--hc-body-sans)/22px var(--hc-sans); display: flex; flex-direction: column; }
+.hc-cafe-opt__name small { color: var(--hc-mid); font-size: 13px; line-height: 18px; }
+.hc-cafe-levels { display: flex; gap: 4px; flex-wrap: wrap; }
+.hc-cafe-level {
+  min-height: 36px; padding: 0 10px; border-radius: var(--hc-radius-pill);
+  border: var(--hc-hairline) solid var(--hc-rule); font: 500 13px/1 var(--hc-sans); color: var(--hc-mid);
+}
+.hc-cafe-level[aria-checked="true"] { background: var(--hc-dark); border-color: var(--hc-dark); color: var(--hc-on-dark); }
+.hc-cafe-step { display: flex; align-items: center; gap: var(--hc-space-md); }
+.hc-cafe-step b { font: 600 16px var(--hc-sans); min-width: 14px; text-align: center; }
+.hc-cafe-step__btn {
+  width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center;
+  border: var(--hc-hairline) solid var(--hc-rule); background: var(--hc-cream);
+  font: 400 18px/1 var(--hc-sans); color: var(--hc-ink);
+}
+.hc-cafe-step__btn[disabled] { color: var(--hc-rule); }
+
+.hc-cafe-wide.hc-btn { display: flex; width: 100%; justify-content: space-between; margin-top: 22px; }
+
+/* Your order. */
+.hc-cafe-lines { margin-top: var(--hc-space-base); }
+.hc-cafe-line { display: flex; gap: var(--hc-space-md); padding: 14px 0; border-top: var(--hc-hairline) solid var(--hc-rule); }
+.hc-cafe-line:last-child { border-bottom: var(--hc-hairline) solid var(--hc-rule); }
+.hc-cafe-line__body { flex: 1; min-width: 0; }
+.hc-cafe-line__name { font: 500 17px/22px var(--hc-serif); }
+.hc-cafe-line__mods { font: 400 13px/18px var(--hc-sans); color: var(--hc-mid); margin-top: 2px; }
+.hc-cafe-line__price { font: 500 16px/22px var(--hc-sans); }
+.hc-cafe-line__edit { display: flex; gap: 6px; margin-top: 4px; color: var(--hc-accent-deep); font: 600 13px var(--hc-sans); }
+.hc-cafe-line__edit button { min-height: 32px; color: var(--hc-accent-deep); font: inherit; }
+.hc-cafe-line__edit span { line-height: 32px; }
+.hc-cafe-addmore { margin-top: var(--hc-space-sm); min-height: var(--hc-tap-min); font: 600 14px var(--hc-sans); color: var(--hc-accent-deep); }
+
+.hc-cafe-pickup { width: 100%; box-sizing: border-box; }
+.hc-cafe-name { width: 100%; box-sizing: border-box; }
+.hc-cafe-totals { margin-top: 22px; }
+.hc-cafe-totals > div { display: flex; justify-content: space-between; font: 400 15px/26px var(--hc-sans); color: var(--hc-mid); }
+.hc-cafe-totals .hc-cafe-totals__big { color: var(--hc-ink); font-weight: 600; font-size: 17px; }
+.hc-cafe-error { margin: var(--hc-space-md) 0 0; color: var(--hc-error); font: 500 14px/20px var(--hc-sans); }
+.hc-cafe-hint { margin-top: var(--hc-space-sm); text-align: center; }
+.hc-cafe-square { margin-top: var(--hc-space-sm); text-align: center; }
+.hc-cafe-note { margin-top: var(--hc-space-lg); }
+.hc-cafe-signin { margin-top: var(--hc-space-lg); }
+.hc-cafe-signin .hc-body-serif { margin: 0 0 var(--hc-space-md); }
+.hc-cafe-actions { display: flex; flex-direction: column; gap: var(--hc-space-sm); margin-top: var(--hc-space-lg); }
+
+/* The ticket. */
+.hc-cafe-ticket { margin-top: 18px; text-align: center; padding: 26px var(--hc-card-pad); }
+.hc-cafe-ticket__big {
+  font: 800 54px/1 var(--hc-sans-display); letter-spacing: -0.02em; margin: 10px 0 8px;
+}
+.hc-cafe-ticket__big--words { font-size: 26px; line-height: 32px; }
+.hc-cafe-ticket__when { margin: 0; }
+.hc-cafe-ticket--ready { box-shadow: inset 0 0 0 1.5px var(--hc-success); }
+.hc-cafe-track { list-style: none; display: flex; padding: 0; margin: 26px 4px 0; }
+.hc-cafe-track__s { flex: 1; position: relative; text-align: center; font: 500 12px/16px var(--hc-sans); color: var(--hc-mid); }
+.hc-cafe-track__s::before {
+  content: ""; display: block; position: relative; z-index: 1;
+  width: 14px; height: 14px; margin: 0 auto 8px; border-radius: 50%;
+  border: 1.5px solid var(--hc-rule); background: var(--hc-cream); box-sizing: border-box;
+}
+.hc-cafe-track__s::after {
+  content: ""; position: absolute; top: 6px; left: -50%; width: 100%; height: 1.5px; background: var(--hc-rule);
+}
+.hc-cafe-track__s:first-child::after { display: none; }
+.hc-cafe-track__s.is-done { color: var(--hc-ink); }
+.hc-cafe-track__s.is-done::before { background: var(--hc-success); border-color: var(--hc-success); }
+.hc-cafe-track__s.is-done::after { background: var(--hc-success); }
+.hc-cafe-track__s.is-now::before { box-shadow: 0 0 0 4px rgba(95,115,85,0.2); }
+
+/* The counter. */
+.hc-cafe-stats { display: flex; gap: var(--hc-space-sm); margin-top: var(--hc-space-base); }
+.hc-cafe-stat { flex: 1; background: var(--hc-cream); border-radius: var(--hc-radius-lg); padding: 12px 14px; }
+.hc-cafe-stat b { display: block; font: 800 26px/1.1 var(--hc-sans-display); }
+.hc-cafe-stat span { font: 400 12px/16px var(--hc-sans); color: var(--hc-mid); }
+.hc-cafe-pause { margin-top: var(--hc-space-base); }
+.hc-cafe-pause .hc-row__body, .hc-cafe-pause .hc-row__label { display: flex; flex-direction: column; flex: 1; }
+.hc-cafe-pause .hc-switch-row__sub { margin-top: 2px; }
+.hc-cafe-grp {
+  display: flex; justify-content: space-between; margin: 22px 0 0;
+  font: 600 var(--hc-eyebrow)/var(--hc-eyebrow-line) var(--hc-sans);
+  letter-spacing: var(--hc-track-eyebrow); text-transform: uppercase; color: var(--hc-mid);
+}
+.hc-cafe-tick { background: var(--hc-cream); border-radius: var(--hc-radius-lg); padding: var(--hc-space-base); margin-top: 10px; }
+.hc-cafe-tick--making { border-left: 3px solid var(--hc-warning); border-top-left-radius: 4px; border-bottom-left-radius: 4px; }
+.hc-cafe-tick--ready { border-left: 3px solid var(--hc-success); border-top-left-radius: 4px; border-bottom-left-radius: 4px; }
+.hc-cafe-tick__top { display: flex; justify-content: space-between; align-items: baseline; gap: var(--hc-space-sm); }
+.hc-cafe-tick__who { font: 600 18px/24px var(--hc-sans); }
+.hc-cafe-tick__no { font: 600 13px var(--hc-sans); color: var(--hc-accent-deep); }
+.hc-cafe-tag {
+  display: inline-block; vertical-align: 2px; margin-left: 6px; padding: 4px 7px; border-radius: var(--hc-radius-pill);
+  background: var(--hc-paper); color: var(--hc-warning);
+  font: 600 10px/1 var(--hc-sans); letter-spacing: 0.1em; text-transform: uppercase;
+}
+.hc-cafe-tick--ready .hc-cafe-tag { color: var(--hc-success); }
+.hc-cafe-tick__d { list-style: none; margin: 10px 0 0; padding: 0; font: 400 15px/22px var(--hc-sans); }
+.hc-cafe-tick__d small { display: block; color: var(--hc-mid); font-size: 13px; line-height: 18px; margin-bottom: 4px; }
+.hc-cafe-tick__a { display: flex; gap: var(--hc-space-sm); margin-top: var(--hc-space-md); }
+.hc-cafe-tick__a .hc-btn { flex: 1; }
+.hc-btn.hc-cafe-readybtn { background: var(--hc-success); border-color: var(--hc-success); color: #FFFFFF; }
+.hc-cafe-undo { margin-top: var(--hc-space-sm); min-height: 32px; font: 600 13px var(--hc-sans); color: var(--hc-accent-deep); }
+.hc-cafe-done {
+  display: flex; justify-content: space-between; align-items: center; padding: 8px 0;
+  border-bottom: var(--hc-hairline) solid var(--hc-rule); font: 400 15px var(--hc-sans); color: var(--hc-mid);
+}
+.hc-cafe-done button { min-height: 32px; font: 600 13px var(--hc-sans); color: var(--hc-accent-deep); }
+
+/* Open or closed, under the logo on Coffee and at the top of the queue.
+   Green and red are the system's own success and error, which keep their
+   contrast on both themes. */
+.hc-cafe-status {
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  width: fit-content; margin: var(--hc-space-base) auto 0;
+  padding: 10px 18px; border-radius: var(--hc-radius-pill);
+  font: 700 18px/22px var(--hc-sans); letter-spacing: 0.01em;
+}
+.hc-cafe-status__dot { width: 12px; height: 12px; border-radius: 50%; flex: none; }
+.hc-cafe-status--open { color: var(--hc-success); background: rgba(95,115,85,0.12); }
+.hc-cafe-status--open .hc-cafe-status__dot { background: var(--hc-success); box-shadow: 0 0 0 4px rgba(95,115,85,0.22); }
+.hc-cafe-status--closed { color: var(--hc-error); background: rgba(139,74,63,0.10); }
+.hc-cafe-status--closed .hc-cafe-status__dot { background: var(--hc-error); box-shadow: 0 0 0 4px rgba(139,74,63,0.18); }
+:root[data-theme="dark"] .hc-cafe-status--open { color: #9DB58F; background: rgba(157,181,143,0.14); }
+:root[data-theme="dark"] .hc-cafe-status--open .hc-cafe-status__dot { background: #9DB58F; }
+:root[data-theme="dark"] .hc-cafe-status--closed { color: #D9897A; background: rgba(217,137,122,0.14); }
+:root[data-theme="dark"] .hc-cafe-status--closed .hc-cafe-status__dot { background: #D9897A; }
+.hc-cafe-status + .hc-cafe__open { margin-top: var(--hc-space-sm); }
+
+/* The counter's Open and Closed, two big buttons. */
+.hc-cafe-oc { display: flex; gap: var(--hc-space-sm); margin-top: var(--hc-space-md); }
+.hc-cafe-oc__btn {
+  flex: 1; min-height: 52px; border-radius: var(--hc-radius-md);
+  border: 1px solid var(--hc-rule); background: var(--hc-paper);
+  font: 700 17px/1 var(--hc-sans); color: var(--hc-mid);
+}
+.hc-cafe-oc__btn--open[aria-pressed="true"] { background: var(--hc-success); border-color: var(--hc-success); color: #FFFFFF; }
+.hc-cafe-oc__btn--closed[aria-pressed="true"] { background: var(--hc-error); border-color: var(--hc-error); color: #FFFFFF; }
+.hc-cafe-oc__btn[disabled] { opacity: 0.6; }
+
+.hc-cafe-counter__queue {
+  display: flex; align-items: center; justify-content: space-between; width: 100%;
+  min-height: var(--hc-tap-min); margin-top: var(--hc-space-sm);
+  font: 500 17px/22px var(--hc-serif); color: var(--hc-ink);
+}
+.hc-cafe-counter__chev { width: 20px; height: 20px; color: var(--hc-mid); }
+.hc-cafe-pause { padding-top: var(--hc-space-xs); }
+.hc-cafe-pause > .hc-cafe-status { margin-top: 0; }
+.hc-cafe-pause__note { margin-top: var(--hc-space-sm); text-align: center; }
+.hc-cafe-oc__note { margin: var(--hc-space-sm) 0 0; text-align: center; }
+.hc-cafe-oc__back { font: inherit; font-weight: 600; color: var(--hc-accent-deep); text-decoration: underline; min-height: 32px; }
+
 
 /* --- standalone page overrides ------------------------------------------ */
 html, body { position: static; overflow: visible; height: auto; }
@@ -8863,7 +9938,7 @@ body { background: var(--hc-paper); }
 </head>
 <body>
 <main class="hc-page">
-<div class="hc-screen hc-legal hc-view-enter"><header class="hc-section-header hc-section-header--flush"><span class="hc-eyebrow hc-section-header__eyebrow">The fine print</span><h1 class="hc-section-header__title">Terms of use</h1><div class="hc-section-header__rule" aria-hidden="true"></div></header><p class="hc-caption hc-legal__date">Effective September 23, 2026</p><section class="hc-legal__block"><h2 class="hc-legal__heading">The short version</h2><p class="hc-body-serif hc-legal__p">Use the app. Be decent with it. We built it for our church and we are not claiming it is perfect.</p></section><section class="hc-legal__block"><h2 class="hc-legal__heading">What this is</h2><p class="hc-body-serif hc-legal__p">Home Church makes this app for our congregation and for anyone else who wants it. Sermons, small group guides, what is coming up, and a way to find us on a Sunday.</p></section><section class="hc-legal__block"><h2 class="hc-legal__heading">Using it</h2><p class="hc-body-serif hc-legal__p">Do not use the app to break the law, and do not try to break the app. Do not take the guides and sell them.</p><p class="hc-body-serif hc-legal__p">Short of that, use them. Print one, hand it around your group, read a line out loud, quote it somewhere. That is what they were written for, and you do not need to ask.</p></section><section class="hc-legal__block"><h2 class="hc-legal__heading">What you write is yours</h2><p class="hc-body-serif hc-legal__p">Your journal, your notes on a guide, your group’s roster and the prayer requests you keep in Leader mode. They are yours. We claim nothing over anything you write here, we do not read it, and we do not use it to train anything. Signed out it never leaves your phone; signed in, your journal is copied to your account so it follows you, and the privacy policy says exactly what that does and does not mean.</p><p class="hc-body-serif hc-legal__p">A group room is the one place that works differently, because the whole point of it is that other people read what you wrote. It still belongs to you. You can edit it or delete it whenever you like. But once you post it, the people in that room have seen it, and the next section is about what that asks of everybody.</p></section><section class="hc-legal__block"><h2 class="hc-legal__heading">In a group room</h2><p class="hc-body-serif hc-legal__p">A room is your small group, on a Thursday night, writing down what they would say out loud. Write like that. Nothing hateful, nothing obscene, nothing aimed at somebody, nothing that is not yours to post. If you would not say it with the room looking at you, it does not go in the box.</p><p class="hc-body-serif hc-legal__p">What other people write in a room stays in the room. It is not yours to forward, screenshot, or repeat somewhere they did not choose.</p><p class="hc-body-serif hc-legal__p">Every note has a Report button and you can block anybody, which stops their writing reaching you. Whoever hosts the room can take anything down for everybody. We look at reports and act on them within one day, and acting on one can mean removing what was written, removing somebody from a room, or closing their account.</p><p class="hc-body-serif hc-legal__p">If the problem is the person hosting your room, or you would rather not go through them, write to us at hello@homechurchnola.com and it comes straight to the church.</p></section><section class="hc-legal__block"><h2 class="hc-legal__heading">The sheet at the end of the night</h2><p class="hc-body-serif hc-legal__p">Whoever hosts a room can turn the evening into one document and send it to the group. Everything the room wrote goes on it, including answers the group never got round to opening, and the prayer requests. That is what the button says before you tap it.</p><p class="hc-body-serif hc-legal__p">Once that document leaves the app it is a file on somebody’s phone and we cannot reach it. Deleting what you wrote afterwards does not take it off a sheet that has already gone out. Worth knowing before you write, and worth a leader thinking about before they send.</p></section><section class="hc-legal__block"><h2 class="hc-legal__heading">What we can do</h2><p class="hc-body-serif hc-legal__p">We can change the app, add to it, or stop offering it. If we ever stop, we will tell you rather than let it go quiet.</p></section><section class="hc-legal__block"><h2 class="hc-legal__heading">No promises</h2><p class="hc-body-serif hc-legal__p">The app is offered as it is. We do not promise it will always work, that it will be free of mistakes, or that it will always be available. To the fullest extent Louisiana law allows, Home Church is not liable for any loss or damage arising from your use of the app, or from not being able to use it.</p></section><section class="hc-legal__block"><h2 class="hc-legal__heading">Louisiana</h2><p class="hc-body-serif hc-legal__p">These terms are governed by the laws of the State of Louisiana, without regard to its conflict of law rules.</p></section><section class="hc-legal__block"><h2 class="hc-legal__heading">If this changes</h2><p class="hc-body-serif hc-legal__p">New date at the top, and we will tell you if the change is one that matters.</p></section><section class="hc-legal__block"><h2 class="hc-legal__heading">Reaching us</h2><p class="hc-body-serif hc-legal__p">Home Church<br>216 Giuffrias Ave<br>Metairie, LA 70001</p><a class="hc-btn hc-btn--secondary" href="mailto:hello@homechurchnola.com"><span>Email the church</span></a></section></div>
+<div class="hc-screen hc-legal hc-view-enter"><header class="hc-section-header hc-section-header--flush"><span class="hc-eyebrow hc-section-header__eyebrow">The fine print</span><h1 class="hc-section-header__title">Terms of use</h1><div class="hc-section-header__rule" aria-hidden="true"></div></header><p class="hc-caption hc-legal__date">Effective October 8, 2026</p><section class="hc-legal__block"><h2 class="hc-legal__heading">The short version</h2><p class="hc-body-serif hc-legal__p">Use the app. Be decent with it. We built it for our church and we are not claiming it is perfect.</p></section><section class="hc-legal__block"><h2 class="hc-legal__heading">What this is</h2><p class="hc-body-serif hc-legal__p">Home Church makes this app for our congregation and for anyone else who wants it. Sermons, small group guides, a kids guide for families, what is coming up, a way to order a coffee before the service, and a way to find us on a Sunday.</p></section><section class="hc-legal__block"><h2 class="hc-legal__heading">Using it</h2><p class="hc-body-serif hc-legal__p">Do not use the app to break the law, and do not try to break the app. Do not take the guides and sell them.</p><p class="hc-body-serif hc-legal__p">Short of that, use them. Print one, hand it around your group, read a line out loud, quote it somewhere. That is what they were written for, and you do not need to ask.</p></section><section class="hc-legal__block"><h2 class="hc-legal__heading">What you write is yours</h2><p class="hc-body-serif hc-legal__p">Your journal, your notes on a guide, your group’s roster and the prayer requests you keep in Leader mode. They are yours. We claim nothing over anything you write here, we do not read it, and we do not use it to train anything. Signed out it never leaves your phone; signed in, your journal is copied to your account so it follows you, and the privacy policy says exactly what that does and does not mean.</p><p class="hc-body-serif hc-legal__p">A group room is the one place that works differently, because the whole point of it is that other people read what you wrote. It still belongs to you. You can edit it or delete it whenever you like. But once you post it, the people in that room have seen it, and the next section is about what that asks of everybody.</p></section><section class="hc-legal__block"><h2 class="hc-legal__heading">In a group room</h2><p class="hc-body-serif hc-legal__p">A room is your small group, on a Thursday night, writing down what they would say out loud. Write like that. Nothing hateful, nothing obscene, nothing aimed at somebody, nothing that is not yours to post. If you would not say it with the room looking at you, it does not go in the box.</p><p class="hc-body-serif hc-legal__p">What other people write in a room stays in the room. It is not yours to forward, screenshot, or repeat somewhere they did not choose.</p><p class="hc-body-serif hc-legal__p">Every note has a Report button and you can block anybody, which stops their writing reaching you. Whoever hosts the room can take anything down for everybody. We look at reports and act on them within one day, and acting on one can mean removing what was written, removing somebody from a room, or closing their account.</p><p class="hc-body-serif hc-legal__p">If the problem is the person hosting your room, or you would rather not go through them, write to us at hello@homechurchnola.com and it comes straight to the church.</p></section><section class="hc-legal__block"><h2 class="hc-legal__heading">The sheet at the end of the night</h2><p class="hc-body-serif hc-legal__p">Whoever hosts a room can turn the evening into one document and send it to the group. Everything the room wrote goes on it, including answers the group never got round to opening, and the prayer requests. That is what the button says before you tap it.</p><p class="hc-body-serif hc-legal__p">Once that document leaves the app it is a file on somebody’s phone and we cannot reach it. Deleting what you wrote afterwards does not take it off a sheet that has already gone out. Worth knowing before you write, and worth a leader thinking about before they send.</p></section><section class="hc-legal__block"><h2 class="hc-legal__heading">Ordering coffee</h2><p class="hc-body-serif hc-legal__p">The Happy Lion Cafe, in our lobby, makes and sells the drinks. The Coffee page is a way to order ahead and pay before you arrive. Payment is taken by Square on the cafe’s behalf, on Square’s own checkout page, and the price, any tax, and the total are shown before you pay.</p><p class="hc-body-serif hc-legal__p">Pick up your drink at the time you chose, at the counter in the lobby, under the name you gave for the cup. Please only order what you mean to collect.</p><p class="hc-body-serif hc-legal__p">If something goes wrong, a drink that is not right, an order that was cancelled, or a charge with no ticket, tell whoever is at the counter, or email us. Refunds are made by the cafe through Square, back to the way you paid.</p><p class="hc-body-serif hc-legal__p">The cafe can be closed, run out of something, or stop taking orders in the app on any given day, and the app says so when it is.</p></section><section class="hc-legal__block"><h2 class="hc-legal__heading">What we can do</h2><p class="hc-body-serif hc-legal__p">We can change the app, add to it, or stop offering it. If we ever stop, we will tell you rather than let it go quiet.</p></section><section class="hc-legal__block"><h2 class="hc-legal__heading">No promises</h2><p class="hc-body-serif hc-legal__p">The app is offered as it is. We do not promise it will always work, that it will be free of mistakes, or that it will always be available. To the fullest extent Louisiana law allows, Home Church is not liable for any loss or damage arising from your use of the app, or from not being able to use it.</p></section><section class="hc-legal__block"><h2 class="hc-legal__heading">Louisiana</h2><p class="hc-body-serif hc-legal__p">These terms are governed by the laws of the State of Louisiana, without regard to its conflict of law rules.</p></section><section class="hc-legal__block"><h2 class="hc-legal__heading">If this changes</h2><p class="hc-body-serif hc-legal__p">New date at the top, and we will tell you if the change is one that matters.</p></section><section class="hc-legal__block"><h2 class="hc-legal__heading">Reaching us</h2><p class="hc-body-serif hc-legal__p">Home Church<br>216 Giuffrias Ave<br>Metairie, LA 70001</p><a class="hc-btn hc-btn--secondary" href="mailto:hello@homechurchnola.com"><span>Email the church</span></a></section></div>
 </main>
 </body>
 </html>

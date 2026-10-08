@@ -54,17 +54,20 @@
   <array>
 
     <!-- The APNs device token, so the church can say a new guide is posted.
-         Not linked, and that word is doing real work now that accounts exist:
-         `device_tokens` is keyed on the token itself and carries no account
-         column, so a token cannot be walked back to a person. Migration 0010
-         is what holds it there, and 0012 added only per-topic switches beside
-         it. If a future migration puts a user id on that table, this entry
-         becomes Linked and so does the App Store label. -->
+         LINKED since the Happy Lion Cafe, and this is the change the comment
+         that used to sit here warned about. `device_tokens` itself is still
+         keyed on the token and carries no account column (migrations 0010 and
+         0012), so the broadcast notifications stay anonymous. But
+         `cafe_orders` (migration 0085) keeps the token of the phone that
+         placed an order beside the account that placed it, so "Your coffee is
+         ready" reaches the right phone, and an admin's own token carries
+         their account for review notifications (0043). Apple's label is per
+         data type, not per table, so one linked path makes the type Linked. -->
     <dict>
       <key>NSPrivacyCollectedDataType</key>
       <string>NSPrivacyCollectedDataTypeDeviceID</string>
       <key>NSPrivacyCollectedDataTypeLinked</key>
-      <false/>
+      <true/>
       <key>NSPrivacyCollectedDataTypeTracking</key>
       <false/>
       <key>NSPrivacyCollectedDataTypePurposes</key>
@@ -226,6 +229,24 @@
       </array>
     </dict>
 
+    <!-- Coffee orders from the Happy Lion Cafe, `cafe_orders` in migration
+         0085: what was ordered, the price, the pickup time, and the account
+         that ordered it. Card details are typed into Square's hosted
+         checkout, which opens in SFSafariViewController, and never reach the
+         app or our server, so Payment Info is NOT declared: all we receive
+         back is paid or not. -->
+    <dict>
+      <key>NSPrivacyCollectedDataType</key>
+      <string>NSPrivacyCollectedDataTypePurchaseHistory</string>
+      <key>NSPrivacyCollectedDataTypeLinked</key>
+      <true/>
+      <key>NSPrivacyCollectedDataTypeTracking</key>
+      <false/>
+      <key>NSPrivacyCollectedDataTypePurposes</key>
+      <array>
+        <string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+      </array>
+    </dict>
   </array>
 
   <key>NSPrivacyAccessedAPITypes</key>

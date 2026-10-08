@@ -84,7 +84,12 @@ const SUPPORT = `
 
 <section class="hc-legal__block">
   <h2 class="hc-legal__heading">Where your notes live</h2>
-  <p class="hc-body-serif hc-legal__p">On your phone. Your notes, your group roster, and anything you have written down for prayer stay on the device and are never sent to us. That means we cannot read them, and it also means we cannot recover them for you. Open Your account, then Your data, to see exactly what is stored and to erase all of it.</p>
+  <p class="hc-body-serif hc-legal__p">On your phone. Your group roster, anything you have written down for prayer, and your family's ticks on HomeKids stay on the device and are never sent to us. That means we cannot read them, and it also means we cannot recover them for you. Your journal is the exception once you sign in: then a copy is kept in your account, so it follows you to a new phone. Open Your account, then Your data, to see exactly what is stored and to erase it.</p>
+</section>
+
+<section class="hc-legal__block">
+  <h2 class="hc-legal__heading">A coffee order</h2>
+  <p class="hc-body-serif hc-legal__p">The Coffee page orders ahead from the Happy Lion Cafe in our lobby, on Sunday mornings, and payment is taken by Square. If you paid and the app has not shown your ticket, open the Coffee page again and tap your order, which asks Square again. If a drink is not right, an order was cancelled, or you were charged with no ticket, tell whoever is at the counter, or email us. Refunds go back to the way you paid.</p>
 </section>
 
 <section class="hc-legal__block">
