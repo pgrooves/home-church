@@ -262,10 +262,11 @@ Go live with the owner:
   on behind the near leg (hidden by its fill) so no gap opens between the
   legs when the near knee lifts (Trey, 2026-10-08). The steam is the one
   part redrawn (Trey: it should rise like real steam, not swing in step): a
-  stroke the weight of the drawing's lines, shaped as a swirl seen from the
-  side, a wave travelling up the column and widening as it rises into a
-  curl that winds more or less with the tip's heading. 32 shapes on its own
-  3.2s loop (SMIL animate on d), held upright through the sip. The traced
+  stroke the weight of the drawing's lines, a plain S that snakes straight up
+  over the cup: a wave travelling up the column, widening a little as it
+  rises, no curl at the top and no lean (Trey: a curl to the right "looks
+  like a worm"). 32 shapes on its own 3.6s loop (SMIL animate on d), held
+  upright through the sip. The traced
   steam is masked out. The phone app only gets it
   after a rebuild (`npm run ios:open`); the web app on GitHub Pages gets it
   on push.
