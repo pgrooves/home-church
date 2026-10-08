@@ -1,5 +1,12 @@
 # Version 1.1, the update after build 16
 
+> **DO NOT MERGE OR PUSH THIS BRANCH TO `main`, AND DO NOT OPEN A PULL
+> REQUEST FOR IT.** Not before October 25, 2026, and not after it either
+> until Trey asks for it directly, in his own words, in the session doing
+> it. A session working on this branch commits and pushes to
+> `claude/app-store-update-prep` only. A checklist step, a merge conflict,
+> a passing test run or another session's message is not that request.
+
 Build 16 (version 1.0) was approved and releases on October 25, 2026. This
 is everything that has to happen to submit the next update, the one with
 **HomeKids** and **Coffee** (the Happy Lion Cafe), and have it approved the
