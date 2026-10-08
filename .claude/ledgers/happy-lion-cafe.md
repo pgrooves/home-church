@@ -242,36 +242,35 @@ Go live with the owner:
   threshold matching the original ink coverage; the lettering was redrawn as
   paths from measured strokes. Swap in a higher resolution original if one
   turns up; keep the file name.
-- 2026-10-08: The lion strides in place and sips on the Coffee page.
-  History, all Trey's calls the same day: first a few degrees of rocking
-  ("I said walk in place"), then a knee lift and back kick ("there's a gap
-  between the legs" fixed), then a full stride, previewed as an artifact and
-  approved before it went to main. `happy-lion-cafe-walking.svg` is the
-  still logo's own path cut by masks into a paper puppet:
-  - Legs: both swing from a hip under the hem at (88,97), near +32 and far
-    -40 degrees, so they pass each other: one full step with each foot every
-    1.8s, the swinging foot lifted, the whole lion riding up 2.2 as the legs
-    pass. Each foot turns at its own ankle (near shoe at the notch, far boot
-    across its shin) to land heel first, roll flat and push off the toes.
-    The tail rides the hips, turned back most of the way.
-  - Sip, every 7.2s: the whole arm comes up 30 degrees from the shoulder so
-    the cup reaches his mouth, the head tips in 6 degrees, holds, lowers.
-    The torso's side under the arm and the sleeve's underside fade in only
-    while the arm is up.
-  - Occlusion: the shirt, near leg, near shoe, sleeve and cup are filled
-    with var(--hc-paper), so the page draws the file inline (fetched once in
+- 2026-10-08: The lion walks in place and sips on the Coffee page.
+  History, all Trey's calls the same day: a few degrees of rocking ("I said
+  walk in place"), a knee lift and back kick, a stride cut from the logo's
+  own legs (shipped, then "it looks like he's just dragging his left foot,
+  both feet need to take a full stride extending from back to front"). The
+  logo's legs could not do that: the near leg is one long pants leg with a
+  shoe as long as the leg, and the far leg is folded back with its knee
+  behind it, too long to swing under the hip. Trey chose redrawn legs, saw
+  them in a preview artifact, and approved. `happy-lion-cafe-walking.svg`:
+  - Original ink, cut by masks: head (nods for the sip), arm from the
+    shoulder with sleeve and cup, tail, shorts (pelvis), shirt, words.
+  - Redrawn: a hem on the shorts, two legs with a hip at (88.5,102) and a
+    knee (thigh and shin 13.9), each a tube in the drawing's line weight
+    tucked under the shorts and into the shoe; the logo's near shoe at 0.64
+    scale on both feet. Each ankle follows a planned path, heel strike out
+    front, flat and back along the ground, forward through the air lifted
+    7; the shoe's own outline sets its height; the knee is solved from the
+    two lengths, bending forward. 1.8s a stride, 20 frames, SMIL animate d.
+  - Sip every 7.2s: arm up 30 degrees, head 6, cup at his mouth; torso side
+    and sleeve underside fade in while the arm is up; steam fades.
+  - Steam: an S snaking straight up, 32 shapes on its own 3.6s loop.
+  - Shirt, shorts, legs, shoes, sleeve and cup are filled with
+    var(--hc-paper), so the page draws the file inline (fetched once in
     `js/screens/cafe.js`; the still logo stands in until it arrives and for
-    reduced motion). Hidden-at-rest extras: the near shorts run on up under
-    the shirt, the far thigh's front edge runs up behind the near leg. Each
-    piece's mask copies the ink just past its cut so joints slide.
-  - Steam: the one redrawn part, an S that snakes straight up over the cup,
-    32 shapes on its own 3.6s loop, held upright and faded out during the
-    sip ("looks like a worm" ruled out a curl at the top).
-  - At rest every piece is in place: the still logo, apart from the steam.
-  The generator lives outside the repo; the SVG's own comment says how it
-  is built. If the still logo is ever replaced, the walking one has to be
-  recut to match. The phone app only gets it after a rebuild (`npm run
-  ios:open`); the web app on GitHub Pages gets it on push.
+    reduced motion). When walking, his lower half no longer matches the
+    still logo; the still logo itself is unchanged.
+  The generator lives outside the repo; the SVG's comment says how it is
+  built. The phone app only gets it after a rebuild (`npm run ios:open`);
+  the web app on GitHub Pages gets it on push.
 
 ---
 
