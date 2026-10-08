@@ -4279,7 +4279,8 @@ button.hc-cal__day { cursor: pointer; }
    ========================================================================== */
 
 .hc-cafe__logo { width: 150px; margin: 0 auto; color: var(--hc-ink); }
-.hc-cafe__logo img { display: block; width: 100%; height: auto; }
+.hc-cafe__logo img,
+.hc-cafe__logo svg { display: block; width: 100%; height: auto; aspect-ratio: 180 / 216; }
 .hc-cafe__logo--small { width: 110px; }
 /* The logo is one colour, drawn in ink. On the dark theme it is drawn in the
    dark theme's ink instead, which is the same picture inverted. */

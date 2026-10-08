@@ -31,11 +31,14 @@
 
   var c = HC.components;
 
-  // The lion walks in place and sips, in the SVG itself, so it plays only
-  // while this page is up. Reduced motion gets the still logo, which is the
-  // same picture: an img does not always pass that setting into its SVG.
-  var LOGO = 'assets/img/happy-lion-cafe-walking.svg?v=2';
+  // The lion walks in place and sips. The walking file is drawn inline, not
+  // as an img, because his shirt and near leg are filled with the page's own
+  // colour (--hc-paper) to hide the leg passing behind them. Until it has
+  // loaded, and always for reduced motion, the still logo stands in; it is
+  // the same picture as his resting pose, so the swap does not show.
+  var LOGO = 'assets/img/happy-lion-cafe-walking.svg?v=3';
   var LOGO_STILL = 'assets/img/happy-lion-cafe.svg';
+  var lion = { svg: null, asked: false };
   var MENU_LEDE = 'Pick your drink, choose when you’ll grab it, and it’ll be waiting at the counter.';
   var OFF_LINE = 'The cafe isn’t taking orders in the app right now. Come say hi at the counter in the lobby.';
 
@@ -71,16 +74,20 @@
 
   /* Repaint in place: the body of whichever view is on screen, without a
      new route, so the scroll position and a half typed name both survive.
-     The logo's img is carried over too, so the lion keeps walking through a
-     repaint instead of starting his step again. */
+     The walking lion is carried over too, at the same moment of his step,
+     so a repaint doesn't start him again. */
   function paint() {
     var root = document.querySelector('[data-cafe-root]');
     if (!root) return;
     var r = route();
-    var was = root.querySelector('.hc-cafe__logo img');
+    var was = root.querySelector('.hc-cafe__logo svg');
+    var at = was && was.getCurrentTime ? was.getCurrentTime() : 0;
     root.innerHTML = body(r || { name: 'cafe' });
-    var now = root.querySelector('.hc-cafe__logo img');
-    if (was && now && was.getAttribute('src') === now.getAttribute('src')) now.parentNode.replaceChild(was, now);
+    var now = root.querySelector('.hc-cafe__logo svg');
+    if (was && now) {
+      now.parentNode.replaceChild(was, now);
+      if (was.setCurrentTime) was.setCurrentTime(at);
+    }
     paintSheet();
   }
 
@@ -91,10 +98,27 @@
            window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   }
 
+  /* Fetch the walking lion once, and swap him in for the still logo if it is
+     on screen when he arrives. */
+  function loadLion() {
+    if (lion.asked || reduced() || !window.fetch) return;
+    lion.asked = true;
+    fetch(LOGO).then(function (res) {
+      return res.ok ? res.text() : Promise.reject(new Error(String(res.status)));
+    }).then(function (text) {
+      var start = text.indexOf('<svg');
+      if (start < 0) return;
+      lion.svg = text.slice(start);
+      var img = document.querySelector('[data-cafe-root] .hc-cafe__logo img');
+      if (img && !reduced()) img.outerHTML = lion.svg;
+    }).catch(function () { /* the still logo stays */ });
+  }
+
   function logo(cls) {
-    return '<div class="hc-cafe__logo ' + (cls || '') + '">' +
-      '<img src="' + (reduced() ? LOGO_STILL : LOGO) + '" alt="Happy Lion Cafe" width="150" height="180">' +
-    '</div>';
+    loadLion();
+    var art = lion.svg && !reduced() ? lion.svg :
+      '<img src="' + LOGO_STILL + '" alt="Happy Lion Cafe" width="150" height="180">';
+    return '<div class="hc-cafe__logo ' + (cls || '') + '">' + art + '</div>';
   }
 
   function drinkIcon(item) {

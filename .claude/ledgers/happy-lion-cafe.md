@@ -243,20 +243,24 @@ Go live with the owner:
   paths from measured strokes. Swap in a higher resolution original if one
   turns up; keep the file name.
 - 2026-10-08: The lion walks in place and sips on the Coffee page (Trey:
-  "the design shouldn't change at all... his stance shouldn't change").
-  `happy-lion-cafe-walking.svg` is the same path, cut at the joints by masks
-  into head, arm + cup, steam, tail and each leg; SMIL animateTransform in the
-  SVG turn each a few degrees about its joint (1.6s step, 7s sip). At rest
-  it is pixel for pixel the still logo. Each joint's pivot sits where the
-  cut lines slide along themselves, and a small circle in the moving piece's
-  mask overlaps the cut so no gap opens. Reduced motion gets the still file
-  (`LOGO_STILL` in `js/screens/cafe.js`); `paint()` carries the img over so a
-  repaint doesn't restart his step. cafe-return.html and the mockups keep
-  the still logo. If the still logo is ever replaced, the walking one has to
-  be recut to match. First cut used CSS keyframes; switched to SMIL the same
-  day because Safari is not reliable about CSS animation inside an img, and
-  plays SMIL there. The phone only sees it after a rebuild (`npm run
-  ios:open`, run from Xcode); iOS Reduce Motion shows the still logo.
+  "the design shouldn't change at all... his stance shouldn't change"; then,
+  of a first cut that only rocked each leg a few degrees, "I said walk in
+  place"). `happy-lion-cafe-walking.svg` is the same path cut by masks into
+  a paper puppet: the near leg (shorts, leg, shoe) swings up 12 degrees from
+  a hip under the hem and tucks under the shirt; the far leg kicks back 22
+  degrees from the crotch; the tail swings; every 7s the arm lifts the cup
+  and the head leans in. The shirt and the near leg are filled with
+  var(--hc-paper) to hide what passes behind them, so the page draws the
+  file inline (fetched once in `js/screens/cafe.js`), with the still logo
+  standing in until it arrives and always for reduced motion. Each leg's
+  mask also copies the ink just past its cut (the near leg's sides under
+  the hem, the far thigh's hidden edge), so joints slide rather than open
+  and the resting pose is the still logo. SMIL, because Safari plays it;
+  `paint()` carries the svg and its clock over a repaint. cafe-return.html
+  and the mockups keep the still logo. If the still logo is ever replaced,
+  the walking one has to be recut to match. The phone app only gets it
+  after a rebuild (`npm run ios:open`); the web app on GitHub Pages gets it
+  on push.
 
 ---
 
