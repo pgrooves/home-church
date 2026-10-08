@@ -1,9 +1,9 @@
 /**
  * Home Church, ordering from the Happy Lion Cafe.
  *
- * TWO ACTIONS, ONE SIGNED IN CALLER.
+ * THREE ACTIONS, AND TWO KINDS OF CALLER.
  *
- *   { action: 'create', lines, pickup_time | slot_id, cup_name, push_token? }
+ *   { action: 'create', lines, pickup_time | slot_id, cup_name, push_token?, guest? }
  *     Prices the order from cafe_menu_items (never from the phone), checks the
  *     pickup time is open and not full (a chosen 'HH:MM', or slot_id 'asap'
  *     for as soon as it is ready; a fixed slot id still works for a phone
@@ -19,8 +19,24 @@
  *     than a lost order, and it is what the phone calls when somebody comes
  *     back from the checkout page.
  *
- * WHO IS CALLING is the caller's own token, verified against the auth server,
- * the same way delete-account does it. A user id in the body is never read.
+ *   { action: 'status', order_id, guest_key }
+ *     A guest's ticket: the order as the ticket screen draws it, and how many
+ *     drinks are ahead of it. Signed in phones read their own orders straight
+ *     from the table instead, through its row level security.
+ *
+ * WHO IS CALLING. Somebody signed in is their own token, verified against the
+ * auth server, the same way delete-account does it. A user id in the body is
+ * never read.
+ *
+ * A GUEST says so, with `guest: true`, and presents no account at all (the
+ * phone sends the publishable key, which proves nothing). Saying so is what
+ * makes it a guest order: a signed in phone whose session has lapsed still
+ * gets "sign in again" rather than quietly becoming a guest. On create a guest
+ * is handed `guest_key`, a random key only that phone keeps; refresh and status
+ * need it, and the order id alone is never enough. Only the key's SHA-256 is
+ * stored. Unpaid guest orders are limited per network and in total, because
+ * an unpaid order holds its drinks against a pickup time. The reasoning is at
+ * "guests" in _shared/cafe.mjs; migration 0090 is the database half.
  *
  * WHAT IT NEEDS. Secrets on this function, none of them in git (the
  * repository is public):
@@ -31,12 +47,19 @@
  *   CAFE_RETURN_URL       optional; where Square sends somebody after paying.
  *                         Defaults to cafe-return.html on the church's
  *                         GitHub Pages site.
+ *   CAFE_IP_PEPPER        optional but wanted; any long random string. Mixed
+ *                         into the network address hash that limits unpaid
+ *                         guest orders. Falls back to CONTACT_IP_PEPPER, then
+ *                         to none (the limit still works, the hash is weaker).
  *
  * Swapping Trey's sandbox for the cafe owner's live account is these values
  * and nothing else. See .claude/ledgers/happy-lion-cafe.md.
  *
- * DEPLOY
- *   supabase functions deploy cafe-checkout
+ * DEPLOY, with the JWT check OFF since guest ordering: a guest presents the
+ * publishable key, which is not a JWT, and the gateway would turn them away
+ * before this code could. Nothing is lost by it, because a signed in caller
+ * is verified here, against the auth server, on every request.
+ *   supabase functions deploy cafe-checkout --no-verify-jwt
  */
 
 import { createClient } from 'jsr:@supabase/supabase-js@2';
@@ -44,6 +67,8 @@ import {
   CafeError, priceCart, taxCents, cleanName, churchDay, churchInstant, churchMinutes, slotProblem,
   openState, isSunday, ASAP_SLOT, ASAP_MINUTES, asapProblem, PICK_SLOT, pickupProblem,
   paymentLinkBody, totalsFromLink, squareBase, SQUARE_VERSION,
+  GUEST_HOLD_MINUTES, newGuestKey, isGuestKey, sha256Hex, guestKeyMatches, guestLimitProblem,
+  drinksAhead,
 } from '../_shared/cafe.mjs';
 
 const CORS = {
@@ -126,33 +151,50 @@ Deno.serve(async (req: Request) => {
     return json({ error: 'This is not set up correctly. Please tell the church.' }, 500);
   }
 
-  const token = (req.headers.get('Authorization') ?? '').replace(/^Bearer\s+/i, '').trim();
-  if (!token) return json({ error: 'Sign in to order from the cafe.' }, 401);
-
-  const asCaller = createClient(url, anonKey, {
-    global: { headers: { Authorization: `Bearer ${token}` } },
-    auth: { persistSession: false, autoRefreshToken: false },
-  });
-  const { data: who, error: whoError } = await asCaller.auth.getUser();
-  if (whoError || !who?.user) {
-    return json({ error: 'That sign in has expired. Sign in again and try once more.' }, 401);
-  }
-  const user = who.user;
-
-  const db: Db = createClient(url, serviceKey, {
-    auth: { persistSession: false, autoRefreshToken: false },
-  });
-
   let body: Record<string, unknown>;
   try {
     body = await req.json();
   } catch {
     return json({ error: 'Body must be JSON.' }, 400);
   }
+  if (!body || typeof body !== 'object' || Array.isArray(body)) {
+    return json({ error: 'Body must be a JSON object.' }, 400);
+  }
+
+  const db: Db = createClient(url, serviceKey, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+
+  // A guest, by their own say so. Nothing in the Authorization header is
+  // read for them; see the header of this file.
+  let caller: Caller;
+  if (body.guest === true) {
+    const pepper = Deno.env.get('CAFE_IP_PEPPER') ?? Deno.env.get('CONTACT_IP_PEPPER') ?? '';
+    caller = { guest: true, senderHash: await senderHash(callerIp(req), pepper) };
+  } else {
+    const token = (req.headers.get('Authorization') ?? '').replace(/^Bearer\s+/i, '').trim();
+    if (!token) return json({ error: 'Sign in to order from the cafe.' }, 401);
+
+    const asCaller = createClient(url, anonKey, {
+      global: { headers: { Authorization: `Bearer ${token}` } },
+      auth: { persistSession: false, autoRefreshToken: false },
+    });
+    const { data: who, error: whoError } = await asCaller.auth.getUser();
+    if (whoError || !who?.user) {
+      return json({ error: 'That sign in has expired. Sign in again and try once more.' }, 401);
+    }
+    caller = { guest: false, user: who.user };
+  }
 
   try {
-    if (body.action === 'refresh') return json(await refresh(db, user.id, String(body.order_id ?? '')));
-    if (body.action === 'create') return json(await create(db, user, body));
+    const orderId = String(body.order_id ?? '');
+    const key = body.guest_key;
+    if (body.action === 'refresh') return json(await refresh(db, await ownOrder(db, caller, orderId, key)));
+    if (body.action === 'status') {
+      if (!caller.guest) return json({ error: 'Unknown action.' }, 400);
+      return json(await status(db, await ownOrder(db, caller, orderId, key)));
+    }
+    if (body.action === 'create') return json(await create(db, caller, body));
     return json({ error: 'Unknown action.' }, 400);
   } catch (err) {
     if (err instanceof CafeError) return json({ error: err.message }, err.status);
@@ -161,11 +203,70 @@ Deno.serve(async (req: Request) => {
   }
 });
 
+/* ---------------------------------------------------------------- caller */
+
+type Caller =
+  | { guest: false; user: { id: string; email?: string } }
+  | { guest: true; senderHash: string | null };
+
+/* The caller's address, as the platform reports it, read the way
+   supabase/functions/contact reads it. Empty on a local invocation, which
+   means "this network cannot be limited", never an identity. */
+function callerIp(req: Request): string {
+  const forwarded = req.headers.get('x-forwarded-for') ?? '';
+  const first = forwarded.split(',')[0].trim();
+  return first || (req.headers.get('x-real-ip') ?? '').trim();
+}
+
+async function senderHash(ip: string, pepper: string): Promise<string | null> {
+  return ip ? await sha256Hex(`${pepper}:${ip}`) : null;
+}
+
+/* The order, if it is this caller's: their account's, or a guest order whose
+   key they hold. Anything else is "No such order", the same words whether it
+   does not exist or is somebody else's, so the answer says nothing about
+   which ids are real. */
+async function ownOrder(db: Db, caller: Caller, orderId: string, key: unknown): Promise<Row> {
+  if (!/^[0-9a-f-]{36}$/i.test(orderId)) throw new CafeError('No such order.', 404);
+  if (caller.guest && !isGuestKey(key)) throw new CafeError('No such order.', 404);
+
+  const { data: order }: { data: Row } = await db
+    .from('cafe_orders').select('*').eq('id', orderId).maybeSingle();
+  if (!order) throw new CafeError('No such order.', 404);
+
+  if (caller.guest) {
+    if (order.user_id !== null || !(await guestKeyMatches(key, order.guest_key_hash))) {
+      throw new CafeError('No such order.', 404);
+    }
+  } else if (order.user_id !== caller.user.id) {
+    throw new CafeError('No such order.', 404);
+  }
+  return order;
+}
+
+/* Unpaid guest orders still holding drinks: from this network, and from
+   everybody. */
+async function guestLimit(db: Db, senderHashValue: string | null) {
+  const since = new Date(Date.now() - GUEST_HOLD_MINUTES * 60000).toISOString();
+  const { data, error } = await db
+    .from('cafe_orders')
+    .select('sender_hash')
+    .is('user_id', null)
+    .eq('status', 'pending_payment')
+    .gte('created_at', since);
+  if (error) throw error;
+  const rows = (data ?? []) as Row[];
+  return guestLimitProblem({
+    fromSender: senderHashValue ? rows.filter((r) => r.sender_hash === senderHashValue).length : null,
+    atOnce: rows.length,
+  });
+}
+
 /* ---------------------------------------------------------------- create */
 
 async function create(
   db: Db,
-  user: { id: string; email?: string },
+  caller: Caller,
   body: Record<string, unknown>,
 ) {
   const cfg = squareConfig();
@@ -200,6 +301,12 @@ async function create(
   }
 
   const cupName = cleanName(body.cup_name);
+
+  // Before Square is asked for anything, so a refused guest costs nothing.
+  if (caller.guest) {
+    const limited = await guestLimit(db, caller.senderHash);
+    if (limited) throw new CafeError(limited, 429);
+  }
 
   const { data: menu, error: menuError } = await db
     .from('cafe_menu_items').select('*').eq('published', true);
@@ -261,7 +368,9 @@ async function create(
     taxPercent,
     tips: settingBool(settings, 'cafe_tips_on', false),
     redirectUrl: (Deno.env.get('CAFE_RETURN_URL') ?? '').trim() || DEFAULT_RETURN_URL,
-    email: user.email,
+    // A guest has given no email, and Square's own page asks for one if the
+    // cafe wants it.
+    email: caller.guest ? undefined : caller.user.email,
   }));
 
   const paymentLink = link?.payment_link;
@@ -278,9 +387,13 @@ async function create(
   const pushToken = typeof body.push_token === 'string' && body.push_token.length < 300
     ? body.push_token : null;
 
+  const guestKey = caller.guest ? newGuestKey() : null;
+
   const { error: insertError } = await db.from('cafe_orders').insert({
     id: orderId,
-    user_id: user.id,
+    user_id: caller.guest ? null : caller.user.id,
+    guest_key_hash: guestKey ? await sha256Hex(guestKey) : null,
+    sender_hash: caller.guest ? caller.senderHash : null,
     service_day: day,
     slot_id: slot.id,
     pickup_at: pickupAt.toISOString(),
@@ -298,7 +411,12 @@ async function create(
   });
   if (insertError) throw insertError;
 
-  return { order_id: orderId, checkout_url: paymentLink.url, total_cents: totals.total_cents };
+  return {
+    order_id: orderId,
+    checkout_url: paymentLink.url,
+    total_cents: totals.total_cents,
+    ...(guestKey ? { guest_key: guestKey } : {}),
+  };
 }
 
 /**
@@ -314,7 +432,7 @@ async function drinksAround(db: Db, day: string, at: Date): Promise<number> {
     .gte('pickup_at', new Date(at.getTime() - 5 * 60000).toISOString())
     .lte('pickup_at', new Date(at.getTime() + 5 * 60000).toISOString());
   if (error) throw error;
-  const fresh = Date.now() - 20 * 60000;
+  const fresh = Date.now() - GUEST_HOLD_MINUTES * 60000;
   return ((data ?? []) as Row[])
     .filter((o) => ['paid', 'making', 'ready', 'picked_up'].includes(o.status) ||
       (o.status === 'pending_payment' && new Date(o.created_at).getTime() > fresh))
@@ -323,13 +441,7 @@ async function drinksAround(db: Db, day: string, at: Date): Promise<number> {
 
 /* --------------------------------------------------------------- refresh */
 
-async function refresh(db: Db, userId: string, orderId: string) {
-  if (!/^[0-9a-f-]{36}$/i.test(orderId)) throw new CafeError('No such order.', 404);
-
-  const { data: order }: { data: Row } = await db
-    .from('cafe_orders').select('*').eq('id', orderId).maybeSingle();
-  if (!order || order.user_id !== userId) throw new CafeError('No such order.', 404);
-
+async function refresh(db: Db, order: Row) {
   if (order.status !== 'pending_payment' || !order.square_order_id) {
     return { status: order.status, ticket_no: order.ticket_no };
   }
@@ -359,4 +471,30 @@ async function refresh(db: Db, userId: string, orderId: string) {
   }
 
   return { status: order.status, ticket_no: order.ticket_no };
+}
+
+/* ---------------------------------------------------------------- status */
+
+/* What the ticket screen draws, and nothing it does not: no Square ids, no
+   push token, no hashes. The same columns ORDER_COLUMNS in js/cafe.js asks
+   the table for when the phone is signed in. */
+const TICKET_COLUMNS = ['id', 'status', 'ticket_no', 'cup_name', 'slot_id', 'pickup_at', 'items',
+  'drinks', 'subtotal_cents', 'tax_cents', 'tip_cents', 'total_cents', 'checkout_url',
+  'service_day', 'created_at', 'ready_at'];
+
+async function status(db: Db, order: Row) {
+  const ticket: Record<string, unknown> = {};
+  TICKET_COLUMNS.forEach((k) => { ticket[k] = order[k] ?? null; });
+
+  let ahead = 0;
+  if (order.status === 'paid' || order.status === 'making') {
+    const { data, error } = await db
+      .from('cafe_orders')
+      .select('id, status, pickup_at, ticket_no, drinks, service_day')
+      .eq('service_day', order.service_day)
+      .in('status', ['paid', 'making']);
+    if (error) throw error;
+    ahead = drinksAhead(order, (data ?? []) as Row[]);
+  }
+  return { order: ticket, ahead };
 }

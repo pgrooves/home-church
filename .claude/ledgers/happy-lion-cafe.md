@@ -344,3 +344,40 @@ secrets were set on 2026-10-03). Compare `ezbr_sha256`, not the version.
   to-top disc stands down (`#app:has(.hc-cafe-cartbar) .hc-disc--top`), the
   same way it does for the highlight bar.
 - cafe-checkout deployed v8.
+
+## 2026-10-08: guest ordering (0090), on `claude/app-store-update-prep`
+
+Trey asked for ordering without signing in, ahead of the v1.1 App Store
+submission (Guideline 5.1.1 rejects shops that require an account to buy).
+**Built on the branch `claude/app-store-update-prep`, which must not be merged
+to main until Trey asks for it himself, after October 25.** Not deployed.
+
+- **How a guest is a guest.** The phone, signed out, calls cafe-checkout with
+  `guest: true` and the publishable key (`HC.auth.callPublicFunction`). A
+  signed in phone whose session lapsed still gets "sign in again", never a
+  silent guest order. Create returns `guest_key` (32 random bytes, base64url);
+  the phone keeps it in `hc:cafeGuestOrders` (last 20) and the server stores
+  only its SHA-256 in `cafe_orders.guest_key_hash`. `refresh` and the new
+  `status` action (ticket columns + drinks ahead) need the key; an order id
+  alone is "No such order". Guests never read the table; RLS is unchanged.
+- **Limits.** Unpaid guest orders hold drinks for 20 minutes, so: at most 3
+  unpaid guest orders per network (peppered hash in `cafe_orders.sender_hash`,
+  `CAFE_IP_PEPPER`, falling back to `CONTACT_IP_PEPPER`) and 25 across
+  everybody at once. Checked before Square is asked for anything.
+- **No email to Square** for a guest; Square's page can ask for one.
+- **Retention.** Guest orders delete after 90 days (Trey chose 90),
+  `hc_purge_cafe_guest_orders`, pg_cron job `hc-purge-cafe-guest-orders` at
+  09:20 UTC. Account orders still go with the account.
+- `hc_cafe_ahead` now returns null for any order with no account, rather than
+  relying on how a null compares.
+- The counter, the webhook and the ready push needed no change: none of them
+  read `user_id`.
+- **Deploy (waiting on Trey):** SQL Editor, paste 0090; then
+  `supabase functions deploy cafe-checkout --no-verify-jwt` (the publishable
+  key is not a JWT, so the gateway check has to be off; the function verifies
+  signed in callers itself). Order matters only in that the new function
+  writes the new columns, so 0090 goes first.
+- Tests: `tests/cafe.test.js` (guest key, limits, place in line, the phone's
+  routing), `supabase/tests/0090_cafe_guest_orders_test.sql`; the render
+  (`demo-happy-lion-cafe/render.js`) now ends with a signed out order and its
+  ticket.

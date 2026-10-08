@@ -234,7 +234,10 @@
          that ordered it. Card details are typed into Square's hosted
          checkout, which opens in SFSafariViewController, and never reach the
          app or our server, so Payment Info is NOT declared: all we receive
-         back is paid or not. -->
+         back is paid or not. Linked because an order placed signed in
+         carries the account; a guest order (migration 0090) carries none,
+         only a hash of the key its phone holds, and is deleted after
+         ninety days. -->
     <dict>
       <key>NSPrivacyCollectedDataType</key>
       <string>NSPrivacyCollectedDataTypePurchaseHistory</string>

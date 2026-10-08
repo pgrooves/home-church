@@ -433,3 +433,95 @@ export async function verifySquareSignature(signatureKey, notificationUrl, rawBo
   for (let i = 0; i < want.length; i++) diff |= want.charCodeAt(i) ^ presented.charCodeAt(i);
   return diff === 0;
 }
+
+/* ----------------------------------------------------------------- guests
+ *
+ * Ordering without an account. Apple turns away shops that make somebody sign
+ * up before they can buy (Guideline 5.1.1), and a cup of coffee is the
+ * clearest case there is, so a guest can order, pay, follow the ticket, and
+ * be told it is ready, all without signing in.
+ *
+ * THE KEY IS THE ACCOUNT. With no account to say whose order it is, the phone
+ * that placed it is handed a random key at checkout and keeps it. Showing the
+ * key is the only way back to the order: the order id alone is never enough,
+ * because an order id travels in Square's redirect and in logs, and a key does
+ * not. The server keeps only the key's SHA-256, so a copy of the table cannot
+ * be used to read anybody's order either.
+ *
+ * THE LIMITS ARE THE FRONT DOOR. An unpaid order holds its drinks against a
+ * pickup time for twenty minutes, so somebody with no account and a script
+ * could fill every time on a Sunday without paying for anything. Two limits
+ * stop that: a handful of unpaid guest orders from any one network (the same
+ * peppered address hash the contact form uses), and a ceiling on unpaid guest
+ * orders across everybody at once. Signed in orders are not counted: an
+ * account is already a person we could turn off.
+ */
+
+export const GUEST_HOLD_MINUTES = 20;      // what drinksAround and hc_cafe_slot_load count
+export const GUEST_UNPAID_PER_SENDER = 3;
+export const GUEST_UNPAID_AT_ONCE = 25;
+
+function toBase64Url(bytes) {
+  let s = '';
+  for (const b of bytes) s += String.fromCharCode(b);
+  return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+/** 32 random bytes, as 43 URL safe characters. */
+export function newGuestKey() {
+  const bytes = new Uint8Array(32);
+  crypto.getRandomValues(bytes);
+  return toBase64Url(bytes);
+}
+
+export function isGuestKey(key) {
+  return typeof key === 'string' && /^[A-Za-z0-9_-]{43}$/.test(key);
+}
+
+export async function sha256Hex(text) {
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(String(text)));
+  return Array.from(new Uint8Array(digest)).map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+/** Does the key the phone showed belong to the order? Constant time. */
+export async function guestKeyMatches(key, storedHash) {
+  if (!isGuestKey(key) || typeof storedHash !== 'string' || storedHash.length !== 64) return false;
+  const want = await sha256Hex(key);
+  let diff = 0;
+  for (let i = 0; i < want.length; i++) diff |= want.charCodeAt(i) ^ storedHash.charCodeAt(i);
+  return diff === 0;
+}
+
+/**
+ * Whether one more unpaid guest order may be taken. `fromSender` is how many
+ * unpaid guest orders this network has open in the hold window (null when the
+ * platform did not say where the request came from), `atOnce` how many there
+ * are across everybody.
+ */
+export function guestLimitProblem({ fromSender, atOnce }) {
+  if (fromSender != null && fromSender >= GUEST_UNPAID_PER_SENDER) {
+    return 'You have a few orders waiting to be paid. Finish one of those, or sign in to order again.';
+  }
+  if (atOnce >= GUEST_UNPAID_AT_ONCE) {
+    return 'The cafe is very busy right now. Sign in to order, or try again in a few minutes.';
+  }
+  return null;
+}
+
+/**
+ * Drinks ahead of an order in the line, the same count hc_cafe_ahead makes in
+ * the database: today's paid and making orders due before this one, or due at
+ * the same time with a smaller ticket. 0 once it is ready or further on.
+ */
+export function drinksAhead(order, others) {
+  if (!order || (order.status !== 'paid' && order.status !== 'making')) return 0;
+  const at = new Date(order.pickup_at).getTime();
+  return (others || [])
+    .filter((o) => o.id !== order.id &&
+      o.service_day === order.service_day &&
+      (o.status === 'paid' || o.status === 'making') &&
+      (new Date(o.pickup_at).getTime() < at ||
+        (new Date(o.pickup_at).getTime() === at && o.ticket_no != null &&
+          order.ticket_no != null && o.ticket_no < order.ticket_no)))
+    .reduce((n, o) => n + (o.drinks || 0), 0);
+}

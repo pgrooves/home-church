@@ -510,7 +510,12 @@ Diagnostics.
   path makes the type Linked.
 - **Purchase History** is the coffee order: items, price, pickup time, the
   name for the cup, and the account. Kept until the account is deleted, which
-  cascades to the orders.
+  cascades to the orders. Still **Linked**, because orders placed signed in
+  carry the account. Orders placed signed out (guest ordering, migration
+  0090) carry no account, only the SHA-256 of a key the phone holds and a
+  peppered network hash for the unpaid order limit, and delete themselves
+  after ninety days. Neither is an identifier Apple asks about, and the
+  privacy policy describes both.
 - **Payment Info is not collected.** Card, Apple Pay, and Cash App details are
   entered on Square's hosted checkout page, opened in
   `SFSafariViewController`, and never reach the app or our server. We get
@@ -636,8 +641,8 @@ analytics, external links, and data collection that buy us nothing.
 ## 7. App Review notes
 
 **Rewritten for v1.1, the update after build 16.** Paste this into the Notes
-for Review field, which caps at 4000 characters. This is about 3060, or about
-3130 if App Store Connect counts CRLF line endings; check again if you edit
+for Review field, which caps at 4000 characters. This is about 3010, or about
+3080 if App Store Connect counts CRLF line endings; check again if you edit
 it. The v1 text, which build 16 was approved on, is in git history. Two
 things were cut to make room for Coffee and HomeKids: the line about build 8
 being returned for a demo account that needed a mailbox (Apple has since
@@ -695,9 +700,8 @@ purchase (3.1.3(e)). Nothing digital is sold or unlocked.
   * Ordering is open Sundays 7:50–11:20 a.m. Central only. Any other time
     the page says "Cafe is Closed." and the menu cannot be ordered from.
     That is intended. A screen recording of a full order is attached.
-  * The menu works signed out. Ordering needs sign-in because the order
-    belongs to a person: its ticket number, place in line, and the
-    "your coffee is ready" notification.
+  * No sign-in is needed to order or pay. Signed out, the ticket, place
+    in line, and "your coffee is ready" notification belong to the phone.
   * You never need to complete a payment.
 
 HOMEKIDS — a kids guide for families
@@ -838,23 +842,13 @@ they still ask, reply with the recording again and offer to open the cafe by
 hand for a window they name: Cafe mode, Open, and Closed again after. While it
 is open it is open for everybody, so keep that window short.
 
-**B. Guideline 5.1.1, "registration required to purchase."** Apple does reject
-shops that make people make an account before they can buy. Our answer is
-that the menu and the cart work signed out, sign in is an email and nothing
-else, and the account is what the order needs: the ticket, the place in line,
-and the ready notification all belong to a person. Prepared response:
-
-> Browsing the menu and building an order work without signing in. Sign in is
-> asked for only at Pay, and it is an email address with no password and no
-> other personal information. The account is what makes the order work: it is
-> how we show the customer their ticket number and place in line, and how we
-> send the "your coffee is ready" notification to the phone that ordered it.
-> Accounts can be deleted from inside the app at any time.
-
-If that is not enough, the fix is guest ordering: the order is tied to the
-phone instead of an account, which means changes to `cafe-checkout`, the
-`cafe_orders` read policy, and the ticket screen. A real piece of work, so
-not built speculatively.
+**B. Guideline 5.1.1, "registration required to purchase." Handled.** Apple
+does reject shops that make people make an account before they can buy, so
+Coffee does not: signed out is a guest order (migration 0090, "guests" in
+`supabase/functions/_shared/cafe.mjs`). The ticket, place in line, and ready
+notification belong to the phone; signing in only keeps orders with the
+account. If a reviewer asks anyway, the answer is that no account is needed
+to order or pay, and they can try it signed out.
 
 **C. Guideline 3.1.1, mistaking Square for a way round in-app purchase.**
 Unlikely, and pre-empted in the notes. Drinks are physical goods consumed

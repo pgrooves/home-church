@@ -371,13 +371,9 @@
       return html;
     }
 
-    if (!HC.cafe.signedIn()) {
-      html += '<div class="hc-card hc-card--edge hc-cafe-signin">' +
-        '<p class="hc-body-serif">Sign in to order ahead, so your order is yours and we can tell you when it’s ready.</p>' +
-        c.button('Sign in', { action: 'go-profile' }) +
-      '</div>';
-      return html;
-    }
+    /* No sign in gate. Signed out is a guest order, and Apple turns away a
+       shop that makes somebody make an account to buy a coffee (5.1.1).
+       See "guests" in supabase/functions/_shared/cafe.mjs. */
 
     var times = HC.cafe.pickupTimes();
     var asapOk = HC.cafe.asapOffered();
@@ -425,6 +421,9 @@
         (state.pickup ? 'Add a name for the cup to keep going.' : 'Choose a time to keep going.') + '</p>';
     }
     html += '<p class="hc-caption hc-cafe-square">Secure checkout by Square. Apple Pay, card, or Cash App.</p>';
+    if (!HC.cafe.signedIn()) {
+      html += '<p class="hc-caption hc-cafe-square">No account needed. Your ticket stays on this phone.</p>';
+    }
     return html;
   }
 

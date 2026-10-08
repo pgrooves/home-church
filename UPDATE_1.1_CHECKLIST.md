@@ -15,7 +15,7 @@ October 8, 2026, and **that branch is not merged on purpose**: merging it
 publishes the new privacy policy and terms at the public URLs Apple has, and
 that should happen when the update is submitted, not before.
 
-Do these in order. Nothing in steps 1 to 3 touches App Store Connect.
+Do these in order. Nothing in steps 1 to 4 touches App Store Connect.
 
 ---
 
@@ -32,6 +32,8 @@ Do these in order. Nothing in steps 1 to 3 touches App Store Connect.
 | Privacy manifest: **Purchase History** added, **Device ID** now Linked | `ios-config/PrivacyInfo.xcprivacy`, `scripts/preflight.js` | A coffee order stores the phone's push token beside the account. |
 | App Privacy answers, age rating notes, review notes, What's New, description, rejection risks | `SUBMISSION_KIT.md` sections 3, 5, 6, 7, 9 | |
 | "Version 1.0" in Your account now says "Version 1.1" | `js/screens/profile.js` | Change it if you choose another version number. |
+| **Guest ordering**: Coffee no longer needs an account. Signed out, the phone gets a key for its order; the ticket, place in line and ready notification all work. Guest orders are limited when unpaid and deleted after 90 days | `supabase/migrations/0090_cafe_guest_orders.sql`, `supabase/functions/cafe-checkout`, `_shared/cafe.mjs`, `js/cafe.js`, `js/screens/cafe.js` | 5.1.1: Apple rejects shops that make you sign up to buy. |
+| Policy: guest orders described (no account, a key on the phone, the network fingerprint for the unpaid limit, 90 days); profile fields corrected to what the app asks for today (first and last name), with the older answers still disclosed | `js/screens/legal.js` | The policy said birthday, marital status and address were collected; the app stopped asking after the security review. |
 
 HomeKids needed nothing beyond the policy text: everything it keeps stays on
 the phone, it needs no sign in, it adds no permission, and every lesson is
@@ -71,7 +73,30 @@ permission prompt, or anything that takes payment.
    npm test
    ```
 
-## 3. Decide, before building
+## 3. Deploy guest ordering to Supabase
+
+Guest ordering has a server half, and the app's half does nothing without it.
+Neither has been deployed. Deploying is safe before the merge: signed in
+ordering works the same, and today's app never sends a guest order.
+
+1. **SQL Editor:** paste `supabase/migrations/0090_cafe_guest_orders.sql`,
+   Run. Safe to run twice. It should say "Scheduled
+   hc-purge-cafe-guest-orders"; if it says NOT SCHEDULED, turn on pg_cron
+   (Database, Extensions) and run it again, or the 90 days in the policy is
+   not true.
+2. **Optional but wanted:** Edge Functions, Secrets, add `CAFE_IP_PEPPER`,
+   any long random string. Without it the function uses the contact form's
+   `CONTACT_IP_PEPPER`, which is fine too.
+3. **Redeploy the function with the JWT check off:**
+   `supabase functions deploy cafe-checkout --no-verify-jwt`
+   (or in the dashboard, cafe-checkout, Details, turn off Verify JWT, after
+   deploying the new code). A guest presents the publishable key, which is
+   not a JWT; the function checks signed in callers itself.
+4. **Try it:** signed out on a phone running the branch, order with the cafe
+   opened by hand, pay with a Square test card if still on sandbox, and check
+   the ticket and the ready notification. Then tap Closed.
+
+## 4. Decide, before building
 
 - [ ] **Is Square on the cafe owner's production account?** If Coffee is
       still on Trey's sandbox, it cannot go to the public, and it cannot be
@@ -88,14 +113,14 @@ permission prompt, or anything that takes payment.
       "Version 1.1"). Any version above `1.0.0` works; the build number must
       be above 16.
 
-## 4. Merge, which publishes the policy
+## 5. Merge, which publishes the policy
 
 Merge the branch into `main`. GitHub Pages republishes
 `pgrooves.github.io/home-church/legal/privacy.html`, `terms.html` and
 `support.html` within a few minutes. Open all three on a phone and check
 they show the new date and the Ordering coffee section.
 
-## 5. Build
+## 6. Build
 
 - [ ] `npm run ios`, then in Xcode: Version `1.1.0`, Build `17` or above.
 - [ ] Copy `ios-config/PrivacyInfo.xcprivacy` to `ios/App/App/` again. It
@@ -103,7 +128,7 @@ they show the new date and the Ordering coffee section.
 - [ ] Archive and upload. If upload warns ITMS-91053 or about the privacy
       manifest, fix it before submitting.
 
-## 6. App Store Connect, the day you submit
+## 7. App Store Connect, the day you submit
 
 - [ ] **+ Version** on the iOS app, `1.1.0`, and pick the new build.
 - [ ] **What's New in This Version**: `SUBMISSION_KIT.md` section 3.
@@ -125,10 +150,11 @@ they show the new date and the Ordering coffee section.
       HomeKids one would help but is not required.
 - [ ] Submit.
 
-## 7. If Apple writes back
+## 8. If Apple writes back
 
 `SUBMISSION_KIT.md` section 9, "New in v1.1", has a prepared answer for
-each of the four ways Coffee could be questioned. The likeliest is "we could
+each of the ways Coffee could be questioned (registration to buy is now
+handled by guest ordering). The likeliest is "we could
 not test the cafe" because ordering only opens on Sunday mornings: the
 recording is the answer, and opening the cafe by hand for a short window
 they name is the fallback.

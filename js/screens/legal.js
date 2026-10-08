@@ -78,7 +78,7 @@
 
     html += block('The short version', [
       'Almost everything you do in this app stays on your phone. We do not track you, there is no analytics, there is no advertising, and we do not sell your information to anyone. That is not a promise we are making for now. It is how the app is built.',
-      'Five things leave, and all five are things you choose. Signing in, which puts your email address and whatever you have filled in under Your information on our server so they follow you to another phone. Your journal, once you are signed in, so what you write follows you too. Writing in a group room, which is the point of a room: what you write there is read by the people in it. Writing to us from the form at the top of Connect, which becomes an email to the church office. And ordering a coffee from the Happy Lion Cafe, which sends your order, the name for your cup, and your email address to Square so they can take the payment. You can delete the first three, and your coffee orders, from inside the app whenever you like. The message from Connect is an email you sent us, which we will delete if you ask.'
+      'Five things leave, and all five are things you choose. Signing in, which puts your email address and whatever you have filled in under Your information on our server so they follow you to another phone. Your journal, once you are signed in, so what you write follows you too. Writing in a group room, which is the point of a room: what you write there is read by the people in it. Writing to us from the form at the top of Connect, which becomes an email to the church office. And ordering a coffee from the Happy Lion Cafe, which sends your order and the name for your cup, and your email address if you are signed in, to Square so they can take the payment. You can delete the first three, and coffee orders placed while signed in, from inside the app whenever you like. The message from Connect is an email you sent us, which we will delete if you ask.'
     ]);
 
     html += list('What stays on your phone, and only on your phone', [
@@ -135,7 +135,12 @@
     html += block('Signing in, which is the one part that does leave', [
       'Signing in is optional. Everything above works whether you sign in or not, and the app never asks you to. What signing in buys you is that Your information follows you to a new phone instead of starting over.',
       'To sign in you give us an email address. We send an eight digit code to it, and once you type the code back in you have an account. There is no password to forget or for us to lose.',
-      'From that point on, whatever you have filled in under Your information is stored on our server as well as on your phone, so it can be there when you sign in somewhere else. That is your name, and any of these you chose to fill in: your birthday, your campus, your marital status, and your address. If you left a field blank it stays blank, and none of it is required to use the app.'
+      'From that point on, whatever you have filled in under Your information is stored on our server as well as on your phone, so it can be there when you sign in somewhere else. That is your first and last name, if you filled them in. Neither is required to use the app.',
+      /* FIELD_MAP in js/auth.js stopped syncing these after the security
+         review, and the form lost its inputs, but the profiles columns still
+         hold whatever was typed before that. Saying so is what keeps the old
+         answers honest until somebody decides to empty them. */
+      'Earlier versions of the app also asked for a birthday, a campus, a marital status, and a home address. It no longer asks for or sends any of them. If you filled them in back then, what you typed is still in your account until you delete it, and you can ask us to clear it sooner.'
     ]);
 
     html += block('', [
@@ -149,7 +154,7 @@
          admin meets. cafe_orders keeps the token of the phone that placed
          the order beside the account that placed it (migration 0085), so
          "Your coffee is ready" reaches the right pocket. */
-      'There are two exceptions. The first is a coffee order. So that the app can tell you your drink is ready, the order remembers which phone it was placed from, and that order belongs to your account, so for that order your phone’s token does sit beside your account. It is used for that one notification and nothing else.',
+      'There are two exceptions. The first is a coffee order. So that the app can tell you your drink is ready, the order remembers which phone it was placed from. If you ordered while signed in, that order belongs to your account, so for that order your phone’s token does sit beside your account. Ordered signed out, it sits beside nothing but the order. Either way it is used for that one notification and nothing else.',
       /* The exception to the paragraph above, and it is written out rather
          than quietly making that paragraph a little bit untrue. Nothing here
          applies to anybody but the handful of people who run the app, and it
@@ -172,7 +177,7 @@
     html += block('Writing to us from Connect', [
       'At the top of Connect there is a form. What you type into it, your name, your email address and your message, is sent to our server and becomes an email to the church office. That is the whole point of it, and it is the only reason we hold any of it.',
       'A copy is kept on our server as well, so that a message cannot be lost if the email fails to send. Nobody but an admin can read it, it is not attached to your account, and it is deleted after a hundred and eighty days. The email in the church’s mailbox is the part that lasts, in the same way any email you sent us would.',
-      'One thing we do record, and we would rather say it than have you find it. Along with the message we keep a scrambled fingerprint of the network address it came from, so that the form cannot be used to send thousands of messages at once. It is put through a one way function with a secret we hold, which means it cannot be turned back into an address, and it is compared only against other messages from the last hour. We do not use it to work out who you are, and nothing else in this app records anything like it.',
+      'One thing we do record, and we would rather say it than have you find it. Along with the message we keep a scrambled fingerprint of the network address it came from, so that the form cannot be used to send thousands of messages at once. It is put through a one way function with a secret we hold, which means it cannot be turned back into an address, and it is compared only against other messages from the last hour. We do not use it to work out who you are. The only other place this app records anything like it is a coffee order placed while signed out, for the same reason, and the next section says so.',
       'If you would rather not use the form, the church’s email address is on the same screen and in this policy, and it reaches the same people.'
     ]);
 
@@ -183,10 +188,14 @@
        squareOrderBody in supabase/functions/_shared/cafe.mjs; what the counter
        sees is hc_cafe_queue, which hands back no email and no token. */
     html += block('Ordering coffee', [
-      'The Coffee page lets you order ahead from the Happy Lion Cafe, the cafe in our lobby on Sunday mornings. You have to be signed in to order, so that the order is yours and the app can tell you when it is ready.',
-      'When you tap Pay, our server keeps a record of the order: what you ordered, the pickup time you chose, the name for your cup, what it cost, and that it was your account that ordered it. The people working the counter see the name for the cup, what goes in it, and the pickup time. They do not see your email address.',
-      'Paying happens on Square’s checkout page, which opens on top of the app. We send Square the order, the name for your cup, and your email address, so the order reaches the cafe with a way to reach you about it. Your card details, or your Apple Pay or Cash App payment, go to Square and never pass through this app or reach us. All we learn back is whether the order was paid. Square’s own privacy policy covers its checkout page.',
-      'Your orders stay in your account until you delete the account, which deletes them from our server too. Square keeps its own record of the payment, the way any card processor does, under its own policy and the law.'
+      'The Coffee page lets you order ahead from the Happy Lion Cafe, the cafe in our lobby on Sunday mornings. You do not need an account to order. Signed in, an order belongs to your account. Signed out, it belongs to your phone.',
+      'When you tap Pay, our server keeps a record of the order: what you ordered, the pickup time you chose, the name for your cup, and what it cost. Signed in, it notes that your account placed it. Signed out, it keeps a scrambled copy of a key that only your phone holds, which is how your phone finds its ticket again, and nobody, us included, can turn it back into the key. The people working the counter see the name for the cup, what goes in it, and the pickup time. They do not see your email address.',
+      /* The limit on unpaid guest orders. Same peppered one way hash as the
+         contact form, kept for the same reason, and said out loud for the
+         same reason. See "guests" in supabase/functions/_shared/cafe.mjs. */
+      'An order placed signed out also keeps the same kind of scrambled network fingerprint as the form on Connect, described above, so that nobody can hold every pickup time on a Sunday with orders they never pay for. It is compared only against other unpaid orders from the last twenty minutes.',
+      'Paying happens on Square’s checkout page, which opens on top of the app. We send Square the order and the name for your cup, and if you are signed in, your email address, so the order reaches the cafe with a way to reach you about it. Your card details, or your Apple Pay or Cash App payment, go to Square and never pass through this app or reach us. All we learn back is whether the order was paid. Square’s own privacy policy covers its checkout page.',
+      'Orders placed signed in stay in your account until you delete the account, which deletes them from our server too. Orders placed signed out are attached to no account, so they delete themselves ninety days after they were placed; if you want one gone sooner, email us the day and the ticket number. Square keeps its own record of the payment, the way any card processor does, under its own policy and the law.'
     ]);
 
     html += block('When the app hands you off to somebody else', [
@@ -199,7 +208,7 @@
       'Google, whose Gmail carries a message you send from the form on Connect to the church, in the same way it would carry an email you wrote to us yourself. They handle the sending and nothing else.',
       'Resend, which delivers the eight digit sign in code to your email address, and carries a message from the form on Connect on the occasions Gmail cannot. They handle the sending and nothing else.',
       'YouVersion, which supplies the words of a verse when you tap a scripture reference. The request goes from our server to theirs and carries the passage and nothing else: not your network address, not your account, not which guide you were reading.',
-      'Square, which runs the checkout page when you pay for a coffee and takes the payment on the cafe’s behalf. It receives your order, the name for your cup, and your email address.',
+      'Square, which runs the checkout page when you pay for a coffee and takes the payment on the cafe’s behalf. It receives your order, the name for your cup, and your email address if you are signed in.',
       /* Said here so nobody has to wonder. Gemini, with Groq as a backup when
          Gemini is busy, drafts announcements from the church newsletter and
          the HomeKids guide from the teachers' lesson plans (newsletter-intake,
@@ -219,7 +228,7 @@
     html += block('How long we keep it', [
       'Whatever is on your phone stays there until you remove it. If you have an account, what is in it stays until you delete the account, and then it is gone from our server rather than hidden or marked inactive.',
       'Group rooms are the exception, and they delete themselves. Ninety days after a room is opened, the room and everything written in it is removed. Long enough that a group can look back at a night, short enough that a hard season somebody wrote about in March is not still sitting on a server in December.',
-      'Coffee orders are kept as a record of the sale for as long as your account exists, and go with it when you delete it.',
+      'Coffee orders placed signed in are kept as a record of the sale for as long as your account exists, and go with it when you delete it. Orders placed signed out are deleted after ninety days.',
       'Our copy of a message sent from the form on Connect goes the same way, after a hundred and eighty days. That copy is a safety net under the email, not a record we keep; the email itself sits in the church’s mailbox like any other, and we will delete that too if you ask.',
       'One thing that ninety days does not reach. If whoever hosted a room sent the night out as a document, that file is on the phones it went to, and we cannot delete it for you. It is worth asking them.'
     ]);
@@ -375,7 +384,7 @@
       'Your group roster, attendance, and private notes.',
       'Prayer requests saved in Leader mode.',
       'Your family’s ticks on HomeKids, and the name on the monthly report.',
-      'A coffee order you have not paid for yet, and the name you like on your cup.',
+      'A coffee order you have not paid for yet, the name you like on your cup, and the keys to any coffee you ordered signed out, which are how this phone finds those tickets again.',
       'Dark mode and text size.',
       'A saved copy of this week’s sermons and guides, so the app works with no signal.'
     ]);
@@ -383,7 +392,7 @@
     if (signedIn) {
       html += list('What is stored in your account', [
         'The email address you sign in with.',
-        'Your name, and anything else you filled in under Your information: birthday, campus, marital status, and your address if you gave one.',
+        'Your name, and if you filled them in on an earlier version of the app, your birthday, campus, marital status, and address.',
         'Your journal, including anything you highlighted in a guide or a verse and whatever you wrote about it.',
         'Your coffee orders: what you ordered, the name for the cup, the pickup time, and what it cost.'
       ]);

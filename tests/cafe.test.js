@@ -273,6 +273,96 @@ const MENU = [
   ok('same 09:25', phone.hhmm(565), C.hhmm(565));
   ok('pickup_at on the church clock', phone.pickupClock('2026-10-04T14:25:00Z'), '9:25');
 
+  console.log('\n--- guests: the key is the account ---');
+
+  const gKey = C.newGuestKey();
+  ok('a guest key is 43 URL safe characters', C.isGuestKey(gKey), true);
+  ok('and a fresh one every time', C.newGuestKey() === gKey, false);
+  ok('an order id is not a key', C.isGuestKey('cf900000-0000-0000-0000-0000000000a1'), false);
+  const gHash = await C.sha256Hex(gKey);
+  ok('what is stored is a sha-256 in hex', /^[0-9a-f]{64}$/.test(gHash), true);
+  ok('and it is not the key', gHash.includes(gKey), false);
+  ok('the right key opens the order', await C.guestKeyMatches(gKey, gHash), true);
+  ok('another key does not', await C.guestKeyMatches(C.newGuestKey(), gHash), false);
+  ok('no key does not', await C.guestKeyMatches(undefined, gHash), false);
+  ok('the hash itself does not', await C.guestKeyMatches(gHash, gHash), false);
+  ok('an order with no stored hash opens for nobody', await C.guestKeyMatches(gKey, null), false);
+
+  console.log('\n--- guests: unpaid orders cannot fill the morning ---');
+
+  ok('a first guest order is fine', C.guestLimitProblem({ fromSender: 0, atOnce: 0 }), null);
+  ok('a third waiting from one network is still fine',
+    C.guestLimitProblem({ fromSender: C.GUEST_UNPAID_PER_SENDER - 1, atOnce: 5 }), null);
+  ok('one more than that is refused, and says what to do',
+    /sign in/i.test(C.guestLimitProblem({ fromSender: C.GUEST_UNPAID_PER_SENDER, atOnce: 5 }) || ''), true);
+  ok('with no address to count, only the ceiling applies',
+    C.guestLimitProblem({ fromSender: null, atOnce: C.GUEST_UNPAID_AT_ONCE - 1 }), null);
+  ok('and the ceiling holds for everybody at once',
+    /busy/i.test(C.guestLimitProblem({ fromSender: null, atOnce: C.GUEST_UNPAID_AT_ONCE }) || ''), true);
+  ok('the hold is the twenty minutes the slot count uses', C.GUEST_HOLD_MINUTES, 20);
+
+  console.log('\n--- guests: where am I in line, as hc_cafe_ahead counts it ---');
+
+  const gAt = (m) => new Date(Date.UTC(2026, 9, 4, 14, m)).toISOString();
+  const gLine = [
+    { id: 'a', status: 'paid', pickup_at: gAt(0), ticket_no: 1, drinks: 2, service_day: '2026-10-04' },
+    { id: 'b', status: 'making', pickup_at: gAt(5), ticket_no: 2, drinks: 1, service_day: '2026-10-04' },
+    { id: 'c', status: 'paid', pickup_at: gAt(5), ticket_no: 3, drinks: 1, service_day: '2026-10-04' },
+    { id: 'd', status: 'ready', pickup_at: gAt(0), ticket_no: 4, drinks: 5, service_day: '2026-10-04' },
+    { id: 'e', status: 'paid', pickup_at: gAt(0), ticket_no: 9, drinks: 7, service_day: '2026-09-27' }
+  ];
+  ok('earlier times and smaller tickets at the same time count', C.drinksAhead(gLine[2], gLine), 3);
+  ok('the first in line has nobody ahead', C.drinksAhead(gLine[0], gLine), 0);
+  ok('ready orders and other days do not count', C.drinksAhead(gLine[1], gLine), 2);
+  ok('a ready order is not waiting on anybody', C.drinksAhead(gLine[3], gLine), 0);
+
+  console.log('\n--- guests: the phone ---');
+
+  const gSaved = {};
+  global.HC.store = {
+    storage: {
+      get: (k, d) => (k in gSaved ? JSON.parse(gSaved[k]) : d),
+      set: (k, v) => { gSaved[k] = JSON.stringify(v); return true; }
+    },
+    getProfile: () => ({})
+  };
+  const gCalls = [];
+  let gSigned = false;
+  global.HC.auth = {
+    isConfigured: () => true,
+    isSignedIn: () => gSigned,
+    callFunction: (path, body) => { gCalls.push({ how: 'account', body }); return Promise.resolve({ order_id: 'acct-1', checkout_url: 'https://sq/1' }); },
+    callPublicFunction: (path, body) => {
+      gCalls.push({ how: 'public', body });
+      if (body.action === 'create') return Promise.resolve({ order_id: 'guest-1', checkout_url: 'https://sq/2', guest_key: gKey });
+      if (body.action === 'status') return Promise.resolve({ order: { id: body.order_id, status: 'paid', created_at: 'x' }, ahead: 4 });
+      return Promise.resolve({ status: 'paid' });
+    },
+    restFetch: (path) => { gCalls.push({ how: 'rest', path }); return Promise.resolve([]); },
+    rpc: (name) => { gCalls.push({ how: 'rpc', name }); return Promise.resolve(0); }
+  };
+  phone.clearCart();
+  phone.addLine({ item_id: 'hot-coffee', size: '12oz', options: {} });
+
+  await phone.checkout('09:25', 'Gus');
+  ok('signed out, the order goes as a guest', [gCalls[0].how, gCalls[0].body.guest], ['public', true]);
+  ok('the key is kept on the phone', JSON.parse(gSaved.cafeGuestOrders)['guest-1'].key, gKey);
+  gCalls.length = 0;
+  await phone.refresh('guest-1');
+  ok('the guest key goes with a refresh', [gCalls[0].how, gCalls[0].body.guest_key], ['public', gKey]);
+  gCalls.length = 0;
+  const gO = await phone.order('guest-1');
+  ok('a guest ticket is read through the function, not the table', [gCalls[0].how, gCalls[0].body.action], ['public', 'status']);
+  ok('and the place in line comes with it, no second call', [gO.status, await phone.ahead('guest-1'), gCalls.length], ['paid', 4, 1]);
+  gCalls.length = 0;
+  ok('an order with no key here is never asked for as a guest', (await phone.refresh('acct-1'), gCalls[0].how), 'account');
+
+  gSigned = true;
+  gCalls.length = 0;
+  phone.addLine({ item_id: 'hot-coffee', size: '12oz', options: {} });
+  await phone.checkout('09:25', 'Gus');
+  ok('signed in, nothing about ordering changed', [gCalls[0].how, gCalls[0].body.guest], ['account', undefined]);
+
   console.log('\n' + pass + ' passed, ' + fail + ' failed.');
   if (fail) process.exit(1);
 })();

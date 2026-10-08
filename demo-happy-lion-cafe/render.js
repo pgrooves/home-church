@@ -62,7 +62,7 @@ function serve() {
   return new Promise(resolve => server.listen(PORT, () => resolve(server)));
 }
 
-function answer(url, accept) {
+function answer(url, accept, post) {
   const send = (body) => ({ status: 200, contentType: 'application/json', body: JSON.stringify(body) });
   if (/\/rest\/v1\/app_settings/.test(url)) {
     let rows = SAMPLE.app_settings.map(r => {
@@ -82,7 +82,20 @@ function answer(url, accept) {
   if (/\/rest\/v1\/cafe_orders/.test(url)) {
     return send(/pgrst\.object/.test(accept) ? SAMPLE.order : (/status=in/.test(url) ? [SAMPLE.order] : []));
   }
-  if (/\/functions\/v1\/cafe-checkout/.test(url)) return send({ status: 'paid', ticket_no: 14 });
+  if (/\/functions\/v1\/cafe-checkout/.test(url)) {
+    let body = {};
+    try { body = JSON.parse(post || '{}'); } catch (e) { /* not JSON */ }
+    // A guest: no account, so the ticket comes back from the function, keyed.
+    if (body.guest && body.action === 'create') {
+      answer.guestCreate = body;
+      return send({ order_id: SAMPLE.order.id, checkout_url: 'https://square.link/u/demo', total_cents: 650,
+        guest_key: 'demo-guest-key-demo-guest-key-demo-guest-k' });
+    }
+    if (body.guest && body.action === 'status') {
+      return send({ order: Object.assign({}, SAMPLE.order, { cup_name: 'Sam' }), ahead: 3 });
+    }
+    return send({ status: 'paid', ticket_no: 14 });
+  }
   return { status: 404, body: '[]' };
 }
 
@@ -98,25 +111,28 @@ async function phone(browser, opts) {
 
   await page.route('**/*.supabase.co/**', route => {
     const req = route.request();
-    return route.fulfill(answer(req.url(), req.headers().accept || ''));
+    return route.fulfill(answer(req.url(), req.headers().accept || '', req.postData()));
   });
 
   await page.goto('http://127.0.0.1:' + PORT + '/index.html');
   await page.waitForFunction(() => window.HC && window.HC.router, null, { timeout: 15000 });
   // A pretend session, an hour from expiring, so nothing tries to refresh it.
-  await page.evaluate((p) => {
-    window.HC.store.storage.set('session', {
-      accessToken: 'demo', refreshToken: 'demo', expiresAt: Date.now() + 3600000,
-      user: { id: p.id, email: 'trey@example.org' }
-    });
-  }, SAMPLE.profile);
-  await page.reload();
-  await page.waitForFunction(() => window.HC && window.HC.router, null, { timeout: 15000 });
+  // Left off for a guest, who has never signed in.
+  if (!opts.guest) {
+    await page.evaluate((p) => {
+      window.HC.store.storage.set('session', {
+        accessToken: 'demo', refreshToken: 'demo', expiresAt: Date.now() + 3600000,
+        user: { id: p.id, email: 'trey@example.org' }
+      });
+    }, SAMPLE.profile);
+    await page.reload();
+    await page.waitForFunction(() => window.HC && window.HC.router, null, { timeout: 15000 });
+  }
   await pastTheGate(page);
   await page.evaluate((o) => {
-    window.HC.store.updateProfile({ theme: o.dark ? 'dark' : 'light', firstName: 'Trey', canRunCafe: !o.customer });
+    window.HC.store.updateProfile({ theme: o.dark ? 'dark' : 'light', firstName: o.guest ? '' : 'Trey', canRunCafe: !o.customer && !o.guest });
     window.HC.store.applyPreferences();
-  }, { dark: !!opts.dark, customer: !!opts.customer });
+  }, { dark: !!opts.dark, customer: !!opts.customer, guest: !!opts.guest });
   if (opts.admin) {
     await page.evaluate(() => window.HC.store.updateProfile({ role: 'admin' }));
   }
@@ -258,6 +274,27 @@ async function go(page, route) {
   errors.push(...page.errors);
   await page.close();
   answer.closed = false;
+
+  // A guest: never signed in, orders anyway, and follows the ticket.
+  page = await phone(browser, { guest: true, height: 1500 });
+  await page.evaluate(() => {
+    window.HC.cafe.clearCart();
+    window.HC.cafe.addLine({ item_id: 'hot-coffee', size: '16oz', options: { half_and_half: 'regular', sugar: 2 } });
+  });
+  await go(page, { name: 'cafe', id: 'order' });
+  await page.selectOption('#hc-cafe-pickup', '09:20');
+  await page.fill('#hc-cafe-name', 'Sam');
+  await page.waitForTimeout(300);
+  await shot(page, '14-guest-order.png');
+  await page.click('[data-cafe="pay"]');
+  await page.waitForTimeout(1500);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await shot(page, '15-guest-ticket.png');
+  console.log('guest order sent as a guest:', !!(answer.guestCreate && answer.guestCreate.guest),
+    '| key kept:', await page.evaluate((id) => !!(window.HC.store.storage.get('cafeGuestOrders', {})[id] || {}).key, SAMPLE.order.id),
+    '| ticket shows:', await page.evaluate(() => (document.querySelector('.hc-cafe-ticket__big') || {}).textContent || ''));
+  errors.push(...page.errors);
+  await page.close();
 
   await browser.close();
   server.close();

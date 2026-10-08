@@ -14,6 +14,13 @@
    localStorage under one key, so closing the app halfway through ordering
    does not lose the coffee, and it is emptied the moment an order is placed.
 
+   NOBODY HAS TO SIGN IN. Signed out, an order is a guest order, and the
+   server hands this phone a key for it (GUEST_KEY below). The key is the only
+   way back to that order, so it is kept here, never sent anywhere but
+   cafe-checkout, and goes with Erase everything like every other hc: key.
+   Signed in, nothing about ordering changed. See the header of
+   supabase/functions/cafe-checkout.
+
    No screens are drawn here. See js/screens/cafe.js.
    ========================================================================== */
 
@@ -23,6 +30,8 @@
   var CART_KEY = 'cafeCart';
   var LAST_KEY = 'cafeLastOrder';
   var NAME_KEY = 'cafeCupName';
+  var GUEST_KEY = 'cafeGuestOrders';   // { [order id]: { key, day } }
+  var GUEST_KEEP = 20;
 
   function storage() {
     return (HC.store && HC.store.storage) || {
@@ -412,20 +421,55 @@
     return !!(HC.auth && HC.auth.isConfigured() && HC.auth.isSignedIn());
   }
 
+  /* Guest orders this phone placed, newest last. Pruned to the last
+     GUEST_KEEP so a year of Sundays is not a year of keys. */
+  function guestOrders() {
+    var saved = storage().get(GUEST_KEY, null);
+    return saved && typeof saved === 'object' ? saved : {};
+  }
+
+  function rememberGuest(orderId, key) {
+    var all = guestOrders();
+    all[orderId] = { key: key, day: churchNow().day };
+    var ids = Object.keys(all);
+    ids.slice(0, Math.max(0, ids.length - GUEST_KEEP)).forEach(function (id) { delete all[id]; });
+    storage().set(GUEST_KEY, all);
+  }
+
+  function guestKey(orderId) {
+    var g = guestOrders()[orderId];
+    return g && typeof g.key === 'string' ? g.key : null;
+  }
+
+  function guestCall(body, fallback) {
+    return HC.auth.callPublicFunction('/cafe-checkout', Object.assign({ guest: true }, body), fallback);
+  }
+
+  /* A guest's ticket comes back with how many drinks are ahead of it, so the
+     second question the ticket screen asks is answered from here rather than
+     with a second call. */
+  var guestAhead = {};
+
   /* `pickup` is ASAP or a chosen time, '09:25'. */
   function checkout(pickup, name) {
     var lines = liveCart().map(function (l) {
       return { item_id: l.item_id, size: l.size, options: l.options || {} };
     });
     setCupName(name);
-    return HC.auth.callFunction('/cafe-checkout', {
+    var body = {
       action: 'create',
       lines: lines,
       slot_id: pickup === ASAP ? ASAP : undefined,
       pickup_time: pickup === ASAP ? undefined : pickup,
       cup_name: name,
       push_token: storage().get('pushToken', null)
-    }, 'The cafe could not take that order. Try again in a moment.').then(function (res) {
+    };
+    var fallback = 'The cafe could not take that order. Try again in a moment.';
+    var call = signedIn()
+      ? HC.auth.callFunction('/cafe-checkout', body, fallback)
+      : guestCall(body, fallback);
+    return call.then(function (res) {
+      if (res.guest_key) rememberGuest(res.order_id, res.guest_key);
       storage().set(LAST_KEY, res.order_id);
       clearCart();
       return res;
@@ -433,6 +477,10 @@
   }
 
   function refresh(orderId) {
+    var key = guestKey(orderId);
+    if (key) {
+      return guestCall({ action: 'refresh', order_id: orderId, guest_key: key }, 'Could not reach the cafe.');
+    }
     return HC.auth.callFunction('/cafe-checkout', { action: 'refresh', order_id: orderId },
       'Could not reach the cafe.');
   }
@@ -441,6 +489,14 @@
     'subtotal_cents,tax_cents,tip_cents,total_cents,checkout_url,service_day,created_at,ready_at';
 
   function order(orderId) {
+    var key = guestKey(orderId);
+    if (key) {
+      return guestCall({ action: 'status', order_id: orderId, guest_key: key },
+        'We could not find that order.').then(function (res) {
+        guestAhead[orderId] = res.ahead;
+        return res.order;
+      });
+    }
     return HC.auth.restFetch('/cafe_orders?id=eq.' + encodeURIComponent(orderId) +
       '&select=' + ORDER_COLUMNS, {
       headers: { Accept: 'application/vnd.pgrst.object+json' }
@@ -448,6 +504,9 @@
   }
 
   function ahead(orderId) {
+    if (guestKey(orderId)) {
+      return Promise.resolve(guestAhead[orderId] == null ? null : guestAhead[orderId]);
+    }
     return HC.auth.rpc('hc_cafe_ahead', { p_order: orderId }).catch(function () { return null; });
   }
 
@@ -455,10 +514,25 @@
      not yet picked up, newest first. What the menu screen puts at the top so
      somebody who closed the app can find their ticket again. */
   function myOpenOrders() {
-    if (!signedIn()) return Promise.resolve([]);
+    if (!signedIn()) return myOpenGuestOrders();
     return HC.auth.restFetch('/cafe_orders?service_day=eq.' + churchNow().day +
       '&status=in.(paid,making,ready)&select=' + ORDER_COLUMNS + '&order=created_at.desc')
       .catch(function () { return []; });
+  }
+
+  /* The same, for orders this phone placed as a guest: today's keys, asked
+     about one at a time. A Sunday is one or two orders, not a list. */
+  function myOpenGuestOrders() {
+    var today = churchNow().day;
+    var all = guestOrders();
+    var ids = Object.keys(all).filter(function (id) { return all[id] && all[id].day === today; });
+    return Promise.all(ids.map(function (id) {
+      return order(id).catch(function () { return null; });
+    })).then(function (rows) {
+      return rows.filter(function (o) {
+        return o && (o.status === 'paid' || o.status === 'making' || o.status === 'ready');
+      }).sort(function (a, b) { return a.created_at < b.created_at ? 1 : -1; });
+    });
   }
 
   function lastOrderId() {
