@@ -258,7 +258,12 @@ Go live with the owner:
   and the resting pose is the still logo. SMIL, because Safari plays it;
   `paint()` carries the svg and its clock over a repaint. cafe-return.html
   and the mockups keep the still logo. If the still logo is ever replaced,
-  the walking one has to be recut to match. The phone app only gets it
+  the walking one has to be recut to match. The far thigh's lower line runs
+  on behind the near leg (hidden by its fill) so no gap opens between the
+  legs when the near knee lifts (Trey, 2026-10-08). The steam is three
+  linked pieces (cup to first bend, bend to top right, top curl), each
+  bending at its joint a beat after the one below, so it squiggles in step
+  with the walk. The phone app only gets it
   after a rebuild (`npm run ios:open`); the web app on GitHub Pages gets it
   on push.
 
