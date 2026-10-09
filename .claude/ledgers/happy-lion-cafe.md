@@ -260,9 +260,12 @@ Go live with the owner:
     of the pants (near: back seam from (85,104.75), front out of the zigzag
     at (99.3,104.5); far: back out of the side line at (76.85,103.6)),
     bends at a knee (hip (88.5,102), thigh and shin 13.9, knee solved from
-    the ankle, bending forward), and ends in a cuff sitting on the top of
-    the paw, heel to instep, so no paw top is left open in any frame (checked
-    numerically, all 20 frames, both legs). They are PAWS, not shoes ("There
+    the ankle, bending forward), and ends in a cuff on the top of the paw,
+    heel to instep, carried 1.7 past the heel and 2.1 past the instep so the
+    ankle is 10.4 wide, about the drawing's cuff (10.1); at the paw's own
+    width it looked "like he's wearing tights" (Trey, 2026-10-09). No paw
+    top is left open in any frame (checked numerically, all 20 frames, both
+    legs). They are PAWS, not shoes ("There
     are no shoes just lion feet"): the logo's near paw at 0.82 on both legs,
     trimmed below the old shin line's stubs, drawn under its pant leg. The
     top of the pants stays the drawing's ink, cut where its side lines are
