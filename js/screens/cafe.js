@@ -36,7 +36,7 @@
   // colour (--hc-paper) to hide the leg passing behind them. Until it has
   // loaded, and always for reduced motion, the still logo stands in; it is
   // the same picture as his resting pose, so the swap does not show.
-  var LOGO = 'assets/img/happy-lion-cafe-walking.svg?v=12';
+  var LOGO = 'assets/img/happy-lion-cafe-walking.svg?v=13';
   var LOGO_STILL = 'assets/img/happy-lion-cafe.svg';
   var lion = { svg: null, asked: false };
   var MENU_LEDE = 'Pick your drink, choose when you’ll grab it, and it’ll be waiting at the counter.';
