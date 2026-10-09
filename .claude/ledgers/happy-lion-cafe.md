@@ -253,17 +253,22 @@ Go live with the owner:
   them in a preview artifact, and approved. `happy-lion-cafe-walking.svg`:
   - Original ink, cut by masks: head (nods for the sip), arm from the
     shoulder with sleeve and cup, tail, shorts (pelvis), shirt, words.
-  - Redrawn: a hem on the shorts, two legs with a hip at (88.5,102) and a
-    knee (thigh and shin 13.9), each a tube in the drawing's line weight
-    tucked under the shorts and into the shoe; the logo's near shoe at 0.64
-    scale on both feet, trimmed below the old shin line's stubs and closed
-    with a smooth collar curve (Trey, 2026-10-09: the stubs made the heels
-    "pointy and weird"). The shorts are filled edge to edge, from under the
-    shirt's hem to their own hem, and the legs start below the top of that
-    fill, so no leg line shows through the waist. Each ankle follows a planned path, heel strike out
-    front, flat and back along the ground, forward through the air lifted
-    7; the shoe's own outline sets its height; the knee is solved from the
-    two lengths, bending forward. 1.8s a stride, 20 frames, SMIL animate d.
+  - Redrawn: the pant legs, long as in the drawing (Trey, 2026-10-09: "the
+    pants lining should sit above the ankles. Look at the original image";
+    shorts were a stopgap). Each leg starts where the drawing's pant leg
+    starts (the far leg's back edge out of the side line at (76.6,102.4),
+    the near leg's front edge out of the zigzag at (99.45,104.1), the near
+    leg's back seam from (85,104.75)), bends at a knee (hip (88.5,102),
+    thigh and shin 13.9, knee solved from the ankle, bending forward), and
+    ends in a cuff square to the shin that sits on the shoe's opening. The
+    logo's shoe at 0.82, trimmed below the old shin line's stubs and closed
+    with a smooth collar. The top of the pants stays the drawing's ink; it
+    is cut where its side lines are single strokes, filled to exactly that
+    cut, with a small round joint at each side so the new lines run out of
+    the old ones without notches. Each ankle follows a planned path, heel
+    strike out front, flat and back along the ground, forward through the
+    air lifted 7; the shoe's own outline sets its height. 1.8s a stride, 20
+    frames, SMIL animate d.
   - Sip every 7.2s: arm up 30 degrees, head 6, cup at his mouth; steam
     fades. While the arm is up, one curve carries the sleeve's underside from
     the arm's cut down into the armpit and into the shirt's side line, worked
