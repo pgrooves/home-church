@@ -260,8 +260,14 @@ Go live with the owner:
     front, flat and back along the ground, forward through the air lifted
     7; the shoe's own outline sets its height; the knee is solved from the
     two lengths, bending forward. 1.8s a stride, 20 frames, SMIL animate d.
-  - Sip every 7.2s: arm up 30 degrees, head 6, cup at his mouth; torso side
-    and sleeve underside fade in while the arm is up; steam fades.
+  - Sip every 7.2s: arm up 30 degrees, head 6, cup at his mouth; steam
+    fades. While the arm is up, one curve carries the sleeve's underside from
+    the arm's cut down into the armpit and into the shirt's side line, worked
+    out frame by frame with the arm's turn (both sampled, 90 steps), and a
+    paper patch covers the shirt line's little nub above the armpit. Both
+    switch on the instant the arm starts to move, when they still match the
+    still drawing (Trey, 2026-10-09: the arm "comes weirdly disconnected at
+    the armpit" with the earlier two loose lines).
   - Steam: an S snaking straight up, 32 shapes on its own 3.6s loop.
   - Shirt, shorts, legs, shoes, sleeve and cup are filled with
     var(--hc-paper), so the page draws the file inline (fetched once in
