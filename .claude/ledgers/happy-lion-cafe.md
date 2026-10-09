@@ -256,7 +256,11 @@ Go live with the owner:
   - Redrawn: a hem on the shorts, two legs with a hip at (88.5,102) and a
     knee (thigh and shin 13.9), each a tube in the drawing's line weight
     tucked under the shorts and into the shoe; the logo's near shoe at 0.64
-    scale on both feet. Each ankle follows a planned path, heel strike out
+    scale on both feet, trimmed below the old shin line's stubs and closed
+    with a smooth collar curve (Trey, 2026-10-09: the stubs made the heels
+    "pointy and weird"). The shorts are filled edge to edge, from under the
+    shirt's hem to their own hem, and the legs start below the top of that
+    fill, so no leg line shows through the waist. Each ankle follows a planned path, heel strike out
     front, flat and back along the ground, forward through the air lifted
     7; the shoe's own outline sets its height; the knee is solved from the
     two lengths, bending forward. 1.8s a stride, 20 frames, SMIL animate d.
