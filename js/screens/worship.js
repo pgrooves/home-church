@@ -57,17 +57,29 @@
      The message's name sits under it in the display serif. A Sunday whose
      episode has not posted yet has no name to show, and that is a real state
      rather than a broken one: the line is dropped and the date carries the
-     slide on its own. */
+     slide on its own.
+
+     A tap on the date or the name lifts a calendar of every Sunday with a
+     setlist, the way the week header on HomeKids does, so a week from last
+     spring is one tap away rather than thirty swipes. A sideways drag on the
+     same block still scrolls the rail: a drag never becomes a click. */
   function weekSlide(set) {
     var title = HC.data.worshipTitle(set);
+    var when = c.formatDate(set.servedOn);
     return '' +
       '<li class="hc-carousel__slide hc-worship-week">' +
-        '<p class="hc-eyebrow hc-worship-week__date">' +
-          c.esc(c.formatDate(set.servedOn)) +
-        '</p>' +
-        (title
-          ? '<h2 class="hc-display-m hc-worship-week__title">' + c.esc(title) + '</h2>'
-          : '') +
+        '<div class="hc-worship-week__open" role="button" tabindex="0" ' +
+            'data-action="worship-calendar" ' +
+            'aria-label="' + c.esc(when + (title ? ', ' + title : '') +
+              '. Pick a different Sunday') + '">' +
+          '<p class="hc-eyebrow hc-worship-week__date">' +
+            c.esc(when) +
+            c.icon('calendar', 'hc-worship-week__cal') +
+          '</p>' +
+          (title
+            ? '<h2 class="hc-display-m hc-worship-week__title">' + c.esc(title) + '</h2>'
+            : '') +
+        '</div>' +
       '</li>';
   }
 
@@ -307,8 +319,192 @@
     return el;
   }
 
+  /* ------------------------------------------------------------ the calendar
+
+     A tap on the week header lifts a month with every Sunday that has a
+     setlist marked, and picking one slides the rail there exactly as the
+     chevrons would: the scroll is what tells selectWeek, so the list under
+     the header is redrawn by the same path a thumb takes and there is no
+     second way for the screen to change week.
+
+     The grid is the Cal tab's, class for class, and the sheet is HomeKids',
+     so all three read as one calendar. The months stop at the oldest and
+     newest set, because a month with nothing in it to pick is a dead end. */
+  var calMonth = null;   // { year, month } the sheet is showing
+
+  function isoOf(year, month, day) {
+    return year + '-' + c.pad2(month + 1) + '-' + c.pad2(day);
+  }
+
+  function monthKey(year, month) { return year * 12 + month; }
+
+  function monthOfIso(iso) {
+    return { year: parseInt(iso.slice(0, 4), 10), month: parseInt(iso.slice(5, 7), 10) - 1 };
+  }
+
+  function matrix(year, month) {
+    var cal = HC.screens.calHelpers;
+    if (cal && cal.monthMatrix) return cal.monthMatrix(year, month);
+    var lead = new Date(year, month, 1).getDay();
+    var days = new Date(year, month + 1, 0).getDate();
+    var cells = [], i, weeks = [];
+    for (i = 0; i < lead; i++) cells.push(0);
+    for (i = 1; i <= days; i++) cells.push(i);
+    while (cells.length % 7) cells.push(0);
+    for (i = 0; i < cells.length; i += 7) weeks.push(cells.slice(i, i + 7));
+    return weeks;
+  }
+
+  // The set the rail is on, read off the page rather than kept here, so it
+  // is right however the rail got there.
+  function showingSetId() {
+    var wrap = document.querySelector('.hc-worship[data-week-ids]');
+    if (!wrap) return null;
+    var ids = (wrap.getAttribute('data-week-ids') || '').split(',');
+    return ids[parseInt(wrap.getAttribute('data-index'), 10) || 0] || null;
+  }
+
+  function calendarBody(showingId) {
+    var sets = HC.data.worshipSetsByDate();
+    var byDay = {};
+    // Newest first, so on the rare date with two rows the one the rail
+    // reaches first is the one the calendar opens.
+    sets.forEach(function (s) { if (!byDay[s.servedOn]) byDay[s.servedOn] = s; });
+    var newest = monthOfIso(sets[0].servedOn);
+    var oldest = monthOfIso(sets[sets.length - 1].servedOn);
+    var here = monthKey(calMonth.year, calMonth.month);
+    var now = new Date();
+    var today = isoOf(now.getFullYear(), now.getMonth(), now.getDate());
+    var label = c.monthNames[calMonth.month] + ' ' + calMonth.year;
+
+    var html = '' +
+      '<div class="hc-cal__head hc-worship-cal__head">' +
+        '<div class="hc-cal__stepper">' +
+          '<button type="button" class="hc-cal__step" data-action="worship-cal-step" ' +
+            'data-step="-1" aria-label="The month before"' +
+            (here <= monthKey(oldest.year, oldest.month) ? ' disabled' : '') + '>' +
+            c.icon('chevronLeft', 'hc-cal__step-icon') + '</button>' +
+          '<span class="hc-cal__stepper-label hc-worship-cal__label">' + c.esc(label) + '</span>' +
+          '<button type="button" class="hc-cal__step" data-action="worship-cal-step" ' +
+            'data-step="1" aria-label="The month after"' +
+            (here >= monthKey(newest.year, newest.month) ? ' disabled' : '') + '>' +
+            c.icon('chevronRight', 'hc-cal__step-icon') + '</button>' +
+        '</div>' +
+      '</div>' +
+      '<div class="hc-cal__grid" role="grid" aria-label="' + c.esc(label) + '">' +
+        '<div class="hc-cal__row hc-cal__row--head" role="row">' +
+          c.dayNames.map(function (name) {
+            return '<span class="hc-cal__dow" role="columnheader" aria-label="' + c.esc(name) + '">' +
+              c.esc(name.slice(0, 1)) + '</span>';
+          }).join('') +
+        '</div>';
+
+    matrix(calMonth.year, calMonth.month).forEach(function (week) {
+      html += '<div class="hc-cal__row" role="row">';
+      week.forEach(function (day) {
+        if (!day) { html += '<span class="hc-cal__cell" role="gridcell"></span>'; return; }
+        var iso = isoOf(calMonth.year, calMonth.month, day);
+        var set = byDay[iso];
+        var open = !!set && set.id === showingId;
+        var classes = 'hc-cal__day' + (set ? ' hc-cal__day--has' : '') +
+          (iso === today ? ' hc-cal__day--today' : '') + (open ? ' hc-cal__day--open' : '');
+        html += '<span class="hc-cal__cell" role="gridcell">';
+        if (set) {
+          var title = HC.data.worshipTitle(set);
+          html += '<button type="button" class="' + classes + '" data-action="worship-cal-pick" ' +
+            'data-id="' + c.esc(set.id) + '" aria-pressed="' + (open ? 'true' : 'false') + '" ' +
+            'aria-label="' + c.esc(c.formatDate(iso) + (title ? ', ' + title : '')) + '">' +
+            '<span class="hc-cal__day-num">' + day + '</span>' +
+            '<span class="hc-cal__dot" aria-hidden="true"></span>' +
+          '</button>';
+        } else {
+          html += '<span class="' + classes + '"><span class="hc-cal__day-num">' + day + '</span></span>';
+        }
+        html += '</span>';
+      });
+      html += '</div>';
+    });
+
+    return html + '</div>' +
+      '<p class="hc-caption hc-sheet__note">Each marked Sunday has a setlist. Tap one to see what we sang.</p>';
+  }
+
+  function openCalendar() {
+    var sets = HC.data.worshipSetsByDate();
+    if (!sets.length) return;
+    hideCalendar();
+    var showing = HC.data.getWorshipSet(showingSetId()) || sets[0];
+    calMonth = monthOfIso(showing.servedOn);
+
+    var layer = c.el('' +
+      '<div class="hc-sheet hc-worship-cal" data-sheet="worship-cal" data-worship-cal role="dialog" ' +
+          'aria-modal="true" aria-label="Pick a Sunday">' +
+        '<button type="button" class="hc-sheet__scrim" data-action="worship-cal-close" ' +
+          'tabindex="-1" aria-hidden="true"></button>' +
+        '<div class="hc-sheet__panel">' +
+          '<div class="hc-sheet__head">' +
+            '<p class="hc-eyebrow">Pick a Sunday</p>' +
+            '<button type="button" class="hc-sheet__close" data-action="worship-cal-close" ' +
+              'aria-label="Close">' + c.icon('close') + '</button>' +
+          '</div>' +
+          '<div data-worship-cal-body>' + calendarBody(showing.id) + '</div>' +
+        '</div>' +
+      '</div>');
+    (document.getElementById('app') || document.body).appendChild(layer);
+  }
+
+  function stepCalendar(el) {
+    var body = document.querySelector('[data-worship-cal-body]');
+    if (!body || !calMonth) return;
+    var to = monthKey(calMonth.year, calMonth.month) + (parseInt(el.getAttribute('data-step'), 10) || 0);
+    calMonth = { year: Math.floor(to / 12), month: to % 12 };
+    body.innerHTML = calendarBody(showingSetId());
+    var sheet = document.querySelector('[data-worship-cal]');
+    if (sheet) sheet.setAttribute('data-settled', 'true');   // no second slide-in
+  }
+
+  /* Slides the rail to the picked Sunday, as if a thumb had. Measured off the
+     slide for the reason the chevrons in js/app.js measure. */
+  function pickFromCalendar(el) {
+    hideCalendar();
+    var wrap = document.querySelector('.hc-worship[data-week-ids]');
+    var rail = wrap && wrap.querySelector('[data-worship-rail]');
+    var track = rail && rail.firstElementChild;
+    if (!track) return;
+    var ids = (wrap.getAttribute('data-week-ids') || '').split(',');
+    var slide = track.children[ids.indexOf(el.getAttribute('data-id'))];
+    if (!slide) return;
+    var still = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    rail.scrollTo({ left: slide.offsetLeft - track.offsetLeft, behavior: still ? 'auto' : 'smooth' });
+  }
+
+  function hideCalendar() {
+    var open = document.querySelector('[data-worship-cal]');
+    if (open && open.parentNode) open.parentNode.removeChild(open);
+  }
+
+  // Leaving the screen, or Escape, puts the calendar away.
+  if (HC.store && HC.store.on) HC.store.on('view', hideCalendar);
+  document.addEventListener('keydown', function (evt) {
+    if (evt.key === 'Escape') hideCalendar();
+    // The week slide is a div with role="button", so it answers the keys a
+    // button would.
+    var t = evt.target;
+    if ((evt.key === 'Enter' || evt.key === ' ') && t && t.classList &&
+        t.classList.contains('hc-worship-week__open')) {
+      evt.preventDefault();
+      openCalendar();
+    }
+  });
+
   HC.screens = HC.screens || {};
   HC.screens.worship = render;
-  HC.screens.worshipHelpers = { selectWeek: selectWeek };
+  HC.screens.worshipHelpers = {
+    selectWeek: selectWeek,
+    openCalendar: openCalendar,
+    stepCalendar: stepCalendar,
+    pickFromCalendar: pickFromCalendar,
+    hideCalendar: hideCalendar
+  };
 
 })(window.HC = window.HC || {});

@@ -3551,6 +3551,25 @@
       });
     },
 
+    /* A tap on the week header on Worship lifts a calendar of the Sundays
+       with a setlist. Picking one slides the rail, which the chevrons above
+       already do, so the screen's helpers own all of it. */
+    'worship-calendar': function () {
+      HC.screens.worshipHelpers.openCalendar();
+    },
+
+    'worship-cal-step': function (el) {
+      HC.screens.worshipHelpers.stepCalendar(el);
+    },
+
+    'worship-cal-pick': function (el) {
+      HC.screens.worshipHelpers.pickFromCalendar(el);
+    },
+
+    'worship-cal-close': function () {
+      HC.screens.worshipHelpers.hideCalendar();
+    },
+
     'date-rail-jump': function (el) {
       HC.dateRail.jump(parseInt(el.getAttribute('data-index'), 10));
     },

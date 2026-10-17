@@ -3204,6 +3204,24 @@
 .hc-worship-week__date { display: block; color: var(--hc-accent-deep); }
 .hc-worship-week__title { margin-top: 6px; }
 
+/* The date and the name are one tap target: a tap lifts the calendar sheet
+   (js/screens/worship.js), a sideways drag still scrolls the rail. Same
+   arrangement as the week header on HomeKids. */
+.hc-worship-week__open {
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.hc-worship-week__open:active .hc-worship-week__title { opacity: 0.7; }
+.hc-worship-week__cal {
+  display: inline-block;
+  width: 13px;
+  height: 13px;
+  margin-left: 6px;
+  vertical-align: -2px;
+}
+.hc-worship-cal__head { justify-content: center; margin-top: var(--hc-space-sm); }
+.hc-worship-cal__label { min-width: 9em; }
+
 /* The two chevrons, laid over the ends of the header rather than beside it,
    so the slide keeps the full width for a long sermon title and the arrows
    sit in the air the padding above already reserved for them. */
