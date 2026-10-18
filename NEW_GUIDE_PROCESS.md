@@ -294,9 +294,16 @@ a guide without it simply has no play buttons, which is a quiet loss nobody
 reports.
 
 ```bash
-npm run narrate          # writes the text, then speaks it
-npm run narrate:upload   # needs SUPABASE_SERVICE_ROLE_KEY in the environment
+npm run narrate -- --only guide-your-slug          # this week's guide, nothing else
+npm run narrate:upload -- --only guide-your-slug   # needs SUPABASE_SERVICE_ROLE_KEY in the environment
 ```
+
+**A weekly publish narrates its own guide and no other.** `--only` on both
+commands carries every other guide through untouched, even an older guide
+whose text has drifted from its recording. The pastor has decided to leave
+those recordings as they are, so the weekly commands never re-speak, reseal or
+upload them, and never ask about them. The rest of this step, the reseal
+included, describes deliberate catalogue work somebody asks for by name.
 
 The first command is two halves. `scripts/narration_text.js` turns the guide
 rows into six blocks of speakable prose, one per section, and hashes each

@@ -714,11 +714,17 @@ So the guide goes out complete on Sunday, which is the whole point of doing
 this here rather than leaving a note for later.
 
 ```bash
-npm run narrate:setup    # venv and model, once per container, idempotent
-npm run narrate:sync     # pull what is already spoken, see below
-npm run narrate          # writes the text, then speaks only what is new
-npm run narrate:upload   # needs SUPABASE_SERVICE_ROLE_KEY in the environment
+npm run narrate:setup                                  # venv and model, once per container, idempotent
+npm run narrate:sync                                   # pull what is already spoken, see below
+npm run narrate -- --only guide-your-slug              # speaks this week's guide and nothing else
+npm run narrate:upload -- --only guide-your-slug       # sends that guide only
 ```
+
+**This command narrates this week's guide and no other.** `--only` on both
+the speaking and the upload is not optional. Every other guide's audio, its
+mp3s, its manifest entry and its `guides.narration`, is left exactly as it is,
+even when its text no longer matches its recording. That is the pastor's
+standing decision, not something to report, ask about, reseal or re-speak.
 
 All four are `npm run`, which `.claude/settings.json` already allows, so none
 of them stops to ask. That is the reason they are npm scripts rather than the
@@ -765,21 +771,14 @@ minutes of laptop time, and re-running with unchanged text regenerates nothing
 at all. Do not swap it for a hosted TTS service without saying out loud what
 that would cost the church per year.
 
-**Never re-speak the catalogue to publish one guide.** If a run reports it is
-about to make far more sections than the guide you just wrote, something
-changed the narrator's own wording rather than a guide's, and every hash in
-the catalogue moved at once. Stop, and reseal instead:
-
-```bash
-npm run narrate:reseal                              # speaks nothing
-npm run narrate                                     # makes the new guide only
-npm run narrate:upload -- --only guide-your-slug    # sends that guide only
-```
-
-The reseal records a decision rather than checking anything, so it is the
-pastor's call and not a step to take on your own initiative. Say what moved
-and what it would cost to re-speak, then let them choose.
-`NEW_GUIDE_PROCESS.md` Step 5b has the whole of it.
+**Never re-speak, reseal or upload another guide.** Without `--only` the
+narrator walks the whole catalogue, and several older guides have text that
+has drifted from their audio, so a bare `npm run narrate` sets off re-speaking
+dozens of sections nobody asked for. The pastor has said to leave those
+recordings exactly as they are. So this command never runs `narrate` or
+`narrate:upload` without `--only`, never runs `narrate:reseal`, never edits
+another guide's row, and does not mention the drift in the confirmation.
+This week's guide is the only one a weekly command touches.
 
 ## Confirm, briefly
 

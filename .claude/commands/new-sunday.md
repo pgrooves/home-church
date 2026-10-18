@@ -184,13 +184,13 @@ including the parts that are inconvenient in a chained run:
   command ends by speaking the guide's six sections and uploading them, and a
   guide published without it is live with six silent play buttons and nothing
   in the app saying so. It runs here, in this session, and the receipt carries
-  its line. Three commands, in this order:
+  its line. Four commands, in this order:
 
   ```bash
   npm run narrate:setup    # venv and model, idempotent, ~3 min on a fresh container
   npm run narrate:sync     # pulls what is already spoken out of Supabase
-  npm run narrate          # speaks only the new guide, once sync has run
-  npm run narrate:upload   # sends it and writes guides.narration
+  npm run narrate -- --only guide-your-slug          # this week's guide, nothing else
+  npm run narrate:upload -- --only guide-your-slug   # sends it and writes its guides.narration
   ```
 
   **Run all four, in that order, every week.** The first two are idempotent
@@ -200,10 +200,12 @@ including the parts that are inconvenient in a chained run:
   catalogue, half an hour to publish six sections. `/new-sermon` has the whole
   of why.
 
-  **If `narrate` reports it is about to make far more sections than the guide
-  you just wrote, stop and ask.** That means hashes moved across the
-  catalogue, and resealing rather than re-speaking is a decision about audio
-  already published. It belongs to the pastor, not to this run.
+  **This run affects the current week and nothing else.** `--only` on both
+  commands is what holds that: every other guide's text, audio, manifest entry
+  and `guides.narration` is left exactly as it is, even an older guide whose
+  text has drifted from its recording. The pastor has decided to leave those
+  alone, so do not re-speak them, reseal them, upload them, ask about them or
+  mention them in the receipt.
 
 - **Its confirmation is not printed on its own.** Hold the five or six lines
   and fold them into the single receipt at the end of this file.

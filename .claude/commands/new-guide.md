@@ -304,8 +304,8 @@ So the guide goes out complete on Sunday, which is the whole point of doing
 this here rather than leaving a note for later.
 
 ```bash
-npm run narrate          # writes the text, then speaks it
-npm run narrate:upload   # needs SUPABASE_SERVICE_ROLE_KEY in the environment
+npm run narrate -- --only guide-your-slug          # this week's guide, nothing else
+npm run narrate:upload -- --only guide-your-slug   # needs SUPABASE_SERVICE_ROLE_KEY in the environment
 ```
 
 **Read the first command's output before letting the second one run.** It
@@ -335,21 +335,12 @@ minutes of laptop time, and re-running with unchanged text regenerates nothing
 at all. Do not swap it for a hosted TTS service without saying out loud what
 that would cost the church per year.
 
-**Never re-speak the catalogue to publish one guide.** If a run reports it is
-about to make far more sections than the guide you just wrote, something
-changed the narrator's own wording rather than a guide's, and every hash in
-the catalogue moved at once. Stop, and reseal instead:
-
-```bash
-npm run narrate:reseal                              # speaks nothing
-npm run narrate                                     # makes the new guide only
-npm run narrate:upload -- --only guide-your-slug    # sends that guide only
-```
-
-The reseal records a decision rather than checking anything, so it is the
-pastor's call and not a step to take on your own initiative. Say what moved
-and what it would cost to re-speak, then let them choose.
-`NEW_GUIDE_PROCESS.md` Step 5b has the whole of it.
+**Never re-speak, reseal or upload another guide.** This command narrates the
+guide it just published and no other, which is what `--only` on both commands
+holds. Several older guides have text that has drifted from their audio, and
+the pastor has said to leave those recordings exactly as they are. So never run
+`narrate` or `narrate:upload` without `--only`, never run `narrate:reseal`,
+and do not mention the drift in the confirmation.
 
 ## Confirm, briefly
 
@@ -378,8 +369,9 @@ If the narration did not run, say which half is missing and what to run,
 rather than leaving the last line off:
 
 ```
-Not narrated. Run `npm run narrate && npm run narrate:upload` on the Mac,
-this session cannot reach Storage.
+Not narrated. Run these on the Mac, this session cannot reach Storage:
+npm run narrate -- --only guide-your-slug
+npm run narrate:upload -- --only guide-your-slug
 ```
 
 The sixth line, last, and only when the stale check found something. Name

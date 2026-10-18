@@ -43,6 +43,12 @@ changed and can live with the audio as it is.
 
     node scripts/narration_text.js
     python3 scripts/build_narration.py --reseal    # no model needed
+
+THE WEEKLY RUN is --only. /new-sermon, /new-guide and /new-sunday publish one
+guide, so they speak one guide and copy every other manifest entry through
+unchanged, even an older guide whose text has drifted from its audio:
+
+    python3 scripts/build_narration.py --only guide-your-slug
 """
 
 import argparse
@@ -118,6 +124,9 @@ def main():
     ap.add_argument("--reseal", action="store_true",
                     help="speak nothing: accept the audio already on disk as "
                          "current and restamp the manifest with today's hashes")
+    ap.add_argument("--only", metavar="GUIDE_ID",
+                    help="speak this one guide and leave every other guide's "
+                         "manifest entry exactly as it was")
     args = ap.parse_args()
 
     if args.reseal and args.force:
@@ -156,7 +165,22 @@ def main():
         kokoro = Kokoro(onnx, voices)
         ff = ffmpeg_exe()
 
+    # --only is the weekly run. A new guide is the only thing a Sunday publishes,
+    # so it is the only thing a Sunday speaks. Every other guide is carried
+    # through from the previous manifest untouched, whatever its hashes say:
+    # older audio that no longer matches its text is the pastor's to leave
+    # alone, and a weekly command has no business re-speaking or resealing it.
+    if args.only:
+        payload["guides"] = [g for g in payload["guides"]
+                             if g["guideId"] == args.only]
+        if not payload["guides"]:
+            sys.exit("--only %s: no such guide in %s. Is it published?"
+                     % (args.only, args.text))
+
     manifest = {}
+    if args.only:
+        manifest = {gid: entry for gid, entry in previous.items()
+                    if gid != args.only}
     started = time.time()
     made, skipped, sealed, audio_seconds, total_bytes = 0, 0, 0, 0.0, 0
     missing = []
