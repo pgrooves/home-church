@@ -129,6 +129,8 @@ async function check() {
         starts: cfg.token.slice(0, 4),
         has_quotes: /["']/.test(cfg.token),
         has_spaces: /\s/.test(cfg.token),
+        // A webhook signature key pasted into the token's box is an easy slip.
+        same_as_webhook_key: cfg.token === (Deno.env.get('SQUARE_WEBHOOK_SIGNATURE_KEY') ?? '').trim(),
       },
       [`works_in_${other}`]: there.ok,
       [`${other}_locations`]: there.ok
