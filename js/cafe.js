@@ -47,6 +47,7 @@
 
   function optionText(option, value) {
     var name = option.short || option.label;
+    if (option.type === 'pick') return String(value);
     return option.type === 'level' ? name + ', ' + value : value + ' ' + name;
   }
 
@@ -67,7 +68,7 @@
     (item.options || []).forEach(function (o) {
       var v = picked[o.key];
       if (v == null || v === '' || v === 'none' || v === 0) return;
-      if (o.type === 'level') {
+      if (o.type === 'level' || o.type === 'pick') {
         parts.push(optionText(o, v));
         price += Number(o.price_cents) || 0;
       } else if (o.type === 'count') {
@@ -78,6 +79,7 @@
 
     return {
       name: item.name,
+      kind: item.kind === 'food' ? 'food' : 'drink',
       sizeLabel: size.label,
       summary: parts.join(' · '),
       price: price
@@ -102,11 +104,17 @@
     return '$' + (n / 100).toFixed(2);
   }
 
-  /* The cheapest size, for the line under a drink's name on the menu. */
+  /* Every size and its price, for the line under a name on the menu. A size
+     with no label (food, a drink that comes one way) is the price alone. */
   function priceLine(item) {
     return (item.sizes || []).map(function (s) {
-      return s.label + ' ' + money(s.price_cents);
+      return s.label ? s.label + ' ' + money(s.price_cents) : money(s.price_cents);
     }).join(' · ');
+  }
+
+  /* "Cold Brew, 16 oz", or "Cookie" for something with no size. */
+  function lineName(name, sizeLabel) {
+    return sizeLabel ? name + ', ' + sizeLabel : name;
   }
 
   /* ---------------------------------------------------------------- cart */
@@ -488,6 +496,7 @@
     tax: tax,
     money: money,
     priceLine: priceLine,
+    lineName: lineName,
     cart: liveCart,
     addLine: addLine,
     replaceLine: replaceLine,

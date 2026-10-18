@@ -2551,25 +2551,26 @@
 
   /* ------------------------------------------------------- happy lion cafe
 
-     The Coffee page's menu and pickup times, migration 0085. The same two
-     drinks and nine times that migration seeds, so a phone that has never
-     reached Supabase can still draw the menu. Ordering itself needs the
-     network and a sign in, so nothing here can be bought from a stale copy:
-     the price that is charged is always the one in the database. */
-  var CAFE_LEVELS = ['none', 'light', 'regular', 'extra'];
+     The Coffee page's menu and pickup times. The menu is the cafe's Square
+     "Home Church Menu" as it was first synced on 2026-10-18 (0090, 0091),
+     with the one milk choice every drink has, so a phone that has never
+     reached Supabase can still draw it. Ordering itself needs the network
+     and a sign in, so nothing here can be bought from a stale copy: the
+     price that is charged is always the one in the database. */
   var CAFE_OPTIONS = [
-    { key: 'half_and_half', label: 'Half & half', short: 'Half & half', group: 'Milk', type: 'level', levels: CAFE_LEVELS },
-    { key: 'two_percent', label: '2% milk', short: '2% milk', group: 'Milk', type: 'level', levels: CAFE_LEVELS },
-    { key: 'sugar', label: 'Sugar', short: 'sugar', group: 'Sweetener', type: 'count', max: 4, unit: 'Packets' },
-    { key: 'splenda', label: 'Splenda', short: 'Splenda', group: 'Sweetener', type: 'count', max: 4, unit: 'Packets' }
+    { key: 'milk', label: 'Milk', group: '', type: 'pick', levels: ['none', 'Milk', 'Oat milk'] }
   ];
+  function cafeDrink(id, name, icon, order, sizes) {
+    return { id: id, name: name, blurb: '', icon: icon, kind: 'drink', sortOrder: order,
+      available: true, options: CAFE_OPTIONS,
+      sizes: sizes.map(function (z) { return { key: z[0] + 'oz', label: z[0] + ' oz', price_cents: z[1] }; }) };
+  }
   var cafeMenu = [
-    { id: 'hot-coffee', name: 'Hot Coffee', blurb: 'Our house drip, brewed fresh each service.',
-      icon: 'hot', sortOrder: 10, available: true, options: CAFE_OPTIONS,
-      sizes: [{ key: '12oz', label: '12 oz', price_cents: 300 }, { key: '16oz', label: '16 oz', price_cents: 350 }] },
-    { id: 'cold-brew', name: 'Cold Brew', blurb: 'Slow steeped overnight, served over ice.',
-      icon: 'cold', sortOrder: 20, available: true, options: CAFE_OPTIONS,
-      sizes: [{ key: '12oz', label: '12 oz', price_cents: 400 }, { key: '16oz', label: '16 oz', price_cents: 475 }] }
+    cafeDrink('cold-brew', 'Cold Brew', 'cold', 10, [[12, 300], [16, 400]]),
+    cafeDrink('hot-coffee', 'Hot Coffee', 'hot', 20, [[8, 200], [12, 300]]),
+    cafeDrink('shaken', 'Shaken', 'cold', 30, [[16, 600]]),
+    cafeDrink('vietnamese', 'Vietnamese', 'cold', 40, [[12, 350], [16, 450]]),
+    cafeDrink('vsc-cold-brew', 'VSC Cold Brew', 'cold', 50, [[16, 600]])
   ];
   var cafeSlots = [
     ['0740', '8:00', '07:40'], ['0750', '8:00', '07:50'], ['0845', '8:00', '08:45'],

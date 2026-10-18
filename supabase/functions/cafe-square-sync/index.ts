@@ -19,14 +19,20 @@
  *     the first time and for when a webhook went missing.
  *
  * WHO MAY CALL. A signed in admin, read fresh from profiles the way
- * admin-remove-user does it, or the project's service role key.
+ * admin-remove-user does it; the project's service role key; or the Sunday
+ * morning job (hc_cafe_sync_menu, migration 0091), which presents the vault's
+ * hc_cafe_sync_secret in x-hc-cafe-secret the way instagram-fetch is called.
+ *
+ * verify_jwt IS OFF, because that job has no JWT to present. Every caller is
+ * checked here instead, and nothing is trusted from a token without asking
+ * the auth server.
  *
  * WHAT IT NEEDS. The same secrets as cafe-checkout: SQUARE_ENV,
  * SQUARE_ACCESS_TOKEN, SQUARE_LOCATION_ID. See
  * .claude/ledgers/happy-lion-cafe.md.
  *
  * DEPLOY
- *   supabase functions deploy cafe-square-sync
+ *   supabase functions deploy cafe-square-sync --no-verify-jwt
  */
 
 import { createClient } from 'jsr:@supabase/supabase-js@2';
@@ -35,7 +41,7 @@ import { squareConfig, squareGet, syncMenu } from '../_shared/cafe-sync.ts';
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, content-type, apikey',
+  'Access-Control-Allow-Headers': 'authorization, content-type, apikey, x-hc-cafe-secret',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
@@ -46,16 +52,13 @@ function json(body: unknown, status = 200): Response {
   });
 }
 
-/* The role a JWT claims. Only trusted because verify_jwt is ON for this
-   function: the gateway has already checked the signature, so a token that
-   reaches this line and says service_role is the project's own key. */
-function jwtRole(token: string): string | null {
-  try {
-    const part = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
-    return JSON.parse(atob(part.padEnd(Math.ceil(part.length / 4) * 4, '='))).role ?? null;
-  } catch {
-    return null;
-  }
+/* Same length and same characters, in time that does not depend on where
+   they first differ. */
+function same(a: string, b: string): boolean {
+  if (!a || !b || a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return diff === 0;
 }
 
 Deno.serve(async (req: Request) => {
@@ -70,12 +73,20 @@ Deno.serve(async (req: Request) => {
     return json({ error: 'This is not set up correctly. Please tell the church.' }, 500);
   }
 
-  const token = (req.headers.get('Authorization') ?? '').replace(/^Bearer\s+/i, '').trim();
-  if (!token) return json({ error: 'You need to be signed in to do that.' }, 401);
-
   const db = createClient(url, serviceKey, { auth: { persistSession: false, autoRefreshToken: false } });
 
-  if (token !== serviceKey && jwtRole(token) !== 'service_role') {
+  const token = (req.headers.get('Authorization') ?? '').replace(/^Bearer\s+/i, '').trim();
+  const presented = req.headers.get('x-hc-cafe-secret') ?? '';
+  let trusted = same(token, serviceKey);
+  if (!trusted && presented) {
+    const { data: secret, error } = await db.rpc('hc_cafe_sync_secret');
+    if (error) console.error('cafe-square-sync: could not read hc_cafe_sync_secret', error.message);
+    trusted = same(presented, String(secret ?? ''));
+    if (!trusted) return json({ error: 'Not allowed.' }, 403);
+  }
+  if (!trusted && !token) return json({ error: 'You need to be signed in to do that.' }, 401);
+
+  if (!trusted) {
     const asCaller = createClient(url, anonKey, {
       global: { headers: { Authorization: `Bearer ${token}` } },
       auth: { persistSession: false, autoRefreshToken: false },

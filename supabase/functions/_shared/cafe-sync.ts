@@ -6,9 +6,14 @@
  * What a row looks like is decided in menuFromCatalog in cafe.mjs, which is
  * tested; this file is the fetching and the writing around it.
  *
- * NEVER EMPTIES THE MENU. A category that is missing, or has nothing in it
- * that can be sold here, leaves the menu exactly as it was and says why in
- * cafe_square_synced. Only a sync that found drinks takes others off.
+ * TWO CATEGORIES. cafe_square_category is the drinks, cafe_square_food_category
+ * the food. No food category in Square (or none set) is fine: the drinks
+ * sync and the food is left as it was.
+ *
+ * NEVER EMPTIES THE MENU. A drinks category that is missing, or has nothing
+ * in it that can be sold here, leaves the menu exactly as it was and says why
+ * in cafe_square_synced. A food category that is there but empty takes the
+ * food off, since that is how the owner says "no food this week".
  */
 
 import { menuFromCatalog, squareBase, SQUARE_VERSION } from './cafe.mjs';
@@ -20,7 +25,7 @@ export type SyncResult = {
   ok: boolean;
   skipped?: boolean;
   message: string;
-  drinks?: { id: string; name: string; sizes: string[] }[];
+  items?: { id: string; name: string; sizes: string[] }[];
   hidden?: string[];
   notes?: string[];
 };
@@ -65,9 +70,14 @@ export async function syncMenu(db: Db): Promise<SyncResult> {
     return { ok: false, message: 'The Square keys are not set on the functions.' };
   }
 
-  const { data: setting } = await db
-    .from('app_settings').select('value_text').eq('key', 'cafe_square_category').maybeSingle();
-  const category = String(setting?.value_text ?? '').trim();
+  const { data: settings } = await db
+    .from('app_settings').select('key, value_text')
+    .in('key', ['cafe_square_category', 'cafe_square_food_category']);
+  const named = (key: string) =>
+    String(((settings ?? []) as { key: string; value_text: string | null }[])
+      .find((r) => r.key === key)?.value_text ?? '').trim();
+  const category = named('cafe_square_category');
+  const foodCategory = named('cafe_square_food_category');
   if (!category) {
     return { ok: true, skipped: true, message: 'No Square category is set, so the menu is kept by hand.' };
   }
@@ -92,11 +102,21 @@ export async function syncMenu(db: Db): Promise<SyncResult> {
   const { data: existing, error: readError } = await db.from('cafe_menu_items').select('*');
   if (readError) throw readError;
 
-  const { rows, notes, categoryFound } = menuFromCatalog({
-    objects, locationId: cfg.location, category, existing: existing ?? [],
+  const drinks = menuFromCatalog({
+    objects, locationId: cfg.location, category, existing: existing ?? [], kind: 'drink',
   });
+  const food = foodCategory
+    ? menuFromCatalog({ objects, locationId: cfg.location, category: foodCategory, existing: existing ?? [], kind: 'food' })
+    : { rows: [], notes: [], categoryFound: false };
+  const { categoryFound } = drinks;
+  const notes = [...drinks.notes, ...food.notes];
 
-  if (!categoryFound || !rows.length) {
+  // A food item with a drink's name would share its id; it keeps its own.
+  const taken = new Set(drinks.rows.map((r) => r.id));
+  for (const r of food.rows) if (taken.has(r.id)) r.id = `${r.id}-food`;
+  const rows = [...drinks.rows, ...food.rows];
+
+  if (!categoryFound || !drinks.rows.length) {
     const message = categoryFound
       ? `“${category}” in Square has no drinks sold at this location. The menu was left as it was.`
       : `Square has no category called “${category}”. The menu was left as it was.`;
@@ -107,21 +127,27 @@ export async function syncMenu(db: Db): Promise<SyncResult> {
   const { error: writeError } = await db.from('cafe_menu_items').upsert(rows, { onConflict: 'id' });
   if (writeError) throw writeError;
 
+  // Off the menu: whatever is no longer in its category. Food only when the
+  // food category was found, so a food category not made yet hides nothing.
   const keep = new Set(rows.map((r) => r.id));
-  const hidden = ((existing ?? []) as { id: string; name: string; published: boolean }[])
-    .filter((r) => r.published && !keep.has(r.id));
+  const hidden = ((existing ?? []) as { id: string; name: string; published: boolean; kind?: string }[])
+    .filter((r) => r.published && !keep.has(r.id) && (r.kind !== 'food' || food.categoryFound));
   if (hidden.length) {
     const { error } = await db.from('cafe_menu_items')
       .update({ published: false }).in('id', hidden.map((r) => r.id));
     if (error) throw error;
   }
 
-  const message = `${rows.length} drink${rows.length === 1 ? '' : 's'} from “${category}”`;
+  const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
+  const message = `${plural(drinks.rows.length, 'drink')} from “${category}”` + (
+    !foodCategory ? ''
+      : food.categoryFound ? `, ${plural(food.rows.length, 'food item')} from “${foodCategory}”`
+      : `; no “${foodCategory}” category in Square yet, so no food`);
   await remember(db, `${churchClock()} · ${message}`);
   return {
     ok: true,
     message,
-    drinks: rows.map((r) => ({ id: r.id, name: r.name, sizes: r.sizes.map((s: { label: string; price_cents: number }) => `${s.label} $${(s.price_cents / 100).toFixed(2)}`) })),
+    items: rows.map((r) => ({ id: r.id, name: r.name, sizes: r.sizes.map((s: { label: string; price_cents: number }) => `${s.label} $${(s.price_cents / 100).toFixed(2)}`) })),
     hidden: hidden.map((r) => r.name),
     notes,
   };

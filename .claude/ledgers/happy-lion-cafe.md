@@ -442,3 +442,41 @@ code on branch `claude/cafe-square-menu-sync`.
 **Waiting on Trey:** add `catalog.version.updated` to the production webhook
 subscription in Square (beside the two payment events), then "Send test
 event" (200 = signature key good). Until then menu changes need the button.
+
+## 2026-10-18 (later): milk only, food, Sunday 6am sync (0091)
+
+Trey: drop the add-ins (there is a condiment station), offer only milk or
+oat milk; add food; Drinks and Food under headers that fold; sync weekly on
+Sunday at 6am.
+
+- **Milk.** New option type `pick` (a level that reads as the word picked,
+  "Oat milk"): `{ key: 'milk', type: 'pick', levels: ['none','Milk','Oat
+  milk'] }`, free, group '' (no heading over it). Drinks with nothing picked
+  read "No milk"; food reads nothing. A pick sent as 0 (an old phone that
+  draws it as a counter) counts as none.
+- **Food.** `cafe_menu_items.kind` ('drink' | 'food'), icon may be 'food'
+  (a muffin glyph in js/components.js). Food comes from its own Square
+  category, `cafe_square_food_category` = "Home Church Food". **That
+  category does not exist in his Square yet**; until it does, the sync says
+  so and leaves food alone. A single "Regular" variation is no size: label
+  '' and the sheet hides the size picker. Food doesn't count toward a
+  pickup time's drink capacity; 10 items per order, food included.
+- **Coffee page:** Drinks and Food sections, each header a button that
+  folds it (state in `state.folded`, survives the 30s repaint).
+- **Sunday 6am:** cron `hc-cafe-menu-sync` at `0 11,12 * * 0` UTC, gated on
+  6 o'clock America/Chicago (one of the two fires either side of DST),
+  calls `hc_cafe_sync_menu()` → pg_net → `cafe-square-sync` with the vault's
+  `hc_cafe_sync_secret` in `x-hc-cafe-secret`. `cafe-square-sync` is now
+  verify_jwt OFF and checks every caller itself (secret, service key, or an
+  admin by the auth server). Tested live: 200, "5 drinks ...; no Home Church
+  Food category in Square yet".
+
+**Live now:** 0091 part A (kind, icon check, food setting, vault secret,
+functions, cron) as `0091a_cafe_food_and_sunday_sync`; cafe-square-sync v11,
+cafe-square-webhook v17.
+
+**Held until the app code is merged (and so on phones):** 0091 part B, the
+`update cafe_menu_items set options = [milk]` for drinks / `[]` for food,
+and redeploying **cafe-checkout** with the new `_shared/cafe.mjs` (it needs
+to understand `pick` before any drink has one). Old screens draw a `pick`
+as a broken counter, so flipping before the merge would show that.

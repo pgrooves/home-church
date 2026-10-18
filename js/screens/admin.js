@@ -2262,7 +2262,9 @@
     /* 0090. Read by name in supabase/functions/_shared/cafe-sync.ts, which
        writes the second one. */
     cafe_square_category: true,
-    cafe_square_synced: true
+    cafe_square_synced: true,
+    /* 0091, the food, read by name in the same file. */
+    cafe_square_food_category: true
   };
 
   /* The Group tab's switch, as the app knows it rather than as the database
@@ -2660,10 +2662,15 @@
     var last = settingRow('cafe_square_synced');
     var lastText = last ? String(last.value_text || '').trim() : '';
 
+    var foodRow = settingRow('cafe_square_food_category');
+    var food = foodRow ? String(foodRow.value_text || '').trim() : '';
+
     var html = c.sectionHeader('', 'Happy Lion Cafe menu');
     html += '<p class="hc-caption hc-admin__loading">' + (name
-      ? 'The Coffee page’s drinks, sizes and prices come from “' + c.esc(name) +
-        '” in the cafe’s Square. A change made there shows here within a minute.'
+      ? 'The Coffee page’s drinks, sizes and prices come from “' + c.esc(name) + '”' +
+        (food ? ', and its food from “' + c.esc(food) + '”,' : '') +
+        ' in the cafe’s Square. A change made there shows here within a minute, ' +
+        'and the whole menu is copied again every Sunday at 6am.'
       : 'No Square category is set below, so the menu is kept by hand.') + '</p>';
     if (lastText) {
       html += '<p class="hc-caption hc-admin__loading">Last synced ' + c.esc(lastText) + '</p>';
