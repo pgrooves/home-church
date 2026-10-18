@@ -2258,7 +2258,11 @@
     cafe_every_day: true,
     cafe_tips_on: true,
     cafe_tax_percent: true,
-    cafe_slot_capacity: true
+    cafe_slot_capacity: true,
+    /* 0090. Read by name in supabase/functions/_shared/cafe-sync.ts, which
+       writes the second one. */
+    cafe_square_category: true,
+    cafe_square_synced: true
   };
 
   /* The Group tab's switch, as the app knows it rather than as the database
@@ -2641,6 +2645,37 @@
   // Open and Closed live at the cafe counter, as two buttons. A date in a
   // text box here would only be a way to get it wrong.
   DRAWN_ELSEWHERE.cafe_open_override = true;
+  // Written by the sync, drawn under its button. See cafeMenuSection.
+  DRAWN_ELSEWHERE.cafe_square_synced = true;
+
+  /* The Coffee page's menu, which comes from the cafe's Square (0090). The
+     category is an ordinary text row in the list below; this is the button
+     for the first sync and for a change the webhook missed, with the last
+     result under it. Drawn only once the cafe's rows exist, since there is
+     nothing to sync on a project without them. */
+  function cafeMenuSection() {
+    var category = settingRow('cafe_square_category');
+    if (!category) return '';
+    var name = String(category.value_text || '').trim();
+    var last = settingRow('cafe_square_synced');
+    var lastText = last ? String(last.value_text || '').trim() : '';
+
+    var html = c.sectionHeader('', 'Happy Lion Cafe menu');
+    html += '<p class="hc-caption hc-admin__loading">' + (name
+      ? 'The Coffee page’s drinks, sizes and prices come from “' + c.esc(name) +
+        '” in the cafe’s Square. A change made there shows here within a minute.'
+      : 'No Square category is set below, so the menu is kept by hand.') + '</p>';
+    if (lastText) {
+      html += '<p class="hc-caption hc-admin__loading">Last synced ' + c.esc(lastText) + '</p>';
+    }
+    if (name) {
+      html += '<div class="hc-admin__item-actions">' +
+        c.button('Sync menu now', { action: 'admin-cafe-sync', small: true,
+          busy: busy === 'cafe-sync' }) +
+      '</div>';
+    }
+    return html;
+  }
 
   function settingsSection() {
     var html = '<div class="hc-screen hc-admin">';
@@ -2665,6 +2700,9 @@
 
     // The reading plan, its switch and its link. See readingPlanSection.
     html += readingPlanSection();
+
+    // The cafe's menu and its Sync button. See cafeMenuSection.
+    html += cafeMenuSection();
 
     var rows = HC.admin.settings().filter(function (s) {
       return !DRAWN_ELSEWHERE[s.key];

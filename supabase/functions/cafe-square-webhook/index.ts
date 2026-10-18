@@ -5,6 +5,11 @@
  * is COMPLETED and belongs to an order we made marks that order paid, which
  * gives it its ticket number and puts it in the queue at the counter.
  *
+ * And on catalog.version.updated, which is the owner changing anything in
+ * his Square item library: the Coffee page's menu is copied again from his
+ * cafe_square_category (see _shared/cafe-sync.ts), so a price changed at the
+ * register is the price in the app a moment later.
+ *
  * WHY verify_jwt IS OFF. Square has no Supabase session to present. It proves
  * itself instead with x-square-hmacsha256-signature: HMAC-SHA256, keyed with
  * the subscription's signature key, over the notification URL followed by the
@@ -29,6 +34,7 @@
 
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 import { completedPayment, verifySquareSignature } from '../_shared/cafe.mjs';
+import { syncMenu } from '../_shared/cafe-sync.ts';
 
 function json(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
@@ -77,6 +83,18 @@ Deno.serve(async (req: Request) => {
     if (seenError) {
       console.error('cafe-square-webhook: could not record the event', seenError.message);
       return json({ error: 'Try again.' }, 500);
+    }
+  }
+
+  if (event.type === 'catalog.version.updated') {
+    // Answered 200 whatever happens: a retry would only sync again, and a
+    // sync that failed has already said why in Admin.
+    try {
+      const result = await syncMenu(db);
+      return json({ ok: true, menu: result.message });
+    } catch (err) {
+      console.error('cafe-square-webhook: menu sync failed', err);
+      return json({ ok: true, menu: 'failed' });
     }
   }
 

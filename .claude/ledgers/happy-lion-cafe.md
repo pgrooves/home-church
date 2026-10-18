@@ -398,18 +398,47 @@ secrets were set on 2026-10-03). Compare `ezbr_sha256`, not the version.
   same way it does for the highlight bar.
 - cafe-checkout deployed v8.
 
-## 2026-10-18: production keys, and the Square menu sync (in progress)
+## 2026-10-18: production keys, and the menu from Square (0090)
 
-- Trey set the production secrets. New function **`cafe-square-sync`**
-  (verify_jwt ON; admins, or a service_role JWT) with a read-only `check`
-  action: asks Square for the location, categories and items with the keys
-  on the functions. Deployed live (v3, check only).
-- First check, 2026-10-18: `SQUARE_ENV` = production, but
-  `SQUARE_ACCESS_TOKEN` is a **sandbox** token (refused by production, works
-  in sandbox). Waiting on Trey to paste the Production Access Token; then
-  re-run `check`, and confirm the production webhook with Square's "Send
-  test event" (200 = signature key good).
-- Next, once the keys pass: the `sync` action (Square category, set by
-  `cafe_square_category`, becomes `cafe_menu_items`; variations are sizes,
-  modifier lists are options, prices from Square), `catalog.version.updated`
-  on the webhook triggers it, and a "Sync menu now" button in Admin.
+**Keys.** Production secrets verified with `cafe-square-sync` `check`:
+location "Happy Lion Cafe", Metairie, ACTIVE, USD. (Took three tries: first
+a sandbox token, then the webhook signature key pasted as the token, then
+the sandbox token again. `check` now says which, without showing the token.)
+The webhook signature key cannot be checked from here; Square's "Send test
+event" on the production subscription answers 200 when it is right.
+
+**The menu comes from his Square.** His register already had a category,
+**"Home Church Menu"**, with one Square item per size (".Hot Coffee 08oz",
+".Hot Coffee 12oz", ...), one "Regular" variation each, no modifier lists,
+no taxes, no descriptions.
+- `menuFromCatalog` (`_shared/cafe.mjs`, tested in `tests/cafe.test.js`):
+  items in the category named by `cafe_square_category`, present at
+  `SQUARE_LOCATION_ID`, not archived. Leading dot and trailing "NNoz" come
+  off the name; sizes of one name become one drink (id = slug of the name,
+  so `hot-coffee` and `cold-brew` kept their rows). An item with several
+  variations is one drink with those sizes. Each size carries
+  `square_variation_id`, so checkout sends his catalog item. Order = his
+  category order. Sold out (location override) on every size = unavailable.
+- Kept from the existing row: icon, add-ins (`options`), blurb if Square has
+  no description. New drinks get the house add-ins (half & half, 2%, sugar,
+  Splenda) and an iced cup if the name sounds cold. Square modifier lists
+  are NOT read yet; a drink with some is listed in the sync's `notes`.
+- Never empties the menu: a missing category or no sellable items leaves it
+  as it was. Drinks no longer in the category are unpublished, not deleted.
+- `_shared/cafe-sync.ts` `syncMenu(db)`: fetch + write, shared by
+  `cafe-square-sync` (`sync` action; Admin "Sync menu now") and
+  `cafe-square-webhook` (`catalog.version.updated`). Writes the result to
+  `cafe_square_synced`, shown under the button.
+- `check` also prices the first drink with Square's `/v2/orders/calculate`
+  (creates nothing) and says whether Square agrees with the app.
+
+**Live, 2026-10-18:** 0090 applied; `cafe-square-sync` v10 and
+`cafe-square-webhook` v16 deployed. First sync: Cold Brew 12/16 ($3/$4),
+Hot Coffee 8/12 ($2/$3), Shaken 16 ($6), Vietnamese 12/16 ($3.50/$4.50),
+VSC Cold Brew 16 ($6). Square priced a Cold Brew 12 oz with half & half by
+catalog id at $3.00, same as the app. The Admin button ships with the app
+code on branch `claude/cafe-square-menu-sync`.
+
+**Waiting on Trey:** add `catalog.version.updated` to the production webhook
+subscription in Square (beside the two payment events), then "Send test
+event" (200 = signature key good). Until then menu changes need the button.

@@ -5,16 +5,21 @@
  *
  *   { action: 'check' }
  *     Asks Square who the keys on these functions belong to: the business,
- *     the location, whether it is live, and which categories its library
- *     has. Changes nothing. It is how anybody can see the keys are good
- *     without placing an order.
+ *     the location, whether it is live, and which categories and items its
+ *     library has. Changes nothing. It is how anybody can see the keys are
+ *     good without placing an order, and when they are not, it says why
+ *     without showing them (a sandbox token in production, a webhook key in
+ *     the token's box).
  *
  *   { action: 'sync' }
- *     (Built next.)
+ *     Copies the drinks in the Square category named by cafe_square_category
+ *     onto cafe_menu_items, with Square's names, sizes and prices. See
+ *     _shared/cafe-sync.ts. cafe-square-webhook does the same thing on its
+ *     own whenever Square says the library changed; this is the button for
+ *     the first time and for when a webhook went missing.
  *
  * WHO MAY CALL. A signed in admin, read fresh from profiles the way
- * admin-remove-user does it. The service role key is also accepted, so the
- * webhook and anybody with the dashboard can run it without a person.
+ * admin-remove-user does it, or the project's service role key.
  *
  * WHAT IT NEEDS. The same secrets as cafe-checkout: SQUARE_ENV,
  * SQUARE_ACCESS_TOKEN, SQUARE_LOCATION_ID. See
@@ -25,7 +30,8 @@
  */
 
 import { createClient } from 'jsr:@supabase/supabase-js@2';
-import { squareBase, SQUARE_VERSION } from '../_shared/cafe.mjs';
+import { squareBase, priceLine, paymentLinkBody, SQUARE_VERSION } from '../_shared/cafe.mjs';
+import { squareConfig, squareGet, syncMenu } from '../_shared/cafe-sync.ts';
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -38,28 +44,6 @@ function json(body: unknown, status = 200): Response {
     status,
     headers: { ...CORS, 'Content-Type': 'application/json' },
   });
-}
-
-function squareConfig() {
-  const env = (Deno.env.get('SQUARE_ENV') ?? 'sandbox').trim().toLowerCase();
-  const token = (Deno.env.get('SQUARE_ACCESS_TOKEN') ?? '').trim();
-  const location = (Deno.env.get('SQUARE_LOCATION_ID') ?? '').trim();
-  return { env, token, location, base: squareBase(env) };
-}
-
-async function square(cfg: ReturnType<typeof squareConfig>, path: string) {
-  const res = await fetch(cfg.base + path, {
-    headers: {
-      'Square-Version': SQUARE_VERSION,
-      Authorization: `Bearer ${cfg.token}`,
-      'Content-Type': 'application/json',
-    },
-  });
-  const payload = await res.json().catch(() => ({}));
-  const errors = Array.isArray(payload?.errors)
-    ? payload.errors.map((e: { code?: string; detail?: string }) => `${e.code}: ${e.detail}`)
-    : [];
-  return { ok: res.ok, status: res.status, payload, errors };
 }
 
 /* The role a JWT claims. Only trusted because verify_jwt is ON for this
@@ -81,10 +65,13 @@ Deno.serve(async (req: Request) => {
   const url = Deno.env.get('SUPABASE_URL');
   const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
   const anonKey = Deno.env.get('SUPABASE_ANON_KEY');
-  if (!url || !serviceKey || !anonKey) return json({ error: 'Platform env missing.' }, 500);
+  if (!url || !serviceKey || !anonKey) {
+    console.error('cafe-square-sync: platform env vars missing');
+    return json({ error: 'This is not set up correctly. Please tell the church.' }, 500);
+  }
 
   const token = (req.headers.get('Authorization') ?? '').replace(/^Bearer\s+/i, '').trim();
-  if (!token) return json({ error: 'Admins only.' }, 401);
+  if (!token) return json({ error: 'You need to be signed in to do that.' }, 401);
 
   const db = createClient(url, serviceKey, { auth: { persistSession: false, autoRefreshToken: false } });
 
@@ -93,35 +80,47 @@ Deno.serve(async (req: Request) => {
       global: { headers: { Authorization: `Bearer ${token}` } },
       auth: { persistSession: false, autoRefreshToken: false },
     });
-    const { data: who } = await asCaller.auth.getUser();
-    if (!who?.user) return json({ error: 'That sign in has expired. Sign in again and try once more.' }, 401);
+    const { data: who, error: whoError } = await asCaller.auth.getUser();
+    if (whoError || !who?.user) {
+      return json({ error: 'That sign in has expired. Sign in again and try once more.' }, 401);
+    }
     const { data: me } = await db.from('profiles').select('role').eq('id', who.user.id).maybeSingle();
     if (me?.role !== 'admin') return json({ error: 'Admins only.' }, 403);
   }
 
   let body: Record<string, unknown> = {};
-  try { body = await req.json(); } catch { /* empty body is a check */ }
+  try { body = await req.json(); } catch { /* no body is a check */ }
 
-  if ((body.action ?? 'check') === 'check') return json(await check());
-  return json({ error: 'Unknown action.' }, 400);
+  try {
+    const action = body.action ?? 'check';
+    if (action === 'check') return json(await check(db));
+    if (action === 'sync') {
+      const result = await syncMenu(db);
+      return json(result, result.ok ? 200 : 409);
+    }
+    return json({ error: 'Unknown action.' }, 400);
+  } catch (err) {
+    console.error('cafe-square-sync:', err);
+    return json({ error: 'That did not go through. Try again in a moment.' }, 500);
+  }
 });
 
-async function check() {
+// deno-lint-ignore no-explicit-any
+async function check(db: any) {
   const cfg = squareConfig();
   const out: Record<string, unknown> = {
     env: cfg.env,
     token_set: !!cfg.token,
-    token_looks_like: cfg.token ? cfg.token.slice(0, 4) + '…' : null,
     location_set: !!cfg.location,
   };
   if (!cfg.token || !cfg.location) return { ...out, ok: false, problem: 'A secret is missing.' };
 
-  const loc = await square(cfg, `/v2/locations/${encodeURIComponent(cfg.location)}`);
+  const loc = await squareGet(cfg, `/v2/locations/${encodeURIComponent(cfg.location)}`);
   if (!loc.ok) {
     // Why, without ever showing the token: its shape, and whether the other
     // environment takes it (the usual mistake is a sandbox token here).
     const other = cfg.env === 'production' ? 'sandbox' : 'production';
-    const there = await square({ ...cfg, base: squareBase(other) }, '/v2/locations');
+    const there = await squareGet({ ...cfg, base: squareBase(other) }, '/v2/locations');
     return {
       ...out, ok: false, problem: `Square refused (HTTP ${loc.status})`, errors: loc.errors,
       token_shape: {
@@ -141,16 +140,47 @@ async function check() {
   const l = loc.payload.location ?? {};
   out.location = {
     name: l.name, business_name: l.business_name, status: l.status, currency: l.currency,
-    city: l.address?.locality ?? null, capabilities: l.capabilities ?? [],
+    city: l.address?.locality ?? null,
   };
 
-  const cats = await square(cfg, '/v2/catalog/list?types=CATEGORY');
+  const cats = await squareGet(cfg, '/v2/catalog/list?types=CATEGORY');
   out.categories = cats.ok
     ? (cats.payload.objects ?? []).map((o: { category_data?: { name?: string } }) => o.category_data?.name)
     : { refused: cats.status, errors: cats.errors };
 
-  const items = await square(cfg, '/v2/catalog/list?types=ITEM');
-  out.item_count_first_page = items.ok ? (items.payload.objects ?? []).length : { refused: items.status, errors: items.errors };
+  // What checkout would be charged for the first drink on the menu, with an
+  // add-in, asked of Square's calculator: the order checkout builds, priced
+  // without creating anything in his account.
+  const { data: menu } = await db.from('cafe_menu_items').select('*').eq('published', true).order('sort_order');
+  const first = (menu ?? [])[0];
+  if (first?.sizes?.length) {
+    const option = (first.options ?? [])[0];
+    const line = priceLine(menu, {
+      item_id: first.id,
+      size: first.sizes[0].key,
+      options: option ? { [option.key]: option.type === 'level' ? option.levels?.[1] : 1 } : {},
+    });
+    const { order } = paymentLinkBody({
+      orderId: crypto.randomUUID(), locationId: cfg.location,
+      priced: { lines: [line], drinks: 1, subtotal_cents: line.price_cents },
+      cupName: 'Check', pickupAt: new Date(), taxPercent: '0', tips: false, redirectUrl: '',
+    });
+    const res = await fetch(cfg.base + '/v2/orders/calculate', {
+      method: 'POST',
+      headers: { 'Square-Version': SQUARE_VERSION, Authorization: `Bearer ${cfg.token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ order }),
+    });
+    const calc = await res.json().catch(() => ({}));
+    out.checkout = res.ok
+      ? {
+          drink: `${line.name}, ${line.size_label}${line.summary ? ` (${line.summary})` : ''}`,
+          by_catalog_id: !!line.square_variation_id,
+          app_price_cents: line.price_cents,
+          square_total_cents: calc.order?.total_money?.amount ?? null,
+          agrees: calc.order?.total_money?.amount === line.price_cents,
+        }
+      : { refused: res.status, errors: (calc.errors ?? []).map((e: { code?: string; detail?: string }) => `${e.code}: ${e.detail}`) };
+  }
 
   return { ...out, ok: true };
 }

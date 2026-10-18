@@ -403,6 +403,166 @@ export function completedPayment(event) {
   };
 }
 
+/* ------------------------------------------------------------ the menu */
+
+/**
+ * The add-ins every drink starts with, the same four 0085 seeded. Free, and
+ * not in the owner's Square: they ride on the order as ad hoc modifiers so
+ * the counter sees them. A drink the sync has seen before keeps whatever
+ * options its row already has.
+ */
+const LEVELS = ['none', 'light', 'regular', 'extra'];
+export const HOUSE_OPTIONS = [
+  { key: 'half_and_half', label: 'Half & half', short: 'Half & half', group: 'Milk', type: 'level', levels: LEVELS },
+  { key: 'two_percent', label: '2% milk', short: '2% milk', group: 'Milk', type: 'level', levels: LEVELS },
+  { key: 'sugar', label: 'Sugar', short: 'sugar', group: 'Sweetener', type: 'count', max: 4, unit: 'Packets' },
+  { key: 'splenda', label: 'Splenda', short: 'Splenda', group: 'Sweetener', type: 'count', max: 4, unit: 'Packets' },
+];
+
+const COLD_WORDS = /\b(cold|iced?|shaken|frapp\w*|smoothie|lemonade|vietnamese|vsc)\b/i;
+
+function slug(text) {
+  return String(text).toLowerCase().replace(/&/g, ' and ').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+}
+
+/**
+ * ".Hot Coffee 08oz" as { base: 'Hot Coffee', oz: 8 }. The owner's register
+ * names lead with a dot to sort them, and carry the size in the name because
+ * each size is its own Square item. Either is optional.
+ */
+export function splitDrinkName(name) {
+  const flat = String(name ?? '').replace(/^[\s.·•*_-]+/, '').replace(/\s+/g, ' ').trim();
+  const m = /^(.*?)[\s,(-]*(\d+(?:\.\d+)?)\s*(?:oz|ounces?)\.?\)?$/i.exec(flat);
+  if (m) return { base: m[1].trim(), oz: Number(m[2]) };
+  return { base: flat, oz: null };
+}
+
+function sizeOf(oz, fallbackName) {
+  if (oz != null) return { key: `${oz}oz`, label: `${oz} oz`, oz };
+  const label = String(fallbackName || 'Regular').trim() || 'Regular';
+  return { key: slug(label) || 'regular', label, oz: null };
+}
+
+function presentAt(object, locationId) {
+  if (!object || object.is_deleted) return false;
+  if ((object.absent_at_location_ids || []).includes(locationId)) return false;
+  return object.present_at_all_locations === true ||
+    (object.present_at_location_ids || []).includes(locationId);
+}
+
+/**
+ * The owner's Square library, as rows for cafe_menu_items.
+ *
+ * WHAT COMES FROM SQUARE: which drinks (every item in the category named
+ * `category`, sold at this location, not archived), their names, sizes and
+ * prices, the order he has them in, a description if he wrote one, and sold
+ * out. Each size carries its variation id, so checkout sends Square his own
+ * item and his reports are itemized.
+ *
+ * SIZES, TWO WAYS. One item per size, the way his register is set up
+ * (".Hot Coffee 08oz", ".Hot Coffee 12oz"), is grouped into one drink by
+ * name. One item with several variations is one drink with those sizes.
+ *
+ * WHAT STAYS OURS: the icon, the add-ins, and a blurb when Square has no
+ * description, kept from the row if the drink is already on the menu
+ * (`existing`), so a sync never undoes something set by hand. Square modifier
+ * lists are not read yet; a drink that has some is named in `notes`.
+ *
+ * Returns { rows, notes, categoryFound }. Pure: no network, no database.
+ */
+export function menuFromCatalog({ objects, locationId, category, existing = [] }) {
+  const notes = [];
+  const want = String(category ?? '').trim().toLowerCase();
+  const all = Array.isArray(objects) ? objects : [];
+  const categoryIds = all
+    .filter((o) => o?.type === 'CATEGORY' && !o.is_deleted &&
+      String(o.category_data?.name ?? '').trim().toLowerCase() === want)
+    .map((o) => o.id);
+  if (!want || !categoryIds.length) return { rows: [], notes, categoryFound: false };
+
+  const groups = new Map();
+  for (const item of all) {
+    if (item?.type !== 'ITEM' || !presentAt(item, locationId)) continue;
+    const data = item.item_data || {};
+    if (data.is_archived) continue;
+    const cats = (data.categories || []).filter((c) => categoryIds.includes(c.id));
+    if (!cats.length && !categoryIds.includes(data.category_id)) continue;
+
+    const variations = (data.variations || []).filter((v) => {
+      const vd = v.item_variation_data || {};
+      return presentAt(v, locationId) && vd.sellable !== false &&
+        vd.pricing_type !== 'VARIABLE_PRICING' && Number.isInteger(vd.price_money?.amount);
+    });
+    if (!variations.length) {
+      notes.push(`${data.name || item.id} has no fixed price here, so it was left off.`);
+      continue;
+    }
+    if ((data.modifier_list_info || []).some((m) => m.enabled !== false)) {
+      notes.push(`${data.name || item.id} has add-ins in Square, which the app does not read yet.`);
+    }
+
+    const split = splitDrinkName(data.name);
+    if (!split.base) split.base = String(data.name ?? '').trim() || item.id;
+    const key = slug(split.base) || item.id.toLowerCase();
+    const ordinal = cats.length ? Math.min(...cats.map((c) => Number(c.ordinal) || 0)) : 0;
+    const g = groups.get(key) || { id: key, name: split.base, items: [], sizes: [], ordinal, blurb: null };
+    g.ordinal = Math.min(g.ordinal, ordinal);
+    g.items.push(item.id);
+    const text = String(data.description_plaintext ?? '').trim();
+    if (text && !g.blurb) g.blurb = text.slice(0, 160);
+
+    for (const v of variations) {
+      const vd = v.item_variation_data;
+      const size = variations.length === 1 && split.oz != null
+        ? sizeOf(split.oz)
+        : sizeOf(splitDrinkName(vd.name).oz, vd.name);
+      if (g.sizes.some((s) => s.key === size.key)) {
+        notes.push(`${split.base} has two ${size.label} sizes in Square; the first one is used.`);
+        continue;
+      }
+      const here = (vd.location_overrides || []).find((o) => o.location_id === locationId) || {};
+      g.sizes.push({
+        key: size.key,
+        label: size.label,
+        price_cents: Number.isInteger(here.price_money?.amount) ? here.price_money.amount : vd.price_money.amount,
+        square_variation_id: v.id,
+        oz: size.oz,
+        ordinal: Number(vd.ordinal) || 0,
+        sold_out: here.sold_out === true,
+      });
+    }
+    groups.set(key, g);
+  }
+
+  const before = new Map((existing || []).map((r) => [r.id, r]));
+  const rows = [...groups.values()]
+    .filter((g) => g.sizes.length)
+    .sort((a, b) => a.ordinal - b.ordinal || a.name.localeCompare(b.name))
+    .map((g, i) => {
+      const old = before.get(g.id);
+      const sizes = g.sizes
+        .sort((a, b) => (a.oz ?? Infinity) - (b.oz ?? Infinity) || a.ordinal - b.ordinal)
+        .map(({ key, label, price_cents, square_variation_id }) => ({ key, label, price_cents, square_variation_id }));
+      return {
+        id: g.id,
+        name: g.name,
+        blurb: g.blurb || old?.blurb || null,
+        icon: old?.icon || (COLD_WORDS.test(g.name) ? 'cold' : 'hot'),
+        sizes,
+        // Kept once set: a synced drink whose add-ins were cleared on purpose
+        // stays without them.
+        options: Array.isArray(old?.options) && (old.options.length || old.square_item_id != null)
+          ? old.options : HOUSE_OPTIONS,
+        square_item_id: g.items.join(','),
+        sort_order: (i + 1) * 10,
+        available: !g.sizes.every((s) => s.sold_out),
+        published: true,
+      };
+    });
+
+  return { rows, notes, categoryFound: true };
+}
+
 /* -------------------------------------------------------------- webhooks */
 
 function toBase64(bytes) {
