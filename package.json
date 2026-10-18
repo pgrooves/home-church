@@ -29,7 +29,7 @@
     "legal": "node scripts/make_legal_pages.js",
     "stamp": "node scripts/stamp_assets.js",
     "sync": "node scripts/sync_web.js",
-    "ios": "npm run stamp && npm run sync && npx cap sync ios && node scripts/ios_plist.js",
+    "ios": "npm run stamp && npm run sync && npx cap sync ios && node scripts/ios_plist.js && node scripts/ios_splash.js",
     "ios:open": "npm run ios && npx cap open ios",
     "icons": "python3 scripts/make_icons.py",
     "practices": "node scripts/build_practices.js",

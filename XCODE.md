@@ -139,6 +139,12 @@ Now in Xcode:
 If your version of Xcode shows many empty squares instead of one, drag the
 matching file into each by size. The filenames say which is which.
 
+**The launch screen needs nothing from you.** `npm run ios` replaces
+Capacitor's blue X logo in **Assets.xcassets → Splash** with plain paper
+(charcoal in dark mode), via `scripts/ios_splash.js`. Version 1.0 shipped
+with the blue X because this used to be a step nobody had written down. If
+you ever see the X again, you archived without running `npm run ios` first.
+
 -----
 
 ## 7. Signing
