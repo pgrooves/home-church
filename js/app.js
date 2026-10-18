@@ -229,13 +229,12 @@
   /* The Coffee page. Off without the row, the opposite of the three above,
      for the reason given where it sits in MODULES.
 
-     AND ALWAYS THERE FOR SOMEBODY IN CAFE MODE, the way the queue has to be:
-     the owner sets up and tests before the church turns the page on, and
-     pausing it for everybody must not take it away from the counter. The
-     page itself tells them when nobody else can see it. */
+     OFF MEANS OFF FOR EVERYBODY, admins and Cafe mode included, the way the
+     other page switches work (Trey, 2026-10-18). Somebody in Cafe mode can
+     still open ?v=cafe directly to set up and test; the page tells them
+     nobody else can see it. */
   function cafeOn() {
-    if (HC.data.setting('cafe_on', false) === true) return true;
-    return !!(HC.cafe && HC.cafe.signedIn() && HC.cafe.isBarista());
+    return HC.data.setting('cafe_on', false) === true;
   }
 
   /* MODULES minus whatever the church has switched off. A module with no
@@ -5898,10 +5897,6 @@
        the right one rather than under the default for a frame. */
     applyNavStyle();
     HC.store.on('profile', applyNavStyle);
-    /* Cafe mode lands on the profile a beat after sign in, and it puts Coffee
-       in the row for the owner even while the page is off for everybody
-       else, so the row is synced again when it does. Cheap and idempotent. */
-    HC.store.on('profile', function () { syncModules(); });
     watchScroll();
 
     /* Edit mode's idle clock and the two listeners that feed it. Wired on
