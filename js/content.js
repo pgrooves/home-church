@@ -1004,6 +1004,7 @@
     if (!window.fetch) return Promise.resolve(false);
 
     state.status = 'fetching';
+    lastAttempt = Date.now();
 
     return Promise.all(TABLES.map(getTable)).then(function (results) {
       var payload = {};
@@ -1054,6 +1055,28 @@
     });
   }
 
+  /* Back to the front, after the phone had the app parked in the background.
+
+     WHY THIS EXISTS. refresh() used to run once, from boot(), and iOS keeps
+     a parked app alive for hours, so opening it from the home screen is not
+     a boot. An admin turning Alpha off reached their own phone at once and
+     everybody else's on their next cold start, which for most people is the
+     next time the phone restarts. Every switch under App settings, Pages
+     makes a promise this is what keeps.
+
+     THROTTLED, not debounced. A quick look at a text and back should not
+     fetch every table, and a refresh already in flight is not started twice.
+     Measured from the last attempt rather than the last success, so a phone
+     with no signal asks once a minute instead of on every glance. */
+  var RESUME_MS = 60 * 1000;
+  var lastAttempt = 0;
+
+  function refreshIfStale() {
+    if (state.status === 'fetching') return Promise.resolve(false);
+    if (Date.now() - lastAttempt < RESUME_MS) return Promise.resolve(false);
+    return refresh();
+  }
+
   /* A cheap fingerprint of what is on screen, used to decide whether a
      refresh is worth a redraw. Counts plus the newest ids catch a new guide,
      a removed event, and a retitled message, which is everything that
@@ -1085,6 +1108,7 @@
   HC.content = {
     primeFromCache: primeFromCache,
     refresh: refresh,
+    refreshIfStale: refreshIfStale,
     isConfigured: configured,
     state: function () {
       return {

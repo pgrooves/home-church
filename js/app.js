@@ -6205,6 +6205,14 @@
     // phone is offline, or the project is unreachable, this quietly does
     // nothing and the app carries on with what it already had.
     HC.content.refresh();
+
+    /* And again whenever the app comes back to the front, so a switch an
+       admin flips reaches a phone the next time somebody opens it, not the
+       next time it cold starts. Throttled inside; see refreshIfStale. */
+    document.addEventListener('visibilitychange', function () {
+      if (document.visibilityState === 'visible') HC.content.refreshIfStale();
+    });
+    window.addEventListener('online', function () { HC.content.refreshIfStale(); });
   }
 
   if (document.readyState === 'loading') {
