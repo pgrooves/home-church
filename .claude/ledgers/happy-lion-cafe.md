@@ -397,3 +397,19 @@ secrets were set on 2026-10-03). Compare `ezbr_sha256`, not the version.
   to-top disc stands down (`#app:has(.hc-cafe-cartbar) .hc-disc--top`), the
   same way it does for the highlight bar.
 - cafe-checkout deployed v8.
+
+## 2026-10-18: production keys, and the Square menu sync (in progress)
+
+- Trey set the production secrets. New function **`cafe-square-sync`**
+  (verify_jwt ON; admins, or a service_role JWT) with a read-only `check`
+  action: asks Square for the location, categories and items with the keys
+  on the functions. Deployed live (v3, check only).
+- First check, 2026-10-18: `SQUARE_ENV` = production, but
+  `SQUARE_ACCESS_TOKEN` is a **sandbox** token (refused by production, works
+  in sandbox). Waiting on Trey to paste the Production Access Token; then
+  re-run `check`, and confirm the production webhook with Square's "Send
+  test event" (200 = signature key good).
+- Next, once the keys pass: the `sync` action (Square category, set by
+  `cafe_square_category`, becomes `cafe_menu_items`; variations are sizes,
+  modifier lists are options, prices from Square), `catalog.version.updated`
+  on the webhook triggers it, and a "Sync menu now" button in Admin.
