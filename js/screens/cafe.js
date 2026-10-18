@@ -206,7 +206,7 @@
     html += openBadge();
     html += '<p class="hc-caption hc-cafe__open">' +
       (!cafeOn()
-        ? 'Only people in Cafe mode can see this page. ' +
+        ? 'This page is off, so it is not in anybody’s menu. ' +
           'An admin turns it on for everybody under App settings, Pages.'
         : c.esc(closed || dayLine())) +
     '</p>';

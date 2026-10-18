@@ -79,9 +79,10 @@ admins.
 Manage users has a **Cafe mode** switch per member, beside Leader mode
 (Trey's name for it, 2026-10-03). Cafe mode = `profiles.can_run_cafe`;
 admins have it implicitly. It grants the queue, Start / Ready (the push to
-the customer) / Picked up / undo, and pausing orders. People in Cafe mode
-see Coffee in their menu even while `cafe_on` is off, with a line saying
-nobody else can see it, so the owner can set up before launch. The users
+the customer) / Picked up / undo, and pausing orders. While `cafe_on` is
+off, Coffee is out of the menu for everybody, admins and Cafe mode included
+(2026-10-18); Cafe mode people can still open `?v=cafe` directly to set up,
+with a line saying the page is off. The users
 list tags them "Cafe" (or "Leader · Cafe"). App settings lists the
 other cafe settings (taking orders, every day for testing, tips, tax
 percent, drinks per pickup time).
@@ -243,6 +244,8 @@ Go live with the owner:
   paths from measured strokes. Swap in a higher resolution original if one
   turns up; keep the file name.
 - 2026-10-08: The lion walks in place and sips on the Coffee page.
+- 2026-10-18: The Pages switch hides Coffee from every menu, admins and
+  Cafe mode too, like the other page switches (Trey).
   History, all Trey's calls the same day: a few degrees of rocking ("I said
   walk in place"), a knee lift and back kick, a stride cut from the logo's
   own legs (shipped, then "it looks like he's just dragging his left foot,
