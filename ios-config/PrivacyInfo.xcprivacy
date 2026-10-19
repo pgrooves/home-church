@@ -54,17 +54,17 @@
   <array>
 
     <!-- The APNs device token, so the church can say a new guide is posted.
-         Not linked, and that word is doing real work now that accounts exist:
-         `device_tokens` is keyed on the token itself and carries no account
-         column, so a token cannot be walked back to a person. Migration 0010
-         is what holds it there, and 0012 added only per-topic switches beside
-         it. If a future migration puts a user id on that table, this entry
-         becomes Linked and so does the App Store label. -->
+         LINKED SINCE 1.1. `device_tokens` is still keyed on the token itself
+         with no account column (migrations 0010 and 0012), but a Coffee order
+         stores the token of the phone it was placed from beside the account
+         that placed it (`cafe_orders.push_token`, migration 0085), so the
+         counter can say the drink is ready. One linked path makes the answer
+         Linked, here and on the App Store label. -->
     <dict>
       <key>NSPrivacyCollectedDataType</key>
       <string>NSPrivacyCollectedDataTypeDeviceID</string>
       <key>NSPrivacyCollectedDataTypeLinked</key>
-      <false/>
+      <true/>
       <key>NSPrivacyCollectedDataTypeTracking</key>
       <false/>
       <key>NSPrivacyCollectedDataTypePurposes</key>
@@ -216,6 +216,25 @@
     <dict>
       <key>NSPrivacyCollectedDataType</key>
       <string>NSPrivacyCollectedDataTypeOtherUserContent</string>
+      <key>NSPrivacyCollectedDataTypeLinked</key>
+      <true/>
+      <key>NSPrivacyCollectedDataTypeTracking</key>
+      <false/>
+      <key>NSPrivacyCollectedDataTypePurposes</key>
+      <array>
+        <string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+      </array>
+    </dict>
+
+    <!-- Coffee orders, added in 1.1. Each order is stored with the account
+         that placed it: the items, the totals, the pickup time and the name
+         for the cup. Declared although Coffee ships switched off, because the
+         code is in the build. Card details are NOT declared: they are typed
+         into Square's own checkout page and never reach the app or our
+         server. -->
+    <dict>
+      <key>NSPrivacyCollectedDataType</key>
+      <string>NSPrivacyCollectedDataTypePurchaseHistory</string>
       <key>NSPrivacyCollectedDataTypeLinked</key>
       <true/>
       <key>NSPrivacyCollectedDataTypeTracking</key>

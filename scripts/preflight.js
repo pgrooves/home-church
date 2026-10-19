@@ -171,14 +171,15 @@ function legal() {
    ===================================================================== */
 
 const DECLARED = {
-  NSPrivacyCollectedDataTypeDeviceID: false,        // the APNs token, unlinked
+  NSPrivacyCollectedDataTypeDeviceID: true,         // the APNs token, linked through cafe_orders
   NSPrivacyCollectedDataTypeName: true,
   NSPrivacyCollectedDataTypeEmailAddress: true,
   NSPrivacyCollectedDataTypePhoneNumber: true,
   NSPrivacyCollectedDataTypePhysicalAddress: true,
   NSPrivacyCollectedDataTypeOtherDataTypes: true,   // birthday, gender, campus, marital status
   NSPrivacyCollectedDataTypeUserID: true,
-  NSPrivacyCollectedDataTypeOtherUserContent: true  // rooms, journal, Connect forms
+  NSPrivacyCollectedDataTypeOtherUserContent: true, // rooms, journal, Connect forms
+  NSPrivacyCollectedDataTypePurchaseHistory: true   // Coffee orders
 };
 
 function manifest() {

@@ -451,12 +451,13 @@ memory.
 | **Physical Address** | Yes | Yes | No | App Functionality |
 | **Other Data** | Yes | Yes | No | App Functionality |
 | **User ID** | Yes | Yes | No | App Functionality |
-| **Device ID** | Yes | **No** | No | App Functionality |
+| **Device ID** | Yes | Yes | No | App Functionality |
 | **Other User Content** | Yes | Yes | No | App Functionality |
+| **Purchase History** | Yes | Yes | No | App Functionality |
 
 Everything else: **Not Collected.** Specifically no Health, no Financial Info,
 no Location, no Sensitive Info, no Contacts, no Browsing History, no Search
-History, no Usage Data, no Diagnostics, no Purchases.
+History, no Usage Data, no Diagnostics. Purchases is Purchase History only.
 
 **Notes on each one that needs explaining:**
 
@@ -473,9 +474,12 @@ History, no Usage Data, no Diagnostics, no Purchases.
   over-declaring costs nothing and the code path exists.
 - **User ID** is the Supabase auth uuid. It is the primary key of the profile
   row, so it is unambiguously collected and linked.
-- **Device ID** is the APNs push token, not linked to the account. Note that
-  the token is only ever registered in a native build, and nothing sends to it
-  yet. See the notification note in section 7 before answering this one.
+- **Device ID** is the APNs push token. It is **linked** since 1.1, because a
+  Coffee order stores the token of the phone it was placed from next to the
+  account that placed it (`cafe_orders.push_token`), so the counter can say
+  the drink is ready. The church-wide registrations in `device_tokens` are
+  still not linked, but one linked path makes the answer Linked. The token is
+  only ever registered in a native build.
 - **Other User Content** is the one line in this table that grew. It now
   covers three different things and the last two are the substantial ones.
     - The Connect forms, which open in the system browser and post to Church
@@ -497,13 +501,18 @@ History, no Usage Data, no Diagnostics, no Purchases.
   saved prayer requests are not. They never leave the device and Apple does
   not ask you to declare what does not leave.
 
-  **Before Coffee is switched on**, add Purchase History (and anything else
-  the Square checkout collects through the app) to this table, the manifest
-  and the App Privacy answers in App Store Connect. Those answers can be
-  changed without a new build.
+- **Purchase History**, added for 1.1 with Coffee. Every order is stored
+  with the account that placed it: what was ordered, the totals, the pickup
+  time and the name for the cup (Name is already declared). Declared now
+  although Coffee ships switched off, because the code is in the build.
+  **Card details are not declared, and correctly so.** Payment happens on
+  Square's own checkout page; the app and our server never see a card
+  number, and Apple's guidance is that payment information a payment
+  service collects without the developer having access to it is not
+  collected by the app.
 
-**This table is also the privacy manifest.** The eight rows above are the same
-eight entries in `ios-config/PrivacyInfo.xcprivacy`, including which ones are
+**This table is also the privacy manifest.** The nine rows above are the same
+nine entries in `ios-config/PrivacyInfo.xcprivacy`, including which ones are
 Linked, and `npm run preflight` fails if they stop matching. Change one and
 change all three: the table, the manifest, and the `DECLARED` list in
 `scripts/preflight.js` that holds them together.
