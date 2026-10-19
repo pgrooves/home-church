@@ -1,0 +1,167 @@
+<!doctype html>
+<!--
+  App Store creative assets, dark. Rendered to PNG by store-art/render.js.
+
+  art.html#header  3840 x 1646, the product page header
+  art.html#search  3840 x 2560, the search results asset
+
+  The mark is redrawn here as vector, traced off assets/icons/mark.png, because
+  that file is 246px and these canvases are 3840 wide. The lockup is the PNG,
+  placed at or below its native 1461px so it is never upscaled.
+
+  Apple crops both of these on smaller screens. Everything that has to be read
+  sits inside the centred safe area (dashed when #guides is on the URL); the
+  rings outside it are allowed to be lost.
+-->
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  @font-face { font-family: 'Poppins'; font-weight: 800; src: url('../assets/fonts/poppins-800.woff2') format('woff2'); }
+  @font-face { font-family: 'Manrope'; font-weight: 200 800; src: url('../assets/fonts/manrope-latin.woff2') format('woff2'); }
+
+  :root {
+    --bg:     #1A1918;
+    --raised: #232120;
+    --ink:    #F2EEE7;
+    --mid:    #9A938A;
+    --accent: #C4B5A2;
+    --gold:   #D7BA85;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { background: var(--bg); }
+  body { width: var(--w); height: var(--h); overflow: hidden; position: relative;
+         -webkit-font-smoothing: antialiased; }
+
+  .glow { position: absolute; inset: 0;
+          background:
+            radial-gradient(ellipse 34% 52% at 50% var(--cy), rgba(215,186,133,0.13), rgba(215,186,133,0) 70%),
+            radial-gradient(ellipse 80% 90% at 50% var(--cy), #24221F 0%, var(--bg) 70%); }
+  .vignette { position: absolute; inset: 0;
+              background: radial-gradient(ellipse 75% 85% at 50% 50%, rgba(0,0,0,0) 55%, rgba(10,9,8,0.55) 100%); }
+  svg.rings { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .grain { position: absolute; inset: 0; opacity: 0.07; mix-blend-mode: overlay; }
+
+  .stack { position: absolute; left: 50%; top: var(--cy); transform: translate(-50%, -50%);
+           display: flex; flex-direction: column; align-items: center; text-align: center;
+           white-space: nowrap; }
+
+  .eyebrow { font: 600 var(--eyebrow)/1 -apple-system, 'Helvetica Neue', Helvetica, Arial, sans-serif;
+             letter-spacing: 0.32em; text-transform: uppercase; color: var(--accent);
+             padding-left: 0.32em; }
+  .rule { width: var(--rule); height: 4px; background: var(--gold); opacity: 0.85; border-radius: 2px; }
+  .tag { font: 500 var(--tag)/1.25 'Manrope', sans-serif; color: var(--accent); letter-spacing: -0.005em; }
+  h1 { font: 800 var(--h1)/1.04 'Poppins', sans-serif; color: var(--ink); letter-spacing: -0.02em; }
+  h1 em { font-style: normal; color: var(--gold); }
+
+  .safe { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+          width: var(--sw); height: var(--sh); outline: 4px dashed #ff3b6b; display: none; }
+  body.guides .safe { display: block; }
+
+  /* HEADER, 3840 x 1646 (21:9). Safe area 1646 x 661. */
+  body.header { --w: 3840px; --h: 1646px; --cy: 50%; --sw: 1646px; --sh: 661px;
+                --eyebrow: 40px; --tag: 62px; --rule: 120px; }
+  body.header .lockup { width: 1461px; display: block; }
+
+  /* SEARCH, 3840 x 2560 (3:2). Safe area 2168 x 1030. */
+  body.search { --w: 3840px; --h: 2560px; --cy: 50%; --sw: 2168px; --sh: 1030px;
+                --eyebrow: 44px; --tag: 68px; --h1: 160px; --rule: 140px; }
+  body.search .mark { width: 260px; display: block; }
+</style>
+</head>
+<body>
+  <div class="glow"></div>
+  <svg class="rings" id="rings" xmlns="http://www.w3.org/2000/svg"></svg>
+  <div class="vignette"></div>
+  <svg class="grain" xmlns="http://www.w3.org/2000/svg">
+    <filter id="n"><feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" stitchTiles="stitch"/>
+      <feColorMatrix values="0 0 0 0 0.5  0 0 0 0 0.5  0 0 0 0 0.5  0 0 0 1 0"/></filter>
+    <rect width="100%" height="100%" filter="url(#n)"/>
+  </svg>
+
+  <div class="stack" id="stack"></div>
+  <div class="safe"></div>
+
+<template id="mark">
+  <svg class="mark" viewBox="0 -1 246 227" xmlns="http://www.w3.org/2000/svg" fill="#D7BA85">
+    <path fill-rule="evenodd" d="M0.72 225.25V85.5L123 -0.1L245.28 85.5V225.25Z
+      M23.8 202.8V97.6L123 28.1L222.18 97.6V202.8H171.4L134.59 225.25V166.2L111.43 149.98V202.8Z"/>
+    <rect x="84.56" y="113.6" width="76.69" height="23.11"/>
+    <rect x="111.43" y="86.14" width="23.16" height="27.5"/>
+  </svg>
+</template>
+
+<script>
+  const kind = (location.hash.match(/header|search/) || ['header'])[0];
+  document.body.classList.add(kind);
+  if (/guides/.test(location.hash)) document.body.classList.add('guides');
+
+  const stack = document.getElementById('stack');
+  const mark = () => document.getElementById('mark').content.firstElementChild.cloneNode(true);
+  const el = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html) e.innerHTML = html; return e; };
+  const gap = px => { const e = el('div'); e.style.height = px + 'px'; return e; };
+
+  // The house outline, the mark's outer edge, centred on (0,0) at unit width.
+  // Proportions from the trace: 244.56 wide, eave 85.6 down, 225.35 tall.
+  const W = 244.56, EAVE = 85.6, H = 225.35;
+  function house(cx, cy, w) {
+    const s = w / W, x0 = cx - w / 2, x1 = cx + w / 2, top = cy - (H / 2) * s, bot = cy + (H / 2) * s;
+    return `M${x0} ${bot}V${top + EAVE * s}L${cx} ${top}L${x1} ${top + EAVE * s}V${bot}Z`;
+  }
+
+  let ring = { cx: 0, cy: 0, w0: 0 };
+  if (kind === 'header') {
+    stack.append(
+      el('div', 'eyebrow', 'Metairie &middot; New Orleans'),
+      gap(64),
+      Object.assign(el('img', 'lockup'), { src: '../assets/img/logo-lockup.png' }),
+      gap(70),
+      el('div', 'tag', 'Everyone is welcome. Everyone is family.')
+    );
+  } else {
+    stack.append(
+      mark(),
+      gap(80),
+      el('h1', '', 'Sunday, and everything<br>before it<em>.</em>'),
+      gap(56),
+      el('div', 'tag', 'This week&rsquo;s guide, every message, and your people.')
+    );
+  }
+
+  // Rings radiate from the gold house wherever the layout put it.
+  function drawRings() {
+    const target = stack.querySelector('.mark') || stack.querySelector('.lockup');
+    const r = target.getBoundingClientRect();
+    let cx, cy, w0;
+    if (target.classList.contains('lockup')) {
+      // The house in logo-lockup.png spans 523..768 of 1461 across, full height.
+      const k = r.width / 1461;
+      cx = r.left + 645.5 * k; cy = r.top + r.height / 2; w0 = 245 * k;
+    } else {
+      cx = r.left + r.width / 2; cy = r.top + r.height / 2; w0 = r.width;
+    }
+    const svg = document.getElementById('rings');
+    const steps = kind === 'header'
+      ? [2.2, 3.3, 4.6, 6.1, 7.8, 9.8, 12.2, 15.0, 18.4]
+      : [1.9, 2.8, 3.9, 5.2, 6.8, 8.7, 11.0, 13.8];
+    // Rings fade out behind the words instead of crossing them.
+    const sr = stack.getBoundingClientRect();
+    const mx = sr.left + sr.width / 2, my = sr.top + sr.height / 2;
+    const defs = `<defs><radialGradient id="clear" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="1"
+        gradientTransform="translate(${mx} ${my}) scale(${sr.width * 0.62} ${sr.height * 0.78})">
+        <stop offset="0.72" stop-color="#000"/><stop offset="1" stop-color="#fff"/></radialGradient>
+      <mask id="m"><rect width="100%" height="100%" fill="url(#clear)"/></mask></defs>`;
+    svg.innerHTML = defs + '<g mask="url(#m)">' + steps.map((k, i) => {
+      const o = Math.max(0.05, 0.34 * Math.pow(0.78, i));
+      const sw = kind === 'header' ? 3 : 3.5;
+      return `<path d="${house(cx, cy, w0 * k)}" fill="none" stroke="#D7BA85" stroke-opacity="${o.toFixed(3)}" stroke-width="${sw}" stroke-linejoin="miter"/>`;
+    }).join('') + '</g>';
+  }
+
+  document.fonts.ready.then(() => {
+    const imgs = [...document.images].map(i => i.complete ? 0 : new Promise(r => i.onload = r));
+    Promise.all(imgs).then(() => { drawRings(); document.body.dataset.ready = '1'; });
+  });
+</script>
+</body>
+</html>
