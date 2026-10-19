@@ -1851,6 +1851,17 @@
       applyNavStyle();
     },
 
+    /* The notches on the right edge. The rail asks the profile itself every
+       time it scans, so all this has to do is make it scan now rather than at
+       the next screen. */
+    'toggle-index-rail': function (el) {
+      var on = el.getAttribute('aria-checked') !== 'true';
+      HC.store.updateProfile({ indexRail: on });
+      HC.native.tap('Light');
+      setSwitch(el, on);
+      HC.indexRail.switched();
+    },
+
     // Both ways back, the arrow in the header and the disc by the thumb.
     back: function () {
       HC.native.tap('Light');

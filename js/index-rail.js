@@ -405,9 +405,17 @@
      the same, only the references are swapped and the notches on screen are
      left alone, which keeps a focused notch focused and costs one pass over a
      handful of elements. */
+  /* The switch on Your account. Off is no rail on any screen, which is also
+     what keeps the right edge for ordinary scrolling: begin() asks enabled
+     before it claims a touch, and nothing is enabled. */
+  function wanted() {
+    var p = HC.store && HC.store.getProfile();
+    return !p || p.indexRail !== false;
+  }
+
   function rescan() {
     var view = document.getElementById('hc-view');
-    if (!liveRoute || !view) { clear(); return; }
+    if (!liveRoute || !view || !wanted()) { clear(); return; }
 
     var found = collect(view);
     // One heading is not an index, it is a heading.
@@ -651,6 +659,9 @@
 
   function beat() {
     var live = swipeHint(false);
+    // Switched off is nothing to say this beat, but not used: switching the
+    // rail back on later in the launch gets its hints back.
+    var mine = !used && wanted();
 
     // Neither of them has anything left this launch. Stop asking.
     if (used && !live) {
@@ -659,12 +670,12 @@
     }
 
     if (++turn % 2) {
-      if (!used) { hint(); return; }
+      if (mine) { hint(); return; }
       swipeHint(true);
       return;
     }
     if (swipeHint(true)) return;
-    hint();
+    if (mine) hint();
   }
 
   /* Set going once per launch, from the first screen that is allowed a rail.
@@ -1215,6 +1226,13 @@
     build: build,
     update: update,
     jump: jump,
+
+    /* The profile's indexRail has just changed. Scanned now, so the notches
+       arrive or go while the switch is still moving. */
+    switched: function () {
+      stopHint(false);
+      scanSoon();
+    },
 
     /* Does this file have the finger? Asked by js/pull.js, which reads the
        same gesture off the same scroller and has to stay out of the way when

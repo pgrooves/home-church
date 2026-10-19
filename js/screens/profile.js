@@ -448,6 +448,17 @@
       on: p.navStyle !== 'bar'
     });
 
+    /* The notches down the right edge. Beside the menu button because it is
+       the other way of getting around a screen, and like that switch it takes
+       effect under your thumb: the rail is rebuilt, or put away, before the
+       switch has finished travelling. See indexRail in js/store.js. */
+    html += switchRow({
+      title: 'Navigation notches',
+      sub: 'The ruler on the right edge that jumps between sections',
+      action: 'toggle-index-rail',
+      on: p.indexRail !== false
+    });
+
     /* THERE IS NO LEADER MODE ON THIS SCREEN, and there should not be one
        again. Somebody is a member, a leader or an admin, an admin sets which
        under Manage users, and nobody sets their own. A screen whose whole job

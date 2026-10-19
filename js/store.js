@@ -180,7 +180,15 @@
        the phone the way textScale and the theme do, and there is no plan here
        for one of the two to win. If one of them ever does, this line and the
        loser's half of js/app.js come out together. See applyNavStyle there. */
-    navStyle: 'button'
+    navStyle: 'button',
+
+    /* Whether the notches down the right edge are drawn. See js/index-rail.js.
+
+       ON BY DEFAULT, and only false turns it off, the same as hints: a profile
+       saved before this line existed has no opinion and gets the rail. Off is
+       the whole rail, not just its look: no notches, no hint swell, and the
+       right edge goes back to scrolling the page like any other. */
+    indexRail: true
   };
 
   var state = {
