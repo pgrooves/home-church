@@ -476,6 +476,18 @@ even when the version is the same.
 
 -----
 
+## 11. Launch screen
+
+**Nothing to do here either.** `npm run ios` replaces Capacitor's splash
+artwork with plain paper (charcoal in dark mode), so the app opens straight
+onto the house and "Welcome home". See `scripts/ios_splash.js`.
+
+iPhones cache a launch screen. If yours still shows the old artwork after
+installing a new build, delete the app and install it again, or restart the
+phone; it is the phone remembering, not the build.
+
+-----
+
 ## The short version, once you have done it once
 
 ```bash
