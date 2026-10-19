@@ -4355,11 +4355,23 @@ a[href^="https://www.biblegateway.com/"]::selection,
 
 /* The picture sits under the words rather than beside them. A photograph
    next to two lines of text on a 375pt screen is a thumbnail, and a
-   thumbnail of a serve day is not worth the row it costs. */
-.hc-banner__frame {
+   thumbnail of a serve day is not worth the row it costs.
+
+   It also runs out under the archive corner. The words share their row with
+   that 44pt button, so a picture held to the words' width sat 62px from the
+   card's right edge and 20px from its left, and read as squeezed to one
+   side. The negative margin hands back the corner's column and the gap
+   before it, less the difference between the card's two paddings, so the
+   picture ends the same distance from each edge. The -10px is the corner's
+   own pull into the padding, above. Width goes back to auto because
+   .hc-latest__frame pins it at 100%, and 100% would ignore the margin; the
+   doubled selector is what outranks that rule, which loads later from
+   css/screens.css. */
+.hc-banner .hc-banner__frame {
   display: block;
+  width: auto;
   margin-top: var(--hc-space-md);
-  border-radius: var(--hc-radius-sm);
+  margin-right: calc(var(--hc-card-pad) - var(--hc-space-base) - var(--hc-space-md) - var(--hc-tap-min) + 10px);
 }
 
 /* The video used to be a Watch button on the card, opening YouTube in the
