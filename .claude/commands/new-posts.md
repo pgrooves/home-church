@@ -32,12 +32,16 @@ puts that on an hourly schedule**, so in the normal case nobody runs this
 command at all: the rail keeps itself current and `/new-posts` is for adding a
 specific post out of order, or for putting one back after it was taken down.
 
-Discovery reads the profile page first and **falls back to the newest post
+Discovery tries, in order: the official API, once the church has stored a
+token (`INSTAGRAM_SYNC_SETUP.md`); then the pages of the **three newest posts
 already on the rail**, because a post page lists two dozen others from the
-same account and, unlike the profile, is not throttled. That fallback is the
-difference between a sync that stops for a week and one that does not: the
+same account and, unlike the profile, is not throttled; then the profile JSON;
+then the profile page. Two outages taught that order. The
 six-hourly version depended on the profile alone and sat idle from 6 to 13
-September while two posts went unseen.
+September while two posts went unseen. The hourly one then depended on the
+newest stored post alone, and when the church took that post down on 15
+October it sat idle for three and a half days while three more did. Since
+0092 a sync stuck for six hours also tells the admins' phones.
 
 ## Why this used to be links and not a sync
 

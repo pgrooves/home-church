@@ -423,6 +423,22 @@ const SLIDE_ONLY = {
 ok('a carousel slide is not a post',
   F.discover(profilePage(SLIDE_ONLY, SLIDE_ONLY)).length, 0);
 
+/* Since at least October 2026 a slide carries a pk and a code of its own, so
+   "has a pk" no longer tells them apart; sitting in a post's carousel_media
+   does. These three are the 12 October album's slides as its page carried
+   them on 18 October, when the Edge Function took them for three posts. */
+{
+  const SLIDES = ['4006383945188316269', '4006383945381296988', '4006383945758762297'];
+  const slide = (pk) => ({ __typename: 'XIGPolarisImageMedia', code: F.toShortcode(pk), pk: pk,
+    id: 'POLARIS_' + pk, media_type: 1, image_versions2: { candidates: [{ url: 'https://x/' + pk + '.jpg' }] } });
+  const album = POST('4006384399889320561', '11 days until kickoff', { carousel_media: SLIDES.map(slide) });
+  const found = F.discover(profilePage(album, POST('3965350390354495018', 'a')));
+  ok('a slide with a pk of its own is still not a post',
+    found.map(p => p.shortcode), ['DeZiWKNEcpx', 'DcHwSuzCUYq']);
+  ok('nor when the page lists one outside its album too',
+    F.discover(profilePage(slide(SLIDES[0]), album)).map(p => p.shortcode), ['DeZiWKNEcpx']);
+}
+
 ok('the same post twice in the page is one post',
   F.discover(profilePage(
     POST('3965350390354495018', 'a'),

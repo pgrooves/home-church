@@ -292,6 +292,24 @@ function toShortcode(pk) {
   return out;
 }
 
+/* Every slide of every carousel inside `node`, as pks. A carousel post keeps
+   its slides in `carousel_media`, each one an XIGPolaris object of its own.
+   The same walk as collectSlides in instagram-fetch/parse.mjs. */
+function collectSlides(node, into, depth) {
+  depth = depth || 0;
+  if (!node || typeof node !== 'object' || depth > 12) return;
+  if (Array.isArray(node)) {
+    for (const v of node) collectSlides(v, into, depth + 1);
+    return;
+  }
+  if (Array.isArray(node.carousel_media)) {
+    for (const s of node.carousel_media) if (s && s.pk) into.add(String(s.pk));
+  }
+  for (const v of Object.values(node)) {
+    if (v && typeof v === 'object') collectSlides(v, into, depth + 1);
+  }
+}
+
 /* Every recent post on a profile page, newest first.
  *
  * THIS IS THE PIECE THAT WAS MISSING, and the reason this file used to say
@@ -305,26 +323,39 @@ function toShortcode(pk) {
  * publish straight from here: the date is read aloud, and the profile has
  * none.
  *
- * A carousel's slides appear as objects too, so only the ones carrying `pk`
- * are posts; the slides have an id and an image and nothing else. A pinned
- * post appears at the top whatever its age, which does not disturb ordering
- * because rows sort on the real date, but it does mean the newest dozen here
- * are not always the newest dozen posted. */
+ * A carousel's slides appear as objects too. They used to carry an id and an
+ * image and nothing else, so "has a pk" told a post from a slide; since at
+ * least October 2026 each slide carries a pk and a code of its own, so what
+ * marks a slide now is where it sits, inside its post's `carousel_media`.
+ * The Edge Function's parse.mjs learned this first, from a run that took
+ * three slides for three posts. A pinned post appears at the top whatever
+ * its age, which does not disturb ordering because rows sort on the real
+ * date, but it does mean the newest dozen here are not always the newest
+ * dozen posted. */
 function discover(html) {
   const text = String(html || '');
   const NEEDLE = '{"__typename":"XIGPolaris';
-  const seen = new Set();
-  const posts = [];
+  const found = [];
+  const slides = new Set();
 
   for (let at = text.indexOf(NEEDLE); at >= 0; at = text.indexOf(NEEDLE, at + 1)) {
     const raw = sliceAt(text, at);
     if (!raw) continue;
     let media;
     try { media = JSON.parse(raw); } catch (e) { continue; }
-    if (!media || !media.pk || seen.has(media.pk)) continue;
-    seen.add(media.pk);
+    if (!media) continue;
+    collectSlides(media, slides);
+    if (media.pk) found.push(media);
+  }
 
-    const shortcode = toShortcode(media.pk);
+  const seen = new Set();
+  const posts = [];
+  for (const media of found) {
+    const pk = String(media.pk);
+    if (seen.has(pk) || slides.has(pk)) continue;
+    seen.add(pk);
+
+    const shortcode = toShortcode(pk);
     if (!shortcode) continue;
 
     posts.push({

@@ -14,6 +14,11 @@
 --      switch draws as off for everybody (turning it on still works).
 --
 -- Safe to run more than once. Undone by supabase/rollback/0085_happy_lion_cafe_down.sql.
+--
+-- 0092 has since put this constraint in itself, with `instagram_sync` added
+-- for the stalled-sync alert, so the first statement is no longer needed. It
+-- carries 0092's list, so running this file now changes nothing rather than
+-- quietly dropping that topic.
 -- ===========================================================================
 
 begin;
@@ -23,7 +28,7 @@ alter table public.push_log
   add constraint push_log_topic_known
   check (topic in ('new_guide', 'sunday_reminder', 'group_day', 'test',
                    'announcement', 'announcement_review', 'event_review',
-                   'banner', 'cafe_ready'));
+                   'banner', 'cafe_ready', 'instagram_sync'));
 
 drop function if exists public.hc_admin_list_users();
 

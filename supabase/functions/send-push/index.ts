@@ -8,13 +8,17 @@
  * WHO CALLS IT. pg_cron, hourly, through `public.hc_push_tick()` in migration
  * 0012. The tick decides in America/Chicago local time whether the current
  * hour is one we send in, and calls `hc_send_push(topic)`, which posts here.
+ * Since 0089 the new guide goes out at 1pm Sunday if it was posted before
+ * noon, and at 8am Monday otherwise.
  * You can also call it by hand for a test, which is the only sane way to prove
  * push works before a Monday arrives.
  *
  * Two other things call it now, both through the same `hc_send_push`. An admin
  * tapping Notify on an announcement, since 0027. And the newsletter intake at
  * the end of a parse, since 0043, for the two review topics that tell the
- * admins their queue has something in it.
+ * admins their queue has something in it. Since 0092 a third: the Instagram
+ * watch, telling the admins the rail has been stuck for six hours, and when
+ * it is working again.
  *
  * THE TWO REVIEW TOPICS ARE ADDRESSED DIFFERENTLY from everything else here,
  * and it is the one thing in this file worth reading before changing it. They
@@ -66,7 +70,8 @@ type Topic =
   | 'announcement_review'
   | 'event_review'
   | 'banner'
-  | 'cafe_ready';
+  | 'cafe_ready'
+  | 'instagram_sync';
 
 const TOPIC_COLUMN: Record<Topic, string | null> = {
   new_guide: 'wants_new_guide',
@@ -82,6 +87,10 @@ const TOPIC_COLUMN: Record<Topic, string | null> = {
   banner: null,
   // One phone: the one the cafe order was placed from. See ONE_PHONE below.
   cafe_ready: null,
+  // The Instagram rail has stopped, or started again. Every admin phone, and
+  // no switch of its own: it is rare, it is about the app rather than the
+  // church, and the admins are who can do something about it. Migration 0092.
+  instagram_sync: null,
 };
 
 /* The topic that goes to exactly one phone, named by the row it is about.
@@ -111,6 +120,9 @@ const ONE_PHONE: ReadonlySet<Topic> = new Set<Topic>(['cafe_ready']);
 const ADMIN_ONLY: ReadonlySet<Topic> = new Set<Topic>([
   'announcement_review',
   'event_review',
+  // Since 0092: the Instagram sync saying it is stuck. Addressed the same way
+  // and for the same reason, re-established from profiles on every send.
+  'instagram_sync',
 ]);
 
 function json(body: unknown, status = 200): Response {
@@ -185,7 +197,39 @@ async function apnsToken(keyId: string, teamId: string, privateKeyPem: string): 
    switch that asked for it is worse than no notification.
    ---------------------------------------------------------------------- */
 
-interface Note { title: string; body: string; }
+interface Note {
+  title: string;
+  body: string;
+  // new_guide only: the guides this send covers, stamped push_announced_at
+  // once it has gone out so the next send does not announce them again.
+  guideIds?: string[];
+}
+
+/* @@ guide-note:start */
+/* The new guide notice, worded for a glance at the lock screen. A greeting
+   that fits the moment it lands (1pm Sunday, or 8am Monday), then the one
+   fact: the guide is live, and which sermon of which series it is. The series
+   title, never the sermon's working title, because the series is the name
+   the church actually uses on Sunday. */
+function guideGreeting(now: Date): string {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/Chicago', weekday: 'short', hour: 'numeric', hour12: false,
+  }).formatToParts(now);
+  const weekday = parts.find((p) => p.type === 'weekday')?.value;
+  const hour = Number(parts.find((p) => p.type === 'hour')?.value);
+  if (weekday === 'Sun') return 'Happy Sunday!';
+  if (hour < 12) return 'Good morning!';
+  return 'Hi there!';
+}
+
+function guideBody(seriesTitle: string | null, part: number | null): string {
+  const series = String(seriesTitle ?? '').trim();
+  if (!series) return 'This week’s guide is live in the app.';
+  return part && part > 0
+    ? `This week’s guide is live in the app: ${series}, Part ${part}.`
+    : `This week’s guide is live in the app: ${series}.`;
+}
+/* @@ guide-note:end */
 
 async function compose(
   topic: Topic,
@@ -214,41 +258,63 @@ async function compose(
   }
 
   if (topic === 'new_guide') {
-    // Only announce a guide that actually appeared since the last time we
-    // announced one. A Monday with no new guide should be silent, not a
-    // weekly lie. This is why push_log exists.
-    const { data: lastRun } = await admin
-      .from('push_log')
-      .select('ran_at')
-      .eq('topic', 'new_guide')
-      .eq('skipped', false)
-      .order('ran_at', { ascending: false })
-      .limit(1)
-      .maybeSingle();
+    /* Only announce a guide nobody has been told about yet. A send with no
+       new guide should be silent, not a weekly lie.
 
-    // First ever run has no watermark. Use the last week rather than the whole
-    // history, so switching this on does not announce a guide from March.
-    const since = lastRun?.ran_at ?? new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString();
+       Two clocks call this (see migration 0089): Sunday at 1pm, passing the
+       noon cutoff as `ref` so only guides posted before noon go out, and
+       Monday at 8am with no cutoff, which takes whatever is still waiting.
+       The guide row carries push_announced_at, so a guide posted at 12:30 on
+       Sunday is skipped at 1pm and still found on Monday.
 
-    const { data: guide } = await admin
+       Bounded to the last week, so a guide from March that somehow never got
+       stamped is not announced as this week's. */
+    const since = new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString();
+    const cutoff = ref && !Number.isNaN(Date.parse(ref)) ? new Date(ref).toISOString() : null;
+
+    let pending = admin
       .from('guides')
-      .select('id, theme_title, subtitle, created_at')
+      .select('id, series_id, preached_on, created_at')
       .eq('published', true)
-      .gt('created_at', since)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle();
+      .is('push_announced_at', null)
+      .gt('created_at', since);
+    if (cutoff) pending = pending.lt('created_at', cutoff);
 
+    const { data: guides } = await pending
+      .order('created_at', { ascending: false })
+      .limit(20);
+
+    const guide = guides?.[0];
     if (!guide) return null;
 
-    // theme_title is nullable and is null on every row today, so the generic
-    // line is the one that will actually ship. Kept the specific one because
-    // it costs nothing and reads better the day somebody fills the field in.
+    let seriesTitle: string | null = null;
+    let part: number | null = null;
+    if (guide.series_id) {
+      const { data: series } = await admin
+        .from('series')
+        .select('title')
+        .eq('id', guide.series_id)
+        .maybeSingle();
+      seriesTitle = series?.title ?? null;
+
+      // Which sermon of the series this is, counted the way 0055 counts it
+      // for the reading plan: distinct published Sundays up to this one.
+      if (guide.preached_on) {
+        const { data: sundays } = await admin
+          .from('guides')
+          .select('preached_on')
+          .eq('series_id', guide.series_id)
+          .eq('published', true)
+          .not('preached_on', 'is', null)
+          .lte('preached_on', guide.preached_on);
+        part = new Set((sundays ?? []).map((r) => r.preached_on)).size || null;
+      }
+    }
+
     return {
-      title: 'This week’s guide is up',
-      body: guide.theme_title
-        ? String(guide.theme_title)
-        : 'Open it before your group meets.',
+      title: guideGreeting(new Date()),
+      body: guideBody(seriesTitle, part),
+      guideIds: guides!.map((g) => g.id as string),
     };
   }
 
@@ -396,7 +462,93 @@ async function compose(
     };
   }
 
+  /* The Instagram rail, stuck or working again.
+   *
+   * hc_instagram_watch (0092) decides WHETHER: six hours without a good run,
+   * in the daytime, once per outage, every three days while it lasts, and
+   * once when it is over. It passes `stalled`, or `recovered:` and when the
+   * outage began, as ref. This decides WHAT, from instagram_sync_runs as it
+   * stands at send time, so a rail that came back in the minute between the
+   * two says nothing at all. The reason is the first sentence of the run's
+   * own error, which instagram-fetch writes to say whose fault it is.
+   */
+  if (topic === 'instagram_sync') {
+    const { data: latestRow } = await admin
+      .from('instagram_sync_runs')
+      .select('ran_at, ok, error')
+      .eq('trigger', 'cron')
+      .order('ran_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    const latest = latestRow as { ran_at: string; ok: boolean; error: string | null } | null;
+    if (!latest) return null;
+
+    if (ref === 'stalled') {
+      if (latest.ok) return null;
+
+      const { data: goodRow } = await admin
+        .from('instagram_sync_runs')
+        .select('ran_at')
+        .eq('trigger', 'cron')
+        .eq('ok', true)
+        .order('ran_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      const good = goodRow as { ran_at: string } | null;
+
+      const since = good
+        ? `Last good check ${churchClock(good.ran_at)}.`
+        : 'It has not had a good run yet.';
+      const why = firstSentence(String(latest.error ?? '').trim() || 'No reason was recorded.');
+      return {
+        title: 'The Instagram rail has stopped updating',
+        body: clip(`${since} ${why.charAt(0).toUpperCase()}${why.slice(1)}`, 178),
+      };
+    }
+
+    if (ref?.startsWith('recovered')) {
+      if (!latest.ok) return null;
+
+      // Every post written since the outage began is one it had missed,
+      // including those written by a run that failed on another post.
+      const from = ref.slice('recovered:'.length);
+      let caught = 0;
+      if (from && !Number.isNaN(Date.parse(from))) {
+        const { data: runs } = await admin
+          .from('instagram_sync_runs')
+          .select('wrote')
+          .eq('trigger', 'cron')
+          .gte('ran_at', new Date(from).toISOString());
+        caught = ((runs ?? []) as { wrote: number | null }[])
+          .reduce((n, r) => n + (Number(r.wrote) || 0), 0);
+      }
+
+      return {
+        title: 'The Instagram rail is updating again',
+        body: caught
+          ? `It caught up the ${caught === 1 ? 'post' : `${caught} posts`} that went up while it was stuck.`
+          : 'Nothing was posted while it was stuck, so nothing was missed.',
+      };
+    }
+
+    return null;
+  }
+
   return null;
+}
+
+/* A moment in the church's own time, "Thu, Oct 15, 8:23 AM", for a line
+   read on a phone in New Orleans rather than in UTC. */
+function churchClock(iso: string): string {
+  return new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/Chicago', weekday: 'short', month: 'short', day: 'numeric',
+    hour: 'numeric', minute: '2-digit',
+  }).format(new Date(iso));
+}
+
+/* What the lock screen will show whole, and a clean cut where it would not. */
+function clip(text: string, max: number): string {
+  return text.length > max ? text.slice(0, max - 1).trimEnd() + '\u2026' : text;
 }
 
 /* The first sentence, or the first 140 characters on a body that does not
@@ -592,7 +744,8 @@ Deno.serve(async (req: Request) => {
     return json({ error: `Unknown topic: ${String(body.topic)}` }, 400);
   }
   const dryRun = body.dry_run === true;
-  // Only `announcement` uses this. Everything else composes itself.
+  // The row a send is about (announcement, cafe_ready), or for new_guide the
+  // "posted before" cutoff the Sunday clock passes. See migration 0089.
   const ref = typeof body.ref === 'string' && body.ref ? body.ref : null;
 
   const url = Deno.env.get('SUPABASE_URL');
@@ -690,7 +843,17 @@ Deno.serve(async (req: Request) => {
     return json({ ok: true, dry_run: true, topic, recipients: tokens.length, note });
   }
 
+  // A guide is announced once, whether or not anybody had the switch on, so
+  // a phone that turns it on next week is not told about this one then.
+  const markAnnounced = async () => {
+    if (!note.guideIds?.length) return;
+    await admin.from('guides')
+      .update({ push_announced_at: new Date().toISOString() })
+      .in('id', note.guideIds);
+  };
+
   if (tokens.length === 0) {
+    await markAnnounced();
     await admin.from('push_log').insert({
       topic, skipped: true, note: 'No phones have asked for this one.',
     });
@@ -771,6 +934,8 @@ Deno.serve(async (req: Request) => {
       .update({ last_push_at: new Date().toISOString(), failure_count: 0, last_error: null })
       .in('token', deliveredTokens);
   }
+
+  await markAnnounced();
 
   const delivered = deliveredTokens.length;
   const failed = tokens.length - delivered;

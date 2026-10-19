@@ -1,235 +1,81 @@
 /**
- * Home Church, filling the Instagram rail from post links.
+ * Home Church, keeping the Instagram rail current.
  *
- * WHAT IT DOES. Takes a list of links to the church's own Instagram posts,
- * fetches each one, mirrors its picture into the `instagram` Storage bucket,
- * and upserts a row into `instagram_posts`. That table is the rail across the
- * top of Connect, and `js/content.js` reads it on every app open, so a run of
- * this reaches every phone with no App Store build.
+ * WHAT IT DOES. Finds the church's newest Instagram posts, mirrors each
+ * picture into the `instagram` Storage bucket, and upserts a row into
+ * `instagram_posts`. That table is the rail across the top of Connect, and
+ * `js/content.js` reads it on every app open, so a run of this reaches every
+ * phone with no App Store build. pg_cron runs it hourly (migration 0070), and
+ * it can be handed links to fetch instead, for a post out of order.
  *
- * WHY IT IS A FUNCTION AND NOT THE SCRIPT NEXT DOOR. `scripts/
- * fetch_instagram_posts.js` does the same job and is the better tool when
- * somebody is at a keyboard. It cannot be run from a phone, and not for the
- * reason it first looks: the blocker is Storage. Neither the Supabase MCP
- * server nor `hc_supabase.py` can put a file in a bucket, so a web session can
- * write the row and not the picture, and a row without its picture is dropped
- * by Connect. Here the service role key is injected by the platform, so the
- * upload happens where the key already is and never travels.
+ * WHERE THE WORK IS. sync.mjs is one run, start to finish, with the network
+ * and the database handed in, and parse.mjs is everything that reads what
+ * Instagram sends. Both are plain JavaScript so tests/instagram-fetch.test.js
+ * runs the same lines. This file is the door, the store, and the run log.
  *
- * WHY IT ASKS AS A CRAWLER, which is the single load bearing detail in this
- * file. Request a post page as a browser and Instagram returns its JavaScript
- * application: 200, about 600KB, 81% script, no og: tags, no media object, and
- * not one mention of the account. The post is fetched later by code that only
- * runs in a browser. Request the same URL as a link preview crawler and
- * Instagram server renders the whole post, because that is how a link pasted
- * into WhatsApp gets a preview card; their own flag for it, `if_is_crawler`,
- * comes back in the response. Change UA below to a browser string and this
- * function stops working entirely and looks, from its output, exactly as
- * though the account had gone private.
+ * WHERE IT LOOKS, which is the part that changed after 15 October 2026. From
+ * September the sync found new posts through one door: Instagram had stopped
+ * answering a crawler's request for the profile page, so it read the page of
+ * the newest post already on the rail, which lists two dozen others from the
+ * same account. On the 15th the church deleted or archived that post, its
+ * page became the empty JavaScript app, and every run failed for three and a
+ * half days with nobody told. Nothing in this project had changed. So the
+ * first place it looks is now the official API, which the church can switch
+ * on with a token in the vault (INSTAGRAM_SYNC_SETUP.md), the crawler routes
+ * behind it have three doors rather than one, and a rail that stops updating
+ * now reaches the admins' phones (0092). sync.mjs's header has the order.
+ *
+ * WHY THE PAGES ARE ASKED FOR AS A CRAWLER. Request a post page as a browser
+ * and Instagram returns its JavaScript application: 200, about 600KB, no og:
+ * tags, no media object, not one mention of the account. Request it as a
+ * link preview crawler and Instagram renders the whole post, because that is
+ * how a link pasted into WhatsApp gets a preview card. Change CRAWLER_UA to a
+ * browser string and that route stops working entirely, and looks, from its
+ * output, exactly as though the account had gone private.
  *
  * WHAT IT WILL NOT DO.
  *
  *   It will not guess a date. `posted_at` is not only a sort key: connect.js
- *   reads it into each tile's aria-label, so it is never drawn on screen and
- *   it is read aloud, as fact, to exactly the people who cannot see the
- *   picture and check it. A post whose real timestamp did not come back is
- *   skipped, not published under a plausible one.
+ *   reads it into each tile's aria-label, so it is read aloud, as fact, to
+ *   exactly the people who cannot see the picture and check it. A post whose
+ *   real timestamp did not come back is not published under a plausible one.
  *
- *   It will not touch a post that is not the church's own. Every media object
- *   carries the username that posted it, and it is checked against the handle
- *   on the `church_profile` row. The rail is the church's own feed, and this
- *   is also what keeps the blast radius of the shared secret below to nothing
- *   worth having.
+ *   It will not touch a post that is not the church's own. Every source says
+ *   who posted each post, and it is checked against the handle on the
+ *   `church_profile` row. This is also what keeps the blast radius of the
+ *   shared secret below to nothing worth having.
  *
  *   It will not store an instagram.com URL. Their CDN links are signed and
- *   expire within days, so a stored one goes blank on its own, and pointing
- *   phones at them would hand Meta every congregant's IP address on every
- *   visit to Connect. The bytes are mirrored and `image_path` is an object
- *   path in the bucket. Migration 0015 is the long version.
+ *   expire within days, and pointing phones at them would hand Meta every
+ *   congregant's IP address on every visit to Connect. The bytes are
+ *   mirrored and `image_path` is an object path in the bucket. 0015 says more.
  *
  * HOW IT IS CALLED. Not from the app, and not by anybody signed in. Same shape
  * as `send-push`: a shared secret in `x-hc-instagram-secret`, checked against a
- * vault secret, so `verify_jwt` is off and this does its own door. The one
- * difference from 0012 is that the expected value is read from the vault at
- * run time rather than from a function secret, because a function secret
- * cannot be set from a web session and the vault can.
+ * vault secret, so `verify_jwt` is off and this does its own door.
  *
+ *   select public.hc_sync_instagram(9);                    -- what pg_cron runs
  *   select public.hc_fetch_instagram(array[
- *     'https://www.instagram.com/p/DcHwSuzCUYq/'
+ *     'https://www.instagram.com/p/DcHwSuzCUYq/'           -- or, by hand
  *   ]);
  *
- * Unlike `hc_send_push` this is not fire and forget: pg_net returns a request
- * id, and the reply lands in `net._http_response`, because the whole point of
- * a run is knowing which posts made it.
- *
- * AND EVERY RUN WRITES ITS OWN OUTCOME to `instagram_sync_runs`, which is not
- * belt and braces. pg_net hands pg_cron a request id the moment the request is
- * queued, so pg_cron records this job as `succeeded` whatever happens next,
- * and has already done so through a 503: the 00:17 run on 9 September is
- * logged green and its reply, 61ms later, was `rate limited by Instagram while
- * reading the profile`. cron.job_run_details is not a health signal for this
- * job, it is a lie about one, and net._http_response holds barely an hour. The
- * table added in migration 0062 is the only honest record.
+ * AND EVERY RUN WRITES ITS OWN OUTCOME to `instagram_sync_runs`. pg_net hands
+ * pg_cron a request id the moment the request is queued, so pg_cron records
+ * this job as `succeeded` whatever happens next. That table is the only
+ * honest record, and since 0092 hc_instagram_watch reads it every hour and
+ * tells the admins' phones when the rail has been stuck for six hours.
  */
 
 import { createClient } from 'jsr:@supabase/supabase-js@2';
+import { runSync } from './sync.mjs';
 
-const UA = 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)';
 const BUCKET = 'instagram';
-const MAX_LINKS = 12;
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), {
     status,
     headers: { 'Content-Type': 'application/json' }
   });
-
-/* ---------------------------------------------------------------- reading */
-
-/** The shapes a link arrives in, all of which are the same post. `/reel/` and
- *  `/tv/` mean video; the page overrules that when it says. */
-function shortcodeOf(link: string): string | null {
-  const m = String(link || '').match(/instagram\.com\/(?:p|reel|reels|tv)\/([A-Za-z0-9_-]+)/i);
-  return m ? m[1] : null;
-}
-
-/** Balanced scan from a `{`, tracking strings and their escapes so a brace
- *  inside a caption does not end the object early. A regex cannot do this. */
-function sliceAt(text: string, start: number): string | null {
-  if (text[start] !== '{') return null;
-  let depth = 0, inString = false, escaped = false;
-  for (let i = start; i < text.length; i++) {
-    const ch = text[i];
-    if (inString) {
-      if (escaped) escaped = false;
-      else if (ch === '\\') escaped = true;
-      else if (ch === '"') inString = false;
-      continue;
-    }
-    if (ch === '"') inString = true;
-    else if (ch === '{') depth++;
-    else if (ch === '}' && --depth === 0) return text.slice(start, i + 1);
-  }
-  return null;
-}
-
-/** The media object for one post.
- *
- *  A carousel embeds one of these per slide, each with its own `code`, so the
- *  first match in the page is usually a single photograph rather than the
- *  post. The one whose `code` is the shortcode that was asked for is the one
- *  that counts, and it has to carry the id and the timestamp the row needs. */
-// deno-lint-ignore no-explicit-any
-function extractMedia(html: string, shortcode: string): any | null {
-  const NEEDLE = '{"__typename":"XIGPolaris';
-  for (let at = html.indexOf(NEEDLE); at >= 0; at = html.indexOf(NEEDLE, at + 1)) {
-    const raw = sliceAt(html, at);
-    if (!raw) continue;
-    try {
-      const media = JSON.parse(raw);
-      if (media?.pk && media?.taken_at && media.code === shortcode) return media;
-    } catch { /* one unparsable candidate is not a failure */ }
-  }
-  return null;
-}
-
-/** A post's shortcode, derived from its numeric media id. The two are the
- *  same number: a shortcode is the id in base64 with Instagram's alphabet.
- *  The profile page carries `pk` for every recent post and no `code` at all,
- *  so this is what turns a page of ids into a page of links. BigInt, because
- *  these ids are past 2^53 and Number() rounds them into a different post. */
-const ALPHABET =
-  'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
-
-/** The same conversion backwards. Instagram's ids increase with time, so
- *  comparing two pks orders two posts chronologically without fetching
- *  either: a candidate whose pk exceeds the newest pk already stored is new,
- *  and everything else is discarded before a page is requested. That is what
- *  makes a run that finds nothing cost one request instead of two dozen. */
-function toPk(shortcode: string): bigint | null {
-  let n = 0n;
-  for (const ch of String(shortcode || '')) {
-    const i = ALPHABET.indexOf(ch);
-    if (i < 0) return null;
-    n = n * 64n + BigInt(i);
-  }
-  return n > 0n ? n : null;
-}
-
-function toShortcode(pk: string): string {
-  let n = BigInt(pk), out = '';
-  if (n <= 0n) return '';
-  while (n > 0n) { out = ALPHABET[Number(n % 64n)] + out; n /= 64n; }
-  return out;
-}
-
-/** Every recent post on a profile page, newest first.
- *
- *  Asked as a crawler, a profile is a document carrying about a dozen posts
- *  with their ids. It carries no taken_at, so this yields shortcodes and each
- *  one is still fetched for its own date. Do not publish straight from here.
- *
- *  A carousel's slides are XIGPolaris objects too, with an image and an id and
- *  no pk; counting them as posts would put a dozen links to the same
- *  photograph on the rail. */
-function discover(html: string): string[] {
-  const NEEDLE = '{"__typename":"XIGPolaris';
-  const seen = new Set<string>();
-  const out: string[] = [];
-  for (let at = html.indexOf(NEEDLE); at >= 0; at = html.indexOf(NEEDLE, at + 1)) {
-    const raw = sliceAt(html, at);
-    if (!raw) continue;
-    try {
-      const m = JSON.parse(raw);
-      if (!m?.pk || seen.has(String(m.pk))) continue;
-      seen.add(String(m.pk));
-      const code = toShortcode(String(m.pk));
-      if (code) out.push(code);
-    } catch { /* one unparsable candidate is not a failure */ }
-  }
-  return out;
-}
-
-/** Did Instagram send a page with content, or the empty shell? A datacenter
- *  IP asking as a browser gets 200 and ~600KB that is 80% JavaScript with no
- *  post in it. Reported as a parse failure that looks like a renamed field,
- *  which is a completely different fix, so the two are told apart on whether
- *  the page carries any media URL that is not Instagram's own bundles. */
-function looksLikeShell(html: string): boolean {
-  const media = html.match(
-    /https:\/\/[a-z0-9.-]*(?:cdninstagram\.com|fbcdn\.net)\/[^"'\\\s]+/gi
-  ) || [];
-  return !media.some((u) => !/\/rsrc\.php\//.test(u));
-}
-
-/** Instagram's own numbering: 1 a photo, 2 a video, 8 a carousel. A reel is a
- *  video whose product_type is `clips`. Anything unfamiliar draws as a still,
- *  because the play badge is a promise about what a tap does. */
-// deno-lint-ignore no-explicit-any
-function mediaTypeOf(media: any): string {
-  if (media.media_type === 8 || media.product_type === 'carousel_container') {
-    return 'CAROUSEL_ALBUM';
-  }
-  if (media.media_type === 2 || media.product_type === 'clips') return 'VIDEO';
-  return 'IMAGE';
-}
-
-/** Instagram allows 2200 characters. The tile reads the first line and the app
- *  does its own truncating, so this only tidies what a phone keyboard left. */
-function normalizeCaption(s: string): string {
-  return String(s ?? '')
-    .replace(/\r\n?/g, '\n')
-    .replace(/[ \t]+$/gm, '')
-    .replace(/\n{3,}/g, '\n\n')
-    .trim()
-    .slice(0, 2200);
-}
-
-const EXT: Record<string, string> = {
-  'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp'
-};
-
-/* ------------------------------------------------------------------ serve */
 
 Deno.serve(async (req: Request) => {
   if (req.method !== 'POST') return json({ error: 'POST only' }, 405);
@@ -245,43 +91,45 @@ Deno.serve(async (req: Request) => {
     auth: { persistSession: false, autoRefreshToken: false }
   });
 
-  /* The door. The expected value lives in the vault rather than in a function
-     secret, so that it can be created and rotated from a web session.
-
-     Asked for through an RPC in `public` rather than by reading the vault
-     schema directly: the Data API serves only its exposed schemas, so
-     `.schema('vault')` is refused with a 406 before any row is read, however
-     complete service_role's grants on the view are. Migration 0060 is the
-     long version. The secret itself has not moved. */
   /* Every exit from here on writes one row to instagram_sync_runs.
    *
-   * Not belt and braces: pg_net hands pg_cron a request id the moment the
-   * request is queued, so the cron layer records this job as succeeded
-   * whatever happens next, and has already done so through a 503. This table
-   * is the only place a failure is visible. Migration 0062. */
-  const started = Date.now();
+   * `note` arrived with 0092. If this deploy ever runs ahead of that
+   * migration, the insert is tried again without it, because a log that
+   * fails silently on a missing column has happened here once already (0062
+   * says how) and blinded the very thing it was for. */
   // deno-lint-ignore no-explicit-any
-  const finish = async (ok: boolean, body: any, status = 200) => {
+  const finish = async (report: any, status = 200) => {
+    const row = {
+      ok: Boolean(report?.ok),
+      trigger: report?.trigger ?? 'cron',
+      via: report?.via ?? null,
+      discovered: report?.counts?.discovered ?? 0,
+      wrote: report?.counts?.wrote ?? 0,
+      skipped: report?.counts?.skipped ?? 0,
+      error: report?.ok ? null : String(report?.error ?? 'unknown'),
+      note: report?.note ?? null
+    };
     try {
-      await admin.from('instagram_sync_runs').insert({
-        ok,
-        trigger: body?.trigger ?? 'cron',
-        via: body?.via ?? null,
-        discovered: body?.counts?.discovered ?? 0,
-        wrote: body?.counts?.wrote ?? 0,
-        skipped: body?.counts?.skipped ?? 0,
-        error: ok ? null : String(body?.error ?? 'unknown')
-      });
+      let { error } = await admin.from('instagram_sync_runs').insert(row);
+      if (error) {
+        console.error('instagram-fetch: run log refused the row, trying without note: ' + error.message);
+        const { note: _note, ...bare } = row;
+        ({ error } = await admin.from('instagram_sync_runs').insert(bare));
+      }
+      if (error) console.error('instagram-fetch: could not write the run log: ' + error.message);
     } catch (e) {
       // A log write that fails must not turn a good run into a bad response.
       console.error('instagram-fetch: could not write the run log: ' + String(e));
     }
-    return json(body, status);
+    return json(report, status);
   };
 
+  /* The door. The expected value lives in the vault rather than in a function
+     secret, so that it can be created and rotated from a web session, and is
+     asked for through an RPC because the Data API does not serve the vault
+     schema. Migration 0060 is the long version. */
   const presented = req.headers.get('x-hc-instagram-secret') ?? '';
-  const { data: expected, error: secretErr } = await admin
-    .rpc('hc_instagram_secret');
+  const { data: expected, error: secretErr } = await admin.rpc('hc_instagram_secret');
 
   if (secretErr || !expected) {
     console.error(
@@ -297,224 +145,72 @@ Deno.serve(async (req: Request) => {
   let body: { links?: unknown; limit?: unknown; force?: unknown };
   try { body = await req.json(); } catch { return json({ error: 'bad json' }, 400); }
 
-  /* Whose feed this rail is. Used twice: to find the posts when none were
-     named, and to refuse a link to somebody else's post. The second is what
-     keeps the shared secret from being worth stealing. */
+  const links = Array.isArray(body.links) ? body.links.map(String) : null;
+  const trigger = links?.length ? 'links' : 'cron';
+
+  /* Whose feed this rail is. Used to find the posts, and to refuse a post
+     that is not the church's own. */
   const { data: church } = await admin
     .from('church_profile').select('social').maybeSingle();
   const handleFrom = JSON.stringify(church?.social ?? '')
     .match(/instagram\.com\\?\/([A-Za-z0-9_.]+)/i);
   const handle = handleFrom ? handleFrom[1].toLowerCase() : null;
   if (!handle) {
-    return await finish(false,
-      { error: 'no instagram handle on the church_profile row to check against' }, 500);
+    return await finish({
+      ok: false, trigger,
+      error: 'no instagram handle on the church_profile row to check against'
+    }, 500);
   }
 
-  const limit = Math.min(Number(body.limit) || 9, MAX_LINKS);
-  let links = Array.isArray(body.links) ? body.links.map(String) : [];
-  let discovered = 0;
-  let via = 'links';
-
-  /* What is already stored, and the newest of it. Read before discovery
-     because both halves are needed: the set, to leave mirrored posts alone,
-     and the largest id, to recognise which candidates are new. */
-  const already = new Set<string>();
-  let newestPk: bigint | null = null;
-  if (!body.force) {
-    const { data: rows } = await admin.from('instagram_posts').select('id');
-    for (const r of rows ?? []) {
-      already.add(String(r.id));
-      try {
-        const pk = BigInt(String(r.id));
-        if (newestPk === null || pk > newestPk) newestPk = pk;
-      } catch { /* a row keyed by something other than a media id */ }
+  /* The store sync.mjs writes through. Each method throws with the reason,
+     so a refused write reaches the run log as a sentence. */
+  const store = {
+    async postIds(): Promise<string[]> {
+      const { data, error } = await admin.from('instagram_posts').select('id');
+      // Not treated as an empty rail: that would refetch every post on it.
+      if (error) throw new Error('could not read instagram_posts: ' + error.message);
+      return (data ?? []).map((r: { id: unknown }) => String(r.id));
+    },
+    async upload(path: string, bytes: Uint8Array, contentType: string) {
+      const { error } = await admin.storage.from(BUCKET)
+        .upload(path, bytes, { contentType, upsert: true });
+      if (error) throw new Error(error.message);
+    },
+    async upsertPost(row: Record<string, unknown>) {
+      const { error } = await admin.from('instagram_posts').upsert(row);
+      if (error) throw new Error(error.message);
+    },
+    /* The official API's token, if the church has stored one (0092). An RPC
+       that does not exist yet is the same as no token: the crawler routes
+       still run, which is exactly what this did before 0092. */
+    async token() {
+      const { data, error } = await admin.rpc('hc_instagram_token');
+      if (error) return null;
+      const row = Array.isArray(data) ? data[0] : data;
+      return row?.token ? { token: String(row.token), savedAt: row.saved_at ?? null } : null;
+    },
+    async saveToken(token: string) {
+      const { error } = await admin.rpc('hc_instagram_save_token', { p_token: token });
+      if (error) throw new Error(error.message);
     }
+  };
+
+  let report;
+  try {
+    report = await runSync({
+      handle,
+      limit: Number(body.limit) || 9,
+      links,
+      force: Boolean(body.force),
+      store,
+      http: fetch
+    });
+  } catch (e) {
+    return await finish({
+      ok: false, trigger, handle,
+      error: 'the run itself failed: ' + String((e as Error)?.message ?? e)
+    }, 500);
   }
 
-  if (!links.length) {
-    /* TWO PLACES TO LOOK, AND THE SECOND IS THE RELIABLE ONE.
-     *
-     * The profile page is the obvious source and the fragile one. Instagram
-     * throttles it far harder than anything else: the same IP in the same
-     * second gets 302 for a profile and 200 for a post. A sync that depends
-     * on it alone stops for days, which is exactly what this one did between
-     * 6 and 13 September, failing every six-hourly run while pg_cron recorded
-     * each of them as a success.
-     *
-     * A post page carries about two dozen other posts from the same account,
-     * including ones newer than itself, and post pages have never been
-     * refused. So any post already on the rail is a door into the current
-     * feed, and the newest stored one is the door used here. The profile is
-     * still tried first because it is ordered and tidy; the post page is what
-     * makes the job survive the profile being refused. */
-    const sources: Array<{ name: string; url: string }> = [
-      { name: 'the profile', url: 'https://www.instagram.com/' + handle + '/' }
-    ];
-    if (newestPk !== null) {
-      sources.push({
-        name: 'the newest stored post',
-        url: 'https://www.instagram.com/p/' + toShortcode(newestPk.toString()) + '/'
-      });
-    }
-
-    let candidates: string[] = [];
-    const tried: string[] = [];
-
-    for (const source of sources) {
-      if (candidates.length) break;
-      try {
-        const res = await fetch(source.url, {
-          headers: {
-            'User-Agent': UA,
-            'Accept-Language': 'en-US,en;q=0.9',
-            'Accept': 'text/html,application/xhtml+xml'
-          }
-        });
-        if (res.status === 429 || /\/accounts\/login\//.test(res.url ?? '')) {
-          tried.push(source.name + ': rate limited');
-          continue;
-        }
-        if (!res.ok) { tried.push(source.name + ': HTTP ' + res.status); continue; }
-        const html = await res.text();
-        const found = discover(html);
-        if (!found.length) {
-          tried.push(source.name + (looksLikeShell(html)
-            ? ': no posts, only JavaScript'
-            : ': nothing parsed'));
-          continue;
-        }
-        candidates = found;
-        via = source.name;
-      } catch (e) {
-        tried.push(source.name + ': ' + String((e as Error)?.message ?? e));
-      }
-    }
-
-    if (!candidates.length) {
-      return await finish(false, { error: 'no source would answer. ' + tried.join('; ') }, 503);
-    }
-
-    discovered = candidates.length;
-
-    /* Only the genuinely new ones are fetched. Instagram's ids increase with
-       time, so this is a comparison rather than two dozen page requests, and
-       a run with nothing new costs exactly one fetch. */
-    const fresh = candidates
-      .map((code) => ({ code, pk: toPk(code) }))
-      .filter((c) => c.pk !== null && !already.has(c.pk.toString()))
-      .filter((c) => newestPk === null || c.pk! > newestPk)
-      .sort((a, b) => (a.pk! < b.pk! ? 1 : a.pk! > b.pk! ? -1 : 0))
-      .slice(0, limit);
-
-    if (!fresh.length) {
-      return await finish(true, {
-        handle, discovered, via, wrote: [], skipped: [], trigger: 'cron',
-        counts: { discovered, wrote: 0, skipped: 0 },
-        note: 'nothing newer than what is already on the rail',
-        ms: Date.now() - started
-      });
-    }
-
-    links = fresh.map((c) => 'https://www.instagram.com/p/' + c.code + '/');
-  }
-
-  if (links.length > MAX_LINKS) {
-    return await finish(false, { error: 'at most ' + MAX_LINKS + ' links per call' }, 400);
-  }
-
-  const wrote: unknown[] = [];
-  const skipped: unknown[] = [];
-
-  for (const [index, link] of links.entries()) {
-    const shortcode = shortcodeOf(link);
-    if (!shortcode) { skipped.push({ link, why: 'not an instagram post link' }); continue; }
-
-    // Paced, because a dozen links at once is what trips the rate limiter.
-    if (index) await new Promise((r) => setTimeout(r, 1500));
-
-    const permalink = 'https://www.instagram.com/p/' + shortcode + '/';
-    try {
-      const res = await fetch(permalink, {
-        headers: {
-          'User-Agent': UA,
-          'Accept-Language': 'en-US,en;q=0.9',
-          'Accept': 'text/html,application/xhtml+xml'
-        }
-      });
-
-      if (res.status === 429 || /\/accounts\/login\//.test(res.url ?? '')) {
-        skipped.push({ shortcode, why: 'rate limited by Instagram, try again later' });
-        continue;
-      }
-      if (!res.ok) { skipped.push({ shortcode, why: 'HTTP ' + res.status }); continue; }
-
-      const html = await res.text();
-      const media = extractMedia(html, shortcode);
-      if (!media) {
-        skipped.push({
-          shortcode,
-          why: /og:image/.test(html)
-            ? 'the page arrived but the media object did not parse; Instagram has renamed something'
-            : 'the page had no post in it'
-        });
-        continue;
-      }
-
-      if (already.has(String(media.pk))) {
-        skipped.push({ shortcode, why: 'already on the rail' });
-        continue;
-      }
-
-      const who = String(media.user?.username ?? '').toLowerCase();
-      if (who && who !== handle) {
-        skipped.push({ shortcode, why: 'posted by @' + who + ', not @' + handle });
-        continue;
-      }
-
-      const imageUrl = media.display_uri || media.image_versions2?.candidates?.[0]?.url;
-      if (!imageUrl) { skipped.push({ shortcode, why: 'no picture on the media object' }); continue; }
-
-      const img = await fetch(imageUrl, { headers: { 'User-Agent': UA } });
-      if (!img.ok) { skipped.push({ shortcode, why: 'picture: HTTP ' + img.status }); continue; }
-      const type = (img.headers.get('content-type') ?? 'image/jpeg').split(';')[0];
-      const bytes = new Uint8Array(await img.arrayBuffer());
-
-      const id = String(media.pk);
-      const objectPath = id + '.' + (EXT[type] ?? 'jpg');
-
-      const { error: upErr } = await admin.storage.from(BUCKET)
-        .upload(objectPath, bytes, { contentType: type, upsert: true });
-      if (upErr) { skipped.push({ shortcode, why: 'upload: ' + upErr.message }); continue; }
-
-      /* The row is written only after the picture is in the bucket. The other
-         order leaves a window in which Connect draws a tile over nothing. */
-      const row = {
-        id,
-        permalink,
-        image_path: objectPath,
-        media_type: mediaTypeOf(media),
-        caption: normalizeCaption(media.caption?.text ?? ''),
-        posted_at: new Date(media.taken_at * 1000).toISOString(),
-        published: true
-      };
-
-      const { error: rowErr } = await admin.from('instagram_posts').upsert(row);
-      if (rowErr) { skipped.push({ shortcode, why: 'row: ' + rowErr.message }); continue; }
-
-      wrote.push({
-        shortcode, id, media_type: row.media_type, posted_at: row.posted_at,
-        bytes: bytes.length, caption: row.caption.split('\n')[0].slice(0, 60)
-      });
-    } catch (e) {
-      skipped.push({ shortcode, why: String((e as Error)?.message ?? e) });
-    }
-  }
-
-  return await finish(true, {
-    handle, discovered, wrote, skipped,
-    trigger: discovered ? 'cron' : 'links',
-    via,
-    counts: { discovered, wrote: wrote.length, skipped: skipped.length },
-    ms: Date.now() - started
-  });
+  return await finish(report, report.ok ? 200 : 503);
 });

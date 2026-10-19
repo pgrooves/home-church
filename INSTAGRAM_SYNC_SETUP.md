@@ -2,7 +2,8 @@
 
 The rail across the top of Connect is already built and already shipped. It
 shows nothing because `instagram_posts` has no rows in it. This is how you get
-rows into it.
+rows into it. (That was true when this page was written. Where things stand
+now, and what happened in October 2026, is at the end.)
 
 **Everything below is free.** There is a section at the end listing every place
 a cost could appear and why none of them do. If at any point something asks for
@@ -76,34 +77,60 @@ Still in the Instagram product settings:
 You will get a long string starting with `IG`. That is the whole key.
 
 **Do not paste that token into a chat, an email, or a file in this repo.** Put
-it straight into Supabase:
+it straight into Supabase, from the SQL Editor (dashboard → **SQL Editor** →
+**New query**):
 
-> Supabase dashboard → **Edge Functions** → **Secrets** → new secret
-> named `INSTAGRAM_ACCESS_TOKEN`, value pasted in.
+```sql
+select public.hc_instagram_save_token('IGAA...the whole token...');
+```
+
+It answers `stored`, and the token is in the vault. Then delete the line from
+the editor, so the token is not left sitting in a saved query.
+
+**Not as an Edge Function secret**, which is what this page used to say. The
+token lasts sixty days from its last renewal and the sync renews it every week,
+and a function cannot write its own secrets, so it lives in the vault, which
+the sync can write (migration `0092`).
 
 If it does leak, it can read the church's own public posts and nothing else, and
 you can invalidate it by regenerating. Still, treat it like a password.
 
 ---
 
-## Step 4. Come back and say so
+## Step 4. Nothing: the sync is already built
 
-Open a session in this repo and say:
+The hourly job picks the token up on its next run, at 23 minutes past the hour.
+To check, in the SQL Editor:
 
-> The Instagram account is Professional and `INSTAGRAM_ACCESS_TOKEN` is set in
-> Supabase. Build the sync.
+```sql
+select public.hc_instagram_status();
+```
 
-That is genuinely all the information needed. What gets built then:
+`api_token_stored` should have a date in it, and after the next run
+`latest_via` should say `the Instagram API`. What the sync does with the token:
 
-- an Edge Function that reads the latest 9 posts,
-- mirrors each image into the `instagram` Storage bucket that already exists,
-- writes rows into `instagram_posts`, which already exists,
-- deletes rows for posts removed from Instagram, which Meta's terms require,
-- refreshes its own token before the 60-day expiry,
-- plus one `pg_cron` line to run it hourly.
+- reads the newest 25 posts from `graph.instagram.com/me/media`, with their real
+  dates, captions and pictures, and an album's first slide as its picture,
+- mirrors each new picture into the `instagram` Storage bucket and writes its
+  row into `instagram_posts`, keyed by the same numeric media id as every row
+  already there,
+- renews its own token every week, well inside the sixty days it lasts,
+- refuses a token generated for some other account,
+- and if the API fails, carries on through the crawler routes it ran on before,
+  noting why in that run's `note`, so a lapsed token costs a new token, not the
+  rail. If those fail too, the six-hour alert below leads with the token.
 
-**None of that needs an App Store build.** The app already reads the table. The
-rail appears on every phone that already has the app, on its next refresh.
+**Not built: taking a post off the rail when it is deleted on Instagram**, which
+this page used to list and which Meta's terms ask of an API app. Until it is,
+hide one by hand. A hidden row stays hidden, and the sync never brings it back:
+
+```sql
+update public.instagram_posts set published = false
+ where permalink = 'https://www.instagram.com/p/SHORTCODE/';
+```
+
+**None of that needs an App Store build.** The app already reads the table, and
+every phone that has the app sees the change on its next refresh.
 
 ---
 
@@ -133,6 +160,12 @@ re-read the steps above:
 ---
 
 ## Step 1 was a dead end, and `/new-posts` is what happened instead
+
+**This may have changed.** In October 2026 Instagram's own error for the
+account named a business category, and only a Professional account has one. On
+the phone: Settings and privacy → **Account type and tools**. If it offers
+**Switch to personal account**, the account is Professional already, Step 1 is
+done, and Steps 2 and 3 are all that stand between the rail and the API.
 
 The church declined to switch to Professional, so the automatic sync above is
 not available. **`/new-posts` is the fallback, it is built, and it is what to
@@ -184,19 +217,20 @@ church risks their account and buys nothing.
 
 ### If the church ever does switch
 
-Build the sync in Step 4 and it supersedes the command. One thing to carry
-across: `/new-posts` keys rows by the post's **shortcode**, since that is the
-only id available without the API, while Step 4 and migration `0015` specify
-Instagram's numeric media id. Migrate the ids in one pass rather than letting
-both conventions sit in the table.
+Store the token (Step 3) and the hourly sync reads the API ahead of everything
+else; `/new-posts` stays for adding a post by hand. The ids need nothing: every
+row is keyed by Instagram's numeric media id, as `0015` specifies, and the API
+route derives that same id from each post's permalink rather than using the
+API's own.
 
 ---
 
 ## The state of things as of this writing
 
-**The rail is live.** It carries five real posts, mirrored from the church's
+**The rail is live.** It carries the church's recent posts, mirrored from its
 own Instagram, with real captions and the posts' own timestamps. Nothing on
-this page is pending any more except the API sync, which is not needed.
+this page is pending any more except a token for the API sync, which the rail
+runs without but would be sturdier with.
 
 Built, merged, and live in Supabase:
 
@@ -207,26 +241,58 @@ Built, merged, and live in Supabase:
   Instagram handle from `homechurchnola` to `homechurch.nola` and added X and
   TikTok to the Profile links
 
-**It now keeps itself current.** Migration `0061` schedules
-`hc_sync_instagram(9)` every six hours: it reads the profile, takes the newest
-nine posts, skips the ones already stored, and mirrors the rest. Nobody has to
-open Instagram at all. `select cron.unschedule('hc-instagram-sync');` turns it
-off.
+**It keeps itself current.** `hc_sync_instagram(9)` runs every hour at :23
+(migration `0061` scheduled it every six hours, and `0070` made it hourly). It
+finds the account's newest posts, skips the ones already stored, and mirrors
+the rest, with nobody opening Instagram at all.
+`select cron.unschedule('hc-instagram-sync');` turns it off.
+
+Where it finds them, in order: the official API once a token is stored (Step
+3), then the pages of the three newest posts already on the rail, then the
+public profile JSON, then the profile page.
 
 That is possible because the claim this page was built on turned out to be
 half wrong. Listing an account's posts without credentials does not work *for
 a browser*. Asked as a link preview crawler, a profile page is a document
-listing about a dozen recent posts, each carrying its numeric media id, and an
-id is a shortcode written in a different base, so it converts straight to a
-link with no request at all. What a profile still does not carry is the date,
-so each discovered link is fetched for its own page.
+listing about a dozen recent posts, and a post page lists two dozen others
+from the same account, each carrying its numeric media id. An id is a
+shortcode written in a different base, so it converts straight to a link with
+no request at all. What those pages do not carry is the date, so each
+discovered link is fetched for its own page.
+
+**Why three doors, and an alert.** From 13 September Instagram refused
+crawlers the profile page, so the sync found new posts through one door, the
+newest stored post's page. On the morning of 15 October the church deleted or
+archived that post. Its page turned into the empty app, every hourly run
+failed, and nobody knew for three and a half days, until a post was noticed
+missing from Connect. Three posts had gone up in the meantime; they were
+caught up on the evening of 18 October. Since then:
+
+- any of the three newest stored posts will do as the door, and the API, once
+  it has a token, needs no door at all;
+- a run that leaves a post behind counts as failed, and the next run goes back
+  for anything it finds from the last 30 days that is not on the rail, rather
+  than only for posts newer than the newest one stored;
+- `hc_instagram_watch` (migration `0092`, hourly at :53) sends one push to the
+  admins' phones after six hours without a good run, between 8am and 8pm in
+  Chicago, reminds them every three days while it lasts, and sends one more
+  when it is working again;
+- `select public.hc_instagram_status();` is the whole picture in one row: when
+  it last worked, how, what the latest run said, and whether the admins have
+  been told.
+
+Every run is recorded in `instagram_sync_runs` (`0062`): whether it worked,
+where it found the posts (`via`), how many it found and wrote, `error` when it
+failed, and `note` when it got there by working round something.
 
 Two ways to fill it by hand as well, both reading what Instagram serves a link
 preview crawler, neither needing a token:
 
 - **From a phone**, `select public.hc_fetch_instagram(array[...])` in the SQL
-  editor. `supabase/functions/instagram-fetch/index.ts` plus migrations `0059`
-  and `0060`. This is the one that works from anywhere, because the service
+  editor. `supabase/functions/instagram-fetch/` (`index.ts`, with the run in
+  `sync.mjs` and the parsing in `parse.mjs`, under
+  `tests/instagram-fetch.test.js`) plus migrations `0059` and `0060`. This is
+  the one that works from anywhere, because the service
   role key is injected into the function and the upload happens where the key
   already is.
 - **From a laptop**, `/new-posts`, wrapping `scripts/fetch_instagram_posts.js`,
@@ -238,8 +304,9 @@ because one is Node and the other is Deno on a different machine. **If one is
 changed, change both.** The load bearing line in each is the crawler
 User-Agent.
 
-Not built: the API sync. That is Step 4, and it stays unbuilt because it is no
-longer needed, not because it is blocked.
+**Built, and waiting on a token: the API sync** (Steps 2 to 4). Since 15
+October it is the one route that does not depend on what Instagram shows a
+stranger, which makes it worth the twenty minutes.
 
 **One correction to `0015` and to the demo seed, which both say `posted_at`
 only sorts the rail.** It does not: `js/screens/connect.js:608` reads it into

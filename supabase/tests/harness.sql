@@ -233,7 +233,13 @@ alter table storage.objects enable row level security;
 create schema if not exists vault;
 create table vault.decrypted_secrets (
   name             text primary key,
-  decrypted_secret text
+  decrypted_secret text,
+  -- 0092 reads when a secret was last stored, and replaces one by id, which
+  -- is how the real vault's view and update_secret work. Its test brings its
+  -- own create_secret and update_secret: their absence here is what 0012,
+  -- 0038, 0059 and 0080 read as "no vault, skip generating a secret".
+  id               uuid not null default gen_random_uuid(),
+  updated_at       timestamptz not null default now()
 );
 create schema if not exists net;
 
