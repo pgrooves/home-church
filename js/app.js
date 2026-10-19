@@ -3509,6 +3509,49 @@
       HC.reminders.open(el.getAttribute('data-id'));
     },
 
+    /* ------------------------------------------------ subscribing
+
+       The Subscribe button under the month, and the sheet it puts up. The
+       addresses and the sheet are in js/screens/cal.js; the feed they point
+       at is supabase/functions/calendar. */
+
+    'cal-subscribe': function () {
+      calHelpers().openSubscribe();
+    },
+
+    'cal-subscribe-close': function () {
+      calHelpers().closeSubscribe();
+    },
+
+    'cal-subscribe-with': function (el) {
+      var links = calHelpers().subscribeLinks();
+      var which = el.getAttribute('data-id');
+      if (!links) return;
+
+      if (which === 'copy') {
+        var copied = navigator.clipboard && navigator.clipboard.writeText
+          ? navigator.clipboard.writeText(links.feed).then(function () { return true; },
+              function () { return false; })
+          : Promise.resolve(false);
+        copied.then(function (ok) {
+          if (ok) {
+            HC.native.tap('Light');
+            c.toast('Link copied. Add it in your calendar app as a subscription.');
+            return;
+          }
+          // No clipboard in this browser, so hand it to the share sheet,
+          // which has its own Copy on a phone and its own apology elsewhere.
+          HC.native.shareText(links.feed, 'Home Church calendar');
+        });
+        return;
+      }
+
+      var url = links[which];
+      if (!url) return;
+      calHelpers().closeSubscribe();
+      c.openExternal(url);
+    },
+
     'remind-close': function () {
       HC.reminders.close();
     },

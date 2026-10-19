@@ -689,6 +689,7 @@
 
     html += calendarBlock();
     html += dayPanel();
+    html += subscribeButton();
 
     html += c.sectionHeader('On the calendar', 'Upcoming',
       { eyebrowSlot: 'cal.events-eyebrow' });
@@ -722,6 +723,93 @@
 
     html += '</div>';
     return c.el(html);
+  }
+
+  /* ------------------------------------------------------- subscribing
+
+     The whole calendar on somebody's own phone, kept current. Every Add to
+     calendar button copies one event once; this hands their calendar app the
+     address of supabase/functions/calendar, which it fetches again on its own,
+     so an event the church moves moves for them too. The header of that
+     function has the rest.
+
+     Three roads, because there is no one link every calendar takes. webcal:
+     is Apple's, and on an iPhone it is the system's own Subscribe prompt with
+     nothing to sign in to. Google and Outlook each have a page that takes a
+     calendar address and asks to add it. Copy the link is for everything
+     else, and for a Windows browser with no webcal: handler at all.
+     ---------------------------------------------------------------------- */
+
+  /* Every address the sheet hands out, or null when this build has no
+     Supabase project to point at, in which case there is no button either. */
+  function subscribeLinks() {
+    var base = String((HC.config && HC.config.SUPABASE_URL) || '').replace(/\/+$/, '');
+    if (!/^https:\/\//.test(base)) return null;
+
+    var feed = base + '/functions/v1/calendar';
+    var webcal = feed.replace(/^https:/, 'webcal:');
+    return {
+      feed: feed,
+      apple: webcal,
+      google: 'https://calendar.google.com/calendar/render?cid=' + encodeURIComponent(webcal),
+      outlook: 'https://outlook.live.com/calendar/0/addfromweb?url=' +
+        encodeURIComponent(feed) + '&name=' + encodeURIComponent('Home Church')
+    };
+  }
+
+  function subscribeButton() {
+    if (!subscribeLinks()) return '';
+    return '<div class="hc-cal__subscribe">' +
+      c.button('Subscribe to this calendar', { action: 'cal-subscribe',
+        icon: 'calendar', variant: 'secondary', small: true }) +
+    '</div>';
+  }
+
+  function subscribeChoice(id, label) {
+    return c.button(label, { action: 'cal-subscribe-with', id: id,
+      variant: 'secondary' });
+  }
+
+  function subscribeSheet() {
+    return '' +
+      '<div class="hc-sheet" data-sheet="cal-subscribe" role="dialog" aria-modal="true" ' +
+          'aria-label="Subscribe to the Home Church calendar">' +
+        '<button type="button" class="hc-sheet__scrim" data-action="cal-subscribe-close" ' +
+          'tabindex="-1" aria-hidden="true"></button>' +
+        '<div class="hc-sheet__panel">' +
+          '<div class="hc-sheet__head">' +
+            '<p class="hc-eyebrow">Subscribe</p>' +
+            '<button type="button" class="hc-sheet__close" data-action="cal-subscribe-close" ' +
+              'aria-label="Close">' + c.icon('close') + '</button>' +
+          '</div>' +
+          '<p class="hc-sheet__preview">Every Home Church event, in your own calendar</p>' +
+          '<p class="hc-caption">New events show up on their own, and a moved or ' +
+            'cancelled one changes there too. Nothing to tap again.</p>' +
+          '<div class="hc-cal__subscribe-choices">' +
+            subscribeChoice('apple', 'iPhone, iPad or Mac Calendar') +
+            subscribeChoice('google', 'Google Calendar') +
+            subscribeChoice('outlook', 'Outlook') +
+            subscribeChoice('copy', 'Copy the link') +
+          '</div>' +
+          /* Google is the one that needs saying. Its add-by-address page only
+             works on a computer, and once it is added there it shows in the
+             Google Calendar app as well. */
+          '<p class="hc-caption hc-sheet__note">Google Calendar adds it from a ' +
+            'computer; after that it is on your phone too. Unsubscribe from your ' +
+            'calendar app whenever you like. The church is not told either way.</p>' +
+        '</div>' +
+      '</div>';
+  }
+
+  function openSubscribe() {
+    closeSubscribe();
+    if (!subscribeLinks()) return;
+    document.getElementById('app').appendChild(c.el(subscribeSheet()));
+  }
+
+  function closeSubscribe() {
+    var el = document.querySelector('[data-sheet="cal-subscribe"]');
+    if (el && el.parentNode) el.parentNode.removeChild(el);
   }
 
   /* ------------------------------------------------------------- the hooks
@@ -820,6 +908,16 @@
     return new Date(+parts[0], (+parts[1]) - 1, +parts[2], hour, min, 0, 0).toISOString();
   }
 
+  /* Leaving takes the subscribe sheet with it, and so does Escape, the same
+     two rules the reminder sheet keeps in js/reminders.js. Guarded because
+     the tests load this file without a store or a document to listen on. */
+  if (HC.store && HC.store.on) HC.store.on('view', closeSubscribe);
+  if (typeof document !== 'undefined' && document.addEventListener) {
+    document.addEventListener('keydown', function (evt) {
+      if (evt.key === 'Escape') closeSubscribe();
+    });
+  }
+
   HC.screens = HC.screens || {};
   HC.screens.cal = render;
   HC.screens.calHelpers = {
@@ -832,6 +930,9 @@
     nextDay: nextDay,
     otherDays: otherDays,
     startsAtIso: startsAtIso,
+    subscribeLinks: subscribeLinks,
+    openSubscribe: openSubscribe,
+    closeSubscribe: closeSubscribe,
     isoDate: isoDate,
     todayIso: todayIso,
 

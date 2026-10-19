@@ -3729,6 +3729,20 @@ button.hc-cal__day { cursor: pointer; }
 
 .hc-cal__add { margin-top: var(--hc-space-md); }
 
+/* Subscribe, under the month and the open day. A small secondary button and
+   not a section of its own: it is a thing you do once, and the month above
+   and the list below are what the screen is for. */
+.hc-cal__subscribe { margin-top: var(--hc-space-base); }
+
+/* The four choices in the subscribe sheet, one to a row, so each is a
+   thumb's worth of target and the labels never wrap beside each other. */
+.hc-cal__subscribe-choices {
+  display: flex;
+  flex-direction: column;
+  gap: var(--hc-space-sm);
+  margin-top: var(--hc-space-lg);
+}
+
 .hc-cal__form { margin-top: var(--hc-space-base); }
 
 .hc-cal__form > .hc-eyebrow { margin-bottom: var(--hc-space-md); }

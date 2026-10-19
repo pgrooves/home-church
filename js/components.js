@@ -150,7 +150,12 @@
      anywhere to explain it.
      ---------------------------------------------------------------------- */
 
-  var SYSTEM_SCHEMES = /^(mailto|sms|tel):/i;
+  /* webcal: is the Subscribe button on the Cal tab. It is a calendar
+     subscription, which only the OS can take: in the app the web view hands
+     it to iOS, which puts up Calendar's own Subscribe prompt, and in Safari
+     the same prompt appears. Opened in the in-app browser it would go
+     nowhere. */
+  var SYSTEM_SCHEMES = /^(mailto|sms|tel|webcal):/i;
 
   function plugins() {
     return (window.Capacitor && window.Capacitor.Plugins) || null;

@@ -320,6 +320,25 @@ There is no `delete`, on purpose. Unpublish instead.
 New Orleans is UTC-5 in summer and UTC-6 in winter, and hand converting that
 is how a Christmas Eve service ends up on the wrong day.
 
+### The subscribable calendar
+
+Every published event is also served as one `.ics` by the `calendar` Edge
+Function, which is what the Subscribe button on the Cal tab hands to Apple
+Calendar, Google Calendar and Outlook. Nothing to publish: an event that is
+in `events` and published is in the feed, and subscribers' calendars pick up
+adds, moves and unpublishes on their own next refresh (a few hours on Apple,
+up to a day on Google). Deploy it once, with the JWT check off, because a
+calendar app fetching a subscription sends no headers:
+
+```bash
+supabase functions deploy calendar --no-verify-jwt
+```
+
+The address is `https://ibqkumxfltfiuqevviji.supabase.co/functions/v1/calendar`,
+and it is safe to put in a newsletter or on the website as is. The header of
+`supabase/functions/calendar/index.ts` has why it never returns an empty
+calendar on an error.
+
 ---
 
 ## Adding a fifth content type
