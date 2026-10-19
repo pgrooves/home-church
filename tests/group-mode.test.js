@@ -70,69 +70,85 @@ function modules(settings) {
   return sandbox.window.HC.modules().map((m) => m.route);
 }
 
-const WITHOUT = ['homekids', 'journal', 'worship', 'when-where', 'practices', 'alpha', 'give'];
-const WITH = ['homekids', 'group'].concat(WITHOUT.slice(1));
+/* Every gated page but Group switched on, which is the full list the church
+   is building toward. Each test that is about Group starts from here so it
+   tests one switch at a time. */
+const PAGES_ON = { homekids_on: true, practices_on: true, alpha_on: true, cafe_on: true };
+const on = (more) => Object.assign({}, PAGES_ON, more);
+
+const WITHOUT = ['homekids', 'cafe', 'journal', 'worship', 'when-where', 'practices', 'alpha', 'give'];
+const WITH = ['homekids', 'cafe', 'group'].concat(WITHOUT.slice(2));
+
+/* What the church launches with: nothing gated, which is also what a phone
+   that has never reached Supabase draws. Journal, Worship, Services, Give. */
+const LAUNCH = ['journal', 'worship', 'when-where', 'give'];
 
 /* ------------------------------------------------------------------- off */
 
 console.log('\n--- off, which is what a phone assumes ---\n');
 
-ok('no row at all, the phone that has never reached Supabase',
-   modules({}), WITHOUT);
+ok('no row at all, the phone that has never reached Supabase, draws the launch list',
+   modules({}), LAUNCH);
 
-ok('the row is there and says false',
-   modules({ group_mode_on: false }), WITHOUT);
+ok('the Group row is there and says false',
+   modules(on({ group_mode_on: false })), WITHOUT);
 
 /* A row that is not a boolean at all: a text setting somebody typed under the
    same key, or a `null` from a column that was never filled in. Read strictly,
    because "not exactly true" is the safe side of this switch. */
 ok('a row holding something that is not true',
-   modules({ group_mode_on: 'yes' }), WITHOUT);
+   modules(on({ group_mode_on: 'yes' })), WITHOUT);
 
 ok('a row holding null',
-   modules({ group_mode_on: null }), WITHOUT);
+   modules(on({ group_mode_on: null })), WITHOUT);
 
 /* -------------------------------------------------------------------- on */
 
 console.log('\n--- on ---\n');
 
-ok('the switch is on, so Group is back and it is first',
-   modules({ group_mode_on: true }), WITH);
+ok('the switch is on, so Group is back, straight after the two drawn with the tabs',
+   modules(on({ group_mode_on: true })), WITH);
 
 /* ----------------------------------------------------------------- order */
 
 console.log('\n--- the order, which is a decision ---\n');
 
 ok('HomeKids first, straight after Guide, where the overlay draws it with the tabs',
-   modules({ group_mode_on: true })[0], 'homekids');
+   modules(on({ group_mode_on: true }))[0], 'homekids');
 
 ok('then Group, what you wrote in it, then Sunday',
-   modules({ group_mode_on: true }).slice(1, 4), ['group', 'journal', 'worship']);
+   modules(on({ group_mode_on: true })).slice(2, 5), ['group', 'journal', 'worship']);
 
 ok('Services before the two courses, and Give last',
-   modules({ group_mode_on: true }).slice(4), ['when-where', 'practices', 'alpha', 'give']);
+   modules(on({ group_mode_on: true })).slice(5), ['when-where', 'practices', 'alpha', 'give']);
 
-/* HomeKids has a switch of its own, the other way round from Group: on
-   unless the church says off, because an empty HomeKids page is honest and
-   an empty Group is a room nobody can join. See migration 0081. */
-ok('HomeKids is there on a phone that has never reached Supabase',
-   modules({}).indexOf('homekids') !== -1, true);
+/* HomeKids, Practices, Alpha and Coffee each have a switch of their own, with
+   the same fallback as Group: off until the church says on, because these
+   pages launch in phases and one that has not launched must not show on a
+   phone that never reached Supabase. See migrations 0081, 0084 and 0085. */
+['homekids', 'cafe', 'practices', 'alpha'].forEach((r) => {
+  ok(r + ' is not there on a phone that has never reached Supabase',
+     modules({}).indexOf(r), -1);
+});
 
-ok('and the church switching it off takes the tile away, nothing else',
-   modules({ homekids_on: false }),
+ok('a page switch holding something that is not true keeps the page hidden',
+   modules({ homekids_on: 'yes', practices_on: null }), LAUNCH);
+
+ok('turning HomeKids on alone adds only HomeKids, first',
+   modules({ homekids_on: true }), ['homekids'].concat(LAUNCH));
+
+ok('turning HomeKids off takes the tile away, nothing else',
+   modules(on({ homekids_on: false })),
    WITHOUT.filter((r) => r !== 'homekids'));
 
-ok('Practices and Alpha are there on a phone that has never reached Supabase',
-   ['practices', 'alpha'].every((r) => modules({}).indexOf(r) !== -1), true);
-
 ok('turning Practices off takes it out and leaves the rest in order',
-   modules({ practices_on: false }), WITHOUT.filter((r) => r !== 'practices'));
+   modules(on({ practices_on: false })), WITHOUT.filter((r) => r !== 'practices'));
 
 ok('turning Alpha off takes it out and leaves the rest in order',
-   modules({ alpha_on: false }), WITHOUT.filter((r) => r !== 'alpha'));
+   modules(on({ alpha_on: false })), WITHOUT.filter((r) => r !== 'alpha'));
 
 ok('hiding Group moves Journal up into its slot rather than leaving a gap',
-   modules({})[1], 'journal');
+   modules(on({}))[2], 'journal');
 
 console.log('\n' + pass + ' passed, ' + fail + ' failed');
 process.exit(fail ? 1 : 0);

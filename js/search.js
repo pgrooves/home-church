@@ -601,6 +601,12 @@
      keystroke rebuilds it with the words in. */
   function practices() {
     if (!HC.practices || !HC.practices.list) return [];
+    // Not while the church has Practices switched off: asked of the same
+    // list places() reads, so the screen and its sessions agree.
+    var shown = (HC.modules ? HC.modules() : []).some(function (m) {
+      return m.route === 'practices';
+    });
+    if (!shown) return [];
     return HC.practices.list().map(function (p) {
       var full = HC.practices.get ? HC.practices.get(p.slug) : null;
       return entry({

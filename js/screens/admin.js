@@ -2239,8 +2239,8 @@
        would be the quiet way to lift the cover with nobody deciding to. */
     maintenance_mode_on: true,
     /* 0081 and 0084. The three page switches drawn under "Pages" with Group
-       mode, read by name in js/app.js. On is their fallback, so deleting one
-       would quietly put a page the church had hidden back in the menu. */
+       mode, read by name in js/app.js. Off is their fallback, so deleting one
+       would quietly take a page the church had turned on out of the menu. */
     homekids_on: true,
     practices_on: true,
     alpha_on: true,
@@ -2298,8 +2298,10 @@
 
   /* The other pages that can be hidden, drawn with Group mode under "Pages".
      Carried whole for the reason GROUP_MODE is: the switch is drawn whether or
-     not its row exists, and the first tap writes exactly this. Unlike Group
-     they default to ON, which is what js/app.js falls back to without a row. */
+     not its row exists, and the first tap writes exactly this. Like Group
+     they default to OFF, which is what js/app.js falls back to without a row:
+     these pages launch in phases, and one that has not launched must not
+     show on a phone that never reached Supabase. */
   var PAGE_SWITCHES = [
     {
       key: 'homekids_on',
@@ -2326,17 +2328,15 @@
         'deleted, and it comes back exactly as it was when this goes on again.',
       sortOrder: 37
     },
-    /* The one page here that is off until somebody turns it on, which is
-       what `fallback` says: it takes money, and the cafe has to be ready for
-       it first. See migration 0085 and the ledger in .claude/ledgers. */
+    /* It takes money, and the cafe has to be ready for it before anybody
+       finds it. See migration 0085 and the ledger in .claude/ledgers. */
     {
       key: 'cafe_on',
       title: 'Happy Lion Cafe',
       label: 'Happy Lion Cafe page',
       help: 'Off takes Coffee out of the ••• menu for everybody. Orders already ' +
         'paid for stay in the queue at the counter.',
-      sortOrder: 38,
-      fallback: false
+      sortOrder: 38
     }
   ];
 
@@ -2344,14 +2344,11 @@
     return PAGE_SWITCHES.filter(function (p) { return p.key === key; })[0] || null;
   }
 
-  // Same two sources as groupModeOn(), with on as the fallback unless the
-  // page says otherwise (Coffee does).
+  // Same two sources and the same fallback as groupModeOn().
   function pageOn(key) {
     var row = HC.admin.settings().filter(function (s) { return s.key === key; })[0];
     if (row) return !!row.value_bool;
-    var meta = pageSwitch(key);
-    if (meta && meta.fallback === false) return HC.data.setting(key, false) === true;
-    return HC.data.setting(key, true) !== false;
+    return HC.data.setting(key, false) === true;
   }
 
   /* Its own section, above the list.

@@ -281,6 +281,16 @@ bring it with you. It works with no signal.
 
 ### Description
 
+**Describe only what is switched on.** This field is public, and it is the
+first place somebody would read about a page the church has not launched.
+Rewritten for 1.1 (October 19) to match what a member sees on launch day:
+Group, HomeKids, Practices, Alpha and Coffee are in the build but switched
+off, so none of them is named here. The guide-notes line about staying on
+your phone came out too: the Journal now saves to your account when you are
+signed in. Add a page's section back the week it is switched on; the
+description can only change with a new submission, so the promotional text
+above is where a launch goes first.
+
 ```
 Home Church is a church in Metairie, Louisiana. This is our app.
 
@@ -293,30 +303,19 @@ group, self-reflection questions to take home, the lines worth repeating, and
 every passage referenced from the stage.
 
 Check questions off as your group covers them. Write your own notes beside
-the reflection questions. All of it stays on your phone.
+the reflection questions.
 
 FOR PEOPLE WHO LEAD GROUPS
 
-Ask your church to turn on Leader mode and the guide gains a presentation
+Ask your church to turn on Leader mode and every guide gains a presentation
 view: one question at a time, large type, readable across a living room
-without anybody hunching over a screen. Keep a roster, mark who came, and
-write down what people asked you to pray for.
+without anybody hunching over a screen.
 
-Your roster, your attendance marks, and the notes you keep beside a name stay
-on your phone. Not to us, not to anyone. A group leader holds things people
-said out loud in a room, and those belong to the room.
+YOUR JOURNAL
 
-THE GROUP TAB
-
-Open a room and the app gives you a six digit code to send your group. This
-week's questions are already in it. Everybody answers on their own phone, the
-answers stay hidden until you open them, and you open them one at a time as
-the conversation gets there, so nobody reads ahead and nobody is put on the
-spot. The last section is prayer requests. When the night is over, one button
-puts the whole evening on a single sheet you can send to everyone.
-
-A room needs an account, because your first name goes on what you write and
-your group should know who said it. It lasts the evening.
+Everything you have written down, from a guide or on your own, in one place.
+It is saved on your phone, and in your account if you sign in, so it follows
+you to a new one. Only you can see it.
 
 IT WORKS WITH NO SIGNAL
 
@@ -327,13 +326,24 @@ material whether or not you have bars.
 EVERYTHING ELSE
 
 Every message we have preached since November 2024, with the notes for each
-one. Service times and directions. What is coming up. Serve teams and how to
-join one. And a way to give, which is what keeps the doors open on a Tuesday
-when somebody needs to talk.
+one. The songs from Sunday, and where to hear them again. Service times and
+directions. What is coming up, and a button to put it on your calendar. Serve
+teams and how to join one. And a way to give, which is what keeps the doors
+open on a Tuesday when somebody needs to talk.
 
 216 Giuffrias Ave, Metairie, LA 70001
 Sundays at 8:00, 9:30, and 11:00
 Stephen and Laura Daigle, lead pastors
+```
+(1644)
+
+### What's New in This Version, 4000 characters
+
+Public, and shown in the Updates list on every phone. Name only what members
+can see. Nothing about a page that is switched off.
+
+```
+Improvements and fixes throughout the app.
 ```
 
 ### Keywords, 100 characters, comma separated, no spaces after commas
@@ -480,9 +490,17 @@ History, no Usage Data, no Diagnostics, no Purchases.
       something a person typed is shown to another person. It is deleted with
       the account and swept after ninety days. See section 2.5 of
       APP_STORE_COMPLIANCE.md.
-  Guide notes, question checkmarks, the leader's roster, attendance marks, and
-  locally saved prayer requests are **not** part of this answer. They never
-  leave the device and Apple does not ask you to declare what does not leave.
+  Guide notes and Journal entries **are** part of this answer for somebody
+  who is signed in: the Journal saves them to the account so they follow the
+  person to a new phone, linked to the account and shown to nobody else.
+  Question checkmarks, the leader's roster, attendance marks, and locally
+  saved prayer requests are not. They never leave the device and Apple does
+  not ask you to declare what does not leave.
+
+  **Before Coffee is switched on**, add Purchase History (and anything else
+  the Square checkout collects through the app) to this table, the manifest
+  and the App Privacy answers in App Store Connect. Those answers can be
+  changed without a new build.
 
 **This table is also the privacy manifest.** The eight rows above are the same
 eight entries in `ios-config/PrivacyInfo.xcprivacy`, including which ones are
@@ -574,11 +592,27 @@ analytics, external links, and data collection that buy us nothing.
 ## 7. App Review notes
 
 Paste this into the Notes for Review field, which caps at 4000 characters.
-This is 3849, which leaves room for CRLF line endings if App Store Connect
-counts them; check the count again if you edit it. **The Leader mode walkthrough is
-the most important thing in this entire document.** A reviewer who does not
-find Leader mode is assessing a reading app with two tabs that link outward,
-which is exactly the shape that fails Guideline 4.2.
+This is 3059, which leaves room for CRLF line endings if App Store Connect
+counts them; check the count again if you edit it.
+
+**Rewritten for 1.1 (October 19), when Group went behind its switch for the
+phased rollout.** The old walkthrough sent the reviewer to GROUP to open a
+room, which is not in the menu while Group mode is off. Leader mode is now
+shown through presentation mode, which needs no switch. The old Group and
+Guideline 1.2 section is condensed into the list of switched-off pages, and
+the note about the 1.0 build 8 rejection is gone because it no longer
+applies.
+
+**THE SWITCHED-OFF LIST IS NOT OPTIONAL.** Guideline 2.3.1 forbids hidden or
+dormant features, and staged rollouts pass review when they are disclosed.
+Code Apple was never shown, found later, is the rejection. Attach a short
+screen recording of each page from a TestFlight build with its switch on
+(App Review Information, Attachment), and keep the list in step with the
+switches: a page that has launched comes off it, and a new page that ships
+switched off goes on.
+
+Promotional text, the description and screenshots are public. These notes
+are not, so this is the only place the unlaunched pages are named.
 
 ```
 Home Church is the app for a single church in Metairie, Louisiana.
@@ -594,30 +628,44 @@ PASSWORD rather than a code. Nothing is emailed and you need no mailbox.
     Email: homechurchappreview@outlook.com
     Password: __________________
 
-Submission 08792afe-55f3-4c13-b984-097eb4e91092 (1.0 build 8) was returned
-under 2.1: the demo account needed a mailbox to receive a code. Both
-accounts now use passwords, tested on a device.
-
 GETTING AROUND
 There is no tab bar. The round button in the bottom right opens the
 navigation, a full screen list. The circle in the top right opens Your
 account.
 
-LEADER MODE, WHICH IS THE HEART OF THE APP
+LEADER MODE
 Almost everything works signed out. Leader mode does not: it belongs to a
 person rather than a phone, so the church grants it to whoever leads a
-group. It is easy to miss:
+group.
 
   1. Circle in the top right, sign in with the Host account.
-  2. Round button in the bottom right, then GROUP.
-  3. Under "Leader mode — Host tonight", pick this week's guide and tap
-     "Open a room". The app mints a six digit code for the group.
-  4. Open GUIDE from the same menu, open any guide, tap "Start presentation
-     mode" — the one-question-at-a-time view leaders use while running a
-     meeting.
+  2. Round button in the bottom right, then GUIDE.
+  3. Open any guide and tap "Start presentation mode": one question at a
+     time in large type, the view leaders use while running a meeting.
 
-  (As the Member account, or signed out, GROUP offers only a box for
-  somebody else's room code. That is the feature working, not an error.)
+  (As the Member account, or signed out, the button is not there. That is
+  the feature working, not an error.)
+
+PAGES IN THIS BUILD THAT ARE SWITCHED OFF
+We are releasing new pages to our congregation in phases. This build
+contains five that church staff turn on, one at a time over the coming
+months, from an admin screen inside the app. Until then each is absent from
+every menu and from search, for everybody. Turning one on changes a setting,
+not code; everything that runs is in this build.
+
+  * Group: rooms a leader opens with a six digit code, where the group
+    answers the week's questions. Moderation: terms agreed before the first
+    post, server-side filtering, Report and Block on every note by someone
+    else, and a host queue for reports. Rooms expire that night.
+  * HomeKids: the week's Bible story for children, and family news.
+  * Practices: a nine-part course on the practices of Jesus.
+  * Alpha: what the Alpha course is, and how to sign up.
+  * Coffee: order ahead from the cafe in our lobby, paid through Square.
+    These are physical goods, collected at the counter, so in-app purchase
+    does not apply (3.1.3(e)).
+
+A screen recording of each is attached. If you would rather see any of them
+live, tell us which and we will switch it on for the review.
 
 DELETING AN ACCOUNT, GUIDELINE 5.1.1(v)
 Two places, both in-app, neither needing an email to us or a website:
@@ -625,36 +673,6 @@ Two places, both in-app, neither needing an email to us or a website:
 Two taps, the second confirming. It deletes rather than deactivates. The
 separate "Erase everything on this phone" clears local data only and is
 deliberately not the same control.
-
-THE GROUP SCREEN, AND GUIDELINE 1.2
-A room is joined with a six digit code from a leader and carries that week's
-questions. Answers stay hidden until the host opens them one at a time.
-Rooms expire that night and are deleted after ninety days. There is no feed,
-no messaging, no directory, and no way to find a room without being handed
-its code.
-
-The controls, all one tap deep:
-
-  * TERMS FIRST. The first attempt to write in a room hits a screen stating
-    the rules against objectionable content and asking for agreement. Our
-    server refuses the post too, so it cannot be skipped.
-  * FILTERING. Checked against a slur list on our server before storage, on
-    posting and on editing.
-  * REPORTING. Every note by somebody else carries a visible Report button.
-    It asks why, confirms, and names hello@homechurchnola.com as a second
-    route.
-  * A HOST QUEUE. Reports appear at the top of the room for the host, with
-    "Take it down" and "Leave it up". Our terms commit us to acting within
-    one day.
-  * BLOCKING. Beside Report on every note, enforced on our server. An
-    Unblock list sits at the bottom of the room.
-
-Report and Block only appear on writing that is not your own. To see them:
-as the HOST, open a room and add a prayer request (the terms screen appears
-first). Sign in as the MEMBER, open GROUP, join with that code — both sit
-under the host's request. Sign back in as the HOST and rejoin: the report is
-at the top of the room. One device is enough. Posting a slur is refused and
-nothing is stored.
 
 GIVE TAKES NO PAYMENT IN THE APP
 It opens our giving provider, Overflow, in SFSafariViewController. No
@@ -705,11 +723,10 @@ is stateful, local, and genuinely not a website.
 > this content: the small group guides are published to the app first, are
 > read and annotated inside it, and are stored on the device for offline use.
 > The app includes leader presentation mode, per question progress tracking,
-> private journaling, local group rosters and attendance, push notifications
-> for new content, calendar integration, and native sharing. We would
-> particularly ask that Leader mode be reviewed, since it is the core of the
-> app and is reached through Your account, and we would welcome a call to
-> demonstrate it.
+> a private journal, push notifications for new content, calendar
+> integration, and native sharing. We would particularly ask that Leader mode
+> be reviewed: sign in with the Host account and open any guide. We would
+> welcome a call to demonstrate it.
 
 **Escalation if that fails:** background audio with lock screen controls. It
 is the strongest possible answer to 4.2 and the largest piece of work, which

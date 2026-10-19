@@ -103,6 +103,7 @@ function boot(over) {
   }, over && over.data);
 
   if (over && over.practices) HC.practices = over.practices;
+  if (over && over.modules) HC.modules = over.modules;
   if (over && over.journal) HC.journal = over.journal;
 
   vm.runInContext(read('js', 'search.js'), sandbox);
@@ -330,12 +331,14 @@ const kinds = (found) => found.map((r) => r.kind);
     sabbath: { title: 'Sabbath', subtitle: 'A day to stop',
                sessions: [{ title: 'Stopping', body: 'The first practice is to stop.' }] }
   };
+  const practices = {
+    list: () => [{ slug: 'sabbath', title: 'Sabbath' },
+                 { slug: 'fasting', title: 'Fasting' }],
+    get: (slug) => loaded[slug] || null
+  };
   const HC = boot({
-    practices: {
-      list: () => [{ slug: 'sabbath', title: 'Sabbath' },
-                   { slug: 'fasting', title: 'Fasting' }],
-      get: (slug) => loaded[slug] || null
-    }
+    practices,
+    modules: () => [{ route: 'practices', sub: 'Nine practices of Jesus.' }]
   });
 
   ok('a practice that has not been opened is still findable by name',
@@ -346,6 +349,16 @@ const kinds = (found) => found.map((r) => r.kind);
 
   ok('and it opens that practice',
     HC.search.results('fasting')[0].route, { name: 'practice', id: 'fasting' });
+
+  /* Switched off, the practices leave the index with the screen: a result
+     that opens a page the church has not launched is a door to it. */
+  const off = boot({ practices });
+
+  ok('with Practices switched off, no practice is findable by name',
+    off.search.results('fasting'), []);
+
+  ok('or by what is inside it',
+    off.search.results('the first practice'), []);
 }
 
 /* --------------------------------------------------------- the journal lock */

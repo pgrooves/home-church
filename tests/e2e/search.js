@@ -358,8 +358,11 @@ async function type(page, text) {
   ok('and it reached nothing outside the app',
     during.every(u => u.indexOf('http://127.0.0.1:' + PORT + '/') === 0),
     during.join('\n        '));
-  ok('what it did read is the nine practices, so their words are on the index',
-    during.filter(u => /\/data\/practices\//.test(u)).length === 9,
+  /* No Supabase here, so no practices_on row, and Practices is off until the
+     church turns it on. Its files stay unread and its words off the index;
+     tests/search.test.js covers the index with the switch on. */
+  ok('with Practices switched off, none of the nine practice files is read',
+    during.filter(u => /\/data\/practices\//.test(u)).length === 0,
     during.join('\n        '));
 
   const found = await rows(page);

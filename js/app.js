@@ -94,8 +94,7 @@
 
        Gated like Group, by a switch an admin can flip, because a summer with
        no kids' lessons would otherwise be a line that opens onto last May.
-       Unlike Group it defaults to on: an empty HomeKids page says warmly that
-       the first lesson is on its way, and that is worth showing. */
+       Like Group it defaults to off; see homekidsOn. */
     {
       route: 'homekids',
       icon: 'kids',
@@ -107,10 +106,10 @@
     /* The Happy Lion Cafe, in the lobby on Sunday mornings. Straight after
        HomeKids and drawn with the tabs, which puts it at the top of the bold
        group, above HomeKids, where the church asked for it; a drag left off
-       it reaches Group, or Journal when Group is hidden. Gated, and unlike
-       the other gated pages OFF until an admin turns it on (migration 0085):
-       a page that takes money is not one to find before the cafe is ready
-       for it. */
+       it reaches Group, or Journal when Group is hidden. Gated, and OFF until
+       an admin turns it on (migration 0085), like every gated page here: a
+       page that takes money is not one to find before the cafe is ready for
+       it. */
     {
       route: 'cafe',
       icon: 'coffee',
@@ -209,25 +208,28 @@
     return HC.data.setting('group_mode_on', false) === true;
   }
 
-  /* Is the HomeKids page showing this season. Same shape as groupModeOn
-     above, opposite fallback: true is the behaviour the app has without the
-     row, because the page is honest while it is empty. See migration 0081. */
+  /* HomeKids, Practices and Alpha. Same shape and same fallback as
+     groupModeOn above: off until an admin turns each one on under App
+     settings, Pages. See migrations 0081 and 0084.
+
+     THE FALLBACK USED TO BE true AND WAS CHANGED ON PURPOSE (Trey,
+     2026-10-19). These pages are being released to the church in phases,
+     and a fallback of on showed a page that had not launched yet to every
+     phone that had not reached Supabase: a first launch before the content
+     fetch lands, or a phone with no signal at all. */
   function homekidsOn() {
-    return HC.data.setting('homekids_on', true) !== false;
+    return HC.data.setting('homekids_on', false) === true;
   }
 
-  /* Practices and Alpha, the same shape as HomeKids: on unless an admin has
-     turned them off under App settings, Pages. See migration 0084. */
   function practicesOn() {
-    return HC.data.setting('practices_on', true) !== false;
+    return HC.data.setting('practices_on', false) === true;
   }
 
   function alphaOn() {
-    return HC.data.setting('alpha_on', true) !== false;
+    return HC.data.setting('alpha_on', false) === true;
   }
 
-  /* The Coffee page. Off without the row, the opposite of the three above,
-     for the reason given where it sits in MODULES.
+  /* The Coffee page. Off without the row, the same as the three above.
 
      OFF MEANS OFF FOR EVERYBODY, admins and Cafe mode included, the way the
      other page switches work (Trey, 2026-10-18). Somebody in Cafe mode can
