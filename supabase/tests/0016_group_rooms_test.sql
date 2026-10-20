@@ -138,11 +138,12 @@ commit;
 
 begin;
   set local role anon;
-  select t_check('a signed out phone can find the room by its code',
-               (select count(*)::int from public.group_rooms
-                where code = (select v from t_state where k='code')), 1);
-  select t_check('and can read the questions',
-               (select count(*)::int from public.group_room_questions), 2);
+  -- Since 0093 a signed out phone cannot read rooms or questions at all: the
+  -- live-room policy listed every room's code. Joining is hc_room_join.
+  select t_refuses('a signed out phone cannot list rooms or their codes',
+               'select code from public.group_rooms');
+  select t_refuses('or read the questions',
+               'select body from public.group_room_questions');
   -- Stronger than returning nothing: a signed out client is not granted the
   -- table at all, so it cannot even ask the question.
   select t_refuses('and cannot so much as ask for an answer',
@@ -304,8 +305,8 @@ commit;
 
 begin;
   set local role anon;
-  select t_check('a closed room cannot be found by its code any more',
-    (select count(*)::int from public.group_rooms), 0);
+  select t_refuses('a closed room cannot be found by its code any more',
+    'select code from public.group_rooms');
 commit;
 
 begin;
