@@ -1,8 +1,10 @@
 -- ===========================================================================
--- 0093: nobody creates their own profile with a tier on it, device_tokens
--- has no allow-everything policy left, and hc_cafe_today's search_path.
+-- 0093: a stranger cannot list tonight's rooms, and members still can.
 --
--- Asked as the real roles.
+-- Asked as the real roles. A room is opened by a host and joined by one
+-- member; then anon, a signed in stranger, the member and the host each ask
+-- for the room and its questions. Plus the device_tokens policies being gone
+-- and hc_cafe_today's search_path.
 -- ===========================================================================
 
 \set ON_ERROR_STOP on
@@ -26,6 +28,81 @@ exception when others then
   raise notice 'PASS  % (refused: %)', label, left(sqlerrm, 46);
 end;
 $$;
+
+insert into auth.users (id, email) values
+  ('93000000-0000-0000-0000-000000000001', 'host93@example.com'),
+  ('93000000-0000-0000-0000-000000000002', 'member93@example.com'),
+  ('93000000-0000-0000-0000-000000000003', 'stranger93@example.com')
+on conflict do nothing;
+
+insert into public.profiles (id, first_name, can_host, terms_accepted_at) values
+  ('93000000-0000-0000-0000-000000000001', 'Host',     true,  now()),
+  ('93000000-0000-0000-0000-000000000002', 'Member',   false, now()),
+  ('93000000-0000-0000-0000-000000000003', 'Stranger', false, now())
+on conflict (id) do update set can_host = excluded.can_host,
+  terms_accepted_at = excluded.terms_accepted_at;
+
+create table t93 (k text primary key, v text);
+grant select, insert on t93 to anon, authenticated;
+
+begin;
+  set local role authenticated;
+  set local request.jwt.claims = '{"sub":"93000000-0000-0000-0000-000000000001"}';
+  insert into t93 select 'room', (public.hc_room_open(
+    'guide-93', 'Guide 93', 'Room 93',
+    '[{"heading":"One","body":"A question"}]'::jsonb)).id::text;
+commit;
+
+insert into t93 select 'code', code from public.group_rooms
+ where id = (select v from t93 where k = 'room')::uuid;
+
+begin;
+  set local role authenticated;
+  set local request.jwt.claims = '{"sub":"93000000-0000-0000-0000-000000000002"}';
+  select public.hc_room_join((select v from t93 where k = 'code'));
+commit;
+
+-- A signed out phone: not granted the tables at all.
+begin;
+  set local role anon;
+  select t93_refuses('0093: anon cannot list live rooms',
+                   'select code from public.group_rooms');
+  select t93_refuses('0093: anon cannot read room questions',
+                   'select body from public.group_room_questions');
+  select t93_refuses('0093: anon cannot call hc_room_is_live',
+                   'select public.hc_room_is_live(gen_random_uuid())');
+commit;
+
+-- Signed in but in no room: sees no room and no question.
+begin;
+  set local role authenticated;
+  set local request.jwt.claims = '{"sub":"93000000-0000-0000-0000-000000000003"}';
+  select t93_check('0093: a stranger with an account sees no live room',
+                 (select count(*)::int from public.group_rooms), 0);
+  select t93_check('0093: and no room''s questions',
+                 (select count(*)::int from public.group_room_questions), 0);
+commit;
+
+-- The member and the host still read their own room, code and all.
+begin;
+  set local role authenticated;
+  set local request.jwt.claims = '{"sub":"93000000-0000-0000-0000-000000000002"}';
+  select t93_check('0093: a member still reads their room',
+                 (select count(*)::int from public.group_rooms
+                   where id = (select v from t93 where k = 'room')::uuid), 1);
+  select t93_check('0093: and its questions',
+                 (select count(*)::int from public.group_room_questions
+                   where room_id = (select v from t93 where k = 'room')::uuid), 1);
+commit;
+
+begin;
+  set local role authenticated;
+  set local request.jwt.claims = '{"sub":"93000000-0000-0000-0000-000000000001"}';
+  select t93_check('0093: the host still reads the code to read out',
+                 (select code from public.group_rooms
+                   where id = (select v from t93 where k = 'room')::uuid),
+                 (select v from t93 where k = 'code'));
+commit;
 
 -- device_tokens: no policy left for a client role, and no grant.
 select t93_check('0093: device_tokens has no client policies',

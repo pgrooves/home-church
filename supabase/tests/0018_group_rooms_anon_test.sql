@@ -32,10 +32,11 @@ $$;
 -- what people wrote about their marriage and their job, and need an account
 -- before the policies from 0016 even get a say.
 
-select t_check('anon can read a room, to find one by its code',
-  has_table_privilege('anon', 'public.group_rooms', 'SELECT'), true);
-select t_check('anon can read its questions, which are the guide''s words',
-  has_table_privilege('anon', 'public.group_room_questions', 'SELECT'), true);
+-- These two were true until 0093, which closed the live-room listing.
+select t_check('anon cannot read rooms, whose codes are the way in',
+  has_table_privilege('anon', 'public.group_rooms', 'SELECT'), false);
+select t_check('anon cannot read room questions',
+  has_table_privilege('anon', 'public.group_room_questions', 'SELECT'), false);
 
 select t_check('anon cannot read what anybody wrote',
   has_table_privilege('anon', 'public.group_room_notes', 'SELECT'), false);
@@ -72,7 +73,7 @@ select t_check('and no write privilege of any kind, for anybody but service_role
 -- The regression from 0017, restated here so this file stands alone, plus the
 -- explicit anon grant that 0017 could not see.
 
-select t_check('anon can execute exactly the two policy helpers, and nothing else',
+select t_check('anon can execute no room function at all, since 0093',
   (select coalesce(string_agg(p.proname, ', ' order by p.proname), 'none')
      from pg_proc p
      join pg_type ty on ty.oid = p.prorettype
@@ -80,7 +81,7 @@ select t_check('anon can execute exactly the two policy helpers, and nothing els
       and (p.proname like 'hc\_room%' or p.proname = 'hc_purge_group_rooms')
       and ty.typname <> 'trigger'
       and has_function_privilege('anon', p.oid, 'EXECUTE')),
-  'hc_room_is_live, hc_room_is_member');
+  'none');
 
 -- Stated as an invariant rather than a count. The first version asserted
 -- "18", which was true until 0019 added a nineteenth and then failed for a
