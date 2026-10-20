@@ -36,3 +36,6 @@ create policy "a phone can update its own row"
   using (true) with check (true);
 
 alter function public.hc_cafe_today() reset search_path;
+
+drop trigger if exists profiles_guard_insert on public.profiles;
+drop function if exists public.hc_guard_profile_insert();

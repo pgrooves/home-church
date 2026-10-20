@@ -114,3 +114,37 @@ select t93_check('0093: anon holds nothing on device_tokens',
 select t93_check('0093: hc_cafe_today has a fixed search_path',
                (select proconfig from pg_proc where proname = 'hc_cafe_today'),
                array['search_path=public']);
+
+-- A fresh account with no profile row yet cannot create one as an admin,
+-- a leader or a barista. The ordinary insert, with the defaults, still works.
+insert into auth.users (id, email) values
+  ('93000000-0000-0000-0000-000000000009', 'fresh93@example.com')
+on conflict do nothing;
+delete from public.profiles where id = '93000000-0000-0000-0000-000000000009';
+
+-- The live project's own insert policy and grant, from the accounts migration
+-- that predates this harness, so the test asks what production would answer.
+drop policy if exists "people can insert their own profile" on public.profiles;
+create policy "people can insert their own profile"
+  on public.profiles for insert to authenticated
+  with check (auth.uid() = id);
+grant insert on public.profiles to authenticated;
+
+begin;
+  set local role authenticated;
+  set local request.jwt.claims = '{"sub":"93000000-0000-0000-0000-000000000009"}';
+  select t93_refuses('0093: a new account cannot insert itself as an admin',
+    'insert into public.profiles (id, role) values (''93000000-0000-0000-0000-000000000009'', ''admin'')');
+  select t93_refuses('0093: or as a leader',
+    'insert into public.profiles (id, can_host) values (''93000000-0000-0000-0000-000000000009'', true)');
+  select t93_refuses('0093: or as a barista',
+    'insert into public.profiles (id, can_run_cafe) values (''93000000-0000-0000-0000-000000000009'', true)');
+  insert into public.profiles (id, first_name) values ('93000000-0000-0000-0000-000000000009', 'Fresh');
+  select t93_check('0093: the ordinary insert still works, as a member',
+    (select role from public.profiles where id = '93000000-0000-0000-0000-000000000009'), 'member');
+  select t93_refuses('0093: and the existing guard still stops promoting yourself',
+    'update public.profiles set role = ''admin'' where id = ''93000000-0000-0000-0000-000000000009''');
+commit;
+
+select t93_check('0093: nobody became an admin along the way',
+  (select role from public.profiles where id = '93000000-0000-0000-0000-000000000009'), 'member');

@@ -44,6 +44,19 @@
 --    answered nothing anon could use, and after (1) no policy anon is
 --    subject to calls them.
 --
+-- 5. Nobody creates their own profile with a tier already on it.
+--
+--    0025, 0036 and 0085 guard role, can_host and can_run_cafe on UPDATE:
+--    only an admin changes them, and never their own. INSERT had no guard,
+--    and the "people can insert their own profile" policy lets a signed in
+--    person insert their own row with any column set. Today that path is
+--    shut by something else entirely: hc_handle_new_user creates the row in
+--    the same transaction as the account, nobody may delete their own, so
+--    an insert collides and an upsert becomes an UPDATE the guards see. But
+--    "a row always already exists" is a property of a trigger on auth.users,
+--    not of this table, and the day it stops holding, a fresh account could
+--    insert itself as an admin. This makes INSERT answer the same as UPDATE.
+--
 -- Rollback: supabase/rollback/0093_security_hardening_down.sql
 -- Tests:    supabase/tests/0093_security_hardening_test.sql, and the anon
 --           block in 0016's test, which asserted the old behaviour.
@@ -71,3 +84,35 @@ alter function public.hc_cafe_today() set search_path = public;
 -- 4. Nothing anon is subject to calls these now.
 revoke execute on function public.hc_room_is_live(uuid)   from anon;
 revoke execute on function public.hc_room_is_member(uuid) from anon;
+
+-- 5. A client inserting a profile gets the defaults or nothing.
+create or replace function public.hc_guard_profile_insert()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  -- The signup trigger and the service role have no auth.uid(), and insert
+  -- only an id, so the defaults apply to them either way.
+  if auth.uid() is null then
+    return new;
+  end if;
+
+  if new.role is distinct from 'member'
+     or new.can_host is distinct from false
+     or new.can_run_cafe is distinct from false then
+    raise exception 'A new profile starts as a member. Only an admin can change that, afterwards.'
+      using errcode = 'insufficient_privilege';
+  end if;
+
+  return new;
+end;
+$$;
+
+revoke all on function public.hc_guard_profile_insert() from public, anon, authenticated;
+
+drop trigger if exists profiles_guard_insert on public.profiles;
+create trigger profiles_guard_insert
+  before insert on public.profiles
+  for each row execute function public.hc_guard_profile_insert();
