@@ -483,3 +483,19 @@ cafe-square-webhook v17.
 and redeploying **cafe-checkout** with the new `_shared/cafe.mjs` (it needs
 to understand `pick` before any drink has one). Old screens draw a `pick`
 as a broken counter, so flipping before the merge would show that.
+
+## 2026-10-20: the held half, shipped
+
+- Branch `claude/cafe-square-menu-sync` merged into main (app half: the
+  Coffee page draws `pick` as words, Drinks and Food fold, Admin sync button).
+- **cafe-checkout** redeployed (v19) with the new `_shared/cafe.mjs`, so it
+  understands `pick` and food. It also now refuses a fourth unpaid order from
+  one person inside twenty minutes (0094's pass on request floods).
+- **0091 part B applied**: every drink's options are `[milk]`, food `[]`.
+  Recorded as `0091b_cafe_milk_options`. Checked: an "Oat milk" order puts
+  "Oat milk" on the Square ticket as a modifier and the line's note.
+
+**Before turning `cafe_on` back on:** ship an iOS build from main. A phone
+still on the old build draws the milk choice as a counter; the checkout reads
+that as "no milk" rather than failing, but nobody can pick oat milk on it.
+The web app at pgrooves.github.io picks up main by itself.
