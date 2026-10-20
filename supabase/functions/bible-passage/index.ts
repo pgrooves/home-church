@@ -50,6 +50,14 @@ const DEFAULT_BIBLE_ID = 111;
 const CACHE_DAYS = 30;
 const META_ID = '_meta';
 
+/* Fresh lookups, the ones that cost a call against the church's YouVersion
+   key, per minute: for one address, and for everybody. Somebody tapping
+   through a chapter does not come near the first; a script spending the
+   allowance hits it at once. Verses already in the cache are never counted.
+   Counted by hc_rate_take, migration 0094. */
+const FRESH_PER_ADDRESS = 30;
+const FRESH_FOR_EVERYBODY = 300;
+
 const CORS = {
   'Access-Control-Allow-Origin': '*',
   // See the note on CORS in supabase/functions/contact: content-type and
@@ -203,6 +211,25 @@ Deno.serve(async (req: Request) => {
     if (error) console.error('bible-passage: cache write', error.message);
   }
 
+  /* Room for one more fresh lookup, or not. Never a reason to fail on its
+     own: no database, or a counter that errors, lets the lookup through, the
+     same way the cache does. The address is hashed before it is stored. */
+  async function roomForFresh(): Promise<boolean> {
+    if (!db) return true;
+    const address = (req.headers.get('x-forwarded-for') ?? '').split(',')[0].trim() || 'unknown';
+    const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(address));
+    const who = Array.from(new Uint8Array(digest).slice(0, 12))
+      .map((b) => b.toString(16).padStart(2, '0')).join('');
+    for (const [bucket, max] of [[`bible:${who}`, FRESH_PER_ADDRESS], ['bible:all', FRESH_FOR_EVERYBODY]] as const) {
+      const { data, error } = await db.rpc('hc_rate_take', {
+        p_bucket: bucket, p_max: max, p_window_seconds: 60,
+      });
+      if (error) { console.error('bible-passage: rate counter', error.message); return true; }
+      if (data === false) return false;
+    }
+    return true;
+  }
+
   async function meta(): Promise<Meta> {
     if (metaMemo && metaMemo.bibleId === bibleId) return metaMemo.meta;
     const hit = await cached(META_ID);
@@ -221,6 +248,10 @@ Deno.serve(async (req: Request) => {
     let passage = await cached(id);
 
     if (!passage) {
+      if (!(await roomForFresh())) {
+        return json({ error: 'That is a lot of verses at once. Try again in a minute.' }, 429,
+          { 'Retry-After': '60' });
+      }
       let got = await fetchPassage(bibleId, id, key);
 
       /* A range YouVersion would not take in one go, asked for a verse at a

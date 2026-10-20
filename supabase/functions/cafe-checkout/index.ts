@@ -54,6 +54,11 @@ const CORS = {
 
 const DEFAULT_RETURN_URL = 'https://pgrooves.github.io/home-church/cafe-return.html';
 
+// How many orders one person may have waiting on payment at once, and how
+// long an unpaid one counts: the same twenty minutes it holds a pickup time.
+const MAX_UNPAID = 3;
+const UNPAID_MINUTES = 20;
+
 function json(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
     status,
@@ -197,6 +202,23 @@ async function create(
   });
   if (!open.open) {
     throw new CafeError('The cafe is closed right now. Ordering ahead opens when it does.', 409);
+  }
+
+  /* A few unpaid orders per person at a time. An order waiting on payment
+     holds its pickup time for twenty minutes (see drinksAround), so without
+     this one account could fill every time on a Sunday morning with orders
+     it never meant to pay for, and keep them full. Three leaves room for a
+     payment page closed by mistake and tried again. */
+  const { count: unpaid, error: unpaidError } = await db
+    .from('cafe_orders')
+    .select('id', { count: 'exact', head: true })
+    .eq('user_id', user.id)
+    .eq('status', 'pending_payment')
+    .gt('created_at', new Date(Date.now() - UNPAID_MINUTES * 60000).toISOString());
+  if (unpaidError) throw unpaidError;
+  if ((unpaid ?? 0) >= MAX_UNPAID) {
+    throw new CafeError(
+      'You already have orders waiting to be paid. Finish one of those, or try again in a few minutes.', 429);
   }
 
   const cupName = cleanName(body.cup_name);
