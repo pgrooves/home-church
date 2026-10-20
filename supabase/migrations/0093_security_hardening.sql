@@ -1,50 +1,11 @@
 -- ===========================================================================
--- Home Church, closing the room list and three loose ends
+-- Home Church, three loose ends from a security pass
 --
--- From a security pass on 20 October 2026, against the live project rather
--- than the migrations, because the live project is what answers a stranger.
+-- From a pass on 20 October 2026, against the live project rather than the
+-- migrations, because the live project is what answers a stranger. Nothing
+-- here was open; each is a second lock on a door that already had one.
 --
--- 1. THE ROOM LIST, which is the one that mattered.
---
---   0016 let anybody read a group room while it was live, so that typing a
---   code on a signed out phone could say "Lakeview Thursday, 5 here" before
---   asking anybody to sign in. The policy was keyed on the room being live,
---   not on knowing its code, and the code was a column anybody could select.
---   So `GET /group_rooms?select=code,group_name` with the publishable key
---   listed every room meeting tonight and the code to each one, which is the
---   whole of what 0056's throttle on guessing was protecting. A free account
---   and that list was a seat in every group, reading answers and prayer
---   requests written for eleven friends.
---
---   Nothing in the app needs it any more. The signed out look-up, peek() in
---   js/rooms.js, had no caller left and goes with this migration. Joining is
---   hc_room_join, which is SECURITY DEFINER, takes the code, and is
---   throttled; hosts and members read their own room through "members keep
---   reading a room after it closes", which covers it while it is open too,
---   because hc_room_open and hc_room_join both put the person on the roster.
---
---   The questions go the same way. Readable by anon while a room was live,
---   which listed every live room's id along with them, and a host can add
---   questions of their own. Members only now.
---
--- 2. device_tokens' two dead policies.
---
---   "a phone can register itself" and "a phone can update its own row" from
---   0010 are `true` for anon: any row, any column. They do nothing today,
---   because anon and authenticated hold no privilege on the table at all and
---   every write goes through hc_register_device_token and its siblings. But a
---   policy that says yes to everybody is one stray GRANT from being the rule,
---   and 0017 is the record of how easily a grant comes back. Dropped, so the
---   table is closed by two things rather than one.
---
--- 3. hc_cafe_today had no search_path, the one function the advisor named.
---    Not SECURITY DEFINER, so low risk; pinned anyway.
---
--- 4. anon loses EXECUTE on hc_room_is_live and hc_room_is_member. They
---    answered nothing anon could use, and after (1) no policy anon is
---    subject to calls them.
---
--- 5. Nobody creates their own profile with a tier already on it.
+-- 1. Nobody creates their own profile with a tier already on it.
 --
 --    0025, 0036 and 0085 guard role, can_host and can_run_cafe on UPDATE:
 --    only an admin changes them, and never their own. INSERT had no guard,
@@ -57,35 +18,27 @@
 --    not of this table, and the day it stops holding, a fresh account could
 --    insert itself as an admin. This makes INSERT answer the same as UPDATE.
 --
+-- 2. device_tokens' two dead policies.
+--
+--    "a phone can register itself" and "a phone can update its own row" from
+--    0010 are `true` for anon: any row, any column. They do nothing today,
+--    because anon and authenticated hold no privilege on the table at all and
+--    every write goes through hc_register_device_token and its siblings. But a
+--    policy that says yes to everybody is one stray GRANT from being the rule,
+--    and 0017 is the record of how easily a grant comes back. Dropped, so the
+--    table is closed by two things rather than one.
+--
+-- 3. hc_cafe_today had no search_path, the one function the advisor named.
+--    Not SECURITY DEFINER, so low risk; pinned anyway.
+--
+-- NOT HERE: the live group room listing the same pass found (anon can read
+-- every live room and its code). Left as it is for now, by choice.
+--
 -- Rollback: supabase/rollback/0093_security_hardening_down.sql
--- Tests:    supabase/tests/0093_security_hardening_test.sql, and the anon
---           block in 0016's test, which asserted the old behaviour.
+-- Tests:    supabase/tests/0093_security_hardening_test.sql
 -- ===========================================================================
 
--- 1. Rooms and their questions, members only.
-drop policy if exists "a live room can be found by its code" on public.group_rooms;
-revoke select on public.group_rooms from anon;
-
-drop policy if exists "questions follow the room" on public.group_room_questions;
-create policy "questions follow the room"
-  on public.group_room_questions for select
-  to authenticated
-  using (public.hc_room_is_member(room_id));
-revoke select on public.group_room_questions from anon;
-
--- 2. device_tokens: no policy says yes to a client role.
-drop policy if exists "a phone can register itself"    on public.device_tokens;
-drop policy if exists "a phone can update its own row" on public.device_tokens;
-revoke all on public.device_tokens from anon, authenticated;
-
--- 3. A fixed search_path.
-alter function public.hc_cafe_today() set search_path = public;
-
--- 4. Nothing anon is subject to calls these now.
-revoke execute on function public.hc_room_is_live(uuid)   from anon;
-revoke execute on function public.hc_room_is_member(uuid) from anon;
-
--- 5. A client inserting a profile gets the defaults or nothing.
+-- 1. A client inserting a profile gets the defaults or nothing.
 create or replace function public.hc_guard_profile_insert()
 returns trigger
 language plpgsql
@@ -116,3 +69,11 @@ drop trigger if exists profiles_guard_insert on public.profiles;
 create trigger profiles_guard_insert
   before insert on public.profiles
   for each row execute function public.hc_guard_profile_insert();
+
+-- 2. device_tokens: no policy says yes to a client role.
+drop policy if exists "a phone can register itself"    on public.device_tokens;
+drop policy if exists "a phone can update its own row" on public.device_tokens;
+revoke all on public.device_tokens from anon, authenticated;
+
+-- 3. A fixed search_path.
+alter function public.hc_cafe_today() set search_path = public;

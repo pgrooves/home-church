@@ -319,6 +319,21 @@
 
   /* ------------------------------------------------------------------ join */
 
+  // What a signed out phone can ask: is there a room behind these six digits.
+  // Answers the question without joining, so the screen can say "Lakeview
+  // Thursday, 5 here" before asking anybody to sign in.
+  function peek(code) {
+    var six = String(code || '').replace(/\D/g, '');
+    if (six.length !== 6) return Promise.reject(new Error('A room code is six digits.'));
+
+    return HC.auth.publicGet('/group_rooms?code=eq.' + six + '&select=*&limit=1')
+      .then(function (rows) {
+        var room = (rows || [])[0];
+        if (!room) throw new Error('No room with that code tonight.');
+        return mapRoom(room);
+      });
+  }
+
   function join(code) {
     var six = String(code || '').replace(/\D/g, '');
     if (six.length !== 6) return Promise.reject(new Error('A room code is six digits.'));
@@ -648,6 +663,7 @@
     init: init,
     snapshot: snapshot,
 
+    peek: peek,
     join: join,
     open: open,
     switchGuide: switchGuide,

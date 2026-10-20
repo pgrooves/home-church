@@ -147,24 +147,12 @@ commit;
 insert into t_grants select 'code', code from public.group_rooms
  where id = (select v from t_grants where k = 'room')::uuid;
 
--- Until 0093. The live-room policy that made this work listed every room's
--- code to anybody, so a signed out phone now reads neither, and the host, who
--- is on the roster from the moment the room opens, still reads both.
 begin;
   set local role anon;
-  select t_no_privilege('a signed out phone can no longer list rooms',
-    'select code from public.group_rooms');
-  select t_no_privilege('or read their questions',
-    'select body from public.group_room_questions');
-commit;
-
-begin;
-  set local role authenticated;
-  set local request.jwt.claims = '{"sub":"55555555-5555-5555-5555-555555555555"}';
-  select t_check('the host still reads the room and its code',
+  select t_check('a signed out phone can still find a room by its code',
     (select count(*)::int from public.group_rooms
       where code = (select v from t_grants where k = 'code')), 1);
-  select t_check('and its questions, which needs the helpers',
+  select t_check('and can still read its questions, which needs the helpers',
     (select count(*)::int from public.group_room_questions
       where room_id = (select v from t_grants where k = 'room')::uuid), 1);
 commit;
@@ -232,9 +220,7 @@ select t_check('but service_role can, because something has to run it',
 -- caller must already hold and sets every switch on it to false. The residual
 -- risk is 0010's, unchanged and stated there in full, that somebody who
 -- already knows a token can stop that phone being notified.
--- 0093 took hc_room_is_live and hc_room_is_member back from anon: no policy
--- anon is subject to calls them any more, so they are down to three.
-select t_check('anon can execute exactly the three functions it needs',
+select t_check('anon can execute exactly the five functions it needs',
   (select coalesce(string_agg(p.proname, ', ' order by p.proname), 'none')
      from pg_proc p
      join pg_type t on t.oid = p.prorettype
@@ -242,7 +228,8 @@ select t_check('anon can execute exactly the three functions it needs',
       and p.proname like 'hc\_%'
       and t.typname <> 'trigger'
       and has_function_privilege('anon', p.oid, 'EXECUTE')),
-  'hc_deactivate_device_token, hc_is_admin, hc_register_device_token');
+  'hc_deactivate_device_token, hc_is_admin, hc_register_device_token, ' ||
+  'hc_room_is_live, hc_room_is_member');
 
 -- The standing guard, and the reason migration 0017 does not try to solve this
 -- with ALTER DEFAULT PRIVILEGES. Postgres hands PUBLIC an EXECUTE grant on

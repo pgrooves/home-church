@@ -105,6 +105,13 @@ vm.runInContext(fs.readFileSync(ROOMS_JS, 'utf8'), sandbox);
 const rooms = sandbox.window.HC.rooms;
 
 (async () => {
+  // ---- peek, the signed out path
+  const peeked = await rooms.peek('486 217');
+  ok('peek strips spaces and maps the row', peeked.code, '486217');
+  await rooms.peek('12345').then(
+    () => ok('peek rejects a short code', 'resolved', 'rejected'),
+    e => ok('peek rejects a short code', e.message, 'A room code is six digits.'));
+
   // ---- join and pull
   await rooms.join('486217');
   let s = rooms.snapshot();
