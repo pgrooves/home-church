@@ -104,10 +104,13 @@ begin;
                  (select v from t93 where k = 'code'));
 commit;
 
--- device_tokens: no policy left for a client role, and no grant.
-select t93_check('0093: device_tokens has no client policies',
+-- device_tokens: no policy says yes to a client role, and no grant.
+select t93_check('0093: no device_tokens policy allows anything',
                (select count(*)::int from pg_policies
-                 where schemaname = 'public' and tablename = 'device_tokens'), 0);
+                 where schemaname = 'public' and tablename = 'device_tokens'
+                   and coalesce(qual, 'false') <> 'false'
+                    or schemaname = 'public' and tablename = 'device_tokens'
+                   and coalesce(with_check, 'false') <> 'false'), 0);
 select t93_check('0093: anon holds nothing on device_tokens',
                has_table_privilege('anon', 'public.device_tokens', 'insert, update, select'), false);
 

@@ -34,8 +34,8 @@
 --   because anon and authenticated hold no privilege on the table at all and
 --   every write goes through hc_register_device_token and its siblings. But a
 --   policy that says yes to everybody is one stray GRANT from being the rule,
---   and 0017 is the record of how easily a grant comes back. Dropped, so the
---   table is closed by two things rather than one.
+--   and 0017 is the record of how easily a grant comes back. Turned to
+--   `false`, so the table is closed by two things rather than one.
 --
 -- 3. hc_cafe_today had no search_path, the one function the advisor named.
 --    Not SECURITY DEFINER, so low risk; pinned anyway.
@@ -62,20 +62,54 @@
 --           block in 0016's test, which asserted the old behaviour.
 -- ===========================================================================
 
--- 1. Rooms and their questions, members only.
-drop policy if exists "a live room can be found by its code" on public.group_rooms;
+-- ALTER POLICY, NOT DROP. This was applied to the live project through a
+-- connection that would not run a DROP, so each policy is changed in place
+-- and renamed for what it now does. The effect is the same as dropping them:
+-- what anybody can read or write is identical, and these statements are
+-- exactly what ran.
+
+-- 1. Rooms and their questions, members only. The live-room policy becomes a
+--    second copy of "members keep reading a room after it closes". Each
+--    rename is skipped once done, so this file stays re-runnable.
+do $$
+begin
+  if exists (select 1 from pg_policies where schemaname = 'public'
+              and tablename = 'group_rooms'
+              and policyname = 'a live room can be found by its code') then
+    alter policy "a live room can be found by its code" on public.group_rooms
+      rename to "members read the room they are in";
+  end if;
+end $$;
+alter policy "members read the room they are in" on public.group_rooms
+  to authenticated
+  using (public.hc_room_is_member(id));
 revoke select on public.group_rooms from anon;
 
-drop policy if exists "questions follow the room" on public.group_room_questions;
-create policy "questions follow the room"
-  on public.group_room_questions for select
+alter policy "questions follow the room" on public.group_room_questions
   to authenticated
   using (public.hc_room_is_member(room_id));
 revoke select on public.group_room_questions from anon;
 
 -- 2. device_tokens: no policy says yes to a client role.
-drop policy if exists "a phone can register itself"    on public.device_tokens;
-drop policy if exists "a phone can update its own row" on public.device_tokens;
+do $$
+begin
+  if exists (select 1 from pg_policies where schemaname = 'public'
+              and tablename = 'device_tokens'
+              and policyname = 'a phone can register itself') then
+    alter policy "a phone can register itself" on public.device_tokens
+      rename to "clients do not write device_tokens directly";
+  end if;
+  if exists (select 1 from pg_policies where schemaname = 'public'
+              and tablename = 'device_tokens'
+              and policyname = 'a phone can update its own row') then
+    alter policy "a phone can update its own row" on public.device_tokens
+      rename to "clients do not update device_tokens directly";
+  end if;
+end $$;
+alter policy "clients do not write device_tokens directly" on public.device_tokens
+  with check (false);
+alter policy "clients do not update device_tokens directly" on public.device_tokens
+  using (false) with check (false);
 revoke all on public.device_tokens from anon, authenticated;
 
 -- 3. A fixed search_path.
