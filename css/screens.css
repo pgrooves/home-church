@@ -4330,6 +4330,26 @@ button.hc-cal__day { cursor: pointer; }
 .hc-cafe-mine, .hc-cafe-counter { margin-top: var(--hc-space-base); display: flex; flex-direction: column; gap: 4px; }
 .hc-cafe-mine__line { font: 500 17px/22px var(--hc-serif); color: var(--hc-ink); }
 
+/* Drinks and Food, each under a header that folds it away. The header is
+   the serif of a drink's name, a size up, with the section chevron's turn:
+   pointing down while open, to the right while folded. */
+.hc-cafe-part + .hc-cafe-part { margin-top: var(--hc-space-md); }
+.hc-cafe-part__head { margin: var(--hc-space-base) 0 var(--hc-space-sm); }
+.hc-cafe-part__toggle {
+  display: flex; align-items: center; justify-content: space-between; gap: var(--hc-space-sm);
+  width: 100%; min-height: var(--hc-tap-min); padding: 0;
+  background: none; border: 0; border-bottom: var(--hc-hairline) solid var(--hc-rule);
+  color: var(--hc-ink); font: 500 24px/30px var(--hc-serif); letter-spacing: -0.01em;
+  text-align: left; cursor: pointer;
+}
+.hc-cafe-part__chev { flex: none; width: 22px; height: 22px; color: var(--hc-mid); transition: transform 0.2s ease; }
+.hc-cafe-part__toggle[aria-expanded="false"] .hc-cafe-part__chev { transform: rotate(-90deg); }
+.hc-cafe-part__items[hidden] { display: none; }
+/* The milk choice has no group heading over it, so it keeps the heading's
+   distance from the sizes above instead. */
+.hc-cafe-seg + .hc-cafe-opts { margin-top: 22px; }
+@media (prefers-reduced-motion: reduce) { .hc-cafe-part__chev { transition: none; } }
+
 /* A drink on the menu. */
 .hc-cafe-item { display: flex; align-items: center; gap: 14px; }
 .hc-cafe-item[aria-disabled="true"] { opacity: 0.6; }

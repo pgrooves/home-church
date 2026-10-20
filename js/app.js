@@ -2999,6 +2999,16 @@
       }));
     },
 
+    /* The cafe's menu, copied again from Square now. What it found is the
+       toast; the line under the button is redrawn from the settings. */
+    'admin-cafe-sync': function () {
+      adminRun('cafe-sync', HC.admin.syncCafeMenu().then(function (result) {
+        HC.components.toast(result && result.message
+          ? 'Synced: ' + result.message + '.'
+          : 'Synced.');
+      }));
+    },
+
     'admin-setting-delete': function (el) {
       var key = el.getAttribute('data-id');
       var row = HC.admin.settings().filter(function (s) { return s.key === key; })[0];

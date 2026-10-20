@@ -737,6 +737,12 @@
           '<rect x="9.3" y="13.2" width="2.6" height="2.6" rx=".6"/>' +
           '<rect x="12.4" y="15.4" width="2.6" height="2.6" rx=".6"/>',
 
+    /* Food on the cafe's menu: a muffin in its paper, in the same hand as
+       `coffee` beside it. */
+    food: '<path d="M5 11.5c0-3.6 3.1-6.5 7-6.5s7 2.9 7 6.5z"/>' +
+          '<path d="m6 11.5 1.3 7.8a1.2 1.2 0 0 0 1.2 1h7a1.2 1.2 0 0 0 1.2-1l1.3-7.8"/>' +
+          '<path d="M10 14v4.5M14 14v4.5"/>',
+
     /* A five point star, for the prize at the end of a HomeKids week. */
     star: '<path d="m12 3.2 2.6 5.5 6 .8-4.4 4.1 1.1 5.9L12 16.6l-5.3 2.9 1.1-5.9-4.4-4.1 6-.8z"/>',
 

@@ -1654,6 +1654,25 @@
       .then(function () { return HC.content.refresh(); });
   }
 
+  /* The Happy Lion Cafe's menu, copied again from the cafe's Square by the
+     cafe-square-sync Edge Function (0090). Refreshes the content so the Coffee
+     page has the new drinks, and the settings so Admin shows the new
+     "Last synced" line. */
+  function syncCafeMenu() {
+    return HC.auth.callFunction('/cafe-square-sync', { action: 'sync' },
+      'The menu did not sync. Try again in a moment.').then(function (result) {
+      invalidate('settings');
+      loadSettings();
+      HC.content.refresh();
+      return result;
+    }, function (err) {
+      // A sync that found nothing still wrote why, under the button.
+      invalidate('settings');
+      loadSettings();
+      throw err;
+    });
+  }
+
   function deleteSetting(key) {
     return HC.auth.restFetch('/app_settings?key=eq.' + encodeURIComponent(key), {
       method: 'DELETE',
@@ -1763,7 +1782,8 @@
     notifyBanner: notifyBanner,
     createSetting: createSetting,
     deleteSetting: deleteSetting,
-    setReadingPlanLink: setReadingPlanLink
+    setReadingPlanLink: setReadingPlanLink,
+    syncCafeMenu: syncCafeMenu
   };
 
 })(window.HC = window.HC || {});

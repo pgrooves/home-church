@@ -40,6 +40,7 @@
   var LOGO_STILL = 'assets/img/happy-lion-cafe.svg';
   var lion = { svg: null, asked: false };
   var MENU_LEDE = 'Pick your drink, choose when you’ll grab it, and it’ll be waiting at the counter.';
+  var NO_MILK = 'No milk';
   var OFF_LINE = 'The cafe isn’t taking orders in the app right now. Come say hi at the counter in the lobby.';
 
   /* ------------------------------------------------------------- state */
@@ -54,7 +55,8 @@
     ticket: null,       // { id, order, ahead, error }
     queue: { rows: null, error: '', busy: '' },
     opening: false,
-    shownOpen: null
+    shownOpen: null,
+    folded: {}          // { drinks: true } while that part of the menu is closed
   };
 
   var timers = { ticket: null, queue: null, open: null };
@@ -122,8 +124,42 @@
   }
 
   function drinkIcon(item) {
+    var glyph = item.icon === 'food' ? 'food' : item.icon === 'cold' ? 'iced' : 'coffee';
     return '<span class="hc-cafe-item__art" aria-hidden="true">' +
-      c.icon(item.icon === 'cold' ? 'iced' : 'coffee', 'hc-cafe-item__icon') + '</span>';
+      c.icon(glyph, 'hc-cafe-item__icon') + '</span>';
+  }
+
+  /* What goes under a line with nothing picked: a drink is "No milk", food
+     says nothing. */
+  function plain(kind) {
+    return kind === 'food' ? '' : NO_MILK;
+  }
+
+  /* One part of the menu, Drinks or Food, under a header that folds it away.
+     A button rather than <details>, because the menu repaints itself every
+     half minute and a fold kept in `state` survives that. */
+  function menuPart(id, title, items, closed) {
+    if (!items.length) return '';
+    var open = !state.folded[id];
+    var html = '<section class="hc-cafe-part">' +
+      '<h2 class="hc-cafe-part__head"><button type="button" class="hc-cafe-part__toggle" ' +
+        'data-action="cafe" data-cafe="fold" data-id="' + id + '" aria-expanded="' + open + '" ' +
+        'aria-controls="hc-cafe-part-' + id + '">' +
+        '<span>' + c.esc(title) + '</span>' + c.icon('chevronDown', 'hc-cafe-part__chev') +
+      '</button></h2>' +
+      '<div class="hc-cafe-part__items" id="hc-cafe-part-' + id + '"' + (open ? '' : ' hidden') + '>';
+    items.forEach(function (item) {
+      html += '<button type="button" class="hc-card hc-cafe-item" data-action="cafe" data-cafe="open" ' +
+        'data-id="' + c.esc(item.id) + '"' + (closed ? ' aria-disabled="true"' : '') + '>' +
+        drinkIcon(item) +
+        '<span class="hc-cafe-item__body">' +
+          '<span class="hc-cafe-item__name">' + c.esc(item.name) + '</span>' +
+          '<span class="hc-cafe-item__price">' + c.esc(HC.cafe.priceLine(item)) + '</span>' +
+        '</span>' +
+        '<span class="hc-cafe-item__add" aria-hidden="true">+</span>' +
+      '</button>';
+    });
+    return html + '</div></section>';
   }
 
   function dayLine() {
@@ -238,19 +274,13 @@
     if (!items.length) {
       html += c.emptyState('The menu is on its way. Check back Sunday morning.', 'coffee');
     }
-    items.forEach(function (item) {
-      html += '<button type="button" class="hc-card hc-cafe-item" data-action="cafe" data-cafe="open" ' +
-        'data-id="' + c.esc(item.id) + '"' + (closed ? ' aria-disabled="true"' : '') + '>' +
-        drinkIcon(item) +
-        '<span class="hc-cafe-item__body">' +
-          '<span class="hc-cafe-item__name">' + c.esc(item.name) + '</span>' +
-          '<span class="hc-cafe-item__price">' + c.esc(HC.cafe.priceLine(item)) + '</span>' +
-        '</span>' +
-        '<span class="hc-cafe-item__add" aria-hidden="true">+</span>' +
-      '</button>';
-    });
+    html += menuPart('drinks', 'Drinks', items.filter(function (m) { return m.kind !== 'food'; }), closed);
+    html += menuPart('food', 'Food', items.filter(function (m) { return m.kind === 'food'; }), closed);
 
-    html += '<p class="hc-caption hc-cafe__more">More of the menu is on its way.</p>';
+    // Until the cafe has food on the app, say more is coming.
+    if (!items.some(function (m) { return m.kind === 'food'; })) {
+      html += '<p class="hc-caption hc-cafe__more">More of the menu is on its way.</p>';
+    }
 
     var lines = cart();
     if (lines.length) {
@@ -267,7 +297,9 @@
 
   function blankOptions(item) {
     var out = {};
-    (item.options || []).forEach(function (o) { out[o.key] = o.type === 'level' ? 'none' : 0; });
+    (item.options || []).forEach(function (o) {
+      out[o.key] = o.type === 'level' || o.type === 'pick' ? 'none' : 0;
+    });
     return out;
   }
 
@@ -288,14 +320,18 @@
         '<h2 class="hc-cafe-sheet__title">' + c.esc(item.name) + '</h2>' +
         (item.blurb ? '<p class="hc-caption hc-cafe-sheet__blurb">' + c.esc(item.blurb) + '</p>' : '');
 
-    html += '<p class="hc-cafe__label">Size</p><div class="hc-cafe-seg" role="radiogroup" aria-label="Size">';
-    (item.sizes || []).forEach(function (z) {
-      var on = z.key === s.size;
-      html += '<button type="button" role="radio" aria-checked="' + on + '" class="hc-cafe-seg__opt" ' +
-        'data-action="cafe" data-cafe="size" data-id="' + c.esc(z.key) + '">' +
-        c.esc(z.label) + '<span>' + c.esc(HC.cafe.money(z.price_cents)) + '</span></button>';
-    });
-    html += '</div>';
+    // One size with no name (food, a drink that comes one way) is no choice.
+    var sizes = item.sizes || [];
+    if (sizes.length > 1 || (sizes[0] && sizes[0].label)) {
+      html += '<p class="hc-cafe__label">Size</p><div class="hc-cafe-seg" role="radiogroup" aria-label="Size">';
+      sizes.forEach(function (z) {
+        var on = z.key === s.size;
+        html += '<button type="button" role="radio" aria-checked="' + on + '" class="hc-cafe-seg__opt" ' +
+          'data-action="cafe" data-cafe="size" data-id="' + c.esc(z.key) + '">' +
+          c.esc(z.label) + '<span>' + c.esc(HC.cafe.money(z.price_cents)) + '</span></button>';
+      });
+      html += '</div>';
+    }
 
     var groups = [];
     (item.options || []).forEach(function (o) {
@@ -305,12 +341,13 @@
     });
 
     groups.forEach(function (g) {
-      html += '<p class="hc-cafe__label">' + c.esc(g.name) + '</p><div class="hc-cafe-opts">';
+      if (g.name) html += '<p class="hc-cafe__label">' + c.esc(g.name) + '</p>';
+      html += '<div class="hc-cafe-opts">';
       g.options.forEach(function (o) {
         var v = s.options[o.key];
         html += '<div class="hc-cafe-opt"><span class="hc-cafe-opt__name">' + c.esc(o.label) +
           (o.unit ? '<small>' + c.esc(o.unit) + '</small>' : '') + '</span>';
-        if (o.type === 'level') {
+        if (o.type === 'level' || o.type === 'pick') {
           html += '<span class="hc-cafe-levels" role="radiogroup" aria-label="' + c.esc(o.label) + '">';
           (o.levels || []).forEach(function (lv) {
             var on = (v || 'none') === lv;
@@ -388,8 +425,8 @@
       var d = HC.cafe.describe(list, l);
       html += '<div class="hc-cafe-line">' +
         '<div class="hc-cafe-line__body">' +
-          '<div class="hc-cafe-line__name">' + c.esc(d.name + ', ' + d.sizeLabel) + '</div>' +
-          (d.summary ? '<div class="hc-cafe-line__mods">' + c.esc(d.summary) + '</div>' : '<div class="hc-cafe-line__mods">Black</div>') +
+          '<div class="hc-cafe-line__name">' + c.esc(HC.cafe.lineName(d.name, d.sizeLabel)) + '</div>' +
+          ((d.summary || plain(d.kind)) ? '<div class="hc-cafe-line__mods">' + c.esc(d.summary || plain(d.kind)) + '</div>' : '') +
           '<div class="hc-cafe-line__edit">' +
             '<button type="button" data-action="cafe" data-cafe="edit" data-id="' + c.esc(l.key) + '">Edit</button>' +
             '<span aria-hidden="true">·</span>' +
@@ -401,7 +438,7 @@
     });
     html += '</div>';
 
-    html += '<button type="button" class="hc-cafe-addmore" data-action="cafe" data-cafe="menu">+ Add another drink</button>';
+    html += '<button type="button" class="hc-cafe-addmore" data-action="cafe" data-cafe="menu">+ Add something else</button>';
 
     var closed = HC.cafe.closedReason();
     if (closed) {
@@ -550,8 +587,8 @@
     html += '<p class="hc-cafe__label">What you ordered</p><div class="hc-cafe-lines">';
     (o.items || []).forEach(function (l) {
       html += '<div class="hc-cafe-line"><div class="hc-cafe-line__body">' +
-        '<div class="hc-cafe-line__name">' + c.esc(l.name + ', ' + l.size_label) + '</div>' +
-        '<div class="hc-cafe-line__mods">' + c.esc(l.summary || 'Black') + '</div>' +
+        '<div class="hc-cafe-line__name">' + c.esc(HC.cafe.lineName(l.name, l.size_label)) + '</div>' +
+        ((l.summary || plain(l.kind)) ? '<div class="hc-cafe-line__mods">' + c.esc(l.summary || plain(l.kind)) + '</div>' : '') +
       '</div></div>';
     });
     html += '</div>';
@@ -666,7 +703,8 @@
         '<span class="hc-cafe-tick__no">#' + c.esc(r.ticket_no) + '</span></div>' +
       '<ul class="hc-cafe-tick__d">' +
         (r.items || []).map(function (l) {
-          return '<li>' + c.esc(l.name + ' ' + l.size_label) + '<small>' + c.esc(l.summary || 'Black') + '</small></li>';
+          return '<li>' + c.esc(l.size_label ? l.name + ' ' + l.size_label : l.name) +
+            ((l.summary || plain(l.kind)) ? '<small>' + c.esc(l.summary || plain(l.kind)) + '</small>' : '') + '</li>';
         }).join('') +
       '</ul><div class="hc-cafe-tick__a">';
 
@@ -803,6 +841,11 @@
       if (line) openSheet(line.item_id, line.key);
     },
     close: function () { state.sheet = null; paintSheet(); },
+    fold: function (el) {
+      var id = el.getAttribute('data-id');
+      state.folded[id] = !state.folded[id];
+      paint();
+    },
     size: function (el) { state.sheet.size = el.getAttribute('data-id'); paintSheet(); },
     level: function (el) { state.sheet.options[el.getAttribute('data-key')] = el.getAttribute('data-id'); paintSheet(); },
     more: function (el) {
@@ -821,7 +864,7 @@
       if (s.key) {
         HC.cafe.replaceLine(s.key, line);
       } else if (!HC.cafe.addLine(line)) {
-        c.toast('Up to 10 drinks in one order.');
+        c.toast('Up to 10 items in one order.');
         return;
       }
       HC.native.tap('Light');

@@ -146,12 +146,18 @@ async function go(page, route) {
   errors.push(...page.errors);
   await page.close();
 
-  // The menu, with two drinks already in the order.
+  // The menu, with a drink and a cookie already in the order. The bundled
+  // menu has no food yet (the cafe's Square has no food category), so two
+  // sample food rows are added here, the way the sync would write them.
   page = await phone(browser, {});
   await page.evaluate(() => {
+    const food = (id, name, cents, order) => ({ id, name, icon: 'food', kind: 'food', sortOrder: order,
+      available: true, options: [], sizes: [{ key: 'regular', label: '', price_cents: cents }] });
+    window.HC.data.cafeMenu = window.HC.data.cafeMenu.filter((m) => m.kind !== 'food')
+      .concat([food('cookie', 'Cookie', 250, 1010), food('burrito', 'Burrito', 600, 1020)]);
     window.HC.cafe.clearCart();
-    window.HC.cafe.addLine({ item_id: 'hot-coffee', size: '16oz', options: { half_and_half: 'regular', sugar: 2 } });
-    window.HC.cafe.addLine({ item_id: 'cold-brew', size: '12oz', options: { two_percent: 'light', splenda: 1 } });
+    window.HC.cafe.addLine({ item_id: 'hot-coffee', size: '12oz', options: { milk: 'Oat milk' } });
+    window.HC.cafe.addLine({ item_id: 'cookie', size: 'regular', options: {} });
   });
   await go(page, { name: 'cafe' });
   await shot(page, '02-menu.png');
@@ -161,15 +167,25 @@ async function go(page, route) {
   await shot(page, '02b-menu-scrolled.png');
   console.log('to-top disc opacity with the order bar:', await page.$eval('#hc-totop', (d) => getComputedStyle(d).opacity + ' show=' + d.getAttribute('data-show')));
 
-  // A drink's sheet.
-  await page.click('[data-cafe="open"][data-id="hot-coffee"]');
+  // Food, and Drinks folded away above it.
+  await page.evaluate(() => document.querySelector('[data-cafe="fold"][data-id="drinks"]').click());
   await page.waitForTimeout(300);
-  await page.click('[data-cafe="size"][data-id="16oz"]');
-  await page.click('[data-cafe="level"][data-key="half_and_half"][data-id="regular"]');
-  await page.click('[data-cafe="more"][data-key="sugar"]');
-  await page.click('[data-cafe="more"][data-key="sugar"]');
+  await page.evaluate(() => { const s = document.querySelector('#hc-main, .hc-main, main') || document.scrollingElement; s.scrollTop = 300; s.dispatchEvent(new Event('scroll')); });
+  await page.waitForTimeout(400);
+  await shot(page, '02c-menu-drinks-folded.png');
+  await page.evaluate(() => document.querySelector('[data-cafe="fold"][data-id="drinks"]').click());
+
+  // A drink's sheet, and a cookie's.
+  await page.evaluate(() => document.querySelector('[data-cafe="open"][data-id="hot-coffee"]').click());
+  await page.waitForTimeout(300);
+  await page.click('[data-cafe="size"][data-id="12oz"]');
+  await page.click('[data-cafe="level"][data-key="milk"][data-id="Oat milk"]');
   await page.waitForTimeout(500);
   await shot(page, '03-drink-sheet.png');
+  await page.evaluate(() => document.querySelector('[data-cafe="close"]').click());
+  await page.evaluate(() => document.querySelector('[data-cafe="open"][data-id="cookie"]').click());
+  await page.waitForTimeout(500);
+  await shot(page, '03b-food-sheet.png');
   await page.evaluate(() => document.querySelector('[data-cafe="close"]').click());
 
   // The order, a time picked.

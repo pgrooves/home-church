@@ -257,6 +257,20 @@ const MENU = [
   ok('same summary', lines.map((l) => phone.describe(phoneMenu, l).summary),
     C.priceCart(MENU, lines).lines.map((l) => l.summary));
   ok('same tax', phone.tax(750, '9.75'), C.taxCents(750, '9.75'));
+  const milkMenu = [
+    { id: 'cold-brew', name: 'Cold Brew', kind: 'drink', options: C.HOUSE_OPTIONS,
+      sizes: [{ key: '12oz', label: '12 oz', price_cents: 300 }] },
+    { id: 'cookie', name: 'Cookie', kind: 'food', options: [],
+      sizes: [{ key: 'regular', label: '', price_cents: 250 }] }
+  ];
+  const milkLines = [
+    { item_id: 'cold-brew', size: '12oz', options: { milk: 'Oat milk' } },
+    { item_id: 'cookie', size: 'regular', options: {} }
+  ];
+  ok('same reading of a milk pick and of food',
+    milkLines.map((l) => { const d = phone.describe(milkMenu, l); return [d.summary, d.kind, d.price]; }),
+    C.priceCart(milkMenu, milkLines).lines.map((l) => [l.summary, l.kind, l.price_cents]));
+  ok('food reads as its name and its price', [phone.lineName('Cookie', ''), phone.priceLine(milkMenu[1])], ['Cookie', '$2.50']);
   const cases = [
     { override: '', day: '2026-10-04', minutes: 470, sunday: true },
     { override: '', day: '2026-10-04', minutes: 469, sunday: true },
@@ -272,6 +286,108 @@ const MENU = [
     cases.map((x) => C.pickupTimes({ open: C.openState(x), minutes: x.minutes })));
   ok('same 09:25', phone.hhmm(565), C.hhmm(565));
   ok('pickup_at on the church clock', phone.pickupClock('2026-10-04T14:25:00Z'), '9:25');
+
+  console.log('\n--- the menu, from the owner\'s Square ---');
+
+  // Shaped like the cafe's real library on 2026-10-18: one Square item per
+  // size, a leading dot to sort them at the register, one "Regular"
+  // variation each, in a "Home Church Menu" category.
+  const LOC = 'LOC1';
+  const cat = (id, name) => ({ type: 'CATEGORY', id, category_data: { name } });
+  const sq = (id, name, cents, extra = {}) => Object.assign({
+    type: 'ITEM', id, present_at_all_locations: false, present_at_location_ids: [LOC],
+    item_data: Object.assign({
+      name, categories: [{ id: 'HCM', ordinal: extra.ordinal || 0 }],
+      variations: [{ id: id + '-V', present_at_all_locations: false, present_at_location_ids: [LOC],
+        item_variation_data: { name: 'Regular', pricing_type: 'FIXED_PRICING', price_money: { amount: cents, currency: 'USD' } } }]
+    }, extra.data || {})
+  }, extra.top || {});
+  const LIBRARY = [
+    cat('HCM', 'Home Church Menu'), cat('POP', 'Pop Up'),
+    sq('HC12', '.Hot Coffee 12oz', 300, { ordinal: -20 }),
+    sq('HC08', '.Hot Coffee 08oz', 200, { ordinal: -21 }),
+    sq('CB16', '.Cold Brew 16oz', 400, { ordinal: -30 }),
+    sq('CB12', '.Cold Brew 12oz', 300, { ordinal: -31 }),
+    sq('SH16', '.Shaken 16oz', 600, { ordinal: -10 }),
+    sq('PU', 'PU Cold Brew', 500, { data: { categories: [{ id: 'POP' }] } }),
+    sq('ELSE', '.Tea 12oz', 250, { top: { present_at_location_ids: ['OTHER'] } }),
+    sq('ARCH', '.Mocha 12oz', 450, { data: { is_archived: true } }),
+    sq('GONE', '.Latte 12oz', 450, { top: { is_deleted: true } })
+  ];
+  const EXISTING = [{ id: 'hot-coffee', name: 'Hot Coffee', icon: 'hot', blurb: 'Our house drip.',
+    options: OPTIONS.slice(0, 2), square_item_id: null, published: true }];
+  const synced = C.menuFromCatalog({ objects: LIBRARY, locationId: LOC, category: ' home church menu ', existing: EXISTING });
+
+  ok('the category is found by name, any case', synced.categoryFound, true);
+  ok('sizes sold as separate items become one drink each, in his order',
+    synced.rows.map((r) => r.name), ['Cold Brew', 'Hot Coffee', 'Shaken']);
+  const sqHot = synced.rows.find((r) => r.id === 'hot-coffee');
+  ok('a drink already on the menu keeps its id', !!sqHot, true);
+  ok('sizes smallest first, with his prices and his variation ids', sqHot.sizes, [
+    { key: '8oz', label: '8 oz', price_cents: 200, square_variation_id: 'HC08-V' },
+    { key: '12oz', label: '12 oz', price_cents: 300, square_variation_id: 'HC12-V' }
+  ]);
+  ok('the icon, blurb and add-ins set here are kept',
+    [sqHot.icon, sqHot.blurb, sqHot.options.length], ['hot', 'Our house drip.', 2]);
+  ok('a new drink starts with the house add-ins', synced.rows.find((r) => r.id === 'shaken').options, C.HOUSE_OPTIONS);
+  ok('a cold sounding drink gets the iced cup', synced.rows.map((r) => r.icon), ['cold', 'hot', 'cold']);
+  ok('another category, another location, archived and deleted are left off',
+    synced.rows.some((r) => /pu|tea|mocha|latte/i.test(r.name)), false);
+  ok('which Square items each drink came from', sqHot.square_item_id, 'HC12,HC08');
+
+  const priced = C.priceLine(synced.rows, { item_id: 'hot-coffee', size: '8oz', options: { half_and_half: 'light' } });
+  ok('checkout prices a synced drink from Square\'s number', priced.price_cents, 200);
+  ok('and sends Square its own item', C.paymentLinkBody({
+    orderId: 'o', locationId: LOC, priced: { lines: [priced], drinks: 1, subtotal_cents: 200 },
+    cupName: 'A', pickupAt: new Date('2026-10-18T14:00:00Z'), taxPercent: '0', tips: false, redirectUrl: ''
+  }).order.line_items[0].catalog_object_id, 'HC08-V');
+
+  const multi = C.menuFromCatalog({ locationId: LOC, category: 'Home Church Menu', objects: [cat('HCM', 'Home Church Menu'),
+    sq('LAT', 'Latte', 0, { data: { variations: [
+      { id: 'L16', present_at_all_locations: true, item_variation_data: { name: '16 oz', ordinal: 2, pricing_type: 'FIXED_PRICING', price_money: { amount: 500 } } },
+      { id: 'L12', present_at_all_locations: true, item_variation_data: { name: 'Small', ordinal: 1, pricing_type: 'FIXED_PRICING', price_money: { amount: 450 },
+        location_overrides: [{ location_id: LOC, price_money: { amount: 425 }, sold_out: true }] } },
+      { id: 'LX', present_at_all_locations: true, item_variation_data: { name: 'Any', pricing_type: 'VARIABLE_PRICING' } }
+    ], modifier_list_info: [{ modifier_list_id: 'M', enabled: true }] } })] });
+  ok('one item with variations is one drink with those sizes',
+    multi.rows[0].sizes.map((s) => [s.key, s.label, s.price_cents]), [['16oz', '16 oz', 500], ['small', 'Small', 425]]);
+  ok('a sold out size alone does not take the drink off', multi.rows[0].available, true);
+  ok('Square add-ins are named as not read yet', multi.notes.length, 1);
+
+  ok('no such category finds nothing, so nothing is changed',
+    C.menuFromCatalog({ objects: LIBRARY, locationId: LOC, category: 'Brunch' }),
+    { rows: [], notes: [], categoryFound: false });
+  ok('names: the dot and the size come off', ['.Hot Coffee 08oz', 'Latte (16 oz)', 'Growler', '12 oz'].map(C.splitDrinkName),
+    [{ base: 'Hot Coffee', oz: 8 }, { base: 'Latte', oz: 16 }, { base: 'Growler', oz: null }, { base: '', oz: 12 }]);
+
+  console.log('\n--- milk or oat milk, and food ---');
+
+  ok('the only add-in is milk', C.HOUSE_OPTIONS.map((o) => [o.key, o.type, o.levels]),
+    [['milk', 'pick', ['none', 'Milk', 'Oat milk']]]);
+  const oat = C.priceLine(milkMenu, { item_id: 'cold-brew', size: '12oz', options: { milk: 'Oat milk' } });
+  ok('oat milk reads as itself and is free', [oat.summary, oat.price_cents], ['Oat milk', 300]);
+  ok('no milk is no choice', C.priceLine(milkMenu, { item_id: 'cold-brew', size: '12oz', options: { milk: 'none' } }).choices, []);
+  throws('a milk the cafe does not have is refused',
+    () => C.priceLine(milkMenu, { item_id: 'cold-brew', size: '12oz', options: { milk: 'Almond' } }), 'pick the milk');
+  const both = C.priceCart(milkMenu, milkLines);
+  ok('a cookie is not a drink at the counter', [both.drinks, both.lines.length, both.subtotal_cents], [1, 2, 550]);
+  const sent = C.paymentLinkBody({
+    orderId: 'o', locationId: 'L', priced: both, cupName: 'A',
+    pickupAt: new Date('2026-10-18T14:00:00Z'), taxPercent: '0', tips: false, redirectUrl: ''
+  }).order.line_items;
+  ok('Square is told "Oat milk", and the cookie by its name alone',
+    [sent[0].modifiers[0].name, sent[1].name], ['Oat milk', 'Cookie']);
+  throws('ten things at most, food included', () => C.priceCart(milkMenu, Array(11).fill(milkLines[1])), 'up to 10 items');
+
+  const pantry = C.menuFromCatalog({ locationId: LOC, category: 'Home Church Food', kind: 'food', existing: [],
+    objects: [cat('HCF', 'Home Church Food'),
+      Object.assign(sq('CK', '.Cookie', 250), { item_data: Object.assign(sq('CK', '.Cookie', 250).item_data, { categories: [{ id: 'HCF' }] }) })] });
+  ok('food from its own category: no size, no add-ins, the food icon, after the drinks',
+    pantry.rows.map((r) => [r.id, r.kind, r.icon, r.sizes[0].label, r.options.length, r.sort_order >= 1000]),
+    [['cookie', 'food', 'food', '', 0, true]]);
+  ok('a drink sold one way, "Regular" in Square, has no size label either',
+    C.menuFromCatalog({ locationId: LOC, category: 'Home Church Menu', objects: [cat('HCM', 'Home Church Menu'), sq('CH', '.Chai', 400)] })
+      .rows[0].sizes, [{ key: 'regular', label: '', price_cents: 400, square_variation_id: 'CH-V' }]);
 
   console.log('\n' + pass + ' passed, ' + fail + ' failed.');
   if (fail) process.exit(1);

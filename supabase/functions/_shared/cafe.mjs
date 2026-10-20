@@ -26,6 +26,7 @@ export class CafeError extends Error {
 
 function optionText(option, value) {
   const name = option.short || option.label;
+  if (option.type === 'pick') return String(value);
   if (option.type === 'level') return `${name}, ${value}`;
   return `${value} ${name}`;
 }
@@ -33,9 +34,10 @@ function optionText(option, value) {
 /**
  * One line of the cart, priced and described.
  *
- * `line` is { item_id, size, options: { [key]: value } }. Levels are a word
- * from the option's own list, counts a whole number up to its max. "none"
- * and 0 are the same as not choosing, and are left out of the summary.
+ * `line` is { item_id, size, options: { [key]: value } }. Levels and picks
+ * are a word from the option's own list (a pick reads as the word alone:
+ * "Oat milk"), counts a whole number up to its max. "none" and 0 are the
+ * same as not choosing, and are left out of the summary.
  */
 export function priceLine(menu, line) {
   const item = (menu || []).find((m) => m && m.id === line?.item_id);
@@ -59,10 +61,16 @@ export function priceLine(menu, line) {
   for (const option of item.options || []) {
     const raw = picked[option.key];
     if (raw == null || raw === '') continue;
+    // A phone from before picks existed draws one as a counter and sends 0.
+    if (option.type === 'pick' && raw === 0) continue;
 
-    if (option.type === 'level') {
+    if (option.type === 'level' || option.type === 'pick') {
       const levels = option.levels || [];
-      if (!levels.includes(raw)) throw new CafeError(`Pick how much ${option.label} you want.`);
+      if (!levels.includes(raw)) {
+        throw new CafeError(option.type === 'pick'
+          ? `Pick the ${option.label.toLowerCase()} you want.`
+          : `Pick how much ${option.label} you want.`);
+      }
       if (raw === 'none') continue;
       choices.push({ key: option.key, label: option.label, value: raw, qty: 1, text: optionText(option, raw) });
       price += Number(option.price_cents) || 0;
@@ -81,6 +89,7 @@ export function priceLine(menu, line) {
   return {
     item_id: item.id,
     name: item.name,
+    kind: item.kind === 'food' ? 'food' : 'drink',
     size: size.key,
     size_label: size.label,
     square_variation_id: size.square_variation_id || null,
@@ -90,17 +99,22 @@ export function priceLine(menu, line) {
   };
 }
 
+/**
+ * The whole order. `drinks` counts drinks only, since it is what a pickup
+ * time's capacity is measured in and a cookie does not keep a barista busy;
+ * MAX_DRINKS is the most lines of anything.
+ */
 export function priceCart(menu, lines) {
   if (!Array.isArray(lines) || lines.length === 0) {
     throw new CafeError('Your order is empty.');
   }
   if (lines.length > MAX_DRINKS) {
-    throw new CafeError(`Up to ${MAX_DRINKS} drinks in one order.`);
+    throw new CafeError(`Up to ${MAX_DRINKS} items in one order.`);
   }
   const priced = lines.map((l) => priceLine(menu, l));
   return {
     lines: priced,
-    drinks: priced.length,
+    drinks: priced.filter((l) => l.kind === 'drink').length,
     subtotal_cents: priced.reduce((sum, l) => sum + l.price_cents, 0),
   };
 }
@@ -324,7 +338,9 @@ export function paymentLinkBody({
       note: l.summary || undefined,
       modifiers: l.choices.length
         ? l.choices.map((c) => ({
-            name: c.qty > 1 || typeof c.value === 'number' ? c.label : `${c.label} (${c.value})`,
+            // A pick ("Oat milk") already says what it is.
+            name: c.qty > 1 || typeof c.value === 'number' ? c.label
+              : c.text === c.value ? c.value : `${c.label} (${c.value})`,
             quantity: String(c.qty),
             base_price_money: money(0),
           }))
@@ -333,7 +349,7 @@ export function paymentLinkBody({
     if (l.square_variation_id) {
       item.catalog_object_id = l.square_variation_id;
     } else {
-      item.name = `${l.name}, ${l.size_label}`;
+      item.name = l.size_label ? `${l.name}, ${l.size_label}` : l.name;
       item.base_price_money = money(l.price_cents);
     }
     return item;
@@ -401,6 +417,171 @@ export function completedPayment(event) {
     total_cents: Number.isInteger(p.total_money?.amount) ? p.total_money.amount : null,
     tip_cents: Number.isInteger(p.tip_money?.amount) ? p.tip_money.amount : 0,
   };
+}
+
+/* ------------------------------------------------------------ the menu */
+
+/**
+ * The one choice a drink starts with: milk or oat milk, or none (Trey,
+ * 2026-10-18; sugar and the rest are at the condiment station). Free, and
+ * not in the owner's Square: it rides on the order as an ad hoc modifier so
+ * the counter sees it. Food starts with nothing. A drink the sync has seen
+ * before keeps whatever options its row already has.
+ */
+export const MILK_OPTION = { key: 'milk', label: 'Milk', group: '', type: 'pick', levels: ['none', 'Milk', 'Oat milk'] };
+export const HOUSE_OPTIONS = [MILK_OPTION];
+
+const COLD_WORDS = /\b(cold|iced?|shaken|frapp\w*|smoothie|lemonade|vietnamese|vsc)\b/i;
+
+function slug(text) {
+  return String(text).toLowerCase().replace(/&/g, ' and ').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+}
+
+/**
+ * ".Hot Coffee 08oz" as { base: 'Hot Coffee', oz: 8 }. The owner's register
+ * names lead with a dot to sort them, and carry the size in the name because
+ * each size is its own Square item. Either is optional.
+ */
+export function splitDrinkName(name) {
+  const flat = String(name ?? '').replace(/^[\s.·•*_-]+/, '').replace(/\s+/g, ' ').trim();
+  const m = /^(.*?)[\s,(-]*(\d+(?:\.\d+)?)\s*(?:oz|ounces?)\.?\)?$/i.exec(flat);
+  if (m) return { base: m[1].trim(), oz: Number(m[2]) };
+  return { base: flat, oz: null };
+}
+
+/* A size. `alone` is an item's only variation with no ounces in its name,
+   which Square calls "Regular": that is no size at all, so it has no label
+   and the app shows the name and the price only (a cookie, a burrito). */
+function sizeOf(oz, fallbackName, alone = false) {
+  if (oz != null) return { key: `${oz}oz`, label: `${oz} oz`, oz };
+  const label = String(fallbackName || 'Regular').trim() || 'Regular';
+  return { key: slug(label) || 'regular', label: alone ? '' : label, oz: null };
+}
+
+function presentAt(object, locationId) {
+  if (!object || object.is_deleted) return false;
+  if ((object.absent_at_location_ids || []).includes(locationId)) return false;
+  return object.present_at_all_locations === true ||
+    (object.present_at_location_ids || []).includes(locationId);
+}
+
+/**
+ * The owner's Square library, as rows for cafe_menu_items.
+ *
+ * WHAT COMES FROM SQUARE: which drinks (every item in the category named
+ * `category`, sold at this location, not archived), their names, sizes and
+ * prices, the order he has them in, a description if he wrote one, and sold
+ * out. Each size carries its variation id, so checkout sends Square his own
+ * item and his reports are itemized.
+ *
+ * SIZES, TWO WAYS. One item per size, the way his register is set up
+ * (".Hot Coffee 08oz", ".Hot Coffee 12oz"), is grouped into one drink by
+ * name. One item with several variations is one drink with those sizes.
+ *
+ * WHAT STAYS OURS: the icon, the add-ins, and a blurb when Square has no
+ * description, kept from the row if the drink is already on the menu
+ * (`existing`), so a sync never undoes something set by hand. Square modifier
+ * lists are not read yet; a drink that has some is named in `notes`.
+ *
+ * DRINKS AND FOOD. `kind` is which one this category is: run once for the
+ * drinks category and once for the food one. Food starts with no add-ins and
+ * the food icon, and sorts after every drink.
+ *
+ * Returns { rows, notes, categoryFound }. Pure: no network, no database.
+ */
+export function menuFromCatalog({ objects, locationId, category, existing = [], kind = 'drink' }) {
+  const food = kind === 'food';
+  const notes = [];
+  const want = String(category ?? '').trim().toLowerCase();
+  const all = Array.isArray(objects) ? objects : [];
+  const categoryIds = all
+    .filter((o) => o?.type === 'CATEGORY' && !o.is_deleted &&
+      String(o.category_data?.name ?? '').trim().toLowerCase() === want)
+    .map((o) => o.id);
+  if (!want || !categoryIds.length) return { rows: [], notes, categoryFound: false };
+
+  const groups = new Map();
+  for (const item of all) {
+    if (item?.type !== 'ITEM' || !presentAt(item, locationId)) continue;
+    const data = item.item_data || {};
+    if (data.is_archived) continue;
+    const cats = (data.categories || []).filter((c) => categoryIds.includes(c.id));
+    if (!cats.length && !categoryIds.includes(data.category_id)) continue;
+
+    const variations = (data.variations || []).filter((v) => {
+      const vd = v.item_variation_data || {};
+      return presentAt(v, locationId) && vd.sellable !== false &&
+        vd.pricing_type !== 'VARIABLE_PRICING' && Number.isInteger(vd.price_money?.amount);
+    });
+    if (!variations.length) {
+      notes.push(`${data.name || item.id} has no fixed price here, so it was left off.`);
+      continue;
+    }
+    if ((data.modifier_list_info || []).some((m) => m.enabled !== false)) {
+      notes.push(`${data.name || item.id} has add-ins in Square, which the app does not read yet.`);
+    }
+
+    const split = splitDrinkName(data.name);
+    if (!split.base) split.base = String(data.name ?? '').trim() || item.id;
+    const key = slug(split.base) || item.id.toLowerCase();
+    const ordinal = cats.length ? Math.min(...cats.map((c) => Number(c.ordinal) || 0)) : 0;
+    const g = groups.get(key) || { id: key, name: split.base, items: [], sizes: [], ordinal, blurb: null };
+    g.ordinal = Math.min(g.ordinal, ordinal);
+    g.items.push(item.id);
+    const text = String(data.description_plaintext ?? '').trim();
+    if (text && !g.blurb) g.blurb = text.slice(0, 160);
+
+    for (const v of variations) {
+      const vd = v.item_variation_data;
+      const size = variations.length === 1 && split.oz != null
+        ? sizeOf(split.oz)
+        : sizeOf(splitDrinkName(vd.name).oz, vd.name, variations.length === 1);
+      if (g.sizes.some((s) => s.key === size.key)) {
+        notes.push(`${split.base} has two ${size.label} sizes in Square; the first one is used.`);
+        continue;
+      }
+      const here = (vd.location_overrides || []).find((o) => o.location_id === locationId) || {};
+      g.sizes.push({
+        key: size.key,
+        label: size.label,
+        price_cents: Number.isInteger(here.price_money?.amount) ? here.price_money.amount : vd.price_money.amount,
+        square_variation_id: v.id,
+        oz: size.oz,
+        ordinal: Number(vd.ordinal) || 0,
+        sold_out: here.sold_out === true,
+      });
+    }
+    groups.set(key, g);
+  }
+
+  const before = new Map((existing || []).map((r) => [r.id, r]));
+  const rows = [...groups.values()]
+    .filter((g) => g.sizes.length)
+    .sort((a, b) => a.ordinal - b.ordinal || a.name.localeCompare(b.name))
+    .map((g, i) => {
+      const old = before.get(g.id);
+      const sizes = g.sizes
+        .sort((a, b) => (a.oz ?? Infinity) - (b.oz ?? Infinity) || a.ordinal - b.ordinal)
+        .map(({ key, label, price_cents, square_variation_id }) => ({ key, label, price_cents, square_variation_id }));
+      return {
+        id: g.id,
+        name: g.name,
+        kind: food ? 'food' : 'drink',
+        blurb: g.blurb || old?.blurb || null,
+        icon: food ? 'food' : old?.icon && old.icon !== 'food' ? old.icon : (COLD_WORDS.test(g.name) ? 'cold' : 'hot'),
+        sizes,
+        // Kept once set: a synced drink whose add-ins were cleared on purpose
+        // stays without them.
+        options: Array.isArray(old?.options) && (old.options.length || old.square_item_id != null)
+          ? old.options : food ? [] : HOUSE_OPTIONS,
+        square_item_id: g.items.join(','),
+        sort_order: (food ? 1000 : 0) + (i + 1) * 10,
+        available: !g.sizes.every((s) => s.sold_out),
+        published: true,
+      };
+    });
+
+  return { rows, notes, categoryFound: true };
 }
 
 /* -------------------------------------------------------------- webhooks */
