@@ -800,18 +800,26 @@ const give = (frames) => {
    So the lengths below come from the track's own shape, which is:
 
      0      quiet, building, 4 bars of intro
-     12.8s  IT COMES IN.  +4.2 dB, the biggest single moment in the track
-     25.6s  IT OPENS UP.  brightness up 800 Hz, the top arrives
-     35.2s  settles into a long even body
-     83.2s  a late brightening, the same figure as 57.6s
-     89.6s  THE OUTRO.  -5 dB, the bottom goes
+     12.8s  IT COMES IN.  +3.8 dB, and it is the biggest thing in the track
+     28.8s  THE TOP ARRIVES.  +313 Hz of brightness, the largest step in the
+            body, and the only real event between the two below
+     89.6s  THE OUTRO.  -4.8 dB, the bottom goes
      97.6s  ends
 
-   and the piece is cut to it: Home hands over to Calendar exactly as the
-   track comes in, the Guide opens exactly as it opens up, the closing tour
-   starts on the late brightening, and Give lands on the outro. The card at
-   the end goes up with eight bars of music left and holds through the last
-   of it into a second of silence.
+   THE TRACK IS FLATTER THAN THAT LIST LOOKS, and saying so matters more than
+   making it sound dramatic. Between bar 4 and bar 20 it moves by less than a
+   decibel a bar and the brightness wanders by a hundred or two. There are
+   two decisive moments in it and one modest third. An earlier read of this
+   file claimed a +800 Hz lift at 25.6s, which came from sampling one window
+   a beat rather than averaging a bar: measured properly the event is a bar
+   later and a third the size. Cutting to a moment that is not there is worse
+   than not cutting to it.
+
+   So three cuts are on the music and the rest are on bar lines, which is the
+   right default rather than a consolation: Home hands over to Calendar as
+   the track comes in, the Guide opens as the top arrives, and Give lands on
+   the outro. The card at the end goes up with eight bars of music left and
+   holds through the last of it into a second of silence.
 
    EVERY LENGTH IS IN BARS, not beats. A bar at 75 BPM is 96 frames, 3.2
    seconds, and cutting on bar lines is most of the difference between clean
@@ -830,14 +838,14 @@ const give = (frames) => {
 export const FULL = [
   home(BAR * 3),            /* 96 - 384,    hands over as the track comes in */
   cal(BAR * 2),             /* 384 - 576 */
-  listen(BAR * 2),          /* 576 - 768 */
-  guideIndex(BAR * 2),      /* 768 - 960,   the Guide opens as the track does */
-  guideTakeHome(BAR * 5),   /* 960 - 1440 */
-  guideOverview(BAR * 3, true),  /* 1440 - 1728, on the first late brightening */
+  listen(BAR * 3),          /* 576 - 864 */
+  guideIndex(BAR * 2),      /* 864 - 1056,  the Guide opens as the top arrives */
+  guideTakeHome(BAR * 4),   /* 1056 - 1440 */
+  guideOverview(BAR * 3, true),  /* 1440 - 1728 */
   guideNote(BAR * 3),       /* 1728 - 2016 */
   journal(BAR * 3),         /* 2016 - 2304 */
   worship(BAR * 2),         /* 2304 - 2496 */
-  connect(BAR * 2),         /* 2496 - 2688, on the second late brightening */
+  connect(BAR * 2),         /* 2496 - 2688 */
   give(BAR * 2)             /* 2688 - 2880, on the outro */
 ];
 

@@ -128,14 +128,14 @@ download does not keep.
 | Opening | 0 – 96 | The lockup, assembling, in the quiet | |
 | Home | 96 – 384 | Down the noticeboard, past the service times, to this week's message | *Home* |
 | Calendar | 384 – 576 | **The track comes in.** Two days opened, then everything coming up | *Calendar* |
-| Listen | 576 – 768 | Past this week into the archive, one message opened for its notes | *Listen* |
-| Guides | 768 – 960 | **It opens up.** Every Sunday the church has written up | *Guides* |
-| Self-Reflection Questions | 960 – 1440 | Opened, read down, one of them answered, then the one-liners | *Self-Reflection Questions* |
+| Listen | 576 – 864 | Past this week into the archive, one message opened for its notes | *Listen* |
+| Guides | 864 – 1056 | **The top arrives.** Every Sunday the church has written up | *Guides* |
+| Self-Reflection Questions | 1056 – 1440 | Opened, read down, one of them answered, then the one-liners | *Self-Reflection Questions* |
 | Overview | 1440 – 1728 | Sunday's message in writing, then the fuller summary under it | *Overview* |
 | Notetaking | 1728 – 2016 | A line highlighted, a note written on it, saved | *Notetaking* |
 | Journal | 2016 – 2304 | Both of them under their sermon, then every sermon | *Journal* |
 | Worship | 2304 – 2496 | A pass down Sunday's setlist | *Worship* |
-| Connect | 2496 – 2688 | A late brightening. Get in touch, and the serve teams | *Connect* |
+| Connect | 2496 – 2688 | Get in touch, and the serve teams | *Connect* |
 | Give | 2688 – 2880 | **The outro.** A thank you and one button | *Give* |
 | Closing | 2880 – 2976 | The name, the service times and the address, into the last of the music | |
 
@@ -262,17 +262,26 @@ it is:
 | | |
 |---|---|
 | 0 – 12.8s | quiet, four bars of intro, building |
-| **12.8s** | **it comes in** — +4.2 dB, the biggest single moment in it |
-| **25.6s** | **it opens up** — brightness up 800 Hz, the top arrives |
-| 35.2s | settles into a long, very even body |
-| 83.2s | a late brightening, the same figure as 57.6s |
-| **89.6s** | **the outro** — −5 dB, the bottom goes |
+| **12.8s** | **it comes in** — +3.8 dB, the biggest thing in the track |
+| **28.8s** | **the top arrives** — +313 Hz, the largest step in the body |
+| 32 – 89.6s | a long, very even body |
+| **89.6s** | **the outro** — −4.8 dB, the bottom goes |
 | 97.6s | ends |
 
-Home hands over to Calendar exactly as the track comes in. The Guide opens
-exactly as it opens up. The closing tour starts on the late brightening and
-Give lands on the outro. The closing card goes up with eight bars of music
-left and holds through the last of it into a second of silence.
+**The track is flatter than that table looks, and saying so matters more than
+making it sound dramatic.** Between bar 4 and bar 20 it moves by less than a
+decibel a bar and the brightness wanders by a hundred or two. There are two
+decisive moments in it and one modest third. An earlier version of this file
+claimed a +800 Hz lift at 25.6s; that came from sampling one window a beat
+rather than averaging a bar, and measured properly the event is a bar later
+and a third the size. Cutting to a moment that is not there is worse than not
+cutting to it.
+
+So three cuts are on the music and the other ten are on bar lines, which is
+the right default rather than a consolation. Home hands over to Calendar as
+the track comes in. The Guide opens as the top arrives. Give lands on the
+outro. The closing card goes up with eight bars of music left and holds
+through the last of it into a second of silence.
 
 **Every length is in bars, not beats.** A bar is 96 frames, and cutting on bar
 lines rather than beats is most of the difference between clean and busy: a
