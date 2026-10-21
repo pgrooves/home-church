@@ -107,7 +107,7 @@ later phase is a store page making a promise the download does not keep.
 | Calendar | 288 – 558 | Two days opened, then everything coming up | *Calendar* |
 | Listen | 558 – 768 | Past this week into the archive, one message opened for its notes | *Listen* |
 | Guides | 768 – 876 | Every Sunday the church has written up | *Guides* |
-| Discussion Questions | 876 – 1254 | Opened, read down, two ticked off | *Discussion Questions* |
+| Overview | 876 – 1254 | Sunday's message in writing, then the fuller summary under it | *Overview* |
 | Self-Reflection Questions | 1254 – 1608 | And the one-liners and the scripture index under them | *Self-Reflection Questions* |
 | Worship | 1608 – 1794 | A pass down Sunday's setlist | *Worship* |
 | Connect | 1794 – 1980 | Get in touch, and the seven serve teams | *Connect* |
@@ -123,10 +123,20 @@ caption telling somebody what to think about a screen they can see for
 themselves.
 
 **The Guide is more than a third of the running time**, in three scenes. That
-is the brief: it is the thing the church most wants somebody to find first, so
-it gets the index, the reader, and the half of a guide people do not discover
-on their own. Worship, Connect and Give follow it and close the tour, Give
-last because that is where a tour of a church ends.
+is the brief: it is the thing the church most wants somebody to find first.
+Worship, Connect and Give follow it and close the tour, Give last because that
+is where a tour of a church ends.
+
+**Nothing in it is about running a group**, and that is a decision rather than
+an oversight. The guide's best known half is the discussion questions, with a
+checkbox on each one and an eyebrow reading FOR THE GROUP, and the Group tab
+that makes them worth having is not in the first launch. Selling a group night
+to somebody downloading the app on day one is selling them something that
+needs seven other people and a Thursday. So the guide is shown the way one
+person uses it on a Tuesday: the message written down, the questions to sit
+with on your own, the lines worth keeping, and every passage that was read.
+The discussion questions are still on the screen, because they are in the app.
+They are just not what the words point at.
 
 **Apple caps an app preview at thirty seconds.** That is the whole reason there
 are two cuts. The store cut is the four pages the church leads with, Home,

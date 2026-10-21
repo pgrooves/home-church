@@ -11,9 +11,19 @@
    The run is Home, Cal, Listen, the Guide, then Worship, Connect and Give.
    The Guide is more than a third of the running time and gets three scenes of
    its own, which is the brief: it is the thing the church most wants somebody
-   to find first, so it gets the index, the reader, and the half of a guide
-   people do not discover on their own. The three after it are the tour, and
-   Give is last because that is where a tour of a church ends.
+   to find first. The three after it are the tour, and Give is last because
+   that is where a tour of a church ends.
+
+   NOTHING IN HERE IS ABOUT RUNNING A GROUP, and that is a decision rather
+   than an oversight. The guide's best known half is the discussion questions,
+   with a checkbox on each one and an eyebrow reading FOR THE GROUP, and the
+   Group tab that makes them worth having is not in the first launch. Selling
+   a group night to somebody downloading the app on day one is selling them
+   something that needs seven other people and a Thursday. So the guide is
+   shown the way one person uses it on a Tuesday: the message written down,
+   the questions to sit with on your own, the lines worth keeping, and every
+   passage that was read. The discussion questions are still on the screen,
+   because they are in the app, they are just not what the words point at.
 
    TWO CUTS OUT OF ONE SET OF SCENES. `FULL` is a minute and fourteen seconds,
    which is the length the church asked for, and it is what goes on the website.
@@ -42,8 +52,8 @@
 import { track, ramp } from './timing';
 import {
   setRoute, setScroll, setTab, setSection, setEpisode,
-  setChecked, pressCheck, setCalMonth, setCalDay,
-  setMenu, menuLink, anchorTop, maxScroll, tapPulse
+  setCalMonth, setCalDay, setMenu, menuLink,
+  anchorTop, maxScroll, tapPulse
 } from './drive';
 
 export const FPS = 30;
@@ -251,8 +261,8 @@ const guideIndex = (frames) => {
     frames,
     tab: { index: TAB.guide, lit: 1 },
     caption:
-      { eyebrow: 'For your group', line: 'Guides',
-      sub: 'Every Sunday, written up for your group.' },
+      { eyebrow: 'Every Sunday', line: 'Guides',
+      sub: 'Every message, written down and kept.' },
     act(win, t) {
       setRoute(win, { name: 'guide' });
 
@@ -292,47 +302,42 @@ const guideReader = (frames) => {
     frames,
     tab: { index: TAB.guide, lit: 0 },   /* a guide is a pushed view, not a tab */
     caption:
-      { eyebrow: 'For the group', line: 'Discussion Questions',
-      sub: 'What to talk about, ticked off as you go.' },
+      { eyebrow: 'Short summary', line: 'Overview',
+      sub: "What Sunday's message actually said." },
     act(win, t, ctx) {
       setRoute(win, { name: 'guide-reader', id: ctx.guideId });
 
-      /* Shut from the first frame rather than folded on camera. A guide opens
-         with its overview out, which is right on a phone and is a thousand
-         pixels of prose here. What shutting it buys is the six sections in
-         view under the caption, which is the shape of every guide this church
-         publishes and the thing worth looking at. */
-      setSection(win, 'short-summary', 0);
-      setSection(win, 'group', ramp(t, at(0.16), at(0.36), 0, 1, 'settle'));
+      /* THE OVERVIEW IS ALREADY OUT when a guide opens, and it is left that
+         way. An earlier cut shut it on the first frame to get to the
+         discussion questions faster, which was the right move for a video
+         about a group night and the wrong one for this. On the first day of
+         an app the person downloading it is on their own: what they want to
+         know is that Sunday's message is written down and they can read it
+         back on Tuesday. That is this section and the one under it. */
+      setSection(win, 'short-summary', 1);
+      setSection(win, 'full-summary', ramp(t, at(0.44), at(0.58), 0, 1, 'settle'));
 
-      /* Measured after the section has been put where this frame wants it, so
-         the questions are found where they actually are. */
-      const questions = anchorTop(win, '[data-section="group"] .hc-qgroup');
+      const overview = Math.max(0, anchorTop(win, '[data-section="short-summary"]') - 110);
+      const summary = Math.max(0, anchorTop(win, '[data-section="full-summary"]') - 110);
+
       setScroll(win, track(t, [
         { f: at(0.00), v: 0 },
-        { f: at(0.06), v: 0 },
-        { f: at(0.14), v: 70, ease: 'flick' },
-        { f: at(0.38), v: 70 },
-        { f: at(0.56), v: Math.max(0, questions - 150), ease: 'flick' },
-        { f: at(1.00), v: Math.max(0, questions - 150) }
+        { f: at(0.08), v: 0 },
+        { f: at(0.26), v: overview, ease: 'flick' },   /* into the prose */
+        { f: at(0.40), v: overview + 190 },
+        { f: at(0.62), v: summary, ease: 'flick' },
+        { f: at(0.78), v: summary },
+        { f: at(1.00), v: summary + 240, ease: 'flick' }
       ]));
 
-      setChecked(win, ctx.guideId, '0-0', t >= at(0.70));
-      setChecked(win, ctx.guideId, '0-1', t >= at(0.86));
-
-      /* The tick lands a touch large and settles, which is the app's own press
-         state held for a dozen frames rather than for as long as a thumb is. */
-      pressCheck(win, '0-0', 1 + 0.22 * ramp(t, at(0.70), at(0.70) + 14, 1, 0, 'flick'));
-      pressCheck(win, '0-1', 1 + 0.22 * ramp(t, at(0.86), at(0.86) + 14, 1, 0, 'flick'));
-      tapPulse(win, '[data-check-key="0-0"] .hc-check__box', (t - at(0.70) + 2) / 26);
-      if (t >= at(0.84)) tapPulse(win, '[data-check-key="0-1"] .hc-check__box', (t - at(0.86) + 2) / 26);
+      tapPulse(win, '[data-section="full-summary"] .hc-section__chevron', (t - at(0.42)) / 26);
     }
   };
 };
 
-/* Three. The half of a guide nobody finds on their own: the questions to take
-   home, the lines worth repeating, and every passage that was read from the
-   stage. Long cut only. */
+/* Three. The rest of what is in there, and the half of it a person reading on
+   their own gets the most out of: questions to sit with, the lines worth
+   keeping, and every passage that was read from the stage. Long cut only. */
 
 const guideMore = (frames) => {
   const at = moves(frames);
@@ -343,42 +348,44 @@ const guideMore = (frames) => {
     tab: { index: TAB.guide, lit: 0 },
     caption:
       { eyebrow: 'Take home', line: 'Self-Reflection Questions',
-      sub: 'Questions to take home, and every verse.' },
+      sub: 'Questions to sit with, and every verse.' },
     act(win, t, ctx) {
       setRoute(win, { name: 'guide-reader', id: ctx.guideId });
-      setSection(win, 'short-summary', 0);
 
       /* IT CARRIES ON FROM THE SCENE BEFORE RATHER THAN CUTTING TO A NEW
-         ARRANGEMENT. The discussion questions are still open and still have
-         two of them ticked, because that is where the last scene left this
-         screen, and the first thing that happens here is folding them away,
-         on camera, with the chevron turning over. Setting them shut on the
-         first frame instead made the whole page jump the moment the caption
-         came up, which read as a cut to somewhere else on a screen nobody
-         had left. */
-      setSection(win, 'group', ramp(t, at(0.02), at(0.14), 1, 0, 'settle'));
-      setSection(win, 'reflection', ramp(t, at(0.22), at(0.36), 0, 1, 'settle'));
-      setSection(win, 'oneliners', ramp(t, at(0.52), at(0.64), 0, 1, 'settle'));
-      setSection(win, 'scripture', ramp(t, at(0.78), at(0.88), 0, 1, 'settle'));
+         ARRANGEMENT. Both summaries are still open, because that is where the
+         last scene left this screen, and the first thing that happens here is
+         folding them away, on camera, with the chevrons turning over. Setting
+         them shut on the first frame instead made the whole page jump the
+         moment the caption came up, which read as a cut to somewhere else on
+         a screen nobody had left. */
+      const shut = ramp(t, at(0.02), at(0.16), 1, 0, 'settle');
+      setSection(win, 'short-summary', shut);
+      setSection(win, 'full-summary', shut);
+      setSection(win, 'reflection', ramp(t, at(0.24), at(0.38), 0, 1, 'settle'));
+      setSection(win, 'oneliners', ramp(t, at(0.54), at(0.66), 0, 1, 'settle'));
+      setSection(win, 'scripture', ramp(t, at(0.80), at(0.90), 0, 1, 'settle'));
 
       /* Follows whichever section is opening. Each one is measured after the
          states above are applied, so the number is where the heading actually
          is on this frame rather than where it was before the one above it
-         unfolded. */
+         unfolded. The fold is watched from the top of the first summary,
+         which is the one thing on the page that does not move while the two
+         below it collapse. */
       const top = (id) => Math.max(0, anchorTop(win, '[data-section="' + id + '"]') - 120);
       setScroll(win, track(t, [
-        { f: at(0.00), v: top('group') },
-        { f: at(0.16), v: top('group') },
-        { f: at(0.26), v: top('reflection'), ease: 'flick' },
-        { f: at(0.48), v: top('reflection') },
-        { f: at(0.58), v: top('oneliners'), ease: 'flick' },
-        { f: at(0.74), v: top('oneliners') },
-        { f: at(0.84), v: top('scripture'), ease: 'flick' },
+        { f: at(0.00), v: top('short-summary') },
+        { f: at(0.18), v: top('short-summary') },
+        { f: at(0.28), v: top('reflection'), ease: 'flick' },
+        { f: at(0.50), v: top('reflection') },
+        { f: at(0.60), v: top('oneliners'), ease: 'flick' },
+        { f: at(0.76), v: top('oneliners') },
+        { f: at(0.86), v: top('scripture'), ease: 'flick' },
         { f: at(1.00), v: top('scripture') }
       ]));
 
-      tapPulse(win, '[data-section="group"] .hc-section__chevron', (t - at(0.00)) / 26);
-      if (t > at(0.44)) tapPulse(win, '[data-section="oneliners"] .hc-section__chevron', (t - at(0.50)) / 26);
+      tapPulse(win, '[data-section="short-summary"] .hc-section__chevron', (t - at(0.00)) / 26);
+      if (t > at(0.46)) tapPulse(win, '[data-section="oneliners"] .hc-section__chevron', (t - at(0.52)) / 26);
     }
   };
 };
