@@ -12,7 +12,7 @@ npm run render              # out/home-church-app-store.mp4, 1320 x 2868, 29.6s
 npm run render:marketing    # out/home-church-marketing.mp4, 1080 x 1920, 73.6s
 ```
 
-**Both cuts need `public/music.m4a`, which is not in the repository.** It is a
+**Both cuts need `public/music.wav`, which is not in the repository.** It is a
 licensed track, and a licence is something somebody holds rather than
 something a git history should carry a copy of. `prepare.mjs` says so out loud
 if it is absent. Everything below about the grid depends on that particular
@@ -271,8 +271,25 @@ transition that does not exist only shoves a caption around.
 at 24, 64, 68 and 71 seconds the music changes gear and so does the picture.
 That is the grid being right rather than anything clever.
 
-**Changing the track means redoing this.** Measure the new tempo and the
-offset of its first beat, and if the beat is not a whole number of frames,
+**The bed is a wav, and it is trimmed by more than you would expect.** 0.4307
+seconds, which is two numbers: 0.3880 is where the track's own first beat
+falls, and 0.0427 is 2048 samples at 48kHz, which is what ffmpeg's AAC
+encoder writes in front of whatever audio it is given. Nothing trims that
+back off — the mp4 comes out with an audio stream 2048 samples longer than
+the video and no edit list saying to skip them — so without the correction
+every player starts the music a frame and a quarter late. It is a wav rather
+than an m4a for a related reason: `-ss` on a compressed file seeks to a frame
+boundary rather than to the sample you asked for, which is a second error on
+top of the first.
+
+**Measure that, do not trust it.** Render a few hundred frames, pull the audio
+out, and cross correlate it against the untrimmed track; the answer should be
+the first-beat offset to within a millisecond. Both signs of the correction
+were wrong once before the probe caught them, which is the entire argument
+for probing.
+
+**Changing the track means redoing all of this.** Measure the new tempo and
+the offset of its first beat, and if the beat is not a whole number of frames,
 pick a different track or accept drift. `BEAT` at the top of `src/scenes.js`
 is the one number to change, and the eleven scene lengths under it are counts
 against it.

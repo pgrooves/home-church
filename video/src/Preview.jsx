@@ -15,15 +15,35 @@ import { loadBrandFonts } from './fonts';
 import { HC, PHONE } from './theme';
 import { applyFrame, BEAT, buildTimeline, captionAt, CUTS } from './scenes';
 
-/* The bed, at public/music.m4a.
+/* The bed, at public/music.wav.
 
    NOT IN THE REPOSITORY, and deliberately: it is a licensed track and a
    licence is a thing somebody holds rather than a thing a git history should
    carry a copy of. prepare.mjs says so out loud when it is missing. What is
-   staged there has already had its first 0.376 seconds taken off, which is
-   where the track's own first beat falls, so beat one of the music is frame
-   zero of the video and every scene boundary after it lands on a beat. See
-   the note over BEAT in scenes.js.
+   staged there has had its first 0.4307 seconds taken off, so beat one of the
+   music is frame zero of the video and every scene boundary after it lands on
+   a beat. See the note over BEAT in scenes.js.
+
+   THAT NUMBER IS TWO NUMBERS. The track's own first beat is at 0.3880s,
+   measured off a 23ms analysis window; the other 0.0427 is 2048 samples at
+   48kHz, which is what ffmpeg's AAC encoder writes in front of the audio it
+   is given. Nothing trims that back off: the mp4 comes out with the audio
+   stream 2048 samples longer than the video and no edit list saying to skip
+   them, so every player starts the music a frame and a quarter late. Cutting
+   that much further into the track cancels it exactly.
+
+   It is an encoder quirk baked into an asset, which is not where a fix
+   belongs, and the honest alternatives are worse: Remotion can only offset an
+   Audio by whole frames, and a post-render remux needs an ffmpeg the person
+   rendering may not have. If the number ever drifts, measure it rather than
+   guess — render a few hundred frames, pull the audio out, and cross
+   correlate it against the untrimmed track. Both signs of this were wrong
+   once before the probe caught them.
+
+   UNCOMPRESSED, SO THE TRIM IS THE TRIM. ffmpeg's -ss on an m4a seeks to an
+   AAC frame boundary rather than to the sample asked for, which is a second
+   error on top of the first. Decoded to wav and cut by sample index, there
+   is nothing to round.
 
    The long cut runs out of music before it runs out of video, by design: the
    track ends at 72.7 seconds and the closing card holds for most of a second
@@ -33,7 +53,7 @@ const Track = () => {
   const { durationInFrames } = useVideoConfig();
   return (
     <Audio
-      src={staticFile('music.m4a')}
+      src={staticFile('music.wav')}
       volume={(f) =>
         interpolate(f, [durationInFrames - BEAT, durationInFrames - 1], [1, 0], {
           extrapolateLeft: 'clamp',

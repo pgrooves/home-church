@@ -235,7 +235,7 @@ async function bakeLiveContent() {
    and a frame rate nobody controls, which is a different kind of video. */
 /* The one thing this cannot fetch for you.
 
-   public/music.m4a is a licensed track and is not in the repository, so a
+   public/music.wav is a licensed track and is not in the repository, so a
    fresh clone has everything except the bed. The render needs it and fails
    without it, which is a confusing error two minutes into a render rather
    than a sentence here. Both cuts are cut to this track at 75 BPM and every
@@ -243,10 +243,10 @@ async function bakeLiveContent() {
    replacement: see the note over BEAT in src/scenes.js, which says what to
    measure and what to change. */
 function checkMusic() {
-  const file = path.join(HERE, 'public', 'music.m4a');
+  const file = path.join(HERE, 'public', 'music.wav');
   if (fs.existsSync(file)) return;
   console.error(
-    '\nprepare: public/music.m4a is missing, and the render will not start ' +
+    '\nprepare: public/music.wav is missing, and the render will not start ' +
     'without it.\n         It is the licensed bed, kept out of the ' +
     'repository on purpose. Drop the\n         track in, trimmed so its first ' +
     'beat is at zero, or render with\n         --props=\'{"music":null}\' ' +

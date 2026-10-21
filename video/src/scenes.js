@@ -71,9 +71,10 @@ export const FPS = 30;
 
    So every scene below is a whole number of beats and every boundary lands on
    one by construction, with nothing to round and nothing to accumulate. The
-   track is staged at public/music.m4a with its first 0.376 seconds trimmed
-   off, which is where its own first beat falls, so beat one of the music is
-   frame zero of the video.
+   track is staged at public/music.wav with its first 0.4307 seconds trimmed
+   off, so beat one of the music is frame zero of the video. That number is
+   the track's own first beat plus a correction for the AAC encoder, and the
+   note over Track in Preview.jsx has the long version.
 
    The two numbers that actually make a cut feel scored are further down:
    MENU_OUT, which is one beat, so the full screen list reaches opacity
