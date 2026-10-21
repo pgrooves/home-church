@@ -61,6 +61,28 @@ import {
 
 export const FPS = 30;
 
+/* THE MUSIC IS 75 BPM, WHICH AT THIRTY FRAMES A SECOND IS 24 FRAMES A BEAT
+   AND 96 A BAR, EXACTLY.
+
+   That is luck, and it is the whole reason this cut is on the grid rather
+   than near it. A beat that came out at 23.6 frames would drift a frame every
+   three beats and a second over the piece, and the only fixes are resampling
+   the music or letting the cuts wander. 75 at 30 divides.
+
+   So every scene below is a whole number of beats and every boundary lands on
+   one by construction, with nothing to round and nothing to accumulate. The
+   track is staged at public/music.m4a with its first 0.376 seconds trimmed
+   off, which is where its own first beat falls, so beat one of the music is
+   frame zero of the video.
+
+   The two numbers that actually make a cut feel scored are further down:
+   MENU_OUT, which is one beat, so the full screen list reaches opacity
+   exactly on the beat the page changes under it; and the dip at a scene's
+   edge, which bottoms out on the boundary. Both land the hit on the beat
+   rather than near it. */
+export const BEAT = 24;
+export const BAR = BEAT * 4;
+
 /* Where each tab sits in the bar, for the lit tile. js/app.js's TAB_META in
    its own order. */
 const TAB = { home: 0, cal: 1, connect: 2, listen: 3, guide: 4, more: 5 };
@@ -68,8 +90,8 @@ const TAB = { home: 0, cal: 1, connect: 2, listen: 3, guide: 4, more: 5 };
 /* The cards at either end. Neither is app footage, so the veil over them is
    opaque and the app underneath is free to sit wherever the nearest scene
    wants it. */
-export const OPEN_FRAMES = 54;
-export const CLOSE_FRAMES = 78;
+export const OPEN_FRAMES = BEAT * 2;
+export const CLOSE_FRAMES = BEAT * 3;
 
 /* How long the caption holds, in frames, the same at every scene length.
 
@@ -108,7 +130,7 @@ const DIM = 0.74;
    and the screen is one the eye is already on, so it can start almost at
    once. Both are still inside the caption's hold, which is the point: the
    dim lifts on something already in motion rather than on a photograph. */
-const PRE = { nav: 56, on: 40 };
+const PRE = { nav: BEAT * 2, on: BEAT };
 
 /* The window a scene's movement is laid out in: from PRE to just short of
    the cut. `at(p)` turns a fraction of the scene into a frame. */
@@ -355,7 +377,7 @@ const guideTakeHome = (frames) => {
   /* Later than PRE.on, and only here: the first thing this scene does is a
      tap, and the church asked for that tap to land as the caption goes
      rather than underneath it. Four frames before the words start to fade. */
-  const at = moves(frames, CAP_ON.out - 4);
+  const at = moves(frames, BEAT * 3);
   return {
     id: 'guideTakeHome',
     navRoute: 'guide',
@@ -767,44 +789,44 @@ const give = (frames) => {
    The two cuts.
    -------------------------------------------------------------------------- */
 
-/* 54 + 2088 + 78 = 2220 frames, seventy four seconds, which is the length
-   the church asked for.
+/* 2 + 87 + 3 = 92 beats. 2208 frames, 73.6 seconds, which is a minute and
+   fourteen as near as the music allows.
 
-   IT GOT THERE TWICE OVER, and the first way was free. Every scene used to
-   hold still for 74 frames before it moved; it is 56 now where the
-   navigation has to clear first and 40 where nothing does, and that alone is
-   seven seconds across eleven scenes without a caption being on screen for a
-   frame less than it was. See PRE at the top of this file.
+   EVERY LENGTH IN HERE IS A COUNT OF BEATS, and that is the only honest way
+   to cut to a track. A scene written in frames lands where it lands; a scene
+   written in beats lands on one, and so does the next, and nothing drifts
+   over the length of the piece. The cost is that a scene can only be a
+   multiple of 24 frames long, which is why these numbers are not the ones
+   that were here before: home went up by twelve frames, worship down by six,
+   and so on, each to the nearest beat.
 
-   The rest was paid for an inch at a time. Every scene is a second or so
-   shorter with the same beats in it, the closing card is six tenths shorter,
-   the navigation comes and goes a little faster, and the answer in the
-   take-home box is five words shorter than it was so that it can still be
-   typed at a speed somebody can read. One thing was cut outright: the
-   Scripture Index, which was the last second of the take-home scene.
+   It came out twelve frames shorter than the 2220 it was, which is the two
+   cards paying for the rounding. Nobody will notice four tenths of a second;
+   everybody notices a cut that lands a frame late.
 
-   That is the whole of it, and it is worth saying what it cost: this is a
-   brisk minute and fourteen rather than a comfortable one. Two scenes
-   dropped, Worship and Connect, would buy the same ten seconds back for the
-   nine that are left. The church asked for the length, so the length is what
-   it is; the lever is right here if that turns out to be the wrong trade.
+   The lengths were already as tight as the content allows before the grid
+   went on them, and they got a little more room rather than less: motion
+   starts on a beat now and the beat it starts on is earlier than the number
+   it replaced, so every scene has at least as long to move in as it had at
+   74 seconds. It is still a brisk minute and fourteen. Two scenes dropped,
+   Worship and Connect, would buy ten seconds back for the nine that remain.
 
-   The Guide and the Journal together are 1206 frames, which is well over
-   half the piece. That is the brief: they are what the church most wants
-   somebody to find first. Worship, Connect and Give follow them and close
-   the tour, Give last because that is where a tour of a church ends. */
+   The Guide and the Journal together are 1200 frames, fifty beats, which is
+   well over half the piece. That is the brief: they are what the church most
+   wants somebody to find first. Worship, Connect and Give follow them and
+   close the tour, Give last because that is where a tour of a church ends. */
 export const FULL = [
-  home(180),
-  cal(198),
-  listen(162),
-  guideIndex(114),
-  guideTakeHome(336),
-  guideOverview(216, true),
-  guideNote(294),
-  journal(246),
-  worship(126),
-  connect(120),
-  give(96)
+  home(BEAT * 8),
+  cal(BEAT * 8),
+  listen(BEAT * 7),
+  guideIndex(BEAT * 5),
+  guideTakeHome(BEAT * 14),
+  guideOverview(BEAT * 9, true),
+  guideNote(BEAT * 12),
+  journal(BEAT * 10),
+  worship(BEAT * 5),
+  connect(BEAT * 5),
+  give(BEAT * 4)
 ];
 
 /* The store cut cannot hold eleven screens in thirty seconds, so it is the
@@ -813,16 +835,18 @@ export const FULL = [
    cut only — the whole beat needs twenty seconds to read, and twenty of
    thirty seconds would cost three of these four. */
 export const APP_STORE = [
-  home(150),
-  cal(156),
-  listen(144),
-  guideOverview(318)
+  home(BEAT * 6),
+  cal(BEAT * 6),
+  listen(BEAT * 6),
+  guideOverview(BEAT * 14)
 ];
 
-/* The open and close cards are shorter in the store cut, which is where the
-   last few frames come from: 54 + 156 + 156 + 132 + 324 + 72 = 894, 29.8
-   seconds, inside Apple's thirty. */
-const APP_STORE_CARDS = { open: 54, close: 72 };
+/* 2 + 32 + 3 = 37 beats, 888 frames, 29.6 seconds, inside Apple's thirty
+   with a beat to spare. Thirty eight beats would be 30.4 and would not
+   upload, so this is the longest the store cut can be and still be on the
+   grid. The track runs out at 29.6 rather than ending, so the Audio fades it
+   over the last beat; see Preview.jsx. */
+const APP_STORE_CARDS = { open: BEAT * 2, close: BEAT * 3 };
 
 export const CUTS = {
   AppStorePreview: { scenes: APP_STORE, cards: APP_STORE_CARDS },
@@ -944,20 +968,20 @@ export function applyFrame(win, frame, ctx, timeline) {
      you are leaving, the route changes behind it with the new line gold, and
      it fades off the page you have arrived on. That is the cut, and it is
      also the feature. */
-  const MENU_OUT = 24;   /* frames the list takes to come up at the end */
-  const MENU_IN = 16;    /* and to clear at the start of the next scene */
+  const MENU_OUT = BEAT;        /* one beat to come up, landing full ON the beat */
+  const MENU_IN = BEAT / 2;     /* half a beat to clear off the new page */
 
   const leaving = scene.leave === 'nav'
-    ? ramp(t, scene.frames - MENU_OUT, scene.frames - 10, 0, 1, 'settle')
+    ? ramp(t, scene.frames - MENU_OUT, scene.frames, 0, 1, 'settle')
     : 0;
-  const arriving = scene.arrive === 'nav' ? ramp(t, 3, MENU_IN, 1, 0, 'settle') : 0;
+  const arriving = scene.arrive === 'nav' ? ramp(t, 0, MENU_IN, 1, 0, 'settle') : 0;
   setMenu(win, Math.max(leaving, arriving));
 
   /* The button, pressed, and then the word in the list. Both are rings over
      the real control rather than a cursor, which is the same thing every
      other tap in this piece draws. */
   if (scene.leave === 'nav') {
-    tapPulse(win, '#hc-navfab', (t - (scene.frames - MENU_OUT - 4)) / 26);
+    tapPulse(win, '#hc-navfab', (t - (scene.frames - MENU_OUT - 8)) / 26);
     if (scene.nextRoute && t > scene.frames - 16) {
       tapPulse(win, menuLink(scene.nextRoute), (t - (scene.frames - 14)) / 22);
     }
@@ -986,7 +1010,7 @@ export function captionAt(frame, timeline) {
      the opening card, and only the last hands over to the closing one. */
   const up = scene.arrive === 'card' ? 0.86 : scene.arrive === 'cut' ? 0.9 : 0;
   const down = scene.leave === 'card' ? 0.97 : scene.leave === 'cut' ? 0.9 : 0;
-  const dip = scene.leave === 'card' ? 12 : scene.leave === 'cut' ? 10 : 0;
+  const dip = scene.leave === 'card' ? BEAT / 2 : scene.leave === 'cut' ? BEAT / 2 : 0;
 
   const veil = track(t, [
     { f: 0, v: up },

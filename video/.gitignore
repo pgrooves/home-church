@@ -7,3 +7,7 @@ public/app/
 out/
 
 node_modules/
+
+# The music. A licensed track, so the licence lives with whoever holds it
+# rather than in a git history. prepare.mjs says what to do if it is absent.
+public/music.m4a

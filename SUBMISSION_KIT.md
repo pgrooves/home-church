@@ -439,9 +439,11 @@ npm install
 npm run render      # video/out/home-church-app-store.mp4
 ```
 
-29.8 seconds at 1320 x 2868, H.264, silent. **Apple takes an app preview
-between fifteen and thirty seconds**, which is the constraint the cut is built
-around. In order: Home and the noticeboard, Calendar and what is coming up,
+29.6 seconds at 1320 x 2868, H.264, with a music bed. **Apple takes an app
+preview between fifteen and thirty seconds**, which is the constraint the cut
+is built around — and it autoplays muted on the store page, so nothing in it
+depends on hearing the track. The bed is a licensed one and is not in the
+repository; `video/README.md` says where it goes. In order: Home and the noticeboard, Calendar and what is coming up,
 Listen, then the Guide, which is the longest thing in it because it is what the
 church most wants somebody to find first. Then the name, the service times and
 the address. Upload it on the version page under Previews and Screenshots, 6.9

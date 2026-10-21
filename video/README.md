@@ -8,9 +8,15 @@ the composition in a browser one frame at a time.
 ```bash
 cd video
 npm install
-npm run render              # out/home-church-app-store.mp4, 1320 x 2868, 29.8s
-npm run render:marketing    # out/home-church-marketing.mp4, 1080 x 1920, 74.0s
+npm run render              # out/home-church-app-store.mp4, 1320 x 2868, 29.6s
+npm run render:marketing    # out/home-church-marketing.mp4, 1080 x 1920, 73.6s
 ```
+
+**Both cuts need `public/music.m4a`, which is not in the repository.** It is a
+licensed track, and a licence is something somebody holds rather than
+something a git history should carry a copy of. `prepare.mjs` says so out loud
+if it is absent. Everything below about the grid depends on that particular
+track; see **Cut to the music**.
 
 Both scripts run `npm run stage` first, which copies the app into `public/app`
 and reads the church's live content into it. That needs the network; the render
@@ -119,19 +125,19 @@ download does not keep.
 
 | | Frames | | |
 |---|---|---|---|
-| Opening | 0 – 54 | The lockup, assembling | |
-| Home | 54 – 234 | Down the noticeboard, past the service times, to this week's message | *Home* |
-| Calendar | 234 – 432 | Two days opened, then everything coming up | *Calendar* |
-| Listen | 432 – 594 | Past this week into the archive, one message opened for its notes | *Listen* |
-| Guides | 594 – 708 | Every Sunday the church has written up | *Guides* |
-| Self-Reflection Questions | 708 – 1044 | Opened, read down, one of them answered, then the one-liners | *Self-Reflection Questions* |
-| Overview | 1044 – 1260 | Sunday's message in writing, then the fuller summary under it | *Overview* |
-| Notetaking | 1260 – 1554 | A line highlighted, a note written on it, saved | *Notetaking* |
-| Journal | 1554 – 1800 | Both of them under their sermon, then every sermon | *Journal* |
-| Worship | 1800 – 1926 | A pass down Sunday's setlist | *Worship* |
-| Connect | 1926 – 2046 | Get in touch, and the serve teams | *Connect* |
-| Give | 2046 – 2142 | A thank you and one button | *Give* |
-| Closing | 2142 – 2220 | The name, the service times and the address | |
+| Opening | 0 – 48 | The lockup, assembling | |
+| Home | 48 – 240 | Down the noticeboard, past the service times, to this week's message | *Home* |
+| Calendar | 240 – 432 | Two days opened, then everything coming up | *Calendar* |
+| Listen | 432 – 600 | Past this week into the archive, one message opened for its notes | *Listen* |
+| Guides | 600 – 720 | Every Sunday the church has written up | *Guides* |
+| Self-Reflection Questions | 720 – 1056 | Opened, read down, one of them answered, then the one-liners | *Self-Reflection Questions* |
+| Overview | 1056 – 1272 | Sunday's message in writing, then the fuller summary under it | *Overview* |
+| Notetaking | 1272 – 1560 | A line highlighted, a note written on it, saved | *Notetaking* |
+| Journal | 1560 – 1800 | Both of them under their sermon, then every sermon | *Journal* |
+| Worship | 1800 – 1920 | A pass down Sunday's setlist | *Worship* |
+| Connect | 1920 – 2040 | Get in touch, and the serve teams | *Connect* |
+| Give | 2040 – 2136 | A thank you and one button | *Give* |
+| Closing | 2136 – 2208 | The name, the service times and the address | |
 
 **Every caption is the app's own words.** The line is the name of the page or
 the section on screen, as the app writes it, the eyebrow above it is that
@@ -236,12 +242,47 @@ lever if it turns out to be the wrong trade is in `src/scenes.js`, and it is
 not the pacing — it is the number of scenes. Dropping Worship and Connect
 would buy ten seconds back for the nine screens that remain.
 
+## Cut to the music
+
+**The track is 75 BPM, which at thirty frames a second is 24 frames a beat and
+96 a bar, exactly.** That is luck and it is the whole reason this is on the
+grid rather than near it. A tempo that came out at 23.6 frames a beat would
+drift a frame every third beat and a second across the piece, and the only
+cures are resampling the music or letting the cuts wander. 75 at 30 divides.
+
+**So every scene length is a count of beats** — `BEAT * 8`, `BEAT * 14` — and
+every boundary lands on one by construction, with nothing to round off and
+nothing to accumulate. The track is staged with its first 0.376 seconds
+trimmed, which is where its own first beat falls, so beat one of the music is
+frame zero of the video.
+
+**The cut is not the boundary, on seven of the eleven.** A change of page here
+is the full screen list coming up over the old screen, the route changing
+behind it, and the list clearing on the new one, so what the eye registers is
+the moment the list goes opaque rather than the frame the scene counter
+changes. `MENU_OUT` is one beat and it now reaches full opacity *on* the
+boundary rather than ten frames early, so the hit is on the beat; the list
+clears over the half beat after. The four that are dips bottom out on the
+boundary already, and the two that are not cuts at all — the take-home into
+the Overview, the Overview into the note — are left alone, because snapping a
+transition that does not exist only shoves a caption around.
+
+**Four of the cuts landed on the track's own turns** without being asked to:
+at 24, 64, 68 and 71 seconds the music changes gear and so does the picture.
+That is the grid being right rather than anything clever.
+
+**Changing the track means redoing this.** Measure the new tempo and the
+offset of its first beat, and if the beat is not a whole number of frames,
+pick a different track or accept drift. `BEAT` at the top of `src/scenes.js`
+is the one number to change, and the eleven scene lengths under it are counts
+against it.
+
 ## The two compositions
 
 | id | Renders at | Runs | For |
 |---|---|---|---|
-| `AppStorePreview` | 1320 x 2868 | 29.8s | The store page. The app fills the frame, no device around it. |
-| `Marketing` | 1080 x 1920 | 74.0s | The website and the socials. Every scene, inside a drawn phone on a warm ground. |
+| `AppStorePreview` | 1320 x 2868 | 29.6s | The store page. The app fills the frame, no device around it. |
+| `Marketing` | 1080 x 1920 | 73.6s | The website and the socials. Every scene, inside a drawn phone on a warm ground. |
 
 Both are built from the same scene functions, listed in `src/scenes.js` as
 `APP_STORE` and `FULL`. A cut is a list of scenes with a length each, so adding
@@ -267,6 +308,7 @@ wants it.
 | `src/scenes.js` | The timeline. What happens, when, and the captions. |
 | `src/drive.js` | The hands: every function that reaches into the running app. |
 | `src/AppStage.jsx` | The iframe, and everything done to the app once it has booted. |
+| `src/Preview.jsx` | The piece: the app, the veil, the words, the cards, and the music. |
 | `src/Type.jsx` | The captions and the two cards. |
 | `src/timing.js` | Keyframes and easings. |
 | `src/theme.js` | The dark palette, copied from `css/tokens.css`. |
@@ -322,9 +364,11 @@ calls the same handler on the frame that asks for it. It is the same decision
 as switching the transitions off: the app's behaviour is right, its timing
 cannot be used.
 
-**No sound.** App previews autoplay muted on the store page and the one Apple
-guideline that matters here is that it has to work without audio. Nothing in
-this needs a voice over, and a music bed is a licence to keep track of.
+**It has to work with the sound off.** App previews autoplay muted on the
+store page, which is the one Apple guideline that bites here: there is a bed
+under both cuts now and not a word of narration, and nothing in the piece
+depends on hearing it. The music is a licence somebody has to keep track of —
+see the note at the top about why it is not committed.
 
 ## What is not identical between two renders
 

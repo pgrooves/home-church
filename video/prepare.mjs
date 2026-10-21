@@ -168,6 +168,7 @@ for (const entry of CARRY) {
 const baked = await bakeLiveContent();
 fs.writeFileSync(path.join(OUT, 'js', 'config.js'), baked ? BAKED_CONFIG : EMPTY_CONFIG);
 cutFeaturedVideoFallback();
+checkMusic();
 
 console.log(`prepare: ${files} files into public/app` +
   (baked ? `, ${baked.rows} live rows and ${baked.images} pictures baked in.`
@@ -232,6 +233,27 @@ async function bakeLiveContent() {
 
    If the video ever has to be in the piece, it needs a render with network
    and a frame rate nobody controls, which is a different kind of video. */
+/* The one thing this cannot fetch for you.
+
+   public/music.m4a is a licensed track and is not in the repository, so a
+   fresh clone has everything except the bed. The render needs it and fails
+   without it, which is a confusing error two minutes into a render rather
+   than a sentence here. Both cuts are cut to this track at 75 BPM and every
+   scene length is a count of its beats, so a different track is not a drop-in
+   replacement: see the note over BEAT in src/scenes.js, which says what to
+   measure and what to change. */
+function checkMusic() {
+  const file = path.join(HERE, 'public', 'music.m4a');
+  if (fs.existsSync(file)) return;
+  console.error(
+    '\nprepare: public/music.m4a is missing, and the render will not start ' +
+    'without it.\n         It is the licensed bed, kept out of the ' +
+    'repository on purpose. Drop the\n         track in, trimmed so its first ' +
+    'beat is at zero, or render with\n         --props=\'{"music":null}\' ' +
+    'once that switch exists.\n'
+  );
+}
+
 /* And the video that ships in the app, in the copy of js/featured-video.js
    that is staged here.
 

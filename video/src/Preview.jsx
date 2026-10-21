@@ -8,12 +8,41 @@
    =========================================================================== */
 
 import { useMemo } from 'react';
-import { AbsoluteFill, useCurrentFrame } from 'remotion';
+import { AbsoluteFill, Audio, interpolate, staticFile, useCurrentFrame, useVideoConfig } from 'remotion';
 import { AppStage } from './AppStage';
 import { Caption, CloseCard, OpenCard } from './Type';
 import { loadBrandFonts } from './fonts';
 import { HC, PHONE } from './theme';
-import { applyFrame, buildTimeline, captionAt, CUTS } from './scenes';
+import { applyFrame, BEAT, buildTimeline, captionAt, CUTS } from './scenes';
+
+/* The bed, at public/music.m4a.
+
+   NOT IN THE REPOSITORY, and deliberately: it is a licensed track and a
+   licence is a thing somebody holds rather than a thing a git history should
+   carry a copy of. prepare.mjs says so out loud when it is missing. What is
+   staged there has already had its first 0.376 seconds taken off, which is
+   where the track's own first beat falls, so beat one of the music is frame
+   zero of the video and every scene boundary after it lands on a beat. See
+   the note over BEAT in scenes.js.
+
+   The long cut runs out of music before it runs out of video, by design: the
+   track ends at 72.7 seconds and the closing card holds for most of a second
+   after it in silence, which is what a card you are meant to read wants. The
+   store cut stops in the middle of the track, so the last beat is a fade. */
+const Track = () => {
+  const { durationInFrames } = useVideoConfig();
+  return (
+    <Audio
+      src={staticFile('music.m4a')}
+      volume={(f) =>
+        interpolate(f, [durationInFrames - BEAT, durationInFrames - 1], [1, 0], {
+          extrapolateLeft: 'clamp',
+          extrapolateRight: 'clamp'
+        })
+      }
+    />
+  );
+};
 
 export const Preview = ({ cut = 'AppStorePreview', scale = 1 }) => {
   loadBrandFonts();
@@ -39,6 +68,8 @@ export const Preview = ({ cut = 'AppStorePreview', scale = 1 }) => {
         overflow: 'hidden'
       }}
     >
+      <Track />
+
       <AppStage frame={frame} apply={apply} scale={scale} />
 
       {/* Everything above the glass is laid out at phone scale and then taken
