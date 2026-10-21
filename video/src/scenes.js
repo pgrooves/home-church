@@ -58,17 +58,33 @@ const TAB = { home: 0, cal: 1, connect: 2, listen: 3, guide: 4, more: 5 };
 export const OPEN_FRAMES = 54;
 export const CLOSE_FRAMES = 96;
 
-/* How long the caption holds, in frames, the same at every scene length. The
-   veil is gone 26 frames after this and starts closing 12 before the end, so
-   anything shorter than about 130 frames is a caption with a glimpse of app
-   after it. */
-const CAP = { in: 22, out: 56 };
+/* How long the caption holds, in frames, the same at every scene length.
+
+   TWO SETS, because a scene arrived at through the navigation spends its
+   first twenty frames under a full screen list and the caption cannot start
+   until that has cleared, where a scene that simply carries on from the one
+   before can start straight away.
+
+   THE HOLD IS THE SENTENCE'S, not the title's. A page name is read in a
+   glance; eight words under it are not, and the first cut of this gave them
+   under a second, which at this size is a sentence somebody notices and then
+   misses. The sentences came down to about seven words each at the same time,
+   because a caption that needs three seconds is a caption that is too long
+   for a video. */
+const CAP_NAV = { in: 22, out: 82 };
+const CAP_ON = { in: 8, out: 68 };
+
+/* How far the page goes back while its name is over it. 0.62 left too much
+   of the screen competing with the sentence, which on a calendar grid is
+   thirty numbers behind eight words. Far enough back to read the caption,
+   near enough to see it is a real screen under there. */
+const DIM = 0.74;
 
 /* The window a scene's movement is laid out in: from a little before the
    caption clears, so the veil lifts on something already moving, to just
    short of the cut. `at(p)` turns a fraction of the scene into a frame. */
 function moves(frames) {
-  const from = CAP.out - 8;
+  const from = CAP_NAV.out - 8;   /* the later of the two, so one window fits both */
   const to = frames - 6;
   return (p) => Math.round(from + (to - from) * p);
 }
@@ -87,8 +103,7 @@ const home = (frames) => {
     tab: { index: TAB.home, lit: 1 },
     caption:
       { eyebrow: 'Home Church, Metairie', line: 'Home',
-      sub: 'What is going on this week, the moment you open the app.' },
-    cap: CAP,
+      sub: 'This week, the moment you open it.' },
     act(win, t) {
       setRoute(win, { name: 'home' });
 
@@ -133,8 +148,7 @@ const cal = (frames) => {
     tab: { index: TAB.cal, lit: 1 },
     caption:
       { eyebrow: 'Every date in one place', line: 'Calendar',
-      sub: 'Every service, class and gathering, and a reminder if you want one.' },
-    cap: CAP,
+      sub: 'Everything coming up, and a reminder.' },
     act(win, t) {
       setRoute(win, { name: 'cal' });
 
@@ -198,8 +212,7 @@ const listen = (frames) => {
     tab: { index: TAB.listen, lit: 1 },
     caption:
       { eyebrow: 'Wherever you listen', line: 'Listen',
-      sub: 'Every message we have preached, with the notes that came with it.' },
-    cap: CAP,
+      sub: 'Every message, with its notes.' },
     act(win, t) {
       setRoute(win, { name: 'listen' });
 
@@ -231,12 +244,15 @@ const guideIndex = (frames) => {
   return {
     id: 'guideIndex',
     navRoute: 'guide',
+    /* A tap on a row, which pushes the reader. Not the navigation, and not
+       nothing either: the screen really does change. A short dip covers the
+       push the way the app's own view transition would. */
+    leave: 'cut',
     frames,
     tab: { index: TAB.guide, lit: 1 },
     caption:
       { eyebrow: 'For your group', line: 'Guides',
-      sub: 'Every Sunday written up for your group, saved on your phone.' },
-    cap: CAP,
+      sub: 'Every Sunday, written up for your group.' },
     act(win, t) {
       setRoute(win, { name: 'guide' });
 
@@ -272,12 +288,12 @@ const guideReader = (frames) => {
   return {
     id: 'guideReader',
     navRoute: 'guide',
+    arrive: 'cut',
     frames,
     tab: { index: TAB.guide, lit: 0 },   /* a guide is a pushed view, not a tab */
     caption:
       { eyebrow: 'For the group', line: 'Discussion Questions',
-      sub: 'What to talk about on Thursday, ticked off as your group goes.' },
-    cap: CAP,
+      sub: 'What to talk about, ticked off as you go.' },
     act(win, t, ctx) {
       setRoute(win, { name: 'guide-reader', id: ctx.guideId });
 
@@ -327,16 +343,23 @@ const guideMore = (frames) => {
     tab: { index: TAB.guide, lit: 0 },
     caption:
       { eyebrow: 'Take home', line: 'Self-Reflection Questions',
-      sub: 'Questions to sit with on your own, the lines worth keeping, every verse.' },
-    cap: CAP,
+      sub: 'Questions to take home, and every verse.' },
     act(win, t, ctx) {
       setRoute(win, { name: 'guide-reader', id: ctx.guideId });
-
       setSection(win, 'short-summary', 0);
-      setSection(win, 'group', 0);
-      setSection(win, 'reflection', ramp(t, at(0.10), at(0.26), 0, 1, 'settle'));
-      setSection(win, 'oneliners', ramp(t, at(0.46), at(0.60), 0, 1, 'settle'));
-      setSection(win, 'scripture', ramp(t, at(0.76), at(0.88), 0, 1, 'settle'));
+
+      /* IT CARRIES ON FROM THE SCENE BEFORE RATHER THAN CUTTING TO A NEW
+         ARRANGEMENT. The discussion questions are still open and still have
+         two of them ticked, because that is where the last scene left this
+         screen, and the first thing that happens here is folding them away,
+         on camera, with the chevron turning over. Setting them shut on the
+         first frame instead made the whole page jump the moment the caption
+         came up, which read as a cut to somewhere else on a screen nobody
+         had left. */
+      setSection(win, 'group', ramp(t, at(0.02), at(0.14), 1, 0, 'settle'));
+      setSection(win, 'reflection', ramp(t, at(0.22), at(0.36), 0, 1, 'settle'));
+      setSection(win, 'oneliners', ramp(t, at(0.52), at(0.64), 0, 1, 'settle'));
+      setSection(win, 'scripture', ramp(t, at(0.78), at(0.88), 0, 1, 'settle'));
 
       /* Follows whichever section is opening. Each one is measured after the
          states above are applied, so the number is where the heading actually
@@ -344,15 +367,18 @@ const guideMore = (frames) => {
          unfolded. */
       const top = (id) => Math.max(0, anchorTop(win, '[data-section="' + id + '"]') - 120);
       setScroll(win, track(t, [
-        { f: at(0.00), v: top('reflection') },
-        { f: at(0.40), v: top('reflection') },
-        { f: at(0.54), v: top('oneliners'), ease: 'flick' },
-        { f: at(0.70), v: top('oneliners') },
+        { f: at(0.00), v: top('group') },
+        { f: at(0.16), v: top('group') },
+        { f: at(0.26), v: top('reflection'), ease: 'flick' },
+        { f: at(0.48), v: top('reflection') },
+        { f: at(0.58), v: top('oneliners'), ease: 'flick' },
+        { f: at(0.74), v: top('oneliners') },
         { f: at(0.84), v: top('scripture'), ease: 'flick' },
         { f: at(1.00), v: top('scripture') }
       ]));
 
-      tapPulse(win, '[data-section="oneliners"] .hc-section__chevron', (t - at(0.44)) / 26);
+      tapPulse(win, '[data-section="group"] .hc-section__chevron', (t - at(0.00)) / 26);
+      if (t > at(0.44)) tapPulse(win, '[data-section="oneliners"] .hc-section__chevron', (t - at(0.50)) / 26);
     }
   };
 };
@@ -371,8 +397,7 @@ const worship = (frames) => {
     tab: { index: TAB.more, lit: 1 },
     caption:
       { eyebrow: 'What we sang', line: 'Worship',
-      sub: "Sunday's songs, and somewhere to hear each one again." },
-    cap: CAP,
+      sub: "Sunday's songs, all week long." },
     act(win, t) {
       setRoute(win, { name: 'worship' });
 
@@ -404,8 +429,7 @@ const connect = (frames) => {
     tab: { index: TAB.connect, lit: 1 },
     caption:
       { eyebrow: 'Find your people', line: 'Connect',
-      sub: 'Reach a real person, find a group, join a team.' },
-    cap: CAP,
+      sub: 'Find a group, join a team.' },
     act(win, t) {
       setRoute(win, { name: 'connect' });
 
@@ -443,8 +467,7 @@ const give = (frames) => {
     tab: { index: TAB.more, lit: 1 },
     caption:
       { eyebrow: 'Thank you', line: 'Give',
-      sub: 'One button, and the plain truth about what it pays for.' },
-    cap: CAP,
+      sub: 'One button, and what it pays for.' },
     act(win, t) {
       setRoute(win, { name: 'give' });
       setScroll(win, 0);
@@ -457,7 +480,7 @@ const give = (frames) => {
    The two cuts.
    -------------------------------------------------------------------------- */
 
-/* 54 + 234 + 270 + 210 + 108 + 378 + 354 + 186 + 186 + 144 + 96 = 2220 frames,
+/* 54 + 228 + 264 + 204 + 168 + 348 + 342 + 180 + 180 + 156 + 96 = 2220 frames,
    74.0 seconds, which is the length the church asked for.
 
    Everything before the Guide is tighter than it was, because the first pass
@@ -466,25 +489,25 @@ const give = (frames) => {
    frames, which is more than a third of the piece and still the point of it.
    Worship, Connect and Give follow it and close the tour. */
 export const FULL = [
-  home(234),
-  cal(270),
-  listen(210),
-  guideIndex(108),
-  guideReader(378),
-  guideMore(354),
-  worship(186),
-  connect(186),
-  give(144)
+  home(228),
+  cal(264),
+  listen(204),
+  guideIndex(168),
+  guideReader(348),
+  guideMore(342),
+  worship(180),
+  connect(180),
+  give(156)
 ];
 
 /* The store cut cannot hold nine pages in thirty seconds, so it is the four
    the church leads with: Home, Cal, Listen, and the Guide, which is still the
    longest thing in it. Worship, Connect and Give are in the long cut. */
 export const APP_STORE = [
-  home(156),
+  home(150),
   cal(156),
-  listen(132),
-  guideReader(324)
+  listen(144),
+  guideReader(318)
 ];
 
 /* The open and close cards are shorter in the store cut, which is where the
@@ -514,11 +537,25 @@ export function buildTimeline(cut) {
       tabFrom: from,
       tabTo: scene.tab.index,
       tabLit: scene.tab.lit,
-      /* Whether this scene is arrived at and left through the navigation,
-         which is every scene but the first and the last: the cards at the
-         ends are not places anybody navigated to. */
-      menuIn: i > 0,
-      menuOut: i < scenes.length - 1,
+      /* HOW THIS SCENE IS ARRIVED AT AND LEFT, and the answer is not always
+         the navigation.
+
+         Three of the scenes are the same page: the guide index, the
+         discussion questions and the take-home sections are one screen and
+         two of its parts. Opening the navigation between them says a thumb
+         went somewhere, and then it does not go anywhere, which is a lie
+         small enough to be confusing rather than wrong. So the list only
+         comes up where the destination actually changes.
+
+         Inside the guide, one of the two hand-overs is a tap on a row in the
+         index, which pushes the reader and is a cut; the other is the same
+         screen carrying on down itself, which is not a cut at all. A scene
+         can name either; where it does not, same page means carry on and a
+         different page means the navigation. */
+      arrive: i === 0 ? 'card'
+        : scene.arrive || (scenes[i - 1].navRoute === scene.navRoute ? 'on' : 'nav'),
+      leave: i === scenes.length - 1 ? 'card'
+        : scene.leave || (scenes[i + 1].navRoute === scene.navRoute ? 'on' : 'nav'),
       /* The word in the list a thumb would have pressed to get to the next
          scene. Modules and tabs both carry their route as data-id. */
       nextRoute: scenes[i + 1] ? scenes[i + 1].navRoute : null
@@ -578,16 +615,16 @@ export function applyFrame(win, frame, ctx, timeline) {
   const MENU_OUT = 30;   /* frames the list takes to come up at the end */
   const MENU_IN = 22;    /* and to clear at the start of the next scene */
 
-  const leaving = scene.menuOut
+  const leaving = scene.leave === 'nav'
     ? ramp(t, scene.frames - MENU_OUT, scene.frames - 10, 0, 1, 'settle')
     : 0;
-  const arriving = scene.menuIn ? ramp(t, 3, MENU_IN, 1, 0, 'settle') : 0;
+  const arriving = scene.arrive === 'nav' ? ramp(t, 3, MENU_IN, 1, 0, 'settle') : 0;
   setMenu(win, Math.max(leaving, arriving));
 
   /* The button, pressed, and then the word in the list. Both are rings over
      the real control rather than a cursor, which is the same thing every
      other tap in this piece draws. */
-  if (scene.menuOut) {
+  if (scene.leave === 'nav') {
     tapPulse(win, '#hc-navfab', (t - (scene.frames - MENU_OUT - 4)) / 26);
     if (scene.nextRoute && t > scene.frames - 16) {
       tapPulse(win, menuLink(scene.nextRoute), (t - (scene.frames - 14)) / 22);
@@ -602,43 +639,36 @@ export function captionAt(frame, timeline) {
   if (!scene) return null;
 
   const t = frame - scene.start;
-  const { in: capIn, out: capOut } = scene.cap;
+  const onPage = scene.arrive === 'on' || scene.arrive === 'cut';
+  const { in: capIn, out: capOut } = onPage ? CAP_ON : CAP_NAV;
 
-  /* Opaque for the change of screen, then down to a dim the app reads through,
-     then off. Back up over the last twelve frames, which is the cut into the
-     next scene: the screen behind it changes where nothing can be seen. */
-  /* IT WAITS FOR THE NAVIGATION TO GET OUT OF THE WAY. A scene arrived at
-     through the overlay spends its first twenty frames under a full screen
-     list, and a veil underneath that is two dimmers in series: the first cut
-     of this had the app almost black for most of a second at every change of
-     screen. So on those scenes the veil starts at nothing and comes up as the
-     list clears, which also means the caption fades in on the page rather
-     than on the list. The first scene has no list before it and takes the
-     hand-over from the opening card instead. */
-  const veil = track(t, scene.menuIn ? [
-    { f: 0, v: 0 },
-    { f: 16, v: 0 },
-    { f: 30, v: 0.62, ease: 'settle' },
-    { f: capOut, v: 0.62 },
+  /* THE VEIL ONLY EXISTS FOR THE CAPTION NOW, except at the two ends.
+
+     A scene arrived at through the navigation spends its first twenty frames
+     under a full screen list, and a veil underneath that is two dimmers in
+     series: the app went almost black at every change of screen in the first
+     cut of this. A scene that carries on from the one before has nothing to
+     cover at all and should not dip, because a dip between the discussion
+     questions and the reflection questions reads as a change of screen on a
+     screen that never changed. Only the first scene takes a hand-over from
+     the opening card, and only the last hands over to the closing one. */
+  const up = scene.arrive === 'card' ? 0.86 : scene.arrive === 'cut' ? 0.9 : 0;
+  const down = scene.leave === 'card' ? 0.97 : scene.leave === 'cut' ? 0.9 : 0;
+  const dip = scene.leave === 'card' ? 12 : scene.leave === 'cut' ? 10 : 0;
+
+  const veil = track(t, [
+    { f: 0, v: up },
+    { f: scene.arrive === 'nav' ? 16 : 0, v: up },
+    { f: scene.arrive === 'nav' ? 30 : 10, v: DIM, ease: 'settle' },
+    { f: capOut, v: DIM },
     { f: capOut + 22, v: 0, ease: 'settle' },
-    { f: scene.frames - (scene.menuOut ? 0 : 12), v: 0 },
-    { f: scene.frames, v: scene.menuOut ? 0 : 0.97, ease: 'settle' }
-  ] : [
-    { f: 0, v: 0.86 },
-    { f: 10, v: 0.62, ease: 'settle' },
-    { f: capOut, v: 0.62 },
-    { f: capOut + 22, v: 0, ease: 'settle' },
-    /* No climb at the end. The navigation coming up is what covers the change
-       of screen now, and a veil underneath it would only darken the list. The
-       last scene has no navigation after it, so that one still dips to meet
-       the closing card. */
-    { f: scene.frames - (scene.menuOut ? 0 : 12), v: 0 },
-    { f: scene.frames, v: scene.menuOut ? 0 : 0.97, ease: 'settle' }
+    { f: scene.frames - dip, v: 0 },
+    { f: scene.frames, v: down, ease: 'settle' }
   ]);
 
   const text = Math.min(
     ramp(t, capIn, capIn + 16, 0, 1, 'lift'),
-    ramp(t, capOut - 6, capOut + 14, 1, 0, 'settle')
+    ramp(t, capOut - 6, capOut + 16, 1, 0, 'settle')
   );
 
   return { ...scene.caption, veil, text, rise: ramp(t, capIn, capIn + 20, 10, 0, 'lift') };

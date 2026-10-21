@@ -47,19 +47,27 @@ export const Caption = ({ veil, text, rise, eyebrow, line, sub }) => (
       </p>
       {/* One sentence saying what the page is for. The name alone tells
           somebody who already has the app where they are; this is for the
-          person deciding whether to download it. Set in the reading face at
-          the size the app sets a card subtitle, so it reads as the app's own
-          second line rather than as a caption on a caption. */}
+          person deciding whether to download it.
+
+          NOT SET IN --hc-mid, which is where this started and where it was
+          unreadable. That token is for a timestamp under a card on a screen
+          somebody is holding still, and this is eight words going past at
+          thirty frames a second, half the size again in the cut that sits
+          inside a drawn phone. It carries weight rather than colour: near the
+          ink the line above uses, a step down in size, and 500 rather than
+          400, which the design system calls the lightest weight this face may
+          be set at. The hierarchy is still three deep, it is just made of
+          size and weight instead of three greys. */}
       {sub ? (
         <p
           style={{
-            margin: '12px 0 0',
-            maxWidth: 330,
+            margin: '14px 0 0',
+            maxWidth: 340,
             fontFamily: FACE.reading,
-            fontWeight: 400,
-            fontSize: 16,
-            lineHeight: '24px',
-            color: HC.mid
+            fontWeight: 500,
+            fontSize: 18,
+            lineHeight: '26px',
+            color: '#E3DDD3'
           }}
         >
           {sub}

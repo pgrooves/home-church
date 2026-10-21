@@ -42,9 +42,15 @@ clicks them and `js/app.js` handles the click, which is why the count above
 them repaints from *18 in all* to *1 of 18 covered* to *2 of 18 covered* as
 they land. The calendar opens a day because the day was tapped.
 
-**Including the navigation.** Every change of screen in the piece is the round
+**Including the navigation, where there is one.** A change of page is the round
 button in the corner, the full screen list behind it, and the destination going
-gold as it is pressed. That is the navigation the app ships with, `navStyle:
+gold as it is pressed. A change of *section* is not: the guide index, the
+discussion questions and the take-home sections are one screen and two of its
+parts, and opening the navigation between them says a thumb went somewhere and
+then it does not go anywhere, which is a lie small enough to be confusing
+rather than wrong. The list only comes up where the destination changes. Inside
+the guide, one hand-over is a tap on a row in the index, which pushes the
+reader, and the other is the same screen carrying on down itself. That is the navigation the app ships with, `navStyle:
 'button'` in `js/store.js`; the tab bar is still in there for anybody who wants
 it back, and it is not what this shows. The list is built by the app at the
 moment of the tap, so the video taps the app's own button rather than setting
@@ -126,11 +132,20 @@ last because that is where a tour of a church ends.
 are two cuts. The store cut is the four pages the church leads with, Home,
 Calendar, Listen and the Guide, with the Guide still the longest thing in it.
 
-**A scene opens under the navigation it was reached through**, which fades off
-the new page, and then the caption comes up over a dim and clears. The change
-of screen happens while the list is opaque, so a re-render never shows as a
-jump, and the scroll starts while the caption is still up, so the dim lifts on
-something already moving rather than on a still.
+**A scene opens under whatever it was reached through.** The navigation, which
+fades off the new page; a short dip, where a row was tapped and a view pushed;
+or nothing at all, where the screen simply carried on. Then the caption comes
+up over a dim and clears. The change of screen happens while the cover is
+opaque, so a re-render never shows as a jump, and the scroll starts while the
+caption is still up, so the dim lifts on something already moving.
+
+**The sentence under each name is the thing that has to be readable**, and the
+first cut of it was not: set in `--hc-mid` at the size the app sets a
+timestamp, it was eight words going past at thirty frames a second, half the
+size again inside the drawn phone. It carries weight rather than colour now,
+near the ink of the line above at 500, and the sentences came down to about
+seven words each, because a caption that needs three seconds is a caption that
+is too long for a video.
 
 **Every scene is a function of its own length.** The beats are fractions of the
 time a scene has, so one description of what happens plays at both lengths
