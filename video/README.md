@@ -1,7 +1,7 @@
 # The App Store preview
 
-A minute and a half of Home Church for the website, and a thirty second cut of
-the same run for the video slot on the store page. Built with
+A minute and fourteen seconds of Home Church for the website, and a thirty
+second cut of the same run for the video slot on the store page. Built with
 [Remotion](https://www.remotion.dev), which renders React to video by drawing
 the composition in a browser one frame at a time.
 
@@ -9,7 +9,7 @@ the composition in a browser one frame at a time.
 cd video
 npm install
 npm run render              # out/home-church-app-store.mp4, 1320 x 2868, 29.8s
-npm run render:marketing    # out/home-church-marketing.mp4, 1080 x 1920, 94.0s
+npm run render:marketing    # out/home-church-marketing.mp4, 1080 x 1920, 74.0s
 ```
 
 Both scripts run `npm run stage` first, which copies the app into `public/app`
@@ -120,18 +120,18 @@ download does not keep.
 | | Frames | | |
 |---|---|---|---|
 | Opening | 0 – 54 | The lockup, assembling | |
-| Home | 54 – 264 | Down the noticeboard, past the service times, to this week's message | *Home* |
-| Calendar | 264 – 504 | Two days opened, then everything coming up | *Calendar* |
-| Listen | 504 – 696 | Past this week into the archive, one message opened for its notes | *Listen* |
-| Guides | 696 – 840 | Every Sunday the church has written up | *Guides* |
-| Self-Reflection Questions | 840 – 1320 | Opened, read down, one of them answered, then the one-liners and the scripture index | *Self-Reflection Questions* |
-| Overview | 1320 – 1584 | Sunday's message in writing, then the fuller summary under it | *Overview* |
-| Notetaking | 1584 – 1944 | A line highlighted, a note written on it, saved | *Notetaking* |
-| Journal | 1944 – 2262 | Both of them under their sermon, then every sermon | *Journal* |
-| Worship | 2262 – 2430 | A pass down Sunday's setlist | *Worship* |
-| Connect | 2430 – 2586 | Get in touch, and the seven serve teams | *Connect* |
-| Give | 2586 – 2724 | A thank you and one button | *Give* |
-| Closing | 2724 – 2820 | The name, the service times and the address | |
+| Home | 54 – 234 | Down the noticeboard, past the service times, to this week's message | *Home* |
+| Calendar | 234 – 432 | Two days opened, then everything coming up | *Calendar* |
+| Listen | 432 – 594 | Past this week into the archive, one message opened for its notes | *Listen* |
+| Guides | 594 – 708 | Every Sunday the church has written up | *Guides* |
+| Self-Reflection Questions | 708 – 1044 | Opened, read down, one of them answered, then the one-liners | *Self-Reflection Questions* |
+| Overview | 1044 – 1260 | Sunday's message in writing, then the fuller summary under it | *Overview* |
+| Notetaking | 1260 – 1554 | A line highlighted, a note written on it, saved | *Notetaking* |
+| Journal | 1554 – 1800 | Both of them under their sermon, then every sermon | *Journal* |
+| Worship | 1800 – 1926 | A pass down Sunday's setlist | *Worship* |
+| Connect | 1926 – 2046 | Get in touch, and the serve teams | *Connect* |
+| Give | 2046 – 2142 | A thank you and one button | *Give* |
+| Closing | 2142 – 2220 | The name, the service times and the address | |
 
 **Every caption is the app's own words.** The line is the name of the page or
 the section on screen, as the app writes it, the eyebrow above it is that
@@ -217,12 +217,31 @@ time a scene has, so one description of what happens plays at both lengths
 rather than two that drift. Caption timing is absolute, because reading speed
 does not scale.
 
+**A minute and fourteen is the length the church asked for, and getting back
+to it was mostly one number.** Every scene used to hold still for 74 frames
+before anything moved, which is two and a half seconds times eleven scenes:
+twenty seconds of a video in which nothing happens. It is 56 now where the
+navigation has to clear out of the way first and 40 where nothing does, and
+that alone is seven seconds — without a caption being on screen for a frame
+less than it was. The page simply starts moving while its name is still up,
+which is better anyway: the dim lifts on something in motion rather than on a
+photograph. The rest came an inch at a time, a second off nearly every scene
+with the same beats still in it, and one thing cut outright — the Scripture
+Index, which was the last second of the take-home scene, a list of references
+unfolding under a screen already on its way out. It is still in the app. It is
+not in the tour.
+
+**What that costs is honest to say: this is a brisk minute and fourteen.** The
+lever if it turns out to be the wrong trade is in `src/scenes.js`, and it is
+not the pacing — it is the number of scenes. Dropping Worship and Connect
+would buy ten seconds back for the nine screens that remain.
+
 ## The two compositions
 
 | id | Renders at | Runs | For |
 |---|---|---|---|
 | `AppStorePreview` | 1320 x 2868 | 29.8s | The store page. The app fills the frame, no device around it. |
-| `Marketing` | 1080 x 1920 | 94.0s | The website and the socials. Every scene, inside a drawn phone on a warm ground. |
+| `Marketing` | 1080 x 1920 | 74.0s | The website and the socials. Every scene, inside a drawn phone on a warm ground. |
 
 Both are built from the same scene functions, listed in `src/scenes.js` as
 `APP_STORE` and `FULL`. A cut is a list of scenes with a length each, so adding

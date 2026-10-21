@@ -69,7 +69,7 @@ const TAB = { home: 0, cal: 1, connect: 2, listen: 3, guide: 4, more: 5 };
    opaque and the app underneath is free to sit wherever the nearest scene
    wants it. */
 export const OPEN_FRAMES = 54;
-export const CLOSE_FRAMES = 96;
+export const CLOSE_FRAMES = 78;
 
 /* How long the caption holds, in frames, the same at every scene length.
 
@@ -93,13 +93,28 @@ const CAP_ON = { in: 8, out: 68 };
    near enough to see it is a real screen under there. */
 const DIM = 0.74;
 
-/* The window a scene's movement is laid out in: from a little before the
-   caption clears, so the veil lifts on something already moving, to just
-   short of the cut. `at(p)` turns a fraction of the scene into a frame. */
-function moves(frames) {
-  const from = CAP_NAV.out - 8;   /* the later of the two, so one window fits both */
+/* WHEN A SCENE STARTS MOVING, and it is the single biggest number in this
+   file. Every scene used to wait 74 frames — the later of the two caption
+   holds, so that one window fitted both arrivals — which across eleven
+   scenes is twenty seconds of a video in which nothing moves. Getting the
+   piece back down to a minute and fourteen started here, and it cost nothing
+   to read: the caption still holds exactly as long as it did, the page
+   underneath simply starts moving while it is still up.
+
+   Two numbers because the two arrivals have different things to get out of
+   the way. A scene reached through the navigation spends its first sixteen
+   frames under a full screen list and cannot start before that has cleared.
+   A scene that carries on from the one before has nothing to clear at all,
+   and the screen is one the eye is already on, so it can start almost at
+   once. Both are still inside the caption's hold, which is the point: the
+   dim lifts on something already in motion rather than on a photograph. */
+const PRE = { nav: 56, on: 40 };
+
+/* The window a scene's movement is laid out in: from PRE to just short of
+   the cut. `at(p)` turns a fraction of the scene into a frame. */
+function moves(frames, pre = PRE.nav) {
   const to = frames - 6;
-  return (p) => Math.round(from + (to - from) * p);
+  return (p) => Math.round(pre + (to - pre) * p);
 }
 
 /* --------------------------------------------------------------------------
@@ -256,7 +271,7 @@ const listen = (frames) => {
 
    So: the index, then the half of the guide that is a take-home — the
    questions to sit with, one of them answered in the box underneath it, the
-   lines worth keeping and every verse that was read — and then back up to
+   lines worth keeping — and then back up to
    the Overview, which is where the last two scenes live. A line out of it is
    highlighted, a note is written on that line, the note is saved, and the
    Journal opens with both of them filed under the sermon they came out of.
@@ -316,8 +331,8 @@ const guideIndex = (frames) => {
 };
 
 /* Two. What a person takes home from a guide they are reading on their own:
-   the questions to sit with, a box under each one, the lines worth keeping,
-   and every passage that was read from the stage.
+   the questions to sit with, a box under each one, and the lines worth
+   keeping.
 
    IT OPENS ON THE THING IT IS ABOUT, shut. An earlier cut of this arrived
    with the Overview out — which is how a guide opens — and spent its first
@@ -325,14 +340,22 @@ const guideIndex = (frames) => {
    question, so the caption said Self-Reflection Questions over a screen of
    summary. Every section is closed from the first frame here and the heading
    the caption names is the one in the middle of the glass, so the name and
-   the screen agree while the name is up. The tap comes as it clears. */
+   the screen agree while the name is up. The tap comes as it clears.
+
+   THE SCRIPTURE INDEX IS THE ONE THING THIS VIDEO USED TO SHOW AND NO LONGER
+   DOES. It was the last second of this scene, a list of references unfolding
+   under a screen already on its way out, and it was the cheapest second in
+   the piece to spend on getting back to a minute and fourteen. The section
+   is still in the app and still in the guide; it is not in the tour. */
 
 const ANSWER_AT = 1;   /* which question gets answered: the second one */
-const ANSWER_TEXT =
-  'Honest answer: not yet. Writing it down so I actually come back to it.';
+const ANSWER_TEXT = 'Honest answer: not yet. Writing it down anyway.';
 
 const guideTakeHome = (frames) => {
-  const at = moves(frames);
+  /* Later than PRE.on, and only here: the first thing this scene does is a
+     tap, and the church asked for that tap to land as the caption goes
+     rather than underneath it. Four frames before the words start to fade. */
+  const at = moves(frames, CAP_ON.out - 4);
   return {
     id: 'guideTakeHome',
     navRoute: 'guide',
@@ -340,7 +363,7 @@ const guideTakeHome = (frames) => {
     frames,
     /* The answer is a journal entry like any other, so it is stated for the
        whole timeline rather than typed into existence here. See writes. */
-    writes: { at: at(0.33), make: answerFor },
+    writes: { at: at(0.30), make: answerFor },
     tab: { index: TAB.guide, lit: 0 },   /* a guide is a pushed view, not a tab */
     caption:
       { eyebrow: 'Take home', line: 'Self-Reflection Questions',
@@ -350,9 +373,9 @@ const guideTakeHome = (frames) => {
 
       setSection(win, 'short-summary', 0);
       setSection(win, 'full-summary', 0);
+      setSection(win, 'scripture', 0);
       setSection(win, 'reflection', ramp(t, at(0.03), at(0.14), 0, 1, 'settle'));
-      setSection(win, 'oneliners', ramp(t, at(0.70), at(0.78), 0, 1, 'settle'));
-      setSection(win, 'scripture', ramp(t, at(0.86), at(0.93), 0, 1, 'settle'));
+      setSection(win, 'oneliners', ramp(t, at(0.76), at(0.86), 0, 1, 'settle'));
 
       /* THE ANSWER FINISHES WELL BEFORE THE SCROLL MOVES ON. Saved on this
          phone only appears on the last letter, and the first cut of this gave
@@ -360,7 +383,7 @@ const guideTakeHome = (frames) => {
          glass — the save notice is half the point of the box. */
       const answer = answerFor(win, ctx);
       setAnswer(win, answer.index, ANSWER_TEXT,
-        ramp(t, at(0.33), at(0.58), 0, ANSWER_TEXT.length, 'linear'));
+        ramp(t, at(0.30), at(0.60), 0, ANSWER_TEXT.length, 'linear'));
 
       /* Every number is measured after the states above are applied, so it is
          where the heading actually is on this frame rather than where it was
@@ -371,19 +394,17 @@ const guideTakeHome = (frames) => {
       const box = Math.max(0, anchorTop(win, '[data-journal-key="' + answer.index + '"]') - 330);
       setScroll(win, track(t, [
         { f: at(0.00), v: top('reflection') },
-        { f: at(0.16), v: top('reflection') },
-        { f: at(0.24), v: top('reflection') + 240, ease: 'flick' },   /* down the questions */
-        { f: at(0.31), v: box, ease: 'flick' },
-        { f: at(0.70), v: box },
-        { f: at(0.78), v: top('oneliners'), ease: 'flick' },
-        { f: at(0.86), v: top('oneliners') + 180 },
-        { f: at(0.93), v: top('scripture'), ease: 'flick' },
-        { f: at(1.00), v: top('scripture') }
+        { f: at(0.14), v: top('reflection') },
+        { f: at(0.22), v: top('reflection') + 240, ease: 'flick' },   /* down the questions */
+        { f: at(0.29), v: box, ease: 'flick' },
+        { f: at(0.80), v: box },
+        { f: at(0.88), v: top('oneliners'), ease: 'flick' },
+        { f: at(1.00), v: top('oneliners') + 200 }
       ]));
 
       tapPulse(win, '[data-section="reflection"] .hc-section__chevron', (t - at(0.01)) / 26);
-      if (t > at(0.62)) {
-        tapPulse(win, '[data-section="oneliners"] .hc-section__chevron', (t - at(0.68)) / 26);
+      if (t > at(0.70)) {
+        tapPulse(win, '[data-section="oneliners"] .hc-section__chevron', (t - at(0.76)) / 26);
       }
     }
   };
@@ -421,7 +442,7 @@ function answerFor(win, ctx) {
    scene; what differs is where the screen was a frame earlier. */
 
 const guideOverview = (frames, carryOn = false) => {
-  const at = moves(frames);
+  const at = moves(frames, carryOn ? PRE.on : PRE.nav);
   return {
     id: 'guideOverview',
     navRoute: 'guide',
@@ -433,18 +454,20 @@ const guideOverview = (frames, carryOn = false) => {
     act(win, t, ctx) {
       setRoute(win, { name: 'guide-reader', id: ctx.guideId });
 
-      /* The three the scene before opened, folding away, and the Overview
-         coming back out above them. Same carry-on, other way up. */
+      /* The two the scene before opened, folding away, and the Overview
+         coming back out above them. Same carry-on, other way up. Scripture is
+         held shut rather than folded: nothing opened it, and a 1-to-0 ramp on
+         a closed section opens it for two frames before it closes again. */
       const shut = carryOn ? ramp(t, at(0.02), at(0.14), 1, 0, 'settle') : 0;
       setSection(win, 'reflection', shut);
       setSection(win, 'oneliners', shut);
-      setSection(win, 'scripture', shut);
+      setSection(win, 'scripture', 0);
       setSection(win, 'short-summary',
         carryOn ? ramp(t, at(0.18), at(0.30), 0, 1, 'settle') : 1);
       setSection(win, 'full-summary', ramp(t, at(0.60), at(0.72), 0, 1, 'settle'));
 
       const top = (id) => Math.max(0, anchorTop(win, '[data-section="' + id + '"]') - 110);
-      const from = carryOn ? top('scripture') : 0;
+      const from = carryOn ? top('oneliners') : 0;
       setScroll(win, track(t, [
         { f: at(0.00), v: from },
         { f: at(0.08), v: from },
@@ -484,7 +507,7 @@ const NOTE_TEXT = 'The part I keep coming back to. Praying on this one.';
 const NOTE_PATH = 'shortSummary.0';
 
 const guideNote = (frames) => {
-  const at = moves(frames);
+  const at = moves(frames, PRE.on);
   return {
     id: 'guideNote',
     navRoute: 'guide',
@@ -497,7 +520,7 @@ const guideNote = (frames) => {
     /* A frame of this scene, not a fraction of it: buildTimeline only adds
        the scene's start to it, and it has to be the same number the sheet
        below opens on. */
-    writes: { at: at(0.42), make: noteFor },
+    writes: { at: at(0.38), make: noteFor },
     tab: { index: TAB.guide, lit: 0 },
     caption:
       { eyebrow: 'From the guide', line: 'Notetaking',
@@ -516,7 +539,7 @@ const guideNote = (frames) => {
       const para = Math.max(0, anchorTop(win, block) - 170);
       setScroll(win, track(t, [
         { f: at(0.00), v: summary + 230 },
-        { f: at(0.12), v: para, ease: 'flick' },
+        { f: at(0.10), v: para, ease: 'flick' },
         { f: at(1.00), v: para }
       ]));
 
@@ -524,17 +547,17 @@ const guideNote = (frames) => {
          Each one is a state this frame is in rather than a thing that happens
          on it; see the header of drive.js, and the long note on setNote. */
       setSelection(win, block,
-        t < at(0.42) ? ramp(t, at(0.16), at(0.28), 0, note.quote.length, 'linear') : 0);
-      setHighlightBar(win, t >= at(0.28) && t < at(0.42));
-      setNoteSheet(win, note, t >= at(0.42) && t < at(0.84),
-        ramp(t, at(0.48), at(0.74), 0, note.text.length, 'linear'));
+        t < at(0.38) ? ramp(t, at(0.14), at(0.26), 0, note.quote.length, 'linear') : 0);
+      setHighlightBar(win, t >= at(0.26) && t < at(0.38));
+      setNoteSheet(win, note, t >= at(0.38) && t < at(0.82),
+        ramp(t, at(0.42), at(0.72), 0, note.text.length, 'linear'));
 
-      tapPulse(win, '[data-action="hl-note"]', (t - at(0.32)) / 26);
-      if (t > at(0.76)) {
-        tapPulse(win, '.hc-hlsheet__foot [data-action="hl-close"]', (t - at(0.78)) / 24);
+      tapPulse(win, '[data-action="hl-note"]', (t - at(0.29)) / 26);
+      if (t > at(0.74)) {
+        tapPulse(win, '.hc-hlsheet__foot [data-action="hl-close"]', (t - at(0.76)) / 24);
       }
       /* My journal, the pill under the reader, which is where it goes next. */
-      if (t > at(0.88)) tapPulse(win, '#hc-jlink', (t - at(0.90)) / 24);
+      if (t > at(0.86)) tapPulse(win, '#hc-jlink', (t - at(0.88)) / 24);
     }
   };
 };
@@ -596,7 +619,7 @@ function eveningOf(guide) {
    -------------------------------------------------------------------------- */
 
 const journal = (frames) => {
-  const at = moves(frames);
+  const at = moves(frames, PRE.on);
   return {
     id: 'journal',
     navRoute: 'journal',
@@ -613,35 +636,35 @@ const journal = (frames) => {
          widened. Changing the route instead would reset the filter. */
       setRoute(win, { name: 'journal', id: ctx.guideId });
 
-      const wide = t >= at(0.44);
+      const wide = t >= at(0.40);
       setJournalFilter(win, wide ? 'all' : 'guide');
 
       /* Scoped, the sermon's own heading is already out: that is the app's
          default and the scene leaves it alone. Widened, every heading is shut
          and this is the one that comes back. */
       const key = 'g:' + ctx.guideId;
-      if (wide) setFold(win, key, ramp(t, at(0.62), at(0.74), 0, 1, 'settle'));
+      if (wide) setFold(win, key, ramp(t, at(0.58), at(0.70), 0, 1, 'settle'));
 
       const fold = Math.max(0, anchorTop(win, '.hc-jfold') - 150);
       const pills = Math.max(0, anchorTop(win, '.hc-journal__filters') - 230);
 
       setScroll(win, track(t, [
         { f: at(0.00), v: 0 },
-        { f: at(0.10), v: 0 },
-        { f: at(0.22), v: fold, ease: 'flick' },      /* the note, under its sermon */
-        { f: at(0.34), v: fold },
-        { f: at(0.42), v: pills, ease: 'flick' },     /* back up to the row of pills */
-        { f: at(0.52), v: pills },
-        { f: at(0.60), v: fold, ease: 'flick' },      /* down the shut headings */
+        { f: at(0.08), v: 0 },
+        { f: at(0.18), v: fold, ease: 'flick' },      /* the note, under its sermon */
+        { f: at(0.30), v: fold },
+        { f: at(0.37), v: pills, ease: 'flick' },     /* back up to the row of pills */
+        { f: at(0.48), v: pills },
+        { f: at(0.56), v: fold, ease: 'flick' },      /* down the shut headings */
         { f: at(1.00), v: fold }
       ]));
 
-      if (t > at(0.36) && t < at(0.56)) {
-        tapPulse(win, '[data-action="journal-filter"][data-value="all"]', (t - at(0.44)) / 24);
+      if (t > at(0.32) && t < at(0.52)) {
+        tapPulse(win, '[data-action="journal-filter"][data-value="all"]', (t - at(0.40)) / 24);
       }
-      if (t > at(0.56)) {
+      if (t > at(0.52)) {
         tapPulse(win, '[data-action="journal-fold"][data-fold="' + key + '"]',
-          (t - at(0.60)) / 24);
+          (t - at(0.56)) / 24);
       }
     }
   };
@@ -744,33 +767,44 @@ const give = (frames) => {
    The two cuts.
    -------------------------------------------------------------------------- */
 
-/* 54 + 2670 + 96 = 2820 frames, ninety four seconds.
+/* 54 + 2088 + 78 = 2220 frames, seventy four seconds, which is the length
+   the church asked for.
 
-   LONGER THAN THE MINUTE AND FOURTEEN IT WAS, and the nineteen seconds went
-   somewhere specific: answering a take-home question, highlighting a line,
-   writing on it and watching both land in the Journal is work somebody does
-   in the app rather than reading somebody else does to them, and none of it
-   can be hurried. An answer that types itself in a second and a half is an
-   answer nobody read. Everything already in the piece paid part of it — Home,
-   Cal, Listen, the index, Worship, Connect and Give are each a little shorter
-   than they were, with the same number of beats in them.
+   IT GOT THERE TWICE OVER, and the first way was free. Every scene used to
+   hold still for 74 frames before it moved; it is 56 now where the
+   navigation has to clear first and 40 where nothing does, and that alone is
+   seven seconds across eleven scenes without a caption being on screen for a
+   frame less than it was. See PRE at the top of this file.
 
-   The Guide and the Journal together are 1566 frames, which is nearly two
-   thirds of the piece. That is the brief: it is the thing the church most
-   wants somebody to find first. Worship, Connect and Give follow them and
-   close the tour, Give last because that is where a tour of a church ends. */
+   The rest was paid for an inch at a time. Every scene is a second or so
+   shorter with the same beats in it, the closing card is six tenths shorter,
+   the navigation comes and goes a little faster, and the answer in the
+   take-home box is five words shorter than it was so that it can still be
+   typed at a speed somebody can read. One thing was cut outright: the
+   Scripture Index, which was the last second of the take-home scene.
+
+   That is the whole of it, and it is worth saying what it cost: this is a
+   brisk minute and fourteen rather than a comfortable one. Two scenes
+   dropped, Worship and Connect, would buy the same ten seconds back for the
+   nine that are left. The church asked for the length, so the length is what
+   it is; the lever is right here if that turns out to be the wrong trade.
+
+   The Guide and the Journal together are 1206 frames, which is well over
+   half the piece. That is the brief: they are what the church most wants
+   somebody to find first. Worship, Connect and Give follow them and close
+   the tour, Give last because that is where a tour of a church ends. */
 export const FULL = [
-  home(210),
-  cal(240),
-  listen(192),
-  guideIndex(144),
-  guideTakeHome(480),
-  guideOverview(264, true),
-  guideNote(360),
-  journal(318),
-  worship(168),
-  connect(156),
-  give(138)
+  home(180),
+  cal(198),
+  listen(162),
+  guideIndex(114),
+  guideTakeHome(336),
+  guideOverview(216, true),
+  guideNote(294),
+  journal(246),
+  worship(126),
+  connect(120),
+  give(96)
 ];
 
 /* The store cut cannot hold eleven screens in thirty seconds, so it is the
@@ -910,8 +944,8 @@ export function applyFrame(win, frame, ctx, timeline) {
      you are leaving, the route changes behind it with the new line gold, and
      it fades off the page you have arrived on. That is the cut, and it is
      also the feature. */
-  const MENU_OUT = 30;   /* frames the list takes to come up at the end */
-  const MENU_IN = 22;    /* and to clear at the start of the next scene */
+  const MENU_OUT = 24;   /* frames the list takes to come up at the end */
+  const MENU_IN = 16;    /* and to clear at the start of the next scene */
 
   const leaving = scene.leave === 'nav'
     ? ramp(t, scene.frames - MENU_OUT, scene.frames - 10, 0, 1, 'settle')
