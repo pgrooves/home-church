@@ -48,6 +48,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
+import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -244,6 +245,37 @@ function readConfig() {
   return url && key ? { url, key } : null;
 }
 
+/* ONE WAY OUT TO THE INTERNET, AND IT IS NOT ALWAYS fetch.
+
+   Where this runs behind an egress proxy, Node's own fetch does not use it:
+   undici reads no proxy environment variable, so a host the proxy would have
+   reached comes back as ENOTFOUND while curl, which does read them, fetches
+   it fine. The symptom is a picture that silently does not arrive, on some
+   hosts and not others, which is a confusing afternoon.
+
+   So: fetch first, because it is built in and it is what works on a laptop,
+   and curl second, because it is what works behind the proxy. If neither
+   does, the caller treats it as a picture that is not coming. */
+function get(url, headers) {
+  return fetchFirst(url, headers).catch(() => viaCurl(url, headers));
+}
+
+async function fetchFirst(url, headers) {
+  const res = await fetch(url, headers ? { headers } : undefined);
+  if (!res.ok) throw new Error('status ' + res.status);
+  return Buffer.from(await res.arrayBuffer());
+}
+
+function viaCurl(url, headers) {
+  const args = ['-sS', '--fail', '--location', '--max-time', '90'];
+  for (const [k, v] of Object.entries(headers || {})) args.push('-H', `${k}: ${v}`);
+  args.push('--output', '-', url);
+  return Promise.resolve(execFileSync('curl', args, {
+    maxBuffer: 64 * 1024 * 1024,
+    stdio: ['ignore', 'pipe', 'ignore']
+  }));
+}
+
 async function getTable(cfg, spec) {
   let url = cfg.url + '/rest/v1/' + spec.table + '?select=*';
   if (spec.filter) url += '&' + spec.filter;
@@ -251,11 +283,11 @@ async function getTable(cfg, spec) {
   if (spec.limit) url += '&limit=' + encodeURIComponent(spec.limit);
 
   try {
-    const res = await fetch(url, {
-      headers: { apikey: cfg.key, Authorization: 'Bearer ' + cfg.key, Accept: 'application/json' }
-    });
-    if (!res.ok) return null;
-    const body = await res.json();
+    const body = JSON.parse((await get(url, {
+      apikey: cfg.key,
+      Authorization: 'Bearer ' + cfg.key,
+      Accept: 'application/json'
+    })).toString('utf8'));
     return Array.isArray(body) ? body : null;
   } catch (err) {
     return null;
@@ -358,9 +390,7 @@ async function mirrorStorage(cfg, payload) {
       if (fs.existsSync(file)) { saved++; continue; }
 
       try {
-        const res = await fetch(cfg.url + '/' + rel);
-        if (!res.ok) continue;
-        const body = Buffer.from(await res.arrayBuffer());
+        const body = await get(cfg.url + '/' + rel);
         if (!body.length) continue;
         fs.mkdirSync(path.dirname(file), { recursive: true });
         fs.writeFileSync(file, body);
@@ -380,9 +410,7 @@ async function download(url, dir, failedHosts) {
   if (fs.existsSync(file)) return rel;
 
   try {
-    const res = await fetch(url);
-    if (!res.ok) throw new Error(String(res.status));
-    const body = Buffer.from(await res.arrayBuffer());
+    const body = await get(url);
     if (!body.length) throw new Error('empty');
     fs.writeFileSync(file, body);
     return rel;

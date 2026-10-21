@@ -74,6 +74,14 @@ a row that never had one, which on a series is the house cover. Every host
 that failed is named in prepare's output, so it is obvious which one to allow
 and re-run.
 
+**It goes out through curl when fetch cannot.** Behind an egress proxy Node's
+own fetch does not use it, because undici reads no proxy environment
+variable, so a host the proxy would have reached comes back as ENOTFOUND
+while curl fetches it fine. What that looks like is artwork that silently does
+not arrive, from some hosts and not others, which is a confusing afternoon.
+fetch first, because it is built in and it is what works on a laptop, and curl
+second.
+
 **The one thing that is edited on the way in** is `app_settings.
 home_featured_video`, emptied. It puts a YouTube embed under the greeting and
 starts it muted the moment the app opens, and there is no YouTube in a render:
