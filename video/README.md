@@ -9,7 +9,7 @@ the composition in a browser one frame at a time.
 cd video
 npm install
 npm run render              # out/home-church-app-store.mp4, 1320 x 2868, 29.8s
-npm run render:marketing    # out/home-church-marketing.mp4, 1080 x 1920, 90.0s
+npm run render:marketing    # out/home-church-marketing.mp4, 1080 x 1920, 94.0s
 ```
 
 Both scripts run `npm run stage` first, which copies the app into `public/app`
@@ -123,15 +123,15 @@ download does not keep.
 | Home | 54 – 264 | Down the noticeboard, past the service times, to this week's message | *Home* |
 | Calendar | 264 – 504 | Two days opened, then everything coming up | *Calendar* |
 | Listen | 504 – 696 | Past this week into the archive, one message opened for its notes | *Listen* |
-| Guides | 696 – 846 | Every Sunday the church has written up | *Guides* |
-| Self-Reflection Questions | 846 – 1146 | And the one-liners and the scripture index under them | *Self-Reflection Questions* |
-| Overview | 1146 – 1434 | Sunday's message in writing, then the fuller summary under it | *Overview* |
-| Your note | 1434 – 1794 | A line highlighted, a note written on it, saved | *Your note* |
-| Journal | 1794 – 2124 | The note under its sermon, then every sermon | *Journal* |
-| Worship | 2124 – 2292 | A pass down Sunday's setlist | *Worship* |
-| Connect | 2292 – 2460 | Get in touch, and the seven serve teams | *Connect* |
-| Give | 2460 – 2604 | A thank you and one button | *Give* |
-| Closing | 2604 – 2700 | The name, the service times and the address | |
+| Guides | 696 – 840 | Every Sunday the church has written up | *Guides* |
+| Self-Reflection Questions | 840 – 1320 | Opened, read down, one of them answered, then the one-liners and the scripture index | *Self-Reflection Questions* |
+| Overview | 1320 – 1584 | Sunday's message in writing, then the fuller summary under it | *Overview* |
+| Notetaking | 1584 – 1944 | A line highlighted, a note written on it, saved | *Notetaking* |
+| Journal | 1944 – 2262 | Both of them under their sermon, then every sermon | *Journal* |
+| Worship | 2262 – 2430 | A pass down Sunday's setlist | *Worship* |
+| Connect | 2430 – 2586 | Get in touch, and the seven serve teams | *Connect* |
+| Give | 2586 – 2724 | A thank you and one button | *Give* |
+| Closing | 2724 – 2820 | The name, the service times and the address | |
 
 **Every caption is the app's own words.** The line is the name of the page or
 the section on screen, as the app writes it, the eyebrow above it is that
@@ -156,16 +156,29 @@ last three scenes live there: a sentence out of it is highlighted, a note is
 written on that line, the note is saved, and the Journal opens with it filed
 under the sermon it came out of.
 
-**That last stretch is the only place anybody puts something *into* the app.**
-Everything else in the video is the church's writing being read. This is the
-app's writing surface: *Note this* over a selection, the sheet, the words
-going in, *Done*, and the line underlined in the page from then on. The
-Journal scene after it opens scoped to that sermon, the way the pill at the
-foot of a guide opens it, and then taps *All* — the app's own pill, in the
-app's own row — and the list widens to every sermon somebody has written
-under, each shut into its own heading. That is the feature in a sentence:
-notes do not pile up in a list, they pile up under the Sunday they came out
-of.
+**Each scene opens on the thing its caption names.** The take-home scene is
+the one that had to be fixed for it: an earlier cut arrived the way a guide
+arrives, with the Overview out, and spent its first two seconds folding that
+away before it got near a take-home question — so the words
+*Self-Reflection Questions* sat over a screen of summary. Every section is
+shut from the first frame now and the heading the caption names is the one in
+the middle of the glass. The tap that opens it comes as the caption clears.
+
+**Half the running time is somebody putting something *into* the app.**
+Everything else in the video is the church's writing being read. Two scenes
+are not. One of the take-home questions gets answered in the box underneath
+it, with *Saved on this phone* appearing under the box on the last letter,
+which is where `js/app.js` puts it. And a line of the Overview is highlighted:
+*Note this* over the selection, the sheet, the words going in, *Done*, and the
+line underlined in the page from then on.
+
+**Both of them land in the Journal, which is the scene after.** It opens
+scoped to that sermon, the way the pill at the foot of a guide opens it, with
+the answer and the note under one heading. Then it taps *All* — the app's own
+pill, in the app's own row — and the list widens to every sermon somebody has
+written under, each shut into its own heading, and one folds back open. That
+is the feature in a sentence: notes do not pile up in a list, they pile up
+under the Sunday they came out of.
 
 **Nothing in it is about running a group**, and that is a decision rather than
 an oversight. The guide's best known half is the discussion questions, with a
@@ -209,7 +222,7 @@ does not scale.
 | id | Renders at | Runs | For |
 |---|---|---|---|
 | `AppStorePreview` | 1320 x 2868 | 29.8s | The store page. The app fills the frame, no device around it. |
-| `Marketing` | 1080 x 1920 | 90.0s | The website and the socials. Every scene, inside a drawn phone on a warm ground. |
+| `Marketing` | 1080 x 1920 | 94.0s | The website and the socials. Every scene, inside a drawn phone on a warm ground. |
 
 Both are built from the same scene functions, listed in `src/scenes.js` as
 `APP_STORE` and `FULL`. A cut is a list of scenes with a length each, so adding
@@ -265,17 +278,18 @@ app sorts those rows on that timestamp and returns 0 on a tie, so their order
 came down to whether the clock ticked between two lines of setup. Every frame
 was correct on its own; the video tore between two different rows several times
 a second, because Remotion renders in several browser tabs and each one boots
-the app and gets its own answer. Date anything you stage, by hand. The note
-the video writes on camera is the same rule one step further on: it carries a
-stated id as well as a stated date, because `HC.journal.create` mints a uuid
-otherwise, and eight tabs each minting one is eight different entries with
-eight different timestamps — and the underline in the paragraph is keyed on
-that id, so the tabs would not even agree about which words were marked. It
-is written through the app's own create, with both facts supplied. See
+the app and gets its own answer. Date anything you stage, by hand. The two
+entries the video writes on camera are the same rule one step further on: each
+carries a stated id as well as a stated date, because `HC.journal.create`
+mints a uuid otherwise, and eight tabs each minting one is eight different
+entries with eight different timestamps — and the underline in the paragraph
+is keyed on that id, so the tabs would not even agree about which words were
+marked. Both go through the app's own create, with both facts supplied. See
 `setNote` in `drive.js`, which has the long version, and `applyFrame`, which
-states it once for the whole timeline rather than inside the scene that writes
-it: the Journal scene needs that row too, and a tab handed the Journal as the
-first frame it ever draws has never run a frame of the guide.
+states them once for the whole timeline rather than inside the scenes that
+write them: the Journal scene shows both and is neither of them, and a tab
+handed the Journal as the first frame it ever draws has never run a frame of
+the guide.
 
 **A timer the app sets is swallowed, and run by hand instead.**
 `js/highlight.js` waits a fifth of a second after a selection changes before

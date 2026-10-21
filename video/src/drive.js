@@ -271,25 +271,30 @@ export function setHighlightBar(win, up) {
   }
 }
 
-/* The entry itself: there, or not there.
+/* An entry in somebody's journal: there, or not there.
 
-   NOT MADE BY PRESSING Note this, which is the one place in this piece where
-   the app's own button is not what happens, and it is worth the paragraph.
-   js/highlight.js mints a uuid and stamps the clock, so eight render tabs
-   pressing that button make eight different entries with eight different
+   THE VIDEO WRITES TWO OF THESE, an answer to a take-home question and a note
+   on a highlighted line, and neither is made by pressing the app's own
+   button. That is the one place in this piece where the app's own control is
+   not what happens, and it is worth the paragraph.
+
+   HC.journal.create mints a uuid and stamps the clock, so eight render tabs
+   pressing Note this make eight different entries with eight different
    timestamps, and the card in the Journal carries both. The same tearing the
    loose notes had, with a worse symptom: the mark in the prose is keyed on
    the id, so the tabs would not even agree about which words are underlined.
 
-   So the entry is written through the same HC.journal.create the button calls,
-   with the id and the date stated rather than minted. Every tab writes the
-   same row. `want` is a position, not a press: a frame before the note exists
-   says false and gets no note, a frame after says true and gets exactly one,
+   So the entry is written through the same create the button calls, with the
+   id and the date stated rather than minted. Every tab writes the same row.
+   `want` is a position, not a press: a frame before the entry exists says
+   false and gets nothing, a frame after says true and gets exactly one,
    whichever order the two frames are drawn in.
 
    redraw() is the app's, and it is what paints the underline into the
-   paragraph. It no-ops on any screen the paragraph is not on, which is how
-   the Journal scene can ask for this without touching anything. */
+   paragraph. It no-ops on any screen that paragraph is not on, and on a path
+   that is not a highlightable block at all, which is how the Journal scene
+   and the take-home answer can both ask for this without touching
+   anything. */
 export function setNote(win, want, note) {
   const HC = win.HC;
   if (!HC || !HC.journal || !note) return;
@@ -308,7 +313,7 @@ export function setNote(win, want, note) {
   HC.journal.create({
     id: note.id,
     createdAt: note.createdAt,
-    kind: 'highlight',
+    kind: note.kind || 'highlight',
     guideId: note.guideId,
     guideTitle: guide ? HC.data.guideTitle(guide) : null,
     path: note.path,
@@ -318,6 +323,33 @@ export function setNote(win, want, note) {
     bodyText: note.text
   });
   HC.highlight.redraw(note.guideId, note.path);
+}
+
+/* One of the boxes under a take-home question, filling up.
+
+   Same division of labour as the note sheet: the entry behind it already
+   holds the whole answer, because the entry is what the Journal draws from,
+   and what is on screen is overwritten every frame with however much of it
+   has been typed by now. The box is a display here, not a source — nothing
+   is ever read back out of it, which is what makes that safe.
+
+   The line under it is the app's own save notice, in the app's own words for
+   a phone nobody has signed in on. It appears when the answer is finished,
+   which is where js/app.js puts it: that debounced save is a wall clock
+   thing, and a render has none. */
+export function setAnswer(win, key, text, chars) {
+  const doc = win.document;
+  const box = doc.querySelector('[data-journal-key="' + cssq(key) + '"]');
+  if (!box) return;
+
+  const typed = text.slice(0, Math.max(0, Math.round(chars)));
+  if (box.value !== typed) box.value = typed;
+
+  const status = doc.querySelector('[data-journal-status="' + cssq(key) + '"]');
+  if (!status) return;
+  const done = typed.length >= text.length;
+  status.textContent = done ? 'Saved on this phone' : '';
+  status.setAttribute('data-visible', done ? 'true' : 'false');
 }
 
 /* A caret, which does not blink, because a blink is a thing the wall clock

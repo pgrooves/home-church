@@ -449,9 +449,9 @@ inch iPhone tab, and choose the last frame as the poster.
 
 `npm run render:marketing` is the same run at a minute and a half, inside a
 drawn phone, for the website and the socials. It carries the guide index, the
-take-home half of a guide, a line highlighted and a note written on it, the
-Journal that note lands in, and Worship, Connect and Give after them, none of
-which fit in thirty seconds.
+take-home half of a guide with one of its questions answered, a line
+highlighted and a note written on it, the Journal both of those land in, and
+Worship, Connect and Give after them, none of which fit in thirty seconds.
 
 **It gets around the way the app does.** Every change of screen is the round
 button in the corner, the full screen list behind it, and the destination

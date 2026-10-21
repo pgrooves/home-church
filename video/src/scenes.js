@@ -54,7 +54,7 @@ import { track, ramp } from './timing';
 import {
   setRoute, setScroll, setTab, setSection, setEpisode,
   setCalMonth, setCalDay, setMenu, menuLink,
-  setSelection, setHighlightBar, setNote, setNoteSheet,
+  setSelection, setHighlightBar, setNote, setNoteSheet, setAnswer,
   setJournalFilter, setFold,
   anchorTop, maxScroll, tapPulse
 } from './drive';
@@ -255,12 +255,21 @@ const listen = (frames) => {
    with, so it belongs next to the doing rather than three minutes before it.
 
    So: the index, then the half of the guide that is a take-home — the
-   questions to sit with and every verse that was read — and then back up to
-   the Overview, which is where the last three scenes live. A line out of it
-   is highlighted, a note is written on that line, the note is saved, and the
-   Journal opens with it filed under the sermon it came out of. That last
-   stretch is the only place in this video where somebody puts something
-   into the app rather than reading what the church put there.
+   questions to sit with, one of them answered in the box underneath it, the
+   lines worth keeping and every verse that was read — and then back up to
+   the Overview, which is where the last two scenes live. A line out of it is
+   highlighted, a note is written on that line, the note is saved, and the
+   Journal opens with both of them filed under the sermon they came out of.
+
+   EVERY SCENE OPENS ON THE THING ITS CAPTION NAMES, which took fixing. The
+   take-home scene used to arrive the way a guide arrives, with the Overview
+   out, and fold it away before it got near a question, so the words
+   Self-Reflection Questions sat over a screen of summary for two seconds.
+   Every section is shut from its first frame now.
+
+   Half this stretch is somebody putting something into the app rather than
+   reading what the church put there, and that is the only half of this video
+   that is.
 
    One. The index: every Sunday the church has written up, this week at the
    top, all of it on the phone.
@@ -307,8 +316,20 @@ const guideIndex = (frames) => {
 };
 
 /* Two. What a person takes home from a guide they are reading on their own:
-   the questions to sit with, the lines worth keeping, and every passage that
-   was read from the stage. */
+   the questions to sit with, a box under each one, the lines worth keeping,
+   and every passage that was read from the stage.
+
+   IT OPENS ON THE THING IT IS ABOUT, shut. An earlier cut of this arrived
+   with the Overview out — which is how a guide opens — and spent its first
+   two seconds folding that away before it got anywhere near a take-home
+   question, so the caption said Self-Reflection Questions over a screen of
+   summary. Every section is closed from the first frame here and the heading
+   the caption names is the one in the middle of the glass, so the name and
+   the screen agree while the name is up. The tap comes as it clears. */
+
+const ANSWER_AT = 1;   /* which question gets answered: the second one */
+const ANSWER_TEXT =
+  'Honest answer: not yet. Writing it down so I actually come back to it.';
 
 const guideTakeHome = (frames) => {
   const at = moves(frames);
@@ -317,48 +338,77 @@ const guideTakeHome = (frames) => {
     navRoute: 'guide',
     arrive: 'cut',
     frames,
+    /* The answer is a journal entry like any other, so it is stated for the
+       whole timeline rather than typed into existence here. See writes. */
+    writes: { at: at(0.33), make: answerFor },
     tab: { index: TAB.guide, lit: 0 },   /* a guide is a pushed view, not a tab */
     caption:
       { eyebrow: 'Take home', line: 'Self-Reflection Questions',
-      sub: 'Questions to sit with, and every verse.' },
+      sub: 'Questions to sit with, and a box for each.' },
     act(win, t, ctx) {
       setRoute(win, { name: 'guide-reader', id: ctx.guideId });
 
-      /* THE OVERVIEW IS OUT WHEN A GUIDE OPENS, and the first thing that
-         happens here is folding it away, on camera, with the chevron turning
-         over. Setting it shut on the first frame instead made the whole page
-         jump the moment the caption came up, which read as a cut to somewhere
-         else on a screen nobody had left. It comes back in the next scene,
-         which is where the rest of this stretch happens. */
-      const shut = ramp(t, at(0.02), at(0.16), 1, 0, 'settle');
-      setSection(win, 'short-summary', shut);
+      setSection(win, 'short-summary', 0);
       setSection(win, 'full-summary', 0);
-      setSection(win, 'reflection', ramp(t, at(0.24), at(0.38), 0, 1, 'settle'));
-      setSection(win, 'oneliners', ramp(t, at(0.54), at(0.66), 0, 1, 'settle'));
-      setSection(win, 'scripture', ramp(t, at(0.80), at(0.90), 0, 1, 'settle'));
+      setSection(win, 'reflection', ramp(t, at(0.03), at(0.14), 0, 1, 'settle'));
+      setSection(win, 'oneliners', ramp(t, at(0.70), at(0.78), 0, 1, 'settle'));
+      setSection(win, 'scripture', ramp(t, at(0.86), at(0.93), 0, 1, 'settle'));
 
-      /* Follows whichever section is opening. Each one is measured after the
-         states above are applied, so the number is where the heading actually
-         is on this frame rather than where it was before the one above it
-         unfolded. The fold is watched from the top of the Overview, which is
-         the one thing on the page that does not move while it collapses. */
+      /* THE ANSWER FINISHES WELL BEFORE THE SCROLL MOVES ON. Saved on this
+         phone only appears on the last letter, and the first cut of this gave
+         it seven frames before the flick to the one-liners took it off the
+         glass — the save notice is half the point of the box. */
+      const answer = answerFor(win, ctx);
+      setAnswer(win, answer.index, ANSWER_TEXT,
+        ramp(t, at(0.33), at(0.58), 0, ANSWER_TEXT.length, 'linear'));
+
+      /* Every number is measured after the states above are applied, so it is
+         where the heading actually is on this frame rather than where it was
+         before the one above it unfolded. The box is anchored on itself: a
+         question that runs to four lines next week puts it somewhere else,
+         and this follows it there. */
       const top = (id) => Math.max(0, anchorTop(win, '[data-section="' + id + '"]') - 120);
+      const box = Math.max(0, anchorTop(win, '[data-journal-key="' + answer.index + '"]') - 330);
       setScroll(win, track(t, [
-        { f: at(0.00), v: top('short-summary') },
-        { f: at(0.18), v: top('short-summary') },
-        { f: at(0.28), v: top('reflection'), ease: 'flick' },
-        { f: at(0.50), v: top('reflection') },
-        { f: at(0.60), v: top('oneliners'), ease: 'flick' },
-        { f: at(0.76), v: top('oneliners') },
-        { f: at(0.86), v: top('scripture'), ease: 'flick' },
+        { f: at(0.00), v: top('reflection') },
+        { f: at(0.16), v: top('reflection') },
+        { f: at(0.24), v: top('reflection') + 240, ease: 'flick' },   /* down the questions */
+        { f: at(0.31), v: box, ease: 'flick' },
+        { f: at(0.70), v: box },
+        { f: at(0.78), v: top('oneliners'), ease: 'flick' },
+        { f: at(0.86), v: top('oneliners') + 180 },
+        { f: at(0.93), v: top('scripture'), ease: 'flick' },
         { f: at(1.00), v: top('scripture') }
       ]));
 
-      tapPulse(win, '[data-section="short-summary"] .hc-section__chevron', (t - at(0.00)) / 26);
-      if (t > at(0.46)) tapPulse(win, '[data-section="oneliners"] .hc-section__chevron', (t - at(0.52)) / 26);
+      tapPulse(win, '[data-section="reflection"] .hc-section__chevron', (t - at(0.01)) / 26);
+      if (t > at(0.62)) {
+        tapPulse(win, '[data-section="oneliners"] .hc-section__chevron', (t - at(0.68)) / 26);
+      }
     }
   };
 };
+
+/* The answer, and the question it belongs under, worked out from the guide
+   rather than typed in here — same reason as noteFor below. The index is
+   clamped, because a short week is a guide with fewer questions in it and the
+   second one is not guaranteed to exist. */
+function answerFor(win, ctx) {
+  const guide = win.HC.data.getGuide(ctx.guideId);
+  const questions = (guide && guide.reflectionQuestions) || [];
+  const index = Math.max(0, Math.min(ANSWER_AT, questions.length - 1));
+
+  return {
+    id: 'reflection-' + ctx.guideId + '-' + index,
+    kind: 'reflection',
+    index,
+    guideId: ctx.guideId,
+    path: 'reflectionQuestions.' + index,
+    quote: questions[index] || null,
+    text: ANSWER_TEXT,
+    createdAt: eveningOf(guide) + ':50:00.000Z'
+  };
+}
 
 /* Three. Back up to the Overview, which is the last thing shown in the guide
    rather than the first, because it is what the next two scenes are about. */
@@ -420,11 +470,11 @@ const guideOverview = (frames, carryOn = false) => {
 
    A sentence out of the Overview is selected, Note this comes up over it, the
    note is typed and saved, and the line is underlined in the page from then
-   on. It is the one stretch of this video where somebody puts something in
-   rather than reading what the church put there, and it is the reason the
-   Journal scene after it has anything in it.
+   on. With the take-home answer two scenes back, it is the half of this video
+   where somebody puts something in rather than reading what the church put
+   there, and it is why the Journal scene after it has anything in it.
 
-   `noteAt` is the fraction of this scene at which the entry exists. Every
+   `writes.at` is the frame of this scene on which the entry exists. Every
    frame of the video from there on has it and every frame before does not,
    which is applyFrame's job rather than this scene's: the Journal is a
    different scene and still needs the note, and a tab handed the Journal as
@@ -444,13 +494,13 @@ const guideNote = (frames) => {
        just written. */
     leave: 'cut',
     frames,
-    /* The frame of this scene, not a fraction of it: buildTimeline only adds
+    /* A frame of this scene, not a fraction of it: buildTimeline only adds
        the scene's start to it, and it has to be the same number the sheet
        below opens on. */
-    noteAt: at(0.42),
+    writes: { at: at(0.42), make: noteFor },
     tab: { index: TAB.guide, lit: 0 },
     caption:
-      { eyebrow: 'From the guide', line: 'Your note',
+      { eyebrow: 'From the guide', line: 'Notetaking',
       sub: 'Highlight a line and keep a thought.' },
     act(win, t, ctx) {
       setRoute(win, { name: 'guide-reader', id: ctx.guideId });
@@ -509,22 +559,27 @@ function noteFor(win, ctx) {
   const end = stop > 24 ? stop + 1 : Math.min(para.length, 120);
   const quote = para.slice(0, end).replace(/\s+$/, '');
 
-  const day = /^\d{4}-\d{2}-\d{2}/.test(String(guide && guide.preachedOn))
-    ? String(guide.preachedOn).slice(0, 10)
-    : '2026-01-04';
-
   return {
     id: 'video-note',
+    kind: 'highlight',
     guideId: ctx.guideId,
     path: NOTE_PATH,
     quote,
     start: 0,
     end: quote.length,
     text: NOTE_TEXT,
-    /* The evening of the sermon, like the ones stage.js seeds, so the card
-       carries a date rather than whatever time the render happened to run. */
-    createdAt: day + 'T21:55:00.000Z'
+    createdAt: eveningOf(guide) + ':55:00.000Z'
   };
+}
+
+/* The evening of the Sunday a guide was preached, to the hour, which is what
+   both of these entries are dated. The same scheme src/stage.js uses for the
+   weeks already in the journal: a card carries a date off the sermon rather
+   than off whatever time the render happened to run, so two renders a day
+   apart are the same video. */
+function eveningOf(guide) {
+  const date = String((guide && guide.preachedOn) || '');
+  return (/^\d{4}-\d{2}-\d{2}/.test(date) ? date.slice(0, 10) : '2026-01-04') + 'T21';
 }
 
 /* --------------------------------------------------------------------------
@@ -676,7 +731,7 @@ const give = (frames) => {
     tab: { index: TAB.more, lit: 1 },
     caption:
       { eyebrow: 'Thank you', line: 'Give',
-      sub: 'One button, and what it pays for.' },
+      sub: 'How to support our ministry.' },
     act(win, t) {
       setRoute(win, { name: 'give' });
       setScroll(win, 0);
@@ -689,33 +744,33 @@ const give = (frames) => {
    The two cuts.
    -------------------------------------------------------------------------- */
 
-/* 54 + 2550 + 96 = 2700 frames, ninety seconds flat.
+/* 54 + 2670 + 96 = 2820 frames, ninety four seconds.
 
-   LONGER THAN THE MINUTE AND FOURTEEN IT WAS, and the sixteen seconds went
-   somewhere specific: highlighting a line, writing on it and watching it land
-   in the Journal is two scenes that did not exist, and neither of them can be
-   hurried. A note that types itself in a second and a half is a note nobody
-   read. Everything already in the piece paid part of it — Home, Cal, Listen,
-   the index, Worship, Connect and Give are each a little shorter than they
-   were, with the same number of beats in them — and the guide itself gave up
-   a hundred frames.
+   LONGER THAN THE MINUTE AND FOURTEEN IT WAS, and the nineteen seconds went
+   somewhere specific: answering a take-home question, highlighting a line,
+   writing on it and watching both land in the Journal is work somebody does
+   in the app rather than reading somebody else does to them, and none of it
+   can be hurried. An answer that types itself in a second and a half is an
+   answer nobody read. Everything already in the piece paid part of it — Home,
+   Cal, Listen, the index, Worship, Connect and Give are each a little shorter
+   than they were, with the same number of beats in them.
 
-   The Guide and the Journal together are 1428 frames, which is well over half
-   the piece. That is the brief: it is the thing the church most wants
-   somebody to find first. Worship, Connect and Give follow them and close the
-   tour, Give last because that is where a tour of a church ends. */
+   The Guide and the Journal together are 1566 frames, which is nearly two
+   thirds of the piece. That is the brief: it is the thing the church most
+   wants somebody to find first. Worship, Connect and Give follow them and
+   close the tour, Give last because that is where a tour of a church ends. */
 export const FULL = [
   home(210),
   cal(240),
   listen(192),
-  guideIndex(150),
-  guideTakeHome(300),
-  guideOverview(288, true),
+  guideIndex(144),
+  guideTakeHome(480),
+  guideOverview(264, true),
   guideNote(360),
-  journal(330),
+  journal(318),
   worship(168),
-  connect(168),
-  give(144)
+  connect(156),
+  give(138)
 ];
 
 /* The store cut cannot hold eleven screens in thirty seconds, so it is the
@@ -780,16 +835,15 @@ export function buildTimeline(cut) {
       /* The word in the list a thumb would have pressed to get to the next
          scene. Modules and tabs both carry their route as data-id. */
       nextRoute: scenes[i + 1] ? scenes[i + 1].navRoute : null,
-      /* Where in the whole video this scene's own note arrives, if it makes
-         one. A fraction on the scene, a frame number here. */
-      noteFrom: scene.noteAt == null ? null : at + scene.noteAt
+      /* Where in the whole video this scene's journal entry arrives, if it
+         writes one: a frame of the scene on the way in, a frame of the video
+         on the way out. */
+      wrote: scene.writes ? { frame: at + scene.writes.at, make: scene.writes.make } : null
     };
     at += scene.frames;
     from = scene.tab.index;
     return entry;
   });
-
-  const writes = placed.find((s) => s.noteFrom != null);
 
   return {
     scenes: placed,
@@ -797,9 +851,10 @@ export function buildTimeline(cut) {
     closeFrames: cards.close,
     appEnd: at,
     total: at + cards.close,
-    /* The frame from which the journal entry the video writes exists. Null in
-       a cut that never writes one, which is the store cut. */
-    noteFrom: writes ? writes.noteFrom : null
+    /* Everything the video writes into the journal, and the frame each one
+       appears on. Empty in a cut that writes nothing, which is the store
+       cut. */
+    writes: placed.filter((s) => s.wrote).map((s) => s.wrote)
   };
 }
 
@@ -831,14 +886,19 @@ export function applyFrame(win, frame, ctx, timeline) {
     ramp(t, 22, 50, scene.tabFrom === scene.tabTo ? scene.tabLit : 1, scene.tabLit, 'settle')
   );
 
-  /* THE NOTE THE VIDEO WRITES, BEFORE ANY SCREEN IS DRAWN, and it belongs
-     here rather than in the scene that writes it for two reasons. The Journal
-     scene needs it and is not that scene. And a render tab handed the Journal
-     as the first frame it ever draws has never run a frame of the guide, so
-     a note made inside the guide's own act() would simply not be there, and
-     the card would be missing from one tab's frames and present in another's.
-     Stated once, for the whole timeline, from the frame it is written on. */
-  if (ctx.guideId) setNote(win, timeline.noteFrom != null && frame >= timeline.noteFrom, noteFor(win, ctx));
+  /* WHAT THE VIDEO WRITES INTO THE JOURNAL, BEFORE ANY SCREEN IS DRAWN, and
+     it belongs here rather than in the scenes that write it for two reasons.
+     The Journal scene shows both and is neither of them. And a render tab
+     handed the Journal as the first frame it ever draws has never run a frame
+     of the guide, so an entry made inside the guide's own act() would simply
+     not be there, and a card would be missing from one tab's frames and
+     present in another's. Stated once, for the whole timeline, each from the
+     frame it is written on. */
+  if (ctx.guideId) {
+    for (const wrote of timeline.writes) {
+      setNote(win, frame >= wrote.frame, wrote.make(win, ctx));
+    }
+  }
 
   scene.act(win, t, ctx);
 
