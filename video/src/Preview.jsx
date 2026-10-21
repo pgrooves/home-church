@@ -49,11 +49,12 @@ import { applyFrame, BEAT, buildTimeline, captionAt, CUTS } from './scenes';
    track ends at 72.7 seconds and the closing card holds for most of a second
    after it in silence, which is what a card you are meant to read wants. The
    store cut stops in the middle of the track, so the last beat is a fade. */
-const Track = () => {
+const Track = ({ from = 0 }) => {
   const { durationInFrames } = useVideoConfig();
   return (
     <Audio
       src={staticFile('music.wav')}
+      trimBefore={from || undefined}
       volume={(f) =>
         interpolate(f, [durationInFrames - BEAT, durationInFrames - 1], [1, 0], {
           extrapolateLeft: 'clamp',
@@ -88,7 +89,7 @@ export const Preview = ({ cut = 'AppStorePreview', scale = 1 }) => {
         overflow: 'hidden'
       }}
     >
-      <Track />
+      <Track from={CUTS[cut].musicFrom} />
 
       <AppStage frame={frame} apply={apply} scale={scale} />
 

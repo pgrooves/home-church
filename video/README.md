@@ -1,7 +1,7 @@
 # The App Store preview
 
-A minute and fourteen seconds of Home Church for the website, and a thirty
-second cut of the same run for the video slot on the store page. Built with
+A minute and thirty nine of Home Church for the website, cut to a music bed,
+and a thirty second cut of the same run for the video slot on the store page. Built with
 [Remotion](https://www.remotion.dev), which renders React to video by drawing
 the composition in a browser one frame at a time.
 
@@ -9,7 +9,7 @@ the composition in a browser one frame at a time.
 cd video
 npm install
 npm run render              # out/home-church-app-store.mp4, 1320 x 2868, 29.6s
-npm run render:marketing    # out/home-church-marketing.mp4, 1080 x 1920, 73.6s
+npm run render:marketing    # out/home-church-marketing.mp4, 1080 x 1920, 99.2s
 ```
 
 **Both cuts need `public/music.wav`, which is not in the repository.** It is a
@@ -125,19 +125,19 @@ download does not keep.
 
 | | Frames | | |
 |---|---|---|---|
-| Opening | 0 – 48 | The lockup, assembling | |
-| Home | 48 – 240 | Down the noticeboard, past the service times, to this week's message | *Home* |
-| Calendar | 240 – 432 | Two days opened, then everything coming up | *Calendar* |
-| Listen | 432 – 600 | Past this week into the archive, one message opened for its notes | *Listen* |
-| Guides | 600 – 720 | Every Sunday the church has written up | *Guides* |
-| Self-Reflection Questions | 720 – 1056 | Opened, read down, one of them answered, then the one-liners | *Self-Reflection Questions* |
-| Overview | 1056 – 1272 | Sunday's message in writing, then the fuller summary under it | *Overview* |
-| Notetaking | 1272 – 1560 | A line highlighted, a note written on it, saved | *Notetaking* |
-| Journal | 1560 – 1800 | Both of them under their sermon, then every sermon | *Journal* |
-| Worship | 1800 – 1920 | A pass down Sunday's setlist | *Worship* |
-| Connect | 1920 – 2040 | Get in touch, and the serve teams | *Connect* |
-| Give | 2040 – 2136 | A thank you and one button | *Give* |
-| Closing | 2136 – 2208 | The name, the service times and the address | |
+| Opening | 0 – 96 | The lockup, assembling, in the quiet | |
+| Home | 96 – 384 | Down the noticeboard, past the service times, to this week's message | *Home* |
+| Calendar | 384 – 576 | **The track comes in.** Two days opened, then everything coming up | *Calendar* |
+| Listen | 576 – 768 | Past this week into the archive, one message opened for its notes | *Listen* |
+| Guides | 768 – 960 | **It opens up.** Every Sunday the church has written up | *Guides* |
+| Self-Reflection Questions | 960 – 1440 | Opened, read down, one of them answered, then the one-liners | *Self-Reflection Questions* |
+| Overview | 1440 – 1728 | Sunday's message in writing, then the fuller summary under it | *Overview* |
+| Notetaking | 1728 – 2016 | A line highlighted, a note written on it, saved | *Notetaking* |
+| Journal | 2016 – 2304 | Both of them under their sermon, then every sermon | *Journal* |
+| Worship | 2304 – 2496 | A pass down Sunday's setlist | *Worship* |
+| Connect | 2496 – 2688 | A late brightening. Get in touch, and the serve teams | *Connect* |
+| Give | 2688 – 2880 | **The outro.** A thank you and one button | *Give* |
+| Closing | 2880 – 2976 | The name, the service times and the address, into the last of the music | |
 
 **Every caption is the app's own words.** The line is the name of the page or
 the section on screen, as the app writes it, the eyebrow above it is that
@@ -245,31 +245,56 @@ would buy ten seconds back for the nine screens that remain.
 ## Cut to the music
 
 **The track is 75 BPM, which at thirty frames a second is 24 frames a beat and
-96 a bar, exactly.** That is luck and it is the whole reason this is on the
-grid rather than near it. A tempo that came out at 23.6 frames a beat would
-drift a frame every third beat and a second across the piece, and the only
-cures are resampling the music or letting the cuts wander. 75 at 30 divides.
+96 a bar, exactly.** That is luck and it is why this is on the grid rather
+than near it. A tempo that came out at 23.6 frames a beat would drift a frame
+every third beat and a second across the piece, and the only cures are
+resampling the music or letting the cuts wander. 75 at 30 divides.
 
-**So every scene length is a count of beats** — `BEAT * 8`, `BEAT * 14` — and
-every boundary lands on one by construction, with nothing to round off and
-nothing to accumulate. The track is staged with its first 0.376 seconds
-trimmed, which is where its own first beat falls, so beat one of the music is
-frame zero of the video.
+**But a grid is not an edit, and the first version of this was a metronome.**
+Every cut landed on a beat and not one landed on a moment: of thirteen cuts,
+two coincided with anything the music actually does, and both by accident. A
+beat grid says when you are allowed to cut. It does not say where to.
 
-**The cut is not the boundary, on seven of the eleven.** A change of page here
-is the full screen list coming up over the old screen, the route changing
-behind it, and the list clearing on the new one, so what the eye registers is
-the moment the list goes opaque rather than the frame the scene counter
-changes. `MENU_OUT` is one beat and it now reaches full opacity *on* the
-boundary rather than ten frames early, so the hit is on the beat; the list
-clears over the half beat after. The four that are dips bottom out on the
-boundary already, and the two that are not cuts at all — the take-home into
-the Overview, the Overview into the note — are left alone, because snapping a
-transition that does not exist only shoves a caption around.
+**So the lengths come from the track's own shape.** Measured with a
+beat-synchronous band analysis and a per-bar loudness and brightness reading,
+it is:
 
-**Four of the cuts landed on the track's own turns** without being asked to:
-at 24, 64, 68 and 71 seconds the music changes gear and so does the picture.
-That is the grid being right rather than anything clever.
+| | |
+|---|---|
+| 0 – 12.8s | quiet, four bars of intro, building |
+| **12.8s** | **it comes in** — +4.2 dB, the biggest single moment in it |
+| **25.6s** | **it opens up** — brightness up 800 Hz, the top arrives |
+| 35.2s | settles into a long, very even body |
+| 83.2s | a late brightening, the same figure as 57.6s |
+| **89.6s** | **the outro** — −5 dB, the bottom goes |
+| 97.6s | ends |
+
+Home hands over to Calendar exactly as the track comes in. The Guide opens
+exactly as it opens up. The closing tour starts on the late brightening and
+Give lands on the outro. The closing card goes up with eight bars of music
+left and holds through the last of it into a second of silence.
+
+**Every length is in bars, not beats.** A bar is 96 frames, and cutting on bar
+lines rather than beats is most of the difference between clean and busy: a
+cut on any old beat is in time and still restless, because the music is not
+changing there and the picture is.
+
+**The bed is eight bars longer than the track the church sent.** That is where
+the room came from, and it was the real problem: eleven screens in 73 seconds
+is 5.7 seconds each however the cuts fall, and no amount of beat-matching
+makes that unhurried. The eight bars are the track's own bars 11 to 19 played
+twice. It is even enough through the middle that the join measures 0.9989
+similarity, with a 20ms equal-power crossfade over the waveform
+discontinuity; the step left at the join is 619 against a typical sample step
+of 489, so there is nothing to hear. Every scene is longer than it was, most
+by half as much again.
+
+**The store cut is not cut to the song and does not pretend to be.** The track
+takes four bars to come in and another four to open up, which is twenty six of
+the thirty seconds Apple allows. So it stays on the beat grid, and the one
+thing it takes from the music is where it starts: `musicFrom` puts the bed in
+at bar four, so the preview opens on a page and a bed that have both already
+arrived rather than on thirteen seconds of somebody clearing their throat.
 
 **The bed is a wav, and it is trimmed by more than you would expect.** 0.4307
 seconds, which is two numbers: 0.3880 is where the track's own first beat
@@ -299,7 +324,7 @@ against it.
 | id | Renders at | Runs | For |
 |---|---|---|---|
 | `AppStorePreview` | 1320 x 2868 | 29.6s | The store page. The app fills the frame, no device around it. |
-| `Marketing` | 1080 x 1920 | 73.6s | The website and the socials. Every scene, inside a drawn phone on a warm ground. |
+| `Marketing` | 1080 x 1920 | 99.2s | The website and the socials. Every scene, inside a drawn phone on a warm ground. |
 
 Both are built from the same scene functions, listed in `src/scenes.js` as
 `APP_STORE` and `FULL`. A cut is a list of scenes with a length each, so adding

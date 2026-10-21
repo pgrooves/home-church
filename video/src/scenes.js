@@ -91,8 +91,8 @@ const TAB = { home: 0, cal: 1, connect: 2, listen: 3, guide: 4, more: 5 };
 /* The cards at either end. Neither is app footage, so the veil over them is
    opaque and the app underneath is free to sit wherever the nearest scene
    wants it. */
-export const OPEN_FRAMES = BEAT * 2;
-export const CLOSE_FRAMES = BEAT * 3;
+export const OPEN_FRAMES = BAR;
+export const CLOSE_FRAMES = BAR;
 
 /* How long the caption holds, in frames, the same at every scene length.
 
@@ -386,7 +386,7 @@ const guideTakeHome = (frames) => {
     frames,
     /* The answer is a journal entry like any other, so it is stated for the
        whole timeline rather than typed into existence here. See writes. */
-    writes: { at: at(0.30), make: answerFor },
+    writes: { at: at(0.33), make: answerFor },
     tab: { index: TAB.guide, lit: 0 },   /* a guide is a pushed view, not a tab */
     caption:
       { eyebrow: 'Take home', line: 'Self-Reflection Questions',
@@ -406,7 +406,7 @@ const guideTakeHome = (frames) => {
          glass — the save notice is half the point of the box. */
       const answer = answerFor(win, ctx);
       setAnswer(win, answer.index, ANSWER_TEXT,
-        ramp(t, at(0.30), at(0.60), 0, ANSWER_TEXT.length, 'linear'));
+        ramp(t, at(0.33), at(0.52), 0, ANSWER_TEXT.length, 'linear'));
 
       /* Every number is measured after the states above are applied, so it is
          where the heading actually is on this frame rather than where it was
@@ -419,7 +419,7 @@ const guideTakeHome = (frames) => {
         { f: at(0.00), v: top('reflection') },
         { f: at(0.14), v: top('reflection') },
         { f: at(0.22), v: top('reflection') + 240, ease: 'flick' },   /* down the questions */
-        { f: at(0.29), v: box, ease: 'flick' },
+        { f: at(0.30), v: box, ease: 'flick' },
         { f: at(0.80), v: box },
         { f: at(0.88), v: top('oneliners'), ease: 'flick' },
         { f: at(1.00), v: top('oneliners') + 200 }
@@ -790,44 +790,55 @@ const give = (frames) => {
    The two cuts.
    -------------------------------------------------------------------------- */
 
-/* 2 + 87 + 3 = 92 beats. 2208 frames, 73.6 seconds, which is a minute and
-   fourteen as near as the music allows.
+/* 31 BARS, 2976 FRAMES, 99.2 SECONDS, AND EVERY CUT ON A BAR LINE.
 
-   EVERY LENGTH IN HERE IS A COUNT OF BEATS, and that is the only honest way
-   to cut to a track. A scene written in frames lands where it lands; a scene
-   written in beats lands on one, and so does the next, and nothing drifts
-   over the length of the piece. The cost is that a scene can only be a
-   multiple of 24 frames long, which is why these numbers are not the ones
-   that were here before: home went up by twelve frames, worship down by six,
-   and so on, each to the nearest beat.
+   The grid version of this was a metronome rather than an edit. Every cut
+   landed on a beat and not one of them landed on a moment: of thirteen cuts,
+   two coincided with anything the music does, and both by accident. A beat
+   grid says when you are allowed to cut. It does not say where to.
 
-   It came out twelve frames shorter than the 2220 it was, which is the two
-   cards paying for the rounding. Nobody will notice four tenths of a second;
-   everybody notices a cut that lands a frame late.
+   So the lengths below come from the track's own shape, which is:
 
-   The lengths were already as tight as the content allows before the grid
-   went on them, and they got a little more room rather than less: motion
-   starts on a beat now and the beat it starts on is earlier than the number
-   it replaced, so every scene has at least as long to move in as it had at
-   74 seconds. It is still a brisk minute and fourteen. Two scenes dropped,
-   Worship and Connect, would buy ten seconds back for the nine that remain.
+     0      quiet, building, 4 bars of intro
+     12.8s  IT COMES IN.  +4.2 dB, the biggest single moment in the track
+     25.6s  IT OPENS UP.  brightness up 800 Hz, the top arrives
+     35.2s  settles into a long even body
+     83.2s  a late brightening, the same figure as 57.6s
+     89.6s  THE OUTRO.  -5 dB, the bottom goes
+     97.6s  ends
 
-   The Guide and the Journal together are 1200 frames, fifty beats, which is
-   well over half the piece. That is the brief: they are what the church most
-   wants somebody to find first. Worship, Connect and Give follow them and
-   close the tour, Give last because that is where a tour of a church ends. */
+   and the piece is cut to it: Home hands over to Calendar exactly as the
+   track comes in, the Guide opens exactly as it opens up, the closing tour
+   starts on the late brightening, and Give lands on the outro. The card at
+   the end goes up with eight bars of music left and holds through the last
+   of it into a second of silence.
+
+   EVERY LENGTH IS IN BARS, not beats. A bar at 75 BPM is 96 frames, 3.2
+   seconds, and cutting on bar lines is most of the difference between clean
+   and busy: a cut on any old beat is in time with the music and still feels
+   restless, because the music is not changing there and the picture is.
+
+   The bed is eight bars longer than the track the church sent, which is
+   where the room came from. Eleven screens in 73 seconds was 5.7 seconds
+   each however the cuts fell, and no amount of beat matching makes that
+   unhurried. Those eight bars are the track's own bars 11 to 19 played
+   twice; it is even enough through the middle that the join measures 0.9989
+   and nobody hears it. See extend in the scratchpad, and the note over Track
+   in Preview.jsx.
+
+   Every scene is longer than it was, most by half as much again. */
 export const FULL = [
-  home(BEAT * 8),
-  cal(BEAT * 8),
-  listen(BEAT * 7),
-  guideIndex(BEAT * 5),
-  guideTakeHome(BEAT * 14),
-  guideOverview(BEAT * 9, true),
-  guideNote(BEAT * 12),
-  journal(BEAT * 10),
-  worship(BEAT * 5),
-  connect(BEAT * 5),
-  give(BEAT * 4)
+  home(BAR * 3),            /* 96 - 384,    hands over as the track comes in */
+  cal(BAR * 2),             /* 384 - 576 */
+  listen(BAR * 2),          /* 576 - 768 */
+  guideIndex(BAR * 2),      /* 768 - 960,   the Guide opens as the track does */
+  guideTakeHome(BAR * 5),   /* 960 - 1440 */
+  guideOverview(BAR * 3, true),  /* 1440 - 1728, on the first late brightening */
+  guideNote(BAR * 3),       /* 1728 - 2016 */
+  journal(BAR * 3),         /* 2016 - 2304 */
+  worship(BAR * 2),         /* 2304 - 2496 */
+  connect(BAR * 2),         /* 2496 - 2688, on the second late brightening */
+  give(BAR * 2)             /* 2688 - 2880, on the outro */
 ];
 
 /* The store cut cannot hold eleven screens in thirty seconds, so it is the
@@ -842,18 +853,28 @@ export const APP_STORE = [
   guideOverview(BEAT * 14)
 ];
 
-/* 2 + 32 + 3 = 37 beats, 888 frames, 29.6 seconds, inside Apple's thirty
-   with a beat to spare. Thirty eight beats would be 30.4 and would not
-   upload, so this is the longest the store cut can be and still be on the
-   grid. The track runs out at 29.6 rather than ending, so the Audio fades it
-   over the last beat; see Preview.jsx. */
+/* 888 frames, 29.6 seconds, inside Apple's thirty with a beat to spare.
+   Thirty eight beats would be 30.4 and would not upload.
+
+   IT CANNOT BE CUT TO THE SONG'S SHAPE AND IT DOES NOT TRY. The track takes
+   four bars to come in and another four to open up, which is twenty six of
+   the thirty seconds Apple allows; a store cut that waited for either would
+   be a store cut of two screens. So this one stays on the beat grid, and the
+   one thing it does take from the music is where it starts: `musicFrom` puts
+   the bed in at bar four, the frame the track comes in on, so the preview
+   opens on a page and a bed that have both already arrived rather than on
+   thirteen seconds of somebody clearing their throat. The offset is a whole
+   number of bars, so the grid underneath it is the same grid. */
 const APP_STORE_CARDS = { open: BEAT * 2, close: BEAT * 3 };
 
 export const CUTS = {
-  AppStorePreview: { scenes: APP_STORE, cards: APP_STORE_CARDS },
-  Marketing: { scenes: FULL, cards: { open: OPEN_FRAMES, close: CLOSE_FRAMES } }
+  AppStorePreview: {
+    scenes: APP_STORE, cards: APP_STORE_CARDS, musicFrom: BAR * 4
+  },
+  Marketing: {
+    scenes: FULL, cards: { open: OPEN_FRAMES, close: CLOSE_FRAMES }, musicFrom: 0
+  }
 };
-
 /* Lay a cut out on a timeline. The lit tile travels from wherever the scene
    before left it, worked out here rather than written down twice, so a scene
    can appear in both cuts in different company and the bar still makes sense
@@ -969,8 +990,8 @@ export function applyFrame(win, frame, ctx, timeline) {
      you are leaving, the route changes behind it with the new line gold, and
      it fades off the page you have arrived on. That is the cut, and it is
      also the feature. */
-  const MENU_OUT = BEAT;        /* one beat to come up, landing full ON the beat */
-  const MENU_IN = BEAT / 2;     /* half a beat to clear off the new page */
+  const MENU_OUT = BEAT * 1.5;  /* a beat and a half up, landing full ON the bar line */
+  const MENU_IN = BEAT;         /* and a beat to clear off the new page */
 
   const leaving = scene.leave === 'nav'
     ? ramp(t, scene.frames - MENU_OUT, scene.frames, 0, 1, 'settle')
@@ -1011,7 +1032,7 @@ export function captionAt(frame, timeline) {
      the opening card, and only the last hands over to the closing one. */
   const up = scene.arrive === 'card' ? 0.86 : scene.arrive === 'cut' ? 0.9 : 0;
   const down = scene.leave === 'card' ? 0.97 : scene.leave === 'cut' ? 0.9 : 0;
-  const dip = scene.leave === 'card' ? BEAT / 2 : scene.leave === 'cut' ? BEAT / 2 : 0;
+  const dip = scene.leave === 'card' || scene.leave === 'cut' ? BEAT : 0;
 
   const veil = track(t, [
     { f: 0, v: up },

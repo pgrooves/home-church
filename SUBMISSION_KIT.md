@@ -449,11 +449,13 @@ church most wants somebody to find first. Then the name, the service times and
 the address. Upload it on the version page under Previews and Screenshots, 6.9
 inch iPhone tab, and choose the last frame as the poster.
 
-`npm run render:marketing` is the same run at a minute and fourteen, inside a
-drawn phone, for the website and the socials. It carries the guide index, the
-take-home half of a guide with one of its questions answered, a line
-highlighted and a note written on it, the Journal both of those land in, and
-Worship, Connect and Give after them, none of which fit in thirty seconds.
+`npm run render:marketing` is the same run at a minute and thirty nine, inside
+a drawn phone, for the website and the socials, and cut to a music bed: Home
+hands over to Calendar as the track comes in, the Guide opens as it opens up,
+and Give lands on the outro. It carries the guide index, the take-home half of
+a guide with one of its questions answered, a line highlighted and a note
+written on it, the Journal both of those land in, and Worship, Connect and
+Give after them, none of which fit in thirty seconds.
 
 **It gets around the way the app does.** Every change of screen is the round
 button in the corner, the full screen list behind it, and the destination
