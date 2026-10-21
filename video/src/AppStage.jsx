@@ -48,6 +48,14 @@ const FREEZE = `
   html, .hc-scroll { scroll-behavior: auto !important; }
   /* The caret in the journal's writing surface blinks on its own clock. */
   * { caret-color: transparent !important; }
+  /* A SELECTION, IN THE APP'S OWN COLOURS. The one piece of styling in this
+     folder that the app does not ship, and the only honest alternative is
+     worse: Chromium draws a selection in its default blue, which is a colour
+     nothing else in a warm charcoal app comes near, and a scene about keeping
+     a line out of a sermon would have a stripe of Windows across it. A phone
+     draws this in the system accent, so there is no one right answer to copy;
+     this is the app's gold at the weight its own marks use. */
+  ::selection { background: rgba(203, 172, 116, 0.34); }
 `;
 
 export const AppStage = ({ frame, apply, scale = 1 }) => {
@@ -129,6 +137,22 @@ async function boot(el) {
 
   const splash = win.document.getElementById('hc-splash');
   if (splash) splash.remove();
+
+  /* ONE TIMER IN THE APP IS SWALLOWED, and it is the fifth of a second
+     js/highlight.js waits after a selection changes before it puts Note this
+     up. Every time the Overview scene widens the selection by three
+     characters it schedules another one, and those timers do fire: a render
+     takes real milliseconds between frames even though the frame numbers say
+     the clock is stopped. One of them landing between a frame being driven
+     and the shutter opening is the bar appearing a second early in one render
+     tab and not in another, which is a tear. So it never fires by itself here
+     and setHighlightBar runs the same handler by hand, on the frame that asks
+     for it. See drive.js. */
+  const realSetTimeout = win.setTimeout;
+  win.setTimeout = function (fn, ms) {
+    if (ms === 220) return 0;
+    return realSetTimeout.apply(win, arguments);
+  };
 
   win.HC.store.updateProfile({
     firstName: 'Sarah',

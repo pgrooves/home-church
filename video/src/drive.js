@@ -204,6 +204,204 @@ export function redraw(win) {
   if (route) win.HC.router.go(route, { force: true, animate: false, replace: true });
 }
 
+/* --- keeping a line out of a guide ---------------------------------------- */
+
+/* The first `chars` characters of a block, selected, the way a thumb dragging
+   across them would leave it. Zero clears the selection.
+
+   A selection is state rather than a gesture, which is the only reason this
+   can be in a video at all: setting the same range on sixty consecutive
+   frames leaves the same range, and growing it by three characters a frame is
+   a drag. What it draws in is the ::selection rule in AppStage's boot CSS,
+   because Chromium's own is a blue nothing else in this app comes near. */
+export function setSelection(win, selector, chars) {
+  const doc = win.document;
+  const sel = win.getSelection && win.getSelection();
+  if (!sel) return;
+
+  if (!(chars > 0)) {
+    if (sel.rangeCount) sel.removeAllRanges();
+    return;
+  }
+
+  const el = doc.querySelector(selector);
+  if (!el) return;
+  const walker = doc.createTreeWalker(el, win.NodeFilter.SHOW_TEXT, null, false);
+  const node = walker.nextNode();
+  if (!node) return;
+
+  const range = doc.createRange();
+  range.setStart(node, 0);
+  range.setEnd(node, Math.min(Math.round(chars), node.textContent.length));
+  sel.removeAllRanges();
+  sel.addRange(range);
+}
+
+/* Note this / Highlight, the bar that comes up over a selection.
+
+   THE APP PUTS IT UP A FIFTH OF A SECOND AFTER THE SELECTION SETTLES, and
+   that delay is not politeness either: on a phone the grab handles are still
+   moving while the selection changes, and a bar that repositions on every
+   tick flickers under the thumb doing the moving. See onSelectionChange in
+   js/highlight.js.
+
+   A render has no fifth of a second. Frames are drawn one at a time with the
+   clock stopped between them, so a timer set while frame 300 is being drawn
+   fires somewhere in the middle of frame 301, or 340, or never. This runs the
+   app's own handler now instead of in 220 milliseconds, by swapping that one
+   timer for a straight call and putting setTimeout back. It is the same
+   decision as switching the CSS transitions off: the app's behaviour is
+   right, its timing cannot be used. Gated on whether the bar is already
+   there, so the frame after this one does nothing. */
+export function setHighlightBar(win, up) {
+  const there = !!win.document.querySelector('.hc-hlbar');
+  if (!!up === there) return;
+
+  if (!up) { win.HC.highlight.hideBar(); return; }
+
+  const real = win.setTimeout;
+  win.setTimeout = function (fn, ms) {
+    if (ms === 220) { fn(); return 0; }
+    return real.apply(win, arguments);
+  };
+  try {
+    win.document.dispatchEvent(new win.Event('selectionchange'));
+  } finally {
+    win.setTimeout = real;
+  }
+}
+
+/* The entry itself: there, or not there.
+
+   NOT MADE BY PRESSING Note this, which is the one place in this piece where
+   the app's own button is not what happens, and it is worth the paragraph.
+   js/highlight.js mints a uuid and stamps the clock, so eight render tabs
+   pressing that button make eight different entries with eight different
+   timestamps, and the card in the Journal carries both. The same tearing the
+   loose notes had, with a worse symptom: the mark in the prose is keyed on
+   the id, so the tabs would not even agree about which words are underlined.
+
+   So the entry is written through the same HC.journal.create the button calls,
+   with the id and the date stated rather than minted. Every tab writes the
+   same row. `want` is a position, not a press: a frame before the note exists
+   says false and gets no note, a frame after says true and gets exactly one,
+   whichever order the two frames are drawn in.
+
+   redraw() is the app's, and it is what paints the underline into the
+   paragraph. It no-ops on any screen the paragraph is not on, which is how
+   the Journal scene can ask for this without touching anything. */
+export function setNote(win, want, note) {
+  const HC = win.HC;
+  if (!HC || !HC.journal || !note) return;
+
+  const has = !!HC.journal.get(note.id);
+  if (has === !!want) return;
+
+  if (!want) {
+    HC.highlight.closeNote();
+    HC.journal.remove(note.id);
+    HC.highlight.redraw(note.guideId, note.path);
+    return;
+  }
+
+  const guide = HC.data.getGuide(note.guideId);
+  HC.journal.create({
+    id: note.id,
+    createdAt: note.createdAt,
+    kind: 'highlight',
+    guideId: note.guideId,
+    guideTitle: guide ? HC.data.guideTitle(guide) : null,
+    path: note.path,
+    quote: note.quote,
+    start: note.start,
+    end: note.end,
+    bodyText: note.text
+  });
+  HC.highlight.redraw(note.guideId, note.path);
+}
+
+/* A caret, which does not blink, because a blink is a thing the wall clock
+   does and there is no wall clock here. */
+const CARET = '<span style="display:inline-block;width:2px;height:1.05em;' +
+  'margin:0 0 -0.18em 2px;background:#CBAC74"></span>';
+
+/* The sheet over the guide, and the words appearing in it.
+
+   The entry already holds the whole note, because the entry is what the
+   Journal draws from and a half typed card is not what anybody would have
+   saved. What is on screen is overwritten every frame with however much of it
+   has been typed by now, so the sheet opens empty under its placeholder and
+   fills up. Nothing is read back out of the box, which is what makes that
+   safe: the box is a display here, not a source. */
+export function setNoteSheet(win, note, open, chars) {
+  const doc = win.document;
+  const sheet = doc.querySelector('[data-sheet="note"]');
+
+  if (open && !sheet) win.HC.highlight.open(note.id);
+  else if (!open && sheet) win.HC.highlight.closeNote();
+  if (!open) return;
+
+  const box = doc.getElementById('hc-hl-note');
+  if (!box) return;
+  const typed = note.text.slice(0, Math.max(0, Math.round(chars)));
+  const done = typed.length >= note.text.length;
+  box.innerHTML = typed
+    ? '<p>' + escapeHtml(typed) + (done ? '' : CARET) + '</p>'
+    : '';
+}
+
+/* --- the journal ---------------------------------------------------------- */
+
+/* Which slice of the Journal is showing: `guide` for the one sermon it was
+   opened from, `all` for everything.
+
+   THE WAY OUT OF A SCOPED JOURNAL IS A PILL, and it is the app's own: arrive
+   from a guide and the row reads This guide · All · Highlights · Scripture,
+   with the first one pressed. Tapping All is what widens the list, and the
+   headings go from one sermon to every sermon somebody has written under,
+   each shut. That is the whole of the Journal scene's second half and it is
+   not a trick played on the screen; it is the button.
+
+   Gated on the screen's own answer, so a frame asking for the slice already
+   showing does not repaint. A repaint here is cheap and visible: it rebuilds
+   the list and takes the scroll with it. */
+export function setJournalFilter(win, id) {
+  const helpers = win.HC.screens && win.HC.screens.journalHelpers;
+  if (!helpers || !helpers.getFilter || helpers.getFilter() === id) return;
+
+  const btn = win.document.querySelector(
+    '[data-action="journal-filter"][data-value="' + cssq(id) + '"]');
+  if (btn) { btn.click(); return; }
+  helpers.setFilter(id);
+  helpers.repaint();
+}
+
+/* One sermon's heading in the Journal, held `amount` open.
+
+   Same grid-rows trick as setSection, different markup: the panel is found
+   through the heading's aria-controls rather than by a known id, because the
+   ids are positional and the church publishes more guides every week. The
+   screen is also told, so that a repaint, if one ever happens mid scene,
+   leaves the fold where the frame put it rather than shutting it. */
+export function setFold(win, key, amount) {
+  const doc = win.document;
+  const btn = doc.querySelector(
+    '[data-action="journal-fold"][data-fold="' + cssq(key) + '"]');
+  if (!btn) return;
+  const panel = doc.getElementById(btn.getAttribute('aria-controls'));
+  if (!panel) return;
+
+  const open = amount > 0.001;
+  btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+  panel.setAttribute('data-open', open ? 'true' : 'false');
+  panel.style.gridTemplateRows = amount + 'fr';
+  const chev = btn.querySelector('.hc-jfold__chevron');
+  if (chev) chev.style.transform = 'rotate(' + (180 * amount).toFixed(1) + 'deg)';
+
+  const helpers = win.HC.screens && win.HC.screens.journalHelpers;
+  if (helpers && helpers.setFold) helpers.setFold(key, open);
+}
+
 /* --- the navigation ------------------------------------------------------- */
 
 /* The round button in the corner and the full screen list behind it, held
@@ -381,4 +579,13 @@ export function tapPulse(win, selector, progress) {
    that not matter. */
 function cssq(value) {
   return String(value).replace(/["\\]/g, '\\$&');
+}
+
+/* The note is written here rather than by somebody typing, so there is
+   nothing in it to escape. It goes through this anyway, because the one
+   place in this folder that puts a string into innerHTML is the one place
+   worth not having to think about again. */
+function escapeHtml(value) {
+  return String(value)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }

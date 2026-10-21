@@ -2,17 +2,18 @@
    The timeline.
 
    PHASE ONE. The church is launching the app in stages, and this cut shows
-   only what is in the first one: the five tabs, Home, Cal, Connect, Listen and
-   Guide, and nothing behind the ••• sheet. The group room, Leader mode and the
-   journal were all in the previous version of this video and are all out of
-   this one. They are features of a later phase, and a store page that shows
-   them is a store page making a promise the download does not keep.
+   only what is in the first one: Home, Calendar, Listen, Guide and Connect,
+   and Settings, Give, Services, Worship and Journal behind the ••• button.
+   The group room and Leader mode were in an earlier version of this video and
+   are out of this one. They are features of a later phase, and a store page
+   that shows them is a store page making a promise the download does not keep.
 
-   The run is Home, Cal, Listen, the Guide, then Worship, Connect and Give.
-   The Guide is more than a third of the running time and gets three scenes of
-   its own, which is the brief: it is the thing the church most wants somebody
-   to find first. The three after it are the tour, and Give is last because
-   that is where a tour of a church ends.
+   The run is Home, Calendar, Listen, the Guide, the note somebody writes in
+   it, the Journal that note lands in, then Worship, Connect and Give. The
+   Guide and the Journal are over half the running time, which is the brief:
+   they are what the church most wants somebody to find first. The three after
+   them are the tour, and Give is last because that is where a tour of a
+   church ends.
 
    NOTHING IN HERE IS ABOUT RUNNING A GROUP, and that is a decision rather
    than an oversight. The guide's best known half is the discussion questions,
@@ -25,9 +26,9 @@
    passage that was read. The discussion questions are still on the screen,
    because they are in the app, they are just not what the words point at.
 
-   TWO CUTS OUT OF ONE SET OF SCENES. `FULL` is a minute and fourteen seconds,
-   which is the length the church asked for, and it is what goes on the website.
-   `APP_STORE` is the same five beats in the same order inside Apple's ceiling:
+   TWO CUTS OUT OF ONE SET OF SCENES. `FULL` is a minute and a half and it is
+   what goes on the website. `APP_STORE` is four of the same beats in the same
+   order inside Apple's ceiling:
    an app preview has to come in between fifteen and thirty seconds and there is
    no arguing with the upload form.
 
@@ -53,6 +54,8 @@ import { track, ramp } from './timing';
 import {
   setRoute, setScroll, setTab, setSection, setEpisode,
   setCalMonth, setCalDay, setMenu, menuLink,
+  setSelection, setHighlightBar, setNote, setNoteSheet,
+  setJournalFilter, setFold,
   anchorTop, maxScroll, tapPulse
 } from './drive';
 
@@ -222,7 +225,7 @@ const listen = (frames) => {
     tab: { index: TAB.listen, lit: 1 },
     caption:
       { eyebrow: 'Wherever you listen', line: 'Listen',
-      sub: 'Every message, with its notes.' },
+      sub: 'Direct links to the sermon audio.' },
     act(win, t) {
       setRoute(win, { name: 'listen' });
 
@@ -243,7 +246,21 @@ const listen = (frames) => {
 };
 
 /* --------------------------------------------------------------------------
-   The Guide, in three scenes and half the running time.
+   The Guide, in four scenes, and then the Journal it feeds.
+
+   The order is the brief, and it is not the order the screen is in. A guide
+   opens on the Overview, and an earlier cut of this read it top to bottom:
+   summary, summary, questions, one-liners, scripture, done. What that missed
+   is that the summary is the thing somebody reads and then does something
+   with, so it belongs next to the doing rather than three minutes before it.
+
+   So: the index, then the half of the guide that is a take-home — the
+   questions to sit with and every verse that was read — and then back up to
+   the Overview, which is where the last three scenes live. A line out of it
+   is highlighted, a note is written on that line, the note is saved, and the
+   Journal opens with it filed under the sermon it came out of. That last
+   stretch is the only place in this video where somebody puts something
+   into the app rather than reading what the church put there.
 
    One. The index: every Sunday the church has written up, this week at the
    top, all of it on the phone.
@@ -262,7 +279,7 @@ const guideIndex = (frames) => {
     tab: { index: TAB.guide, lit: 1 },
     caption:
       { eyebrow: 'Every Sunday', line: 'Guides',
-      sub: 'Every message, written down and kept.' },
+      sub: "A place to review Sunday's sermon notes." },
     act(win, t) {
       setRoute(win, { name: 'guide' });
 
@@ -289,79 +306,33 @@ const guideIndex = (frames) => {
   };
 };
 
-/* Two. The reader, and the part of it a group actually works through. The
-   ticks go through the app's own handler, so the line above them repaints
-   itself from "18 in all" to "1 of 18 covered" as they land. */
+/* Two. What a person takes home from a guide they are reading on their own:
+   the questions to sit with, the lines worth keeping, and every passage that
+   was read from the stage. */
 
-const guideReader = (frames) => {
+const guideTakeHome = (frames) => {
   const at = moves(frames);
   return {
-    id: 'guideReader',
+    id: 'guideTakeHome',
     navRoute: 'guide',
     arrive: 'cut',
     frames,
     tab: { index: TAB.guide, lit: 0 },   /* a guide is a pushed view, not a tab */
-    caption:
-      { eyebrow: 'Short summary', line: 'Overview',
-      sub: "What Sunday's message actually said." },
-    act(win, t, ctx) {
-      setRoute(win, { name: 'guide-reader', id: ctx.guideId });
-
-      /* THE OVERVIEW IS ALREADY OUT when a guide opens, and it is left that
-         way. An earlier cut shut it on the first frame to get to the
-         discussion questions faster, which was the right move for a video
-         about a group night and the wrong one for this. On the first day of
-         an app the person downloading it is on their own: what they want to
-         know is that Sunday's message is written down and they can read it
-         back on Tuesday. That is this section and the one under it. */
-      setSection(win, 'short-summary', 1);
-      setSection(win, 'full-summary', ramp(t, at(0.44), at(0.58), 0, 1, 'settle'));
-
-      const overview = Math.max(0, anchorTop(win, '[data-section="short-summary"]') - 110);
-      const summary = Math.max(0, anchorTop(win, '[data-section="full-summary"]') - 110);
-
-      setScroll(win, track(t, [
-        { f: at(0.00), v: 0 },
-        { f: at(0.08), v: 0 },
-        { f: at(0.26), v: overview, ease: 'flick' },   /* into the prose */
-        { f: at(0.40), v: overview + 190 },
-        { f: at(0.62), v: summary, ease: 'flick' },
-        { f: at(0.78), v: summary },
-        { f: at(1.00), v: summary + 240, ease: 'flick' }
-      ]));
-
-      tapPulse(win, '[data-section="full-summary"] .hc-section__chevron', (t - at(0.42)) / 26);
-    }
-  };
-};
-
-/* Three. The rest of what is in there, and the half of it a person reading on
-   their own gets the most out of: questions to sit with, the lines worth
-   keeping, and every passage that was read from the stage. Long cut only. */
-
-const guideMore = (frames) => {
-  const at = moves(frames);
-  return {
-    id: 'guideMore',
-    navRoute: 'guide',
-    frames,
-    tab: { index: TAB.guide, lit: 0 },
     caption:
       { eyebrow: 'Take home', line: 'Self-Reflection Questions',
       sub: 'Questions to sit with, and every verse.' },
     act(win, t, ctx) {
       setRoute(win, { name: 'guide-reader', id: ctx.guideId });
 
-      /* IT CARRIES ON FROM THE SCENE BEFORE RATHER THAN CUTTING TO A NEW
-         ARRANGEMENT. Both summaries are still open, because that is where the
-         last scene left this screen, and the first thing that happens here is
-         folding them away, on camera, with the chevrons turning over. Setting
-         them shut on the first frame instead made the whole page jump the
-         moment the caption came up, which read as a cut to somewhere else on
-         a screen nobody had left. */
+      /* THE OVERVIEW IS OUT WHEN A GUIDE OPENS, and the first thing that
+         happens here is folding it away, on camera, with the chevron turning
+         over. Setting it shut on the first frame instead made the whole page
+         jump the moment the caption came up, which read as a cut to somewhere
+         else on a screen nobody had left. It comes back in the next scene,
+         which is where the rest of this stretch happens. */
       const shut = ramp(t, at(0.02), at(0.16), 1, 0, 'settle');
       setSection(win, 'short-summary', shut);
-      setSection(win, 'full-summary', shut);
+      setSection(win, 'full-summary', 0);
       setSection(win, 'reflection', ramp(t, at(0.24), at(0.38), 0, 1, 'settle'));
       setSection(win, 'oneliners', ramp(t, at(0.54), at(0.66), 0, 1, 'settle'));
       setSection(win, 'scripture', ramp(t, at(0.80), at(0.90), 0, 1, 'settle'));
@@ -369,9 +340,8 @@ const guideMore = (frames) => {
       /* Follows whichever section is opening. Each one is measured after the
          states above are applied, so the number is where the heading actually
          is on this frame rather than where it was before the one above it
-         unfolded. The fold is watched from the top of the first summary,
-         which is the one thing on the page that does not move while the two
-         below it collapse. */
+         unfolded. The fold is watched from the top of the Overview, which is
+         the one thing on the page that does not move while it collapses. */
       const top = (id) => Math.max(0, anchorTop(win, '[data-section="' + id + '"]') - 120);
       setScroll(win, track(t, [
         { f: at(0.00), v: top('short-summary') },
@@ -386,6 +356,238 @@ const guideMore = (frames) => {
 
       tapPulse(win, '[data-section="short-summary"] .hc-section__chevron', (t - at(0.00)) / 26);
       if (t > at(0.46)) tapPulse(win, '[data-section="oneliners"] .hc-section__chevron', (t - at(0.52)) / 26);
+    }
+  };
+};
+
+/* Three. Back up to the Overview, which is the last thing shown in the guide
+   rather than the first, because it is what the next two scenes are about. */
+
+/* `carryOn` says the scene before this one was the take-home, so the three
+   sections it opened have to be folded away and the Overview opened back up,
+   on camera. The store cut has no room for the take-home and opens a guide
+   straight onto this, where the Overview is already out because that is how
+   a guide opens, and there is nothing below it to shut. Both are the same
+   scene; what differs is where the screen was a frame earlier. */
+
+const guideOverview = (frames, carryOn = false) => {
+  const at = moves(frames);
+  return {
+    id: 'guideOverview',
+    navRoute: 'guide',
+    frames,
+    tab: { index: TAB.guide, lit: 0 },   /* a guide is a pushed view, not a tab */
+    caption:
+      { eyebrow: 'Short summary', line: 'Overview',
+      sub: "What Sunday's message actually said." },
+    act(win, t, ctx) {
+      setRoute(win, { name: 'guide-reader', id: ctx.guideId });
+
+      /* The three the scene before opened, folding away, and the Overview
+         coming back out above them. Same carry-on, other way up. */
+      const shut = carryOn ? ramp(t, at(0.02), at(0.14), 1, 0, 'settle') : 0;
+      setSection(win, 'reflection', shut);
+      setSection(win, 'oneliners', shut);
+      setSection(win, 'scripture', shut);
+      setSection(win, 'short-summary',
+        carryOn ? ramp(t, at(0.18), at(0.30), 0, 1, 'settle') : 1);
+      setSection(win, 'full-summary', ramp(t, at(0.60), at(0.72), 0, 1, 'settle'));
+
+      const top = (id) => Math.max(0, anchorTop(win, '[data-section="' + id + '"]') - 110);
+      const from = carryOn ? top('scripture') : 0;
+      setScroll(win, track(t, [
+        { f: at(0.00), v: from },
+        { f: at(0.08), v: from },
+        { f: at(0.22), v: top('short-summary'), ease: 'flick' },
+        { f: at(0.36), v: top('short-summary') },
+        { f: at(0.50), v: top('short-summary') + 210 },
+        { f: at(0.68), v: top('full-summary'), ease: 'flick' },
+        { f: at(0.84), v: top('full-summary') },
+        { f: at(1.00), v: top('full-summary') + 230, ease: 'flick' }
+      ]));
+
+      if (carryOn) {
+        tapPulse(win, '[data-section="short-summary"] .hc-section__chevron', (t - at(0.16)) / 26);
+      }
+      if (t > at(0.52)) {
+        tapPulse(win, '[data-section="full-summary"] .hc-section__chevron', (t - at(0.58)) / 26);
+      }
+    }
+  };
+};
+
+/* Four. Keeping a line, and writing on it.
+
+   A sentence out of the Overview is selected, Note this comes up over it, the
+   note is typed and saved, and the line is underlined in the page from then
+   on. It is the one stretch of this video where somebody puts something in
+   rather than reading what the church put there, and it is the reason the
+   Journal scene after it has anything in it.
+
+   `noteAt` is the fraction of this scene at which the entry exists. Every
+   frame of the video from there on has it and every frame before does not,
+   which is applyFrame's job rather than this scene's: the Journal is a
+   different scene and still needs the note, and a tab handed the Journal as
+   the first thing it ever draws has never run a frame of this one. */
+
+const NOTE_TEXT = 'The part I keep coming back to. Praying on this one.';
+const NOTE_PATH = 'shortSummary.0';
+
+const guideNote = (frames) => {
+  const at = moves(frames);
+  return {
+    id: 'guideNote',
+    navRoute: 'guide',
+    /* My journal, the pill at the foot of the reader, which pushes a view.
+       Not the navigation: the list coming up here would say a thumb went
+       looking for the Journal when what it did was follow the note it had
+       just written. */
+    leave: 'cut',
+    frames,
+    /* The frame of this scene, not a fraction of it: buildTimeline only adds
+       the scene's start to it, and it has to be the same number the sheet
+       below opens on. */
+    noteAt: at(0.42),
+    tab: { index: TAB.guide, lit: 0 },
+    caption:
+      { eyebrow: 'From the guide', line: 'Your note',
+      sub: 'Highlight a line and keep a thought.' },
+    act(win, t, ctx) {
+      setRoute(win, { name: 'guide-reader', id: ctx.guideId });
+      setSection(win, 'short-summary', 1);
+      setSection(win, 'full-summary', 1);
+
+      const note = noteFor(win, ctx);
+      const block = '[data-hl-path="' + NOTE_PATH + '"]';
+
+      /* Back up from where the last scene left off, to the top of the
+         Overview's first paragraph, which is the line about to be kept. */
+      const summary = Math.max(0, anchorTop(win, '[data-section="full-summary"]') - 110);
+      const para = Math.max(0, anchorTop(win, block) - 170);
+      setScroll(win, track(t, [
+        { f: at(0.00), v: summary + 230 },
+        { f: at(0.12), v: para, ease: 'flick' },
+        { f: at(1.00), v: para }
+      ]));
+
+      /* The drag across the sentence, then the bar over it, then the sheet.
+         Each one is a state this frame is in rather than a thing that happens
+         on it; see the header of drive.js, and the long note on setNote. */
+      setSelection(win, block,
+        t < at(0.42) ? ramp(t, at(0.16), at(0.28), 0, note.quote.length, 'linear') : 0);
+      setHighlightBar(win, t >= at(0.28) && t < at(0.42));
+      setNoteSheet(win, note, t >= at(0.42) && t < at(0.84),
+        ramp(t, at(0.48), at(0.74), 0, note.text.length, 'linear'));
+
+      tapPulse(win, '[data-action="hl-note"]', (t - at(0.32)) / 26);
+      if (t > at(0.76)) {
+        tapPulse(win, '.hc-hlsheet__foot [data-action="hl-close"]', (t - at(0.78)) / 24);
+      }
+      /* My journal, the pill under the reader, which is where it goes next. */
+      if (t > at(0.88)) tapPulse(win, '#hc-jlink', (t - at(0.90)) / 24);
+    }
+  };
+};
+
+/* What the note is, worked out from the guide rather than typed in here.
+
+   THE QUOTE COMES OFF THE GUIDE'S OWN DATA, not off the paragraph on screen,
+   and that is the difference between a video and a video that tears. Remotion
+   renders in several browser tabs; a tab handed the Journal first has no
+   guide reader mounted and no paragraph to read, so a quote taken from the
+   page would be the sentence in one tab and an empty string in another, and
+   the card in the Journal would flicker between them. Asked of HC.data, every
+   tab gets the same sentence whatever is on screen.
+
+   It is a sentence rather than a fixed number of letters because the church
+   publishes a new guide every week and ninety letters of next Sunday's
+   overview stops in the middle of a word. */
+function noteFor(win, ctx) {
+  const guide = win.HC.data.getGuide(ctx.guideId);
+  const para = guide && guide.shortSummary ? String(guide.shortSummary[0] || '') : '';
+  const stop = para.search(/[.?!](\s|$)/);
+  const end = stop > 24 ? stop + 1 : Math.min(para.length, 120);
+  const quote = para.slice(0, end).replace(/\s+$/, '');
+
+  const day = /^\d{4}-\d{2}-\d{2}/.test(String(guide && guide.preachedOn))
+    ? String(guide.preachedOn).slice(0, 10)
+    : '2026-01-04';
+
+  return {
+    id: 'video-note',
+    guideId: ctx.guideId,
+    path: NOTE_PATH,
+    quote,
+    start: 0,
+    end: quote.length,
+    text: NOTE_TEXT,
+    /* The evening of the sermon, like the ones stage.js seeds, so the card
+       carries a date rather than whatever time the render happened to run. */
+    createdAt: day + 'T21:55:00.000Z'
+  };
+}
+
+/* --------------------------------------------------------------------------
+   The Journal, which is where the note went.
+
+   Two halves, and the second one is the point. It opens the way the pill in
+   the guide opens it, scoped to the sermon that was just read, with the note
+   under its heading. Then All is tapped — the app's own pill, in the app's
+   own row — and the list widens to everything, every sermon shut into its own
+   heading. Tapping one back open is what the scene ends on.
+
+   That is the feature in a sentence: notes do not pile up in a list, they
+   pile up under the Sunday they came out of.
+   -------------------------------------------------------------------------- */
+
+const journal = (frames) => {
+  const at = moves(frames);
+  return {
+    id: 'journal',
+    navRoute: 'journal',
+    /* Reached by the pill at the foot of the guide, which pushes a view. */
+    arrive: 'cut',
+    frames,
+    tab: { index: TAB.more, lit: 1 },
+    caption:
+      { eyebrow: 'Yours', line: 'Journal',
+      sub: 'A place to drop your sermon notes.' },
+    act(win, t, ctx) {
+      /* The route keeps the guide on it the whole scene, because that is what
+         the pill opened and the pills in the filter row are how the screen is
+         widened. Changing the route instead would reset the filter. */
+      setRoute(win, { name: 'journal', id: ctx.guideId });
+
+      const wide = t >= at(0.44);
+      setJournalFilter(win, wide ? 'all' : 'guide');
+
+      /* Scoped, the sermon's own heading is already out: that is the app's
+         default and the scene leaves it alone. Widened, every heading is shut
+         and this is the one that comes back. */
+      const key = 'g:' + ctx.guideId;
+      if (wide) setFold(win, key, ramp(t, at(0.62), at(0.74), 0, 1, 'settle'));
+
+      const fold = Math.max(0, anchorTop(win, '.hc-jfold') - 150);
+      const pills = Math.max(0, anchorTop(win, '.hc-journal__filters') - 230);
+
+      setScroll(win, track(t, [
+        { f: at(0.00), v: 0 },
+        { f: at(0.10), v: 0 },
+        { f: at(0.22), v: fold, ease: 'flick' },      /* the note, under its sermon */
+        { f: at(0.34), v: fold },
+        { f: at(0.42), v: pills, ease: 'flick' },     /* back up to the row of pills */
+        { f: at(0.52), v: pills },
+        { f: at(0.60), v: fold, ease: 'flick' },      /* down the shut headings */
+        { f: at(1.00), v: fold }
+      ]));
+
+      if (t > at(0.36) && t < at(0.56)) {
+        tapPulse(win, '[data-action="journal-filter"][data-value="all"]', (t - at(0.44)) / 24);
+      }
+      if (t > at(0.56)) {
+        tapPulse(win, '[data-action="journal-fold"][data-fold="' + key + '"]',
+          (t - at(0.60)) / 24);
+      }
     }
   };
 };
@@ -487,34 +689,45 @@ const give = (frames) => {
    The two cuts.
    -------------------------------------------------------------------------- */
 
-/* 54 + 228 + 264 + 204 + 168 + 348 + 342 + 180 + 180 + 156 + 96 = 2220 frames,
-   74.0 seconds, which is the length the church asked for.
+/* 54 + 2550 + 96 = 2700 frames, ninety seconds flat.
 
-   Everything before the Guide is tighter than it was, because the first pass
-   at this length dragged: Home, Cal and Listen are each about two seconds
-   shorter and have the same number of beats in them. The Guide keeps 840
-   frames, which is more than a third of the piece and still the point of it.
-   Worship, Connect and Give follow it and close the tour. */
+   LONGER THAN THE MINUTE AND FOURTEEN IT WAS, and the sixteen seconds went
+   somewhere specific: highlighting a line, writing on it and watching it land
+   in the Journal is two scenes that did not exist, and neither of them can be
+   hurried. A note that types itself in a second and a half is a note nobody
+   read. Everything already in the piece paid part of it — Home, Cal, Listen,
+   the index, Worship, Connect and Give are each a little shorter than they
+   were, with the same number of beats in them — and the guide itself gave up
+   a hundred frames.
+
+   The Guide and the Journal together are 1428 frames, which is well over half
+   the piece. That is the brief: it is the thing the church most wants
+   somebody to find first. Worship, Connect and Give follow them and close the
+   tour, Give last because that is where a tour of a church ends. */
 export const FULL = [
-  home(228),
-  cal(264),
-  listen(204),
-  guideIndex(168),
-  guideReader(348),
-  guideMore(342),
-  worship(180),
-  connect(180),
-  give(156)
+  home(210),
+  cal(240),
+  listen(192),
+  guideIndex(150),
+  guideTakeHome(300),
+  guideOverview(288, true),
+  guideNote(360),
+  journal(330),
+  worship(168),
+  connect(168),
+  give(144)
 ];
 
-/* The store cut cannot hold nine pages in thirty seconds, so it is the four
-   the church leads with: Home, Cal, Listen, and the Guide, which is still the
-   longest thing in it. Worship, Connect and Give are in the long cut. */
+/* The store cut cannot hold eleven screens in thirty seconds, so it is the
+   four pages the church leads with: Home, Cal, Listen, and the Guide, which
+   is still the longest thing in it. The note and the Journal are in the long
+   cut only — the whole beat needs twenty seconds to read, and twenty of
+   thirty seconds would cost three of these four. */
 export const APP_STORE = [
   home(150),
   cal(156),
   listen(144),
-  guideReader(318)
+  guideOverview(318)
 ];
 
 /* The open and close cards are shorter in the store cut, which is where the
@@ -547,37 +760,46 @@ export function buildTimeline(cut) {
       /* HOW THIS SCENE IS ARRIVED AT AND LEFT, and the answer is not always
          the navigation.
 
-         Three of the scenes are the same page: the guide index, the
-         discussion questions and the take-home sections are one screen and
-         two of its parts. Opening the navigation between them says a thumb
-         went somewhere, and then it does not go anywhere, which is a lie
-         small enough to be confusing rather than wrong. So the list only
-         comes up where the destination actually changes.
+         Four of the scenes are the same page: the take-home sections, the
+         Overview, and the note written in it are one screen and three of its
+         parts. Opening the navigation between them says a thumb went
+         somewhere, and then it does not go anywhere, which is a lie small
+         enough to be confusing rather than wrong. So the list only comes up
+         where the destination actually changes.
 
-         Inside the guide, one of the two hand-overs is a tap on a row in the
-         index, which pushes the reader and is a cut; the other is the same
-         screen carrying on down itself, which is not a cut at all. A scene
-         can name either; where it does not, same page means carry on and a
-         different page means the navigation. */
+         Around the guide, the hand-overs that are not the navigation are
+         taps: a row in the index, which pushes the reader, and My journal at
+         the foot of it, which pushes the Journal. Both are cuts. The ones
+         inside it are the same screen carrying on down itself, which is not
+         a cut at all. A scene can name either; where it does not, same page
+         means carry on and a different page means the navigation. */
       arrive: i === 0 ? 'card'
         : scene.arrive || (scenes[i - 1].navRoute === scene.navRoute ? 'on' : 'nav'),
       leave: i === scenes.length - 1 ? 'card'
         : scene.leave || (scenes[i + 1].navRoute === scene.navRoute ? 'on' : 'nav'),
       /* The word in the list a thumb would have pressed to get to the next
          scene. Modules and tabs both carry their route as data-id. */
-      nextRoute: scenes[i + 1] ? scenes[i + 1].navRoute : null
+      nextRoute: scenes[i + 1] ? scenes[i + 1].navRoute : null,
+      /* Where in the whole video this scene's own note arrives, if it makes
+         one. A fraction on the scene, a frame number here. */
+      noteFrom: scene.noteAt == null ? null : at + scene.noteAt
     };
     at += scene.frames;
     from = scene.tab.index;
     return entry;
   });
 
+  const writes = placed.find((s) => s.noteFrom != null);
+
   return {
     scenes: placed,
     openFrames: cards.open,
     closeFrames: cards.close,
     appEnd: at,
-    total: at + cards.close
+    total: at + cards.close,
+    /* The frame from which the journal entry the video writes exists. Null in
+       a cut that never writes one, which is the store cut. */
+    noteFrom: writes ? writes.noteFrom : null
   };
 }
 
@@ -608,6 +830,15 @@ export function applyFrame(win, frame, ctx, timeline) {
     ramp(t, 10, 44, scene.tabFrom, scene.tabTo, 'settle'),
     ramp(t, 22, 50, scene.tabFrom === scene.tabTo ? scene.tabLit : 1, scene.tabLit, 'settle')
   );
+
+  /* THE NOTE THE VIDEO WRITES, BEFORE ANY SCREEN IS DRAWN, and it belongs
+     here rather than in the scene that writes it for two reasons. The Journal
+     scene needs it and is not that scene. And a render tab handed the Journal
+     as the first frame it ever draws has never run a frame of the guide, so
+     a note made inside the guide's own act() would simply not be there, and
+     the card would be missing from one tab's frames and present in another's.
+     Stated once, for the whole timeline, from the frame it is written on. */
+  if (ctx.guideId) setNote(win, timeline.noteFrom != null && frame >= timeline.noteFrom, noteFor(win, ctx));
 
   scene.act(win, t, ctx);
 

@@ -167,6 +167,7 @@ for (const entry of CARRY) {
 
 const baked = await bakeLiveContent();
 fs.writeFileSync(path.join(OUT, 'js', 'config.js'), baked ? BAKED_CONFIG : EMPTY_CONFIG);
+cutFeaturedVideoFallback();
 
 console.log(`prepare: ${files} files into public/app` +
   (baked ? `, ${baked.rows} live rows and ${baked.images} pictures baked in.`
@@ -231,6 +232,25 @@ async function bakeLiveContent() {
 
    If the video ever has to be in the piece, it needs a render with network
    and a frame rate nobody controls, which is a different kind of video. */
+/* And the video that ships in the app, in the copy of js/featured-video.js
+   that is staged here.
+
+   Emptying the row is not enough on its own. The app paints Home once before
+   any content has arrived, off the seed in js/data.js, which has no row for
+   this and so takes the link in the source file: every render tab asks
+   youtube.com for an embed in the first second of its life, fails, and logs
+   it. Nothing of that reaches a frame — the redraw after the content lands
+   takes the section away again — but it is a request to the internet from a
+   render that is supposed to need none, in eight tabs, every time. One
+   string, blanked in the staged copy. The app's own file is untouched. */
+function cutFeaturedVideoFallback() {
+  const file = path.join(OUT, 'js', 'featured-video.js');
+  if (!fs.existsSync(file)) return;
+  const src = fs.readFileSync(file, 'utf8');
+  const cut = src.replace(/(var FALLBACK = ')[^']*(')/, '$1$2');
+  if (cut !== src) fs.writeFileSync(file, cut);
+}
+
 function silenceFeaturedVideo(payload) {
   const rows = payload.app_settings;
   if (!Array.isArray(rows)) return;

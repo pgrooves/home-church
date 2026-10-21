@@ -447,9 +447,10 @@ church most wants somebody to find first. Then the name, the service times and
 the address. Upload it on the version page under Previews and Screenshots, 6.9
 inch iPhone tab, and choose the last frame as the poster.
 
-`npm run render:marketing` is the same run at a minute and fourteen, inside a
+`npm run render:marketing` is the same run at a minute and a half, inside a
 drawn phone, for the website and the socials. It carries the guide index, the
-take-home half of a guide, and Worship, Connect and Give after it, none of
+take-home half of a guide, a line highlighted and a note written on it, the
+Journal that note lands in, and Worship, Connect and Give after them, none of
 which fit in thirty seconds.
 
 **It gets around the way the app does.** Every change of screen is the round
