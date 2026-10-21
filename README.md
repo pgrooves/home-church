@@ -97,9 +97,17 @@ assets/icons          the mark, favicon, app icons, all without alpha
 assets/img            placeholder note, real photography goes here later
 ios-config/           hand written files for the generated Xcode project
 scripts/              publishing, setlist resolving, icons, cache stamps, www/
+video/                the App Store preview, a Remotion project of its own
 manifest.webmanifest
 capacitor.config.json
 ```
+
+**`video/` has its own package.json and its own node_modules**, and nothing in
+the app depends on it or knows it is there. It is the App Store preview: the
+real app, running inside a Remotion composition and driven one frame at a
+time, rather than a cut of screenshots. `cd video && npm install && npm run
+render`. It reads the live tables once before each render so the series on
+screen is the series being preached. See `video/README.md`.
 
 **Scripts are classic, not modules.** ES modules fail over `file://` because
 of origin rules, and the brief calls for the app to run by opening the file.

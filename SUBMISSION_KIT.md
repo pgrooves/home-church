@@ -428,6 +428,44 @@ which is honest and is accepted. If you want the last few percent of fidelity,
 retake them in the iOS simulator following the same order and captions. Do not
 ship a mix of both, the tonal difference shows.
 
+### The app preview
+
+Optional, and worth the few minutes it costs. It sits above the stills on the
+store page and it is the only place a person can see the app move.
+
+```bash
+cd video
+npm install
+npm run render      # video/out/home-church-app-store.mp4
+```
+
+29.8 seconds at 1320 x 2868, H.264, silent. **Apple takes an app preview
+between fifteen and thirty seconds**, which is the constraint the cut is built
+around. In order: Home and the noticeboard, Calendar and what is coming up,
+Listen, then the Guide, which is the longest thing in it because it is what the
+church most wants somebody to find first. Then the name, the service times and
+the address. Upload it on the version page under Previews and Screenshots, 6.9
+inch iPhone tab, and choose the last frame as the poster.
+
+`npm run render:marketing` is the same run at a minute and fourteen, inside a
+drawn phone, for the website and the socials. It carries the guide index, the
+take-home half of a guide, and Worship, Connect and Give after it, none of
+which fit in thirty seconds.
+
+**It gets around the way the app does.** Every change of screen is the round
+button in the corner, the full screen list behind it, and the destination
+going gold as it is tapped. The caption on each scene is the page's own name
+and eyebrow with one sentence under it, rather than a line about the app.
+
+**It shows what the church published this week.** `npm run stage`, which both
+render scripts run first, reads the live tables once, downloads the artwork,
+and writes it where the app's own fetch will find it, so the series on screen
+is the series being preached and the setlist is Sunday's. Re-run it the morning
+you submit. `video/README.md` has the rest.
+
+**It is not a slideshow of the six stills.** Remotion runs the real app inside
+the composition and drives it one frame at a time.
+
 -----
 
 ## 5. App Privacy questionnaire, filled in
