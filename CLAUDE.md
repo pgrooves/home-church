@@ -4,6 +4,19 @@ The app is live in the App Store. People have it open on their phones, and
 the web version at https://pgrooves.github.io/home-church is served straight
 from `main`. Read this before changing anything.
 
+## Trey works only on a phone
+
+Trey always works from their iPhone, never a laptop or desktop. So:
+
+- Never ask Trey to run a command, open a terminal, use Xcode, or open
+  `localhost`. Do that here and report back what happened.
+- Show work with full, clickable links and screenshots. Render screenshots at
+  phone size (390 x 844).
+- Write setup steps for a phone browser or the iOS app. If something really
+  needs a computer, say so up front.
+- Keep replies easy to read on a small screen: short paragraphs, narrow
+  tables, nothing that needs scrolling sideways.
+
 ## Ask first before anything people would see
 
 Before any action below, stop and tell Trey, in plain words:
