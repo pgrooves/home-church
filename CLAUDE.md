@@ -4,12 +4,15 @@ The app is live in the App Store. People have it open on their phones, and
 the web version at https://pgrooves.github.io/home-church is served straight
 from `main`. Read this before changing anything.
 
-## Trey works only on a phone
+## Trey works on a phone
 
-Trey always works from their iPhone, never a laptop or desktop. So:
+Trey works from their iPhone. The one exception is the laptop, which Trey
+opens only to build in Xcode and upload to TestFlight (see "Releasing a new
+version" below). So:
 
 - Never ask Trey to run a command, open a terminal, use Xcode, or open
-  `localhost`. Do that here and report back what happened.
+  `localhost`, except for the TestFlight build itself. Do that here and
+  report back what happened.
 - Show work with full, clickable links and screenshots. Render screenshots at
   phone size (390 x 844).
 - Write setup steps for a phone browser or the iOS app. If something really
@@ -93,3 +96,40 @@ The cafe's Square checkout returns to the live GitHub Pages site afterwards.
 
 `home-church.pages.dev` itself is a copy of `main` nobody uses. The live web
 version is still https://pgrooves.github.io/home-church.
+
+## Releasing a new version
+
+Every change takes this path. Know which step a change is at, and tell
+Trey what the next step is.
+
+1. **Branch.** Build it on a branch, test it here, send the preview link.
+   Nothing is live.
+2. **`main`.** After Trey's yes, merge. The web version updates within
+   minutes. The App Store app doesn't change yet.
+3. **TestFlight, on Trey's laptop.** Trey pulls `main`, builds in Xcode and
+   uploads. The steps are in `XCODE.md` under "The short version, once you
+   have done it once". Trey installs the build on their phone from the
+   TestFlight app and tries it there.
+4. **App Store.** Trey submits the TestFlight build as a new version in App
+   Store Connect, from the phone, and Apple reviews it (usually about a day).
+   Once it's released, people get it as they update. Older versions stay in
+   use for weeks.
+
+When Trey is ready to make a TestFlight build, check first, here:
+
+- `npm test` passes on `main`.
+- The version is right. **Build** goes up by one on every upload, or Apple
+  rejects it. The version number goes up for each new App Store release.
+- `SUBMISSION_KIT.md` matches what's shipping: What's New, the review notes,
+  and which pages ship switched off.
+- Any new plugin will be picked up. `XCODE.md` explains why `npm install`
+  runs every time and what `npm run preflight` checks.
+
+Then give Trey the laptop steps as one copy-paste block, with the Xcode
+clicks after it. That is the one time a command is fine.
+
+A feature the church isn't ready for ships switched off and is turned on
+later in Admin → App settings. Every installed version reads the same
+switch. Before turning one on, check that no build people still use has a
+half-finished version of that page. If one does, give the new build its own
+switch.
