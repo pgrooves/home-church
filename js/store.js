@@ -9,7 +9,8 @@
 (function (HC) {
   'use strict';
 
-  var PREFIX = 'hc:';
+  // Demo mode (js/demo.js) keeps its own keys, so a demo never touches a real session.
+  var PREFIX = HC.demo && HC.demo.on ? 'hc-demo:' : 'hc:';
 
   /* --------------------------------------------------------------- storage */
 

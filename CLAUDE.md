@@ -94,6 +94,27 @@ Previews talk to the live Supabase project. Looking is harmless; submitting
 anything on a preview (an order, a journal entry, a prayer request) is real.
 The cafe's Square checkout returns to the live GitHub Pages site afterwards.
 
+### Demos with sample data
+
+When an idea needs data the database doesn't have yet, or would write things
+people would see, demo it with sample data instead of touching the live
+project. Add `?demo=<name>` to a preview link and the app answers from
+`demo/<name>.json` in the branch:
+
+- Reads still come from the live project, the way a signed-out visitor sees
+  it, so the rest of the app looks real.
+- Writes, sign-ins, rpcs and function calls never leave the phone. A banner
+  says "Demo · nothing saves", with Exit.
+- It only switches on at `*.pages.dev` (and `http://127.0.0.1` here). Never
+  on GitHub Pages or in the App Store app.
+
+Send the demo link in full next to the preview link, with `&v=<page>` if it
+should open on a page, for example
+`https://<branch-alias>.home-church.pages.dev/?demo=cafe&v=cafe`. Open it here
+with Playwright before sending it. The sample format is at the top of
+`js/demo.js`, and `tests/e2e/demo.js` shows how to drive one. When the idea
+ships for real, its table goes on the live project (ask first, as above).
+
 `home-church.pages.dev` itself is a copy of `main` nobody uses. The live web
 version is still https://pgrooves.github.io/home-church.
 
