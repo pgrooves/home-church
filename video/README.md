@@ -204,9 +204,9 @@ The note and the Journal are in the long cut only: the whole beat needs twenty
 seconds to read, and twenty of thirty seconds would cost three of those four.
 
 **A scene opens under whatever it was reached through.** The navigation, which
-fades off the new page; a short dip, where a row was tapped and a view pushed;
-or nothing at all, where the screen simply carried on. Then the caption comes
-up over a dim and clears. The change of screen happens while the cover is
+fades off the new page; a bloom, where a row was tapped and a view pushed; or
+a breath, where the screen simply carried on. Then the caption comes up over
+a defocus and clears. See **The hand-overs**. The change of screen happens while the cover is
 opaque, so a re-render never shows as a jump, and the scroll starts while the
 caption is still up, so the dim lifts on something already moving.
 
@@ -241,6 +241,53 @@ not in the tour.
 lever if it turns out to be the wrong trade is in `src/scenes.js`, and it is
 not the pacing — it is the number of scenes. Dropping Worship and Connect
 would buy ten seconds back for the nine screens that remain.
+
+## The hand-overs
+
+**There is one iframe, so there is nothing to cross dissolve with.** The app
+is live in the composition and shows one state at a time; a dissolve needs
+two pictures. What one layer can still do is go out of focus and over-expose,
+and between them those make a cut read as an edit rather than a gap.
+
+So every boundary blooms: the screen softens, the exposure lifts, and a warm
+wash comes up over it in the app's own cream, peaking on the frame the page
+changes and resolving on the new one. The warmth is the point — a white flash
+over a warm charcoal app is somebody else's video, and lifting the charcoal
+towards the paper colour it is a dark version of is the move the brand would
+make. It is mostly defocus and only a little exposure, in that order, because
+defocus is the half that reads as craft and exposure is the half that reads
+as a transition preset.
+
+**Four strengths, because there are four kinds of hand-over**, and they are
+not interchangeable:
+
+| | |
+|---|---|
+| `card` | into and out of the lockup. The bloom runs under the veil, so the app blooms away and the card arrives on top of it. |
+| `cut` | a row tapped, a view pushed. Nothing else covers these, so they carry the transition alone and get the most of it. |
+| `nav` | the full screen list. **No blur here**, because the app already blurs the page beneath its own navigation — see the note by `.hc-navmenu` in `css/components.css`. Adding one would be two blurs in series on the one hand-over that needed none. It gets the exposure lift only. |
+| `on` | the same screen carrying on, where the caption changes and the page does not. A breath, not a transition: enough to mark a chapter, not enough to claim the screen changed. |
+
+**The dip at a cut went from 0.9 to 0.2 when the bloom arrived**, and that is
+worth knowing before touching either. The old transition was a rectangle of
+charcoal fading up and down — a dissolve to black with the lights on. Run
+underneath the bloom it made the peak of every cut a flat grey field with
+nothing in it: two full-strength covers in series, each of which had been
+tuned on its own. What is left is a fifth of a stop, there to stop the warm
+wash reading as a lamp coming on. The cards keep theirs, because the card
+that follows is opaque and anything less than most of the way there pops on
+the frame it arrives.
+
+**The caption defocuses the page rather than dimming it.** This was 0.74 of
+flat charcoal, which is a dimmer switch: the screen underneath stayed sharp,
+so thirty calendar numbers competed with eight words at full detail and the
+only thing holding them apart was that one was darker. The caption layer
+blurs its backdrop now, the way every sheet, plinth and disc in the app
+already does, and the scrim came down to 0.6 because the blur is doing the
+separating. The blur ramps on its radius rather than on the layer's opacity:
+fading a backdrop-filter by opacity composites a blurred copy over a sharp
+one, which at halfway is two pictures a few pixels apart, and that reads as a
+double exposure rather than a focus pull.
 
 ## Cut to the music
 
@@ -360,7 +407,7 @@ wants it.
 | `src/drive.js` | The hands: every function that reaches into the running app. |
 | `src/AppStage.jsx` | The iframe, and everything done to the app once it has booted. |
 | `src/Preview.jsx` | The piece: the app, the veil, the words, the cards, and the music. |
-| `src/Type.jsx` | The captions and the two cards. |
+| `src/Type.jsx` | The captions and the two cards. The caption's backdrop defocus is here. |
 | `src/timing.js` | Keyframes and easings. |
 | `src/theme.js` | The dark palette, copied from `css/tokens.css`. |
 

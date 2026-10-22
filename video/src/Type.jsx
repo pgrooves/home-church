@@ -17,8 +17,32 @@ import { ramp, track } from './timing';
    The veil and one line, over the app.
    -------------------------------------------------------------------------- */
 
+/* THE PAGE GOES SOFT BEHIND ITS OWN NAME, it does not go dark.
+
+   This was a rectangle of charcoal at 74 percent, which is a dimmer switch
+   rather than a caption treatment: the screen underneath stayed sharp, so
+   thirty calendar numbers competed with eight words at full detail and the
+   only thing holding them apart was that one of them was darker. Defocusing
+   it instead is what every sheet, plinth and disc in the app already does to
+   whatever is behind it — see the backdrop-filter rules in css/components.css
+   — so this is the app's own idea applied to the one layer the app does not
+   draw. The scrim stays, at rather less, because the blur is doing the
+   separating and the charcoal only has to carry contrast.
+
+   The blur ramps on the radius rather than on the layer's opacity. Fading a
+   backdrop-filter by its own opacity composites a blurred copy over a sharp
+   one, which at the halfway point is two pictures a few pixels apart, and
+   that reads as a double exposure rather than a focus pull. */
 export const Caption = ({ veil, text, rise, eyebrow, line, sub }) => (
   <AbsoluteFill style={{ pointerEvents: 'none' }}>
+    {veil > 0.004 ? (
+      <AbsoluteFill
+        style={{
+          backdropFilter: `blur(${(veil * 15).toFixed(2)}px) saturate(${(1 + veil * 0.25).toFixed(3)})`,
+          WebkitBackdropFilter: `blur(${(veil * 15).toFixed(2)}px) saturate(${(1 + veil * 0.25).toFixed(3)})`
+        }}
+      />
+    ) : null}
     <AbsoluteFill style={{ backgroundColor: HC.paper, opacity: veil }} />
     <AbsoluteFill
       style={{

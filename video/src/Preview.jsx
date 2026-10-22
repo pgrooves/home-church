@@ -13,7 +13,7 @@ import { AppStage } from './AppStage';
 import { Caption, CloseCard, OpenCard } from './Type';
 import { loadBrandFonts } from './fonts';
 import { HC, PHONE } from './theme';
-import { applyFrame, BEAT, buildTimeline, captionAt, CUTS } from './scenes';
+import { applyFrame, BEAT, buildTimeline, captionAt, CUTS, gradeAt } from './scenes';
 
 /* The bed, at public/music.wav.
 
@@ -72,6 +72,7 @@ export const Preview = ({ cut = 'AppStorePreview', scale = 1 }) => {
   const timeline = useMemo(() => buildTimeline(CUTS[cut]), [cut]);
 
   const caption = captionAt(frame, timeline);
+  const grade = gradeAt(frame, timeline);
   const inOpen = frame < timeline.openFrames;
   const inClose = frame >= timeline.appEnd;
 
@@ -91,7 +92,31 @@ export const Preview = ({ cut = 'AppStorePreview', scale = 1 }) => {
     >
       <Track from={CUTS[cut].musicFrom} />
 
-      <AppStage frame={frame} apply={apply} scale={scale} />
+      {/* THE FOOTAGE, GRADED. Everything in here is one iframe showing one
+          state, so there is no second copy to cross dissolve with and the
+          hand-overs have to be carried by what can be done to a single
+          layer: it softens and over-exposes through a cut and resolves on
+          the other side. See gradeAt in scenes.js. The filter is left off
+          entirely when there is nothing to do, because a blur of zero is
+          still a compositing pass on every one of the frames between cuts. */}
+      <AbsoluteFill
+        style={{
+          filter: grade.blur > 0.01 || grade.bright > 1.001
+            ? `blur(${grade.blur.toFixed(2)}px) brightness(${grade.bright.toFixed(3)})`
+            : undefined
+        }}
+      >
+        <AppStage frame={frame} apply={apply} scale={scale} />
+      </AbsoluteFill>
+
+      {/* The warm half of the bloom, over the app and under the words. The
+          app's own paper colour rather than white: a white flash over a warm
+          charcoal screen belongs to somebody else's video, and lifting the
+          charcoal towards the cream it is a dark version of is the move the
+          brand would make. */}
+      {grade.wash > 0.002 ? (
+        <AbsoluteFill style={{ backgroundColor: HC.ink, opacity: grade.wash }} />
+      ) : null}
 
       {/* Everything above the glass is laid out at phone scale and then taken
           up with the phone, so one set of numbers describes it whichever

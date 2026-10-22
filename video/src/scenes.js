@@ -110,11 +110,16 @@ export const CLOSE_FRAMES = BAR;
 const CAP_NAV = { in: 22, out: 82 };
 const CAP_ON = { in: 8, out: 68 };
 
-/* How far the page goes back while its name is over it. 0.62 left too much
-   of the screen competing with the sentence, which on a calendar grid is
-   thirty numbers behind eight words. Far enough back to read the caption,
-   near enough to see it is a real screen under there. */
-const DIM = 0.74;
+/* How far the page goes back while its name is over it.
+
+   IT USED TO BE A DARKER SCRIM AND IT IS A LIGHTER ONE OVER A BLUR NOW.
+   0.74 of flat charcoal was the only thing separating eight words from a
+   calendar grid, and a flat rectangle of 74 percent black over a screen is
+   what a dimmed screen looks like rather than what a captioned one does. The
+   caption layer defocuses what is behind it now, the way every sheet and
+   plinth in the app does, so the scrim only has to carry contrast and not
+   separation. See Caption in Type.jsx. */
+const DIM = 0.6;
 
 /* WHEN A SCENE STARTS MOVING, and it is the single biggest number in this
    file. Every scene used to wait 74 frames — the later of the two caption
@@ -1018,6 +1023,73 @@ export function applyFrame(win, frame, ctx, timeline) {
   }
 }
 
+/* --------------------------------------------------------------------------
+   The grade: what the footage itself is doing through a hand-over.
+
+   A cut used to be a rectangle of charcoal fading up and down, which is a
+   dissolve to black and is the cheapest transition there is. What a cut wants
+   is for the picture to do something, and the picture here is a live app in
+   an iframe: there is exactly one of it, so there is nothing to cross
+   dissolve with. What one layer can still do is defocus and over-expose, and
+   between them they make the hand-over read as an edit rather than a gap.
+
+   So each boundary blooms: the screen softens, the exposure lifts, and a warm
+   wash comes up over it in the brand's own cream, peaking on the frame the
+   page changes and resolving on the new one. The warmth matters — a white
+   flash on a warm charcoal app is somebody else's video, and lifting the
+   charcoal towards its own paper colour is the same move a film lab would
+   make on this stock.
+
+   FOUR STRENGTHS, BECAUSE FOUR KINDS OF HAND-OVER.
+
+     card   into and out of the lockup. The bloom runs under the veil, so the
+            app blooms away and the card arrives on top of it.
+     cut    a row tapped, a view pushed. Nothing else covers these, so they
+            carry the transition on their own and get the most of it.
+     nav    the full screen list. The app already blurs the page underneath
+            its own navigation, so blurring it again here would be two blurs
+            in series on the one hand-over that needed none. It gets the
+            exposure lift and nothing else.
+     on     the same screen carrying on, where the caption changes and the
+            page does not. A breath rather than a transition: enough to mark
+            a chapter, not enough to claim the screen changed. The whole
+            reason these exist is that a dip here reads as a cut that did not
+            happen.
+
+   Every boundary is a frame number, so this is a function of distance from
+   the nearest one and nothing is stateful. */
+const EDGE = {
+  card: { half: BEAT,        blur: 10, bright: 0.26, wash: 0.26 },
+  cut:  { half: BEAT,        blur: 19, bright: 0.20, wash: 0.26 },
+  nav:  { half: BEAT * 0.75, blur: 0,  bright: 0.10, wash: 0.08 },
+  on:   { half: BEAT * 0.6,  blur: 4,  bright: 0.12, wash: 0.10 }
+};
+
+export function gradeAt(frame, timeline) {
+  let blur = 0;
+  let bright = 1;
+  let wash = 0;
+
+  const bump = (at, kind) => {
+    const spec = EDGE[kind];
+    if (!spec) return;
+    const d = Math.abs(frame - at);
+    if (d >= spec.half) return;
+    /* A raised cosine rather than a triangle: a bloom with a corner on it
+       reads as a flicker. */
+    const w = 0.5 - 0.5 * Math.cos(Math.PI * (1 - d / spec.half));
+    blur = Math.max(blur, spec.blur * w);
+    bright = Math.max(bright, 1 + spec.bright * w);
+    wash = Math.max(wash, spec.wash * w);
+  };
+
+  for (const s of timeline.scenes) bump(s.start, s.arrive);
+  const last = timeline.scenes[timeline.scenes.length - 1];
+  if (last) bump(last.end, last.leave);
+
+  return { blur, bright, wash };
+}
+
 /* What the veil and the caption are doing on a given frame. Null outside the
    app footage, where the cards take over. */
 export function captionAt(frame, timeline) {
@@ -1038,8 +1110,16 @@ export function captionAt(frame, timeline) {
      questions and the reflection questions reads as a change of screen on a
      screen that never changed. Only the first scene takes a hand-over from
      the opening card, and only the last hands over to the closing one. */
-  const up = scene.arrive === 'card' ? 0.86 : scene.arrive === 'cut' ? 0.9 : 0;
-  const down = scene.leave === 'card' ? 0.97 : scene.leave === 'cut' ? 0.9 : 0;
+  /* THE DIP AT A CUT IS ALMOST GONE, because the bloom replaced it. It was
+     0.9 of charcoal, which is a dissolve to black with the lights left on,
+     and run underneath gradeAt's bloom it made the peak of every cut a flat
+     grey field with nothing in it at all — two full-strength covers in
+     series. What is left is a fifth of a stop of darkening, there to keep
+     the warm wash from reading as a lamp coming on. The cards keep theirs:
+     the card that follows is opaque, and anything less than most of the way
+     there pops on the frame it arrives. */
+  const up = scene.arrive === 'card' ? 0.86 : scene.arrive === 'cut' ? 0.2 : 0;
+  const down = scene.leave === 'card' ? 0.97 : scene.leave === 'cut' ? 0.2 : 0;
   const dip = scene.leave === 'card' || scene.leave === 'cut' ? BEAT : 0;
 
   const veil = track(t, [
