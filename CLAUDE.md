@@ -83,6 +83,9 @@ and an early link shows the old build. Instead:
    latest push on the branch. The check also gives a per-commit URL that
    never changes; use that one if Trey wants to compare two versions.
 3. If the build failed, say so and fix it, instead of sending a link.
+4. Open the link to confirm it loads. If this session's network blocks
+   `*.pages.dev`, say the build passed but you couldn't open it yourself.
+   Don't claim you checked it.
 
 Previews talk to the live Supabase project. Looking is harmless; submitting
 anything on a preview (an order, a journal entry, a prayer request) is real.
