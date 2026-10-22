@@ -33,7 +33,7 @@ import { ramp, track } from './timing';
    backdrop-filter by its own opacity composites a blurred copy over a sharp
    one, which at the halfway point is two pictures a few pixels apart, and
    that reads as a double exposure rather than a focus pull. */
-export const Caption = ({ veil, text, rise, eyebrow, line, sub }) => (
+export const Caption = ({ veil, t, capIn, capOut, eyebrow, line, sub }) => (
   <AbsoluteFill style={{ pointerEvents: 'none' }}>
     {veil > 0.004 ? (
       <AbsoluteFill
@@ -46,8 +46,6 @@ export const Caption = ({ veil, text, rise, eyebrow, line, sub }) => (
     <AbsoluteFill style={{ backgroundColor: HC.paper, opacity: veil }} />
     <AbsoluteFill
       style={{
-        opacity: text,
-        transform: `translateY(${rise}px)`,
         padding: '0 40px',
         display: 'flex',
         flexDirection: 'column',
@@ -55,20 +53,24 @@ export const Caption = ({ veil, text, rise, eyebrow, line, sub }) => (
         alignItems: 'flex-start'
       }}
     >
-      <Eyebrow>{eyebrow}</Eyebrow>
-      <p
-        style={{
-          margin: '10px 0 0',
-          fontFamily: FACE.display,
-          fontWeight: 800,
-          fontSize: 34,
-          lineHeight: '40px',
-          letterSpacing: '-0.015em',
-          color: HC.ink
-        }}
-      >
-        {line}
-      </p>
+      <div style={reveal(t, capIn, capOut, 0)}>
+        <Eyebrow>{eyebrow}</Eyebrow>
+      </div>
+      <div style={reveal(t, capIn, capOut, 4)}>
+        <p
+          style={{
+            margin: '10px 0 0',
+            fontFamily: FACE.display,
+            fontWeight: 800,
+            fontSize: 34,
+            lineHeight: '40px',
+            letterSpacing: '-0.015em',
+            color: HC.ink
+          }}
+        >
+          {line}
+        </p>
+      </div>
       {/* One sentence saying what the page is for. The name alone tells
           somebody who already has the app where they are; this is for the
           person deciding whether to download it.
@@ -83,24 +85,63 @@ export const Caption = ({ veil, text, rise, eyebrow, line, sub }) => (
           be set at. The hierarchy is still three deep, it is just made of
           size and weight instead of three greys. */}
       {sub ? (
-        <p
-          style={{
-            margin: '14px 0 0',
-            maxWidth: 340,
-            fontFamily: FACE.reading,
-            fontWeight: 500,
-            fontSize: 18,
-            lineHeight: '26px',
-            color: '#E3DDD3'
-          }}
-        >
-          {sub}
-        </p>
+        <div style={reveal(t, capIn, capOut, 9)}>
+          <p
+            style={{
+              margin: '14px 0 0',
+              maxWidth: 340,
+              fontFamily: FACE.reading,
+              fontWeight: 500,
+              fontSize: 18,
+              lineHeight: '26px',
+              color: '#E3DDD3'
+            }}
+          >
+            {sub}
+          </p>
+        </div>
       ) : null}
-      <Rule width={72} />
+      <div style={reveal(t, capIn, capOut, 13)}>
+        <Rule width={72} />
+      </div>
     </AbsoluteFill>
   </AbsoluteFill>
 );
+
+/* ONE LINE ARRIVING, AND THE REASON IT IS NOT A FADE.
+
+   A caption that fades up and slides ten pixels is the default every motion
+   tool ships with, and it reads as one: the words are there the whole time
+   at some fraction of themselves, so there is no moment they arrive. This
+   masks instead. The block is clipped to nothing and the clip opens
+   downwards while the words rise into it and come out of a short defocus, so
+   the type assembles at an edge rather than materialising in mid air. It is
+   the move the lockup already makes on the opening card, where the wordmark
+   wipes out from behind the house.
+
+   `delay` staggers the four pieces a few frames apart — eyebrow, line,
+   sentence, rule — which is what makes a caption read as one thing arriving
+   in order rather than four things arriving at once.
+
+   The way out is not the way in reversed. A mask closing is a strong move
+   and doing it twice a scene makes the words the subject; they are a label
+   on somebody else's screen. So it leaves on a blur and a fade, which is
+   the thing nobody notices, which is the point. */
+const reveal = (t, capIn, capOut, delay) => {
+  const inP = ramp(t, capIn + delay, capIn + delay + 15, 0, 1, 'lift');
+  const outP = ramp(t, capOut - 4, capOut + 16, 1, 0, 'settle');
+  const blur = (1 - inP) * 6 + (1 - outP) * 4;
+
+  return {
+    opacity: outP,
+    /* A little negative bleed at the bottom so a descender is not clipped
+       flat while the mask is open. */
+    clipPath: `inset(${((1 - inP) * 112).toFixed(2)}% 0 -14% 0)`,
+    transform: `translateY(${((1 - inP) * 16).toFixed(2)}px)`,
+    filter: blur > 0.02 ? `blur(${blur.toFixed(2)}px)` : undefined,
+    willChange: 'clip-path, transform, opacity'
+  };
+};
 
 /* --------------------------------------------------------------------------
    The way in. The mark arrives first and the wordmark wipes out from behind

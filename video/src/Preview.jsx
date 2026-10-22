@@ -13,7 +13,7 @@ import { AppStage } from './AppStage';
 import { Caption, CloseCard, OpenCard } from './Type';
 import { loadBrandFonts } from './fonts';
 import { HC, PHONE } from './theme';
-import { applyFrame, BEAT, buildTimeline, captionAt, CUTS, gradeAt } from './scenes';
+import { applyFrame, BEAT, buildTimeline, cameraAt, captionAt, CUTS, gradeAt } from './scenes';
 
 /* The bed, at public/music.wav.
 
@@ -151,6 +151,10 @@ export const Framed = ({ cut = 'Marketing', screenWidth = 232 }) => {
   const bezel = Math.round(9 * scale + 4);
   const radius = Math.round(56 * scale + bezel);
 
+  const frame = useCurrentFrame();
+  const timeline = useMemo(() => buildTimeline(CUTS[cut]), [cut]);
+  const cam = cameraAt(frame, timeline);
+
   return (
     <AbsoluteFill
       style={{
@@ -160,16 +164,19 @@ export const Framed = ({ cut = 'Marketing', screenWidth = 232 }) => {
       }}
     >
       {/* A single soft warmth behind the phone, so the ground is not a flat
-          field. Taupe at a tenth, which is barely there on purpose. */}
+          field. Taupe at a tenth, which is barely there on purpose. It leans
+          with the camera, at a fraction of it, so the ground has parallax
+          against the device instead of being a sticker behind it. */}
       <AbsoluteFill
         style={{
-          background: 'radial-gradient(60% 42% at 50% 38%, rgba(196,181,162,0.10) 0%, rgba(196,181,162,0) 70%)'
+          background: `radial-gradient(60% 42% at ${(50 + cam.x * 0.22).toFixed(2)}% ${(38 + cam.y * 0.18).toFixed(2)}%, rgba(196,181,162,0.10) 0%, rgba(196,181,162,0) 70%)`
         }}
       />
 
       <div
         style={{
           position: 'relative',
+          transform: `translate3d(${cam.x.toFixed(2)}px, ${cam.y.toFixed(2)}px, 0) scale(${cam.scale.toFixed(4)})`,
           width: screenWidth + bezel * 2,
           height: screenHeight + bezel * 2,
           padding: bezel,
@@ -199,6 +206,61 @@ export const Framed = ({ cut = 'Marketing', screenWidth = 232 }) => {
           <Preview cut={cut} scale={scale} />
         </div>
       </div>
+
+      <Vignette />
+      <Grain frame={frame} />
     </AbsoluteFill>
   );
 };
+
+/* The corners go down, which is the oldest trick there is for making the
+   middle of a frame the subject. Barely: the phone is already the only lit
+   thing in the picture and this is here to stop the ground reading as a flat
+   field behind it. */
+const Vignette = () => (
+  <AbsoluteFill
+    style={{
+      pointerEvents: 'none',
+      background:
+        'radial-gradient(74% 56% at 50% 46%, rgba(0,0,0,0) 38%, rgba(0,0,0,0.42) 100%)'
+    }}
+  />
+);
+
+/* GRAIN, AND IT IS NOT NOSTALGIA.
+
+   A warm charcoal radial gradient across 1080 pixels at eight bits a channel
+   is about forty steps of tone over a very long ramp, which is banding, and
+   it was banding: concentric rings around the glow behind the phone, the
+   kind that only show once the thing is encoded and on somebody's screen.
+   Noise is the fix — it dithers the ramp, and the encoder spends a few more
+   bits on the gradient instead of smoothing it into rings.
+
+   It is four percent and it moves. Still grain over moving pictures reads as
+   a dirty lens, so the tile is offset by the frame number, which is cheap
+   where generating noise per frame is not: one 140 pixel tile, one
+   background-position, no filter pass. The numbers are coprime with the tile
+   so the pattern does not come back around for a couple of thousand
+   frames. */
+const GRAIN_TILE =
+  'data:image/svg+xml;utf8,' +
+  encodeURIComponent(
+    '<svg xmlns="http://www.w3.org/2000/svg" width="140" height="140">' +
+      '<filter id="n"><feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="3" stitchTiles="stitch"/>' +
+      '<feColorMatrix type="saturate" values="0"/></filter>' +
+      '<rect width="140" height="140" filter="url(#n)"/>' +
+    '</svg>'
+  );
+
+const Grain = ({ frame }) => (
+  <AbsoluteFill
+    style={{
+      pointerEvents: 'none',
+      opacity: 0.04,
+      mixBlendMode: 'overlay',
+      backgroundImage: `url("${GRAIN_TILE}")`,
+      backgroundRepeat: 'repeat',
+      backgroundPosition: `${(frame * 37) % 140}px ${(frame * 61) % 140}px`
+    }}
+  />
+);

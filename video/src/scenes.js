@@ -947,7 +947,11 @@ export function buildTimeline(cut) {
     /* Everything the video writes into the journal, and the frame each one
        appears on. Empty in a cut that writes nothing, which is the store
        cut. */
-    writes: placed.filter((s) => s.wrote).map((s) => s.wrote)
+    writes: placed.filter((s) => s.wrote).map((s) => s.wrote),
+    /* Camera runs. Consecutive scenes joined by an `on` arrival are one
+       continuous shot, because the screen never changed and a camera that
+       jumps there would claim it did. Everything else starts a new one. */
+    runs: runsOf(placed)
   };
 }
 
@@ -1024,6 +1028,62 @@ export function applyFrame(win, frame, ctx, timeline) {
 }
 
 /* --------------------------------------------------------------------------
+   The camera.
+
+   A phone pinned dead centre for ninety nine seconds is the single most
+   dated thing a piece like this can do, and it was doing it. Nothing here
+   moves the app — the footage stays square on and pixel aligned, because it
+   is an app preview and a tilted UI is a soft UI — but the device itself is
+   never quite still: it drifts, and it pushes in or pulls back across the
+   length of a shot.
+
+   A SHOT IS NOT A SCENE. Scenes joined by an `on` arrival are the same
+   screen carrying on, so they are one continuous move; a camera that jumped
+   there would claim a cut that did not happen. Everywhere else the camera
+   cuts with the content, on the frame, which is the whole modern idiom:
+   the transition is that the framing is different on the other side, not
+   that something was smeared over the join.
+
+   The moves alternate so no two shots in a row do the same thing, and they
+   are small — five percent of scale, a dozen pixels of drift. At this size
+   anything more is a camera operator with opinions. Marketing only: the
+   store cut is flat and centred, because Apple's slot wants the app rather
+   than a film about it.
+   -------------------------------------------------------------------------- */
+
+function runsOf(placed) {
+  const runs = [];
+  placed.forEach((s, i) => {
+    if (i === 0 || s.arrive !== 'on') runs.push({ start: s.start, end: s.end });
+    else runs[runs.length - 1].end = s.end;
+    s.run = runs.length - 1;
+  });
+  return runs;
+}
+
+const MOVES = [
+  { from: { s: 1.000, x: 0, y: 7 }, to: { s: 1.052, x: 0, y: -3 } },
+  { from: { s: 1.040, x: 11, y: -2 }, to: { s: 0.988, x: -5, y: 4 } },
+  { from: { s: 0.980, x: -11, y: 4 }, to: { s: 1.034, x: 5, y: -4 } },
+  { from: { s: 1.046, x: -6, y: -5 }, to: { s: 1.004, x: 8, y: 3 } },
+  { from: { s: 0.992, x: 7, y: 5 }, to: { s: 1.046, x: -7, y: -3 } }
+];
+
+export function cameraAt(frame, timeline) {
+  const scenes = timeline.scenes;
+  let scene = scenes[0];
+  for (const s of scenes) if (frame >= s.start) scene = s;
+  const run = timeline.runs[scene.run] || { start: scene.start, end: scene.end };
+
+  const span = Math.max(1, run.end - run.start);
+  const p = Math.max(0, Math.min(1, (frame - run.start) / span));
+  const m = MOVES[scene.run % MOVES.length];
+  const at = (a, b) => a + (b - a) * p;
+
+  return { scale: at(m.from.s, m.to.s), x: at(m.from.x, m.to.x), y: at(m.from.y, m.to.y) };
+}
+
+/* --------------------------------------------------------------------------
    The grade: what the footage itself is doing through a hand-over.
 
    A cut used to be a rectangle of charcoal fading up and down, which is a
@@ -1060,7 +1120,7 @@ export function applyFrame(win, frame, ctx, timeline) {
    the nearest one and nothing is stateful. */
 const EDGE = {
   card: { half: BEAT,        blur: 10, bright: 0.26, wash: 0.26 },
-  cut:  { half: BEAT,        blur: 19, bright: 0.20, wash: 0.26 },
+  cut:  { half: BEAT,        blur: 11, bright: 0.10, wash: 0.13 },
   nav:  { half: BEAT * 0.75, blur: 0,  bright: 0.10, wash: 0.08 },
   on:   { half: BEAT * 0.6,  blur: 4,  bright: 0.12, wash: 0.10 }
 };
@@ -1132,10 +1192,8 @@ export function captionAt(frame, timeline) {
     { f: scene.frames, v: down, ease: 'settle' }
   ]);
 
-  const text = Math.min(
-    ramp(t, capIn, capIn + 16, 0, 1, 'lift'),
-    ramp(t, capOut - 6, capOut + 16, 1, 0, 'settle')
-  );
-
-  return { ...scene.caption, veil, text, rise: ramp(t, capIn, capIn + 20, 10, 0, 'lift') };
+  /* The words themselves are Type.jsx's business now rather than two numbers
+     worked out here: a staggered mask reveal needs the frame and the two
+     holds, not a single opacity. */
+  return { ...scene.caption, veil, t, capIn, capOut };
 }

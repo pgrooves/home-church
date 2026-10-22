@@ -244,19 +244,37 @@ would buy ten seconds back for the nine screens that remain.
 
 ## The hand-overs
 
-**There is one iframe, so there is nothing to cross dissolve with.** The app
-is live in the composition and shows one state at a time; a dissolve needs
-two pictures. What one layer can still do is go out of focus and over-expose,
-and between them those make a cut read as an edit rather than a gap.
+**The transition is that the framing is different on the other side.** That
+is the whole of the current idiom and it is worth stating plainly, because
+the obvious thing to reach for is the opposite: a light leak, an exposure
+flash, something smeared over the join. Those read as 2015. What reads as now
+is a hard cut landing on the beat, with a camera that was already moving and
+is somewhere else when it lands.
 
-So every boundary blooms: the screen softens, the exposure lifts, and a warm
-wash comes up over it in the app's own cream, peaking on the frame the page
-changes and resolving on the new one. The warmth is the point — a white flash
-over a warm charcoal app is somebody else's video, and lifting the charcoal
-towards the paper colour it is a dark version of is the move the brand would
-make. It is mostly defocus and only a little exposure, in that order, because
-defocus is the half that reads as craft and exposure is the half that reads
-as a transition preset.
+**So the device is never quite still.** It drifts, and it pushes in or pulls
+back across the length of a shot — five percent of scale, a dozen pixels of
+sideways. A phone pinned dead centre for ninety nine seconds was the single
+most dated thing in this piece and it was doing exactly that. The ground
+leans with it at a fifth of the rate, so there is parallax between the device
+and the glow behind it rather than a sticker on a backdrop.
+
+**A shot is not a scene.** Scenes joined by an `on` arrival are the same
+screen carrying on, so the camera runs through them as one continuous move;
+jumping there would claim a cut that did not happen. Everywhere else the
+camera cuts with the content, on the frame. Nine shots, five moves,
+alternating so no two in a row do the same thing.
+
+**Nothing moves the app itself.** The footage stays square on and pixel
+aligned — no tilt, no 3D, no perspective. It is an app preview and a tilted
+UI is a soft UI. The camera moves the *device*, which is a drawn object, and
+the store cut has no camera at all because Apple's slot wants the app rather
+than a film about it.
+
+**There is still a bloom, and it is now a whisper.** One iframe shows one
+state at a time, so there is genuinely nothing to cross dissolve with, and a
+little defocus through a join does real work — it just cannot be the whole
+transition. It went from blur 19 and a quarter stop of wash down to blur 11
+and a tenth once the camera arrived to carry the cut.
 
 **Four strengths, because there are four kinds of hand-over**, and they are
 not interchangeable:
@@ -277,6 +295,27 @@ tuned on its own. What is left is a fifth of a stop, there to stop the warm
 wash reading as a lamp coming on. The cards keep theirs, because the card
 that follows is opaque and anything less than most of the way there pops on
 the frame it arrives.
+
+**The type masks in rather than fading up, in four staggered pieces.** A
+caption that fades and slides ten pixels is the default every motion tool
+ships with and it reads as one: the words are present the whole time at some
+fraction of themselves, so there is no moment they arrive. Each piece is
+clipped to nothing and the clip opens downwards while the words rise into it
+and come out of a short defocus, eyebrow then line then sentence then rule, a
+few frames apart. It is the move the lockup already makes on the opening
+card, where the wordmark wipes out from behind the house. The way out is
+deliberately not the way in reversed — a mask closing is a strong gesture and
+doing it twice a scene makes the words the subject, when they are a label on
+somebody else's screen.
+
+**Grain, and it is not nostalgia.** A warm radial gradient across 1080 pixels
+at eight bits a channel is about forty steps of tone over a very long ramp,
+which is banding, and it was banding: faint concentric rings around the glow
+behind the phone, the kind that only show up once the thing is encoded. Four
+percent of moving noise dithers the ramp away and gives the encoder something
+to spend bits on. It moves because still grain over moving pictures reads as
+a dirty lens, and it moves by offsetting one 140 pixel tile per frame rather
+than generating noise, because the first is free and the second is not.
 
 **The caption defocuses the page rather than dimming it.** This was 0.74 of
 flat charcoal, which is a dimmer switch: the screen underneath stayed sharp,
@@ -406,7 +445,7 @@ wants it.
 | `src/scenes.js` | The timeline. What happens, when, and the captions. |
 | `src/drive.js` | The hands: every function that reaches into the running app. |
 | `src/AppStage.jsx` | The iframe, and everything done to the app once it has booted. |
-| `src/Preview.jsx` | The piece: the app, the veil, the words, the cards, and the music. |
+| `src/Preview.jsx` | The piece: the app, the grade, the words, the cards, the music, and the camera the device moves on. |
 | `src/Type.jsx` | The captions and the two cards. The caption's backdrop defocus is here. |
 | `src/timing.js` | Keyframes and easings. |
 | `src/theme.js` | The dark palette, copied from `css/tokens.css`. |
