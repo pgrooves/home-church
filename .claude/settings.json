@@ -39,6 +39,17 @@
       "Bash(git status:*)",
       "Bash(git diff:*)",
       "Bash(git log:*)"
+    ],
+
+    "ask": [
+      "mcp__supabase__apply_migration",
+      "mcp__supabase__deploy_edge_function",
+      "mcp__Supabase__apply_migration",
+      "mcp__Supabase__deploy_edge_function",
+      "mcp__github__merge_pull_request",
+      "Bash(git push origin main:*)",
+      "Bash(git push -u origin main:*)",
+      "Bash(git push origin HEAD:main:*)"
     ]
   }
 }
