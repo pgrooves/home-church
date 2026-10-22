@@ -64,9 +64,29 @@ SQL (`select`), reading logs and advisors, and pushing a branch other than
 in a new App Store build, so changing it on a branch is never live. It goes
 live on the web version when it lands on `main`.
 
-## Working on a branch
+## Working on a branch, and the preview link
 
-Work on a branch, not `main`. When a branch has something to look at, give
-Trey a way to see it: screenshots from the real app rendered here (Chromium
-is installed), and a preview link if one exists for the branch. Merge to
-`main` only after a yes, as above.
+Work on a branch, not `main`. Merge to `main` only after a yes, as above.
+
+Cloudflare Pages (project `home-church`) builds every pushed branch and
+gives it its own address. **Every time you push a branch, end your reply
+with that branch's full preview link**, written out in full so Trey can tap it:
+
+> Preview: https://<branch-alias>.home-church.pages.dev
+
+Don't build the link from the branch name yourself. Long names get cut off,
+and an early link shows the old build. Instead:
+
+1. Push, then wait for the **Cloudflare Pages** check on that commit in
+   GitHub (it takes a minute or two).
+2. Take the **Branch Preview URL** from it. That address always shows the
+   latest push on the branch. The check also gives a per-commit URL that
+   never changes; use that one if Trey wants to compare two versions.
+3. If the build failed, say so and fix it, instead of sending a link.
+
+Previews talk to the live Supabase project. Looking is harmless; submitting
+anything on a preview (an order, a journal entry, a prayer request) is real.
+The cafe's Square checkout returns to the live GitHub Pages site afterwards.
+
+`home-church.pages.dev` itself is a copy of `main` nobody uses. The live web
+version is still https://pgrooves.github.io/home-church.
