@@ -125,8 +125,32 @@ When Trey is ready to make a TestFlight build, check first, here:
 - Any new plugin will be picked up. `XCODE.md` explains why `npm install`
   runs every time and what `npm run preflight` checks.
 
-Then give Trey the laptop steps as one copy-paste block, with the Xcode
-clicks after it. That is the one time a command is fine.
+### The TestFlight handoff, every time
+
+When the work is on `main` and it's time for TestFlight, always end with
+two things together: a final confirmation that it's time to move into the
+TestFlight step (what this build contains and its version), and this
+one-shot command for Trey's laptop. This is the one time a command is fine.
+
+```bash
+cd /Users/trey_1/home-church && git merge --abort 2>/dev/null; git fetch origin main && git reset --hard origin/main && npm install && npm run ios && npm run preflight && npx cap open ios
+```
+
+It pulls the latest `main`, replacing anything left over on the laptop,
+installs dependencies, prepares the iOS project, runs the preflight check,
+and opens Xcode only if everything passed. If it stops before Xcode opens,
+Trey sends a screenshot of the last lines.
+
+Then, in Xcode:
+
+1. Click **App** in the left column, then the **General** tab. Raise
+   **Build** by one.
+2. At the top, set the device to **Any iOS Device (arm64)**.
+3. Menu bar: **Product → Archive**. It takes a few minutes.
+4. In the window that opens: **Distribute App → App Store Connect →
+   Upload**.
+
+If the command or the steps in `XCODE.md` change, update this block too.
 
 A feature the church isn't ready for ships switched off and is turned on
 later in Admin → App settings. Every installed version reads the same
