@@ -147,6 +147,15 @@ function serve() {
   ok('after Exit, the hc-demo: keys are gone',
     await page.evaluate(() => Object.keys(localStorage).every(k => k.indexOf('hc-demo:') !== 0)));
 
+  // 6. The default demo, for changes that need no data of their own.
+  await page.goto(ORIGIN + '/index.html?demo=default');
+  await ready();
+  await page.waitForSelector('#hc-demo-banner', { timeout: 10000 });
+  await greeted();
+  ok('?demo=default is signed in, with its banner',
+    await page.evaluate(() => window.HC.auth.isSignedIn() && /Demo · Preview/.test(document.getElementById('hc-demo-banner').textContent)));
+  ok('still nothing but reads reached the network', sent.every(s => s.method === 'GET' || s.method === 'HEAD'));
+
   ok('no page errors', errors.length === 0, errors.join(' | '));
 
   await browser.close();

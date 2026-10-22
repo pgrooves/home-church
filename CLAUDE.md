@@ -94,11 +94,19 @@ Previews talk to the live Supabase project. Looking is harmless; submitting
 anything on a preview (an order, a journal entry, a prayer request) is real.
 The cafe's Square checkout returns to the live GitHub Pages site afterwards.
 
-### Demos with sample data
+### Demos with sample data, the default
 
-When an idea needs data the database doesn't have yet, or would write things
-people would see, demo it with sample data instead of touching the live
-project. Add `?demo=<name>` to a preview link and the app answers from
+**While Trey and Claude are going back and forth on a change, use demo data
+by default, until Trey says to put it on `main`.** Every branch with
+something to try gets a demo link. Don't touch the live project to show an
+idea: no migrations, no rows, no switches. Those wait until Trey says to
+ship it, and they still need the confirmation above.
+
+- If the change needs data, write or extend a sample file for it in `demo/`.
+- If it doesn't, use `?demo=default`. That's signed in as a pretend person,
+  with nothing that can save.
+
+Add `?demo=<name>` to a preview link and the app answers from
 `demo/<name>.json` in the branch:
 
 - Reads still come from the live project, the way a signed-out visitor sees

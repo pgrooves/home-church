@@ -1,0 +1,7 @@
+{
+  "title": "Preview",
+  "signedIn": { "id": "00000000-0000-0000-0000-00000000de30", "email": "demo@example.org" },
+  "routes": [
+    { "match": "/rest/v1/profiles", "body": [{ "id": "00000000-0000-0000-0000-00000000de30", "first_name": "Trey", "role": "member", "can_host": false, "can_run_cafe": false }] }
+  ]
+}
