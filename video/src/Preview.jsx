@@ -460,7 +460,7 @@ export const Sunday = (props) => (
 
 export const Card = () => {
   loadBrandFonts();
-  const qr = 180;
+  const qr = 200;
 
   return (
     <AbsoluteFill style={{ backgroundColor: '#131211' }}>
@@ -492,19 +492,24 @@ export const Card = () => {
           Scan to download
         </span>
 
-        {/* THE WHITE IS A CUFF ROUND THE CODE, not a sheet behind the middle
-            of the slide. It only has to do two things: give the scanner the
-            contrast the supplied file does not (dark modules on a
-            transparent ground, which on this charcoal is a dark square on a
-            dark wall), and carry the quiet zone. The file already brings 8.8
-            percent of itself as quiet zone on every side, so ten points of
-            padding past that is a comfortable margin rather than a
-            requirement, and the corners are rounded to the same radius the
-            app rounds a card to. */}
+        {/* THE WHITE IS THE FILE'S OWN QUIET ZONE AND NOTHING ELSE.
+
+            It has two jobs: give a scanner the contrast the supplied file
+            does not — it is dark modules on a transparent ground, which on
+            this charcoal is a dark square on a dark wall — and carry the
+            four modules of clear space a code needs round its edge.
+
+            There is no padding here because none is needed. Measured off
+            the file: the code itself spans 84.1 percent of the image, so it
+            arrives with a margin of 9.5 percent of its own width already
+            built in, which at this code's density is just over the four
+            modules. Ten points of padding on top of that, which is what was
+            here, was a third as much white again for nothing, and it read
+            as a slab rather than a cuff. The corners are rounded to the
+            radius the app rounds a card to. */}
         <div
           style={{
-            padding: 10,
-            borderRadius: 18,
+            borderRadius: 16,
             backgroundColor: '#FFFFFF',
             boxShadow: '0 20px 52px rgba(0,0,0,0.5)',
             lineHeight: 0
