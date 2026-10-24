@@ -460,7 +460,7 @@ export const Sunday = (props) => (
 
 export const Card = () => {
   loadBrandFonts();
-  const qr = 170;
+  const qr = 180;
 
   return (
     <AbsoluteFill style={{ backgroundColor: '#131211' }}>
@@ -478,37 +478,45 @@ export const Card = () => {
       />
 
       <AbsoluteFill style={{ alignItems: 'center', justifyContent: 'center' }}>
-        <div
+        <span
           style={{
-            width: qr + 40,
-            padding: 20,
-            boxSizing: 'border-box',
-            borderRadius: 22,
-            backgroundColor: '#FFFFFF',
-            boxShadow: '0 24px 60px rgba(0,0,0,0.5)',
-            textAlign: 'center'
+            fontFamily: FACE.sans,
+            fontWeight: 600,
+            fontSize: 11,
+            letterSpacing: '0.16em',
+            textTransform: 'uppercase',
+            color: HC.accent,
+            marginBottom: 18
           }}
         >
-          <span
-            style={{
-              display: 'block',
-              fontFamily: FACE.sans,
-              fontWeight: 600,
-              fontSize: 10,
-              letterSpacing: '0.16em',
-              textTransform: 'uppercase',
-              color: '#6D6864',
-              marginBottom: 12
-            }}
-          >
-            Scan to download
-          </span>
+          Scan to download
+        </span>
+
+        {/* THE WHITE IS A CUFF ROUND THE CODE, not a sheet behind the middle
+            of the slide. It only has to do two things: give the scanner the
+            contrast the supplied file does not (dark modules on a
+            transparent ground, which on this charcoal is a dark square on a
+            dark wall), and carry the quiet zone. The file already brings 8.8
+            percent of itself as quiet zone on every side, so ten points of
+            padding past that is a comfortable margin rather than a
+            requirement, and the corners are rounded to the same radius the
+            app rounds a card to. */}
+        <div
+          style={{
+            padding: 10,
+            borderRadius: 18,
+            backgroundColor: '#FFFFFF',
+            boxShadow: '0 20px 52px rgba(0,0,0,0.5)',
+            lineHeight: 0
+          }}
+        >
           <Img src={staticFile('qr.png')} style={{ width: qr, height: qr, display: 'block' }} />
-          <Img
-            src={staticFile('app-store-badge.svg')}
-            style={{ width: qr - 16, display: 'block', margin: '14px auto 0' }}
-          />
         </div>
+
+        <Img
+          src={staticFile('app-store-badge.svg')}
+          style={{ width: 150, display: 'block', marginTop: 24 }}
+        />
       </AbsoluteFill>
 
       <Grain frame={0} />
