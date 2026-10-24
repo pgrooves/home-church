@@ -10,7 +10,7 @@
 import { useMemo } from 'react';
 import { AbsoluteFill, Audio, Img, interpolate, Sequence, staticFile, useCurrentFrame, useVideoConfig } from 'remotion';
 import { AppStage } from './AppStage';
-import { Caption, CloseCard, OpenCard } from './Type';
+import { Caption, CloseCard, FeaturePanel, OpenCard } from './Type';
 import { loadBrandFonts } from './fonts';
 import { ramp } from './timing';
 import { FACE, HC, PHONE } from './theme';
@@ -66,7 +66,7 @@ const Track = ({ from = 0 }) => {
   );
 };
 
-export const Preview = ({ cut = 'AppStorePreview', scale = 1 }) => {
+export const Preview = ({ cut = 'AppStorePreview', scale = 1, wordless = false }) => {
   loadBrandFonts();
 
   const frame = useCurrentFrame();
@@ -130,7 +130,7 @@ export const Preview = ({ cut = 'AppStorePreview', scale = 1 }) => {
           transformOrigin: 'top left'
         }}
       >
-        {caption ? <Caption {...caption} /> : null}
+        {caption ? <Caption {...caption} wordless={wordless} /> : null}
         {inOpen ? <OpenCard t={frame} frames={timeline.openFrames} /> : null}
         {inClose ? <CloseCard t={frame - timeline.appEnd} frames={timeline.closeFrames} /> : null}
       </AbsoluteFill>
@@ -310,40 +310,25 @@ const Grain = ({ frame }) => (
    before a service. Everything else here is 9:16 because a phone is; this is
    1920 x 1080 because a sanctuary screen is, and a vertical video on a
    sixteen by nine screen is two thirds of a wall doing nothing. So the empty
-   two thirds carry the things a congregation needs and the video cannot: who
-   it is, what it does, and how to get it without leaving their seat.
+   two thirds carry the things a congregation needs and the phone cannot say
+   large enough: who it is, what they are looking at, and where to get it.
 
-   THE CODE IS THE POINT OF THE WHOLE SLIDE, so it is sized for the back row
-   rather than for the layout. At 128 points of a 640 point frame it is a
-   fifth of the picture width, which on a twelve foot screen is about two feet
-   of QR and scans from the back of most rooms. It sits on a light card
-   because the file the church sent is dark modules on a transparent ground,
-   which on this charcoal would be a dark square on a dark wall, and because
-   a scanner wants contrast more than it wants a brand.
+   THE NAME OF THE PAGE MOVED OFF THE GLASS. In the portrait cuts the caption
+   sits over the app, which works at arm's length and does not work at forty
+   feet: a phone-sized caption inside a phone-sized phone inside a sixteen by
+   nine frame is four point type by the time it reaches the back row. Here it
+   is beside the phone at thirty points of a 640 point frame, and it changes
+   as the phone changes, so the words and the screen are always the same
+   feature. The veil stays behind on the glass even though the words left —
+   it is what covers the two card hand-overs, and it is what sends the eye
+   right to read and brings it back.
 
    Apple's badge is Apple's own artwork, fetched from developer.apple.com
    rather than drawn here: the guidelines ask for the supplied file and they
-   are right to, since a hand-made one is a trademark somebody redrew. The
-   black variant, because it is on a white card.
+   are right to, since a hand-made one is a trademark somebody redrew.
    =========================================================================== */
 
 const STAGE = { width: 640, height: 360 };
-
-/* Five, and not the eight the video shows. The list is read in a glance from
-   forty feet by somebody who is also talking to the person next to them, so
-   the constraint is type size rather than coverage: six lines fit only by
-   making every one of them too small to read from the back, which is the
-   whole job. Worship is the one that went, not because it is the least
-   loved but because it is the least needed — the other four are things a
-   person wants on a Tuesday and the fifth is how the lights stay on. Each
-   line is the page's own name and the shortest true sentence about it. */
-const FEATURES = [
-  ['Guides', "Sunday's message, written down"],
-  ['Listen', 'Every sermon, and its notes'],
-  ['Journal', 'Keep a line. Write on it.'],
-  ['Calendar', 'Everything coming up'],
-  ['Give', 'Support the ministry']
-];
 
 const SundayBody = ({ cut = 'Marketing' }) => {
   loadBrandFonts();
@@ -351,40 +336,36 @@ const SundayBody = ({ cut = 'Marketing' }) => {
   const frame = useCurrentFrame();
   const timeline = useMemo(() => buildTimeline(CUTS[cut]), [cut]);
   const cam = cameraAt(frame, timeline);
+  const caption = captionAt(frame, timeline);
 
   /* The phone is sized off the frame's height rather than its width, which
      is the whole difference between this and the portrait cuts. */
-  const screenHeight = 300;
+  const screenHeight = 290;
   const scale = screenHeight / PHONE.height;
   const screenWidth = PHONE.width * scale;
   const bezel = Math.round(9 * scale + 4);
   const radius = Math.round(56 * scale + bezel);
   const phoneTop = Math.round((STAGE.height - (screenHeight + bezel * 2)) / 2);
-
-  const qr = 128;
-  const card = qr + 32;
-  const cardBottom = phoneTop + screenHeight + bezel * 2;
+  const phoneBottom = phoneTop + screenHeight + bezel * 2;
 
   return (
     <AbsoluteFill style={{ backgroundColor: '#131211' }}>
       <AbsoluteFill
         style={{
-          background: `radial-gradient(52% 58% at ${(45 + cam.x * 0.18).toFixed(2)}% ${(46 + cam.y * 0.14).toFixed(2)}%, rgba(196,181,162,0.11) 0%, rgba(196,181,162,0) 70%)`
+          background: `radial-gradient(52% 58% at ${(42 + cam.x * 0.18).toFixed(2)}% ${(46 + cam.y * 0.14).toFixed(2)}%, rgba(196,181,162,0.11) 0%, rgba(196,181,162,0) 70%)`
         }}
       />
 
       {/* THE VIGNETTE GOES HERE, under the chrome rather than over it. Over
-          the top it put a diagonal sheen across the white card in the corner
-          it is darkest in, which on the one element of this slide that has
-          to read as a clean sheet of paper looked like a crease. It is a
-          treatment for the ground and the device, not for the furniture. */}
+          the top it put a diagonal sheen across anything pale in the corner
+          it is darkest in, which on a sheet of white looked like a crease.
+          It is a treatment for the ground and the device, not the furniture. */}
       <Vignette />
 
-      {/* The phone, on the same camera the portrait cut rides. */}
       <div
         style={{
           position: 'absolute',
-          left: Math.round(STAGE.width / 2) - 32 - Math.round(screenWidth / 2) - bezel,
+          left: 204,
           top: phoneTop,
           transform: `translate3d(${(cam.x * 0.6).toFixed(2)}px, ${(cam.y * 0.6).toFixed(2)}px, 0) scale(${cam.scale.toFixed(4)})`,
           width: screenWidth + bezel * 2,
@@ -407,7 +388,7 @@ const SundayBody = ({ cut = 'Marketing' }) => {
             backgroundColor: HC.paper
           }}
         >
-          <Preview cut={cut} scale={scale} />
+          <Preview cut={cut} scale={scale} wordless />
         </div>
       </div>
 
@@ -417,91 +398,25 @@ const SundayBody = ({ cut = 'Marketing' }) => {
         style={{ position: 'absolute', left: 34, top: 30, width: 150, display: 'block' }}
       />
 
-      {/* Bottom left: how to get it, as one object. The code and the badge
-          are the same card because they are the same instruction. */}
+      {/* Bottom left: where to get it. The code is its own slide now. */}
+      <Img
+        src={staticFile('app-store-badge.svg')}
+        style={{ position: 'absolute', left: 34, top: phoneBottom - 40, width: 134, display: 'block' }}
+      />
+
+      {/* Right: whatever the phone is showing, and nothing else. */}
       <div
         style={{
           position: 'absolute',
-          left: 34,
-          top: cardBottom - (qr + 43 + 43),
-          width: card,
-          padding: 16,
-          boxSizing: 'border-box',
-          borderRadius: 18,
-          backgroundColor: '#FFFFFF',
-          boxShadow: '0 18px 44px rgba(0,0,0,0.45)',
-          textAlign: 'center'
+          left: 382,
+          top: 0,
+          width: 224,
+          height: STAGE.height,
+          display: 'flex',
+          alignItems: 'center'
         }}
       >
-        <span
-          style={{
-            display: 'block',
-            fontFamily: FACE.sans,
-            fontWeight: 600,
-            fontSize: 9,
-            letterSpacing: '0.14em',
-            textTransform: 'uppercase',
-            color: '#6D6864',
-            marginBottom: 9
-          }}
-        >
-          Scan to download
-        </span>
-        <Img src={staticFile('qr.png')} style={{ width: qr, height: qr, display: 'block' }} />
-        <Img
-          src={staticFile('app-store-badge.svg')}
-          style={{ width: qr, display: 'block', marginTop: 10 }}
-        />
-      </div>
-
-      {/* Right: what it does. */}
-      <div style={{ position: 'absolute', left: 404, top: 0, width: 202, height: STAGE.height,
-                    display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-        <span
-          style={{
-            fontFamily: FACE.sans,
-            fontWeight: 600,
-            fontSize: 9,
-            letterSpacing: '0.14em',
-            textTransform: 'uppercase',
-            color: HC.accent
-          }}
-        >
-          On your phone
-        </span>
-        <p
-          style={{
-            margin: '5px 0 15px',
-            fontFamily: FACE.display,
-            fontWeight: 800,
-            fontSize: 19,
-            lineHeight: '23px',
-            letterSpacing: '-0.015em',
-            color: HC.ink
-          }}
-        >
-          Everything from Sunday
-        </p>
-
-        {FEATURES.map(([name, line], i) => (
-          <div
-            key={name}
-            style={{
-              paddingTop: i === 0 ? 0 : 10,
-              marginTop: i === 0 ? 0 : 10,
-              borderTop: i === 0 ? undefined : `1px solid ${HC.rule}`
-            }}
-          >
-            <p style={{ margin: 0, fontFamily: FACE.display, fontWeight: 700, fontSize: 14,
-                        lineHeight: '17px', letterSpacing: '-0.01em', color: HC.ink }}>
-              {name}
-            </p>
-            <p style={{ margin: '2px 0 0', fontFamily: FACE.reading, fontWeight: 500,
-                        fontSize: 10.5, lineHeight: '14px', color: HC.mid }}>
-              {line}
-            </p>
-          </div>
-        ))}
+        {caption ? <FeaturePanel {...caption} width={224} /> : null}
       </div>
 
       <Grain frame={frame} />
@@ -514,3 +429,78 @@ export const Sunday = (props) => (
     <SundayBody {...props} />
   </Opening>
 );
+
+/* ===========================================================================
+   The card that goes up when the video is not playing.
+
+   One still, the same size and the same ground as the Sunday cut, with the
+   phone taken out and the code put in the middle of the space it leaves.
+   What it is for is the minute after the video ends and the minute before it
+   starts: a room full of people who have just watched the thing and now want
+   it, looking at a wall that has stopped telling them how.
+
+   THE CODE IS ON A WHITE CARD AND THAT IS NOT A STYLE DECISION. The file the
+   church supplied is dark modules on a transparent ground, so on this
+   charcoal it is a dark square on a dark wall: invisible, and unreadable to
+   a scanner even where it is visible. White is also simply what a scanner
+   wants. At 170 of the frame's 360 points it is very nearly half the height
+   of the picture, which from the back of a sanctuary is more than enough.
+   =========================================================================== */
+
+export const Card = () => {
+  loadBrandFonts();
+  const qr = 170;
+
+  return (
+    <AbsoluteFill style={{ backgroundColor: '#131211' }}>
+      <AbsoluteFill
+        style={{
+          background:
+            'radial-gradient(52% 58% at 50% 48%, rgba(196,181,162,0.11) 0%, rgba(196,181,162,0) 70%)'
+        }}
+      />
+      <Vignette />
+
+      <Img
+        src={staticFile('app/assets/img/logo-lockup.png')}
+        style={{ position: 'absolute', left: 34, top: 30, width: 150, display: 'block' }}
+      />
+
+      <AbsoluteFill style={{ alignItems: 'center', justifyContent: 'center' }}>
+        <div
+          style={{
+            width: qr + 40,
+            padding: 20,
+            boxSizing: 'border-box',
+            borderRadius: 22,
+            backgroundColor: '#FFFFFF',
+            boxShadow: '0 24px 60px rgba(0,0,0,0.5)',
+            textAlign: 'center'
+          }}
+        >
+          <span
+            style={{
+              display: 'block',
+              fontFamily: FACE.sans,
+              fontWeight: 600,
+              fontSize: 10,
+              letterSpacing: '0.16em',
+              textTransform: 'uppercase',
+              color: '#6D6864',
+              marginBottom: 12
+            }}
+          >
+            Scan to download
+          </span>
+          <Img src={staticFile('qr.png')} style={{ width: qr, height: qr, display: 'block' }} />
+          <Img
+            src={staticFile('app-store-badge.svg')}
+            style={{ width: qr - 16, display: 'block', margin: '14px auto 0' }}
+          />
+        </div>
+      </AbsoluteFill>
+
+      <Grain frame={0} />
+    </AbsoluteFill>
+  );
+};

@@ -1202,5 +1202,10 @@ export function captionAt(frame, timeline) {
   /* The words themselves are Type.jsx's business now rather than two numbers
      worked out here: a staggered mask reveal needs the frame and the two
      holds, not a single opacity. */
-  return { ...scene.caption, veil, t, capIn, capOut };
+  /* `frames` is the scene's whole length, which the portrait cuts do not
+     need and the Sunday cut does: its caption is beside the phone rather
+     than over it, so it holds for as long as the feature is on screen
+     instead of clearing after a few seconds and leaving a third of a
+     projector wall empty. */
+  return { ...scene.caption, veil, t, capIn, capOut, frames: scene.frames };
 }

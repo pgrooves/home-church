@@ -33,7 +33,7 @@ import { ramp, track } from './timing';
    backdrop-filter by its own opacity composites a blurred copy over a sharp
    one, which at the halfway point is two pictures a few pixels apart, and
    that reads as a double exposure rather than a focus pull. */
-export const Caption = ({ veil, t, capIn, capOut, eyebrow, line, sub }) => (
+export const Caption = ({ veil, t, capIn, capOut, eyebrow, line, sub, wordless }) => (
   <AbsoluteFill style={{ pointerEvents: 'none' }}>
     {veil > 0.004 ? (
       <AbsoluteFill
@@ -44,6 +44,13 @@ export const Caption = ({ veil, t, capIn, capOut, eyebrow, line, sub }) => (
       />
     ) : null}
     <AbsoluteFill style={{ backgroundColor: HC.paper, opacity: veil }} />
+    {/* THE VEIL WITHOUT THE WORDS is what the Sunday cut asks for: the name
+        of the page is on the wall beside the phone there rather than over
+        it, and printing it in both places is printing it twice. The veil
+        stays, and not out of laziness — it is also what covers the two card
+        hand-overs, and it is what makes the eye go and read the right hand
+        side and come back. */}
+    {wordless ? null : (
     <AbsoluteFill
       style={{
         padding: '0 40px',
@@ -105,6 +112,7 @@ export const Caption = ({ veil, t, capIn, capOut, eyebrow, line, sub }) => (
         <Rule width={72} />
       </div>
     </AbsoluteFill>
+    )}
   </AbsoluteFill>
 );
 
@@ -127,7 +135,7 @@ export const Caption = ({ veil, t, capIn, capOut, eyebrow, line, sub }) => (
    and doing it twice a scene makes the words the subject; they are a label
    on somebody else's screen. So it leaves on a blur and a fade, which is
    the thing nobody notices, which is the point. */
-const reveal = (t, capIn, capOut, delay) => {
+export const reveal = (t, capIn, capOut, delay) => {
   const inP = ramp(t, capIn + delay, capIn + delay + 15, 0, 1, 'lift');
   const outP = ramp(t, capOut - 4, capOut + 16, 1, 0, 'settle');
   const blur = (1 - inP) * 6 + (1 - outP) * 4;
@@ -287,3 +295,78 @@ const Rule = ({ width, center }) => (
     }}
   />
 );
+
+/* --------------------------------------------------------------------------
+   The same caption, beside the phone instead of over it.
+
+   The Sunday cut puts the page's name on the wall rather than on the glass,
+   because a sanctuary reads it from forty feet and a phone-sized caption
+   inside a phone-sized phone inside a sixteen by nine frame is four point
+   type by the time it reaches the back row. Same words, same faces, same
+   staggered mask — only the size and the measure change.
+   -------------------------------------------------------------------------- */
+
+export const FeaturePanel = ({ t, capIn, frames, eyebrow, line, sub, width }) => {
+  /* IT HOLDS FOR THE WHOLE SCENE, which is the one thing it does not share
+     with the caption over the glass. That one says the name of the page and
+     gets out of the way, because it is sitting on top of the thing it is
+     naming. This one is beside it, in space that has nothing else to do, and
+     a projector wall with a third of it empty for twenty seconds out of
+     every twenty-four is a wall that looks broken. In at the top of the
+     scene, out on its last half second. */
+  const out = frames - 18;
+  return (
+  <div style={{ width }}>
+    <div style={reveal(t, capIn, out, 0)}>
+      <span
+        style={{
+          fontFamily: FACE.sans,
+          fontWeight: 600,
+          fontSize: 11,
+          lineHeight: '14px',
+          letterSpacing: '0.14em',
+          textTransform: 'uppercase',
+          color: HC.accent,
+          display: 'block'
+        }}
+      >
+        {eyebrow}
+      </span>
+    </div>
+    <div style={reveal(t, capIn, out, 4)}>
+      <p
+        style={{
+          margin: '8px 0 0',
+          fontFamily: FACE.display,
+          fontWeight: 800,
+          fontSize: 30,
+          lineHeight: '34px',
+          letterSpacing: '-0.02em',
+          color: HC.ink
+        }}
+      >
+        {line}
+      </p>
+    </div>
+    {sub ? (
+      <div style={reveal(t, capIn, out, 9)}>
+        <p
+          style={{
+            margin: '14px 0 0',
+            fontFamily: FACE.reading,
+            fontWeight: 500,
+            fontSize: 15,
+            lineHeight: '22px',
+            color: '#E3DDD3'
+          }}
+        >
+          {sub}
+        </p>
+      </div>
+    ) : null}
+    <div style={reveal(t, capIn, out, 13)}>
+      <Rule width={64} />
+    </div>
+  </div>
+  );
+};

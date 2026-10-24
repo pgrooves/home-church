@@ -15,7 +15,7 @@
    =========================================================================== */
 
 import { Composition } from 'remotion';
-import { Framed, Preview, Sunday } from './Preview';
+import { Card, Framed, Preview, Sunday } from './Preview';
 import { buildTimeline, CUTS, FPS, LEAD } from './scenes';
 import { PHONE } from './theme';
 
@@ -65,6 +65,18 @@ export const RemotionRoot = () => (
       width={640}
       height={360}
       defaultProps={{ cut: 'Marketing' }}
+    />
+
+    {/* The still that goes up when the video is not playing: same ground,
+        same size, phone taken out and the code put in the space it leaves.
+        One frame, rendered with `remotion still`. */}
+    <Composition
+      id="SundayCard"
+      component={Card}
+      durationInFrames={1}
+      fps={FPS}
+      width={640}
+      height={360}
     />
   </>
 );
