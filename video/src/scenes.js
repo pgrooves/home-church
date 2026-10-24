@@ -1159,7 +1159,7 @@ export function gradeAt(frame, timeline) {
 
 /* What the veil and the caption are doing on a given frame. Null outside the
    app footage, where the cards take over. */
-export function captionAt(frame, timeline) {
+export function captionAt(frame, timeline, dim = DIM) {
   const scene = timeline.scenes.find((s) => frame >= s.start && frame < s.end);
   if (!scene) return null;
 
@@ -1192,8 +1192,8 @@ export function captionAt(frame, timeline) {
   const veil = track(t, [
     { f: 0, v: up },
     { f: scene.arrive === 'nav' ? 16 : 0, v: up },
-    { f: scene.arrive === 'nav' ? 30 : 10, v: DIM, ease: 'settle' },
-    { f: capOut, v: DIM },
+    { f: scene.arrive === 'nav' ? 30 : 10, v: dim, ease: 'settle' },
+    { f: capOut, v: dim },
     { f: capOut + 22, v: 0, ease: 'settle' },
     { f: scene.frames - dip, v: 0 },
     { f: scene.frames, v: down, ease: 'settle' }

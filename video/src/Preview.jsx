@@ -50,6 +50,10 @@ import { applyFrame, BAR, BEAT, buildTimeline, cameraAt, captionAt, CUTS, gradeA
    track ends at 72.7 seconds and the closing card holds for most of a second
    after it in silence, which is what a card you are meant to read wants. The
    store cut stops in the middle of the track, so the last beat is a fade. */
+/* What the app goes back to while its name is on the wall beside it rather
+   than over it. The full dim is 0.6; see captionAt. */
+const SIDE_DIM = 0.26;
+
 const Track = ({ from = 0 }) => {
   const { durationInFrames } = useVideoConfig();
   return (
@@ -72,7 +76,14 @@ export const Preview = ({ cut = 'AppStorePreview', scale = 1, wordless = false }
   const frame = useCurrentFrame();
   const timeline = useMemo(() => buildTimeline(CUTS[cut]), [cut]);
 
-  const caption = captionAt(frame, timeline);
+  /* THE PAGE ONLY HIDES BEHIND ITS OWN NAME WHERE THE NAME IS ON TOP OF IT.
+     In the portrait cuts the caption sits over the glass and the app has to
+     go back for it to be readable. On the Sunday wall the name is beside the
+     phone, so the dim is doing nothing but hiding the thing a room came to
+     look at: it drops to under half. The two card hand-overs keep their full
+     strength, because those are covering a change of picture rather than
+     making room for words. */
+  const caption = captionAt(frame, timeline, wordless ? SIDE_DIM : undefined);
   const grade = gradeAt(frame, timeline);
   const inOpen = frame < timeline.openFrames;
   const inClose = frame >= timeline.appEnd;
