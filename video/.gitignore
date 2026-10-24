@@ -11,3 +11,8 @@ node_modules/
 # The music. A licensed track, so the licence lives with whoever holds it
 # rather than in a git history. prepare.mjs says what to do if it is absent.
 public/music.wav
+
+# Apple's badge, fetched from developer.apple.com by hand. Their artwork,
+# their licence; the guidelines ask for the supplied file rather than a
+# redrawn one, and a redrawn one is a trademark somebody traced.
+public/app-store-badge.svg

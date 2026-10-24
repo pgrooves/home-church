@@ -168,7 +168,7 @@ for (const entry of CARRY) {
 const baked = await bakeLiveContent();
 fs.writeFileSync(path.join(OUT, 'js', 'config.js'), baked ? BAKED_CONFIG : EMPTY_CONFIG);
 cutFeaturedVideoFallback();
-checkMusic();
+checkAssets();
 
 console.log(`prepare: ${files} files into public/app` +
   (baked ? `, ${baked.rows} live rows and ${baked.images} pictures baked in.`
@@ -242,7 +242,23 @@ async function bakeLiveContent() {
    scene length is a count of its beats, so a different track is not a drop-in
    replacement: see the note over BEAT in src/scenes.js, which says what to
    measure and what to change. */
-function checkMusic() {
+function checkAssets() {
+  /* Apple's badge for the Sunday slide, fetched by hand from
+     developer.apple.com/app-store/marketing/guidelines and kept out of the
+     repository for the same reason the music is: it is somebody else's
+     artwork under somebody else's licence, and the guidelines ask for the
+     supplied file rather than a redrawn one. Only the Sunday composition
+     uses it, so this is a warning and not a wall. */
+  const badge = path.join(HERE, 'public', 'app-store-badge.svg');
+  if (!fs.existsSync(badge)) {
+    console.error(
+      '\nprepare: public/app-store-badge.svg is missing. The Sunday cut ' +
+      'draws it and the other two\n         do not. It is Apple\'s own file: ' +
+      'developer.apple.com/app-store/marketing/guidelines,\n         the black ' +
+      '"Download on the App Store" SVG.\n'
+    );
+  }
+
   const file = path.join(HERE, 'public', 'music.wav');
   if (fs.existsSync(file)) return;
   console.error(

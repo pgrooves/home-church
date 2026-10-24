@@ -15,8 +15,8 @@
    =========================================================================== */
 
 import { Composition } from 'remotion';
-import { Framed, Preview } from './Preview';
-import { buildTimeline, CUTS, FPS } from './scenes';
+import { Framed, Preview, Sunday } from './Preview';
+import { buildTimeline, CUTS, FPS, LEAD } from './scenes';
 import { PHONE } from './theme';
 
 const length = (cut) => buildTimeline(CUTS[cut]).total;
@@ -44,11 +44,27 @@ export const RemotionRoot = () => (
     <Composition
       id="Marketing"
       component={Framed}
-      durationInFrames={length('Marketing')}
+      durationInFrames={length('Marketing') + LEAD}
       fps={FPS}
       width={360}
       height={640}
       defaultProps={{ cut: 'Marketing', screenWidth: 232 }}
+    />
+
+    {/* Sunday morning, on the wall. 640 x 360 at three times is 1920 x 1080,
+        which every projector and television in a church building takes
+        without asking. The portrait cuts are 9:16 because a phone is; this
+        one is the room's shape, and the two thirds of it a vertical video
+        cannot fill carry the lockup, the list of what the app does, and a QR
+        code sized to scan from the back row. */}
+    <Composition
+      id="Sunday"
+      component={Sunday}
+      durationInFrames={length('Marketing') + LEAD}
+      fps={FPS}
+      width={640}
+      height={360}
+      defaultProps={{ cut: 'Marketing' }}
     />
   </>
 );

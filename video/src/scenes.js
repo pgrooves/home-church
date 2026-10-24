@@ -84,6 +84,13 @@ export const FPS = 30;
 export const BEAT = 24;
 export const BAR = BEAT * 4;
 
+/* Two beats of black and silence before anything starts, and the fade up
+   across the first of them. A whole number of beats, so the music's grid is
+   untouched and everything downstream is the same timeline two beats later.
+   The store cut does not get it; see Opening in Preview.jsx. */
+export const LEAD = BEAT * 2;
+export const LEAD_FADE = BEAT;
+
 /* Where each tab sits in the bar, for the lit tile. js/app.js's TAB_META in
    its own order. */
 const TAB = { home: 0, cal: 1, connect: 2, listen: 3, guide: 4, more: 5 };

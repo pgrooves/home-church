@@ -9,6 +9,7 @@
     "studio": "npm run stage && remotion studio src/index.jsx",
     "render": "npm run stage && remotion render src/index.jsx AppStorePreview out/home-church-app-store.mp4",
     "render:marketing": "npm run stage && remotion render src/index.jsx Marketing out/home-church-marketing.mp4",
+    "render:sunday": "npm run stage && remotion render src/index.jsx Sunday out/home-church-sunday.mp4",
     "still": "npm run stage && remotion still src/index.jsx AppStorePreview out/still.png"
   },
   "dependencies": {

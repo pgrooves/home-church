@@ -9,10 +9,15 @@ the composition in a browser one frame at a time.
 cd video
 npm install
 npm run render              # out/home-church-app-store.mp4, 1320 x 2868, 29.6s
-npm run render:marketing    # out/home-church-marketing.mp4, 1080 x 1920, 99.2s
+npm run render:marketing    # out/home-church-marketing.mp4, 1080 x 1920, 100.8s
+npm run render:sunday       # out/home-church-sunday.mp4,    1920 x 1080, 100.8s
 ```
 
-**Both cuts need `public/music.wav`, which is not in the repository.** It is a
+**Two files are not in the repository and the render needs them.**
+`public/music.wav` is the bed and `public/app-store-badge.svg` is Apple's
+badge for the Sunday slide; `prepare.mjs` names whichever is missing.
+
+**`public/music.wav` is not in the repository.** It is a
 licensed track, and a licence is something somebody holds rather than
 something a git history should carry a copy of. `prepare.mjs` says so out loud
 if it is absent. Everything below about the grid depends on that particular
@@ -202,6 +207,15 @@ are two cuts. The store cut is the four pages the church leads with, Home,
 Calendar, Listen and the Guide, with the Guide still the longest thing in it.
 The note and the Journal are in the long cut only: the whole beat needs twenty
 seconds to read, and twenty of thirty seconds would cost three of those four.
+
+**The two cuts that play to a room open on black and silence**, for two
+beats, and then the music lands on the frame the lockup begins to appear on.
+Starting cold on a logo and a downbeat is how a slideshow opens; two beats of
+nothing is the room going quiet first, and it costs a second and a half. The
+lead is a whole number of beats so the music's grid is untouched — everything
+downstream is the same timeline two beats later. The store cut does not get
+it: Apple gives a preview thirty seconds and a person scrolling past gives it
+about two, and the first of those cannot be black.
 
 **A scene opens under whatever it was reached through.** The navigation, which
 fades off the new page; a bloom, where a row was tapped and a view pushed; or
@@ -414,12 +428,42 @@ pick a different track or accept drift. `BEAT` at the top of `src/scenes.js`
 is the one number to change, and the eleven scene lengths under it are counts
 against it.
 
-## The two compositions
+## Sunday morning, on the wall
+
+A third composition, `Sunday`, at 1920 x 1080. The other two are 9:16 because
+a phone is; a projector in a sanctuary is not, and a vertical video on a
+sixteen by nine screen is two thirds of a wall doing nothing.
+
+So the two thirds carry what the video cannot and a congregation needs: the
+lockup top left, five things the app does down the right, and bottom left a
+QR code with Apple's badge under it as one card. The phone rides the same
+camera as the long cut and plays the same hundred seconds.
+
+**The code is the point of the slide, so it is sized for the back row rather
+than for the layout.** 128 of the frame's 640 points, which is a fifth of the
+picture width — on a twelve foot screen that is about two feet of QR, and it
+scans from the back of most rooms. It sits on a white card, which is not a
+brand decision: the file the church supplied is dark modules on a
+*transparent* ground, so on this charcoal it would be a dark square on a dark
+wall. A scanner wants contrast more than it wants a palette.
+
+**Apple's badge is Apple's own file**, fetched from their marketing
+guidelines rather than drawn here. A hand-made one is a trademark somebody
+traced, and their guidelines ask for the supplied artwork. The black variant,
+because it is on a white card.
+
+**Five features and not the eight the video shows.** The constraint is type
+size, not coverage: six lines fit only by making every one too small to read
+from forty feet, which is the whole job. Worship is the one that went — not
+the least loved, the least needed.
+
+## The three compositions
 
 | id | Renders at | Runs | For |
 |---|---|---|---|
 | `AppStorePreview` | 1320 x 2868 | 29.6s | The store page. The app fills the frame, no device around it. |
-| `Marketing` | 1080 x 1920 | 99.2s | The website and the socials. Every scene, inside a drawn phone on a warm ground. |
+| `Marketing` | 1080 x 1920 | 100.8s | The website and the socials. Every scene, inside a drawn phone on a warm ground. |
+| `Sunday` | 1920 x 1080 | 100.8s | A projector or a television in the room before a service. The same phone, with the lockup, the feature list and the QR code around it. |
 
 Both are built from the same scene functions, listed in `src/scenes.js` as
 `APP_STORE` and `FULL`. A cut is a list of scenes with a length each, so adding
