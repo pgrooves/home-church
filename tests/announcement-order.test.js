@@ -14,7 +14,7 @@
    block below builds one table of rows and asks both sides where they think
    the cards go.
 
-   THE THREE WAYS AN ANNOUNCEMENT GETS A POSITION, all tested here, because
+   THE FOUR WAYS AN ANNOUNCEMENT GETS A POSITION, all tested here, because
    each of them was wrong in a different way:
 
      the arrows      renumber the live list from the top. Always did work; the
@@ -24,7 +24,12 @@
                      not "no opinion", it is last.
      approving one   the same, for the drafts the newsletter parses.
 
-   And one thing that must NOT set a position: saving an edit. That is the
+     by date         soonest event first, undated underneath, written into the
+                     same column after an approval, a new post, a moved date,
+                     and by "Organize chronologically".
+
+   And one thing that must NOT set a position: saving an edit that only
+   changes the words. That is the
    regression this file exists to hold, because it is silent and it happens
    minutes after somebody has finished ordering the list.
 
@@ -65,8 +70,9 @@ function fakeStorage() {
    worth asking about it is whether the list that comes back is the list
    somebody asked for. A fake that recorded the writes and answered reads from
    a fixture could not be asked that. */
-function fakeAuth(rows) {
+function fakeAuth(rows, events) {
   const calls = [];
+  events = events || [];
   const api = {
     calls: calls,
     rows: rows,
@@ -98,6 +104,13 @@ function fakeAuth(rows) {
         }));
       }
 
+      // The calendar rows an announcement points at, for the date order.
+      const linked = /^\/events\?select=[^&]*&id=in\.\(([^)]*)\)/.exec(pathname);
+      if (linked) {
+        const want = linked[1].split(',').map(decodeURIComponent);
+        return Promise.resolve(events.filter(e => want.indexOf(e.id) !== -1));
+      }
+
       return Promise.resolve([]);
     },
 
@@ -115,7 +128,7 @@ function fakeAuth(rows) {
   return api;
 }
 
-function load(rows) {
+function load(rows, events) {
   const sandbox = { window: { localStorage: fakeStorage(), console: console } };
   sandbox.window.window = sandbox.window;
   vm.createContext(sandbox);
@@ -124,7 +137,7 @@ function load(rows) {
   });
 
   const HC = sandbox.window.HC;
-  HC.auth = fakeAuth(rows);
+  HC.auth = fakeAuth(rows, events);
   HC.store = { emit: function () {}, getProfile: function () { return {}; } };
   HC.content = { refresh: function () {} };
   // Enough of the sanitizer for saveAnnouncement to make a body out of a
@@ -138,8 +151,8 @@ function load(rows) {
 
 const settle = () => new Promise(function (r) { setImmediate(r); });
 
-async function loaded(rows) {
-  const HC = load(rows);
+async function loaded(rows, events) {
+  const HC = load(rows, events);
   HC.admin.loadAnnouncements();
   await settle();
   await settle();
@@ -434,6 +447,151 @@ const ids = list => list.map(r => r.id);
 
   ok('a failed reposition does not fail the approval', threw, false);
   ok('and the announcement is published', rows[0].published, true);
+}
+
+/* ------------------------------------------------ soonest first, by date
+
+   What Home is in by default, written into the same priority column the
+   arrows write, so every installed build draws it. Dates in 2099 so none of
+   these has finished by the time this file runs, and times in the middle of
+   a UTC day so the phone's zone cannot move one onto another date. */
+
+{
+  const rows = [
+    row({ id: 'merch',     created_at: '2026-10-24T00:00:00Z', priority: 18,
+          event_id: 'e-merch',     ends_on: '2099-10-26' }),
+    row({ id: 'fest',      created_at: '2026-10-24T00:01:00Z', priority: 17,
+          event_id: 'e-fest',      ends_on: '2099-10-29' }),
+    row({ id: 'baptism',   created_at: '2026-10-24T00:02:00Z', priority: 15,
+          event_id: 'e-baptism',   ends_on: '2099-11-02' }),
+    row({ id: 'service',   created_at: '2026-10-09T00:00:00Z', priority: 13,
+          event_id: 'e-service',   ends_on: '2099-10-26' }),
+    row({ id: 'group',     created_at: '2026-10-03T00:00:00Z', priority: 11 }),
+    row({ id: 'plan',      created_at: '2026-09-11T00:00:00Z', priority: 3 }),
+    // No event, but a date it comes down: the day before it is the day.
+    row({ id: 'signup',    created_at: '2026-09-01T00:00:00Z', priority: 1,
+          ends_on: '2099-10-28' }),
+    // Not on Home yet, and numbered anyway so it appears in its place.
+    row({ id: 'next-week', created_at: '2026-09-02T00:00:00Z', priority: 0,
+          starts_on: '2099-10-27', event_id: 'e-next', ends_on: '2099-10-31' }),
+    // None of these are numbered: a draft, the queue, the bin, and finished.
+    row({ id: 'a-draft',   priority: 50, published: false, ends_on: '2099-10-20' }),
+    row({ id: 'queued',    priority: 0, published: false, review_state: 'pending',
+          ends_on: '2099-10-20' }),
+    row({ id: 'binned',    priority: 40, deleted_at: '2026-07-03T00:00:00Z' }),
+    row({ id: 'finished',  priority: 30, ends_on: '2020-01-01' })
+  ];
+  const events = [
+    { id: 'e-merch',   starts_at: '2099-10-25T17:00:00Z' },
+    { id: 'e-service', starts_at: '2099-10-25T14:00:00Z' },
+    { id: 'e-fest',    starts_at: '2099-10-28T15:00:00Z' },
+    { id: 'e-baptism', starts_at: '2099-11-01T15:00:00Z' },
+    { id: 'e-next',    starts_at: '2099-10-30T15:00:00Z' }
+  ];
+  const HC = await loaded(rows, events);
+
+  const moved = await HC.admin.organizeAnnouncements();
+  HC.admin.loadAnnouncements();
+  await settle();
+  await settle();
+
+  const byPriority = rows.filter(r => !r.deleted_at && r.published && !r.review_state &&
+    r.id !== 'finished').sort((a, b) => b.priority - a.priority).map(r => r.id);
+
+  ok('everything dated goes soonest first, and undated ones underneath',
+    byPriority,
+    ['service', 'merch', 'signup', 'fest', 'next-week', 'baptism', 'group', 'plan']);
+  ok('two on one day go in the order they happen',
+    byPriority.indexOf('service') < byPriority.indexOf('merch'), true);
+  ok('the undated ones keep the order they were in',
+    byPriority.slice(-2), ['group', 'plan']);
+  ok('Home draws that order',
+    onHome(HC, rows), ['service', 'merch', 'signup', 'fest', 'baptism', 'group', 'plan']);
+  ok('and the admin list agrees', ids(HC.admin.orderedLive()), onHome(HC, rows));
+
+  ok('a draft, the queue, the bin and a finished one are not renumbered',
+    ['a-draft', 'queued', 'binned', 'finished'].map(id => rows.filter(r => r.id === id)[0].priority),
+    [50, 0, 40, 30]);
+  ok('it says how many moved', moved > 0, true);
+
+  const again = await HC.admin.organizeAnnouncements();
+  ok('and a second tap moves nothing', again, 0);
+}
+
+{
+  // The button after the arrows: back to the dates.
+  const rows = [
+    row({ id: 'sooner', created_at: '2026-01-01T00:00:00Z', ends_on: '2099-03-02' }),
+    row({ id: 'later',  created_at: '2026-02-01T00:00:00Z', ends_on: '2099-06-02' })
+  ];
+  const HC = await loaded(rows);
+  await HC.admin.organizeAnnouncements();
+  HC.admin.loadAnnouncements();
+  await settle(); await settle();
+  ok('the dates decide first', onHome(HC, rows), ['sooner', 'later']);
+
+  await HC.admin.reorderAnnouncement('later', 'up');
+  HC.admin.loadAnnouncements();
+  await settle(); await settle();
+  ok('an arrow can still move one by hand', onHome(HC, rows), ['later', 'sooner']);
+
+  await HC.admin.organizeAnnouncements();
+  HC.admin.loadAnnouncements();
+  await settle(); await settle();
+  ok('and Organize chronologically puts it back', onHome(HC, rows), ['sooner', 'later']);
+}
+
+{
+  // An approved draft about a dated thing goes where its date is, not on top.
+  const rows = [
+    row({ id: 'soon',   created_at: '2026-01-01T00:00:00Z', priority: 2,
+          ends_on: '2099-03-02' }),
+    row({ id: 'undated', created_at: '2026-02-01T00:00:00Z', priority: 1 }),
+    row({ id: 'parsed', created_at: '2026-08-01T00:00:00Z', priority: 0,
+          published: false, review_state: 'pending', event_id: 'e-parsed',
+          ends_on: '2099-05-02' })
+  ];
+  const events = [{ id: 'e-parsed', starts_at: '2099-05-01T15:00:00Z' }];
+  const HC = await loaded(rows, events);
+
+  await HC.admin.approveAnnouncement('parsed');
+  HC.admin.loadAnnouncements();
+  await settle(); await settle();
+
+  ok('an approved dated draft lands in date order',
+    onHome(HC, rows), ['soon', 'parsed', 'undated']);
+}
+
+{
+  // A new one with a date, written on this screen.
+  const rows = [
+    row({ id: 'soon',  created_at: '2026-01-01T00:00:00Z', priority: 2,
+          ends_on: '2099-03-02' }),
+    row({ id: 'later', created_at: '2026-02-01T00:00:00Z', priority: 1,
+          ends_on: '2099-09-02' })
+  ];
+  const HC = await loaded(rows);
+
+  await HC.admin.saveAnnouncement({
+    title: 'Spring thing', bodyHtml: '<p>April.</p>', images: [], published: true,
+    endsOn: '2099-04-02'
+  });
+  HC.admin.loadAnnouncements();
+  await settle(); await settle();
+
+  ok('a new dated one is placed by its date',
+    onHome(HC, rows), ['soon', 'announcement-spring-thing', 'later']);
+
+  // Moving its date is a reason to move it. Fixing its words is not.
+  await HC.admin.saveAnnouncement({
+    id: 'announcement-spring-thing', title: 'Spring thing', bodyHtml: '<p>Later.</p>',
+    images: [], published: true, endsOn: '2099-12-02'
+  });
+  HC.admin.loadAnnouncements();
+  await settle(); await settle();
+
+  ok('changing its date moves it',
+    onHome(HC, rows), ['soon', 'later', 'announcement-spring-thing']);
 }
 
 console.log('\n' + pass + ' passed, ' + fail + ' failed');

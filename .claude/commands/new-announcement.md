@@ -107,9 +107,17 @@ python3 scripts/hc_supabase.py select announcements --eq id=announcement-your-sl
 
 ## Step 4. Check what is already running
 
-Home shows one. If another announcement is live in the same window, say so
-and ask which should win, then either set `priority` higher on the new one or
-unpublish the old one:
+Home lists them soonest first, by the date of each one's event (the linked
+calendar event, or the day before `ends_on`), with undated ones underneath.
+The order is the `priority` column, highest on top. The Admin screen renumbers
+it after every approval and new post, and **Organize chronologically** in
+Manage Announcements does the same on demand. A row written here does not go
+through that, so give it a `priority` that puts it in date order among the
+rows below (renumber the others if there is no gap), or tell Trey to tap
+Organize chronologically afterwards.
+
+If another announcement is about the same thing, say so and ask which should
+win, then unpublish the old one:
 
 ```bash
 python3 scripts/hc_supabase.py select announcements --eq published=true \

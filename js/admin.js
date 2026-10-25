@@ -710,7 +710,12 @@
           method: 'PATCH',
           headers: { Prefer: 'return=minimal' },
           body: { priority: want }
-        }).then(null, function () { return null; });
+        }).then(null, function () { return null; })
+          /* And then into date order, which is where a dated one belongs. The
+             number above still matters for one with no date: it puts it at
+             the top of the undated ones, which keep the order they were in.
+             See placeByDate(). */
+          .then(placeByDateQuietly);
       })
       .then(function () {
         invalidate('announcements');
@@ -880,6 +885,18 @@
         : null
     };
 
+    /* Whether this save can change where the card belongs in date order: a
+       new one going up, a draft being published, or a date being moved. A fix
+       to the words cannot, and does not reorder anything, for the reason the
+       note on `priority` above gives. */
+    var before = row.id
+      ? list('announcements').filter(function (a) { return a.id === row.id; })[0]
+      : null;
+    var reorders = body.published && (!before ||
+      !before.published ||
+      (before.starts_on || null) !== body.starts_on ||
+      (before.ends_on || null) !== body.ends_on);
+
     var done = row.id
       ? HC.auth.restFetch('/announcements?id=eq.' + encodeURIComponent(row.id), {
           method: 'PATCH',
@@ -897,6 +914,9 @@
         });
 
     return done.then(function (rows) {
+      if (!reorders) return rows;
+      return placeByDateQuietly().then(function () { return rows; });
+    }).then(function (rows) {
       invalidate('announcements');
       var saved = Array.isArray(rows) ? rows[0] : rows;
       // Home reads HC.data.announcements, which the content sync fills. A
@@ -942,7 +962,7 @@
       method: 'PATCH',
       headers: { Prefer: 'return=minimal' },
       body: { deleted_at: null }
-    }).then(function () {
+    }).then(placeByDateQuietly).then(function () {
       invalidate('announcements');
       HC.content.refresh();
     });
@@ -1041,6 +1061,157 @@
     return top + 1;
   }
 
+  /* ------------------------------------------------ soonest first, by date
+
+     The order Home is in by default: whatever happens soonest on top, and the
+     things that happen later underneath. Run on its own after an announcement
+     is approved, posted, restored, or has its dates changed, and on demand
+     from "Organize chronologically" on the Admin screen.
+
+     WRITTEN INTO `priority`, THE COLUMN THE ARROWS WRITE, rather than taught
+     to Home as a new way of sorting. Every installed build already draws Home
+     by that column, so a phone running a version from the summer shows the
+     new order on its next content refresh, with no App Store release in
+     between. And the arrows go on working: they move a card by hand, and the
+     next approval or a tap of the button puts the dates back in charge.
+
+     WHAT "THE DATE OF THE EVENT" IS, most trustworthy first:
+       the event   the calendar row the announcement is linked to, by event_id.
+                   Its start time too, so two things on one Sunday go in the
+                   order they happen.
+       ends_on     the day before it, which is what the newsletter intake
+                   already reads it as: rule 8 of its prompt defines ends_on as
+                   the day AFTER the thing happens.
+       neither     an announcement with no date at all — a standing invitation,
+                   a reading plan. These go underneath every dated one, in the
+                   order they were already in, because "soonest" says nothing
+                   about them.
+
+     Numbered over everything published and not yet finished, not only what is
+     on Home today, so one dated for next week is already in its place on the
+     morning it appears. Separate PATCHes for the reason reorderAnnouncement()
+     gives above: half of them landing is an order nobody asked for, which the
+     button fixes, and not a promise broken. Resolves with how many rows
+     moved. */
+  var ORDER_COLUMNS = 'id,priority,published,review_state,deleted_at,' +
+    'starts_on,ends_on,event_id,created_at';
+
+  function placeByDate() {
+    var today = todayIso();
+    var rows = [];
+
+    /* Asked of the network rather than of this file's cache, because the
+       moments this runs are the moments the cache is wrong: an approval has
+       just published a row and its event, and a save has just changed a date.
+       Filtered again here, so a row the query let through by some route
+       cannot be numbered. */
+    return HC.auth.restFetch('/announcements?select=' + ORDER_COLUMNS +
+        '&published=eq.true&deleted_at=is.null')
+      .then(function (got) {
+        rows = (Array.isArray(got) ? got : []).filter(function (row) {
+          if (!row.published || row.deleted_at) return false;
+          if (row.review_state === 'pending') return false;
+          return !(row.ends_on && today >= row.ends_on);
+        });
+
+        var want = [];
+        rows.forEach(function (row) {
+          if (row.event_id && want.indexOf(row.event_id) === -1) want.push(row.event_id);
+        });
+        if (!want.length) return [];
+
+        return HC.auth.restFetch('/events?select=id,starts_at&id=in.(' +
+          want.map(encodeURIComponent).join(',') + ')');
+      })
+      .then(function (events) {
+        var startsAt = {};
+        (Array.isArray(events) ? events : []).forEach(function (row) {
+          if (row && row.starts_at) startsAt[row.id] = row.starts_at;
+        });
+
+        var when = {};
+        rows.forEach(function (row) { when[row.id] = eventMoment(row, startsAt); });
+
+        var sorted = rows.slice().sort(function (x, y) {
+          var wx = when[x.id], wy = when[y.id];
+          if (wx && !wy) return -1;
+          if (!wx && wy) return 1;
+          if (wx && wy && wx !== wy) return wx < wy ? -1 : 1;
+          return byHomeOrder(x, y);
+        });
+
+        var writes = [];
+        sorted.forEach(function (row, i) {
+          var want = sorted.length - i;
+          if ((row.priority || 0) === want) return;
+          writes.push(HC.auth.restFetch('/announcements?id=eq.' + encodeURIComponent(row.id), {
+            method: 'PATCH',
+            headers: { Prefer: 'return=minimal' },
+            body: { priority: want }
+          }));
+        });
+
+        return Promise.all(writes).then(function () { return writes.length; });
+      });
+  }
+
+  /* When an announcement's event happens, as 'YYYY-MM-DDTHH:MM' in this
+     phone's zone so the strings sort as times, or null for one with no date.
+
+     A day taken from ends_on has no time, and is written as the end of that
+     day: something with a real start time on the same date is more precisely
+     "soonest" than something that only says which day. */
+  function eventMoment(row, startsAt) {
+    var at = row.event_id && startsAt[row.event_id]
+      ? new Date(startsAt[row.event_id]) : null;
+    if (at && !isNaN(at.getTime())) {
+      return isoDay(at) + 'T' +
+        ('0' + at.getHours()).slice(-2) + ':' + ('0' + at.getMinutes()).slice(-2);
+    }
+
+    var end = /^(\d{4})-(\d{2})-(\d{2})/.exec(row.ends_on || '');
+    if (end) {
+      return isoDay(new Date(+end[1], +end[2] - 1, +end[3] - 1)) + 'T99:99';
+    }
+    return null;
+  }
+
+  function isoDay(d) {
+    return d.getFullYear() + '-' +
+      ('0' + (d.getMonth() + 1)).slice(-2) + '-' +
+      ('0' + d.getDate()).slice(-2);
+  }
+
+  /* The same thing, never failing. For the moments it runs on its own, after
+     something else has already succeeded: an approval or a save that went
+     through is not undone by its card landing one place off, and saying "that
+     did not work" about a card that is on Home would be a lie. */
+  function placeByDateQuietly() {
+    return placeByDate().then(null, function () { return 0; });
+  }
+
+  /* "Organize chronologically", the button. */
+  function organizeAnnouncements() {
+    return placeByDate().then(function (moved) {
+      invalidate('announcements');
+      HC.content.refresh();
+      return moved;
+    });
+  }
+
+  /* Home's order, as js/data.js's sortAnnouncements() states it: priority,
+     then newest, then the id. Said once here for the two lists below and for
+     the tie-break above. */
+  function byHomeOrder(x, y) {
+    var px = x.priority || 0;
+    var py = y.priority || 0;
+    if (px !== py) return py - px;
+    var cx = String(x.created_at || '');
+    var cy = String(y.created_at || '');
+    if (cx !== cy) return cx < cy ? 1 : -1;
+    return String(x.id) < String(y.id) ? -1 : 1;
+  }
+
   /* The live list in the order Home draws it, which is the order the up and
      down controls move things around in. Deliberately the same comparison
      js/data.js makes rather than a second opinion about it: a screen that
@@ -1058,15 +1229,7 @@
       if (row.starts_on && iso < row.starts_on) return false;
       if (row.ends_on && iso >= row.ends_on) return false;
       return true;
-    }).sort(function (x, y) {
-      var px = x.priority || 0;
-      var py = y.priority || 0;
-      if (px !== py) return py - px;
-      var cx = String(x.created_at || '');
-      var cy = String(y.created_at || '');
-      if (cx !== cy) return cx < cy ? 1 : -1;
-      return String(x.id) < String(y.id) ? -1 : 1;
-    });
+    }).sort(byHomeOrder);
   }
 
   /* The Posted list on the Admin screen, in the order it is drawn.
@@ -1702,6 +1865,7 @@
     postedOrder: postedOrder,
     nextPriority: nextPriority,
     reorderAnnouncement: reorderAnnouncement,
+    organizeAnnouncements: organizeAnnouncements,
     applyAnnouncementUpdate: applyAnnouncementUpdate,
     keepAnnouncementSeparate: keepAnnouncementSeparate,
 

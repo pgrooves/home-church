@@ -1634,9 +1634,20 @@
     html += c.sectionHeader('', 'Posted');
 
     if (live.length > 1) {
-      html += '<p class="hc-caption hc-admin__intro-note">The arrows set the order ' +
-        'on Home, and this list is in it: the top one here is the top one there. ' +
-        'Anything not on Home today sits underneath, and cannot move.</p>';
+      html += '<p class="hc-caption hc-admin__intro-note">Home puts whatever happens ' +
+        'soonest on top, by the date of its event, with undated ones underneath. ' +
+        'The arrows move one by hand, and this list is in Home\'s order. Anything ' +
+        'not on Home today sits underneath, and cannot move.</p>';
+
+      /* Back to date order, for whenever the list looks wrong: after the
+         arrows, after an event's date was changed on the calendar, or after an
+         announcement was written by something other than this screen. It
+         happens on its own after an approval or a new post; this is the same
+         thing on demand. See placeByDate() in js/admin.js. */
+      html += '<div class="hc-admin__item-actions">' +
+        c.button('Organize chronologically', { action: 'admin-announcements-organize',
+          variant: 'secondary', small: true, busy: busy === 'organize' }) +
+      '</div>';
     }
 
     ordered.forEach(function (row) {

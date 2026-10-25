@@ -2548,6 +2548,13 @@
        flight would renumber a list that is already being renumbered. */
     'admin-announcement-up': function (el) { moveAnnouncement(el, 'up'); },
     'admin-announcement-down': function (el) { moveAnnouncement(el, 'down'); },
+    'admin-announcements-organize': function () {
+      adminRun('organize', HC.admin.organizeAnnouncements().then(function (moved) {
+        HC.components.toast(moved
+          ? 'Sorted by date, soonest first.'
+          : 'Already in date order.');
+      }));
+    },
 
     /* ---------------------------------------------- the same thing twice
 
