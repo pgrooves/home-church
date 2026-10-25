@@ -2094,6 +2094,14 @@
         return;
       }
 
+      /* Asked here and not only said under the switch, because Tell everybody
+         starts on for a new announcement and a push cannot be unsent. The way
+         out is named, so Cancel is not a dead end: the draft is untouched and
+         one switch away from posting quietly. */
+      if (d.notify && !window.confirm('Post “' + String(d.title).trim() + '” and send it to ' +
+            'everybody’s phone as a notification? This cannot be undone.\n\n' +
+            'To post it without a notification, tap Cancel and turn off Tell everybody.')) return;
+
       adminRun('save', HC.admin.saveAnnouncement(d).then(function (saved) {
         var wanted = d.notify;
         h.clearDraft();
@@ -2855,6 +2863,7 @@
       var meta = h.pageSwitch(el.getAttribute('data-id'));
       if (!meta) return;
       var next = !h.pageOn(meta.key);
+      if (next && !confirmPageOn(meta.title, meta.onWarning)) return;
       setSwitch(el, next);
       HC.native.tap('Light');
       adminRun('setting:' + meta.key, HC.admin.saveSwitch(meta, next));
@@ -2863,6 +2872,7 @@
     'admin-group-mode-toggle': function (el) {
       var meta = HC.screens.adminHelpers.groupMode();
       var next = !HC.screens.adminHelpers.groupModeOn();
+      if (next && !confirmPageOn('Group')) return;
 
       // Moved on screen first, saved after, same as every other switch here:
       // a switch that waits on the network to move feels broken on a bad
@@ -3014,6 +3024,47 @@
           ? 'Synced: ' + result.message + '.'
           : 'Synced.');
       }));
+    },
+
+    /* One App settings text box, on Save only. Nothing typed reaches the
+       church until this.
+
+       The video wrapper is checked and asked about first. Every YouTube
+       player in every installed copy of the app is framed through that
+       address, so a wrong one stops video on phones while it goes on working
+       in a browser, which is the hardest version of this to notice. The check
+       is the one js/components.js applies before it will use the value. */
+    'admin-setting-save': function (el) {
+      var h = HC.screens.adminHelpers;
+      var key = el.getAttribute('data-id');
+      var row = HC.admin.settings().filter(function (s) { return s.key === key; })[0];
+      if (!row) return;
+
+      var typed = h.getSettingDraft(key);
+      var value = String(typed == null ? (row.value_text || '') : typed).trim();
+
+      if (value === String(row.value_text || '').trim()) {
+        h.clearSettingDraft(key);
+        HC.components.toast('Nothing has changed.');
+        repaintAdmin();
+        return;
+      }
+
+      if (key === 'home_embed_base') {
+        if (value && !/^https:\/\/[^\s"'<>]+$/.test(value)) {
+          HC.components.toast('That does not look like a link. Paste the whole address, starting with https://.');
+          return;
+        }
+        if (!window.confirm('Change where every video in the app plays from?\n\n' +
+              'It will be: ' + (value || 'the app’s built-in address') + '\n\n' +
+              'If this address is wrong, video stops playing in the app for everybody.')) return;
+      }
+
+      adminRun('setting:' + key, HC.admin.saveSetting(key, 'text', value).then(function () {
+        h.clearSettingDraft(key);
+      }), function () {
+        HC.components.toast('Saved.');
+      });
     },
 
     'admin-setting-delete': function (el) {
@@ -4971,15 +5022,6 @@
     return HC.screens.adminHelpers;
   }
 
-  /* The same 400ms debounce wireEvents() uses, hoisted so the admin handlers
-     above can reach it too. Keyed, so two fields edited in the same moment do
-     not cancel each other. */
-  var adminTimers = {};
-  function debounceGlobal(key, fn) {
-    window.clearTimeout(adminTimers[key]);
-    adminTimers[key] = window.setTimeout(fn, 400);
-  }
-
   /* A repaint that keeps the reader where they were. Every admin action ends
      in one of these rather than patching the DOM, because the screen is
      rendered from the draft and the caches in one pass and there is nothing
@@ -5099,12 +5141,9 @@
       return;
     }
 
+    // An App settings text box, held until its Save. See settingsSection.
     if (name === 'setting') {
-      debounceGlobal('setting-' + id, function () {
-        HC.admin.saveSetting(id, 'text', value).catch(function (err) {
-          HC.components.toast(err.message || 'That did not save.');
-        });
-      });
+      h.setSettingDraft(id, value);
       return;
     }
 
@@ -5300,6 +5339,17 @@
      disabled and marked while it is out. One helper because every admin write
      wants exactly this and forgetting it is how somebody double posts an
      announcement on a slow connection. */
+  /* Before a page goes on, and only on. These launch a page to the whole
+     church on their next refresh, which should never be a thumb brushing
+     the switch above Edit mode on the way to it. Off stays one tap, the same
+     as Maintenance mode the other way round: taking a page down quickly is
+     the reason to reach for the switch. */
+  function confirmPageOn(title, warning) {
+    return window.confirm('Turn on ' + title + '? It appears in the ••• menu for ' +
+      'everybody, on phones that are already open too.' +
+      (warning ? '\n\n' + warning : ''));
+  }
+
   function adminRun(token, promise, onDone) {
     var h = adminHelpers();
     h.setBusy(token);

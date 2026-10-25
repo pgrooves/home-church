@@ -31,6 +31,8 @@
      and is empty, and the screens tell those two apart. */
   var cache = {
     announcements: null, users: null, pages: null, settings: null,
+    // Who owns the app, from migration 0095: ids only, for the people list.
+    owners: null,
     // The newsletter intake's own heartbeat, read for the notice at the top of
     // the announcements section. A slot of its own rather than a field on the
     // announcements load, because it is a different table with a different
@@ -1592,6 +1594,20 @@
     return !!id && id === me();
   }
 
+  /* The owner, migration 0095. Their row draws a line instead of Make a
+     member and Remove, because the database refuses both for them anyway.
+     A project that has not run 0095 answers with an error, which leaves this
+     empty and the buttons drawn, which is how every row looked before. */
+  function loadOwners() {
+    load('owners', function () {
+      return HC.auth.rpc('hc_admin_owner_ids');
+    });
+  }
+
+  function isOwner(id) {
+    return !!id && list('owners').some(function (row) { return row && row.id === id; });
+  }
+
   function setRole(id, role) {
     if (isSelf(id)) {
       return Promise.reject(new Error('You cannot change your own role.'));
@@ -1929,6 +1945,8 @@
 
     users: function () { return list('users'); },
     loadUsers: loadUsers,
+    loadOwners: loadOwners,
+    isOwner: isOwner,
     setRole: setRole,
     setLeader: setLeader,
     setBarista: setBarista,

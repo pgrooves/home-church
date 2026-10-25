@@ -48,12 +48,14 @@
   var uploading = false;
   var userQuery = '';      // what is typed in the box above the users list
   var userFolds = {};      // which of Admins, Hosts and Members are open
+  var settingDrafts = {};  // App settings text boxes, by key, until Save
 
   function resetDrafts() {
     draft = null;
     pageDraft = null;
     groupBox = null;
     bannerDraft = null;
+    settingDrafts = {};
     busy = '';
     uploading = false;
     userQuery = '';
@@ -1804,7 +1806,7 @@
      over Leader when both are true, which is the order they are granted in and
      the order they matter in: an admin can do everything a leader can. */
   function personStanding(u) {
-    if (u.role === 'admin') return 'Admin';
+    if (u.role === 'admin') return HC.admin.isOwner(u.id) ? 'Admin · Owner' : 'Admin';
     // Cafe mode rides alongside, since it says what somebody does on a
     // Sunday rather than what tier they are.
     if (u.is_barista) return u.is_leader ? 'Leader · Cafe' : 'Cafe';
@@ -2045,6 +2047,11 @@
       html += '<p class="hc-caption hc-admin__self">You cannot change your own role or ' +
         'remove your own account here, and an admin has the leader tools already. ' +
         'Deleting your account is under Your data.</p>';
+    } else if (isAdminRow && HC.admin.isOwner(u.id)) {
+      /* The owner, migration 0095. Same shape as your own row: a line saying
+         why rather than two buttons the database would only refuse. */
+      html += '<p class="hc-caption hc-admin__self">The app’s owner. Their role and ' +
+        'account cannot be changed here.</p>';
     } else {
       html += c.button(isAdminRow ? 'Make a member' : 'Make an admin', {
         action: 'admin-role',
@@ -2353,6 +2360,8 @@
       label: 'Happy Lion Cafe page',
       help: 'Off takes Coffee out of the ••• menu for everybody. Orders already ' +
         'paid for stay in the queue at the counter.',
+      // Said in the confirm before it goes on. See 'admin-page-toggle'.
+      onWarning: 'People can order and pay for real during cafe hours.',
       sortOrder: 38
     }
   ];
@@ -2742,13 +2751,22 @@
             on: !!s.value_bool
           });
         } else {
+          /* Held until Save, like the reading plan link above. These boxes
+             used to save a moment after every keystroke, which made a stray
+             tap in "Video wrapper URL" a change to every video in the app. */
+          var typed = Object.prototype.hasOwnProperty.call(settingDrafts, s.key)
+            ? settingDrafts[s.key] : null;
           html += field({
             name: 'setting',
             id: s.key,
             label: s.label,
-            value: s.value_text || '',
+            value: typed == null ? (s.value_text || '') : typed,
             help: s.help || ''
           });
+          html += '<div class="hc-admin__item-actions hc-mb-md">' +
+            c.button('Save', { action: 'admin-setting-save', id: s.key, small: true,
+              busy: busy === 'setting:' + s.key }) +
+          '</div>';
         }
         // Only rows somebody added from this screen can be removed. The three
         // the app ships with are read by name in the code, and deleting one
@@ -2762,7 +2780,7 @@
           '</div>';
         }
       });
-      html += '<p class="hc-caption hc-admin__loading">Text boxes save as you type. ' +
+      html += '<p class="hc-caption hc-admin__loading">Text boxes save when you tap Save. ' +
         'Switches save the moment you tap them.</p>';
     }
 
@@ -2945,6 +2963,7 @@
     if (id === 'homekids') HC.admin.loadHomekids();
     if (id === 'homekids') HC.admin.loadHomekidsDrafts();
     if (id === 'users') HC.admin.loadUsers();
+    if (id === 'users') HC.admin.loadOwners();
     if (id === 'content') HC.admin.loadPages();
     if (id === 'settings') HC.admin.loadSettings();
 
@@ -3040,7 +3059,14 @@
     readingPlanLink: readingPlanLink,
     getReadingPlanLinkDraft: function () { return readingPlanLinkDraft; },
     setReadingPlanLinkDraft: function (value) { readingPlanLinkDraft = value; },
-    clearReadingPlanLinkDraft: function () { readingPlanLinkDraft = null; }
+    clearReadingPlanLinkDraft: function () { readingPlanLinkDraft = null; },
+
+    // The App settings text boxes, typed but not saved yet.
+    getSettingDraft: function (key) {
+      return Object.prototype.hasOwnProperty.call(settingDrafts, key) ? settingDrafts[key] : null;
+    },
+    setSettingDraft: function (key, value) { settingDrafts[key] = value; },
+    clearSettingDraft: function (key) { delete settingDrafts[key]; }
   };
 
 })(window.HC = window.HC || {});

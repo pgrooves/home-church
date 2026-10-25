@@ -21,6 +21,10 @@
  *      same guard hc_admin_set_role applies to demotion and for the same
  *      reason: the last admin locking themselves out at 11pm on a Saturday
  *      leaves nobody who can let them back in.
+ *   4. The target is not the app's owner, migration 0095. Read from
+ *      app_owners with the service key, the same table hc_admin_set_role
+ *      asks. If that read fails, nobody is removed: a deletion that cannot
+ *      check is a deletion that waits. Deploy this after 0095 has run.
  *
  * WHY IT IS NOT A POSTGRES FUNCTION, which is where every other admin action
  * in this project lives. Deleting a row from auth.users is not a table write
@@ -133,6 +137,22 @@ Deno.serve(async (req: Request) => {
     return json({
       error: 'You cannot remove your own account here. Use Delete my account under Your data.',
     }, 400);
+  }
+
+  // Check 4. Not the owner.
+  const { data: owner, error: ownerError } = await admin
+    .from('app_owners')
+    .select('user_id')
+    .eq('user_id', targetId)
+    .maybeSingle();
+
+  if (ownerError) {
+    console.error('admin-remove-user: could not read app_owners', ownerError.message);
+    return json({ error: 'Could not check that account. Nothing was removed.' }, 500);
+  }
+
+  if (owner) {
+    return json({ error: 'That is the app’s owner. Their account cannot be removed here.' }, 403);
   }
 
   const { error: deleteError } = await admin.auth.admin.deleteUser(targetId);
