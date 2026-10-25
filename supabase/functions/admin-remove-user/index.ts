@@ -8,9 +8,9 @@
  * This one has to accept one: an admin removing a member is by definition
  * acting on somebody who is not them.
  *
- * So the id is not the thing that authorizes anything here. Three checks
+ * So the id is not the thing that authorizes anything here. Four checks
  * stand between a request and a deleted account, and the id is only the
- * subject of the last one:
+ * subject of the last two:
  *
  *   1. The caller presents a token, verified against the auth server rather
  *      than decoded locally, so an expired or forged one fails here.
