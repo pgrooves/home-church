@@ -210,7 +210,11 @@ interface Note {
    that fits the moment it lands (1pm Sunday, or 8am Monday), then the one
    fact: the guide is live, and which sermon of which series it is. The series
    title, never the sermon's working title, because the series is the name
-   the church actually uses on Sunday. */
+   the church actually uses on Sunday.
+
+   No "Part 1". A one Sunday series (the 2 Year Anniversary) has nothing to
+   be part of, and at send time a one-off and the first of four look the
+   same, so the number starts at Part 2. */
 function guideGreeting(now: Date): string {
   const parts = new Intl.DateTimeFormat('en-US', {
     timeZone: 'America/Chicago', weekday: 'short', hour: 'numeric', hour12: false,
@@ -225,7 +229,7 @@ function guideGreeting(now: Date): string {
 function guideBody(seriesTitle: string | null, part: number | null): string {
   const series = String(seriesTitle ?? '').trim();
   if (!series) return 'This week’s guide is live in the app.';
-  return part && part > 0
+  return part && part > 1
     ? `This week’s guide is live in the app: ${series}, Part ${part}.`
     : `This week’s guide is live in the app: ${series}.`;
 }
