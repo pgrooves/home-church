@@ -2002,8 +2002,8 @@
        thrown away, it is only hidden while it cannot matter. */
     if (isAdminRow) {
       /* Your own row says this once, in the line under the buttons, rather
-         than twice in two stacked captions. */
-      if (!self) {
+         than twice in two stacked captions. The owner's row, the same. */
+      if (!self && !HC.admin.isOwner(u.id)) {
         html += '<p class="hc-caption hc-admin__self">An admin has the leader tools ' +
           'and can host a group room already. There is no Leader mode to turn on.</p>';
       }

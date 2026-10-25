@@ -1,0 +1,14 @@
+{
+  "title": "Admin",
+  "signedIn": { "id": "00000000-0000-0000-0000-00000000de30", "email": "demo@example.org" },
+  "routes": [
+    { "match": "/rest/v1/profiles", "body": [{ "id": "00000000-0000-0000-0000-00000000de30", "first_name": "Sample", "last_name": "Admin", "role": "admin", "can_host": false, "can_run_cafe": false }] },
+    { "match": "/rpc/hc_admin_owner_ids", "method": "POST", "body": [{ "id": "00000000-0000-0000-0000-0000000000a1" }] },
+    { "match": "/rpc/hc_admin_list_users", "method": "POST", "body": [
+      { "id": "00000000-0000-0000-0000-00000000de30", "email": "demo@example.org", "first_name": "Sample", "last_name": "Admin", "role": "admin", "is_leader": false, "is_barista": false, "created_at": "2026-10-20T15:00:00+00:00" },
+      { "id": "00000000-0000-0000-0000-0000000000a1", "email": "owner@example.org", "first_name": "Trey", "last_name": "", "role": "admin", "is_leader": false, "is_barista": false, "created_at": "2026-08-08T15:00:00+00:00" },
+      { "id": "00000000-0000-0000-0000-0000000000b1", "email": "member.one@example.org", "first_name": "Sample", "last_name": "Member", "role": "member", "is_leader": false, "is_barista": false, "created_at": "2026-10-01T15:00:00+00:00" },
+      { "id": "00000000-0000-0000-0000-0000000000b2", "email": "member.two@example.org", "first_name": "Another", "last_name": "Member", "role": "member", "is_leader": true, "is_barista": false, "created_at": "2026-10-02T15:00:00+00:00" }
+    ] }
+  ]
+}
