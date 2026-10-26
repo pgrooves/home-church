@@ -1213,7 +1213,8 @@
 #app[data-navmenu="open"] .hc-scroll,
 #app[data-navmenu="open"] .hc-topbar,
 #app[data-navmenu="open"] .hc-pinbar,
-#app[data-navmenu="open"] .hc-date-rail {
+#app[data-navmenu="open"] .hc-date-rail,
+#app[data-navmenu="open"] .hc-narrate-dock {
   filter: blur(7px);
 }
 
@@ -1563,10 +1564,92 @@ a.hc-card:active { background: var(--hc-paper-sunk); }
   position: relative;
   padding-left: calc(20px + var(--hc-space-md));
   padding-right: calc(20px + var(--hc-space-md));
+  flex-wrap: wrap;
+  row-gap: 0;
 }
 
+/* --------------------------------------------------------------------------
+   A guide's headers hold on as you read
+
+   IN THE GUIDE READER ONLY. Scroll past a part's header and it stays under
+   the top bar until the next part pushes it off, so a long Sermon Summary
+   never leaves you wondering which part you are in. Sticky is bounded by its
+   own .hc-section, which is exactly "until the next one" with nothing in JS.
+   Other screens draw the same collapsible (serve teams on Connect, the Listen
+   archive) and are lists rather than documents, so they are left alone.
+
+   The bar reaches out to the screen's edges with a negative margin and puts
+   the same amount back as padding, so its background covers the gutters the
+   words scroll under. The same trick top and bottom gives the stuck bar room
+   to breathe without moving anything in the resting layout: the 12px it
+   borrows above sits in the section's own 24px of padding, and the 12px below
+   in the open panel's 16px.
+
+   WHILE A SECTION IS PLAYING, it is the only header that holds on, and it
+   holds on for the whole page rather than its own part: js/narration.js keeps
+   a copy of it, .hc-narrate-dock below, pinned in the same spot once the real
+   one has scrolled away. Every other part's header scrolls normally then,
+   because two headers stacked under the top bar would be a third of the
+   screen on a phone.
+   -------------------------------------------------------------------------- */
+
+.hc-reader .hc-section__bar {
+  position: sticky;
+  top: calc(var(--hc-header-h) + var(--hc-pin-h, 0px) + env(safe-area-inset-top));
+  z-index: 4;
+  background: var(--hc-paper);
+  margin: -12px calc(-1 * var(--hc-screen-pad));
+  padding-top: 12px;
+  padding-bottom: 12px;
+  padding-left: calc(var(--hc-screen-pad) + 20px + var(--hc-space-md));
+  padding-right: calc(var(--hc-screen-pad) + 20px + var(--hc-space-md));
+}
+
+.hc-reader .hc-section__chevron { left: var(--hc-screen-pad); top: 22px; }
+
+/* A hairline only while stuck, drawn by js/sticky-heads.js. At rest the
+   section's own top rule is the divider and a second line would double it. */
+.hc-reader .hc-section__bar[data-stuck="true"],
+.hc-narrate-dock {
+  box-shadow: 0 var(--hc-hairline) 0 var(--hc-rule);
+}
+
+.hc-reader[data-narrating] .hc-section:not([data-playing]) .hc-section__bar {
+  position: relative;
+  box-shadow: none;
+}
+
+/* The pinned copy of the playing section's header. Fixed under the top bar
+   (and the pinned strip when there is one), under both of them in the stack
+   and over the page. It is the same markup as the header it copies, so the
+   chevron, title, pause button and progress row all land in the same place
+   and the hand-off as the real one scrolls away is invisible. */
+.hc-narrate-dock {
+  position: fixed;
+  z-index: 38;
+  top: calc(var(--hc-header-h) + var(--hc-pin-h, 0px) + env(safe-area-inset-top));
+  left: 0; right: 0;
+  background: var(--hc-paper);
+}
+
+.hc-narrate-dock[hidden] { display: none; }
+
+.hc-narrate-dock__inner {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 12px var(--hc-screen-pad);
+}
+
+/* Turned the way an open part's chevron is: the copy has no aria-expanded to
+   turn it, and the part it copies is open, or it could not be playing. */
+.hc-narrate-dock .hc-section__chevron { left: 0; top: 10px; transform: rotate(180deg); }
+
 .hc-section__h {
-  flex: 1 1 auto;
+  /* A basis of 0 rather than auto, because the bar wraps (the progress row
+     joins it while a section plays, see .hc-section__playbar) and a long
+     title's natural width would otherwise push the play button onto a line
+     of its own. */
+  flex: 1 1 0;
   min-width: 0;
 }
 
@@ -1694,10 +1777,18 @@ a.hc-card:active { background: var(--hc-paper-sunk); }
    "Sermon Summary" onto two lines, and because the pill appears on play, the
    title reflowed under the thumb that pressed it. */
 .hc-section__playbar {
+  /* Inside .hc-section__bar, so it holds on with the header when the header
+     sticks. It takes a line of its own there and steps back out over the
+     chevron's and the rail's columns to keep the full width it had. The
+     basis counts those margins back in, or the row would fit beside the
+     title instead of under it. */
+  flex: 0 0 calc(100% + 2 * (20px + var(--hc-space-md)));
   display: flex;
   align-items: center;
   gap: var(--hc-space-md);
   margin-top: var(--hc-space-md);
+  margin-left: calc(-1 * (20px + var(--hc-space-md)));
+  margin-right: calc(-1 * (20px + var(--hc-space-md)));
 }
 
 .hc-narrate-speed {

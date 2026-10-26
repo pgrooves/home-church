@@ -134,17 +134,134 @@
     row.appendChild(track);
     row.appendChild(pill);
 
+    /* Inside the header row rather than after it, so that when the guide
+       reader holds the header at the top of the screen the progress and the
+       speed go with it. css/components.css gives it a line of its own. */
     var head = section.querySelector('.hc-section__bar');
-    if (head && head.parentNode) head.parentNode.insertBefore(row, head.nextSibling);
+    if (head) head.appendChild(row);
     return row;
   }
 
   function paint() {
     if (!playing || !audio || !audio.duration) return;
     var pct = Math.min(100, (audio.currentTime / audio.duration) * 100);
-    var fill = playing.bar &&
-      playing.bar.querySelector('.hc-section__progress > span');
-    if (fill) fill.style.width = pct + '%';
+    [playing.bar, playing.dock].forEach(function (host) {
+      var fill = host && host.querySelector('.hc-section__progress > span');
+      if (fill) fill.style.width = pct + '%';
+    });
+  }
+
+  /* ------------------------------------------------------------------- dock
+
+     THE PLAYING SECTION'S HEADER STAYS ON SCREEN FOR THE WHOLE PAGE. In the
+     guide reader every header sticks under the top bar, but only until its
+     own part ends, because that is all position: sticky can do. A section
+     that is talking needs more than that: you press play on the Overview and
+     keep reading into the Sermon Summary, and the pause button has to come
+     with you.
+
+     So while a section plays, this keeps a copy of its header, the dock,
+     fixed in the same spot the sticky one sits. The copy is shown only while
+     the real one is off screen, above (its part has ended) or below (you have
+     scrolled back up past it), so there is never two of it, and because it is
+     the same markup in the same place the hand-off cannot be seen.
+
+     Pressing play on another part replaces the dock with that part's header.
+     Tapping the dock's title scrolls back to the part that is playing. */
+
+  /* Where a stuck header's top edge sits, in viewport pixels: the scroller's
+     top plus the header's own `top`, which the browser has already resolved
+     from the top bar, the pinned strip and the notch. */
+  function stickyLine() {
+    var scroller = document.querySelector('.hc-scroll');
+    var base = scroller ? scroller.getBoundingClientRect().top : 0;
+    var top = playing && playing.head
+      ? parseFloat(window.getComputedStyle(playing.head).top) : 0;
+    return base + (isNaN(top) ? 0 : top);
+  }
+
+  function buildDock(head) {
+    var app = document.getElementById('app');
+    if (!app || !head) return null;
+
+    var dock = document.createElement('div');
+    dock.className = 'hc-narrate-dock';
+    dock.setAttribute('role', 'region');
+    dock.setAttribute('aria-label', 'Now playing');
+    dock.hidden = true;
+
+    var inner = document.createElement('div');
+    inner.className = 'hc-narrate-dock__inner';
+
+    var copy = head.cloneNode(true);
+    copy.removeAttribute('data-stuck');
+
+    // The title takes you back to the part, rather than folding it from
+    // somewhere it cannot be seen.
+    var toggle = copy.querySelector('.hc-section__toggle');
+    if (toggle) {
+      toggle.setAttribute('data-action', 'narrate-jump');
+      toggle.removeAttribute('aria-expanded');
+      toggle.removeAttribute('aria-controls');
+      toggle.removeAttribute('data-section-id');
+    }
+    // Headings belong to the page, not to a copy floating over it.
+    var h = copy.querySelector('.hc-section__h');
+    if (h) {
+      var plain = document.createElement('div');
+      plain.className = h.className;
+      while (h.firstChild) plain.appendChild(h.firstChild);
+      h.parentNode.replaceChild(plain, h);
+    }
+
+    var btn = copy.querySelector('.hc-narrate');
+    if (btn) {
+      btn.setAttribute('data-narrate-dock', '');
+      btn.removeAttribute('data-narrate-src');
+      btn.setAttribute('aria-pressed', 'true');
+      btn.removeAttribute('data-state');
+    }
+
+    inner.appendChild(copy);
+    dock.appendChild(inner);
+    app.appendChild(dock);
+    return dock;
+  }
+
+  var dockFrame = 0;
+
+  function placeDock() {
+    dockFrame = 0;
+    if (!playing || !playing.dock) return;
+    if (!document.contains(playing.btn)) { stop(); return; }
+
+    var line = stickyLine();
+    var r = playing.head.getBoundingClientRect();
+    var below = r.top > window.innerHeight - r.height;
+    var above = r.top < line - 0.5;
+    playing.dock.hidden = !(above || below);
+    if (playing.dock.hidden) return;
+
+    // The loading dim follows the real button.
+    var copy = playing.dock.querySelector('.hc-narrate');
+    if (copy) {
+      if (playing.btn.getAttribute('data-state')) copy.setAttribute('data-state', 'loading');
+      else copy.removeAttribute('data-state');
+    }
+  }
+
+  function onScroll() {
+    if (!dockFrame) dockFrame = window.requestAnimationFrame(placeDock);
+  }
+
+  function jump() {
+    if (!playing) return;
+    var scroller = document.querySelector('.hc-scroll');
+    var section = playing.btn.closest('.hc-section');
+    if (!scroller || !section) return;
+    var line = stickyLine();
+    var y = scroller.scrollTop + section.getBoundingClientRect().top - line;
+    scroller.scrollTo({ top: Math.max(0, y), behavior: 'smooth' });
   }
 
   /* ----------------------------------------------------------- play / stop */
@@ -158,11 +275,21 @@
       if (playing.bar && playing.bar.parentNode) {
         playing.bar.parentNode.removeChild(playing.bar);
       }
+      if (playing.dock && playing.dock.parentNode) {
+        playing.dock.parentNode.removeChild(playing.dock);
+      }
+      if (playing.section) playing.section.removeAttribute('data-playing');
+      if (playing.reader) playing.reader.removeAttribute('data-narrating');
+      document.removeEventListener('scroll', onScroll, true);
+      window.removeEventListener('resize', onScroll);
     }
     playing = null;
   }
 
   function toggle(btn) {
+    // The pause button on the dock is a copy, and pausing from it is pausing.
+    if (btn.hasAttribute('data-narrate-dock')) { stop(); return; }
+
     var src = btn.getAttribute('data-narrate-src');
     if (!src) return;
 
@@ -182,11 +309,25 @@
     a.currentTime = 0;
     applySpeed(a);
 
-    playing = { btn: btn, wrap: wrap, bar: playBar(section) };
+    playing = { btn: btn, wrap: wrap, bar: playBar(section), section: section };
     btn.setAttribute('aria-pressed', 'true');
     btn.setAttribute('data-state', 'loading');
     wrap.setAttribute('data-playing', 'true');
     paintSpeed();
+
+    // Only the guide reader holds headers at the top, so only it gets a dock.
+    var reader = section.closest('.hc-reader');
+    var head = section.querySelector('.hc-section__bar');
+    if (reader && head) {
+      section.setAttribute('data-playing', 'true');
+      reader.setAttribute('data-narrating', 'true');
+      playing.reader = reader;
+      playing.head = head;
+      playing.dock = buildDock(head);
+      document.addEventListener('scroll', onScroll, true);
+      window.addEventListener('resize', onScroll);
+      placeDock();
+    }
 
     a.play().then(function () {
       if (playing && playing.btn === btn) btn.removeAttribute('data-state');
@@ -237,6 +378,7 @@
     SPEEDS: SPEEDS,
     nowPlaying: nowPlaying,
     toggle: toggle,
+    jump: jump,
     cycle: cycle,
     stop: stop,
     speed: speed,

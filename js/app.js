@@ -3817,6 +3817,11 @@
       HC.narration.cycle();
     },
 
+    // The title on the pinned now-playing header, back to the part it names.
+    'narrate-jump': function () {
+      HC.narration.jump();
+    },
+
     /* HomeKids. Each one hands straight to the screen's own helpers, which
        know what to repaint; this table only routes the tap. See
        js/screens/homekids.js. */
