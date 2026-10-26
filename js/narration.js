@@ -116,10 +116,37 @@
     row = document.createElement('div');
     row.className = 'hc-section__playbar';
 
+    /* The line is a slider while it plays: drag the playhead, or tap
+       anywhere on the line, to move through the recording. The line itself
+       is 1.5px, so the slider around it is a full thumb tall and the line
+       sits in the middle of it. Scrubbing is handled once for the whole app
+       by delegation, further down, because the dock carries a copy of this
+       row and the copy has to work too. */
     var track = document.createElement('div');
-    track.className = 'hc-section__progress';
-    track.setAttribute('aria-hidden', 'true');
-    track.appendChild(document.createElement('span'));
+    track.className = 'hc-section__scrub';
+    track.setAttribute('role', 'slider');
+    track.setAttribute('tabindex', '0');
+    track.setAttribute('aria-label', 'Position in the recording');
+    track.setAttribute('aria-valuemin', '0');
+    track.setAttribute('aria-valuemax', '0');
+    track.setAttribute('aria-valuenow', '0');
+    track.setAttribute('data-no-swipe', '');
+
+    var line = document.createElement('div');
+    line.className = 'hc-section__progress';
+    line.appendChild(document.createElement('span'));
+
+    var head = document.createElement('span');
+    head.className = 'hc-section__playhead';
+    head.setAttribute('aria-hidden', 'true');
+
+    var tip = document.createElement('span');
+    tip.className = 'hc-section__scrubtime';
+    tip.setAttribute('aria-hidden', 'true');
+
+    track.appendChild(line);
+    track.appendChild(head);
+    track.appendChild(tip);
 
     var pill = document.createElement('button');
     pill.type = 'button';
@@ -137,19 +164,129 @@
     /* Inside the header row rather than after it, so that when the guide
        reader holds the header at the top of the screen the progress and the
        speed go with it. css/components.css gives it a line of its own. */
-    var head = section.querySelector('.hc-section__bar');
-    if (head) head.appendChild(row);
+    var bar = section.querySelector('.hc-section__bar');
+    if (bar) bar.appendChild(row);
     return row;
   }
 
   function paint() {
     if (!playing || !audio || !audio.duration) return;
-    var pct = Math.min(100, (audio.currentTime / audio.duration) * 100);
+    // While a thumb is on the playhead it is the thumb that says where it is.
+    if (scrub) return;
+    drawAt(audio.currentTime / audio.duration);
+  }
+
+  /* Puts the line, the playhead and the slider's numbers at a fraction of the
+     way through, in the header and in the dock alike. */
+  function drawAt(frac) {
+    if (!playing) return;
+    frac = Math.max(0, Math.min(1, frac));
+    var pct = frac * 100;
+    var total = audio && audio.duration ? audio.duration : 0;
+    var at = frac * total;
     [playing.bar, playing.dock].forEach(function (host) {
-      var fill = host && host.querySelector('.hc-section__progress > span');
+      if (!host) return;
+      var fill = host.querySelector('.hc-section__progress > span');
       if (fill) fill.style.width = pct + '%';
+      var head = host.querySelector('.hc-section__playhead');
+      if (head) head.style.left = pct + '%';
+      var tip = host.querySelector('.hc-section__scrubtime');
+      if (tip) { tip.style.left = pct + '%'; tip.textContent = clock(at); }
+      var slider = host.querySelector('.hc-section__scrub');
+      if (slider) {
+        slider.setAttribute('aria-valuemax', String(Math.round(total)));
+        slider.setAttribute('aria-valuenow', String(Math.round(at)));
+        slider.setAttribute('aria-valuetext', clock(at) + ' of ' + clock(total));
+      }
     });
   }
+
+  // 0:07, 3:41, 12:05. A guide section never runs to an hour.
+  function clock(sec) {
+    sec = Math.max(0, Math.floor(sec || 0));
+    var s = sec % 60;
+    return Math.floor(sec / 60) + ':' + (s < 10 ? '0' : '') + s;
+  }
+
+  /* ------------------------------------------------------------------ scrub
+
+     DRAG TO MOVE, LET GO TO LISTEN. The playhead follows the thumb and shows
+     the time it would land on, and the recording only jumps when the thumb
+     comes up. Seeking on every move asks a phone on one bar to fetch a new
+     piece of the mp3 sixty times a second, and what you hear is a stutter.
+
+     The page under the line has its own gestures: a sideways drag changes
+     tabs (js/swipe.js), a drag down at the top refreshes (js/pull.js), and
+     the right edge is the index (js/index-rail.js). All three listen on
+     .hc-scroll, so stopping the touch here, on its way up, keeps them out of
+     it, and touch-action: none in the CSS keeps the page from scrolling. */
+
+  var scrub = null;
+
+  function fracAt(slider, clientX) {
+    var r = slider.querySelector('.hc-section__progress').getBoundingClientRect();
+    return r.width ? (clientX - r.left) / r.width : 0;
+  }
+
+  function scrubStart(evt) {
+    var slider = evt.target.closest && evt.target.closest('.hc-section__scrub');
+    if (!slider || !playing || !audio || !audio.duration) return;
+    evt.stopPropagation();
+    evt.preventDefault();
+    try { slider.setPointerCapture(evt.pointerId); } catch (err) { /* old WebKit */ }
+    scrub = { slider: slider, id: evt.pointerId, frac: fracAt(slider, evt.clientX) };
+    [playing.bar, playing.dock].forEach(function (host) {
+      var s = host && host.querySelector('.hc-section__scrub');
+      if (s) s.setAttribute('data-scrubbing', 'true');
+    });
+    drawAt(scrub.frac);
+    HC.native.tap('Light');
+  }
+
+  function scrubMove(evt) {
+    if (!scrub || evt.pointerId !== scrub.id) return;
+    evt.preventDefault();
+    scrub.frac = fracAt(scrub.slider, evt.clientX);
+    drawAt(scrub.frac);
+  }
+
+  function scrubEnd(evt) {
+    if (!scrub || evt.pointerId !== scrub.id) return;
+    var frac = Math.max(0, Math.min(1, scrub.frac));
+    var cancelled = evt.type === 'pointercancel';
+    scrub = null;
+    document.querySelectorAll('.hc-section__scrub[data-scrubbing]').forEach(function (s) {
+      s.removeAttribute('data-scrubbing');
+    });
+    if (!cancelled && playing && audio && audio.duration) {
+      // Not quite the very end, or "ended" fires and the section stops.
+      audio.currentTime = Math.min(frac * audio.duration, audio.duration - 0.25);
+    }
+    paint();
+  }
+
+  function scrubKey(evt) {
+    var slider = evt.target.closest && evt.target.closest('.hc-section__scrub');
+    if (!slider || !playing || !audio || !audio.duration) return;
+    var step = { ArrowRight: 5, ArrowUp: 5, ArrowLeft: -5, ArrowDown: -5 }[evt.key];
+    if (!step) return;
+    evt.preventDefault();
+    audio.currentTime = Math.max(0, Math.min(audio.currentTime + step, audio.duration - 0.25));
+    paint();
+  }
+
+  // The touch, stopped before the page's own gestures hear it.
+  function shield(evt) {
+    if (evt.target.closest && evt.target.closest('.hc-section__scrub')) evt.stopPropagation();
+  }
+
+  document.addEventListener('pointerdown', scrubStart, true);
+  document.addEventListener('pointermove', scrubMove, true);
+  document.addEventListener('pointerup', scrubEnd, true);
+  document.addEventListener('pointercancel', scrubEnd, true);
+  document.addEventListener('keydown', scrubKey);
+  document.addEventListener('touchstart', shield, { capture: true, passive: true });
+  document.addEventListener('touchmove', shield, { capture: true, passive: true });
 
   /* ------------------------------------------------------------------- dock
 
@@ -268,6 +405,7 @@
 
   function stop() {
     if (audio) { audio.pause(); }
+    scrub = null;
     if (playing) {
       playing.btn.setAttribute('aria-pressed', 'false');
       playing.btn.removeAttribute('data-state');
