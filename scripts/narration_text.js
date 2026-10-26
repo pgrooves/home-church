@@ -162,6 +162,57 @@ function sectionText(guide, id) {
   }
 }
 
+/* Which block of the reader each paragraph of the spoken text came from, in
+   the order sectionText() speaks them, so a tap on a paragraph in the app can
+   find where that paragraph starts in the recording.
+
+   The names are the reader's own data-narrate-at values (js/screens/guide.js),
+   which for prose are the same addresses the highlighter already uses. "head"
+   is the section's spoken name and "anchorsHead" is "Where it went."; nothing
+   on screen taps to those, but they hold a place in the count.
+
+   An empty item would leave a run of blank lines that normalize() collapses,
+   so it is left out here too. The count is checked against the text anyway,
+   in build(): a section whose paragraphs do not line up gets no names, and
+   the app falls back to an estimate rather than jumping to the wrong place. */
+function paragraphKeys(guide, id) {
+  const keys = ['head'];
+  const add = (items, name) => (items || []).forEach((t, i) => {
+    if (String(t == null ? '' : t).trim()) keys.push(name(i));
+  });
+
+  switch (id) {
+    case 'short-summary':
+      add(guide.shortSummary, (i) => 'shortSummary.' + i);
+      break;
+    case 'full-summary':
+      add(guide.fullSummary, (i) => 'fullSummary.' + i);
+      if ((guide.anchors || []).length) {
+        keys.push('anchorsHead');
+        (guide.anchors || []).forEach((a, i) => keys.push('anchors.' + i + '.body'));
+      }
+      break;
+    case 'group':
+      (guide.groupSections || []).forEach((s, si) => {
+        keys.push('groupSections.' + si + '.heading');
+        add(s.questions, (qi) => 'groupSections.' + si + '.questions.' + qi);
+      });
+      break;
+    case 'reflection':
+      add(guide.reflectionQuestions, (i) => 'reflectionQuestions.' + i);
+      break;
+    case 'oneliners':
+      add(guide.oneLiners, (i) => 'oneLiners.' + i);
+      break;
+    case 'scripture':
+      add(guide.scriptures, (i) => 'scriptures.' + i);
+      break;
+    default:
+      return [];
+  }
+  return keys;
+}
+
 /* The hash covers the spoken text, after normalisation, not the row. Two
    edits that produce the same words, a trailing space removed, an ampersand
    spelled out by hand, should not force a regeneration; an edit that changes
@@ -187,7 +238,13 @@ function build(guide, title) {
     const raw = sectionText(guide, id);
     const text = normalize(raw);
     if (!isSpeakable(text)) return;
-    sections.push({ id: id, text: text, hash: hash(text), words: text.split(/\s+/).length });
+    // Names only when they line up one for one; see paragraphKeys().
+    const keys = paragraphKeys(guide, id);
+    const lined = keys.length === text.split('\n\n').length;
+    sections.push({
+      id: id, text: text, hash: hash(text), words: text.split(/\s+/).length,
+      keys: lined ? keys : null
+    });
   });
   return { guideId: guide.id, title: title || guide.id, sections: sections };
 }
@@ -333,7 +390,7 @@ async function main() {
   }
 }
 
-module.exports = { SECTIONS, BOOKS, normalize, sectionText, hash, isSpeakable, build, configured };
+module.exports = { SECTIONS, BOOKS, normalize, sectionText, paragraphKeys, hash, isSpeakable, build, configured };
 
 if (require.main === module) {
   main().catch((e) => { console.error(e); process.exit(1); });

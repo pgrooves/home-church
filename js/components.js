@@ -1411,7 +1411,7 @@
      in the markup can tell them apart. So the call site says.
 
      opts.audio, when given, hangs a play button off the right of the header.
-     It is {src, seconds, label} and it is only ever passed by the guide
+     It is {src, seconds, label, marks} and it is only ever passed by the guide
      reader. THE HEADER IS A ROW NOW, NOT A BUTTON, and that is the whole
      reason this markup changed: the toggle is a full width <button>, and a
      second button cannot live inside it. So the toggle and the audio controls
@@ -1443,6 +1443,7 @@
           '<button type="button" class="hc-narrate" data-action="narrate" ' +
             'data-narrate-key="' + esc(opts.id) + '" ' +
             'data-narrate-src="' + esc(audio.src) + '" ' +
+            (audio.marks ? 'data-narrate-marks="' + esc(JSON.stringify(audio.marks)) + '" ' : '') +
             'aria-pressed="false" ' +
             'aria-label="Listen to ' + esc(audio.label || opts.title) + '">' +
             icon('play', 'hc-narrate__glyph hc-narrate__glyph--play') +

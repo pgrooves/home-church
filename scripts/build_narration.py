@@ -94,8 +94,16 @@ def ffmpeg_exe():
 
 def sentences(text, limit=CHUNK_CHARS):
     """Sentence groups under the model's token ceiling."""
+    return [part for part, _ in sentence_groups(text, limit)]
+
+
+def sentence_groups(text, limit=CHUNK_CHARS):
+    """The same groups, each with the paragraph it came from. A group never
+    runs across a paragraph, which is what lets a paragraph's start be marked
+    in the recording. scripts/narration_marks.py repeats this; keep them in
+    step."""
     parts, buf = [], ""
-    for line in text.split("\n\n"):
+    for pi, line in enumerate(text.split("\n\n")):
         for s in re.split(r"(?<=[.!?])\s+", line.strip()):
             if not s:
                 continue
@@ -103,13 +111,11 @@ def sentences(text, limit=CHUNK_CHARS):
                 buf = (buf + " " + s).strip()
             else:
                 if buf:
-                    parts.append(buf)
+                    parts.append((buf, pi))
                 buf = s
         if buf:
-            parts.append(buf)
+            parts.append((buf, pi))
             buf = ""
-    if buf:
-        parts.append(buf)
     return parts
 
 
@@ -235,13 +241,21 @@ def main():
                 continue
 
             t0 = time.time()
-            chunks, rate = [], 24000
-            for part in sentences(text):
+            # Where each paragraph starts, for the tap-to-jump in the reader.
+            # Keyed by the reader's block names from narration_text.js, and
+            # only when it sent them, which it does when they line up.
+            chunks, rate, at, starts = [], 24000, 0, {}
+            for part, pi in sentence_groups(text):
                 samples, rate = kokoro.create(
                     part, voice=args.voice, speed=SPEED, lang="en-us")
+                starts.setdefault(pi, at)
                 chunks.append(samples)
                 chunks.append(np.zeros(int(rate * GAP_SECONDS), dtype=samples.dtype))
+                at += len(samples) + int(rate * GAP_SECONDS)
             audio = np.concatenate(chunks)
+            keys = section.get("keys") or []
+            marks = {keys[pi]: round(n / rate, 2)
+                     for pi, n in starts.items() if pi < len(keys)}
 
             wav = mp3 + ".wav"
             sf.write(wav, audio, rate)
@@ -260,6 +274,8 @@ def main():
                 "voice": args.voice,
                 "hash": digest,
             }
+            if marks:
+                manifest[gid][sid]["marks"] = marks
             audio_seconds += secs
             total_bytes += size
             made += 1

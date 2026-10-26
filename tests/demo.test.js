@@ -88,6 +88,16 @@ ok('overlay honours key=in',
   demo._overlayRows([], sample.overlay.app_settings, '/rest/v1/app_settings?key=in.(cafe_open_override,cafe_tax_percent)'),
   [{ key: 'cafe_open_override', value_text: 'open 2026-10-25' }]);
 
+// Any other table matches on id, and only ever changes a row that came back:
+// a guide made of the sample's one column would be a broken guide.
+const guideRows = [{ id: 'g1', narration: { a: 1 } }, { id: 'g9', narration: { b: 2 } }];
+ok('an id overlay lays over the live row it names',
+  demo._overlayRows([{ id: 'g1', title: 'One', narration: {} }, { id: 'g2', title: 'Two' }],
+    guideRows, '/rest/v1/guides?select=*'),
+  [{ id: 'g1', title: 'One', narration: { a: 1 } }, { id: 'g2', title: 'Two' }]);
+ok('and adds nothing the live project did not send',
+  demo._overlayRows([], guideRows, '/rest/v1/guides?select=*'), []);
+
 const index = read('index.html');
 const at = s => index.indexOf('src="' + s);
 ok('demo.js loads before everything else', at('js/demo.js') !== -1 && at('js/demo.js') < at('js/data.js') && at('js/demo.js') < at('js/store.js'), true);

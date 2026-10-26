@@ -1891,7 +1891,23 @@ a.hc-card:active { background: var(--hc-paper-sunk); }
   transition: width 250ms linear;
 }
 
+/* Tap to jump: the block you tapped warms for a moment, so the jump in the
+   recording has a cause you can see. js/narration.js sets and clears it. */
+[data-narrate-jump="true"] {
+  animation: hc-narrate-jump 900ms var(--hc-ease);
+  border-radius: var(--hc-radius-sm);
+}
+
+/* The spread is the same colour as the fill, so the glow reaches a little
+   past the words rather than ending flush with them. */
+@keyframes hc-narrate-jump {
+  0%   { background-color: transparent; box-shadow: 0 0 0 8px transparent; }
+  20%  { background-color: var(--hc-paper-sunk); box-shadow: 0 0 0 8px var(--hc-paper-sunk); }
+  100% { background-color: transparent; box-shadow: 0 0 0 8px transparent; }
+}
+
 @media (prefers-reduced-motion: reduce) {
+  [data-narrate-jump="true"] { animation: none; }
   .hc-narrate { transition: none; }
   .hc-section__progress > span { transition: none; }
   .hc-section__playhead { transition: none; }

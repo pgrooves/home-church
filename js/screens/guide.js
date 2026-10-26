@@ -23,9 +23,20 @@
   function prose(guide, path, text, tag, className) {
     tag = tag || 'p';
     return '<' + tag + ' class="hc-hl-src' + (className ? ' ' + className : '') + '" ' +
-      'data-hl-path="' + c.esc(path) + '">' +
+      'data-hl-path="' + c.esc(path) + '" data-narrate-at="' + c.esc(path) + '">' +
       HC.journal.marked(guide.id, path, text) +
       '</' + tag + '>';
+  }
+
+  /* Names a block for tap-to-jump in js/narration.js: while its section is
+     playing, a tap on it moves the recording to where it is spoken. The name
+     is the one scripts/narration_text.js gives the same paragraph, which is
+     how a recording's marks find it. Put on the block's own outer element
+     rather than a wrapper, because the lists in here are styled by
+     :last-child and a wrapper would cost every row its rule. Prose gets it
+     from prose() above, where it is the highlighter's path as well. */
+  function narrateAt(html, key) {
+    return html.replace(/^<([a-z0-9]+)/i, '<$1 data-narrate-at="' + c.esc(key) + '"');
   }
 
   /* The recording for one section, or nothing. Nothing is the normal answer:
@@ -158,10 +169,10 @@
       body += '<div class="hc-anchors">';
       body += '<p class="hc-eyebrow hc-eyebrow--legible hc-anchors__label">Where it went</p>';
       guide.anchors.forEach(function (a, i) {
-        body += c.numberedRow(i + 1,
+        body += narrateAt(c.numberedRow(i + 1,
           '<p class="hc-anchors__title">' + c.esc(a.label) + '</p>' +
           prose(guide, 'anchors.' + i + '.body', a.body, 'p', 'hc-body-serif hc-anchors__body')
-        );
+        ), 'anchors.' + i + '.body');
       });
       body += '</div>';
     }
@@ -188,10 +199,12 @@
 
     guide.groupSections.forEach(function (section, si) {
       body += '<div class="hc-qgroup">';
-      body += '<p class="hc-eyebrow hc-eyebrow--legible hc-qgroup__label">' + c.esc(section.heading) + '</p>';
+      body += '<p class="hc-eyebrow hc-eyebrow--legible hc-qgroup__label" ' +
+        'data-narrate-at="groupSections.' + si + '.heading">' + c.esc(section.heading) + '</p>';
       section.questions.forEach(function (q, qi) {
         var key = si + '-' + qi;
-        body += c.checkRow(key, q, HC.store.isChecked(guide.id, key));
+        body += narrateAt(c.checkRow(key, q, HC.store.isChecked(guide.id, key)),
+          'groupSections.' + si + '.questions.' + qi);
       });
       body += '</div>';
     });
@@ -247,7 +260,7 @@
 
     guide.reflectionQuestions.forEach(function (q, i) {
       var saved = HC.journal.getReflection(guide.id, String(i));
-      body += c.numberedRow(i + 1,
+      body += narrateAt(c.numberedRow(i + 1,
         '<p class="hc-question">' + c.esc(q) + '</p>' +
         '<div class="hc-journal">' +
           '<label class="hc-visually-hidden" for="journal-' + i + '">Your notes on question ' + (i + 1) + '</label>' +
@@ -257,7 +270,7 @@
           '</textarea>' +
           '<p class="hc-journal__status" data-journal-status="' + i + '" aria-live="polite"></p>' +
         '</div>'
-      );
+      ), 'reflectionQuestions.' + i);
     });
 
     return c.collapsible({
@@ -275,10 +288,10 @@
     var title = meta.title;
     guide.oneLiners.forEach(function (line, i) {
       var path = 'oneLiners.' + i;
-      body += c.quoteCard(line, meta.preacherShort + ', ' + title, {
+      body += narrateAt(c.quoteCard(line, meta.preacherShort + ', ' + title, {
         text: '“' + line + '”\n\n' + meta.preacherShort + ', ' + title + ', Home Church',
         title: title
-      }, { path: path, html: HC.journal.marked(guide.id, path, line) });
+      }, { path: path, html: HC.journal.marked(guide.id, path, line) }), path);
     });
     return c.collapsible({
       id: 'oneliners',
@@ -291,7 +304,9 @@
 
   function scriptureSection(guide) {
     var body = '<div class="hc-scripture-list">';
-    guide.scriptures.forEach(function (s, i) { body += c.scriptureRow(s, i); });
+    guide.scriptures.forEach(function (s, i) {
+      body += narrateAt(c.scriptureRow(s, i), 'scriptures.' + i);
+    });
     body += '</div>';
     return c.collapsible({
       id: 'scripture',

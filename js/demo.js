@@ -143,14 +143,20 @@
     return null;
   }
 
+  /* Rows match on `key` (app_settings) or, when a sample row has no key, on
+     `id`, which is every other table: a guide's narration, say. A row matched
+     on id only ever changes a row the live project sent. It is never added,
+     because a sample row is a few columns, and a guide made of a few columns
+     is a broken guide rather than a new one. */
   function overlayRows(live, rows, path) {
     var asked = keysAskedFor(path);
     var out = (Array.isArray(live) ? live : []).slice();
     rows.forEach(function (row) {
-      if (asked && asked.indexOf(row.key) === -1) return;
+      var by = row && 'key' in row ? 'key' : 'id';
+      if (by === 'key' && asked && asked.indexOf(row.key) === -1) return;
       var at = -1;
-      out.forEach(function (r, i) { if (r && r.key === row.key) at = i; });
-      if (at === -1) out.push(row);
+      out.forEach(function (r, i) { if (r && r[by] === row[by]) at = i; });
+      if (at === -1) { if (by === 'key') out.push(row); }
       else out[at] = Object.assign({}, out[at], row);
     });
     return out;

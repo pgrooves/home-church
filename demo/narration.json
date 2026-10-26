@@ -1,0 +1,1174 @@
+{
+ "title": "Tap to jump",
+ "signedIn": {
+  "id": "00000000-0000-0000-0000-00000000de30",
+  "email": "demo@example.org"
+ },
+ "routes": [
+  {
+   "match": "/rest/v1/profiles",
+   "body": [
+    {
+     "id": "00000000-0000-0000-0000-00000000de30",
+     "first_name": "Trey",
+     "role": "member",
+     "can_host": false,
+     "can_run_cafe": false
+    }
+   ]
+  }
+ ],
+ "overlay": {
+  "guides": [
+   {
+    "id": "guide-boats-tarshish",
+    "narration": {
+     "group": {
+      "hash": "a53fe3e58542109a",
+      "path": "guide-boats-tarshish/af_heart/group.mp3",
+      "bytes": 1320140,
+      "voice": "af_heart",
+      "seconds": 219.9,
+      "marks": {
+       "groupSections.0.heading": 1.68,
+       "groupSections.0.questions.0": 3.18,
+       "groupSections.0.questions.1": 13.96,
+       "groupSections.1.heading": 23.35,
+       "groupSections.1.questions.0": 24.49,
+       "groupSections.1.questions.1": 36.17,
+       "groupSections.1.questions.2": 50.54,
+       "groupSections.2.heading": 60.94,
+       "groupSections.2.questions.0": 62.23,
+       "groupSections.2.questions.1": 74.6,
+       "groupSections.2.questions.2": 87.8,
+       "groupSections.3.heading": 98.66,
+       "groupSections.3.questions.0": 100.19,
+       "groupSections.3.questions.1": 112.46,
+       "groupSections.3.questions.2": 121.65,
+       "groupSections.4.heading": 135.71,
+       "groupSections.4.questions.0": 137.49,
+       "groupSections.4.questions.1": 151.92,
+       "groupSections.5.heading": 164.03,
+       "groupSections.5.questions.0": 165.4,
+       "groupSections.5.questions.1": 179.6,
+       "groupSections.5.questions.2": 188.86,
+       "groupSections.6.heading": 202.91,
+       "groupSections.6.questions.0": 204.14,
+       "groupSections.6.questions.1": 214.3,
+       "head": 0.0
+      }
+     },
+     "oneliners": {
+      "hash": "3c8d32c261c30cc1",
+      "path": "guide-boats-tarshish/af_heart/oneliners.mp3",
+      "bytes": 507836,
+      "voice": "af_heart",
+      "seconds": 84.5,
+      "marks": {
+       "head": 0.0,
+       "oneLiners.0": 1.76,
+       "oneLiners.1": 7.42,
+       "oneLiners.10": 52.75,
+       "oneLiners.11": 60.31,
+       "oneLiners.12": 66.99,
+       "oneLiners.13": 73.55,
+       "oneLiners.14": 78.72,
+       "oneLiners.2": 10.31,
+       "oneLiners.3": 13.88,
+       "oneLiners.4": 21.76,
+       "oneLiners.5": 25.78,
+       "oneLiners.6": 31.81,
+       "oneLiners.7": 35.85,
+       "oneLiners.8": 38.5,
+       "oneLiners.9": 46.64
+      }
+     },
+     "scripture": {
+      "hash": "7c677feb2eebeb9a",
+      "path": "guide-boats-tarshish/af_heart/scripture.mp3",
+      "bytes": 1064108,
+      "voice": "af_heart",
+      "seconds": 177.2,
+      "marks": {
+       "head": 0.0,
+       "scriptures.0": 1.44,
+       "scriptures.1": 18.54,
+       "scriptures.2": 37.28,
+       "scriptures.3": 56.42,
+       "scriptures.4": 76.23,
+       "scriptures.5": 96.35,
+       "scriptures.6": 108.14,
+       "scriptures.7": 126.58,
+       "scriptures.8": 147.26,
+       "scriptures.9": 160.43
+      }
+     },
+     "reflection": {
+      "hash": "4e28cf392d4d0c3a",
+      "path": "guide-boats-tarshish/af_heart/reflection.mp3",
+      "bytes": 522524,
+      "voice": "af_heart",
+      "seconds": 87,
+      "marks": {
+       "head": 0.0,
+       "reflectionQuestions.0": 1.84,
+       "reflectionQuestions.1": 10.98,
+       "reflectionQuestions.2": 18.72,
+       "reflectionQuestions.3": 29.6,
+       "reflectionQuestions.4": 42.48,
+       "reflectionQuestions.5": 55.05,
+       "reflectionQuestions.6": 65.28,
+       "reflectionQuestions.7": 75.25
+      }
+     },
+     "full-summary": {
+      "hash": "2bec36cdfd8a1476",
+      "path": "guide-boats-tarshish/af_heart/full-summary.mp3",
+      "bytes": 5906108,
+      "voice": "af_heart",
+      "seconds": 984.3,
+      "marks": {
+       "anchors.0.body": 868.97,
+       "anchors.1.body": 898.45,
+       "anchors.2.body": 924.96,
+       "anchors.3.body": 953.7,
+       "anchorsHead": 867.7,
+       "fullSummary.0": 1.42,
+       "fullSummary.1": 55.82,
+       "fullSummary.2": 135.97,
+       "fullSummary.3": 231.55,
+       "fullSummary.4": 293.51,
+       "fullSummary.5": 360.78,
+       "fullSummary.6": 461.63,
+       "fullSummary.7": 542.06,
+       "fullSummary.8": 685.14,
+       "fullSummary.9": 777.46,
+       "head": 0.0
+      }
+     },
+     "short-summary": {
+      "hash": "2b9858e937203b62",
+      "path": "guide-boats-tarshish/af_heart/short-summary.mp3",
+      "bytes": 686972,
+      "voice": "af_heart",
+      "seconds": 114.4,
+      "marks": {
+       "head": 0.0,
+       "shortSummary.0": 1.14,
+       "shortSummary.1": 38.71,
+       "shortSummary.2": 76.12
+      }
+     }
+    }
+   },
+   {
+    "id": "guide-dream-again",
+    "narration": {
+     "group": {
+      "hash": "9f9bbc7f128005cd",
+      "path": "guide-dream-again/af_heart/group.mp3",
+      "bytes": 822188,
+      "voice": "af_heart",
+      "seconds": 136.9,
+      "marks": {
+       "groupSections.0.heading": 1.68,
+       "groupSections.0.questions.0": 3.18,
+       "groupSections.0.questions.1": 12.1,
+       "groupSections.1.heading": 21.62,
+       "groupSections.1.questions.0": 23.3,
+       "groupSections.1.questions.1": 32.99,
+       "groupSections.1.questions.2": 44.35,
+       "groupSections.2.heading": 52.42,
+       "groupSections.2.questions.0": 54.69,
+       "groupSections.2.questions.1": 64.09,
+       "groupSections.3.heading": 74.59,
+       "groupSections.3.questions.0": 76.97,
+       "groupSections.3.questions.1": 87.13,
+       "groupSections.3.questions.2": 95.14,
+       "groupSections.4.heading": 102.06,
+       "groupSections.4.questions.0": 103.71,
+       "groupSections.4.questions.1": 113.85,
+       "groupSections.5.heading": 122.65,
+       "groupSections.5.questions.0": 123.88,
+       "groupSections.5.questions.1": 132.27,
+       "head": 0.0
+      }
+     },
+     "oneliners": {
+      "hash": "929fcd18aa8b24d8",
+      "path": "guide-dream-again/af_heart/oneliners.mp3",
+      "bytes": 448076,
+      "voice": "af_heart",
+      "seconds": 74.6,
+      "marks": {
+       "head": 0.0,
+       "oneLiners.0": 1.76,
+       "oneLiners.1": 3.59,
+       "oneLiners.10": 40.52,
+       "oneLiners.11": 46.57,
+       "oneLiners.12": 50.48,
+       "oneLiners.13": 55.61,
+       "oneLiners.14": 59.4,
+       "oneLiners.15": 64.59,
+       "oneLiners.16": 66.67,
+       "oneLiners.17": 69.3,
+       "oneLiners.18": 72.7,
+       "oneLiners.2": 5.68,
+       "oneLiners.3": 8.59,
+       "oneLiners.4": 11.24,
+       "oneLiners.5": 15.99,
+       "oneLiners.6": 22.14,
+       "oneLiners.7": 26.2,
+       "oneLiners.8": 31.65,
+       "oneLiners.9": 36.06
+      }
+     },
+     "scripture": {
+      "hash": "be87454b7837bc19",
+      "path": "guide-dream-again/af_heart/scripture.mp3",
+      "bytes": 579836,
+      "voice": "af_heart",
+      "seconds": 96.5,
+      "marks": {
+       "head": 0.0,
+       "scriptures.0": 1.44,
+       "scriptures.1": 15.94,
+       "scriptures.2": 26.5,
+       "scriptures.3": 38.65,
+       "scriptures.4": 54.17,
+       "scriptures.5": 65.5,
+       "scriptures.6": 76.63,
+       "scriptures.7": 86.64
+      }
+     },
+     "reflection": {
+      "hash": "a67d1afb74c5efa2",
+      "path": "guide-dream-again/af_heart/reflection.mp3",
+      "bytes": 456428,
+      "voice": "af_heart",
+      "seconds": 76,
+      "marks": {
+       "head": 0.0,
+       "reflectionQuestions.0": 1.85,
+       "reflectionQuestions.1": 11.97,
+       "reflectionQuestions.2": 21.53,
+       "reflectionQuestions.3": 31.91,
+       "reflectionQuestions.4": 38.7,
+       "reflectionQuestions.5": 48.97,
+       "reflectionQuestions.6": 57.53,
+       "reflectionQuestions.7": 66.52
+      }
+     },
+     "full-summary": {
+      "hash": "9901391485ad27ef",
+      "path": "guide-dream-again/af_heart/full-summary.mp3",
+      "bytes": 1798796,
+      "voice": "af_heart",
+      "seconds": 299.7,
+      "marks": {
+       "anchors.0.body": 219.36,
+       "anchors.1.body": 245.92,
+       "anchors.2.body": 273.69,
+       "anchorsHead": 218.09,
+       "fullSummary.0": 1.42,
+       "fullSummary.1": 30.51,
+       "fullSummary.2": 50.3,
+       "fullSummary.3": 77.31,
+       "fullSummary.4": 99.99,
+       "fullSummary.5": 123.92,
+       "fullSummary.6": 150.82,
+       "fullSummary.7": 172.65,
+       "fullSummary.8": 194.01,
+       "head": 0.0
+      }
+     },
+     "short-summary": {
+      "hash": "46458fbfa9667d37",
+      "path": "guide-dream-again/af_heart/short-summary.mp3",
+      "bytes": 557948,
+      "voice": "af_heart",
+      "seconds": 92.9,
+      "marks": {
+       "head": 0.0,
+       "shortSummary.0": 1.14,
+       "shortSummary.1": 28.89,
+       "shortSummary.2": 63.92
+      }
+     }
+    }
+   },
+   {
+    "id": "guide-grace-extended",
+    "narration": {
+     "group": {
+      "hash": "d3fd489803f68eac",
+      "path": "guide-grace-extended/af_heart/group.mp3",
+      "bytes": 882524,
+      "voice": "af_heart",
+      "seconds": 147,
+      "marks": {
+       "groupSections.0.heading": 1.68,
+       "groupSections.0.questions.0": 3.18,
+       "groupSections.0.questions.1": 8.95,
+       "groupSections.1.heading": 19.24,
+       "groupSections.1.questions.0": 20.72,
+       "groupSections.1.questions.1": 31.43,
+       "groupSections.1.questions.2": 39.14,
+       "groupSections.2.heading": 52.12,
+       "groupSections.2.questions.0": 53.63,
+       "groupSections.2.questions.1": 63.3,
+       "groupSections.3.heading": 71.97,
+       "groupSections.3.questions.0": 73.56,
+       "groupSections.3.questions.1": 83.42,
+       "groupSections.3.questions.2": 94.84,
+       "groupSections.4.heading": 102.21,
+       "groupSections.4.questions.0": 103.52,
+       "groupSections.4.questions.1": 113.24,
+       "groupSections.5.heading": 124.4,
+       "groupSections.5.questions.0": 125.63,
+       "groupSections.5.questions.1": 137.99,
+       "head": 0.0
+      }
+     },
+     "oneliners": {
+      "hash": "1020bbace9534b8b",
+      "path": "guide-grace-extended/af_heart/oneliners.mp3",
+      "bytes": 387740,
+      "voice": "af_heart",
+      "seconds": 64.5,
+      "marks": {
+       "head": 0.0,
+       "oneLiners.0": 1.76,
+       "oneLiners.1": 3.96,
+       "oneLiners.10": 32.91,
+       "oneLiners.11": 37.67,
+       "oneLiners.12": 40.48,
+       "oneLiners.13": 43.51,
+       "oneLiners.14": 46.1,
+       "oneLiners.15": 49.14,
+       "oneLiners.16": 53.1,
+       "oneLiners.17": 56.8,
+       "oneLiners.18": 60.6,
+       "oneLiners.2": 5.74,
+       "oneLiners.3": 9.81,
+       "oneLiners.4": 12.76,
+       "oneLiners.5": 16.25,
+       "oneLiners.6": 19.75,
+       "oneLiners.7": 23.71,
+       "oneLiners.8": 26.6,
+       "oneLiners.9": 28.74
+      }
+     },
+     "scripture": {
+      "hash": "72159464d60ad61b",
+      "path": "guide-grace-extended/af_heart/scripture.mp3",
+      "bytes": 850124,
+      "voice": "af_heart",
+      "seconds": 141.6,
+      "marks": {
+       "head": 0.0,
+       "scriptures.0": 1.44,
+       "scriptures.1": 13.03,
+       "scriptures.10": 108.02,
+       "scriptures.11": 118.14,
+       "scriptures.12": 128.26,
+       "scriptures.2": 27.89,
+       "scriptures.3": 37.37,
+       "scriptures.4": 49.71,
+       "scriptures.5": 60.88,
+       "scriptures.6": 71.25,
+       "scriptures.7": 79.6,
+       "scriptures.8": 88.45,
+       "scriptures.9": 98.14
+      }
+     },
+     "reflection": {
+      "hash": "d75b1829ffd2adb3",
+      "path": "guide-grace-extended/af_heart/reflection.mp3",
+      "bytes": 427772,
+      "voice": "af_heart",
+      "seconds": 71.2,
+      "marks": {
+       "head": 0.0,
+       "reflectionQuestions.0": 1.84,
+       "reflectionQuestions.1": 11.54,
+       "reflectionQuestions.2": 21.13,
+       "reflectionQuestions.3": 31.03,
+       "reflectionQuestions.4": 38.3,
+       "reflectionQuestions.5": 45.13,
+       "reflectionQuestions.6": 55.0,
+       "reflectionQuestions.7": 61.89
+      }
+     },
+     "full-summary": {
+      "hash": "36ca74c583d6a528",
+      "path": "guide-grace-extended/af_heart/full-summary.mp3",
+      "bytes": 1951292,
+      "voice": "af_heart",
+      "seconds": 325.1,
+      "marks": {
+       "anchors.0.body": 238.41,
+       "anchors.1.body": 270.47,
+       "anchors.2.body": 298.62,
+       "anchorsHead": 237.14,
+       "fullSummary.0": 1.44,
+       "fullSummary.1": 30.07,
+       "fullSummary.2": 55.11,
+       "fullSummary.3": 84.63,
+       "fullSummary.4": 111.33,
+       "fullSummary.5": 127.22,
+       "fullSummary.6": 156.5,
+       "fullSummary.7": 181.93,
+       "fullSummary.8": 202.31,
+       "head": 0.0
+      }
+     },
+     "short-summary": {
+      "hash": "6b940b3902d2ebb0",
+      "path": "guide-grace-extended/af_heart/short-summary.mp3",
+      "bytes": 501068,
+      "voice": "af_heart",
+      "seconds": 83.4,
+      "marks": {
+       "head": 0.0,
+       "shortSummary.0": 1.14,
+       "shortSummary.1": 24.1,
+       "shortSummary.2": 61.99
+      }
+     }
+    }
+   },
+   {
+    "id": "guide-occult",
+    "narration": {
+     "group": {
+      "hash": "b26bc33416fd341d",
+      "path": "guide-occult/af_heart/group.mp3",
+      "bytes": 1061948,
+      "voice": "af_heart",
+      "seconds": 176.9,
+      "marks": {
+       "groupSections.0.heading": 1.68,
+       "groupSections.0.questions.0": 3.18,
+       "groupSections.0.questions.1": 15.58,
+       "groupSections.1.heading": 26.21,
+       "groupSections.1.questions.0": 27.76,
+       "groupSections.1.questions.1": 40.98,
+       "groupSections.1.questions.2": 53.33,
+       "groupSections.2.heading": 64.2,
+       "groupSections.2.questions.0": 65.62,
+       "groupSections.2.questions.1": 77.21,
+       "groupSections.2.questions.2": 91.98,
+       "groupSections.3.heading": 102.63,
+       "groupSections.3.questions.0": 104.24,
+       "groupSections.3.questions.1": 114.86,
+       "groupSections.4.heading": 125.21,
+       "groupSections.4.questions.0": 127.12,
+       "groupSections.4.questions.1": 139.88,
+       "groupSections.5.heading": 150.9,
+       "groupSections.5.questions.0": 152.12,
+       "groupSections.5.questions.1": 160.92,
+       "head": 0.0
+      }
+     },
+     "oneliners": {
+      "hash": "c4836901e92f70e2",
+      "path": "guide-occult/af_heart/oneliners.mp3",
+      "bytes": 446204,
+      "voice": "af_heart",
+      "seconds": 74.3,
+      "marks": {
+       "head": 0.0,
+       "oneLiners.0": 1.76,
+       "oneLiners.1": 5.5,
+       "oneLiners.10": 42.04,
+       "oneLiners.11": 45.44,
+       "oneLiners.12": 47.86,
+       "oneLiners.13": 51.47,
+       "oneLiners.14": 53.51,
+       "oneLiners.15": 56.93,
+       "oneLiners.16": 59.86,
+       "oneLiners.17": 64.86,
+       "oneLiners.18": 68.58,
+       "oneLiners.19": 70.06,
+       "oneLiners.2": 8.54,
+       "oneLiners.3": 13.67,
+       "oneLiners.4": 19.67,
+       "oneLiners.5": 24.29,
+       "oneLiners.6": 26.64,
+       "oneLiners.7": 31.37,
+       "oneLiners.8": 33.06,
+       "oneLiners.9": 37.87
+      }
+     },
+     "scripture": {
+      "hash": "a3c7229c29f22cf4",
+      "path": "guide-occult/af_heart/scripture.mp3",
+      "bytes": 1571708,
+      "voice": "af_heart",
+      "seconds": 261.9,
+      "marks": {
+       "head": 0.0,
+       "scriptures.0": 1.44,
+       "scriptures.1": 21.97,
+       "scriptures.10": 123.87,
+       "scriptures.11": 137.88,
+       "scriptures.12": 147.19,
+       "scriptures.13": 157.11,
+       "scriptures.14": 164.16,
+       "scriptures.15": 171.79,
+       "scriptures.16": 183.43,
+       "scriptures.17": 195.08,
+       "scriptures.18": 206.89,
+       "scriptures.19": 218.22,
+       "scriptures.2": 34.23,
+       "scriptures.20": 229.24,
+       "scriptures.21": 240.66,
+       "scriptures.22": 251.36,
+       "scriptures.3": 44.32,
+       "scriptures.4": 59.22,
+       "scriptures.5": 68.87,
+       "scriptures.6": 79.04,
+       "scriptures.7": 90.97,
+       "scriptures.8": 102.87,
+       "scriptures.9": 113.24
+      }
+     },
+     "reflection": {
+      "hash": "9c9073bde5eb9788",
+      "path": "guide-occult/af_heart/reflection.mp3",
+      "bytes": 553340,
+      "voice": "af_heart",
+      "seconds": 92.1,
+      "marks": {
+       "head": 0.0,
+       "reflectionQuestions.0": 1.85,
+       "reflectionQuestions.1": 14.66,
+       "reflectionQuestions.2": 24.73,
+       "reflectionQuestions.3": 37.61,
+       "reflectionQuestions.4": 48.13,
+       "reflectionQuestions.5": 56.86,
+       "reflectionQuestions.6": 68.37,
+       "reflectionQuestions.7": 80.88
+      }
+     },
+     "full-summary": {
+      "hash": "fc8105df94737dd2",
+      "path": "guide-occult/af_heart/full-summary.mp3",
+      "bytes": 2018108,
+      "voice": "af_heart",
+      "seconds": 336.3,
+      "marks": {
+       "anchors.0.body": 242.68,
+       "anchors.1.body": 273.44,
+       "anchors.2.body": 307.98,
+       "anchorsHead": 241.42,
+       "fullSummary.0": 1.43,
+       "fullSummary.1": 25.82,
+       "fullSummary.2": 52.08,
+       "fullSummary.3": 81.21,
+       "fullSummary.4": 107.86,
+       "fullSummary.5": 127.34,
+       "fullSummary.6": 159.04,
+       "fullSummary.7": 186.3,
+       "fullSummary.8": 216.03,
+       "head": 0.0
+      }
+     },
+     "short-summary": {
+      "hash": "c166c21dee981078",
+      "path": "guide-occult/af_heart/short-summary.mp3",
+      "bytes": 607772,
+      "voice": "af_heart",
+      "seconds": 101.2,
+      "marks": {
+       "head": 0.0,
+       "shortSummary.0": 1.14,
+       "shortSummary.1": 34.99,
+       "shortSummary.2": 70.85
+      }
+     }
+    }
+   },
+   {
+    "id": "guide-out-of-the-depths",
+    "narration": {
+     "group": {
+      "hash": "af73fb59a1e93601",
+      "path": "guide-out-of-the-depths/af_heart/group.mp3",
+      "bytes": 1329212,
+      "voice": "af_heart",
+      "seconds": 221.4,
+      "marks": {
+       "groupSections.0.heading": 1.68,
+       "groupSections.0.questions.0": 3.18,
+       "groupSections.0.questions.1": 15.02,
+       "groupSections.1.heading": 25.0,
+       "groupSections.1.questions.0": 26.28,
+       "groupSections.1.questions.1": 37.05,
+       "groupSections.2.heading": 51.43,
+       "groupSections.2.questions.0": 53.15,
+       "groupSections.2.questions.1": 65.49,
+       "groupSections.2.questions.2": 74.92,
+       "groupSections.3.heading": 86.97,
+       "groupSections.3.questions.0": 88.3,
+       "groupSections.3.questions.1": 106.89,
+       "groupSections.3.questions.2": 116.43,
+       "groupSections.3.questions.3": 126.13,
+       "groupSections.4.heading": 136.23,
+       "groupSections.4.questions.0": 137.64,
+       "groupSections.4.questions.1": 152.07,
+       "groupSections.5.heading": 162.3,
+       "groupSections.5.questions.0": 163.55,
+       "groupSections.5.questions.1": 177.08,
+       "groupSections.5.questions.2": 186.71,
+       "groupSections.6.heading": 197.28,
+       "groupSections.6.questions.0": 198.5,
+       "groupSections.6.questions.1": 212.12,
+       "head": 0.0
+      }
+     },
+     "oneliners": {
+      "hash": "d06f5d5b3511da61",
+      "path": "guide-out-of-the-depths/af_heart/oneliners.mp3",
+      "bytes": 525260,
+      "voice": "af_heart",
+      "seconds": 87.4,
+      "marks": {
+       "head": 0.0,
+       "oneLiners.0": 1.76,
+       "oneLiners.1": 7.19,
+       "oneLiners.10": 57.97,
+       "oneLiners.11": 61.4,
+       "oneLiners.12": 66.91,
+       "oneLiners.13": 74.36,
+       "oneLiners.14": 82.05,
+       "oneLiners.2": 17.05,
+       "oneLiners.3": 20.11,
+       "oneLiners.4": 23.72,
+       "oneLiners.5": 30.5,
+       "oneLiners.6": 36.18,
+       "oneLiners.7": 44.53,
+       "oneLiners.8": 49.93,
+       "oneLiners.9": 54.83
+      }
+     },
+     "scripture": {
+      "hash": "647fa7bded8d33cb",
+      "path": "guide-out-of-the-depths/af_heart/scripture.mp3",
+      "bytes": 1125020,
+      "voice": "af_heart",
+      "seconds": 187.4,
+      "marks": {
+       "head": 0.0,
+       "scriptures.0": 1.44,
+       "scriptures.1": 20.12,
+       "scriptures.10": 135.2,
+       "scriptures.11": 148.72,
+       "scriptures.12": 161.65,
+       "scriptures.13": 174.14,
+       "scriptures.2": 32.18,
+       "scriptures.3": 42.79,
+       "scriptures.4": 55.64,
+       "scriptures.5": 69.43,
+       "scriptures.6": 81.09,
+       "scriptures.7": 92.19,
+       "scriptures.8": 107.77,
+       "scriptures.9": 123.14
+      }
+     },
+     "reflection": {
+      "hash": "8f6e483c8ff7c90a",
+      "path": "guide-out-of-the-depths/af_heart/reflection.mp3",
+      "bytes": 508700,
+      "voice": "af_heart",
+      "seconds": 84.7,
+      "marks": {
+       "head": 0.0,
+       "reflectionQuestions.0": 1.85,
+       "reflectionQuestions.1": 12.8,
+       "reflectionQuestions.2": 22.26,
+       "reflectionQuestions.3": 31.69,
+       "reflectionQuestions.4": 45.44,
+       "reflectionQuestions.5": 54.77,
+       "reflectionQuestions.6": 62.85,
+       "reflectionQuestions.7": 76.02
+      }
+     },
+     "full-summary": {
+      "hash": "3b70db33d42ee15c",
+      "path": "guide-out-of-the-depths/af_heart/full-summary.mp3",
+      "bytes": 4970252,
+      "voice": "af_heart",
+      "seconds": 828.3,
+      "marks": {
+       "anchors.0.body": 712.47,
+       "anchors.1.body": 753.83,
+       "anchors.2.body": 791.09,
+       "anchorsHead": 711.2,
+       "fullSummary.0": 1.42,
+       "fullSummary.1": 72.09,
+       "fullSummary.2": 112.7,
+       "fullSummary.3": 151.31,
+       "fullSummary.4": 194.32,
+       "fullSummary.5": 232.17,
+       "fullSummary.6": 312.53,
+       "fullSummary.7": 372.44,
+       "fullSummary.8": 540.86,
+       "fullSummary.9": 630.71,
+       "head": 0.0
+      }
+     },
+     "short-summary": {
+      "hash": "045fdb605fd9a51e",
+      "path": "guide-out-of-the-depths/af_heart/short-summary.mp3",
+      "bytes": 731036,
+      "voice": "af_heart",
+      "seconds": 121.7,
+      "marks": {
+       "head": 0.0,
+       "shortSummary.0": 1.14,
+       "shortSummary.1": 40.37,
+       "shortSummary.2": 84.65
+      }
+     }
+    }
+   },
+   {
+    "id": "guide-second-time",
+    "narration": {
+     "group": {
+      "hash": "6218dfa1a8824660",
+      "path": "guide-second-time/af_heart/group.mp3",
+      "bytes": 1150220,
+      "voice": "af_heart",
+      "seconds": 191.6,
+      "marks": {
+       "groupSections.0.heading": 1.68,
+       "groupSections.0.questions.0": 3.18,
+       "groupSections.0.questions.1": 13.87,
+       "groupSections.1.heading": 26.85,
+       "groupSections.1.questions.0": 27.99,
+       "groupSections.1.questions.1": 43.91,
+       "groupSections.1.questions.2": 55.21,
+       "groupSections.2.heading": 65.89,
+       "groupSections.2.questions.0": 67.3,
+       "groupSections.2.questions.1": 82.82,
+       "groupSections.2.questions.2": 93.11,
+       "groupSections.3.heading": 101.01,
+       "groupSections.3.questions.0": 102.58,
+       "groupSections.3.questions.1": 116.77,
+       "groupSections.3.questions.2": 127.34,
+       "groupSections.4.heading": 141.71,
+       "groupSections.4.questions.0": 143.1,
+       "groupSections.4.questions.1": 157.6,
+       "groupSections.5.heading": 167.19,
+       "groupSections.5.questions.0": 168.41,
+       "groupSections.5.questions.1": 180.6,
+       "head": 0.0
+      }
+     },
+     "oneliners": {
+      "hash": "7686ba4e96e79e14",
+      "path": "guide-second-time/af_heart/oneliners.mp3",
+      "bytes": 539660,
+      "voice": "af_heart",
+      "seconds": 89.8,
+      "marks": {
+       "head": 0.0,
+       "oneLiners.0": 1.76,
+       "oneLiners.1": 4.16,
+       "oneLiners.10": 47.56,
+       "oneLiners.11": 50.45,
+       "oneLiners.12": 54.69,
+       "oneLiners.13": 59.58,
+       "oneLiners.14": 63.15,
+       "oneLiners.15": 68.75,
+       "oneLiners.16": 74.56,
+       "oneLiners.17": 77.75,
+       "oneLiners.18": 82.6,
+       "oneLiners.19": 86.62,
+       "oneLiners.2": 7.07,
+       "oneLiners.3": 12.11,
+       "oneLiners.4": 17.94,
+       "oneLiners.5": 22.86,
+       "oneLiners.6": 28.05,
+       "oneLiners.7": 34.4,
+       "oneLiners.8": 40.51,
+       "oneLiners.9": 44.36
+      }
+     },
+     "scripture": {
+      "hash": "784f3e74d37b6303",
+      "path": "guide-second-time/af_heart/scripture.mp3",
+      "bytes": 785612,
+      "voice": "af_heart",
+      "seconds": 130.8,
+      "marks": {
+       "head": 0.0,
+       "scriptures.0": 1.44,
+       "scriptures.1": 17.3,
+       "scriptures.2": 29.13,
+       "scriptures.3": 42.3,
+       "scriptures.4": 56.37,
+       "scriptures.5": 71.24,
+       "scriptures.6": 85.1,
+       "scriptures.7": 94.3,
+       "scriptures.8": 109.43,
+       "scriptures.9": 121.24
+      }
+     },
+     "reflection": {
+      "hash": "83246f2cf795daab",
+      "path": "guide-second-time/af_heart/reflection.mp3",
+      "bytes": 487532,
+      "voice": "af_heart",
+      "seconds": 81.1,
+      "marks": {
+       "head": 0.0,
+       "reflectionQuestions.0": 1.84,
+       "reflectionQuestions.1": 10.58,
+       "reflectionQuestions.2": 16.92,
+       "reflectionQuestions.3": 28.41,
+       "reflectionQuestions.4": 40.19,
+       "reflectionQuestions.5": 51.79,
+       "reflectionQuestions.6": 60.41,
+       "reflectionQuestions.7": 70.64
+      }
+     },
+     "full-summary": {
+      "hash": "a917b5ff51e5ee7f",
+      "path": "guide-second-time/af_heart/full-summary.mp3",
+      "bytes": 1989164,
+      "voice": "af_heart",
+      "seconds": 331.4,
+      "marks": {
+       "anchors.0.body": 244.61,
+       "anchors.1.body": 271.76,
+       "anchors.2.body": 301.6,
+       "anchorsHead": 243.34,
+       "fullSummary.0": 1.42,
+       "fullSummary.1": 22.42,
+       "fullSummary.2": 50.1,
+       "fullSummary.3": 73.85,
+       "fullSummary.4": 101.0,
+       "fullSummary.5": 129.88,
+       "fullSummary.6": 154.24,
+       "fullSummary.7": 183.33,
+       "fullSummary.8": 212.11,
+       "head": 0.0
+      }
+     },
+     "short-summary": {
+      "hash": "fd4ae2b6daa595d1",
+      "path": "guide-second-time/af_heart/short-summary.mp3",
+      "bytes": 561260,
+      "voice": "af_heart",
+      "seconds": 93.4,
+      "marks": {
+       "head": 0.0,
+       "shortSummary.0": 1.14,
+       "shortSummary.1": 24.71,
+       "shortSummary.2": 67.59
+      }
+     }
+    }
+   },
+   {
+    "id": "guide-want-to-be-free",
+    "narration": {
+     "group": {
+      "hash": "fca4915a8de69415",
+      "path": "guide-want-to-be-free/af_heart/group.mp3",
+      "bytes": 1011548,
+      "voice": "af_heart",
+      "seconds": 168.5,
+      "marks": {
+       "groupSections.0.heading": 1.68,
+       "groupSections.0.questions.0": 3.18,
+       "groupSections.0.questions.1": 13.04,
+       "groupSections.1.heading": 24.12,
+       "groupSections.1.questions.0": 25.52,
+       "groupSections.1.questions.1": 40.25,
+       "groupSections.2.heading": 56.09,
+       "groupSections.2.questions.0": 57.63,
+       "groupSections.2.questions.1": 71.83,
+       "groupSections.3.heading": 81.39,
+       "groupSections.3.questions.0": 83.0,
+       "groupSections.3.questions.1": 92.46,
+       "groupSections.3.questions.2": 101.79,
+       "groupSections.4.heading": 113.7,
+       "groupSections.4.questions.0": 115.18,
+       "groupSections.4.questions.1": 130.27,
+       "groupSections.5.heading": 143.38,
+       "groupSections.5.questions.0": 144.6,
+       "groupSections.5.questions.1": 156.26,
+       "head": 0.0
+      }
+     },
+     "oneliners": {
+      "hash": "33418788a4a65cf7",
+      "path": "guide-want-to-be-free/af_heart/oneliners.mp3",
+      "bytes": 531884,
+      "voice": "af_heart",
+      "seconds": 88.5,
+      "marks": {
+       "head": 0.0,
+       "oneLiners.0": 1.76,
+       "oneLiners.1": 6.57,
+       "oneLiners.10": 49.29,
+       "oneLiners.11": 51.33,
+       "oneLiners.12": 54.0,
+       "oneLiners.13": 58.34,
+       "oneLiners.14": 60.72,
+       "oneLiners.15": 64.01,
+       "oneLiners.16": 68.12,
+       "oneLiners.17": 74.89,
+       "oneLiners.18": 79.38,
+       "oneLiners.19": 82.63,
+       "oneLiners.2": 11.76,
+       "oneLiners.3": 16.87,
+       "oneLiners.4": 20.05,
+       "oneLiners.5": 25.44,
+       "oneLiners.6": 29.97,
+       "oneLiners.7": 32.84,
+       "oneLiners.8": 39.84,
+       "oneLiners.9": 45.34
+      }
+     },
+     "scripture": {
+      "hash": "e6ced982881e199e",
+      "path": "guide-want-to-be-free/af_heart/scripture.mp3",
+      "bytes": 1124156,
+      "voice": "af_heart",
+      "seconds": 187.3,
+      "marks": {
+       "head": 0.0,
+       "scriptures.0": 1.44,
+       "scriptures.1": 18.47,
+       "scriptures.10": 109.37,
+       "scriptures.11": 118.4,
+       "scriptures.12": 127.0,
+       "scriptures.13": 141.24,
+       "scriptures.14": 151.13,
+       "scriptures.15": 164.32,
+       "scriptures.16": 175.79,
+       "scriptures.2": 28.7,
+       "scriptures.3": 38.35,
+       "scriptures.4": 51.39,
+       "scriptures.5": 59.06,
+       "scriptures.6": 70.57,
+       "scriptures.7": 80.52,
+       "scriptures.8": 89.51,
+       "scriptures.9": 99.89
+      }
+     },
+     "reflection": {
+      "hash": "0edf78432e7a30cd",
+      "path": "guide-want-to-be-free/af_heart/reflection.mp3",
+      "bytes": 501212,
+      "voice": "af_heart",
+      "seconds": 83.4,
+      "marks": {
+       "head": 0.0,
+       "reflectionQuestions.0": 1.85,
+       "reflectionQuestions.1": 11.56,
+       "reflectionQuestions.2": 24.01,
+       "reflectionQuestions.3": 33.87,
+       "reflectionQuestions.4": 41.37,
+       "reflectionQuestions.5": 52.75,
+       "reflectionQuestions.6": 62.59,
+       "reflectionQuestions.7": 74.82
+      }
+     },
+     "full-summary": {
+      "hash": "de197e7d14c7d4ec",
+      "path": "guide-want-to-be-free/af_heart/full-summary.mp3",
+      "bytes": 1943228,
+      "voice": "af_heart",
+      "seconds": 323.8,
+      "marks": {
+       "anchors.0.body": 241.15,
+       "anchors.1.body": 268.31,
+       "anchors.2.body": 297.27,
+       "anchorsHead": 239.88,
+       "fullSummary.0": 1.42,
+       "fullSummary.1": 25.12,
+       "fullSummary.2": 46.67,
+       "fullSummary.3": 79.52,
+       "fullSummary.4": 100.14,
+       "fullSummary.5": 124.86,
+       "fullSummary.6": 141.15,
+       "fullSummary.7": 176.32,
+       "fullSummary.8": 207.16,
+       "head": 0.0
+      }
+     },
+     "short-summary": {
+      "hash": "d01877957548c633",
+      "path": "guide-want-to-be-free/af_heart/short-summary.mp3",
+      "bytes": 544556,
+      "voice": "af_heart",
+      "seconds": 90.7,
+      "marks": {
+       "head": 0.0,
+       "shortSummary.0": 1.16,
+       "shortSummary.1": 27.74,
+       "shortSummary.2": 60.67
+      }
+     }
+    }
+   },
+   {
+    "id": "guide-war-youre-in",
+    "narration": {
+     "group": {
+      "hash": "b2c17d3d6306d095",
+      "path": "guide-war-youre-in/af_heart/group.mp3",
+      "bytes": 942140,
+      "voice": "af_heart",
+      "seconds": 156.9,
+      "marks": {
+       "groupSections.0.heading": 1.68,
+       "groupSections.0.questions.0": 3.18,
+       "groupSections.0.questions.1": 13.32,
+       "groupSections.1.heading": 24.48,
+       "groupSections.1.questions.0": 26.41,
+       "groupSections.1.questions.1": 41.5,
+       "groupSections.1.questions.2": 50.86,
+       "groupSections.2.heading": 61.42,
+       "groupSections.2.questions.0": 63.08,
+       "groupSections.2.questions.1": 77.59,
+       "groupSections.2.questions.2": 87.61,
+       "groupSections.3.heading": 96.7,
+       "groupSections.3.questions.0": 97.97,
+       "groupSections.3.questions.1": 107.56,
+       "groupSections.3.questions.2": 118.68,
+       "groupSections.4.heading": 131.02,
+       "groupSections.4.questions.0": 132.24,
+       "groupSections.4.questions.1": 145.57,
+       "head": 0.0
+      }
+     },
+     "oneliners": {
+      "hash": "639e281b557e6ad3",
+      "path": "guide-war-youre-in/af_heart/oneliners.mp3",
+      "bytes": 482492,
+      "voice": "af_heart",
+      "seconds": 80.3,
+      "marks": {
+       "head": 0.0,
+       "oneLiners.0": 1.76,
+       "oneLiners.1": 5.72,
+       "oneLiners.10": 37.62,
+       "oneLiners.11": 43.71,
+       "oneLiners.12": 46.43,
+       "oneLiners.13": 49.55,
+       "oneLiners.14": 53.74,
+       "oneLiners.15": 59.19,
+       "oneLiners.16": 63.36,
+       "oneLiners.17": 66.21,
+       "oneLiners.18": 69.18,
+       "oneLiners.19": 75.87,
+       "oneLiners.2": 8.22,
+       "oneLiners.3": 11.81,
+       "oneLiners.4": 15.19,
+       "oneLiners.5": 20.3,
+       "oneLiners.6": 22.4,
+       "oneLiners.7": 25.33,
+       "oneLiners.8": 31.06,
+       "oneLiners.9": 33.52
+      }
+     },
+     "scripture": {
+      "hash": "aaee1cf4c7861fcc",
+      "path": "guide-war-youre-in/af_heart/scripture.mp3",
+      "bytes": 1318124,
+      "voice": "af_heart",
+      "seconds": 219.6,
+      "marks": {
+       "head": 0.0,
+       "scriptures.0": 1.44,
+       "scriptures.1": 16.21,
+       "scriptures.10": 108.0,
+       "scriptures.11": 115.05,
+       "scriptures.12": 124.02,
+       "scriptures.13": 131.69,
+       "scriptures.14": 140.99,
+       "scriptures.15": 152.1,
+       "scriptures.16": 160.02,
+       "scriptures.17": 168.39,
+       "scriptures.18": 176.19,
+       "scriptures.19": 184.84,
+       "scriptures.2": 27.06,
+       "scriptures.20": 192.44,
+       "scriptures.21": 200.55,
+       "scriptures.22": 211.38,
+       "scriptures.3": 35.43,
+       "scriptures.4": 46.7,
+       "scriptures.5": 56.84,
+       "scriptures.6": 67.6,
+       "scriptures.7": 78.05,
+       "scriptures.8": 85.05,
+       "scriptures.9": 96.0
+      }
+     },
+     "reflection": {
+      "hash": "ac74a60fe2e6b824",
+      "path": "guide-war-youre-in/af_heart/reflection.mp3",
+      "bytes": 484220,
+      "voice": "af_heart",
+      "seconds": 80.6,
+      "marks": {
+       "head": 0.0,
+       "reflectionQuestions.0": 1.84,
+       "reflectionQuestions.1": 12.46,
+       "reflectionQuestions.2": 24.94,
+       "reflectionQuestions.3": 33.06,
+       "reflectionQuestions.4": 40.13,
+       "reflectionQuestions.5": 49.8,
+       "reflectionQuestions.6": 59.14,
+       "reflectionQuestions.7": 69.11
+      }
+     },
+     "full-summary": {
+      "hash": "67ec10231717218b",
+      "path": "guide-war-youre-in/af_heart/full-summary.mp3",
+      "bytes": 1906652,
+      "voice": "af_heart",
+      "seconds": 317.7,
+      "marks": {
+       "anchors.0.body": 242.27,
+       "anchors.1.body": 266.35,
+       "anchors.2.body": 293.63,
+       "anchorsHead": 241.0,
+       "fullSummary.0": 1.44,
+       "fullSummary.1": 23.66,
+       "fullSummary.2": 51.26,
+       "fullSummary.3": 67.72,
+       "fullSummary.4": 93.74,
+       "fullSummary.5": 126.95,
+       "fullSummary.6": 155.43,
+       "fullSummary.7": 184.99,
+       "fullSummary.8": 213.81,
+       "head": 0.0
+      }
+     },
+     "short-summary": {
+      "hash": "c305e6b32172d07c",
+      "path": "guide-war-youre-in/af_heart/short-summary.mp3",
+      "bytes": 557516,
+      "voice": "af_heart",
+      "seconds": 92.8,
+      "marks": {
+       "head": 0.0,
+       "shortSummary.0": 1.14,
+       "shortSummary.1": 28.85,
+       "shortSummary.2": 61.59
+      }
+     }
+    }
+   }
+  ]
+ }
+}

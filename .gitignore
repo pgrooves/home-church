@@ -44,6 +44,8 @@
 /narration/
 /models/
 /narration-text.json
+# narration-marks.json is what scripts/narration_marks.py found on one run.
+/narration-marks.json
 
 # OS and editor noise
 .DS_Store

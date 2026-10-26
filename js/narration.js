@@ -275,6 +275,88 @@
     paint();
   }
 
+  /* ------------------------------------------------------------ tap to jump
+
+     WHILE A SECTION IS PLAYING, TAPPING ITS WORDS MOVES THE RECORDING THERE.
+     Every block of a guide carries data-narrate-at, a name for the paragraph
+     it is (js/screens/guide.js), and a recording carries marks, the second
+     each named paragraph starts (scripts/narration_marks.py and
+     scripts/build_narration.py). A tap looks one up in the other.
+
+     A recording made before marks were kept has none, and then this
+     estimates: the section's words up to the tapped block, as a share of all
+     of them, as a share of the recording. Kokoro reads at an even pace, so
+     that lands within a few seconds, which is near enough to be useful and
+     the reason it is not a dead tap instead.
+
+     Only in the section that is playing, and only on the words. The small
+     controls inside a block keep their own jobs: the tick box on a question,
+     Share on a one-liner, the chevron on a scripture row, the box you write
+     in. Anything selected is somebody highlighting, not jumping. */
+
+  var SKIP = '.hc-check__box, .hc-share, .hc-row__chevron, .hc-journal, ' +
+    'textarea, input, label, a[href], .hc-hlbar';
+
+  function markFor(block) {
+    var key = block.getAttribute('data-narrate-at');
+    var marks = playing.marks;
+    if (marks && typeof marks[key] === 'number') return marks[key];
+    if (!audio || !audio.duration) return null;
+
+    // The estimate. Outermost blocks only: an anchor's prose sits inside its
+    // row and carries the same name.
+    var all = playing.section.querySelectorAll('[data-narrate-at]');
+    var words = function (el) {
+      var copy = el.cloneNode(true);
+      var drop = copy.querySelectorAll('textarea, .hc-journal, .hc-numeral, ' +
+        '.hc-quote-card__foot, .hc-row__chevron, .hc-check__box');
+      for (var d = 0; d < drop.length; d++) drop[d].parentNode.removeChild(drop[d]);
+      return (copy.textContent || '').replace(/\s+/g, ' ').trim().length;
+    };
+    var title = playing.section.querySelector('.hc-section__title');
+    var before = title ? (title.textContent || '').length : 0;
+    var total = before, found = -1;
+    for (var i = 0; i < all.length; i++) {
+      var el = all[i];
+      if (el.parentNode.closest('[data-narrate-at]')) continue;
+      if (el === block || el.contains(block)) found = total;
+      total += words(el);
+    }
+    if (found < 0 || !total) return null;
+    return (found / total) * audio.duration;
+  }
+
+  function onTap(evt) {
+    if (!playing || !audio || !playing.section) return;
+    var t = evt.target;
+    var block = t.closest && t.closest('[data-narrate-at]');
+    if (!block || !playing.section.contains(block)) return;
+    if (t.closest(SKIP)) return;
+    var sel = window.getSelection && window.getSelection();
+    if (sel && !sel.isCollapsed && String(sel).trim()) return;
+
+    var at = markFor(block);
+    if (at == null) return;
+
+    // The tap is the jump, not a tick or a verse sheet as well.
+    evt.preventDefault();
+    evt.stopPropagation();
+
+    var end = audio.duration ? audio.duration - 0.25 : at;
+    audio.currentTime = Math.max(0, Math.min(at, end));
+    if (audio.paused) audio.play().catch(function () {});
+    paint();
+    HC.native.tap('Light');
+
+    // A moment of colour on what you tapped, so the jump has a cause you can see.
+    block.removeAttribute('data-narrate-jump');
+    void block.offsetWidth;
+    block.setAttribute('data-narrate-jump', 'true');
+    window.setTimeout(function () { block.removeAttribute('data-narrate-jump'); }, 900);
+  }
+
+  document.addEventListener('click', onTap, true);
+
   // The touch, stopped before the page's own gestures hear it.
   function shield(evt) {
     if (evt.target.closest && evt.target.closest('.hc-section__scrub')) evt.stopPropagation();
@@ -447,7 +529,9 @@
     a.currentTime = 0;
     applySpeed(a);
 
-    playing = { btn: btn, wrap: wrap, bar: playBar(section), section: section };
+    var marks = null;
+    try { marks = JSON.parse(btn.getAttribute('data-narrate-marks') || 'null'); } catch (err) { /* estimate */ }
+    playing = { btn: btn, wrap: wrap, bar: playBar(section), section: section, marks: marks };
     btn.setAttribute('aria-pressed', 'true');
     btn.setAttribute('data-state', 'loading');
     wrap.setAttribute('data-playing', 'true');

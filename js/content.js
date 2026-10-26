@@ -225,7 +225,12 @@
       out[section] = {
         src: storageUrl('narration', row.path),
         seconds: Number(row.seconds) || 0,
-        voice: str(row.voice)
+        voice: str(row.voice),
+        /* Where each paragraph starts, in seconds, keyed by the reader's
+           data-narrate-at names. Absent on anything recorded before marks
+           were kept, and then a tap estimates instead. See
+           scripts/narration_marks.py. */
+        marks: row.marks && typeof row.marks === 'object' ? row.marks : null
       };
     });
     return out;
