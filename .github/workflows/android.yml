@@ -120,13 +120,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Node 22 for its built in fetch and WebSocket, which is all
+      # scripts/android_screens.js needs to talk to the app's WebView.
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-          cache: npm
-
-      # Only playwright-core is needed here, to talk to the app's WebView.
-      - run: npm ci
 
       - uses: actions/download-artifact@v4
         with:
