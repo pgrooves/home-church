@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Home Church</string>
+    <string name="title_activity_main">Home Church</string>
+    <string name="package_name">com.homechurchnola.app</string>
+    <string name="custom_url_scheme">com.homechurchnola.app</string>
+</resources>

@@ -23,7 +23,7 @@
 
   // Update this whenever the text below changes in a way that matters, and
   // confirm it before submitting to the App Store.
-  var EFFECTIVE = 'September 23, 2026';
+  var EFFECTIVE = 'October 27, 2026';
 
   /* ---------------------------------------------------------- small parts */
 
@@ -111,7 +111,7 @@
       'No other account can read it. That is not a setting we chose and could change by accident, it is enforced by the database itself: a request for somebody else’s journal comes back empty, and there is no screen anywhere in this app, or in anything the church runs, that shows one person another person’s writing.',
       'Here is the part that would be easy to leave out. Your journal is stored as ordinary text, which means whoever administers our database could read it if they went looking, the same way it is true of your email at any company. We are not going to pretend otherwise by saying it is encrypted so that not even we can read it. That would need a key, and signing in here is a code sent to you rather than a password, so there is nothing to build a key from that would not either live on one phone, defeating the point of it following you, or be held by us, defeating the point of the key.',
       'What we can tell you is what we actually do: nobody at this church reads journals, there is no screen that would show one, and deleting an entry deletes it from our server too. If you would rather keep it all on your phone, do not sign in. Everything in the Journal works either way.',
-      'There is a switch under Your account that puts Face ID, Touch ID, or your passcode in front of the Journal. It is worth having and it is worth being precise about what it does: it stops somebody who picks up your unlocked phone from reading what you wrote. It is not encryption, and it does not change anything in the three paragraphs above.'
+      'There is a switch under Your account that puts Face ID, Touch ID, or your passcode in front of the Journal, or on an Android phone your fingerprint, face, or screen lock. It is worth having and it is worth being precise about what it does: it stops somebody who picks up your unlocked phone from reading what you wrote. It is not encryption, and it does not change anything in the three paragraphs above.'
     ]);
 
     /* The Group tab is the one place this app holds something a person wrote
@@ -165,7 +165,7 @@
     ]);
 
     html += block('When the app hands you off to somebody else', [
-      'Some things here are not ours. Giving opens Overflow. Messages open our podcast host or Spotify. Read the full chapter, under a verse, opens YouVersion’s bible.com. Baptism and Alpha open Church Center. Hosting a group opens Group Vitals. Sending us a prayer request opens a Google form. The email list opens Flodesk.',
+      'Some things here are not ours. Giving, on an iPhone or on the web, opens Overflow. Messages open our podcast host or Spotify. Read the full chapter, under a verse, opens YouVersion’s bible.com. Baptism and Alpha open Church Center. Hosting a group opens Group Vitals. Sending us a prayer request opens a Google form. The email list opens Flodesk.',
       'Each of those opens in your phone’s own browser, and once you are there you are on their site and under their privacy policy, not ours. Anything you type into one of their forms goes to them and to the church. It does not pass through this app, and we only ever see what you chose to send.'
     ]);
 
@@ -190,6 +190,10 @@
 
     html += block('Getting rid of it', [
       'Open Your account and choose Your data. There are two buttons and they do different things. One erases everything this app has stored on this phone. The other deletes your account and everything synced to it, for good, and you do not have to email anybody or visit a website to do it.',
+      /* For somebody who no longer has the app, which Google Play asks every
+         app to provide and Apple does not. scripts/make_legal_pages.js writes
+         the page. PLAY_COMPLIANCE.md section 4. */
+      'If you no longer have the app, the way to delete your account without it is at pgrooves.github.io/home-church/legal/delete-account.html: the web version of the app, or an email to us.',
       'If you would rather ask us to do something about information you have sent the church another way, through a signup or a prayer request form, email us and we will take care of it.'
     ]);
 

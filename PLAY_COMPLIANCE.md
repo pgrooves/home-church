@@ -12,6 +12,12 @@ where those were reachable and from secondary sources where they were not;
 `support.google.com` is blocked from the session that wrote this, and the
 lines that rest on a secondary source say so.
 
+**Decided October 27:** Give hidden on Android, target ages 13 and over, and
+the first Android release ships without push. All three on the condition
+that nothing changes or hides for the iPhone app, which is how every Android
+difference below is built: a branch on `HC.native.isAndroid()` that an iPhone
+never takes, pinned by `tests/android.test.js`.
+
 Status key: **Done** means true in the repo today. **Build** means it gets
 done as part of generating the Android project. **Decide** means it needs an
 answer from Trey first. **Console** means it is a form in Play Console.
@@ -51,11 +57,11 @@ Nothing in this file or in the build depends on which account publishes.
 
 | Requirement | Status | Notes |
 |---|---|---|
-| **Android App Bundle (`.aab`)**, not an APK | Build | The GitHub Action builds one. |
+| **Android App Bundle (`.aab`)**, not an APK | Done | `.github/workflows/android.yml` builds one on every push. |
 | **Play App Signing** | Console | Mandatory for new apps. Google holds the key that signs what phones install; we hold an **upload key** that only proves an upload came from us. A lost upload key can be reset through Google support, which a lost iOS certificate cannot. |
-| **Target API 36 (Android 16)** | Build | Required for new apps and updates since August 31, 2026. Capacitor 8's template already sets `targetSdkVersion = 36` and `compileSdkVersion = 36`. Every Capacitor major bump must be checked against Google's then current target. |
-| **16 KB memory pages** | Build | Required for apps targeting Android 15+. It only bites apps that ship native `.so` libraries. None of our plugins ship any; the build checks the bundle rather than trusting that. |
-| **`versionCode` goes up on every upload** | Build | Play refuses a repeat. Same rule as the iOS Build number, separate counter. |
+| **Target API 36 (Android 16)** | Done | Required for new apps and updates since August 31, 2026. Capacitor 8's template already sets `targetSdkVersion = 36` and `compileSdkVersion = 36`. Every Capacitor major bump must be checked against Google's then current target. |
+| **16 KB memory pages** | Done | Required for apps targeting Android 15+, and only about native `.so` libraries. Our plugins ship none, but Firebase brings one in (`libdatastore_shared_counter.so`, from androidx datastore). It is aligned, and `scripts/android_manifest_check.js` fails the build if any library ever is not. |
+| **`versionCode` goes up on every upload** | Done | Play refuses a repeat. The Action uses its run number, which only goes up, so nobody raises it by hand. `versionName` is 1.1, matching iOS. |
 | **`minSdkVersion` 24** | Build | Capacitor 8's floor, Android 7. Fine. |
 
 **No webview-wrapper problem.** Google's policy against apps that are only a
@@ -74,16 +80,22 @@ this app: **every permission in the merged manifest has a feature that needs
 it, and the build fails if a new one appears.** A plugin update that quietly
 adds a permission is the Android version of the privacy manifest drifting.
 
-What the plugins bring, read from their manifests:
+What the merged manifest holds, read from the first real build. **Done:**
+`scripts/android_manifest_check.js` holds this list and fails the build on
+anything else.
 
-| Permission | From | Why | Play declaration |
-|---|---|---|---|
-| `INTERNET` | Capacitor | Content | None |
-| `POST_NOTIFICATIONS` | local and push notifications | Asked at runtime on Android 13+, the same moment iOS asks | None |
-| `VIBRATE` | haptics | Taps | None |
-| `RECEIVE_BOOT_COMPLETED`, `WAKE_LOCK` | local notifications | Reminders survive a restart | None |
-| `SCHEDULE_EXACT_ALARM` | local notifications | **Decide in the build**, see below | None for this one |
-| `USE_BIOMETRIC` | biometric auth | The Journal lock | None |
+| Permission | From | Why |
+|---|---|---|
+| `INTERNET` | Capacitor | Content |
+| `ACCESS_NETWORK_STATE` | Capacitor, Firebase | Knowing there is no signal |
+| `POST_NOTIFICATIONS` | local and push notifications | Asked at runtime on Android 13+, the same moment iOS asks |
+| `VIBRATE` | haptics | Taps |
+| `RECEIVE_BOOT_COMPLETED`, `WAKE_LOCK` | local notifications | Reminders survive a restart |
+| `USE_BIOMETRIC`, `USE_FINGERPRINT` | biometric auth | The Journal lock (the second is for phones older than Android 9) |
+| `c2dm.permission.RECEIVE` | push notifications | Firebase Cloud Messaging. Present although push is off, harmless |
+| `DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION` | androidx | Internal, signature level, grants nothing to another app |
+
+None of these carries a Play Console declaration.
 
 **Not requested, on purpose:**
 
@@ -99,19 +111,19 @@ What the plugins bring, read from their manifests:
 - **`USE_EXACT_ALARM`.** Restricted by Play to alarm clock and calendar apps.
   Not used.
 
-**`SCHEDULE_EXACT_ALARM`.** Not restricted by Play, but since Android 14 the
-user has to grant it in Settings, and nobody will. Reminders here are "the
-event starts in an hour", not an alarm clock, so a few minutes of drift is
-fine. The plan is to remove it from the merged manifest and confirm the
-local notifications plugin falls back to an inexact alarm, in the emulator,
-before it ships. If it does not fall back cleanly, it stays, and that costs
-nothing in Play Console.
+**`SCHEDULE_EXACT_ALARM`: removed. Done.** Not restricted by Play, but the
+local notifications plugin asks for it by default, and on Android 12+ that
+sends people to a Settings screen the first time they ask for a reminder.
+Reminders are "the event starts in an hour", not an alarm clock, so on
+Android `js/native.js` schedules them inexact (`isExactNotification: false`,
+an Android-only field the iPhone payload does not carry) and the manifest
+removes the permission.
 
 -----
 
 ## 3. Payments: the one real Android problem
 
-**Coffee: fine. Give: Decide, and it is a blocker.**
+**Coffee: fine. Give: Done, hidden on Android.**
 
 Google's Payments policy splits payments three ways: digital goods, which
 must use Play billing; physical goods and services, which must not; and
@@ -133,8 +145,10 @@ must use Play billing; physical goods and services, which must not; and
   payment never happening inside the app. Google's rule is about *who* the
   money goes to, so the same button that passed Apple can fail Google.
 
-**Recommendation: ship Android with Give hidden**, by platform, until the
-church has a determination letter. Hidden means the Give tab, the row in the
+**Built: Android ships with Give hidden**, by platform, until the church has
+a determination letter. `offersGiving()` in `js/native.js` is the one
+answer, and the Give stop in the menu, the giving row on Home and the button
+on the Give screen all ask it. Hidden means the Give tab, the row in the
 overflow sheet, and every other link to Overflow, not just the tab. People
 can still give on the church website; the app just does not link to it on
 Android. When the letter exists, flip it on in a new build and send Google
@@ -148,7 +162,7 @@ every update after it, which is the AnkiDroid situation.
 
 ## 4. Account deletion needs a web page too
 
-**In app: Done. On the web: Build.**
+**In app: Done. On the web: Done, goes live with `main`.**
 
 Apple accepts deletion inside the app. Google wants that **and** a public web
 link where somebody can request deletion **without installing the app**, and
@@ -172,18 +186,22 @@ is not enough for Google. The plan:
 
 ## 5. Privacy policy wording
 
-**Build.** The policy is good, and it is written for an iPhone. On Android
-these lines are wrong, so they become platform neutral (one policy for both
-stores, not two):
+**Done, additions only.** The policy is good, and it was written for an
+iPhone. One policy covers both stores; nothing about the iPhone was taken
+out, and the effective date moved to October 27, 2026.
 
 - "Apple gives us an anonymous token for your device" and "Apple, which
-  delivers notifications": Android phones get their token from **Google
-  (Firebase Cloud Messaging)**, which has to be named as a service.
-- "Face ID, Touch ID, or your passcode": add "or your fingerprint, face or
-  screen lock on Android".
-- "you do not have to email anybody or visit a website to do it": keep, and
-  add the link to the deletion page from section 4.
-- The Give / Overflow sentence: only if Give is hidden on Android, say so.
+  delivers notifications": **left as is for now**, because it is still the
+  whole truth: an Android phone registers no token while push is off. When
+  Android push ships, Google (Firebase Cloud Messaging) is added beside
+  Apple.
+- "Face ID, Touch ID, or your passcode" gains "or on an Android phone your
+  fingerprint, face, or screen lock". The switch on Settings says the
+  Android words on Android only.
+- "you do not have to email anybody or visit a website to do it" stays, and
+  a sentence after it links the deletion page from section 4.
+- "Giving opens Overflow" became "Giving, on an iPhone or on the web, opens
+  Overflow".
 
 The policy is generated from `js/screens/legal.js`, so the change is made
 there and `npm run legal` rebuilds the web copy.
@@ -255,7 +273,7 @@ the answer decides whether the much stricter **Families policy** applies.
 Picking any group under 13 pulls the whole app into it: certified ad SDKs
 only, extra data rules, and closer review of everything else.
 
-**Recommendation: 13 and over** (the 13 to 15, 16 to 17 and 18+ groups).
+**Decided: 13 and over** (the 13 to 15, 16 to 17 and 18+ groups).
 Same reasoning as Apple 2.6: the app is for a congregation that includes
 families, it is not directed at children, and the privacy policy already
 says no accounts for under 13s. HomeKids is a page for parents, and the
@@ -306,9 +324,10 @@ Android push goes through Firebase Cloud Messaging, not APNs. Three pieces:
    secret. Deploying that function and setting the secret are live changes
    and get asked about first, per CLAUDE.md. Apple delivery does not change.
 
-**Until all three are done, push stays off on Android.** On Android,
-registering for push without `google-services.json` crashes the app, so the
-build guards it rather than trusting the file to be there. A first Android
+**Until all three are done, push stays off on Android. Done.** On Android,
+registering for push without `google-services.json` crashes the app, so
+`pushAvailable()` in `js/native.js` is checked before the plugin is touched
+at all, and `ANDROID_PUSH` is the one line to flip when both halves ship. A first Android
 release without push is acceptable; the Notifications screen says it is
 coming rather than offering a switch that does nothing (Apple 2.1 and
 Google's equivalent both reject dead controls).
@@ -351,13 +370,36 @@ Google's equivalent both reject dead controls).
 
 -----
 
-## 11. Decisions, in one place
+## 11. How the Android build works
 
-1. **Give on Android**: hide until there is an IRS determination letter
-   (recommended), or keep and risk a payments rejection. Section 3.
-2. **Target age groups**: 13 and over (recommended). Section 7.
-3. **Push in the first Android release**: wait for it, or ship without and
-   add it in an update (recommended, so the 14-day test can start sooner).
-   Section 8.
+- **`android/` is committed**, unlike `ios/`. Nobody generates it on a
+  laptop: the GitHub Action builds from whatever is in the repo, so the
+  project has to be in the repo. The Capacitor template's own `.gitignore`
+  keeps build output and the copied web app out.
+- **`npm run android`** stamps, copies the web app into `www/`, and runs
+  `npx cap sync android`. The Action runs it; so can anybody with the SDK.
+- **The launcher icon** comes from `python3 scripts/make_icons.py --android`,
+  which draws Android's adaptive icon from `assets/icons/mark.png` and
+  touches nothing iOS or the web reads.
+- **The launch screen** is plain paper, light and dark, the same as iOS, so
+  the house in `js/splash.js` is the first thing anybody sees.
+- **Every push** builds the bundle, checks permissions and alignment, then
+  runs the debug build on an Android emulator and saves phone screenshots
+  (`scripts/android_screens.js`), failing if Give or the push switches ever
+  appear on Android.
+- **The upload key** goes in four repository secrets, `HC_UPLOAD_KEYSTORE_BASE64`,
+  `HC_UPLOAD_STORE_PASSWORD`, `HC_UPLOAD_KEY_ALIAS` and
+  `HC_UPLOAD_KEY_PASSWORD`, when it is time for the first upload. Until then
+  the bundle is unsigned and the runs are checks.
+
+-----
+
+## 12. Decisions, in one place
+
+1. **Give on Android**: hidden until there is an IRS determination letter.
+   Decided October 27. Section 3.
+2. **Target age groups**: 13 and over. Decided October 27. Section 7.
+3. **Push in the first Android release**: ships without, added in an
+   update. Decided October 27. Section 8.
 4. **Account**: stay personal, or add an organization account once a
    D-U-N-S number arrives. Section 0. Does not block anything.

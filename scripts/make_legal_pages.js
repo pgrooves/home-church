@@ -23,7 +23,8 @@
  *   npx http-server -p 8770 -s &
  *   node scripts/make_legal_pages.js
  *
- * Writes legal/privacy.html, legal/terms.html and legal/support.html.
+ * Writes legal/privacy.html, legal/terms.html, legal/support.html and
+ * legal/delete-account.html.
  * Re-run whenever js/screens/legal.js changes.
  *
  * FORGETTING TO RE-RUN IT IS THE FAILURE THIS SCRIPT EXISTS TO PREVENT, AND
@@ -101,6 +102,56 @@ const SUPPORT = `
   </p>
   <p class="hc-body-serif hc-legal__p"><a href="https://www.homechurchnola.com">homechurchnola.com</a></p>
   <p class="hc-body-serif hc-legal__p"><a href="privacy.html">Privacy policy</a> &middot; <a href="terms.html">Terms of use</a></p>
+</section>
+`;
+
+/* The account deletion page. Written here for the same reason as the support
+   page: the in-app version is the Your data screen, which only works for the
+   person signed in on the phone holding it, and this is for somebody who is
+   not.
+
+   GOOGLE ASKS FOR IT AND APPLE DOES NOT. Apple accepts deletion inside the
+   app. Google Play also wants a public link where somebody can ask for their
+   account to be deleted without installing anything, on the Data safety
+   form, where it shows on the store listing. PLAY_COMPLIANCE.md section 4.
+
+   What it lists as deleted is what supabase/functions/delete-account removes,
+   by cascade: if a table gains a link to an account, check this page. */
+const DELETE_ACCOUNT = `
+<header class="hc-section-header hc-section-header--flush">
+  <span class="hc-eyebrow hc-section-header__eyebrow">Home Church</span>
+  <h1 class="hc-section-header__title">Delete your account</h1>
+  <div class="hc-section-header__rule" aria-hidden="true"></div>
+</header>
+
+<section class="hc-legal__block">
+  <h2 class="hc-legal__heading">From the app</h2>
+  <p class="hc-body-serif hc-legal__p">Open Home Church on your phone and go to Settings, from the menu or by tapping your initials at the top. Tap Delete my account, then Delete my account again, and confirm. It happens straight away, and you do not have to email anybody.</p>
+</section>
+
+<section class="hc-legal__block">
+  <h2 class="hc-legal__heading">Without the app</h2>
+  <p class="hc-body-serif hc-legal__p">Open <a href="https://pgrooves.github.io/home-church/?v=profile">the web version of the app</a> in any browser, sign in with the same email address, and follow the same steps.</p>
+  <p class="hc-body-serif hc-legal__p">Or email <a href="mailto:hello@homechurchnola.com?subject=Delete%20my%20account">hello@homechurchnola.com</a> from the address you signed in with and ask us to delete your account. We will do it within 30 days and write back to say it is done.</p>
+</section>
+
+<section class="hc-legal__block">
+  <h2 class="hc-legal__heading">What is deleted</h2>
+  <p class="hc-body-serif hc-legal__p">Your account and the email address it uses. Everything under Your information: your name, and your birthday, campus, marital status and address if you gave them. Every journal entry and highlight saved to your account. Everything you wrote in a group room, and any room you hosted along with what everybody wrote in it. Your Coffee orders. It is removed from our server for good, not hidden or marked inactive, and there is no undo.</p>
+</section>
+
+<section class="hc-legal__block">
+  <h2 class="hc-legal__heading">What is not</h2>
+  <p class="hc-body-serif hc-legal__p">What is saved on your phone itself, like guide checkmarks, a group roster, or a journal you kept without signing in, is not on our server, so deleting the account does not reach it. Erase it from Settings, then Your data, or delete the app. A message you sent from the form on Connect is an email in the church's mailbox; ask and we will delete that too. Our own copy of it is removed after 180 days either way.</p>
+</section>
+
+<section class="hc-legal__block">
+  <h2 class="hc-legal__heading">Home Church</h2>
+  <p class="hc-body-serif hc-legal__p">
+    216 Giuffrias Ave<br>
+    Metairie, LA 70001
+  </p>
+  <p class="hc-body-serif hc-legal__p"><a href="privacy.html">Privacy policy</a> &middot; <a href="terms.html">Terms of use</a> &middot; <a href="support.html">App support</a></p>
 </section>
 `;
 
@@ -267,6 +318,11 @@ body { background: var(--hc-paper); }
   fs.writeFileSync(supportFile, supportHtml);
   console.log(`legal/support.html  ${(supportHtml.length / 1024).toFixed(0)} KB, self contained`);
 
+  const deleteFile = path.join(OUT, 'delete-account.html');
+  const deleteHtml = shell('Delete your account, Home Church', css, DELETE_ACCOUNT);
+  fs.writeFileSync(deleteFile, deleteHtml);
+  console.log(`legal/delete-account.html  ${(deleteHtml.length / 1024).toFixed(0)} KB, self contained`);
+
   await browser.close();
 
   fs.writeFileSync(path.join(OUT, 'README.md'),
@@ -302,9 +358,13 @@ agree to have to be readable somewhere public.
 \`support.html\` goes in the **Support URL** field, which is also required.
 A homepage is thin and reviewers do check.
 
+\`delete-account.html\` goes in the Google Play **Data safety** form, under
+data deletion. Google wants a public page where somebody can ask for their
+account to be deleted without installing the app. Apple does not ask for it.
+
 ## Before publishing
 
-All three are drafts and none has been read by a lawyer. See
+All four are drafts and none has been read by a lawyer. See
 \`LAUNCH_TODO.md\`. Run \`npm run preflight\` after regenerating: it is what
 catches these three files going stale against the app screens again.
 `);

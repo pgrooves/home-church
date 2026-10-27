@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Plain paper, the same as the iOS launch screen (scripts/ios_splash.js).
+     The church's own splash, the house arriving, is drawn by js/splash.js a
+     moment later, so anything here would be a second splash in front of it. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <solid android:color="@color/hc_paper" />
+</shape>

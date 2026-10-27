@@ -155,6 +155,8 @@ function legal() {
 
   ok('legal/support.html exists, for the Support URL field', exists('legal', 'support.html'),
     'Run the generator. App Store Connect requires a Support URL.');
+  ok('legal/delete-account.html exists, for the Data safety form', exists('legal', 'delete-account.html'),
+    'Run the generator. Google Play requires a public page for deleting an account.');
 }
 
 /* ====================================================== 2. privacy manifest
@@ -659,10 +661,15 @@ function infoPlistKeys() {
      fixture it was tested against was written from this same list and so
      agreed with the bug. `cap sync` counts 11 plugins; this has to agree.
 
+   @capacitor/android is the other platform, for the same reason. It went
+   into package.json with the Android port, and without this line every
+   iPhone preflight would have looked for it in Package.swift and failed.
+
+
    Split out from pluginPods so tests/plugin-manifest.test.js can hold the
    rule to that number rather than to a fixture of my own making. */
 function capacitorPlugins(dependencies) {
-  const NOT_PLUGINS = ['@capacitor/core', '@capacitor/ios'];
+  const NOT_PLUGINS = ['@capacitor/core', '@capacitor/ios', '@capacitor/android'];
   return Object.keys(dependencies || {})
     .filter((name) => /capacitor/i.test(name) && NOT_PLUGINS.indexOf(name) === -1);
 }

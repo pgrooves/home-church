@@ -1,0 +1,78 @@
+apply plugin: 'com.android.application'
+
+android {
+    namespace = "com.homechurchnola.app"
+    compileSdk = rootProject.ext.compileSdkVersion
+    defaultConfig {
+        applicationId "com.homechurchnola.app"
+        minSdkVersion rootProject.ext.minSdkVersion
+        targetSdkVersion rootProject.ext.targetSdkVersion
+        /* Play refuses an upload whose versionCode it has seen before, the same
+           rule as the iOS Build number. The GitHub Action passes its run
+           number, which only ever goes up, so nobody has to remember to raise
+           it. A local build with no HC_VERSION_CODE is 1 and is never uploaded.
+           versionName is what people see, and matches the iOS version. */
+        versionCode((System.getenv('HC_VERSION_CODE') ?: '1') as Integer)
+        versionName "1.1"
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        aaptOptions {
+             // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
+             // Default: https://android.googlesource.com/platform/frameworks/base/+/282e181b58cf72b6ca770dc7ca5f91f135444502/tools/aapt/AaptAssets.cpp#61
+            ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
+        }
+    }
+    /* The upload key. Play App Signing holds the key phones actually trust;
+       this one only proves an upload came from us, and Google can reset it if
+       it is ever lost. It lives in GitHub secrets, never in the repo. With no
+       keystore in the environment the release build is simply unsigned, which
+       is what every branch build is. */
+    signingConfigs {
+        upload {
+            def store = System.getenv('HC_UPLOAD_STORE_FILE')
+            if (store) {
+                storeFile file(store)
+                storePassword System.getenv('HC_UPLOAD_STORE_PASSWORD')
+                keyAlias System.getenv('HC_UPLOAD_KEY_ALIAS')
+                keyPassword System.getenv('HC_UPLOAD_KEY_PASSWORD')
+            }
+        }
+    }
+    buildTypes {
+        release {
+            if (System.getenv('HC_UPLOAD_STORE_FILE')) {
+                signingConfig signingConfigs.upload
+            }
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+    }
+}
+
+repositories {
+    flatDir{
+        dirs '../capacitor-cordova-android-plugins/src/main/libs', 'libs'
+    }
+}
+
+dependencies {
+    implementation fileTree(include: ['*.jar'], dir: 'libs')
+    implementation "androidx.appcompat:appcompat:$androidxAppCompatVersion"
+    implementation "androidx.coordinatorlayout:coordinatorlayout:$androidxCoordinatorLayoutVersion"
+    implementation "androidx.core:core-splashscreen:$coreSplashScreenVersion"
+    implementation project(':capacitor-android')
+    testImplementation "junit:junit:$junitVersion"
+    androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
+    androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"
+    implementation project(':capacitor-cordova-android-plugins')
+}
+
+apply from: 'capacitor.build.gradle'
+
+try {
+    def servicesJSON = file('google-services.json')
+    if (servicesJSON.text) {
+        apply plugin: 'com.google.gms.google-services'
+    }
+} catch(Exception e) {
+    logger.info("google-services.json not found, google-services plugin not applied. Push Notifications won't work")
+}

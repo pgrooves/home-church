@@ -30,8 +30,12 @@ agree to have to be readable somewhere public.
 `support.html` goes in the **Support URL** field, which is also required.
 A homepage is thin and reviewers do check.
 
+`delete-account.html` goes in the Google Play **Data safety** form, under
+data deletion. Google wants a public page where somebody can ask for their
+account to be deleted without installing the app. Apple does not ask for it.
+
 ## Before publishing
 
-All three are drafts and none has been read by a lawyer. See
+All four are drafts and none has been read by a lawyer. See
 `LAUNCH_TODO.md`. Run `npm run preflight` after regenerating: it is what
 catches these three files going stale against the app screens again.

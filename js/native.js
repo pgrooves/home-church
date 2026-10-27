@@ -32,6 +32,47 @@
               window.Capacitor.isNativePlatform());
   }
 
+  /* 'ios', 'android' or 'web'. Capacitor answers 'ios' on every iPhone build,
+     so anything below that asks isAndroid() is a branch an iPhone never
+     takes. That is the rule for the whole Android port: it adds branches, it
+     does not change the road an iPhone already drives. */
+  function platform() {
+    if (!isNative()) return 'web';
+    var name = window.Capacitor.getPlatform && window.Capacitor.getPlatform();
+    return name === 'android' ? 'android' : 'ios';
+  }
+
+  function isAndroid() {
+    return platform() === 'android';
+  }
+
+  /* Whether this build may link to giving at all.
+
+     NOT ON ANDROID, AND THE REASON IS GOOGLE'S RULE, NOT OURS. Apple's rule
+     is about where the payment happens, and handing off to Overflow in the
+     browser satisfies it. Google's is about who the money goes to: a link
+     out to donations is allowed only for an organisation that can show an
+     IRS determination letter, and the church does not have one yet. So on
+     Android the Give stop, the giving row on Home and the button on the Give
+     screen are all left out, together, through this one answer.
+     PLAY_COMPLIANCE.md section 3. When the letter exists this returns true
+     everywhere and that is the whole change. */
+  function offersGiving() {
+    return !isAndroid();
+  }
+
+  /* Whether this build can be sent a push. Android push goes through
+     Firebase Cloud Messaging, which needs google-services.json in the build
+     and a sender in supabase/functions/send-push, and neither exists yet. On
+     Android, asking the plugin to register without that file crashes the
+     app, so this is checked before the plugin is touched at all, not after.
+     PLAY_COMPLIANCE.md section 8. Flip ANDROID_PUSH once both halves ship. */
+  var ANDROID_PUSH = false;
+
+  function pushAvailable() {
+    return !isAndroid() || ANDROID_PUSH;
+  }
+
   /* ------------------------------------------------------------- haptics
      Deliberately small. A tick when a leader checks a question off in front
      of a group, and nothing else. Haptics used for decoration stop meaning
@@ -448,20 +489,27 @@
     var at = reminder.at instanceof Date ? reminder.at : new Date(reminder.at);
     if (!at.getTime() || at.getTime() <= Date.now()) return Promise.resolve(false);
 
+    var notification = {
+      id: reminder.id,
+      title: reminder.title,
+      body: reminder.body,
+      schedule: { at: at },
+      /* Comes back on the tap, so opening the notification can open the
+         Cal tab rather than wherever the app was left. See the
+         localNotificationActionPerformed listener in js/reminders.js. */
+      extra: { event: reminder.eventId }
+    };
+    /* Android only. Inexact means the phone may fire it a few minutes late
+       to save battery, which is fine for "this starts in an hour". Exact
+       would need SCHEDULE_EXACT_ALARM, which since Android 14 sends people to
+       a Settings screen to grant it the first time they ask. */
+    if (isAndroid()) notification.isExactNotification = false;
+
     return askToRemind().then(function (granted) {
       if (!granted) return false;
 
       return ln.schedule({
-        notifications: [{
-          id: reminder.id,
-          title: reminder.title,
-          body: reminder.body,
-          schedule: { at: at },
-          /* Comes back on the tap, so opening the notification can open the
-             Cal tab rather than wherever the app was left. See the
-             localNotificationActionPerformed listener in js/reminders.js. */
-          extra: { event: reminder.eventId }
-        }]
+        notifications: [notification]
       }).then(function () { return true; });
     }).catch(function (err) {
       console.warn('reminders: iOS would not take that one.', err);
@@ -571,7 +619,7 @@
     var prefs = (HC.store.getProfile().notifications) || {};
     return {
       p_token: token,
-      p_platform: 'ios',
+      p_platform: platform(),
       p_new_guide: !!prefs.newGuide,
       p_sunday_reminder: !!prefs.sundayReminder,
       p_group_day: !!prefs.groupWeek,
@@ -835,7 +883,7 @@
      caller can put the switch back if somebody says no. */
   function enableNotifications() {
     var p = plugins();
-    if (!p || !p.PushNotifications) return Promise.resolve(false);
+    if (!p || !p.PushNotifications || !pushAvailable()) return Promise.resolve(false);
 
     listen(p);
 
@@ -872,7 +920,7 @@
      `quiet` is the foreground case: it acts only on a change of answer, so
      coming back to the app is not a registration request every time. */
   function resumeNotifications(quiet) {
-    if (!isNative()) return;
+    if (!isNative() || !pushAvailable()) return;
     var p = plugins();
     if (!p || !p.PushNotifications) return;
 
@@ -987,6 +1035,8 @@
 
     return b.authenticate({
       reason: reason || 'Open your journal',
+      // Android's own prompt has a title where iOS has the reason line.
+      androidTitle: reason || 'Open your journal',
       cancelTitle: 'Not now',
       allowDeviceCredential: true,
       iosFallbackTitle: 'Use passcode'
@@ -996,6 +1046,10 @@
 
   HC.native = {
     isNative: isNative,
+    platform: platform,
+    isAndroid: isAndroid,
+    offersGiving: offersGiving,
+    pushAvailable: pushAvailable,
     tap: tap,
     canLock: canLock,
     unlock: unlock,
