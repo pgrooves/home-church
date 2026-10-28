@@ -485,6 +485,27 @@ def cmd_update(args):
     return 0
 
 
+def cmd_rpc(args):
+    """Call one database function by name, with named arguments.
+
+    Used by /new-podcast for its last step, hc_announce_new_sermon. The
+    function's own refusal (already told, no episode yet) comes back in its
+    own words and the script exits non-zero, so a run that says nothing was
+    sent is never reported as one that did."""
+    url, key = load_env()
+    params = load_json_arg(args.params) if args.params else {}
+    if not isinstance(params, dict):
+        die("The arguments must be a JSON object, for example '{\"p_id\": \"sermon-x\"}'.")
+
+    status, body = request("POST", url, key, "/rest/v1/rpc/" + args.function, body=params)
+    if status not in (200, 204):
+        message = body.get("message") if isinstance(body, dict) else None
+        die("%s refused (%s): %s" % (args.function, status, message or json.dumps(body, indent=2)))
+
+    print("called  %s  -> %s" % (args.function, json.dumps(body, ensure_ascii=False)))
+    return 0
+
+
 # --------------------------------------------------------------------------
 # when: church local time -> the UTC string events wants
 # --------------------------------------------------------------------------
@@ -680,6 +701,10 @@ def main():
     p_update.add_argument("id")
     p_update.add_argument("patch", help="path to a .json file, a JSON string, or -")
 
+    p_rpc = sub.add_parser("rpc", help="call one database function by name")
+    p_rpc.add_argument("function")
+    p_rpc.add_argument("params", nargs="?", help="JSON object of named arguments, a .json file, or -")
+
     p_setting = sub.add_parser("setting", help="write one app_settings row, by key")
     p_setting.add_argument("key")
     p_setting.add_argument("value", help="the text, or on/off for a switch")
@@ -698,6 +723,7 @@ def main():
         "check": cmd_check, "verify": cmd_verify, "apply": cmd_apply,
         "select": cmd_select, "upsert": cmd_upsert, "update": cmd_update,
         "setting": cmd_setting, "host": cmd_host, "when": cmd_when,
+        "rpc": cmd_rpc,
     }
     return handlers[args.command](args)
 

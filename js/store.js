@@ -99,6 +99,12 @@
     photoUrl: '',
     notifications: {
       newGuide: true,
+      /* The sermon audio is up, from migration 0096. The one switch that
+         starts off, and stays off through the first launch's "turn
+         everything on", because the church wants it chosen. A phone that
+         already has the app gets the same false from the merge below, which
+         is the right answer for a switch it has never seen. */
+      newSermon: false,
       sundayReminder: true,
       groupWeek: false,
       // The church posting something on purpose. Default on for the reason in

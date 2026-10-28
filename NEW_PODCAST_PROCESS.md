@@ -334,6 +334,30 @@ editing a guide.
 
 -----
 
+## Step 5c: Tell the phones that asked
+
+The last thing, and only when everything above worked: the row is
+published, `episode_url` landed, the title has no `(Working Title)` left on
+it, and the setlist step did what it said. If any of that failed or was
+skipped, stop and send nothing. A notification that sends somebody to
+"Audio coming soon!" is worse than none, and it cannot be taken back.
+
+```bash
+python3 scripts/hc_supabase.py rpc hc_announce_new_sermon '{"p_id": "sermon-your-slug"}'
+```
+
+It goes only to phones that turned on **New sermon audio** in Your account,
+which is off unless somebody chose it. The function checks the row again
+before anything is sent, and refuses one with no episode, one from more than
+two weeks ago, or one already announced, so running `/new-podcast` twice for
+the same Sunday tells nobody twice. A refusal is not a failure of the run:
+say what it said and finish.
+
+**Never in a backfill.** The back catalogue is not news, and the two week
+limit is there in case somebody forgets.
+
+-----
+
 ## Backfilling the whole catalogue
 
 Everything above handles one episode, which is the weekly case. Say **"new

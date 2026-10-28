@@ -234,7 +234,12 @@ select t_check('but service_role can, because something has to run it',
 -- already knows a token can stop that phone being notified.
 -- 0093 took hc_room_is_live and hc_room_is_member back from anon: no policy
 -- anon is subject to calls them any more, so they are down to three.
-select t_check('anon can execute exactly the three functions it needs',
+--
+-- hc_set_device_new_sermon, from 0096, makes four again, and is the same
+-- shape as hc_deactivate_device_token: it names one row by a token the caller
+-- already holds and sets one switch on it. It never creates a row, so it is
+-- not a second way to register.
+select t_check('anon can execute exactly the four functions it needs',
   (select coalesce(string_agg(p.proname, ', ' order by p.proname), 'none')
      from pg_proc p
      join pg_type t on t.oid = p.prorettype
@@ -242,14 +247,14 @@ select t_check('anon can execute exactly the three functions it needs',
       and p.proname like 'hc\_%'
       and t.typname <> 'trigger'
       and has_function_privilege('anon', p.oid, 'EXECUTE')),
-  'hc_deactivate_device_token, hc_is_admin, hc_register_device_token');
+  'hc_deactivate_device_token, hc_is_admin, hc_register_device_token, hc_set_device_new_sermon');
 
 -- The standing guard, and the reason migration 0017 does not try to solve this
 -- with ALTER DEFAULT PRIVILEGES. Postgres hands PUBLIC an EXECUTE grant on
 -- every new function and there is no way to switch that off ahead of time, so
 -- the next person to add an hc_ function to this schema has to revoke it from
 -- public by name. This is what tells them they forgot: it lists anything anon
--- can reach that is not one of the four named above. Trigger functions are
+-- can reach that is not one of the ones named above. Trigger functions are
 -- exempt, PostgREST does not expose them.
 select t_check('and nothing else in the schema is reachable by a signed out client',
   (select coalesce(string_agg(p.proname, ', ' order by p.proname), 'none')
@@ -259,6 +264,7 @@ select t_check('and nothing else in the schema is reachable by a signed out clie
       and p.proname like 'hc\_%'
       and t.typname <> 'trigger'
       and p.proname not in ('hc_room_is_live', 'hc_room_is_member', 'hc_is_admin',
-                            'hc_register_device_token', 'hc_deactivate_device_token')
+                            'hc_register_device_token', 'hc_deactivate_device_token',
+                            'hc_set_device_new_sermon')
       and has_function_privilege('anon', p.oid, 'EXECUTE')),
   'none');

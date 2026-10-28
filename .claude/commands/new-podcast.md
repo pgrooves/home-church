@@ -184,6 +184,29 @@ The exception is not about titles at all: if you edited the guide's own words
 while you were here, that section's hash moved and it needs a run like any
 other content edit.
 
+## Last: tell the phones that asked
+
+Only once everything above has worked: the row is published, `episode_url`
+is on it, the title has no `(Working Title)` left, and the setlist step did
+what it said. Read the row back to check, don't assume. If anything failed
+or was skipped, **send nothing** and say why in the confirmation.
+
+```bash
+python3 scripts/hc_supabase.py rpc hc_announce_new_sermon '{"p_id": "sermon-your-slug"}'
+```
+
+Or, over the MCP server, `select public.hc_announce_new_sermon('sermon-your-slug');`.
+
+It goes only to phones that turned on **New sermon audio** in Your account,
+which is off unless somebody chose it. Running this command is the yes for
+it; don't ask again. The function checks the row itself and refuses one with
+no episode, one from more than two weeks ago, or one already announced, so a
+second `/new-podcast` for the same Sunday tells nobody twice. A refusal is
+not a failed run: report its words and finish.
+
+**Never in a backfill.** Skip this step entirely when backfilling.
+`NEW_PODCAST_PROCESS.md` Step 5c is the reasoning.
+
 ## Confirm, briefly
 
 ```
@@ -191,11 +214,12 @@ Published  Who's In Your Corner?
 Stephen, August 9 2026
 Renamed from Unsung Heroes (Working Title), linked to guide-unsung-heroes
 Setlist for that Sunday now points at it
+Phones that asked were told it's up
 ```
 
 Name the old title the way it actually read, marker and all, so the line says
 what changed rather than implying the church renamed its own message.
 
-Drop the last line when there was no setlist for that Sunday. Four lines is
-the whole confirmation: no narration line, because there was no narration
-step.
+Drop the setlist line when there was no setlist for that Sunday. The last
+line says what the notification step did: told, already told before, or not
+sent and why. No narration line, because there was no narration step.
