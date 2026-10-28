@@ -14,17 +14,19 @@ Paste-ready text is in grey boxes. Copy the whole box.
 |---|---|---|
 | Developer account paid (personal) | Trey | Done |
 | Android device check | Trey | Done, October 27 |
-| Identity documents | Google | Waiting, "a few days" |
-| Contact phone number | Trey | After identity, one text code |
-| Create the app | Trey | After both verifications |
-| Upload key | Trey and Claude | Right before the first upload |
-| Closed test, 12 testers, 14 days | Trey | After the first upload |
+| Identity and phone number | Google, Trey | Done, October 27 |
+| Create the app | Trey | Done, October 27 |
+| Upload key | Claude | Done, October 27. Trey saves the backup file |
+| Internal test, build 1, on Brandon's Android | Trey | Done, October 27: installs and works |
+| Store listing and App content | Trey | Next, sections 2 and 3 |
+| Upload key into GitHub secrets | Trey | Before build 2, section 4 |
+| Closed test, 12 testers, 14 days | Trey | After the forms, section 5 |
 | Apply for production | Trey | After day 14 |
 | Live on Google Play | Google | About a week after applying |
 
-Play Console will not let you create the app until Google has verified your
-identity and the phone number. Nothing below can be started before then
-except section 7, recruiting testers.
+Build 1 was signed by hand in a Claude session, from the `android-play`
+branch, with the upload key Claude made. Everything after it comes from the
+GitHub Action once the key is in the repository's secrets.
 
 -----
 
@@ -35,6 +37,7 @@ Play Console, **Create app**.
 | Field | Answer |
 |---|---|
 | App name | `Home Church NOLA` |
+| Package name | `com.homechurchnola.app`, copied, never typed. Permanent, and it must match the app exactly |
 | Default language | English (United States) – en-US |
 | App or game | App |
 | Free or paid | **Free.** Permanent: a free app can never become paid |
@@ -256,19 +259,22 @@ The first bundle has to be signed with an upload key. Google holds the key
 phones actually trust (Play App Signing); the upload key only proves an
 upload came from us, and if it is ever lost Google can reset it.
 
-When you get here, tell Claude. Claude will:
+**Made October 27.** Its fingerprint is
+`4C:45:A3:6C:91:87:71:3C:59:58:BF:39:02:71:10:B2:03:D9:1A:90:49:11:92:28:A3:5C:EC:DD:AF:40:37:83`.
+The private half is `home-church-upload-key.txt`, sent to Trey in chat and
+kept somewhere private. **Never in the repository, which is public.**
 
-1. Make the key in this session, and put a file in the session's scratch
-   folder holding it as text plus its password.
-2. Walk you through four **repository secrets** on GitHub (github.com →
-   the repo → Settings → Secrets and variables → Actions → New repository
-   secret), pasted from that file: `HC_UPLOAD_KEYSTORE_BASE64`,
-   `HC_UPLOAD_STORE_PASSWORD`, `HC_UPLOAD_KEY_ALIAS`, `HC_UPLOAD_KEY_PASSWORD`.
-3. Ask you to save the same file somewhere private you will not lose, like
-   a note in your password manager. **Never in the repository, which is
-   public.**
+To let the GitHub Action sign every build from now on, add four
+**repository secrets**: github.com → the repo → **Settings → Secrets and
+variables → Actions → New repository secret**. The file lists each name
+with its value under it:
 
-From then on every build the GitHub Action makes is signed.
+1. `HC_UPLOAD_KEY_ALIAS`
+2. `HC_UPLOAD_STORE_PASSWORD`
+3. `HC_UPLOAD_KEY_PASSWORD`
+4. `HC_UPLOAD_KEYSTORE_BASE64`, one very long line; copy all of it
+
+Then the next green Android run makes a signed bundle, build 2 or higher.
 
 -----
 
