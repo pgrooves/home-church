@@ -343,8 +343,13 @@ Public, and shown in the Updates list on every phone. Name only what members
 can see. Nothing about a page that is switched off.
 
 ```
-Improvements and fixes throughout the app.
+Bug fixes and improvements.
 ```
+
+That line on its own is enough for fixes, security and speed. Guideline
+2.3.12 asks that a significant change people can see be named, so when
+there is one, add a sentence per change under it (at most three).
+`/new-build` decides which, and the same text goes to Google Play.
 
 ### Keywords, 100 characters, comma separated, no spaces after commas
 

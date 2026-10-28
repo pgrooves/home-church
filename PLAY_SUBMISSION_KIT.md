@@ -283,7 +283,7 @@ Then the next green Android run makes a signed bundle, build 2 or higher.
 1. Get the bundle. github.com → the repo → **Actions** → the latest green
    **Android** run on `main` → **Artifacts** → `home-church-android-aab`.
    It downloads as a zip; tap it in Files to unzip. Inside is
-   `home-church-1.1-build-N.aab`.
+   `home-church-<version>-build-N.aab`.
 2. Play Console → **Test and release → Testing → Closed testing** →
    **Create track** (or use the one already there) → **Manage track**.
 3. **Countries/regions**: United States.
@@ -393,6 +393,9 @@ Please don't leave the test until I say we're done. Google counts days in a row.
 -----
 
 ## 8. Every update after launch
+
+**`/new-build` does steps 1 to 3 and sends you the file**, with the notes
+to paste and where to tap, at the same time as the iPhone build.
 
 1. The change lands on `main` (with your yes, as always).
 2. The Android action builds a signed bundle, its build number one higher.

@@ -1254,6 +1254,11 @@ on a device.
 **Everything else about submitting is in `SUBMISSION_KIT.md`**, and everything
 that needs a human rather than a commit is in `LAUNCH_TODO.md`.
 
+**Each new version after that starts with `/new-build`.** It says what changed
+since the last build, picks the version and build numbers, writes What's New,
+hands over the laptop command, sends the Android file, and walks through App
+Store Connect and Play Console. The build history is in `RELEASES.md`.
+
 **Worth knowing before you start.** An Apple Developer account is $99 a year.
 A personal account can be created in a few minutes. An organization account,
 which is what you want if the app is published as Home Church rather than as a

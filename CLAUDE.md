@@ -144,6 +144,11 @@ Trey what the next step is.
    Once it's released, people get it as they update. Older versions stay in
    use for weeks.
 
+**`/new-build` runs this whole step for Trey**: what changed since the last
+build, the version and build numbers, What's New, the laptop command, the
+Android file and both stores' steps. It keeps the build list in
+`RELEASES.md`. Whether or not it is used, the checks are the same.
+
 When Trey is ready to make a TestFlight build, check first, here:
 
 - `npm test` passes on `main`.
@@ -173,7 +178,8 @@ Trey sends a screenshot of the last lines.
 Then, in Xcode:
 
 1. Click **App** in the left column, then the **General** tab. Raise
-   **Build** by one.
+   **Build** by one, and set **Version** when it goes up (`/new-build`
+   gives both numbers).
 2. At the top, set the device to **Any iOS Device (arm64)**.
 3. Menu bar: **Product → Archive**. It takes a few minutes.
 4. In the window that opens: **Distribute App → App Store Connect →

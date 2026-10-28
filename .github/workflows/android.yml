@@ -126,11 +126,18 @@ jobs:
             exit 1
           fi
 
+      # The version comes from versionName in build.gradle, which /new-build
+      # raises with each App Store version, so the file name never goes stale.
       - name: Name the bundle after its version
         run: |
           mkdir -p out
+          version=$(sed -n 's/^ *versionName "\(.*\)".*/\1/p' android/app/build.gradle)
+          if [ -z "$version" ]; then
+            echo "No versionName in android/app/build.gradle."
+            exit 1
+          fi
           cp android/app/build/outputs/bundle/release/app-release.aab \
-            "out/home-church-1.1-build-${HC_VERSION_CODE}.aab"
+            "out/home-church-${version}-build-${HC_VERSION_CODE}.aab"
 
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
