@@ -387,6 +387,8 @@ create table public.podcasts (
   description text,
   summary     text[],
   episode_url text,
+  -- 0096 announces only the last two weeks of messages, by this date.
+  preached_on date,
   published   boolean not null default true,
   updated_at  timestamptz not null default now()
 );

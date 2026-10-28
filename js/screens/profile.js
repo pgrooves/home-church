@@ -16,6 +16,7 @@
      second half is the part that goes stale, when the church moves the send
      from Monday morning to Sunday night. */
   var NOTIFY_GUIDE = 'Monday morning, once a week';
+  var NOTIFY_SERMON = 'When Sunday’s message is up to listen to';
   var NOTIFY_SUNDAY = 'Saturday evening, service times and address';
   var NOTIFY_NEWS = 'When the church posts something on purpose';
   /* The two admin ones. Not editable, unlike the three above, and the
@@ -298,6 +299,18 @@
     }), { slot: 'profile.notify-guide',
       value: HC.data.copy('profile.notify-guide', NOTIFY_GUIDE),
       label: 'when a new guide goes out', rows: 2 });
+    /* Off until somebody turns it on, unlike the switches around it. Sent
+       once a week, at the end of /new-podcast, and only when that worked.
+       See migration 0096. */
+    html += HC.edit.mark(switchRow({
+      title: 'New sermon audio',
+      sub: HC.data.copy('profile.notify-sermon', NOTIFY_SERMON),
+      action: 'toggle-notify',
+      id: 'newSermon',
+      on: p.notifications.newSermon
+    }), { slot: 'profile.notify-sermon',
+      value: HC.data.copy('profile.notify-sermon', NOTIFY_SERMON),
+      label: 'when new sermon audio goes out', rows: 2 });
     html += HC.edit.mark(switchRow({
       title: 'Sunday reminder',
       sub: HC.data.copy('profile.notify-sunday', NOTIFY_SUNDAY),

@@ -608,6 +608,28 @@
     });
   }
 
+  /* The "New sermon audio" switch, which does not travel with the other
+     four. Adding it to hc_register_device_token would change that function's
+     signature, and every installed build calls it on launch; migration 0096
+     says why that is not worth it for one boolean. So it has its own door,
+     which sets one column on the row the registration made, and is always
+     called after it. Silent, like syncPreferences(): a miss is repaired by
+     the re-register on next launch. */
+  function syncNewSermon(token) {
+    var cfg = HC.config || {};
+    var prefs = HC.store.getProfile().notifications || {};
+    return fetch(cfg.SUPABASE_URL + '/rest/v1/rpc/hc_set_device_new_sermon', {
+      method: 'POST',
+      headers: restHeaders({ Prefer: 'return=minimal' }),
+      body: JSON.stringify({ p_token: token, p_on: !!prefs.newSermon })
+    }).then(function (res) {
+      if (!res.ok) console.error('push: the server refused the sermon audio switch.', res.status);
+      return res.ok;
+    }).catch(function () {
+      return false;
+    });
+  }
+
   /* ------------------------------------------- the two admin switches
 
      Everything above this point is addressed to a phone. These two are
@@ -731,8 +753,10 @@
          anything for. So the anonymous registration is what makes the row, and
          this says whose it is. Not waited on: the four ordinary switches are
          already saved and an admin phone that fails this step is repaired by
-         the re-register on next launch. */
+         the re-register on next launch. The sermon audio switch is second for
+         the same reason: its door updates a row and never makes one. */
       syncAdminPreferences(token);
+      syncNewSermon(token);
       return true;
     }).catch(function (err) {
       // Offline. The switch stays on and this retries next launch.
@@ -765,8 +789,9 @@
         }, function () {
           console.error('push: the server refused this preference change.', res.status);
         });
+        return false;
       }
-      return res.ok;
+      return syncNewSermon(token);
     }).catch(function () {
       return false;
     });

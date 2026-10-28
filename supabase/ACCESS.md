@@ -169,6 +169,19 @@ succeeds and changes nothing, and without a returned row you will report a
 write that never happened. The script catches this for you and raw SQL does
 not.
 
+### Call a database function
+
+```bash
+python3 scripts/hc_supabase.py rpc hc_announce_new_sermon '{"p_id": "sermon-your-slug"}'
+```
+
+```sql
+select public.hc_announce_new_sermon('sermon-your-slug');
+```
+
+The function's refusal comes back in its own words either way. The script
+exits non-zero on one, so read the message rather than assuming it sent.
+
 ### Church local time to the UTC value `events.starts_at` wants
 
 ```bash

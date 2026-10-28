@@ -18,7 +18,8 @@
  * the end of a parse, since 0043, for the two review topics that tell the
  * admins their queue has something in it. Since 0092 a third: the Instagram
  * watch, telling the admins the rail has been stuck for six hours, and when
- * it is working again.
+ * it is working again. Since 0096 a fourth: the last step of /new-podcast,
+ * through hc_announce_new_sermon, saying Sunday's message can be listened to.
  *
  * THE TWO REVIEW TOPICS ARE ADDRESSED DIFFERENTLY from everything else here,
  * and it is the one thing in this file worth reading before changing it. They
@@ -71,7 +72,8 @@ type Topic =
   | 'event_review'
   | 'banner'
   | 'cafe_ready'
-  | 'instagram_sync';
+  | 'instagram_sync'
+  | 'new_sermon';
 
 const TOPIC_COLUMN: Record<Topic, string | null> = {
   new_guide: 'wants_new_guide',
@@ -91,6 +93,9 @@ const TOPIC_COLUMN: Record<Topic, string | null> = {
   // no switch of its own: it is rare, it is about the app rather than the
   // church, and the admins are who can do something about it. Migration 0092.
   instagram_sync: null,
+  // The sermon audio is up. Off unless somebody turned it on, unlike every
+  // switch above it. Migration 0096.
+  new_sermon: 'wants_new_sermon',
 };
 
 /* The topic that goes to exactly one phone, named by the row it is about.
@@ -435,6 +440,36 @@ async function compose(
     return {
       title: waiting === 1 ? 'A date needs you' : `${waiting} dates need you`,
       body: 'Nothing reaches the calendar until you say so.',
+    };
+  }
+
+  /* The sermon audio. hc_announce_new_sermon (0096) decides WHETHER: once,
+     at the end of a /new-podcast run that worked, for a message from the
+     last two weeks that has an episode to play. This decides WHAT, from the
+     row as it is now, so the lock screen says the title Listen shows. A row
+     unpublished or unlinked in the moment between is the null case. */
+  if (topic === 'new_sermon') {
+    if (!ref) return null;
+
+    const { data } = await admin
+      .from('podcasts')
+      .select('title, preacher_short, episode_url, published')
+      .eq('id', ref)
+      .maybeSingle();
+    const row = data as {
+      title?: string; preacher_short?: string | null;
+      episode_url?: string | null; published?: boolean;
+    } | null;
+
+    if (!row || !row.published || !String(row.episode_url ?? '').trim()) return null;
+
+    const title = String(row.title ?? '').trim();
+    const who = String(row.preacher_short ?? '').trim();
+    return {
+      title: 'Sunday’s message is up',
+      body: title
+        ? `${title}${who ? `, with ${who}` : ''}. Listen in the app.`
+        : 'Listen in the app.',
     };
   }
 
@@ -900,7 +935,7 @@ Deno.serve(async (req: Request) => {
   const retire: string[] = [];
 
   // See the note next to apns-collapse-id in sendOne().
-  const collapseId = (topic === 'announcement' || topic === 'cafe_ready') && ref
+  const collapseId = (topic === 'announcement' || topic === 'cafe_ready' || topic === 'new_sermon') && ref
     ? `${topic}:${ref}` : topic;
 
   // Batched rather than all at once. This church is small enough that it will

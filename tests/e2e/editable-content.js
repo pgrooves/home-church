@@ -124,7 +124,8 @@ const SLOTS = [
   /* profile.leader-copy and profile.leader-sub both went with the Leader mode
      section. Leader mode is a tier an admin sets under Manage users, so Your
      account says nothing about it and has no sentence left to reword. */
-  'profile.notify-guide', 'profile.notify-sunday', 'profile.notify-news'
+  'profile.notify-guide', 'profile.notify-sermon', 'profile.notify-sunday',
+  'profile.notify-news'
 ];
 
 function serve() {
