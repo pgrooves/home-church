@@ -998,7 +998,8 @@
      'granted', 'denied', or null where there is nobody to ask (a browser, or
      a build without the plugin). See js/notify-intro.js. */
   function applyChoices() {
-    if (!isNative()) return Promise.resolve(null);
+    // pushAvailable() first: on Android before Firebase, the plugin crashes.
+    if (!isNative() || !pushAvailable()) return Promise.resolve(null);
     var p = plugins();
     if (!p || !p.PushNotifications) return Promise.resolve(null);
 
@@ -1033,7 +1034,8 @@
      for somebody to come back from Settings. */
   function notificationAnswer() {
     var p = plugins();
-    if (!isNative() || !p || !p.PushNotifications || !p.PushNotifications.checkPermissions) {
+    if (!isNative() || !pushAvailable() || !p || !p.PushNotifications ||
+        !p.PushNotifications.checkPermissions) {
       return Promise.resolve(null);
     }
     return p.PushNotifications.checkPermissions()
@@ -1047,7 +1049,7 @@
      not serve to iOS, the same road mailto: and webcal: take in
      js/components.js. */
   function openAppSettings() {
-    if (!isNative()) return;
+    if (!isNative() || isAndroid()) return;
     window.location.href = 'app-settings:';
   }
 

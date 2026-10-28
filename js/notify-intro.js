@@ -41,8 +41,11 @@
    that ask to Continue instead, and a yes keeps the switches exactly as they
    were left here. See applyChoices() in js/native.js.
 
-   IN A BROWSER the switches are saved and nothing is asked, the same as
-   moving them on Your account.
+   WHERE IT SHOWS. Only in an app that can be sent a push: the iPhone app
+   today, Android once its push is in. See canReach(). When Android's turns
+   on, the three steps on the Don't Allow state are iPhone wording and
+   openAppSettings() in js/native.js is iPhone only; both want an Android
+   version before ANDROID_PUSH flips.
    ========================================================================== */
 
 (function (HC) {
@@ -69,10 +72,23 @@
     return !!(HC.store && HC.store.storage.get(SEEN_KEY, false));
   }
 
+  /* Only where a notification can actually arrive. That is the iPhone app,
+     and the Android app once pushAvailable() in js/native.js says Firebase
+     is in (PLAY_COMPLIANCE.md section 8). Not the web version, which has no
+     push at all, and not Android before then, where touching the push
+     plugin crashes the app: a screen of switches with nothing behind them
+     is the lie Your account already refuses to draw on Android. A demo on a
+     preview link shows it, since showing it is what the demo is for. */
+  function canReach() {
+    if (HC.demo && HC.demo.on) return true;
+    var n = HC.native;
+    return !!(n && n.isNative && n.isNative() && n.pushAvailable && n.pushAvailable());
+  }
+
   /* Asked by js/gate.js at the moment it is done, and by app.js at boot to
      decide whether iOS is asked now or by Continue. */
   function shouldShow() {
-    return !seen();
+    return canReach() && !seen();
   }
 
   /* Whether this is going to be on the glass before the splash leaves. True
@@ -119,14 +135,10 @@
     return list;
   }
 
-  /* What the one button says. On a phone it is what the button does: it
-     brings up the iOS alert. In a browser there is no alert behind it, so it
-     says Continue rather than promise one. A demo on a preview link reads
-     as the phone, since that is what a demo is there to show. */
+  /* What the one button says, which is what it does: it brings up the
+     phone's own alert. Every place this screen shows has one behind it. */
   function goLabel() {
-    var phone = (HC.native && HC.native.isNative && HC.native.isNative()) ||
-      (HC.demo && HC.demo.on);
-    return phone ? 'Turn on notifications' : 'Continue';
+    return 'Turn on notifications';
   }
 
   /* ---------------------------------------------------------------- markup */

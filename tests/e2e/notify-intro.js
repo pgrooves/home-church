@@ -84,17 +84,24 @@ function serve() {
 
 /* A phone that has never been asked. requestPermissions says yes and
    records when it was called, relative to the screen being up. */
-const PRETEND_PHONE = (reply) => {
-  window.__hcPush = { asked: 0, askedWhileGateUp: 0, registered: 0 };
+const PRETEND_PHONE = (opts) => {
+  const reply = opts && opts.reply;
+  const platform = (opts && opts.platform) || 'ios';
+  window.__hcPush = { asked: 0, askedWhileGateUp: 0, registered: 0, touched: 0 };
   let answer = 'prompt';
   // So a test can stand in for somebody flipping the switch in Settings.
   window.__hcSetAnswer = (a) => { answer = a; };
   window.Capacitor = {
     isNativePlatform: () => true,
+    getPlatform: () => platform,
     Plugins: {
       PushNotifications: {
-        checkPermissions: () => Promise.resolve({ receive: answer }),
+        checkPermissions: () => {
+          window.__hcPush.touched++;
+          return Promise.resolve({ receive: answer });
+        },
         requestPermissions: () => {
+          window.__hcPush.touched++;
           window.__hcPush.asked++;
           if (window.HC && window.HC.gate && window.HC.gate.step()) {
             window.__hcPush.askedWhileGateUp++;
@@ -102,7 +109,11 @@ const PRETEND_PHONE = (reply) => {
           answer = reply || 'granted';
           return Promise.resolve({ receive: answer });
         },
-        register: () => { window.__hcPush.registered++; return Promise.resolve(); },
+        register: () => {
+          window.__hcPush.touched++;
+          window.__hcPush.registered++;
+          return Promise.resolve();
+        },
         addListener: () => ({ remove: () => {} })
       }
     }
@@ -130,16 +141,54 @@ async function toTheSwitches(page) {
     page.on('pageerror', e => noise.push('pageerror: ' + String(e)));
     page.on('console', m => {
       const text = m.text();
-      if (m.type() === 'error' && !/ERR_|Failed to load resource|push:/.test(text)) {
+      // The featured video's YouTube player, when it loads at all from here,
+      // logs a Permissions policy line of its own. Not the app's.
+      if (m.type() === 'error' &&
+          !/ERR_|Failed to load resource|push:|Permissions policy violation/.test(text)) {
         noise.push('console: ' + text);
       }
     });
   };
 
-  /* ------------------------------------------------------------ a browser */
+  /* ------------------------------------------------------- the web version
+
+     No push behind it, so no screen of switches: guest goes straight home. */
+
+  const web = await browser.newPage({ viewport: { width: 390, height: 844 } });
+  listen(web);
+  await web.goto('http://127.0.0.1:' + PORT + '/index.html');
+  await toTheGate(web);
+  await web.click('[data-gate="guest"]');
+  await web.waitForFunction(() => !document.getElementById('hc-splash'), null, { timeout: 8000 });
+  ok('the web version skips it, since nothing could be sent there',
+    await web.evaluate(() => !document.querySelector('.hc-notify') &&
+      document.getElementById('app').getAttribute('data-view') === 'home'));
+
+  /* ------------------------------------------------- Android, before push
+
+     Firebase is not in yet, and touching the push plugin on Android without
+     it crashes the app. So no screen, and not one call into the plugin. */
+
+  const droid = await browser.newPage({ viewport: { width: 390, height: 844 } });
+  listen(droid);
+  await droid.addInitScript(PRETEND_PHONE, { platform: 'android' });
+  await droid.goto('http://127.0.0.1:' + PORT + '/index.html');
+  await toTheGate(droid);
+  await droid.click('[data-gate="guest"]');
+  await droid.waitForFunction(() => !document.getElementById('hc-splash'), null, { timeout: 8000 });
+  await droid.waitForTimeout(500);
+  const android = await droid.evaluate(() => ({
+    screen: !!document.querySelector('.hc-notify'), p: window.__hcPush
+  }));
+  ok('Android skips it while its push is not set up', android.screen === false);
+  ok('and never touches the push plugin, which would crash it',
+    android.p.touched === 0, JSON.stringify(android.p));
+
+  /* ---------------------------------------------------------- an iPhone */
 
   const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
   listen(page);
+  await page.addInitScript(PRETEND_PHONE, {});
   await page.goto('http://127.0.0.1:' + PORT + '/index.html');
   await toTheGate(page);
   await page.click('[data-gate="guest"]');
@@ -173,8 +222,8 @@ async function toTheSwitches(page) {
     shown.lockup.bottom <= shown.list.top, JSON.stringify(shown));
   ok('and the button is on the screen',
     shown.go.bottom <= 844, JSON.stringify(shown.go));
-  ok('saying Continue in a browser, where there is no alert behind it',
-    shown.label === 'Continue', shown.label);
+  ok('saying what it does',
+    shown.label === 'Turn on notifications', shown.label);
   ok('Home stays out of the accessibility tree while it is up',
     shown.hidden === 'true', String(shown.hidden));
 
@@ -205,7 +254,7 @@ async function toTheSwitches(page) {
 
   const phone = await browser.newPage({ viewport: { width: 390, height: 844 } });
   listen(phone);
-  await phone.addInitScript(PRETEND_PHONE);
+  await phone.addInitScript(PRETEND_PHONE, {});
   await phone.goto('http://127.0.0.1:' + PORT + '/index.html');
   await toTheGate(phone);
 
@@ -242,7 +291,7 @@ async function toTheSwitches(page) {
 
   const no = await browser.newPage({ viewport: { width: 390, height: 844 } });
   listen(no);
-  await no.addInitScript(PRETEND_PHONE, 'denied');
+  await no.addInitScript(PRETEND_PHONE, { reply: 'denied' });
   await no.goto('http://127.0.0.1:' + PORT + '/index.html');
   await toTheGate(no);
   await no.click('[data-gate="guest"]');
@@ -285,7 +334,7 @@ async function toTheSwitches(page) {
 
   const later = await browser.newPage({ viewport: { width: 390, height: 844 } });
   listen(later);
-  await later.addInitScript(PRETEND_PHONE, 'denied');
+  await later.addInitScript(PRETEND_PHONE, { reply: 'denied' });
   await later.goto('http://127.0.0.1:' + PORT + '/index.html');
   await toTheGate(later);
   await later.click('[data-gate="guest"]');
