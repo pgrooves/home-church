@@ -5,8 +5,8 @@
    iPhone does. So every answer here is asked three times, once per platform
    Capacitor can report, and the iPhone answer is pinned to what the app did
    before Android existed: giving offered, push available, a reminder sent
-   to the plugin with no Android-only field in it, and push registering as
-   'ios'. PLAY_COMPLIANCE.md sections 3 and 8 say why Android differs.
+   to the plugin with no Android-only field in it, push registering as 'ios',
+   and no notification channel, which only Android has. PLAY_COMPLIANCE.md sections 3 and 8 say why Android differs.
    =========================================================================== */
 'use strict';
 
@@ -45,7 +45,8 @@ function fakePlugins(calls) {
       addListener: function () { return Promise.resolve({ remove: function () {} }); },
       checkPermissions: record('push.checkPermissions', { receive: 'granted' }),
       requestPermissions: record('push.requestPermissions', { receive: 'granted' }),
-      register: record('push.register', undefined)
+      register: record('push.register', undefined),
+      createChannel: record('push.createChannel', undefined)
     }
   };
 }
@@ -101,7 +102,7 @@ ok('and not on Android, until there is a determination letter',
 /* ----------------------------------------------------------------- push */
 
 ok('push is available on an iPhone, as before', ios.HC.native.pushAvailable(), true);
-ok('and not on Android, until Firebase is set up', android.HC.native.pushAvailable(), false);
+ok('and on Android, now that Firebase is set up', android.HC.native.pushAvailable(), true);
 
 const later = new Date(Date.now() + 3 * 3600 * 1000);
 const reminder = { id: 42, title: 'Group night', body: 'In an hour', at: later, eventId: 'e1' };
@@ -113,15 +114,20 @@ Promise.all([
   ok('turning notifications on still registers on an iPhone', answers[0], true);
   ok('on an iPhone that is a permission request and a registration',
     ios.calls.map((c) => c[0]), ['push.requestPermissions', 'push.register']);
-  ok('on Android it answers no', answers[1], false);
-  ok('without touching the push plugin, which would crash with no Firebase file',
-    android.calls.filter((c) => c[0].indexOf('push.') === 0), []);
-
-  android.HC.native.resumeNotifications(false);
-  return new Promise((r) => setTimeout(r, 0));
-}).then(function () {
-  ok('the launch check leaves the push plugin alone on Android too',
-    android.calls.filter((c) => c[0].indexOf('push.') === 0), []);
+  ok('an iPhone is never asked to make a channel, which iOS does not have',
+    ios.calls.some((c) => c[0] === 'push.createChannel'), false);
+  ok('on Android it registers too', answers[1], true);
+  ok('after making the channel the manifest names, then the same two steps',
+    android.calls.filter((c) => c[0].indexOf('push.') === 0).map((c) => c[0]),
+    ['push.createChannel', 'push.requestPermissions', 'push.register']);
+  ok('the channel id is the one AndroidManifest.xml points Firebase at',
+    android.calls.filter((c) => c[0] === 'push.createChannel')[0][1].id, 'church');
+  const manifest = fs.readFileSync(path.join(__dirname, '..', 'android', 'app', 'src', 'main',
+    'AndroidManifest.xml'), 'utf8');
+  ok('and the manifest does point Firebase at it',
+    /default_notification_channel_id"\s+android:value="church"/.test(manifest), true);
+  ok('the Firebase file the plugin needs is in the build',
+    fs.existsSync(path.join(__dirname, '..', 'android', 'app', 'google-services.json')), true);
 
   /* ------------------------------------------------------------ reminders */
 

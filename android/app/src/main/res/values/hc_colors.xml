@@ -2,4 +2,7 @@
 <resources>
     <!-- hc-paper in css/tokens.css. values-night holds the dark one. -->
     <color name="hc_paper">#F7F4EF</color>
+    <!-- The brand gold, the same sample as css/tokens.css. Tints the small
+         icon on a notification. -->
+    <color name="hc_notify">#D7BA85</color>
 </resources>

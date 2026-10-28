@@ -198,8 +198,13 @@ Play Console, in order.
   `tests/android.test.js` pins both sides. Keep it that way: a change for
   Google that would also change iOS gets asked about first.
 - **Give is hidden on Android** (`offersGiving()`) until the church has an
-  IRS determination letter, and **push is off on Android** (`pushAvailable()`)
-  until Firebase is set up. Don't remove either without that happening.
+  IRS determination letter. Don't remove that without the letter.
+- **Android push goes through Firebase** (project `home-church-e3d0d`).
+  `android/app/google-services.json` is committed on purpose; it is not a
+  secret. `ANDROID_PUSH` in `js/native.js` is the off switch, and without
+  that file in the build it must be off, or the app crashes on Android.
+  `send-push` chooses Apple or Firebase per phone by `device_tokens.platform`,
+  and `FCM_SERVICE_ACCOUNT` is its Firebase secret.
 - **`android/` is committed**, unlike `ios/`, because a GitHub Action builds
   it, not a laptop. Trey never needs Android Studio. Every push to `main` or
   `android-play` builds the Play bundle and screenshots the real app in an

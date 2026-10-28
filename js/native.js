@@ -62,12 +62,13 @@
   }
 
   /* Whether this build can be sent a push. Android push goes through
-     Firebase Cloud Messaging, which needs google-services.json in the build
-     and a sender in supabase/functions/send-push, and neither exists yet. On
-     Android, asking the plugin to register without that file crashes the
-     app, so this is checked before the plugin is touched at all, not after.
-     PLAY_COMPLIANCE.md section 8. Flip ANDROID_PUSH once both halves ship. */
-  var ANDROID_PUSH = false;
+     Firebase Cloud Messaging, which needs android/app/google-services.json in
+     the build and the FCM sender in supabase/functions/send-push. Both exist
+     now. On Android, asking the plugin to register without that file crashes
+     the app, so this stays the one line to turn back off if the file ever
+     has to come out, and it is checked before the plugin is touched at all.
+     PLAY_COMPLIANCE.md section 8. */
+  var ANDROID_PUSH = true;
 
   function pushAvailable() {
     return !isAndroid() || ANDROID_PUSH;
@@ -850,6 +851,20 @@
   function listen(p) {
     if (listening) return;
     listening = true;
+    /* Android 8 and later file every notification under a channel, and the
+       channel's name is what somebody sees in Settings when they decide what
+       this app may do. Without one Firebase files ours under "Miscellaneous".
+       The id matches default_notification_channel_id in AndroidManifest.xml,
+       and making it again on every launch is a no-op. iOS has no channels. */
+    if (isAndroid() && p.PushNotifications.createChannel) {
+      p.PushNotifications.createChannel({
+        id: 'church',
+        name: 'Home Church',
+        description: 'New guides, Sunday reminders and announcements',
+        importance: 4,
+        visibility: 1
+      }).catch(function () { /* Firebase falls back to its own channel */ });
+    }
     p.PushNotifications.addListener('registration', function (t) {
       saveToken(t && t.value);
     });
