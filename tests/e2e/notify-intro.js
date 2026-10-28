@@ -106,7 +106,9 @@ const PRETEND_PHONE = (opts) => {
           if (window.HC && window.HC.gate && window.HC.gate.step()) {
             window.__hcPush.askedWhileGateUp++;
           }
-          answer = reply || 'granted';
+          // A list is one answer per time the dialog comes up, the way
+          // Android answers 'prompt-with-rationale' after a first no.
+          answer = Array.isArray(reply) ? (reply.shift() || 'denied') : (reply || 'granted');
           return Promise.resolve({ receive: answer });
         },
         register: () => {
@@ -114,7 +116,8 @@ const PRETEND_PHONE = (opts) => {
           window.__hcPush.registered++;
           return Promise.resolve();
         },
-        addListener: () => ({ remove: () => {} })
+        addListener: () => ({ remove: () => {} }),
+        createChannel: () => Promise.resolve()
       }
     }
   };
@@ -164,25 +167,76 @@ async function toTheSwitches(page) {
     await web.evaluate(() => !document.querySelector('.hc-notify') &&
       document.getElementById('app').getAttribute('data-view') === 'home'));
 
-  /* ------------------------------------------------- Android, before push
+  /* -------------------------------------------------------------- Android
 
-     Firebase is not in yet, and touching the push plugin on Android without
-     it crashes the app. So no screen, and not one call into the plugin. */
+     Android asks twice: after a first no it answers 'prompt-with-rationale'
+     and the dialog will come up once more. So a no there offers Turn on
+     notifications again, not the way to Settings an iPhone gets. */
 
   const droid = await browser.newPage({ viewport: { width: 390, height: 844 } });
   listen(droid);
-  await droid.addInitScript(PRETEND_PHONE, { platform: 'android' });
+  await droid.addInitScript(PRETEND_PHONE,
+    { platform: 'android', reply: ['prompt-with-rationale', 'granted'] });
   await droid.goto('http://127.0.0.1:' + PORT + '/index.html');
   await toTheGate(droid);
+  ok('Android is not asked at launch either',
+    (await droid.evaluate(() => window.__hcPush.asked)) === 0);
   await droid.click('[data-gate="guest"]');
-  await droid.waitForFunction(() => !document.getElementById('hc-splash'), null, { timeout: 8000 });
-  await droid.waitForTimeout(500);
-  const android = await droid.evaluate(() => ({
-    screen: !!document.querySelector('.hc-notify'), p: window.__hcPush
+  await toTheSwitches(droid);
+  await droid.click('[data-notify="newGuide"]');
+  await droid.click('[data-notify-go]');
+  await droid.waitForSelector('.hc-splash--notify-off [data-notify-again]', { timeout: 8000 });
+  await droid.waitForTimeout(800);
+  const again = await droid.evaluate(() => ({
+    greeting: document.getElementById('hc-splash-greeting').textContent,
+    settings: !!document.querySelector('[data-notify-settings]'),
+    steps: !!document.querySelector('.hc-notify__steps')
   }));
-  ok('Android skips it while its push is not set up', android.screen === false);
-  ok('and never touches the push plugin, which would crash it',
-    android.p.touched === 0, JSON.stringify(android.p));
+  ok('a first no on Android offers to ask again',
+    again.greeting === 'Notifications are off.' && !again.settings && !again.steps,
+    JSON.stringify(again));
+
+  await droid.click('[data-notify-again]');
+  await droid.waitForFunction(() => !document.getElementById('hc-splash'), null, { timeout: 8000 });
+  const droidAfter = await droid.evaluate(() => ({
+    n: window.HC.store.getProfile().notifications, p: window.__hcPush
+  }));
+  ok('and a yes the second time registers, with the switches as chosen',
+    droidAfter.p.asked === 2 && droidAfter.p.registered >= 1 &&
+    droidAfter.n.newGuide === false && droidAfter.n.announcements === true,
+    JSON.stringify(droidAfter));
+
+  const twice = await browser.newPage({ viewport: { width: 390, height: 844 } });
+  listen(twice);
+  await twice.addInitScript(PRETEND_PHONE,
+    { platform: 'android', reply: ['prompt-with-rationale', 'denied'] });
+  await twice.goto('http://127.0.0.1:' + PORT + '/index.html');
+  await toTheGate(twice);
+  await twice.click('[data-gate="guest"]');
+  await toTheSwitches(twice);
+  await twice.click('[data-notify-go]');
+  await twice.waitForSelector('.hc-splash--notify-off [data-notify-again]', { timeout: 8000 });
+  await twice.waitForTimeout(800);
+  await twice.click('[data-notify-again]');
+  await twice.waitForFunction(() => !document.getElementById('hc-splash'), null, { timeout: 8000 });
+  ok('a second no on Android is an answer, and goes to Home',
+    (await twice.evaluate(() => document.getElementById('app').getAttribute('data-view'))) === 'home');
+
+  const gone = await browser.newPage({ viewport: { width: 390, height: 844 } });
+  listen(gone);
+  await gone.addInitScript(PRETEND_PHONE, { platform: 'android', reply: ['denied'] });
+  await gone.goto('http://127.0.0.1:' + PORT + '/index.html');
+  await toTheGate(gone);
+  await gone.click('[data-gate="guest"]');
+  await toTheSwitches(gone);
+  await gone.click('[data-notify-go]');
+  await gone.waitForSelector('.hc-splash--notify-off .hc-notify__steps', { timeout: 8000 });
+  const goneShown = await gone.evaluate(() => ({
+    steps: document.querySelector('.hc-notify__steps').textContent,
+    settings: !!document.querySelector('[data-notify-settings]')
+  }));
+  ok('an Android phone past asking gets the way to Settings in words',
+    /Apps/.test(goneShown.steps) && !goneShown.settings, JSON.stringify(goneShown));
 
   /* ---------------------------------------------------------- an iPhone */
 

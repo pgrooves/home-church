@@ -17,10 +17,10 @@
    cold launch meets this only the first time. Every switch on it is also on
    Your account, and the caption under the card says so.
 
-   IF IOS IS TOLD DON'T ALLOW, the screen stays for one more moment: the
-   switches give way to the three taps in Settings that turn notifications
-   on, Open Settings, and Maybe later. iOS will not show its own alert a
-   second time, so that is the only second chance there is. See refused().
+   IF THE PHONE IS TOLD DON'T ALLOW, the screen stays for one more moment.
+   On an iPhone: the three taps in Settings, Open Settings, and Maybe later,
+   because iOS will not show its own alert a second time. On Android, which
+   will: Turn on notifications again, and Maybe later. See refused().
 
    ONE BUTTON, ON PURPOSE. A screen in front of the iOS permission alert may
    explain it and may not offer a way around it: App Review reads "Not now"
@@ -41,11 +41,9 @@
    that ask to Continue instead, and a yes keeps the switches exactly as they
    were left here. See applyChoices() in js/native.js.
 
-   WHERE IT SHOWS. Only in an app that can be sent a push: the iPhone app
-   today, Android once its push is in. See canReach(). When Android's turns
-   on, the three steps on the Don't Allow state are iPhone wording and
-   openAppSettings() in js/native.js is iPhone only; both want an Android
-   version before ANDROID_PUSH flips.
+   WHERE IT SHOWS. Only in an app that can be sent a push: the iPhone app,
+   and the Android app while pushAvailable() in js/native.js says so. Not
+   the web version, which has no push. See canReach().
    ========================================================================== */
 
 (function (HC) {
@@ -171,23 +169,9 @@
         '<p class="hc-notify__note">You can change these anytime in Your account.</p>' +
       '</div>' +
 
-      /* The second state, for a phone that just said Don't Allow. Hidden
-         until then; see refused() below. */
-      '<div class="hc-notify__off" hidden>' +
-        '<p class="hc-notify__lede">That’s okay. Just so you know, urgent news, ' +
-          'like a change to Sunday, only reaches phones with notifications on.</p>' +
-        '<ol class="hc-notify__steps">' +
-          '<li><span class="hc-notify__num">1</span><span>Tap <strong>Open Settings</strong> below</span></li>' +
-          '<li><span class="hc-notify__num">2</span><span>Tap <strong>Notifications</strong></span></li>' +
-          '<li><span class="hc-notify__num">3</span><span>Turn on <strong>Allow Notifications</strong></span></li>' +
-        '</ol>' +
-        '<div class="hc-notify__foot">' +
-          '<button type="button" class="hc-btn hc-btn--primary" data-notify-settings>' +
-            'Open Settings</button>' +
-          '<button type="button" class="hc-btn hc-btn--tertiary hc-notify__later" ' +
-            'data-notify-later>Maybe later</button>' +
-        '</div>' +
-      '</div>';
+      /* The second state, for a phone that just said Don't Allow. Empty and
+         hidden until then; refused() fills it for the phone it is on. */
+      '<div class="hc-notify__off" hidden></div>';
   }
 
   /* ----------------------------------------------------------------- place
@@ -254,22 +238,112 @@
     }, out);
   }
 
-  /* DON'T ALLOW, AND WHY THIS IS NOT A SECOND PROMPT. iOS shows its
-     notification alert once per install. Asked again, it answers "denied"
-     straight away and shows nothing, so a button here that "asks again"
-     would be a button that does nothing. What is left is the switch iOS
-     keeps in Settings, and this says where it is, once, with a way past.
+  /* DON'T ALLOW, AND WHAT IS LEFT AFTER IT, which is different on the two
+     phones.
+
+     AN IPHONE ASKS ONCE. Asked again, iOS answers "denied" straight away and
+     shows nothing, so a button that "asks again" would do nothing. What is
+     left is the switch iOS keeps in Settings, and this says where it is,
+     with a button straight to it.
+
+     ANDROID ASKS TWICE. After the first Don't allow it reports
+     'prompt-with-rationale', and the system dialog will come up once more,
+     so there the button asks again. A second no is final on Android and
+     goes to Home: somebody who has said no twice has answered. A phone that
+     was already past both (Android reports 'denied') gets the way to
+     Settings in words, since there is no Android link to it without another
+     plugin.
 
      Nothing here blocks the app or comes back on a later launch: Maybe later
      is Home, and this screen is already marked as seen. The line it says is
      a fact about what the church sends, not a reason to feel bad. */
+  var LEDE = 'That’s okay. Just so you know, urgent news, like a change to ' +
+    'Sunday, only reaches phones with notifications on.';
+
+  function step(n, html) {
+    return '<li><span class="hc-notify__num">' + n + '</span><span>' + html + '</span></li>';
+  }
+
+  function later(label, primary) {
+    return '<button type="button" class="hc-btn ' +
+      (primary ? 'hc-btn--primary' : 'hc-btn--tertiary hc-notify__later') +
+      '" data-notify-later>' + label + '</button>';
+  }
+
+  function offMarkup(mode) {
+    if (mode === 'again') {
+      return '<p class="hc-notify__lede">' + LEDE + '</p>' +
+        '<div class="hc-notify__foot">' +
+          '<button type="button" class="hc-btn hc-btn--primary" data-notify-again>' +
+            'Turn on notifications</button>' +
+          later('Maybe later') +
+        '</div>';
+    }
+    if (mode === 'android-settings') {
+      return '<p class="hc-notify__lede">' + LEDE + '</p>' +
+        '<ol class="hc-notify__steps">' +
+          step(1, 'Open your phone’s <strong>Settings</strong>') +
+          step(2, 'Tap <strong>Apps</strong>, then <strong>Home Church</strong>') +
+          step(3, 'Tap <strong>Notifications</strong> and turn them on') +
+        '</ol>' +
+        '<div class="hc-notify__foot">' + later('Continue', true) + '</div>';
+    }
+    return '<p class="hc-notify__lede">' + LEDE + '</p>' +
+      '<ol class="hc-notify__steps">' +
+        step(1, 'Tap <strong>Open Settings</strong> below') +
+        step(2, 'Tap <strong>Notifications</strong>') +
+        step(3, 'Turn on <strong>Allow Notifications</strong>') +
+      '</ol>' +
+      '<div class="hc-notify__foot">' +
+        '<button type="button" class="hc-btn hc-btn--primary" data-notify-settings>' +
+          'Open Settings</button>' +
+        later('Maybe later') +
+      '</div>';
+  }
+
   function refused() {
-    var off = panel.querySelector('.hc-notify__off');
-    if (off) off.removeAttribute('hidden');
-    root.classList.add('hc-splash--notify-off');
-    say('Notifications are off.');
-    if (HC.native && HC.native.tap) HC.native.tap('Light');
-    document.addEventListener('visibilitychange', backFromSettings);
+    var android = HC.native && HC.native.isAndroid && HC.native.isAndroid();
+    var check = HC.native && HC.native.notificationAnswer
+      ? HC.native.notificationAnswer()
+      : Promise.resolve(null);
+
+    check.then(function (answer) {
+      if (closed) return;
+      var mode = !android ? 'ios'
+        : answer === 'prompt-with-rationale' ? 'again'
+        : 'android-settings';
+      var off = panel.querySelector('.hc-notify__off');
+      if (off) {
+        off.innerHTML = offMarkup(mode);
+        off.removeAttribute('hidden');
+      }
+      root.classList.add('hc-splash--notify-off');
+      say('Notifications are off.');
+      if (HC.native && HC.native.tap) HC.native.tap('Light');
+      document.addEventListener('visibilitychange', backFromSettings);
+    });
+  }
+
+  /* Android's second chance. The switches go back to what was chosen (the
+     first no turned them all off) before asking, because the registration
+     carries them. Yes is the same ending as coming back from Settings; a
+     second no is final, and Home. */
+  function askAgain() {
+    var button = panel.querySelector('[data-notify-again]');
+    if (button) button.setAttribute('disabled', 'true');
+    save();
+    HC.native.applyChoices().then(function (answer) {
+      if (answer === 'granted') allSet();
+      else out();
+    }, out);
+  }
+
+  function allSet() {
+    if (closed) return;
+    document.removeEventListener('visibilitychange', backFromSettings);
+    say('You’re all set.');
+    root.classList.add('hc-splash--notify-done');
+    setTimeout(out, 1300);
   }
 
   /* Back from Settings. If notifications are on now, the switches go back to
@@ -280,12 +354,9 @@
     if (document.visibilityState !== 'visible' || closed) return;
     HC.native.notificationAnswer().then(function (answer) {
       if (answer !== 'granted' || closed) return;
-      document.removeEventListener('visibilitychange', backFromSettings);
       save();
       HC.native.applyChoices();
-      say('You’re all set.');
-      root.classList.add('hc-splash--notify-done');
-      setTimeout(out, 1300);
+      allSet();
     });
   }
 
@@ -314,6 +385,7 @@
       var row = hit('[data-notify]');
       if (row && !asked) { flip(row); return; }
       if (hit('[data-notify-go]')) finish();
+      else if (hit('[data-notify-again]')) askAgain();
       else if (hit('[data-notify-settings]')) HC.native.openAppSettings();
       else if (hit('[data-notify-later]')) out();
     });

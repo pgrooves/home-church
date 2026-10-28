@@ -161,15 +161,16 @@ async function main() {
     };
   });
 
-  /* A new phone is asked at launch, as on an iPhone. On Android 13 and later
-     that is the system's dialog over the app.
+  /* A new phone is asked after the way in, not at launch. Continue as guest,
+     then "Stay in the loop." (js/notify-intro.js), whose Turn on
+     notifications is what brings up Android's own dialog. On Android 13 and
+     later that is the system's dialog over the app.
 
-     On one run in two on October 28 the dialog was not on screen in the 40
-     seconds after launch, and the switches showed nobody had answered. Why
-     is not known yet, so a miss prints what the phone thought, and then asks
-     again the way the app does itself on its next trip to the front
-     (resumeNotifications). The next launch asking is what a real phone would
-     get, so that is a warning; never being able to ask is the failure. */
+     On one run in two on October 28 the dialog did not appear when asked,
+     and the switches showed nobody had answered. Why is not known yet, so a
+     miss prints what the phone thought and then asks again the same way.
+     Asking again is what the screen itself offers after a first no, so that
+     is a warning; never being able to ask is the failure. */
   const findDeny = async (seconds) => {
     const until = Date.now() + seconds * 1000;
     let found = null;
@@ -179,6 +180,18 @@ async function main() {
     }
     return found;
   };
+
+  ok('nobody is asked about notifications at launch', !findOnScreen(/permission_deny/));
+  if (await has('[data-gate="guest"]')) {
+    shoot('1-launch');
+    await tap('[data-gate="guest"]');
+    await wait(2500);
+  }
+  ok('the way in leads to the notification switches',
+    await has('.hc-splash--notify [data-notify-go]'));
+  shoot('1b-notifications');
+  await tap('[data-notify-go]');
+
   let deny = await findDeny(30);
   if (!deny) {
     const state = await run(() => window.Capacitor.Plugins.PushNotifications.checkPermissions()
@@ -195,27 +208,39 @@ async function main() {
         .filter((l) => /POST_NOTIFICATIONS|GrantPermissions|permissioncontroller|Capacitor\/Plugin.*Push|PushNotifications/i.test(l))
         .slice(-15).join('\n        ');
     } catch (e) { log = String(e); }
-    console.log('WARN  no notification prompt 30 seconds after launch.\n' +
+    console.log('WARN  no notification prompt 30 seconds after Turn on notifications.\n' +
       '        the app reads the permission as: ' + state + '\n' +
       '        focus: ' + focus + '\n        ' + (log || '(no permission lines in logcat)'));
-    shoot('1-launch-no-prompt');
-    await run(() => { window.HC.native.resumeNotifications(false); });
+    shoot('1c-no-prompt');
+    await run(() => { window.HC.native.applyChoices(); });
     deny = await findDeny(30);
   }
   ok('a new phone is asked about notifications', !!deny);
-  shoot('1-launch');
+  shoot('1c-prompt');
   if (deny) {
     // No, for the screenshots: a phone that declines is the one with the most
     // to show, every switch drawn and off.
     execFileSync('adb', ['shell', 'input', 'tap', String(deny.x), String(deny.y)]);
+    await wait(2000);
+  }
+
+  /* After a first no Android will ask once more, so the screen offers Turn
+     on notifications again rather than the way to Settings an iPhone gets.
+     Maybe later is Home. */
+  const off = await run(() => ({
+    title: (document.getElementById('hc-splash-greeting') || {}).textContent,
+    again: !!document.querySelector('[data-notify-again]'),
+    later: !!document.querySelector('[data-notify-later]')
+  }));
+  ok('a no says notifications are off', off.title === 'Notifications are off.', off);
+  ok('and offers to ask again, which Android allows once', off.again, off);
+  shoot('1d-notifications-off');
+  if (off.later) {
+    await tap('[data-notify-later]');
     await wait(1500);
   }
 
-  if (await has('[data-gate="guest"]')) {
-    await tap('[data-gate="guest"]');
-    await wait(1500);
-  }
-  ok('Continue as guest reaches Home', await run(() => window.HC.router.current().name) === 'home');
+  ok('Maybe later reaches Home', await run(() => window.HC.router.current().name) === 'home');
   shoot('2-home');
 
   ok('Home has no giving row', !(await has('.hc-home__give')));
