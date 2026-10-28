@@ -5,8 +5,9 @@
  *
  * WHY. The preview link shows the web version, and on the web every
  * Android-only branch in js/native.js answers the way an iPhone does. So the
- * only way to see the Android app, and to prove Give and the push switches
- * really are gone from it, is the real build on a real Android system. This
+ * only way to see the Android app, to prove Give really is gone from it,
+ * and that push asks the way Android asks and gets a real Firebase token, is
+ * the real build on a real Android system. This
  * runs in the GitHub Action (.github/workflows/android.yml), which has the
  * emulator; nobody needs to run it on a laptop.
  *
@@ -96,6 +97,30 @@ async function run(fn, arg) {
 }
 
 const has = (sel) => run((s) => !!document.querySelector(s), sel);
+
+/* Android's own permission dialog is not in the WebView, so it is found the
+   way a test finds any system screen: uiautomator's dump of what is on the
+   glass. Returns the centre of the first node whose resource id matches. */
+function findOnScreen(idPattern) {
+  let xml = '';
+  try {
+    // A dump taken while the screen is changing can fail; that is a miss,
+    // not a reason to stop the run.
+    execFileSync('adb', ['shell', 'rm', '-f', '/sdcard/hc-ui.xml']);
+    execFileSync('adb', ['shell', 'uiautomator', 'dump', '/sdcard/hc-ui.xml'], { stdio: 'pipe' });
+    xml = execFileSync('adb', ['exec-out', 'cat', '/sdcard/hc-ui.xml'], { stdio: 'pipe' }).toString();
+  } catch (e) {
+    return null;
+  }
+  for (const node of xml.match(/<node [^>]*>/g) || []) {
+    const id = (node.match(/resource-id="([^"]*)"/) || [])[1] || '';
+    const b = node.match(/bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"/);
+    if (idPattern.test(id) && b) {
+      return { x: (+b[1] + +b[3]) >> 1, y: (+b[2] + +b[4]) >> 1 };
+    }
+  }
+  return null;
+}
 const tap = (sel) => run((s) => { document.querySelector(s).click(); }, sel);
 
 async function main() {
@@ -117,9 +142,74 @@ async function main() {
   }));
   ok('the app knows it is on Android', native.platform === 'android', native);
   ok('and offers no giving', native.giving === false);
-  ok('and does not touch push', native.push === false);
+  ok('and can be sent a push, now that Firebase is in the build', native.push === true);
 
+  /* NOTHING HERE REACHES THE LIVE TOKEN TABLE. This emulator is a real phone
+     as far as Firebase is concerned, and a token it saved would be a row in
+     the church's device_tokens getting every Sunday reminder until Firebase
+     reported it gone. So the two calls that save one answer here, on the
+     phone, and are kept for the checks below. */
+  await run(() => {
+    window.__hcSaved = [];
+    const real = window.fetch;
+    window.fetch = function (url, init) {
+      if (/\/rpc\/hc_[a-z_]*device/.test(String(url))) {
+        window.__hcSaved.push({ url: String(url), body: init && init.body });
+        return Promise.resolve(new Response(null, { status: 204 }));
+      }
+      return real.apply(this, arguments);
+    };
+  });
+
+  /* A new phone is asked at launch, as on an iPhone. On Android 13 and later
+     that is the system's dialog over the app.
+
+     On one run in two on October 28 the dialog was not on screen in the 40
+     seconds after launch, and the switches showed nobody had answered. Why
+     is not known yet, so a miss prints what the phone thought, and then asks
+     again the way the app does itself on its next trip to the front
+     (resumeNotifications). The next launch asking is what a real phone would
+     get, so that is a warning; never being able to ask is the failure. */
+  const findDeny = async (seconds) => {
+    const until = Date.now() + seconds * 1000;
+    let found = null;
+    while (!found && Date.now() < until) {
+      found = findOnScreen(/permission_deny/);
+      if (!found) await wait(1000);
+    }
+    return found;
+  };
+  let deny = await findDeny(30);
+  if (!deny) {
+    const state = await run(() => window.Capacitor.Plugins.PushNotifications.checkPermissions()
+      .then((r) => r.receive, (e) => 'error: ' + e));
+    let focus = '';
+    try {
+      focus = execFileSync('adb', ['shell', 'dumpsys', 'window'], { stdio: 'pipe' }).toString()
+        .split('\n').filter((l) => /mCurrentFocus|mFocusedApp/.test(l)).map((l) => l.trim()).join(' | ');
+    } catch (e) { focus = String(e); }
+    let log = '';
+    try {
+      log = execFileSync('adb', ['logcat', '-d', '-v', 'brief'], { stdio: 'pipe', maxBuffer: 64 * 1024 * 1024 })
+        .toString().split('\n')
+        .filter((l) => /POST_NOTIFICATIONS|GrantPermissions|permissioncontroller|Capacitor\/Plugin.*Push|PushNotifications/i.test(l))
+        .slice(-15).join('\n        ');
+    } catch (e) { log = String(e); }
+    console.log('WARN  no notification prompt 30 seconds after launch.\n' +
+      '        the app reads the permission as: ' + state + '\n' +
+      '        focus: ' + focus + '\n        ' + (log || '(no permission lines in logcat)'));
+    shoot('1-launch-no-prompt');
+    await run(() => { window.HC.native.resumeNotifications(false); });
+    deny = await findDeny(30);
+  }
+  ok('a new phone is asked about notifications', !!deny);
   shoot('1-launch');
+  if (deny) {
+    // No, for the screenshots: a phone that declines is the one with the most
+    // to show, every switch drawn and off.
+    execFileSync('adb', ['shell', 'input', 'tap', String(deny.x), String(deny.y)]);
+    await wait(1500);
+  }
 
   if (await has('[data-gate="guest"]')) {
     await tap('[data-gate="guest"]');
@@ -149,20 +239,60 @@ async function main() {
   await wait(1200);
   shoot('5-settings');
   const notify = await run(() => {
-    const switches = document.querySelectorAll('[data-action="toggle-notify"]').length;
+    const rows = Array.from(document.querySelectorAll('[data-action="toggle-notify"]'));
     const hint = Array.from(document.querySelectorAll('.hc-profile__hint'))
       .map((p) => p.textContent).join(' ');
-    return { switches: switches, saysComing: /on their way to the Android app/.test(hint) };
+    return {
+      switches: rows.length,
+      on: rows.filter((r) => r.getAttribute('aria-checked') === 'true').length,
+      saysComing: /on their way to the Android app/.test(hint)
+    };
   });
-  ok('Settings draws no notification switches', notify.switches === 0, notify);
-  ok('and says notifications are coming', notify.saysComing, notify);
+  ok('Settings draws the notification switches', notify.switches > 0, notify);
+  ok('all off, after a no', notify.on === 0, notify);
+  ok('and no longer says notifications are coming', !notify.saysComing, notify);
   await run(() => {
-    const h = Array.from(document.querySelectorAll('.hc-profile__hint'))
-      .find((p) => /Android app/.test(p.textContent));
-    if (h) h.scrollIntoView({ block: 'center' });
+    const s = document.querySelector('[data-action="toggle-notify"]');
+    if (s) s.scrollIntoView({ block: 'center' });
   });
   await wait(600);
   shoot('6-settings-notifications');
+
+  /* THE WHOLE ROAD TO A TOKEN, short of the database. Saying yes in Settings
+     is what pm grant stands in for; then the same call the switch makes.
+     Firebase answers with a token only if google-services.json matches this
+     app and project, so a token here is the build's half of section 8
+     proven on a real Android system. Firebase needs the network, which an
+     emulator on a CI runner usually has and occasionally does not, so no
+     answer at all is a warning; a refusal is a failure. */
+  execFileSync('adb', ['shell', 'pm', 'grant', 'com.homechurchnola.app',
+    'android.permission.POST_NOTIFICATIONS']);
+  await run(() => {
+    window.__hcPushError = null;
+    window.Capacitor.Plugins.PushNotifications.addListener('registrationError', (e) => {
+      window.__hcPushError = String((e && e.error) || JSON.stringify(e));
+    });
+    return window.HC.native.enableNotifications().then((v) => { window.__hcEnabled = v; });
+  });
+  let saved = [];
+  let pushError = null;
+  for (let i = 0; i < 45; i++) {
+    saved = await run(() => window.__hcSaved);
+    pushError = await run(() => window.__hcPushError);
+    if (saved.some((c) => /register_device_token/.test(c.url)) || pushError) break;
+    await wait(1000);
+  }
+  ok('after a yes, turning notifications on succeeds', await run(() => window.__hcEnabled) === true);
+  ok('Firebase does not refuse this build', !pushError, pushError);
+  const registration = saved.find((c) => /register_device_token/.test(c.url));
+  if (registration) {
+    const args = JSON.parse(registration.body);
+    ok('Firebase gave this phone a token', typeof args.p_token === 'string' && args.p_token.length > 100,
+      args.p_token && args.p_token.length);
+    ok('and it registers as android', args.p_platform === 'android', args.p_platform);
+  } else if (!pushError) {
+    console.log('WARN  Firebase did not answer in 45 seconds; no token to check on this run');
+  }
 
   await run(() => window.HC.router.go({ name: 'give' }));
   await wait(1200);

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The small icon on an Android notification: the house from
+     assets/icons/mark.png, traced. Android draws status bar icons from the
+     alpha alone, so a full colour launcher icon there turns into a white
+     square. This is white on clear, and the gold comes back through
+     hc_notify in the manifest. 24dp with the mark inside the middle 20. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="296"
+    android:viewportHeight="296">
+    <group android:translateX="25" android:translateY="35">
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:fillType="evenOdd"
+            android:pathData="M123,0 L245,84 L245,226 L1,226 L1,84 Z M123,28.3 L222,96.6 L222,203 L171.5,203 L135.5,224.5 L135,165.5 L111,149.5 L111,203 L24,203 L24,96.6 Z M111,86 L135,86 L135,113 L161,113 L161,136.5 L85,136.5 L85,113 L111,113 Z" />
+    </group>
+</vector>

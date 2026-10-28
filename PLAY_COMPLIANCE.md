@@ -19,6 +19,10 @@ that nothing changes or hides for the iPhone app, which is how every Android
 difference below is built: a branch on `HC.native.isAndroid()` that an iPhone
 never takes, pinned by `tests/android.test.js`.
 
+**October 28:** the Firebase project exists and Android push is built
+(section 8). Whether it is in the first release now depends only on
+`send-push` being deployed with its Firebase secret before that release.
+
 Status key: **Done** means true in the repo today. **Build** means it gets
 done as part of generating the Android project. **Decide** means it needs an
 answer from Trey first. **Console** means it is a form in Play Console.
@@ -93,7 +97,7 @@ anything else.
 | `VIBRATE` | haptics | Taps |
 | `RECEIVE_BOOT_COMPLETED`, `WAKE_LOCK` | local notifications | Reminders survive a restart |
 | `USE_BIOMETRIC`, `USE_FINGERPRINT` | biometric auth | The Journal lock (the second is for phones older than Android 9) |
-| `c2dm.permission.RECEIVE` | push notifications | Firebase Cloud Messaging. Present although push is off, harmless |
+| `c2dm.permission.RECEIVE` | push notifications | Firebase Cloud Messaging, how a push reaches the phone |
 | `DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION` | androidx | Internal, signature level, grants nothing to another app |
 
 None of these carries a Play Console declaration.
@@ -192,10 +196,10 @@ iPhone. One policy covers both stores; nothing about the iPhone was taken
 out, and the effective date moved to October 27, 2026.
 
 - "Apple gives us an anonymous token for your device" and "Apple, which
-  delivers notifications": **left as is for now**, because it is still the
-  whole truth: an Android phone registers no token while push is off. When
-  Android push ships, Google (Firebase Cloud Messaging) is added beside
-  Apple.
+  delivers notifications": **Google added beside Apple** on October 28, when
+  Android push was built: "Apple, or on an Android phone Google, gives us an
+  anonymous token", and Google (Firebase Cloud Messaging) in the list of
+  services. Effective date moved to October 28, 2026.
 - "Face ID, Touch ID, or your passcode" gains "or on an Android phone your
   fingerprint, face, or screen lock". The switch on Settings says the
   Android words on Android only.
@@ -259,9 +263,8 @@ Why each answer:
   removes `com.google.android.gms.permission.AD_ID` if any dependency adds it,
   and the ads declaration in section 9 says No.
 
-If push is not in the first Android release (section 8), the Device IDs row
-stays, because the Coffee code path stores it the moment push is added and
-over-declaring costs nothing.
+Android push is built (section 8), so the Device IDs row is now simply
+true: an Android phone that allows notifications registers its FCM token.
 
 -----
 
@@ -307,31 +310,50 @@ Nothing Android specific.
 
 ## 8. Push notifications on Android
 
-**Build. Needs from Trey: a Firebase project.**
+**Built October 28. `send-push` deployed with its secret the same day.**
 
 Android push goes through Firebase Cloud Messaging, not APNs. Three pieces:
 
-1. **A Firebase project** for the church, made at
-   `console.firebase.google.com` in a phone browser, with an Android app
-   registered as `com.homechurchnola.app`. It produces a
-   `google-services.json`, which goes in the build. That file is not a
-   secret (it ships inside every APK), so it can be committed.
-2. **The app registers as `android`.** `js/native.js` currently always says
-   `p_platform: 'ios'`. It becomes the real platform. The database already
-   accepts `android` (`device_tokens_platform_known`, migration 0010), so no
-   migration.
-3. **`send-push` learns FCM.** A second sender beside the APNs one, choosing
-   by `platform`. It needs an FCM service account key as a new Edge Function
-   secret. Deploying that function and setting the secret are live changes
-   and get asked about first, per CLAUDE.md. Apple delivery does not change.
+1. **The Firebase project. Done.** `home-church-e3d0d`, made from a phone
+   on October 28, Google Analytics off (it would add an advertising ID and a
+   Data safety line), Gemini off. The Android app is registered as
+   `com.homechurchnola.app`, and its `google-services.json` is committed at
+   `android/app/google-services.json`. It is not a secret: it ships inside
+   every APK.
+2. **The app registers as `android`. Done.** `js/native.js` sends the real
+   platform, and the database already accepts `android`
+   (`device_tokens_platform_known`, migration 0010; the register RPC since
+   0037). `ANDROID_PUSH` is on. On Android the app also makes a notification
+   channel, "Home Church", which is what people see in Android's settings,
+   and the manifest points Firebase at it and at a small white house icon
+   (`res/drawable/ic_stat_notify.xml`, traced from the mark) tinted gold.
+3. **`send-push` speaks FCM. Deployed October 28** (version 43, loading
+   commit 39bea22; the dry run after it counted 200 iPhones and sent
+   nothing). It reads
+   `device_tokens.platform` and sends Android phones through FCM's v1 API and
+   everything else through APNs, exactly as before. Each side reads only its
+   own secrets, so a send with no Android phone in it never touches Firebase.
+   The new secret is `FCM_SERVICE_ACCOUNT`, the whole service account JSON
+   from Firebase (Project settings, Service accounts, Generate new private
+   key). A token Firebase calls `UNREGISTERED` is retired, like Apple's 410;
+   an `INVALID_ARGUMENT` is retired only when it is about the token, because
+   the same code also means a malformed message, and that is our bug, not the
+   phone's. `tests/push-fcm.test.js` pins those rules.
 
-**Until all three are done, push stays off on Android. Done.** On Android,
-registering for push without `google-services.json` crashes the app, so
-`pushAvailable()` in `js/native.js` is checked before the plugin is touched
-at all, and `ANDROID_PUSH` is the one line to flip when both halves ship. A first Android
-release without push is acceptable; the Notifications screen says it is
-coming rather than offering a switch that does nothing (Apple 2.1 and
-Google's equivalent both reject dead controls).
+**Both live steps done October 28, each after a yes:**
+
+1. Trey generated the service account key in Firebase and pasted it into
+   Supabase as `FCM_SERVICE_ACCOUNT` from a phone. It never went through a
+   chat or the repository.
+2. `send-push` was deployed. Apple delivery did not change; the same file
+   was run against fake Apple, Google and database servers for iPhones only,
+   Android only, both, and a missing or wrong secret. The undo is
+   redeploying the one line that loads b4a793a.
+
+**Not yet proven:** a real notification reaching a real Android phone. The
+first Android build from `main` installed on a phone, then a `test` send,
+is that proof. If the secret was pasted wrong, `push_log` says exactly
+which way (see `parseServiceAccount()`), and iPhones are not held up.
 
 -----
 
@@ -386,8 +408,11 @@ Google's equivalent both reject dead controls).
   the house in `js/splash.js` is the first thing anybody sees.
 - **Every push** builds the bundle, checks permissions and alignment, then
   runs the debug build on an Android emulator and saves phone screenshots
-  (`scripts/android_screens.js`), failing if Give or the push switches ever
-  appear on Android.
+  (`scripts/android_screens.js`), failing if Give ever appears on Android,
+  or if the app stops asking for notifications, drawing the switches, or
+  getting a real Firebase token. That last check never saves the token: the
+  emulator's registration call is answered on the phone, so CI never writes
+  to the live `device_tokens`.
 - **The upload key** goes in four repository secrets, `HC_UPLOAD_KEYSTORE_BASE64`,
   `HC_UPLOAD_STORE_PASSWORD`, `HC_UPLOAD_KEY_ALIAS` and
   `HC_UPLOAD_KEY_PASSWORD`, when it is time for the first upload. Until then
@@ -400,7 +425,8 @@ Google's equivalent both reject dead controls).
 1. **Give on Android**: hidden until there is an IRS determination letter.
    Decided October 27. Section 3.
 2. **Target age groups**: 13 and over. Decided October 27. Section 7.
-3. **Push in the first Android release**: ships without, added in an
-   update. Decided October 27. Section 8.
+3. **Push in the first Android release**: decided October 27 to ship
+   without. Built October 28, so it can be in the first release once
+   `send-push` is deployed with `FCM_SERVICE_ACCOUNT`. Section 8.
 4. **Account**: stay personal, or add an organization account once a
    D-U-N-S number arrives. Section 0. Does not block anything.

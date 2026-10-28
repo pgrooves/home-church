@@ -56,6 +56,19 @@
  * tried once on the other gateway before anything is given up on. See
  * sendEitherGateway() for the phone that made that necessary.
  *
+ * ANDROID goes through Firebase Cloud Messaging instead, chosen per phone by
+ * device_tokens.platform. It needs one more secret:
+ *
+ *   FCM_SERVICE_ACCOUNT  the entire service account JSON file Firebase gives
+ *                        you under Project settings -> Service accounts ->
+ *                        Generate new private key, pasted as it is
+ *
+ * Each side needs only its own secrets. A send with no Android phones in it
+ * never reads FCM_SERVICE_ACCOUNT, so Apple delivery works exactly as it did
+ * before the secret existed, and a missing Firebase secret fails the Android
+ * phones in push_log without holding up the iPhones. PLAY_COMPLIANCE.md
+ * section 8.
+ *
  * DEPLOY
  *   supabase functions deploy send-push --no-verify-jwt
  */
@@ -195,6 +208,143 @@ async function apnsToken(keyId: string, teamId: string, privateKeyPem: string): 
 
   return signingInput + '.' + base64url(signature);
 }
+
+/* ------------------------------------------------------------- FCM auth
+   Google wants an OAuth access token, which we get by signing a JWT RS256
+   with the service account's private key and trading it at Google's token
+   endpoint. Good for an hour; one per invocation, like the APNs one.
+   ---------------------------------------------------------------------- */
+
+async function fcmAccessToken(account: ServiceAccount): Promise<string> {
+  const now = Math.floor(Date.now() / 1000);
+  const header = { alg: 'RS256', typ: 'JWT' };
+  const claims = {
+    iss: account.client_email,
+    scope: 'https://www.googleapis.com/auth/firebase.messaging',
+    aud: account.token_uri,
+    iat: now,
+    exp: now + 3600,
+  };
+  const encoder = new TextEncoder();
+
+  const signingInput =
+    base64url(encoder.encode(JSON.stringify(header))) + '.' +
+    base64url(encoder.encode(JSON.stringify(claims)));
+
+  const key = await crypto.subtle.importKey(
+    'pkcs8',
+    pemToDer(account.private_key),
+    { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' },
+    false,
+    ['sign'],
+  );
+  const signature = new Uint8Array(
+    await crypto.subtle.sign('RSASSA-PKCS1-v1_5', key, encoder.encode(signingInput)),
+  );
+
+  const res = await fetch(account.token_uri, {
+    method: 'POST',
+    headers: { 'content-type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer',
+      assertion: signingInput + '.' + base64url(signature),
+    }),
+  });
+  const detail = await res.text();
+  if (!res.ok) throw new Error(`Google refused the token request: ${res.status} ${detail.slice(0, 200)}`);
+  const token = JSON.parse(detail)?.access_token;
+  if (typeof token !== 'string' || !token) throw new Error('Google answered without an access token.');
+  return token;
+}
+
+/* @@ fcm:start */
+interface ServiceAccount {
+  project_id: string;
+  client_email: string;
+  private_key: string;
+  token_uri: string;
+}
+
+/* FCM_SERVICE_ACCOUNT as pasted, or a sentence saying what is wrong with it.
+   The usual mistakes are pasting google-services.json instead (the app's
+   file, which has no private key), or only part of the file. */
+function parseServiceAccount(raw: string | undefined): ServiceAccount | string {
+  if (!raw || !raw.trim()) return 'FCM_SERVICE_ACCOUNT is not set.';
+  let parsed: Record<string, unknown>;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return 'FCM_SERVICE_ACCOUNT is not JSON. Paste the whole file, braces included.';
+  }
+  if (parsed && typeof parsed === 'object' && 'project_info' in parsed) {
+    return 'FCM_SERVICE_ACCOUNT holds google-services.json. It needs the service account key instead.';
+  }
+  const missing = ['project_id', 'client_email', 'private_key']
+    .filter((k) => typeof parsed?.[k] !== 'string' || !(parsed[k] as string).trim());
+  if (missing.length) return `FCM_SERVICE_ACCOUNT is missing ${missing.join(', ')}.`;
+  return {
+    project_id: parsed.project_id as string,
+    client_email: parsed.client_email as string,
+    // A dashboard paste can turn the file's \n escapes into literal ones.
+    private_key: (parsed.private_key as string).replace(/\\n/g, '\n'),
+    token_uri: typeof parsed.token_uri === 'string' && parsed.token_uri
+      ? parsed.token_uri : 'https://oauth2.googleapis.com/token',
+  };
+}
+
+/* The same notification sendOne() gives Apple, in Firebase's words.
+ *
+ *   tag            what apns-collapse-id does: a second send with the same
+ *                  one replaces the first in the notification shade.
+ *   collapse_key   the same for messages still waiting on a phone that is off.
+ *   ttl            apns-expiration's six hours.
+ *   channel_id     the channel js/native.js makes. A phone on a build from
+ *                  before the channel existed falls back to Firebase's own.
+ */
+function fcmMessage(token: string, note: { title: string; body: string }, topic: string, collapseId: string) {
+  return {
+    message: {
+      token,
+      notification: { title: note.title, body: note.body },
+      data: { topic },
+      android: {
+        priority: 'HIGH',
+        ttl: '21600s',
+        collapse_key: collapseId,
+        notification: { tag: collapseId, channel_id: 'church', sound: 'default' },
+      },
+    },
+  };
+}
+
+/* What a Firebase answer means for the token. Retired only when Firebase
+ * says the token itself is no good:
+ *
+ *   UNREGISTERED          the app was uninstalled, or the token was replaced
+ *   SENDER_ID_MISMATCH    a token from some other Firebase project
+ *   INVALID_ARGUMENT      only when the message is about the registration
+ *                         token. The same code covers a malformed message,
+ *                         which is our bug, not the phone's, and retiring
+ *                         every Android phone over it would be a disaster.
+ *
+ * Everything else (quota, Google having a bad minute) leaves it alone.
+ */
+function fcmOutcome(status: number, detail: string) {
+  if (status >= 200 && status < 300) return { ok: true, retire: false };
+  let code = '';
+  let message = detail;
+  try {
+    const err = JSON.parse(detail)?.error ?? {};
+    message = err.message ?? detail;
+    const fcm = (err.details ?? []).find((d: { errorCode?: string }) => d && d.errorCode);
+    code = fcm?.errorCode ?? err.status ?? '';
+  } catch { /* not json */ }
+  const retire = code === 'UNREGISTERED' ||
+    code === 'SENDER_ID_MISMATCH' ||
+    (code === 'INVALID_ARGUMENT' && /registration token/i.test(message));
+  return { ok: false, retire, reason: `FCM ${status} ${code || message}`.slice(0, 200) };
+}
+/* @@ fcm:end */
 
 /* ---------------------------------------------------------- the message
    Written here rather than in the database because the copy is part of the
@@ -751,6 +901,31 @@ async function sendOne(
   }
 }
 
+async function sendOneFcm(
+  projectId: string,
+  accessToken: string,
+  token: string,
+  note: Note,
+  topic: Topic,
+  collapseId: string,
+): Promise<SendOutcome> {
+  const attempt = async (): Promise<SendOutcome> => {
+    try {
+      const res = await fetch(`https://fcm.googleapis.com/v1/projects/${projectId}/messages:send`, {
+        method: 'POST',
+        headers: { authorization: `Bearer ${accessToken}`, 'content-type': 'application/json' },
+        body: JSON.stringify(fcmMessage(token, note, topic, collapseId)),
+      });
+      return fcmOutcome(res.status, res.ok ? '' : await res.text().catch(() => ''));
+    } catch (err) {
+      return { ok: false, retire: false, reason: `FCM ${err}`, network: true };
+    }
+  };
+  // A dropped connection says nothing about the token. One more try.
+  const first = await attempt();
+  return first.network ? attempt() : first;
+}
+
 /* ------------------------------------------------------------------ main */
 
 Deno.serve(async (req: Request) => {
@@ -802,7 +977,7 @@ Deno.serve(async (req: Request) => {
     return json({ ok: true, skipped: true, reason: 'nothing new' });
   }
 
-  let query = admin.from('device_tokens').select('token').eq('active', true);
+  let query = admin.from('device_tokens').select('token, platform').eq('active', true);
   const column = TOPIC_COLUMN[topic];
   if (column) query = query.eq(column, true);
 
@@ -873,6 +1048,12 @@ Deno.serve(async (req: Request) => {
   }
 
   const tokens = (rows ?? []).map((r) => r.token as string);
+  // Everything that is not Android is Apple, as it was before the column was
+  // read: 'ios' is the default, and a 'web' row has never been written.
+  const androidTokens = new Set(
+    (rows ?? []).filter((r) => r.platform === 'android').map((r) => r.token as string),
+  );
+  const appleTokens = tokens.filter((t) => !androidTokens.has(t));
 
   if (dryRun) {
     return json({ ok: true, dry_run: true, topic, recipients: tokens.length, note });
@@ -895,44 +1076,11 @@ Deno.serve(async (req: Request) => {
     return json({ ok: true, skipped: true, recipients: 0 });
   }
 
-  const keyId = Deno.env.get('APNS_KEY_ID');
-  const teamId = Deno.env.get('APNS_TEAM_ID');
-  const privateKey = Deno.env.get('APNS_PRIVATE_KEY');
-  const bundleId = Deno.env.get('APNS_BUNDLE_ID');
-  // Trimmed for the same reason the intake trims its IMAP host: a pasted
-  // trailing space would stop this matching either gateway in otherGateway().
-  const host = (Deno.env.get('APNS_HOST') ?? '').trim() || PRODUCTION_HOST;
-
-  if (!keyId || !teamId || !privateKey || !bundleId) {
-    const missing = [
-      !keyId && 'APNS_KEY_ID', !teamId && 'APNS_TEAM_ID',
-      !privateKey && 'APNS_PRIVATE_KEY', !bundleId && 'APNS_BUNDLE_ID',
-    ].filter(Boolean).join(', ');
-    console.error('send-push: missing', missing);
-    await admin.from('push_log').insert({
-      topic, recipients: tokens.length, failed: tokens.length,
-      note: `APNs is not configured: ${missing} not set.`,
-    });
-    return json({ error: `APNs is not configured. Missing: ${missing}` }, 500);
-  }
-
-  let jwt: string;
-  try {
-    jwt = await apnsToken(keyId, teamId, privateKey);
-  } catch (err) {
-    // Almost always a mangled APNS_PRIVATE_KEY: pasted without the BEGIN and
-    // END lines, or with the newlines eaten by a shell.
-    console.error('send-push: could not sign the APNs token', err);
-    await admin.from('push_log').insert({
-      topic, recipients: tokens.length, failed: tokens.length,
-      note: `Could not sign the APNs token. Check APNS_PRIVATE_KEY. ${err}`,
-    });
-    return json({ error: 'Could not sign the APNs token. Check APNS_PRIVATE_KEY.' }, 500);
-  }
-
   const deliveredTokens: string[] = [];
   const failures: string[] = [];
   const retire: string[] = [];
+  // Why a whole side could not send at all, for push_log and the response.
+  const notConfigured: string[] = [];
 
   // See the note next to apns-collapse-id in sendOne().
   const collapseId = (topic === 'announcement' || topic === 'cafe_ready' || topic === 'new_sermon') && ref
@@ -942,26 +1090,101 @@ Deno.serve(async (req: Request) => {
   // never matter, and a congregation-sized list opening 400 sockets at once
   // would matter a lot.
   const BATCH = 20;
-  for (let i = 0; i < tokens.length; i += BATCH) {
-    const slice = tokens.slice(i, i + BATCH);
-    const results = await Promise.all(
-      slice.map((t) => sendEitherGateway(
-        host, (h) => sendOne(h, t, jwt, bundleId, note, topic, collapseId),
-      )),
-    );
-    results.forEach((r, n) => {
-      if (r.ok) deliveredTokens.push(slice[n]);
-      else {
-        failures.push(r.reason ?? 'unknown');
-        if (r.retire) retire.push(slice[n]);
+  const sendAll = async (list: string[], send: (t: string) => Promise<SendOutcome>) => {
+    for (let i = 0; i < list.length; i += BATCH) {
+      const slice = list.slice(i, i + BATCH);
+      const results = await Promise.all(slice.map(send));
+      results.forEach((r, n) => {
+        if (r.ok) deliveredTokens.push(slice[n]);
+        else {
+          failures.push(r.reason ?? 'unknown');
+          if (r.retire) retire.push(slice[n]);
+        }
+      });
+    }
+  };
+
+  /* ---- Apple. Only asked for its secrets when there is an iPhone to send to. */
+  if (appleTokens.length) {
+    const keyId = Deno.env.get('APNS_KEY_ID');
+    const teamId = Deno.env.get('APNS_TEAM_ID');
+    const privateKey = Deno.env.get('APNS_PRIVATE_KEY');
+    const bundleId = Deno.env.get('APNS_BUNDLE_ID');
+    // Trimmed for the same reason the intake trims its IMAP host: a pasted
+    // trailing space would stop this matching either gateway in otherGateway().
+    const host = (Deno.env.get('APNS_HOST') ?? '').trim() || PRODUCTION_HOST;
+
+    let jwt: string | null = null;
+    if (!keyId || !teamId || !privateKey || !bundleId) {
+      const missing = [
+        !keyId && 'APNS_KEY_ID', !teamId && 'APNS_TEAM_ID',
+        !privateKey && 'APNS_PRIVATE_KEY', !bundleId && 'APNS_BUNDLE_ID',
+      ].filter(Boolean).join(', ');
+      console.error('send-push: missing', missing);
+      notConfigured.push(`APNs is not configured: ${missing} not set.`);
+    } else {
+      try {
+        jwt = await apnsToken(keyId, teamId, privateKey);
+      } catch (err) {
+        // Almost always a mangled APNS_PRIVATE_KEY: pasted without the BEGIN and
+        // END lines, or with the newlines eaten by a shell.
+        console.error('send-push: could not sign the APNs token', err);
+        notConfigured.push(`Could not sign the APNs token. Check APNS_PRIVATE_KEY. ${err}`);
       }
-    });
+    }
+
+    if (jwt && bundleId) {
+      const signed = jwt;
+      await sendAll(appleTokens, (t) => sendEitherGateway(
+        host, (h) => sendOne(h, t, signed, bundleId, note, topic, collapseId),
+      ));
+    }
   }
 
-  if (retire.length) {
+  /* ---- Android. Same rule: FCM_SERVICE_ACCOUNT is read only when needed. */
+  const androidList = [...androidTokens];
+  if (androidList.length) {
+    const account = parseServiceAccount(Deno.env.get('FCM_SERVICE_ACCOUNT'));
+    let accessToken: string | null = null;
+    if (typeof account === 'string') {
+      console.error('send-push:', account);
+      notConfigured.push(account);
+    } else {
+      try {
+        accessToken = await fcmAccessToken(account);
+      } catch (err) {
+        console.error('send-push: could not get a Firebase access token', err);
+        notConfigured.push(`Could not get a Firebase access token. Check FCM_SERVICE_ACCOUNT. ${err}`);
+      }
+    }
+
+    if (accessToken && typeof account !== 'string') {
+      const bearer = accessToken;
+      await sendAll(androidList, (t) => sendOneFcm(account.project_id, bearer, t, note, topic, collapseId));
+    }
+  }
+
+  // Nothing could be sent at all because of configuration: say so loudly, the
+  // way this function always has when APNs was not set up.
+  if (notConfigured.length && deliveredTokens.length === 0 && failures.length === 0) {
+    await admin.from('push_log').insert({
+      topic, recipients: tokens.length, failed: tokens.length,
+      note: notConfigured.join(' | ').slice(0, 500),
+    });
+    return json({ error: notConfigured.join(' ') }, 500);
+  }
+
+  const retireApple = retire.filter((t) => !androidTokens.has(t));
+  const retireAndroid = retire.filter((t) => androidTokens.has(t));
+  if (retireApple.length) {
     await admin.from('device_tokens')
       .update({ active: false, last_error: 'Retired: APNs says this phone is gone.' })
-      .in('token', retire);
+      .in('token', retireApple);
+  }
+  if (retireAndroid.length) {
+    await admin.from('device_tokens')
+      .update({ active: false, last_error: 'Retired: Firebase says this phone is gone.' })
+      .in('token', retireAndroid);
   }
 
   if (deliveredTokens.length) {
@@ -980,7 +1203,7 @@ Deno.serve(async (req: Request) => {
     delivered,
     failed,
     retired: retire.length,
-    note: failed ? failures.slice(0, 5).join(' | ').slice(0, 500) : null,
+    note: failed ? [...notConfigured, ...failures].slice(0, 5).join(' | ').slice(0, 500) : null,
   });
 
   console.log(`send-push: ${topic} delivered ${delivered}/${tokens.length}, retired ${retire.length}`);

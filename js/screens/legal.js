@@ -23,7 +23,7 @@
 
   // Update this whenever the text below changes in a way that matters, and
   // confirm it before submitting to the App Store.
-  var EFFECTIVE = 'October 27, 2026';
+  var EFFECTIVE = 'October 28, 2026';
 
   /* ---------------------------------------------------------- small parts */
 
@@ -137,7 +137,7 @@
 
     html += block('What actually leaves your phone', [
       'Content. The app downloads sermons, guides, events, and the church’s own details so you always have this week’s material, and keeps a copy so it still works when you have no signal. That is an ordinary web request, and like any web request it includes your device’s network address. We do not use it to work out who you are and we do not build a profile from it.',
-      'Notifications, if you turn them on. Apple gives us an anonymous token for your device, and we keep it alongside which of the switches you turned on, so we know what to send and what not to. None of it is attached to your name, your email, or your account: a row here says that some phone wants the Monday guide notice, never whose phone it is. Turning the switches off stops the sending, and we retire the token when your phone tells Apple the app is gone.',
+      'Notifications, if you turn them on. Apple, or on an Android phone Google, gives us an anonymous token for your device, and we keep it alongside which of the switches you turned on, so we know what to send and what not to. None of it is attached to your name, your email, or your account: a row here says that some phone wants the Monday guide notice, never whose phone it is. Turning the switches off stops the sending, and we retire the token when Apple or Google tells us the app is gone from your phone.',
       /* The exception to the paragraph above, and it is written out rather
          than quietly making that paragraph a little bit untrue. Nothing here
          applies to anybody but the handful of people who run the app, and it
@@ -174,7 +174,7 @@
       'Google, whose Gmail carries a message you send from the form on Connect to the church, in the same way it would carry an email you wrote to us yourself. They handle the sending and nothing else.',
       'Resend, which delivers the eight digit sign in code to your email address, and carries a message from the form on Connect on the occasions Gmail cannot. They handle the sending and nothing else.',
       'YouVersion, which supplies the words of a verse when you tap a scripture reference. The request goes from our server to theirs and carries the passage and nothing else: not your network address, not your account, not which guide you were reading.',
-      'Apple, which delivers notifications if you have turned them on.'
+      'Apple, which delivers notifications to an iPhone if you have turned them on, and Google (Firebase Cloud Messaging), which does the same on an Android phone. They carry the notification and nothing else.'
     ]);
 
     html += block('', [

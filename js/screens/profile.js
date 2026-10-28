@@ -289,9 +289,10 @@
        many. */
 
     // Notifications
-    /* Android, until push reaches it. Android push goes through Firebase,
-       which is not set up yet (PLAY_COMPLIANCE.md section 8), so on Android
-       there is nothing behind these switches. Rather than draw switches that
+    /* Android, if push is ever turned back off there. Android push goes
+       through Firebase (PLAY_COMPLIANCE.md section 8), and ANDROID_PUSH in
+       js/native.js is the switch; with it off there is nothing behind these
+       switches. Rather than draw switches that
        do nothing, say so. Reminders you set on the Cal tab are the phone
        talking to itself and work today, so the line says that too. An iPhone
        never takes this branch: pushAvailable() is only false on Android. */

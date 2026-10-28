@@ -409,7 +409,9 @@ TestFlight and Android through this, separately.
 
 ### Push notifications on Android
 
-Needs a free Firebase project. From a phone browser:
+**All four steps done October 28** (project `home-church-e3d0d`), and
+`send-push` is deployed with the secret. Kept for the day the key is
+rotated. From a phone browser:
 
 1. `console.firebase.google.com` → **Create a project**, name it
    `Home Church`. **Turn Google Analytics off** when asked; on, it would add
@@ -423,10 +425,10 @@ Needs a free Firebase project. From a phone browser:
    one **is** a secret. Do not send it in chat or commit it; Claude will
    walk you through pasting it into Supabase as an Edge Function secret.
 
-Claude then adds the Firebase sender to `send-push`, flips `ANDROID_PUSH` in
-`js/native.js`, and adds Google to the privacy policy's list of services.
-Deploying `send-push` and setting the secret are live changes and get asked
-about first.
+The Firebase sender in `send-push`, `ANDROID_PUSH`, and Google in the
+privacy policy are built (`PLAY_COMPLIANCE.md` section 8). Deploying
+`send-push` and setting the secret are live changes and get asked about
+first.
 
 ### Give on Android
 

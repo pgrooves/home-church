@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "555593120971",
+    "project_id": "home-church-e3d0d",
+    "storage_bucket": "home-church-e3d0d.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:555593120971:android:aabd78dfde219129e02f4e",
+        "android_client_info": {
+          "package_name": "com.homechurchnola.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBWwGW-NxvBT-zBukU4fgOmSQBHfIDagLM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
