@@ -310,7 +310,7 @@ Nothing Android specific.
 
 ## 8. Push notifications on Android
 
-**Built October 28. Live once `send-push` is deployed with its secret.**
+**Built October 28. `send-push` deployed with its secret the same day.**
 
 Android push goes through Firebase Cloud Messaging, not APNs. Three pieces:
 
@@ -327,7 +327,9 @@ Android push goes through Firebase Cloud Messaging, not APNs. Three pieces:
    channel, "Home Church", which is what people see in Android's settings,
    and the manifest points Firebase at it and at a small white house icon
    (`res/drawable/ic_stat_notify.xml`, traced from the mark) tinted gold.
-3. **`send-push` speaks FCM. Built, not deployed.** It reads
+3. **`send-push` speaks FCM. Deployed October 28** (version 43, loading
+   commit 39bea22; the dry run after it counted 200 iPhones and sent
+   nothing). It reads
    `device_tokens.platform` and sends Android phones through FCM's v1 API and
    everything else through APNs, exactly as before. Each side reads only its
    own secrets, so a send with no Android phone in it never touches Firebase.
@@ -338,21 +340,20 @@ Android push goes through Firebase Cloud Messaging, not APNs. Three pieces:
    the same code also means a malformed message, and that is our bug, not the
    phone's. `tests/push-fcm.test.js` pins those rules.
 
-**What is left, in order, both live and asked about first per CLAUDE.md:**
+**Both live steps done October 28, each after a yes:**
 
-1. Trey generates the service account key in Firebase and pastes it into
-   Supabase as `FCM_SERVICE_ACCOUNT`. It is a secret, so it never goes
-   through a chat or the repository.
-2. `send-push` is deployed. Apple delivery does not change; the same file
+1. Trey generated the service account key in Firebase and pasted it into
+   Supabase as `FCM_SERVICE_ACCOUNT` from a phone. It never went through a
+   chat or the repository.
+2. `send-push` was deployed. Apple delivery did not change; the same file
    was run against fake Apple, Google and database servers for iPhones only,
-   Android only, both, and a missing or wrong secret.
+   Android only, both, and a missing or wrong secret. The undo is
+   redeploying the one line that loads b4a793a.
 
-Until both are done an Android phone on this build can register, and its
-row fails in `push_log` with "FCM_SERVICE_ACCOUNT is not set" (once
-deployed) without holding up a single iPhone. Before the deploy, today's
-`send-push` would send its token to Apple, which refuses it, and the token
-would be retired; harmless, and the phone re-registers on its next launch.
-So the deploy goes first, then the Android release.
+**Not yet proven:** a real notification reaching a real Android phone. The
+first Android build from `main` installed on a phone, then a `test` send,
+is that proof. If the secret was pasted wrong, `push_log` says exactly
+which way (see `parseServiceAccount()`), and iPhones are not held up.
 
 -----
 

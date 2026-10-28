@@ -409,8 +409,9 @@ TestFlight and Android through this, separately.
 
 ### Push notifications on Android
 
-**Steps 1 to 3 done October 28** (project `home-church-e3d0d`). Step 4 is
-what is left. From a phone browser:
+**All four steps done October 28** (project `home-church-e3d0d`), and
+`send-push` is deployed with the secret. Kept for the day the key is
+rotated. From a phone browser:
 
 1. `console.firebase.google.com` → **Create a project**, name it
    `Home Church`. **Turn Google Analytics off** when asked; on, it would add
