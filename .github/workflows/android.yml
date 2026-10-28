@@ -95,6 +95,27 @@ jobs:
       - name: Permissions and 16 KB alignment
         run: node scripts/android_manifest_check.js
 
+      # Play refuses an update signed with any key but the one the first
+      # upload used, so a wrong secret would only show up as a rejection on
+      # Trey's phone. This says so here instead. The fingerprint is public;
+      # the key it belongs to is in the HC_UPLOAD_* secrets.
+      # PLAY_SUBMISSION_KIT.md section 4.
+      - name: Signed with the church's upload key
+        env:
+          UPLOAD_KEY_SHA256: '4C:45:A3:6C:91:87:71:3C:59:58:BF:39:02:71:10:B2:03:D9:1A:90:49:11:92:28:A3:5C:EC:DD:AF:40:37:83'
+        run: |
+          if [ -z "$HC_UPLOAD_STORE_FILE" ]; then
+            echo "No upload key in this repository's secrets, so this bundle is unsigned and only a check."
+            exit 0
+          fi
+          got=$(keytool -printcert -jarfile android/app/build/outputs/bundle/release/app-release.aab 2>/dev/null \
+            | grep -m1 'SHA256:' | awk '{print $2}')
+          echo "Signed with $got"
+          if [ "$got" != "$UPLOAD_KEY_SHA256" ]; then
+            echo "That is not the church's upload key ($UPLOAD_KEY_SHA256). Play would refuse this bundle."
+            exit 1
+          fi
+
       - name: Name the bundle after its version
         run: |
           mkdir -p out
