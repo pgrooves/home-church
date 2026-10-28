@@ -157,6 +157,7 @@ async function toTheSwitches(page) {
       lockup: box('.hc-splash__lockup'),
       list: box('.hc-notify__list'),
       go: box('[data-notify-go]'),
+      label: document.querySelector('[data-notify-go]').textContent,
       hidden: document.getElementById('app').getAttribute('aria-hidden')
     };
   });
@@ -170,8 +171,10 @@ async function toTheSwitches(page) {
     ]), JSON.stringify(shown.rows));
   ok('the house and the title sit above the card, not on it',
     shown.lockup.bottom <= shown.list.top, JSON.stringify(shown));
-  ok('and Continue is on the screen',
+  ok('and the button is on the screen',
     shown.go.bottom <= 844, JSON.stringify(shown.go));
+  ok('saying Continue in a browser, where there is no alert behind it',
+    shown.label === 'Continue', shown.label);
   ok('Home stays out of the accessibility tree while it is up',
     shown.hidden === 'true', String(shown.hidden));
 
@@ -211,6 +214,9 @@ async function toTheSwitches(page) {
 
   await phone.click('[data-gate="guest"]');
   await toTheSwitches(phone);
+  ok('on a phone the button says what it does',
+    (await phone.evaluate(() => document.querySelector('[data-notify-go]').textContent))
+      === 'Approve notifications');
   ok('nor while the switches are up',
     (await phone.evaluate(() => window.__hcPush.asked)) === 0);
 

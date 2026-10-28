@@ -25,8 +25,12 @@
    ONE BUTTON, ON PURPOSE. A screen in front of the iOS permission alert may
    explain it and may not offer a way around it: App Review reads "Not now"
    on a pre-permission screen as steering people away from the system's own
-   question, guideline 5.1.1(iv). So Continue is the only way on, and on a
-   phone it leads straight to iOS asking. Turning every switch off is how
+   question, guideline 5.1.1(iv). So the button is the only way on, and on a
+   phone it says "Approve notifications" and leads straight to iOS asking,
+   which is the church's call: an honest name for what it does, and the
+   alert that follows still has Don't Allow on it. If App Review ever
+   objects to the wording, goLabel() is the one place to change it back to
+   Continue. Turning every switch off is how
    somebody says "none of these", and iOS is still asked, because the pinned
    banner reaches every phone that allows notifications whatever is set here
    (migration 0078), and a phone that was never asked can never hear it.
@@ -112,6 +116,16 @@
     return list;
   }
 
+  /* What the one button says. On a phone it is what the button does: it
+     brings up the iOS alert. In a browser there is no alert behind it, so it
+     says Continue rather than promise one. A demo on a preview link reads
+     as the phone, since that is what a demo is there to show. */
+  function goLabel() {
+    var phone = (HC.native && HC.native.isNative && HC.native.isNative()) ||
+      (HC.demo && HC.demo.on);
+    return phone ? 'Approve notifications' : 'Continue';
+  }
+
   /* ---------------------------------------------------------------- markup */
 
   function markup() {
@@ -137,7 +151,8 @@
       '<p class="hc-notify__lede">Choose what you’d like to hear from us.</p>' +
       '<div class="hc-notify__list" role="group" aria-label="Notifications">' + rows + '</div>' +
       '<div class="hc-notify__foot">' +
-        '<button type="button" class="hc-btn hc-btn--primary" data-notify-go>Continue</button>' +
+        '<button type="button" class="hc-btn hc-btn--primary" data-notify-go>' +
+          esc(goLabel()) + '</button>' +
         '<p class="hc-notify__note">You can change these anytime in Your account.</p>' +
       '</div>' +
 
