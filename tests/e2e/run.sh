@@ -101,6 +101,11 @@ node "$(dirname "$0")/search.js" || exit 1
 # local and still needs no database, so it belongs up here with the cheap ones.
 node "$(dirname "$0")/gate.js" || exit 1
 
+# What to hear about, the stop after the way in on a phone's first trip
+# through it. Same terms as the gate, plus a pretend Capacitor to count the
+# times iOS is asked.
+node "$(dirname "$0")/notify-intro.js" || exit 1
+
 # The contact form at the top of Connect. Stands up its own answers for the
 # contact Edge Function, including the failure, and needs no database either.
 node "$(dirname "$0")/contact.js" || exit 1

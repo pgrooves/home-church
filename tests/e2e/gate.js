@@ -377,6 +377,17 @@ async function waitForGate(page) {
   ok('and the welcome says so', arrived.greeting === 'You’re in!', arrived.greeting);
   ok('with the light behind the house', arrived.burst);
 
+  /* The first trip through ends at what to hear about, with the house still
+     on the glass. tests/e2e/notify-intro.js asks everything about it; here
+     it only has to be the thing between You're in and Home. */
+  await page.waitForFunction(() => !!document.querySelector('.hc-splash--notify'),
+    null, { timeout: 8000 });
+  ok('then it asks what to hear about, once',
+    (await page.evaluate(() => document.getElementById('hc-splash-greeting').textContent))
+      === 'Stay in the loop.');
+  await page.waitForTimeout(900);
+  await page.click('[data-notify-go]');
+
   await page.waitForFunction(() => !document.getElementById('hc-splash'),
     null, { timeout: 8000 });
   const home = await page.evaluate(() => ({
@@ -425,6 +436,8 @@ async function waitForGate(page) {
     stillScene.panels.choose.x === 0, JSON.stringify(stillScene.panels));
 
   await quiet.click('[data-gate="guest"]');
+  await quiet.waitForSelector('.hc-splash--notify [data-notify-go]', { timeout: 8000 });
+  await quiet.click('[data-notify-go]');
   await quiet.waitForFunction(() => !document.getElementById('hc-splash'),
     null, { timeout: 8000 });
   const guest = await quiet.evaluate(() => ({
@@ -518,6 +531,9 @@ async function waitForGate(page) {
   ok('and the welcome is the same one everybody else gets',
     inNow.greeting === 'You’re in!', inNow.greeting);
 
+  await review.waitForSelector('.hc-splash--notify [data-notify-go]', { timeout: 8000 });
+  await review.waitForTimeout(900);
+  await review.click('[data-notify-go]');
   await review.waitForFunction(() => !document.getElementById('hc-splash'),
     null, { timeout: 8000 });
   const landed = await review.evaluate(() => ({

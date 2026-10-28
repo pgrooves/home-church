@@ -12,6 +12,10 @@
    and no build flag makes the gate go away for tests, because a gate that can
    be turned off from outside is a gate.
 
+   The first time through there is one more question, what to hear about,
+   and this answers it the same way: Continue, with the switches as they
+   start. See js/notify-intro.js.
+
    Returns once the layer has actually gone, and returns quietly on a build
    where no gate ever appears, so js/config.js being emptied one day cannot
    make every test in this folder hang.
@@ -39,6 +43,18 @@ module.exports = async function pastTheGate(page) {
     // for and it makes a flaky test out of a moving button.
     await page.waitForTimeout(500);
     await page.click('[data-gate="guest"]');
+
+    /* And on a phone's first trip through, the stop after it: what to hear
+       about. Continue is its only button, so that is what a person taps. */
+    await page.waitForFunction(
+      () => !document.getElementById('hc-splash') ||
+            !!document.querySelector('.hc-splash--notify [data-notify-go]'),
+      null, { timeout: 25000 }
+    );
+    if (await page.evaluate(() => !!document.querySelector('[data-notify-go]'))) {
+      await page.waitForTimeout(500);
+      await page.click('[data-notify-go]');
+    }
   }
 
   await page.waitForFunction(GONE, null, { timeout: 25000 });

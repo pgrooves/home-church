@@ -4325,6 +4325,208 @@ a[href^="https://www.biblegateway.com/"]::selection,
 }
 
 /* --------------------------------------------------------------------------
+   What to hear about
+
+   The stop after the way in, on a phone's first trip through it. The house
+   and the line climb to the top and get smaller, the gate's panels step off
+   to the left, and a card of switches comes up from below. See
+   js/notify-intro.js for when it shows and what Continue does.
+
+   After the gate and You're in rules, not before them: by now the layer can
+   be carrying all three classes, they weigh the same, and the order in this
+   file is what decides.
+   -------------------------------------------------------------------------- */
+
+/* The distance and the size are measured by js/notify-intro.js, against the
+   card's real top edge, and handed over as custom properties. */
+.hc-splash--notify .hc-splash__lockup {
+  transform: translateY(var(--hc-notify-y, -260px)) scale(var(--hc-notify-scale, 0.78));
+  transition: transform 760ms cubic-bezier(0.16, 0.84, 0.44, 1);
+}
+
+.hc-splash--notify .hc-splash__gate {
+  opacity: 0;
+  transform: translateX(-28px);
+  pointer-events: none;
+  transition: opacity 280ms ease, transform 420ms cubic-bezier(0.4, 0, 1, 1);
+}
+
+/* The line says something new, so it arrives again. Its own keyframes, not
+   hc-gate-say: an element already running that name would not start it over,
+   and on the signed in path it is. */
+.hc-splash--notify .hc-splash__greeting {
+  animation: hc-notify-say 520ms cubic-bezier(0.16, 0.84, 0.44, 1) 160ms both;
+}
+
+@keyframes hc-notify-say {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* THE CARD OWNS THE SCREEN BELOW THE TITLE. Its top is fixed against the
+   safe area, which is what the title is measured against, and it scrolls on
+   its own if a big text size and a small phone ever add up to more than fits.
+   The button sits at the bottom of it, where a thumb already is. */
+.hc-notify {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(env(safe-area-inset-top) + 168px);
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 0 var(--hc-screen-pad) calc(var(--hc-space-lg) + env(safe-area-inset-bottom));
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  pointer-events: none;
+}
+
+.hc-splash--notify .hc-notify { pointer-events: auto; }
+
+.hc-notify > * {
+  width: 100%;
+  max-width: 440px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.hc-notify__lede {
+  margin: 0 auto var(--hc-space-lg);
+  text-align: center;
+  font-family: var(--hc-serif);
+  font-size: calc(var(--hc-body-serif) * var(--hc-text-scale));
+  line-height: 1.45;
+  color: var(--hc-mid);
+}
+
+.hc-notify__list {
+  background: var(--hc-cream);
+  border-radius: 18px;
+  padding: var(--hc-space-xs) 0;
+}
+
+.hc-notify__row {
+  display: flex;
+  align-items: center;
+  gap: var(--hc-space-md);
+  width: 100%;
+  min-height: 64px;
+  padding: var(--hc-space-md) var(--hc-space-base);
+  text-align: left;
+  position: relative;
+}
+
+/* An inset hairline between rows, starting where the words do, the way a
+   settings list on the phone itself draws one. */
+.hc-notify__row + .hc-notify__row::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: var(--hc-space-base);
+  left: calc(var(--hc-space-base) + 40px + var(--hc-space-md));
+  border-top: var(--hc-hairline) solid var(--hc-rule);
+}
+
+.hc-notify__icon {
+  flex: 0 0 auto;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--hc-paper);
+  color: var(--hc-accent-deep);
+  transition: background var(--hc-dur-fast) var(--hc-ease),
+              color var(--hc-dur-fast) var(--hc-ease);
+}
+
+.hc-notify__icon svg { width: 22px; height: 22px; }
+
+/* On is the gold of the house, so a card of choices reads at a glance. */
+.hc-notify__row[aria-checked="true"] .hc-notify__icon {
+  background: var(--hc-accent-deep);
+  color: var(--hc-on-dark);
+}
+
+.hc-notify__text {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.hc-notify__title {
+  font-family: var(--hc-sans);
+  font-weight: 600;
+  font-size: calc(15px * var(--hc-text-scale));
+  line-height: 1.3;
+  color: var(--hc-ink);
+}
+
+.hc-notify__sub {
+  font-family: var(--hc-sans);
+  font-size: var(--hc-caption);
+  line-height: var(--hc-caption-line);
+  color: var(--hc-mid);
+}
+
+.hc-notify__foot {
+  margin-top: auto;
+  padding-top: var(--hc-space-lg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--hc-space-md);
+}
+
+.hc-notify__note {
+  margin: 0;
+  text-align: center;
+  font-family: var(--hc-sans);
+  font-size: var(--hc-caption);
+  line-height: var(--hc-caption-line);
+  color: var(--hc-mid);
+}
+
+/* The entrance. The lede and the card come up just behind the title, and the
+   rows follow one another down the card, fast enough that the last one is in
+   before anybody has read the first. base.css collapses all of it under
+   Reduce Motion, which leaves everything simply there. */
+.hc-notify__lede,
+.hc-notify__list,
+.hc-notify__foot,
+.hc-notify__row { opacity: 0; }
+
+.hc-splash--notify .hc-notify__lede {
+  animation: hc-notify-up 560ms cubic-bezier(0.16, 0.84, 0.44, 1) 260ms forwards;
+}
+
+.hc-splash--notify .hc-notify__list {
+  animation: hc-notify-up 620ms cubic-bezier(0.16, 0.84, 0.44, 1) 320ms forwards;
+}
+
+.hc-splash--notify .hc-notify__row {
+  animation: hc-notify-up 520ms cubic-bezier(0.16, 0.84, 0.44, 1) forwards;
+  animation-delay: calc(420ms + var(--i, 0) * 70ms);
+}
+
+.hc-splash--notify .hc-notify__foot {
+  animation: hc-notify-up 560ms cubic-bezier(0.16, 0.84, 0.44, 1) 700ms forwards;
+}
+
+@keyframes hc-notify-up {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@media (max-height: 700px) {
+  .hc-notify { top: calc(env(safe-area-inset-top) + 140px); }
+  .hc-notify__lede { margin-bottom: var(--hc-space-base); }
+  .hc-notify__row { min-height: 58px; padding-top: 10px; padding-bottom: 10px; }
+}
+
+/* --------------------------------------------------------------------------
    The index rail. The right edge, in place of a scrollbar this design does
    not draw. See js/index-rail.js for what moves and why.
 

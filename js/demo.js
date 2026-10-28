@@ -317,6 +317,18 @@
       el.appendChild(text);
       el.appendChild(exit);
       document.body.appendChild(el);
+
+      /* At the top while the splash is up, so it does not sit on the
+         buttons at the bottom of the gate's last stop. Back down once Home
+         is on the glass. */
+      if (HC.splash && HC.splash.showing()) {
+        el.style.bottom = 'auto';
+        el.style.top = 'calc(env(safe-area-inset-top, 0px) + 8px)';
+        HC.splash.whenGone(function () {
+          el.style.top = '';
+          el.style.bottom = 'calc(env(safe-area-inset-bottom, 0px) + 92px)';
+        });
+      }
     }
 
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', banner);

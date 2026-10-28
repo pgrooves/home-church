@@ -940,6 +940,44 @@
     }).catch(function () { /* tried again next launch */ });
   }
 
+  /* Continue on "Stay in the loop.", the first launch's screen of switches.
+     The same three answers resumeNotifications() handles, with one
+     difference: a yes leaves the switches exactly as they were chosen on that
+     screen instead of turning everything on, because somebody just told us
+     which ones they want. A no still turns them all off, so Your account
+     tells the truth. Resolves once iOS has answered, so the screen can wait
+     for the alert to close before it leaves. See js/notify-intro.js. */
+  function applyChoices() {
+    if (!isNative()) return Promise.resolve(false);
+    var p = plugins();
+    if (!p || !p.PushNotifications) return Promise.resolve(false);
+
+    listen(p);
+
+    var check = p.PushNotifications.checkPermissions
+      ? p.PushNotifications.checkPermissions()
+      : Promise.resolve(null);
+
+    var granted = function () {
+      rememberAnswer('granted');
+      return p.PushNotifications.register().then(function () { return true; });
+    };
+    var refused = function () {
+      turnEverythingOff();
+      rememberAnswer('denied');
+      return false;
+    };
+
+    return check.then(function (status) {
+      var state = status && status.receive;
+      if (state === 'granted') return granted();
+      if (state === 'denied') return refused();
+      return p.PushNotifications.requestPermissions().then(function (result) {
+        return result && result.receive === 'granted' ? granted() : refused();
+      });
+    }).catch(function () { return false; });
+  }
+
   /* ------------------------------------------------------------- biometry
 
      Face ID, or Touch ID, or the passcode, in front of the Journal.
@@ -1042,7 +1080,8 @@
     syncPreferences: syncPreferences,
     syncAdminPreferences: syncAdminPreferences,
     clearAdminNotifications: clearAdminNotifications,
-    resumeNotifications: resumeNotifications
+    resumeNotifications: resumeNotifications,
+    applyChoices: applyChoices
   };
 
 })(window.HC = window.HC || {});

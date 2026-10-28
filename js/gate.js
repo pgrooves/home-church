@@ -374,6 +374,14 @@
     if (closed) return;
     closed = true;
 
+    /* The first time a phone gets past this, whichever way, there is one
+       more stop before Home: what to hear about. It takes the layer and the
+       exit from here and puts #app back itself. See js/notify-intro.js. */
+    if (HC.notifyIntro && HC.notifyIntro.shouldShow()) {
+      HC.notifyIntro.open(root, leave);
+      return;
+    }
+
     var app = document.getElementById('app');
     if (app) app.removeAttribute('aria-hidden');
 
