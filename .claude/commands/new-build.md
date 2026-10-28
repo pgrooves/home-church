@@ -59,32 +59,46 @@ git log origin/main -1 --format='%H %ad' --date=short -S'| <date> | <version> | 
 with a new date and the same numbers. Changing a row's Status alone does
 not move it.)
 
-Then ask Trey one question about the newest row (use the question tool, so
-it is one tap):
+### Ask Trey first, every time
 
-> Where did the last build (1.2, build 15) end up?
-> - **It's live on the App Store** (or approved)
-> - **Uploaded, but not released yet** (TestFlight only, waiting for review, or rejected)
-> - **It never got uploaded**
+Before any other work, ask Trey for the build number, even when
+`RELEASES.md` has it. Trey's number is the one Xcode will count up from, so
+it wins. One chat message, answered in a few words:
 
-That answer decides everything in Step 2. Write it into that row's Status
-column in Step 5 (`Live`, `TestFlight only`, `Never uploaded`), so the next
-run knows without asking again.
+> Before I start, two quick things:
+>
+> 1. **What's the build number of your last upload?** App Store Connect
+>    (in Safari, `appstoreconnect.apple.com`) → **Apps** → **Home Church**
+>    → **TestFlight** lists every build, newest first. My list says
+>    **1.2 (15)**.
+> 2. **Where did it end up?** Live on the App Store, or uploaded but not
+>    released yet (TestFlight only, waiting for review, or rejected).
+>
+> A reply like "15, live" is all I need.
 
-**Skip the question** when the newest row already says `Live`.
+Leave out "My list says" when `RELEASES.md` has no rows yet. Then also ask
+for the version and the date it was uploaded (the same TestFlight list
+shows both), because there is nothing else to go on.
 
-### The first time, when `RELEASES.md` has no rows yet
+**The next iPhone build is Trey's number plus one.** Every number Trey is
+told to type, in Xcode and in App Store Connect, comes from that.
 
-Ask Trey in chat, in one message:
+**If Trey's number is lower than the newest row in `RELEASES.md`**, that
+row never got uploaded: it is the "Never uploaded" case in Step 2.
 
-1. "What version and build number did you upload last?" App Store Connect
-   (in Safari, `appstoreconnect.apple.com`) → **Apps** → **Home Church** →
-   **TestFlight** at the top lists every build with its number and date.
-2. "Is that one live on the App Store?"
-3. "What date was it uploaded?" (the same list shows it)
+**If Trey's number is higher**, use Trey's, and say so in a sentence ("My list said 15, you said 17; going with 17, so this
+one is 18"). A higher number usually means a build was uploaded without
+`/new-build`. Then the newest row is not where "since the last build"
+starts: ask for that upload's date (the TestFlight list shows it) and use
+the last commit on `origin/main` before it, as below.
 
-Use the last commit on `origin/main` before that date as where "since the
-last build" starts:
+The second answer goes into the Status column of the row for that build
+in Step 5 (`Live` or `TestFlight only`).
+
+### Finding the starting commit from a date
+
+The first time, or when a build was uploaded outside this command, use the
+last commit on `origin/main` before the upload date:
 
 ```bash
 git log origin/main -1 --format='%H %ad %s' --date=short --before='<date> 23:59'
@@ -137,13 +151,13 @@ Trey still wants one before doing anything else.
 
 ## Step 2. Pick the numbers
 
-From the Step 0 answer:
+Step 0 gave Trey's last build number and where it ended up. From there:
 
 | The last build is | Next version | Next iPhone build |
 |---|---|---|
-| Live on the App Store | Up by one: `1.2` → `1.3` | Last build + 1 |
-| Uploaded, not released | **The same** version | Last build + 1 |
-| Never uploaded | The same version | **The same** build number. Replace its row in Step 5 rather than adding one |
+| Live on the App Store | Up by one: `1.2` → `1.3` | Trey's number + 1 |
+| Uploaded, not released | **The same** version | Trey's number + 1 |
+| Never uploaded (the newest row is above Trey's number) | That row's version | Trey's number + 1, the number it would have had. Replace its row in Step 5 rather than adding one |
 
 Versions go `1.2`, `1.3` … `1.9`, `1.10`. Never `2.0` unless Trey asks for
 it.
