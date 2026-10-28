@@ -100,7 +100,8 @@
        everybody reads. */
     var list = [
       { id: 'announcements', icon: 'bell', title: 'Announcements',
-        sub: copy('profile.notify-news', 'When the church posts something on purpose') },
+        sub: copy('profile.notify-news',
+          'When the church posts something important, like an event or a change to Sunday') },
       { id: 'newGuide', icon: 'guide', title: 'A new guide is posted',
         sub: copy('profile.notify-guide', 'Monday morning, once a week') },
       { id: 'newSermon', icon: 'listen', title: 'New sermon audio',
