@@ -173,6 +173,29 @@ async function main() {
   await wait(1500);
   shoot('8-cal');
 
+  /* Sharing a file, the road a printed guide, a calendar invitation and an
+     exported journal all take. The app may only hand out files from its own
+     cache (android/app/src/main/res/xml/file_paths.xml), so this writes one
+     there and opens the share sheet with it. If that list ever stops
+     covering where the app writes, Android refuses at once and the plugin
+     rejects; a share sheet on screen is the pass. */
+  await run(() => {
+    window.__hcShareError = null;
+    const P = window.Capacitor.Plugins;
+    return P.Filesystem.writeFile({
+      path: 'hc-share-check.txt', data: 'Home Church', directory: 'CACHE', encoding: 'utf8'
+    }).then((written) => {
+      P.Share.share({ title: 'Share check', files: [written.uri] })
+        .catch((err) => { window.__hcShareError = String((err && err.message) || err); });
+    });
+  });
+  await wait(3000);
+  shoot('9-share-sheet');
+  const shareError = await run(() => window.__hcShareError);
+  ok('a file from the cache can be shared', !shareError, shareError);
+  execFileSync('adb', ['shell', 'input', 'keyevent', '4']);
+  await wait(800);
+
   socket.close();
   console.log('\n' + pass + ' passed, ' + fail + ' failed');
   process.exit(fail ? 1 : 0);

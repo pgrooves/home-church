@@ -62,6 +62,16 @@ const json = (body: unknown, status = 200) =>
     headers: { 'Content-Type': 'application/json' }
   });
 
+/* Compared without stopping at the first wrong character, the same as every
+   other secret check in supabase/functions (send-push, homekids-drive), so
+   how long a refusal takes says nothing about how close a guess was. */
+function secretsMatch(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return diff === 0;
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method !== 'POST') return json({ error: 'POST only' }, 405);
 
@@ -103,7 +113,7 @@ Deno.serve(async (req: Request) => {
       (secretErr?.message ?? 'the vault returned nothing under that name'));
     return json({ error: 'not configured' }, 500);
   }
-  if (presented !== expected) return json({ error: 'forbidden' }, 403);
+  if (!secretsMatch(presented, String(expected))) return json({ error: 'forbidden' }, 403);
 
   let body: { limit?: unknown; force?: unknown } = {};
   try { body = await req.json(); } catch { /* an empty body is the default run */ }

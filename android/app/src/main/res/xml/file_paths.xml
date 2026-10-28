@@ -1,5 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- What the app may hand to another app (the share sheet, a calendar) by
+     content:// link. Only its own cache, which is the one place js/native.js
+     writes a file to share: a printed guide, a calendar invitation, an
+     exported journal. Capacitor's template also offered the whole of the
+     phone's shared storage; nothing here uses it, so it is not offered. -->
 <paths xmlns:android="http://schemas.android.com/apk/res/android">
-    <external-path name="my_images" path="." />
     <cache-path name="my_cache_images" path="." />
 </paths>
