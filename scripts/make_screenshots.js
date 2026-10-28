@@ -24,8 +24,21 @@
  * USAGE
  *   npx http-server -p 8770 -s &
  *   node scripts/make_screenshots.js
+ *   node scripts/make_screenshots.js --android
  *
- * Writes to screenshots/.
+ * Writes to screenshots/, or with --android to play/screenshots/.
+ *
+ * THE ANDROID SET. Google Play wants phone screenshots between 16:9 and 9:16,
+ * and at least 1080 pixels on the short side to be eligible for the
+ * listing's larger layouts. 405 x 720 CSS pixels at 8/3 is exactly 1080 x
+ * 1920, which is 9:16 at a width close to a typical Android phone's.
+ *
+ * And the app is told it is Android, with a stand-in Capacitor global that
+ * answers getPlatform() with 'android' and carries no plugins. That is what
+ * makes every Android branch in js/native.js take its Android road, so Give
+ * is absent from these exactly as it is from the Android app, rather than a
+ * store screenshot showing a page that build does not have. PLAY_COMPLIANCE.md
+ * section 3.
  */
 
 'use strict';
@@ -34,11 +47,26 @@ const path = require('path');
 const fs = require('fs');
 
 const BASE = process.env.HC_BASE || 'http://127.0.0.1:8770';
-const OUT = path.join(path.dirname(__dirname), 'screenshots');
+const ANDROID = process.argv.includes('--android');
+const OUT = ANDROID
+  ? path.join(path.dirname(__dirname), 'play', 'screenshots')
+  : path.join(path.dirname(__dirname), 'screenshots');
 
 // 6.9 inch iPhone: 440 x 956 logical, 3x, so 1320 x 2868 actual.
-const VIEWPORT = { width: 440, height: 956 };
-const SCALE = 3;
+// Android: 405 x 720 logical at 8/3, so 1080 x 1920 actual. See the header.
+const VIEWPORT = ANDROID ? { width: 405, height: 720 } : { width: 440, height: 956 };
+const SCALE = ANDROID ? 8 / 3 : 3;
+
+/* Runs before any of the app's own scripts, so js/native.js sees Android
+   from its first line. No plugins: every call that would reach one is
+   guarded by a presence check, the same as in a browser. */
+const AS_ANDROID = () => {
+  window.Capacitor = {
+    isNativePlatform: () => true,
+    getPlatform: () => 'android',
+    Plugins: {}
+  };
+};
 
 /* Seed state before each shot. An empty app photographs badly and, worse,
    photographs dishonestly: the greeting says "Welcome home" to a stranger and
@@ -136,6 +164,7 @@ async function main() {
 
   for (const shot of SHOTS) {
     const page = await browser.newPage({ viewport: VIEWPORT, deviceScaleFactor: SCALE });
+    if (ANDROID) await page.addInitScript(AS_ANDROID);
 
     // Land somewhere cheap, seed, then go to the real route so the seeded
     // profile is already in place when the screen first paints.
@@ -146,6 +175,16 @@ async function main() {
     await page.goto(`${BASE}/${route}`, { waitUntil: 'networkidle' });
     await page.evaluate(() => document.fonts.ready);
     await page.waitForTimeout(700);
+
+    /* The offer to sign in comes up on every launch where nobody is signed
+       in (js/gate.js), over whatever screen the link opened. Take it the way
+       a visitor would, with Continue as guest, which closes it and leaves
+       the screen underneath where it was. */
+    const gate = await page.waitForSelector('[data-gate="guest"]', { timeout: 6000 }).catch(() => null);
+    if (gate) {
+      await gate.click();
+      await page.waitForTimeout(1200);
+    }
 
     if (shot.after) await shot.after(page);
 
@@ -165,11 +204,13 @@ async function main() {
   await browser.close();
 
   fs.writeFileSync(path.join(OUT, 'CAPTIONS.txt'),
-    'App Store screenshot captions, in order.\n' +
-    'Paste these as the text overlay or as the localized captions.\n\n' +
+    (ANDROID ? 'Google Play phone screenshots, in upload order.\n' +
+      'Play has no caption field; these are for whoever is choosing the order.\n\n'
+      : 'App Store screenshot captions, in order.\n' +
+      'Paste these as the text overlay or as the localized captions.\n\n') +
     captions.join('\n\n') + '\n');
 
-  console.log(`\n${SHOTS.length} screenshots in screenshots/, captions in CAPTIONS.txt`);
+  console.log(`\n${SHOTS.length} screenshots in ${path.relative(path.dirname(__dirname), OUT)}/, captions in CAPTIONS.txt`);
 }
 
 main();

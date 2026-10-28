@@ -186,3 +186,29 @@ later in Admin → App settings. Every installed version reads the same
 switch. Before turning one on, check that no build people still use has a
 half-finished version of that page. If one does, give the new build its own
 switch.
+
+## The Android app
+
+The same app is on its way to Google Play. `PLAY_COMPLIANCE.md` is why each
+Android difference exists; `PLAY_SUBMISSION_KIT.md` is what Trey types into
+Play Console, in order.
+
+- **Nothing Android changes the iPhone.** Every Android difference is a
+  branch on `HC.native.isAndroid()` that an iPhone never takes, and
+  `tests/android.test.js` pins both sides. Keep it that way: a change for
+  Google that would also change iOS gets asked about first.
+- **Give is hidden on Android** (`offersGiving()`) until the church has an
+  IRS determination letter, and **push is off on Android** (`pushAvailable()`)
+  until Firebase is set up. Don't remove either without that happening.
+- **`android/` is committed**, unlike `ios/`, because a GitHub Action builds
+  it, not a laptop. Trey never needs Android Studio. Every push to `main` or
+  `android-play` builds the Play bundle and screenshots the real app in an
+  emulator; the run must be green.
+- **New permissions fail the build.** `scripts/android_manifest_check.js`
+  holds the list. A plugin that adds one means updating that list, section 2
+  of `PLAY_COMPLIANCE.md` and the Data safety answers together.
+- **The build number** is the Action's run number, so it never needs raising
+  by hand. `versionName` in `android/app/build.gradle` matches the iOS
+  version and goes up with it.
+- **Play store screenshots** come from
+  `node scripts/make_screenshots.js --android`, drawn as the Android app.

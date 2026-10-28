@@ -5,7 +5,8 @@ Supabase project, the same switches. So most of `APP_STORE_COMPLIANCE.md`
 carries over unchanged, and this file does not repeat it. It covers what
 Google asks that Apple does not, what Google asks differently, and the
 decisions that have to be made before the Android project is generated,
-because some of them change what goes into the build.
+because some of them change what goes into the build. What to type into
+Play Console, step by step, is `PLAY_SUBMISSION_KIT.md`.
 
 Written October 27, 2026. Policy dates below are from Google's own pages
 where those were reachable and from secondary sources where they were not;
