@@ -946,11 +946,13 @@
      screen instead of turning everything on, because somebody just told us
      which ones they want. A no still turns them all off, so Your account
      tells the truth. Resolves once iOS has answered, so the screen can wait
-     for the alert to close before it leaves. See js/notify-intro.js. */
+     for the alert to close before it leaves, and resolves to what iOS said:
+     'granted', 'denied', or null where there is nobody to ask (a browser, or
+     a build without the plugin). See js/notify-intro.js. */
   function applyChoices() {
-    if (!isNative()) return Promise.resolve(false);
+    if (!isNative()) return Promise.resolve(null);
     var p = plugins();
-    if (!p || !p.PushNotifications) return Promise.resolve(false);
+    if (!p || !p.PushNotifications) return Promise.resolve(null);
 
     listen(p);
 
@@ -960,12 +962,12 @@
 
     var granted = function () {
       rememberAnswer('granted');
-      return p.PushNotifications.register().then(function () { return true; });
+      return p.PushNotifications.register().then(function () { return 'granted'; });
     };
     var refused = function () {
       turnEverythingOff();
       rememberAnswer('denied');
-      return false;
+      return 'denied';
     };
 
     return check.then(function (status) {
@@ -975,7 +977,30 @@
       return p.PushNotifications.requestPermissions().then(function (result) {
         return result && result.receive === 'granted' ? granted() : refused();
       });
-    }).catch(function () { return false; });
+    }).catch(function () { return null; });
+  }
+
+  /* What iOS says right now, without asking anybody anything: 'granted',
+     'denied', 'prompt', or null off a phone. For the screen that is waiting
+     for somebody to come back from Settings. */
+  function notificationAnswer() {
+    var p = plugins();
+    if (!isNative() || !p || !p.PushNotifications || !p.PushNotifications.checkPermissions) {
+      return Promise.resolve(null);
+    }
+    return p.PushNotifications.checkPermissions()
+      .then(function (status) { return (status && status.receive) || null; })
+      .catch(function () { return null; });
+  }
+
+  /* This app's own page in the Settings app, where Notifications is the
+     switch iOS will not show the prompt for twice. app-settings: is
+     UIApplication.openSettingsURLString; the web view hands a scheme it does
+     not serve to iOS, the same road mailto: and webcal: take in
+     js/components.js. */
+  function openAppSettings() {
+    if (!isNative()) return;
+    window.location.href = 'app-settings:';
   }
 
   /* ------------------------------------------------------------- biometry
@@ -1081,7 +1106,9 @@
     syncAdminPreferences: syncAdminPreferences,
     clearAdminNotifications: clearAdminNotifications,
     resumeNotifications: resumeNotifications,
-    applyChoices: applyChoices
+    applyChoices: applyChoices,
+    notificationAnswer: notificationAnswer,
+    openAppSettings: openAppSettings
   };
 
 })(window.HC = window.HC || {});

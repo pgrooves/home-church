@@ -4520,6 +4520,91 @@ a[href^="https://www.biblegateway.com/"]::selection,
   to   { opacity: 1; transform: translateY(0); }
 }
 
+/* Don't Allow. The switches step aside and the way to Settings comes up in
+   their place, on the same card and the same layer. See refused() in
+   js/notify-intro.js. */
+.hc-notify__off[hidden] { display: none; }
+
+.hc-notify__off {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.hc-splash--notify-off .hc-notify > .hc-notify__lede,
+.hc-splash--notify-off .hc-notify > .hc-notify__list,
+.hc-splash--notify-off .hc-notify > .hc-notify__foot { display: none; }
+
+.hc-notify__off > * { opacity: 0; }
+
+.hc-splash--notify-off .hc-notify__off > .hc-notify__lede {
+  animation: hc-notify-up 520ms cubic-bezier(0.16, 0.84, 0.44, 1) 120ms forwards;
+}
+
+.hc-splash--notify-off .hc-notify__steps {
+  animation: hc-notify-up 560ms cubic-bezier(0.16, 0.84, 0.44, 1) 200ms forwards;
+}
+
+.hc-splash--notify-off .hc-notify__off > .hc-notify__foot {
+  animation: hc-notify-up 560ms cubic-bezier(0.16, 0.84, 0.44, 1) 320ms forwards;
+}
+
+.hc-notify__steps {
+  list-style: none;
+  margin: 0;
+  padding: var(--hc-space-xs) 0;
+  background: var(--hc-cream);
+  border-radius: 18px;
+}
+
+.hc-notify__steps li {
+  display: flex;
+  align-items: center;
+  gap: var(--hc-space-md);
+  min-height: 56px;
+  padding: var(--hc-space-sm) var(--hc-space-base);
+  font-family: var(--hc-sans);
+  font-size: calc(15px * var(--hc-text-scale));
+  line-height: 1.3;
+  color: var(--hc-ink);
+  position: relative;
+}
+
+.hc-notify__steps li + li::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: var(--hc-space-base);
+  left: calc(var(--hc-space-base) + 30px + var(--hc-space-md));
+  border-top: var(--hc-hairline) solid var(--hc-rule);
+}
+
+.hc-notify__steps strong { font-weight: 600; }
+
+.hc-notify__num {
+  flex: 0 0 auto;
+  width: 30px;
+  height: 30px;
+  border-radius: var(--hc-radius-pill);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--hc-accent-deep);
+  color: var(--hc-on-dark);
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.hc-notify__later { align-self: center; }
+
+/* Back from Settings with notifications on: the card goes, the line under
+   the house says so, and the layer leaves a moment later. */
+.hc-splash--notify-done .hc-notify {
+  opacity: 0;
+  transition: opacity 260ms ease;
+  pointer-events: none;
+}
+
 @media (max-height: 700px) {
   .hc-notify { top: calc(env(safe-area-inset-top) + 140px); }
   .hc-notify__lede { margin-bottom: var(--hc-space-base); }

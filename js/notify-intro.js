@@ -17,6 +17,11 @@
    cold launch meets this only the first time. Every switch on it is also on
    Your account, and the caption under the card says so.
 
+   IF IOS IS TOLD DON'T ALLOW, the screen stays for one more moment: the
+   switches give way to the three taps in Settings that turn notifications
+   on, Open Settings, and Maybe later. iOS will not show its own alert a
+   second time, so that is the only second chance there is. See refused().
+
    ONE BUTTON, ON PURPOSE. A screen in front of the iOS permission alert may
    explain it and may not offer a way around it: App Review reads "Not now"
    on a pre-permission screen as steering people away from the system's own
@@ -50,7 +55,8 @@
   var greeting = null;
   var leave = null;
   var opened = false;
-  var closed = false;
+  var asked = false;      // Continue has been tapped
+  var closed = false;     // the layer is on its way out
 
   // The switches on screen, separate from the profile until Continue.
   var choice = {};
@@ -85,15 +91,18 @@
     var copy = function (slot, fallback) {
       return HC.data && HC.data.copy ? HC.data.copy(slot, fallback) : fallback;
     };
+    /* Announcements first, ahead of the order Your account uses: it is the
+       one the church most wants heard, and the top of the card is the row
+       everybody reads. */
     var list = [
+      { id: 'announcements', icon: 'bell', title: 'Announcements',
+        sub: copy('profile.notify-news', 'When the church posts something on purpose') },
       { id: 'newGuide', icon: 'guide', title: 'A new guide is posted',
         sub: copy('profile.notify-guide', 'Monday morning, once a week') },
       { id: 'newSermon', icon: 'listen', title: 'New sermon audio',
         sub: copy('profile.notify-sermon', 'When Sunday’s message is up to listen to') },
       { id: 'sundayReminder', icon: 'sun', title: 'Sunday reminder',
-        sub: copy('profile.notify-sunday', 'Saturday evening, service times and address') },
-      { id: 'announcements', icon: 'bell', title: 'Announcements',
-        sub: copy('profile.notify-news', 'When the church posts something on purpose') }
+        sub: copy('profile.notify-sunday', 'Saturday evening, service times and address') }
     ];
     // Season gated for the reason Your account gives beside the same switch.
     if (HC.data && HC.data.church && HC.data.church.groupsInSeason) {
@@ -130,6 +139,24 @@
       '<div class="hc-notify__foot">' +
         '<button type="button" class="hc-btn hc-btn--primary" data-notify-go>Continue</button>' +
         '<p class="hc-notify__note">You can change these anytime in Your account.</p>' +
+      '</div>' +
+
+      /* The second state, for a phone that just said Don't Allow. Hidden
+         until then; see refused() below. */
+      '<div class="hc-notify__off" hidden>' +
+        '<p class="hc-notify__lede">That’s okay. Just so you know, urgent news, ' +
+          'like a change to Sunday, only reaches phones with notifications on.</p>' +
+        '<ol class="hc-notify__steps">' +
+          '<li><span class="hc-notify__num">1</span><span>Tap <strong>Open Settings</strong> below</span></li>' +
+          '<li><span class="hc-notify__num">2</span><span>Tap <strong>Notifications</strong></span></li>' +
+          '<li><span class="hc-notify__num">3</span><span>Turn on <strong>Allow Notifications</strong></span></li>' +
+        '</ol>' +
+        '<div class="hc-notify__foot">' +
+          '<button type="button" class="hc-btn hc-btn--primary" data-notify-settings>' +
+            'Open Settings</button>' +
+          '<button type="button" class="hc-btn hc-btn--tertiary hc-notify__later" ' +
+            'data-notify-later>Maybe later</button>' +
+        '</div>' +
       '</div>';
   }
 
@@ -168,28 +195,83 @@
     if (HC.native && HC.native.tap) HC.native.tap('Light');
   }
 
-  function finish() {
-    if (closed) return;
-    closed = true;
-
+  function save() {
     var next = Object.assign({}, HC.store.getProfile().notifications, choice);
     HC.store.updateProfile({ notifications: next });
+  }
+
+  function finish() {
+    if (asked) return;
+    asked = true;
+
+    save();
     HC.store.storage.set(SEEN_KEY, true);
 
     var button = panel.querySelector('[data-notify-go]');
     if (button) button.setAttribute('disabled', 'true');
 
     /* iOS is asked with the layer still up, so the alert lands over the
-       screen that explained it rather than over Home. The layer leaves once
-       there is an answer, whichever answer. */
+       screen that explained it rather than over Home. A yes, or a browser
+       with nobody to ask, goes on to Home. A no stays here for one more
+       moment: see refused(). */
     var ask = HC.native && HC.native.applyChoices
       ? HC.native.applyChoices()
-      : Promise.resolve(false);
+      : Promise.resolve(null);
 
-    ask.then(out, out);
+    ask.then(function (answer) {
+      if (answer === 'denied') refused();
+      else out();
+    }, out);
+  }
+
+  /* DON'T ALLOW, AND WHY THIS IS NOT A SECOND PROMPT. iOS shows its
+     notification alert once per install. Asked again, it answers "denied"
+     straight away and shows nothing, so a button here that "asks again"
+     would be a button that does nothing. What is left is the switch iOS
+     keeps in Settings, and this says where it is, once, with a way past.
+
+     Nothing here blocks the app or comes back on a later launch: Maybe later
+     is Home, and this screen is already marked as seen. The line it says is
+     a fact about what the church sends, not a reason to feel bad. */
+  function refused() {
+    var off = panel.querySelector('.hc-notify__off');
+    if (off) off.removeAttribute('hidden');
+    root.classList.add('hc-splash--notify-off');
+    say('Notifications are off.');
+    if (HC.native && HC.native.tap) HC.native.tap('Light');
+    document.addEventListener('visibilitychange', backFromSettings);
+  }
+
+  /* Back from Settings. If notifications are on now, the switches go back to
+     what was chosen a moment ago (the no turned them all off), the phone
+     registers, and the screen says so before it leaves. If not, it stays put
+     and Maybe later is still there. */
+  function backFromSettings() {
+    if (document.visibilityState !== 'visible' || closed) return;
+    HC.native.notificationAnswer().then(function (answer) {
+      if (answer !== 'granted' || closed) return;
+      document.removeEventListener('visibilitychange', backFromSettings);
+      save();
+      HC.native.applyChoices();
+      say('You’re all set.');
+      root.classList.add('hc-splash--notify-done');
+      setTimeout(out, 1300);
+    });
+  }
+
+  /* The line under the house says something new and arrives again. */
+  function say(text) {
+    if (!greeting) return;
+    greeting.textContent = text;
+    greeting.style.animation = 'none';
+    void greeting.offsetWidth;
+    greeting.style.animation = '';
   }
 
   function out() {
+    if (closed) return;
+    closed = true;
+    document.removeEventListener('visibilitychange', backFromSettings);
     var app = document.getElementById('app');
     if (app) app.removeAttribute('aria-hidden');
     if (leave) leave();
@@ -198,9 +280,12 @@
   function wire() {
     panel.addEventListener('click', function (evt) {
       if (closed) return;
-      var row = evt.target.closest ? evt.target.closest('[data-notify]') : null;
-      if (row) { flip(row); return; }
-      if (evt.target.closest && evt.target.closest('[data-notify-go]')) finish();
+      var hit = function (sel) { return evt.target.closest && evt.target.closest(sel); };
+      var row = hit('[data-notify]');
+      if (row && !asked) { flip(row); return; }
+      if (hit('[data-notify-go]')) finish();
+      else if (hit('[data-notify-settings]')) HC.native.openAppSettings();
+      else if (hit('[data-notify-later]')) out();
     });
   }
 
@@ -218,6 +303,11 @@
 
     var prefs = (HC.store.getProfile().notifications) || {};
     topics().forEach(function (t) { choice[t.id] = !!prefs[t.id]; });
+
+    /* Sermon audio starts off everywhere else (js/store.js, migration 0096)
+       and starts on here. This screen is where somebody new sees it and
+       chooses, which is the choosing the church asked for. */
+    choice.newSermon = true;
 
     panel = document.createElement('div');
     panel.className = 'hc-notify';

@@ -14,6 +14,10 @@
                              the same record Your account draws, or the screen
                              is decoration.
 
+     a no is a dead end      iOS shows its alert once. After Don't Allow the
+                             screen says where the switch is in Settings and
+                             notices when somebody comes back with it on.
+
      iOS is asked twice      On a phone, boot used to ask iOS for permission
                              while the greeting was up, and a yes turned every
                              switch on. With this screen coming, that ask
@@ -80,9 +84,11 @@ function serve() {
 
 /* A phone that has never been asked. requestPermissions says yes and
    records when it was called, relative to the screen being up. */
-const PRETEND_PHONE = () => {
+const PRETEND_PHONE = (reply) => {
   window.__hcPush = { asked: 0, askedWhileGateUp: 0, registered: 0 };
   let answer = 'prompt';
+  // So a test can stand in for somebody flipping the switch in Settings.
+  window.__hcSetAnswer = (a) => { answer = a; };
   window.Capacitor = {
     isNativePlatform: () => true,
     Plugins: {
@@ -93,8 +99,8 @@ const PRETEND_PHONE = () => {
           if (window.HC && window.HC.gate && window.HC.gate.step()) {
             window.__hcPush.askedWhileGateUp++;
           }
-          answer = 'granted';
-          return Promise.resolve({ receive: 'granted' });
+          answer = reply || 'granted';
+          return Promise.resolve({ receive: answer });
         },
         register: () => { window.__hcPush.registered++; return Promise.resolve(); },
         addListener: () => ({ remove: () => {} })
@@ -157,10 +163,10 @@ async function toTheSwitches(page) {
 
   ok('leaving the gate as a guest lands on what to hear about',
     shown.greeting === 'Stay in the loop.', shown.greeting);
-  ok('with the switches from Your account, as they start',
+  ok('announcements first, and sermon audio on here, unlike Your account',
     JSON.stringify(shown.rows) === JSON.stringify([
-      ['newGuide', 'true'], ['newSermon', 'false'],
-      ['sundayReminder', 'true'], ['announcements', 'true']
+      ['announcements', 'true'], ['newGuide', 'true'],
+      ['newSermon', 'true'], ['sundayReminder', 'true']
     ]), JSON.stringify(shown.rows));
   ok('the house and the title sit above the card, not on it',
     shown.lockup.bottom <= shown.list.top, JSON.stringify(shown));
@@ -181,7 +187,7 @@ async function toTheSwitches(page) {
   }));
   ok('Continue reaches Home', after.view === 'home', after.view);
   ok('and the profile holds what was chosen',
-    after.n.newSermon === true && after.n.announcements === false &&
+    after.n.newSermon === false && after.n.announcements === false &&
     after.n.newGuide === true && after.n.sundayReminder === true, JSON.stringify(after.n));
   ok('the app is back in the accessibility tree', after.hidden === null, String(after.hidden));
 
@@ -218,9 +224,73 @@ async function toTheSwitches(page) {
   }));
   ok('Continue is what asks iOS, once', push.p.asked === 1, JSON.stringify(push.p));
   ok('and a yes registers the phone', push.p.registered >= 1, JSON.stringify(push.p));
-  ok('without turning on what was just turned off',
-    push.n.newGuide === false && push.n.newSermon === false && push.n.sundayReminder === true,
+  ok('and keeps the switches as they were left',
+    push.n.newGuide === false && push.n.newSermon === true && push.n.sundayReminder === true,
     JSON.stringify(push.n));
+
+  /* ---------------------------------------------------- a phone that says no
+
+     iOS shows its alert once. After Don't Allow the screen stays, says where
+     the switch is in Settings, and leaves by itself once somebody comes back
+     with it turned on. */
+
+  const no = await browser.newPage({ viewport: { width: 390, height: 844 } });
+  listen(no);
+  await no.addInitScript(PRETEND_PHONE, 'denied');
+  await no.goto('http://127.0.0.1:' + PORT + '/index.html');
+  await toTheGate(no);
+  await no.click('[data-gate="guest"]');
+  await toTheSwitches(no);
+  await no.click('[data-notify="newGuide"]');
+  await no.click('[data-notify-go]');
+  await no.waitForSelector('.hc-splash--notify-off [data-notify-settings]', { timeout: 8000 });
+  await no.waitForTimeout(800);
+
+  const off = await no.evaluate(() => ({
+    greeting: document.getElementById('hc-splash-greeting').textContent,
+    switches: !!document.querySelector('.hc-notify__list').offsetParent,
+    later: !!document.querySelector('[data-notify-later]').offsetParent,
+    n: window.HC.store.getProfile().notifications
+  }));
+  ok('Don\'t Allow keeps the screen up and says notifications are off',
+    off.greeting === 'Notifications are off.', off.greeting);
+  ok('with the switches stepped aside', off.switches === false);
+  ok('and a way past it', off.later === true);
+  ok('and every switch off, so Your account tells the truth',
+    !off.n.announcements && !off.n.newSermon && !off.n.sundayReminder, JSON.stringify(off.n));
+
+  // Somebody goes to Settings and turns them on, and comes back.
+  await no.evaluate(() => {
+    window.__hcSetAnswer('granted');
+    document.dispatchEvent(new Event('visibilitychange'));
+  });
+  await no.waitForFunction(() =>
+    (document.getElementById('hc-splash-greeting') || {}).textContent === 'You’re all set.',
+    null, { timeout: 5000 });
+  await no.waitForFunction(() => !document.getElementById('hc-splash'), null, { timeout: 8000 });
+  const back = await no.evaluate(() => ({
+    n: window.HC.store.getProfile().notifications, p: window.__hcPush
+  }));
+  ok('coming back with them on says so and goes to Home', true);
+  ok('with the switches back to what was chosen',
+    back.n.announcements === true && back.n.newGuide === false && back.n.newSermon === true,
+    JSON.stringify(back.n));
+  ok('and the phone registered', back.p.registered >= 1, JSON.stringify(back.p));
+
+  const later = await browser.newPage({ viewport: { width: 390, height: 844 } });
+  listen(later);
+  await later.addInitScript(PRETEND_PHONE, 'denied');
+  await later.goto('http://127.0.0.1:' + PORT + '/index.html');
+  await toTheGate(later);
+  await later.click('[data-gate="guest"]');
+  await toTheSwitches(later);
+  await later.click('[data-notify-go]');
+  await later.waitForSelector('.hc-splash--notify-off [data-notify-later]', { timeout: 8000 });
+  await later.waitForTimeout(800);
+  await later.click('[data-notify-later]');
+  await later.waitForFunction(() => !document.getElementById('hc-splash'), null, { timeout: 8000 });
+  ok('Maybe later goes straight to Home',
+    (await later.evaluate(() => document.getElementById('app').getAttribute('data-view'))) === 'home');
 
   ok('nothing threw along the way', noise.length === 0, noise.join('\n        '));
 
