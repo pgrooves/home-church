@@ -63,7 +63,18 @@ create table auth.users (
   email      text,
   -- Real auth.users has this and hc_admin_list_users (0025) reads it, so the
   -- stub needs it or that function fails at run time rather than at review.
-  created_at timestamptz not null default now()
+  created_at timestamptz not null default now(),
+  -- 0078_blocked_signin_emails bans an address it blocks.
+  banned_until timestamptz
+);
+
+-- Just enough of auth.identities for 0078_blocked_signin_emails, which
+-- rewrites the email on a blocked address's identity row.
+create table auth.identities (
+  id            uuid primary key default gen_random_uuid(),
+  user_id       uuid references auth.users (id) on delete cascade,
+  provider      text,
+  identity_data jsonb
 );
 
 -- Supabase's own definition, near enough: the signed in user's id off the JWT.
@@ -401,6 +412,7 @@ create table public.guides (
   preached_on          date,
   reflection_questions jsonb not null default '[]'::jsonb,
   published            boolean not null default true,
+  created_at           timestamptz not null default now(),
   updated_at           timestamptz not null default now()
 );
 
