@@ -216,7 +216,7 @@ async function toTheSwitches(page) {
   await toTheSwitches(phone);
   ok('on a phone the button says what it does',
     (await phone.evaluate(() => document.querySelector('[data-notify-go]').textContent))
-      === 'Approve notifications');
+      === 'Turn on notifications');
   ok('nor while the switches are up',
     (await phone.evaluate(() => window.__hcPush.asked)) === 0);
 

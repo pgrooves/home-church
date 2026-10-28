@@ -26,7 +26,7 @@
    explain it and may not offer a way around it: App Review reads "Not now"
    on a pre-permission screen as steering people away from the system's own
    question, guideline 5.1.1(iv). So the button is the only way on, and on a
-   phone it says "Approve notifications" and leads straight to iOS asking,
+   phone it says "Turn on notifications" and leads straight to iOS asking,
    which is the church's call: an honest name for what it does, and the
    alert that follows still has Don't Allow on it. If App Review ever
    objects to the wording, goLabel() is the one place to change it back to
@@ -123,7 +123,7 @@
   function goLabel() {
     var phone = (HC.native && HC.native.isNative && HC.native.isNative()) ||
       (HC.demo && HC.demo.on);
-    return phone ? 'Approve notifications' : 'Continue';
+    return phone ? 'Turn on notifications' : 'Continue';
   }
 
   /* ---------------------------------------------------------------- markup */
