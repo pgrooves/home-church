@@ -289,113 +289,126 @@
        many. */
 
     // Notifications
-    html += c.sectionHeader('When we reach out', 'Notifications');
-    html += HC.edit.mark(switchRow({
-      title: 'A new guide is posted',
-      sub: HC.data.copy('profile.notify-guide', NOTIFY_GUIDE),
-      action: 'toggle-notify',
-      id: 'newGuide',
-      on: p.notifications.newGuide
-    }), { slot: 'profile.notify-guide',
-      value: HC.data.copy('profile.notify-guide', NOTIFY_GUIDE),
-      label: 'when a new guide goes out', rows: 2 });
-    /* Off until somebody turns it on, unlike the switches around it. Sent
-       once a week, at the end of /new-podcast, and only when that worked.
-       See migration 0096. */
-    html += HC.edit.mark(switchRow({
-      title: 'New sermon audio',
-      sub: HC.data.copy('profile.notify-sermon', NOTIFY_SERMON),
-      action: 'toggle-notify',
-      id: 'newSermon',
-      on: p.notifications.newSermon
-    }), { slot: 'profile.notify-sermon',
-      value: HC.data.copy('profile.notify-sermon', NOTIFY_SERMON),
-      label: 'when new sermon audio goes out', rows: 2 });
-    html += HC.edit.mark(switchRow({
-      title: 'Sunday reminder',
-      sub: HC.data.copy('profile.notify-sunday', NOTIFY_SUNDAY),
-      action: 'toggle-notify',
-      id: 'sundayReminder',
-      on: p.notifications.sundayReminder
-    }), { slot: 'profile.notify-sunday',
-      value: HC.data.copy('profile.notify-sunday', NOTIFY_SUNDAY),
-      label: 'what the Sunday reminder is', rows: 2 });
-    html += HC.edit.mark(switchRow({
-      title: 'Announcements',
-      sub: HC.data.copy('profile.notify-news', NOTIFY_NEWS),
-      action: 'toggle-notify',
-      id: 'announcements',
-      on: p.notifications.announcements
-    }), { slot: 'profile.notify-news',
-      value: HC.data.copy('profile.notify-news', NOTIFY_NEWS),
-      label: 'when announcements are sent', rows: 2 });
-    /* The fourth switch is season gated, the same way Connect gates the group
-       finder, and for a harder reason than symmetry. "Only on your group's
-       day" needs to know which group you are in, and nothing in this app
-       models that: there is no membership, only a roster a leader keeps on
-       their own phone. Sending it on every group's day would be noise, and
-       sending it on none would be a lie.
-
-       So while groups are out of season it does not render, and the server
-       column behind it stays false. When groups come back, this needs a group
-       picker in Your information before the switch can be honest. Migration
-       0012 says the same thing next to the column. */
-    if (HC.data.church.groupsInSeason) {
-      html += switchRow({
-        title: 'The day your group meets',
-        sub: 'Only on your group’s day',
+    /* Android, until push reaches it. Android push goes through Firebase,
+       which is not set up yet (PLAY_COMPLIANCE.md section 8), so on Android
+       there is nothing behind these switches. Rather than draw switches that
+       do nothing, say so. Reminders you set on the Cal tab are the phone
+       talking to itself and work today, so the line says that too. An iPhone
+       never takes this branch: pushAvailable() is only false on Android. */
+    if (HC.native && !HC.native.pushAvailable()) {
+      html += c.sectionHeader('When we reach out', 'Notifications');
+      html += '<p class="hc-caption hc-profile__hint">Notifications from the church are on ' +
+        'their way to the Android app. Reminders you set for an event on the ' +
+        'calendar already work.</p>';
+    } else {
+      html += c.sectionHeader('When we reach out', 'Notifications');
+      html += HC.edit.mark(switchRow({
+        title: 'A new guide is posted',
+        sub: HC.data.copy('profile.notify-guide', NOTIFY_GUIDE),
         action: 'toggle-notify',
-        id: 'groupWeek',
-        on: p.notifications.groupWeek
-      });
-    }
-
-    /* The two an admin has, and nobody else is shown.
-
-       WHY THEY ARE HERE RATHER THAN ON THE ADMIN SCREEN, which was the other
-       option and the more obvious one. Because they are preferences, and this
-       screen is where a person's preferences live. The Admin screen is a place
-       to do the church's work; deciding whether your own phone buzzes at seven
-       in the morning is not that, and somebody looking for a notification
-       switch looks where the other four are.
-
-       They sit under the same heading for the same reason, rather than in an
-       Admin section of their own. A separate box would say these are a
-       different kind of thing, and they are not: they are two more answers to
-       "when should this app reach out".
-
-       HIDING THEM IS PRESENTATION AND NOTHING MORE, the same as the Admin row
-       further down. hc_set_admin_device_token refuses anybody the database
-       does not agree is an admin, so a member who made these appear would
-       flip a switch that writes to nothing. See migration 0043 section 4. */
-    if (HC.admin && HC.admin.isAdmin()) {
-      html += switchRow({
-        title: 'Announcements waiting',
-        sub: NOTIFY_REVIEW_NEWS,
+        id: 'newGuide',
+        on: p.notifications.newGuide
+      }), { slot: 'profile.notify-guide',
+        value: HC.data.copy('profile.notify-guide', NOTIFY_GUIDE),
+        label: 'when a new guide goes out', rows: 2 });
+      /* Off until somebody turns it on, unlike the switches around it. Sent
+         once a week, at the end of /new-podcast, and only when that worked.
+         See migration 0096. */
+      html += HC.edit.mark(switchRow({
+        title: 'New sermon audio',
+        sub: HC.data.copy('profile.notify-sermon', NOTIFY_SERMON),
         action: 'toggle-notify',
-        id: 'announcementReview',
-        on: p.notifications.announcementReview
-      });
-      html += switchRow({
-        title: 'Dates waiting',
-        sub: NOTIFY_REVIEW_DATES,
+        id: 'newSermon',
+        on: p.notifications.newSermon
+      }), { slot: 'profile.notify-sermon',
+        value: HC.data.copy('profile.notify-sermon', NOTIFY_SERMON),
+        label: 'when new sermon audio goes out', rows: 2 });
+      html += HC.edit.mark(switchRow({
+        title: 'Sunday reminder',
+        sub: HC.data.copy('profile.notify-sunday', NOTIFY_SUNDAY),
         action: 'toggle-notify',
-        id: 'eventReview',
-        on: p.notifications.eventReview
-      });
-      html += '<p class="hc-caption hc-profile__hint">These two are yours because ' +
-        'you are an admin. Nobody else in the church is told what is in the queue, ' +
-        'and nothing in it is on Home until you say so.</p>';
-    }
+        id: 'sundayReminder',
+        on: p.notifications.sundayReminder
+      }), { slot: 'profile.notify-sunday',
+        value: HC.data.copy('profile.notify-sunday', NOTIFY_SUNDAY),
+        label: 'what the Sunday reminder is', rows: 2 });
+      html += HC.edit.mark(switchRow({
+        title: 'Announcements',
+        sub: HC.data.copy('profile.notify-news', NOTIFY_NEWS),
+        action: 'toggle-notify',
+        id: 'announcements',
+        on: p.notifications.announcements
+      }), { slot: 'profile.notify-news',
+        value: HC.data.copy('profile.notify-news', NOTIFY_NEWS),
+        label: 'when announcements are sent', rows: 2 });
+      /* The fourth switch is season gated, the same way Connect gates the group
+         finder, and for a harder reason than symmetry. "Only on your group's
+         day" needs to know which group you are in, and nothing in this app
+         models that: there is no membership, only a roster a leader keeps on
+         their own phone. Sending it on every group's day would be noise, and
+         sending it on none would be a lie.
 
-    /* Said out loud because these switches no longer silence everything. The
-       pinned banner reaches every phone iOS allows, whatever is set here, and
-       a switch that looks like it turns something off when it does not is the
-       lie js/native.js keeps warning about. See resumeNotifications there. */
-    if (HC.native && HC.native.isNative()) {
-      html += '<p class="hc-caption hc-profile__hint">Urgent news from the church, ' +
-        'like a change to Sunday, reaches every phone that allows Home Church ' +
-        'notifications in Settings.</p>';
+         So while groups are out of season it does not render, and the server
+         column behind it stays false. When groups come back, this needs a group
+         picker in Your information before the switch can be honest. Migration
+         0012 says the same thing next to the column. */
+      if (HC.data.church.groupsInSeason) {
+        html += switchRow({
+          title: 'The day your group meets',
+          sub: 'Only on your group’s day',
+          action: 'toggle-notify',
+          id: 'groupWeek',
+          on: p.notifications.groupWeek
+        });
+      }
+
+      /* The two an admin has, and nobody else is shown.
+
+         WHY THEY ARE HERE RATHER THAN ON THE ADMIN SCREEN, which was the other
+         option and the more obvious one. Because they are preferences, and this
+         screen is where a person's preferences live. The Admin screen is a place
+         to do the church's work; deciding whether your own phone buzzes at seven
+         in the morning is not that, and somebody looking for a notification
+         switch looks where the other four are.
+
+         They sit under the same heading for the same reason, rather than in an
+         Admin section of their own. A separate box would say these are a
+         different kind of thing, and they are not: they are two more answers to
+         "when should this app reach out".
+
+         HIDING THEM IS PRESENTATION AND NOTHING MORE, the same as the Admin row
+         further down. hc_set_admin_device_token refuses anybody the database
+         does not agree is an admin, so a member who made these appear would
+         flip a switch that writes to nothing. See migration 0043 section 4. */
+      if (HC.admin && HC.admin.isAdmin()) {
+        html += switchRow({
+          title: 'Announcements waiting',
+          sub: NOTIFY_REVIEW_NEWS,
+          action: 'toggle-notify',
+          id: 'announcementReview',
+          on: p.notifications.announcementReview
+        });
+        html += switchRow({
+          title: 'Dates waiting',
+          sub: NOTIFY_REVIEW_DATES,
+          action: 'toggle-notify',
+          id: 'eventReview',
+          on: p.notifications.eventReview
+        });
+        html += '<p class="hc-caption hc-profile__hint">These two are yours because ' +
+          'you are an admin. Nobody else in the church is told what is in the queue, ' +
+          'and nothing in it is on Home until you say so.</p>';
+      }
+
+      /* Said out loud because these switches no longer silence everything. The
+         pinned banner reaches every phone iOS allows, whatever is set here, and
+         a switch that looks like it turns something off when it does not is the
+         lie js/native.js keeps warning about. See resumeNotifications there. */
+      if (HC.native && HC.native.isNative()) {
+        html += '<p class="hc-caption hc-profile__hint">Urgent news from the church, ' +
+          'like a change to Sunday, reaches every phone that allows Home Church ' +
+          'notifications in Settings.</p>';
+      }
     }
 
     // Reading
@@ -563,11 +576,17 @@
      file, and called from there once the phone has answered. */
   function lockRow() {
     var p = HC.store.getProfile();
+    // Android has no Face ID or Touch ID, and calls the passcode a screen lock.
+    var android = HC.native && HC.native.isAndroid();
     return switchRow({
       title: 'Lock the Journal',
-      sub: p.lockJournal
-        ? 'Face ID, Touch ID, or your passcode before the Journal opens.'
-        : 'Ask for Face ID, Touch ID, or your passcode before opening the Journal.',
+      sub: android
+        ? (p.lockJournal
+          ? 'Your fingerprint, face, or screen lock before the Journal opens.'
+          : 'Ask for your fingerprint, face, or screen lock before opening the Journal.')
+        : (p.lockJournal
+          ? 'Face ID, Touch ID, or your passcode before the Journal opens.'
+          : 'Ask for Face ID, Touch ID, or your passcode before opening the Journal.'),
       action: 'toggle-lock',
       on: !!p.lockJournal
     }) +

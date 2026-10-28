@@ -72,6 +72,9 @@ ok('@capacitor/core is not in it, having no native side at all',
 ok('AND @capacitor/ios IS NOT EITHER, because it is the platform',
   plugins.indexOf('@capacitor/ios'), -1);
 
+ok('nor @capacitor/android, the other platform',
+  plugins.indexOf('@capacitor/android'), -1);
+
 ok('the calendar plugin is in it', plugins.indexOf('@ebarooni/capacitor-calendar') > -1, true);
 ok('and so is a plugin under somebody else\'s scope',
   plugins.indexOf('@aparajita/capacitor-biometric-auth') > -1, true);

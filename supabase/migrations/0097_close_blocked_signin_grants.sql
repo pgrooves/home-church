@@ -1,0 +1,33 @@
+-- ===========================================================================
+-- Home Church, closing two default grants left open by 0078
+--
+-- From the security pass on October 28, 2026, where Supabase's own advisor
+-- and a read of the live grants found that 0078_blocked_signin_emails never
+-- took back what Supabase grants every new table and function by default.
+--
+--   hc_blocked_signin_emails   anon and authenticated could select, insert,
+--                              update and delete. Row level security is on
+--                              with no policy, so in fact they could do none
+--                              of it: checked live as anon, 0 of its 1 row
+--                              was visible. This takes the grants back too,
+--                              so the table stays closed if RLS is ever
+--                              switched off by mistake.
+--   hc_refuse_blocked_signin   EXECUTE for public, anon and authenticated.
+--                              It is a trigger function on auth.users, so a
+--                              direct call does nothing but fail. Taken back
+--                              the same way hc_handle_new_user's is (0009).
+--
+-- NOTHING CHANGES FOR ANYBODY. The app never reads or writes that table,
+-- and Postgres does not check EXECUTE when a trigger fires, only when one is
+-- created, so sign-ups keep passing through the guard exactly as before.
+-- That was checked on a local Postgres before this was written: with the
+-- grants revoked, an ordinary role's insert went through and a blocked
+-- address was still refused. tests/0097 checks it again.
+--
+-- Rollback: supabase/rollback/0097_close_blocked_signin_grants_down.sql
+-- Tests:    supabase/tests/0097_close_blocked_signin_grants_test.sql
+-- Re-runnable.
+-- ===========================================================================
+
+revoke all on table public.hc_blocked_signin_emails from anon, authenticated;
+revoke all on function public.hc_refuse_blocked_signin() from public, anon, authenticated;

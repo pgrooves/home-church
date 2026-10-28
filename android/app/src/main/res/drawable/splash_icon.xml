@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android 12 and later always draw an icon on the system splash. This one is
+     empty, so the system splash is plain paper and the house in js/splash.js
+     is still the first thing anybody sees, as on iOS. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <solid android:color="@android:color/transparent" />
+</shape>

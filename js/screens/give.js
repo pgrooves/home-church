@@ -78,19 +78,25 @@
 
         ledeHtml +
 
-        '<div class="hc-give__action">' +
-          c.button(HC.data.copy('give.button', GIVE_BUTTON), {
-            action: 'open-url',
-            url: church.givingUrl,
-            icon: 'arrowOut',
-            labelSlot: 'give.button',
-            labelName: 'the giving button'
-          }) +
-          HC.edit.wrap(
-            note ? '<p class="hc-caption hc-give__note">' + c.esc(note) + '</p>' : '',
-            { slot: 'give.note', value: note, label: 'the line under the Give button' }
-          ) +
-        '</div>' +
+        /* No button on Android. Nothing in the Android app leads here, since
+           the Give stop is gated, but an old link could, and it lands on the
+           thank you without a way out to giving. See offersGiving in
+           js/native.js. */
+        ((!HC.native || HC.native.offersGiving())
+          ? '<div class="hc-give__action">' +
+              c.button(HC.data.copy('give.button', GIVE_BUTTON), {
+                action: 'open-url',
+                url: church.givingUrl,
+                icon: 'arrowOut',
+                labelSlot: 'give.button',
+                labelName: 'the giving button'
+              }) +
+              HC.edit.wrap(
+                note ? '<p class="hc-caption hc-give__note">' + c.esc(note) + '</p>' : '',
+                { slot: 'give.note', value: note, label: 'the line under the Give button' }
+              ) +
+            '</div>'
+          : '') +
 
         // Anything the church added to the page beyond its opening paragraph.
         // Almost always nothing, and drawn under the button rather than above

@@ -743,7 +743,8 @@
     'cheerful giver';
 
   function givingRow() {
-    if (!HC.data.church.givingUrl) return '';
+    // Not on Android, with the Give stop. See offersGiving in js/native.js.
+    if (!HC.data.church.givingUrl || (HC.native && !HC.native.offersGiving())) return '';
     return '' +
       '<div class="hc-home__give">' +
         c.row({

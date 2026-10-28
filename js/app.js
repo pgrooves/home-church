@@ -189,7 +189,10 @@
       route: 'give',
       icon: 'give',
       title: 'Give',
-      sub: 'Through Overflow, in your own browser.'
+      sub: 'Through Overflow, in your own browser.',
+      // Every phone but an Android one. Google's rule, not a switch: see
+      // offersGiving in js/native.js.
+      gate: function () { return !HC.native || HC.native.offersGiving(); }
     }
   ];
 
