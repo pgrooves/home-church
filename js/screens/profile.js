@@ -15,9 +15,9 @@
      receive, and the row under it is what that choice means in practice. That
      second half is the part that goes stale, when the church moves the send
      from Monday morning to Sunday night. */
-  var NOTIFY_GUIDE = 'Monday morning, once a week';
-  var NOTIFY_SERMON = 'When Sunday’s message is up to listen to';
-  var NOTIFY_SUNDAY = 'Saturday evening, service times and address';
+  var NOTIFY_GUIDE = 'Monday mornings weekly';
+  var NOTIFY_SERMON = 'When Sunday’s message is up to listen to, Tuesdays weekly';
+  var NOTIFY_SUNDAY = 'Service times and address, Saturday evenings weekly';
   var NOTIFY_NEWS = 'When the church posts something important, like an event or a change to Sunday';
   /* The two admin ones. Not editable, unlike the three above, and the
      difference is not an oversight. Those three describe a schedule the church

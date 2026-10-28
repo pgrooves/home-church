@@ -103,11 +103,13 @@
         sub: copy('profile.notify-news',
           'When the church posts something important, like an event or a change to Sunday') },
       { id: 'newGuide', icon: 'guide', title: 'A new guide is posted',
-        sub: copy('profile.notify-guide', 'Monday morning, once a week') },
+        sub: copy('profile.notify-guide', 'Monday mornings weekly') },
       { id: 'newSermon', icon: 'listen', title: 'New sermon audio',
-        sub: copy('profile.notify-sermon', 'When Sunday’s message is up to listen to') },
+        sub: copy('profile.notify-sermon',
+          'When Sunday’s message is up to listen to, Tuesdays weekly') },
       { id: 'sundayReminder', icon: 'sun', title: 'Sunday reminder',
-        sub: copy('profile.notify-sunday', 'Saturday evening, service times and address') }
+        sub: copy('profile.notify-sunday',
+          'Service times and address, Saturday evenings weekly') }
     ];
     // Season gated for the reason Your account gives beside the same switch.
     if (HC.data && HC.data.church && HC.data.church.groupsInSeason) {
