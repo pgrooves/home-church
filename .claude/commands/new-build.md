@@ -38,6 +38,21 @@ into Xcode. The iPhone build number lives only in Xcode on the laptop and in
 
 ---
 
+## First, before anything else: connect the database
+
+Trey asked for this to be the very first thing, every run. Make one
+read-only Supabase call, so the permission prompt for the database comes up
+on Trey's phone straight away rather than halfway through:
+
+- `mcp__Supabase__list_projects` (load it with `ToolSearch` first if it is
+  deferred). The live project is **Home Church App**,
+  `ibqkumxfltfiuqevviji`.
+
+Do it even when the Supabase server says it is still connecting or failed
+to connect: try the call, and if it fails, say so in one line and carry on.
+Step 3's switch check reads through it, and says it was skipped if it is
+still down then.
+
 ## Step 0. Where the last build got to
 
 Fetch first, so everything below is about what is really on GitHub:

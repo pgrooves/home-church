@@ -19,3 +19,10 @@ row is the code that build was made from**, and that is how the next
 
 | Date | Version | iPhone build | Status | What's New |
 |---|---|---|---|---|
+| 2026-10-29 | 1.1 | 24 | | Bug fixes and improvements. New: in a guide, drag through the audio, or tap a paragraph to jump there. New: turn on notifications for new sermon audio from Your account. |
+
+Before this list began: **1.0.1 (23)**, uploaded and live on the App Store
+October 21, 2026, made from `8732646` (October 19, "Launch screen: plain
+paper instead of Capacitor's splash artwork"), the last commit on `main`
+before that upload. Until a row here is `Live`, "since the last live
+version" starts there.
