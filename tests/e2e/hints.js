@@ -257,6 +257,41 @@ const said  = page => page.evaluate(() => {
     ok('and it shows anyway, with no scroll at all', await marks(page) > 0, true);
     await page.waitForTimeout(2600);
 
+    /* ------------------------------------- folded before it had a chance */
+    /* A folded panel is grid-template-rows: 0fr with the overflow clipped, so
+       the prose inside it still measures its full height and inView says yes.
+       Open Overview and fold it again inside the wait above, and the fallback
+       drew the marker over whatever slid up into its place, with nothing left
+       to fold it away. Found on a phone. */
+    await intoAGuide(page, base);
+    await page.evaluate(() => { document.getElementById('hc-scroll').scrollTop = 0; });
+    await openASection(page);
+    await page.evaluate(() =>
+      document.querySelector('[data-opened] .hc-section__toggle').click());
+    await justWait(page);
+    ok('a section folded before the hint arrives gets none',
+       await page.evaluate(() => document.querySelectorAll('.hc-hint, .hc-hint-marks').length), 0);
+
+    /* And the scroll path, which had the same hole: the fold left it armed. */
+    await intoAGuide(page, base);
+    await openASection(page);
+    await page.evaluate(() =>
+      document.querySelector('[data-opened] .hc-section__toggle').click());
+    await page.waitForTimeout(400);
+    await page.evaluate(() => {
+      const el = document.querySelector('[data-opened] .hc-section__toggle');
+      document.getElementById('hc-scroll').scrollTop += el.getBoundingClientRect().top - 160;
+    });
+    await page.waitForTimeout(1400);
+    ok('nor does scrolling past it once it is folded',
+       await page.evaluate(() => document.querySelectorAll('.hc-hint, .hc-hint-marks').length), 0);
+
+    /* Folding it disarmed nothing for good: open it again and it still comes. */
+    await openASection(page, 0);
+    await scrollOnto(page);
+    ok('and opening it again still offers it', await marks(page) > 0, true);
+    await page.waitForTimeout(2600);
+
     /* ---------------------------------------------------------- the switch */
     await page.evaluate(() => {
       window.HC.store.updateProfile({ hints: false });

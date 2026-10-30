@@ -167,6 +167,10 @@
   /* Far enough onto the screen to have been read, rather than one pixel of it
      showing under the bar. */
   function inView(block) {
+    /* A folded panel is not a zero-height one. It folds with
+       grid-template-rows: 0fr and clips the rest, so the prose inside still
+       measures its full height, sitting under whatever slid up over it. */
+    if (block.closest('[data-open="false"]')) return false;
     var r = block.getBoundingClientRect();
     if (!r.height) return false;
     var top = header();
@@ -236,8 +240,9 @@
      a fixed layer over where the words were, so a fold pulls the words out
      from under them and leaves the marker floating over whatever slides up
      into their place. Whatever is on the glass goes with the fold. Nothing is
-     disarmed and no timer is touched when nothing is drawn: a folded panel
-     measures zero, and inView already says no to it. */
+     disarmed and no timer is touched when nothing is drawn: inView says no
+     to a folded panel, so the wait and the scroll both find nothing to show,
+     and opening it again arms it afresh. */
   function sectionClosed() {
     if (layer) end('fold');
   }
