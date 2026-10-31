@@ -91,3 +91,6 @@ demo-*/*.html
 demo-homekids/out/
 demo-happy-lion-cafe/out/
 demo-happy-lion-cafe/out-app/
+
+# /report output. The repo is public; the report is for the pastor.
+/reports/
