@@ -3766,6 +3766,13 @@
       HC.verse.open(el.getAttribute('data-reference'));
     },
 
+    // A picture on an announcement, whole. See js/photo.js.
+    'photo-open': function (el) {
+      HC.photo.open(el.getAttribute('data-src'));
+    },
+    'photo-close': function () {
+      HC.photo.close();
+    },
     'verse-close': function () {
       HC.verse.close();
     },
@@ -6272,6 +6279,7 @@
     // The sheet a tapped scripture reference opens. Only its listeners; it
     // draws nothing until somebody taps one.
     HC.verse.init();
+    HC.photo.init();
 
     HC.store.on('journal', function () {
       var route = HC.router.current();

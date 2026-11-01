@@ -180,12 +180,25 @@
     var list = (a.images && a.images.length) ? a.images : (a.imageUrl ? [a.imageUrl] : []);
     if (!list.length) return '';
 
+    /* Each one is a button that opens it whole, in js/photo.js. The frame
+       crops, which suits a photograph and does not suit a flyer: the dates
+       and the address are at the bottom of a poster, exactly where a 4:3 crop
+       cuts. The corner mark says there is more to see. */
     var html = '<div class="hc-announce__gallery">';
-    list.forEach(function (url) {
-      html += '<span class="hc-latest__frame hc-latest__frame--4x3" data-media-fallback>' +
-        '<img class="hc-latest__img" src="' + c.esc(url) + '" alt="" ' +
-          'loading="lazy" decoding="async">' +
-      '</span>';
+    list.forEach(function (url, i) {
+      html += '<button type="button" class="hc-announce__pic" data-action="photo-open" ' +
+          'data-src="' + c.esc(url) + '" aria-label="' +
+          (list.length > 1 ? 'Open picture ' + (i + 1) + ' of ' + list.length : 'Open the picture') + '">' +
+        '<span class="hc-latest__frame hc-latest__frame--4x3" data-media-fallback>' +
+          '<img class="hc-latest__img" src="' + c.esc(url) + '" alt="" ' +
+            'loading="lazy" decoding="async">' +
+          '<span class="hc-announce__expand" aria-hidden="true">' +
+            '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" ' +
+              'stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+              '<path d="M14 4h6v6M10 20H4v-6M20 4l-7 7M4 20l7-7"/></svg>' +
+          '</span>' +
+        '</span>' +
+      '</button>';
     });
     return html + '</div>';
   }
