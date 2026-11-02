@@ -226,7 +226,8 @@ const settle = () => new Promise(r => setImmediate(r));
       ok('the function helpers are fenced by @@ passage:start / @@ passage:end', false, true);
     } else {
       const fn = vm.runInNewContext(
-        stripTypeScriptTypes(source.slice(start, end)) + '\n({ isPassageId, versesOf, tidy, BOOKS })');
+        stripTypeScriptTypes(source.slice(start, end)) +
+        '\n({ isPassageId, versesOf, tidy, BOOKS, versesIn, chapterSpan, chaptersOf, joinedReference })');
 
       ok('the function knows the same sixty-six books as the app',
          Array.from(fn.BOOKS), B.books.map(b => b.usfm));
@@ -242,10 +243,173 @@ const settle = () => new Promise(r => setImmediate(r));
          Array.from(fn.versesOf('JHN.3.16-JHN.3.18')), ['JHN.3.16', 'JHN.3.17', 'JHN.3.18']);
       ok('but not across chapters, and not Psalm 119 in one go',
          [fn.versesOf('JHN.3.16-JHN.4.2'), fn.versesOf('PSA.119.1-PSA.119.176')], [null, null]);
+      ok('the function knows how long every chapter is, the same as the app',
+         B.books.every(b => b.verses.every((n, i) => fn.versesIn(b.usfm, i + 1) === n) &&
+           fn.versesIn(b.usfm, b.chapters + 1) === 0),
+         true);
+      ok('how many chapters an id runs across',
+         ['JHN.3.16', 'JHN.3.16-JHN.3.18', 'GEN.39.20-GEN.40.23', 'NUM.13-NUM.14', 'GEN.37-GEN.45']
+           .map(fn.chapterSpan), [1, 1, 2, 2, 9]);
+      const C = s => { const got = fn.chaptersOf(U(s)); return got && Array.from(got); };
+      ok('a passage across chapters, a chapter at a time',
+         C('Genesis 39:20-40:23'), ['GEN.39.20-GEN.39.23', 'GEN.40']);
+      ok('a run of whole chapters',
+         C('Numbers 13-14'), ['NUM.13', 'NUM.14']);
+      ok('the middle chapters whole, the ends as far as they go',
+         C('John 3:36-5:2'), ['JHN.3.36', 'JHN.4', 'JHN.5.1-JHN.5.2']);
+      ok('starting at the first verse is the whole chapter, ending short is not',
+         C('Genesis 3:1-4:10'), ['GEN.3', 'GEN.4.1-GEN.4.10']);
+      ok('Genesis 37-45, the longest a guide has used, fits',
+         C('Genesis 37-45').length, 9);
+      ok('nothing to split inside one chapter, or past ten chapters, or past the end',
+         [fn.chaptersOf('JHN.3.16-JHN.3.18'), fn.chaptersOf('PSA.23'),
+          fn.chaptersOf('GEN.1-GEN.50'), fn.chaptersOf('GEN.39.30-GEN.40.1'),
+          fn.chaptersOf('JHN.4.1-JHN.3.1')],
+         [null, null, null, null, null]);
+      ok('the joined reference reads the way the app writes it',
+         [fn.joinedReference('Genesis 39:20-23', 'GEN.39.20-GEN.40.23'),
+          fn.joinedReference('Numbers 13', 'NUM.13-NUM.14'),
+          fn.joinedReference('1 Samuel 17:55-58', '1SA.17.55-1SA.18.4'),
+          fn.joinedReference('Psalms 22', 'PSA.22-PSA.23')],
+         ['Genesis 39:20-40:23', 'Numbers 13-14', '1 Samuel 17:55-18:4', 'Psalms 22-23']);
+      ok('every reference the app reads is one the function can answer',
+         B.books.every(b => {
+           for (let ch = 1; ch <= b.chapters; ch++) {
+             const last = b.verses[ch - 1];
+             const ids = [B.usfm({ book: b.name, chapter: ch, verse: 0, toChapter: ch, toVerse: 0 }),
+                          B.usfm({ book: b.name, chapter: ch, verse: 1, toChapter: ch, toVerse: last })];
+             if (ch < b.chapters) {
+               ids.push(B.usfm({ book: b.name, chapter: ch, verse: last, toChapter: ch + 1, toVerse: 1 }));
+               ids.push(B.usfm({ book: b.name, chapter: ch, verse: 0, toChapter: ch + 1, toVerse: 0 }));
+             }
+             if (!ids.every(fn.isPassageId)) return false;
+             if (ids.slice(2).some(id => !fn.chaptersOf(id))) return false;
+           }
+           return true;
+         }),
+         true);
       ok('the text is tidied and the poetry keeps its lines',
          fn.tidy('  The Lord is my shepherd,\r\n   I lack nothing.\n\n\n\nHe makes me  lie down '),
          'The Lord is my shepherd,\nI lack nothing.\n\nHe makes me lie down');
     }
+  }
+
+  /* ------------------------------------- the Edge Function, end to end
+
+     The whole function, run here with a YouVersion that behaves the way the
+     real one does: a chapter, or a range inside one, comes back; a range that
+     runs from one chapter into the next is a 404. The cache and the rate
+     counter are a Map and a yes. */
+  if (typeof stripTypeScriptTypes === 'function') {
+    const source = fs.readFileSync(
+      path.join(__dirname, '..', 'supabase', 'functions', 'bible-passage', 'index.ts'), 'utf8');
+
+    function runFunction() {
+      const asked = [];
+      const cache = new Map();
+      let handler = null;
+      const books = { GEN: 'Genesis', NUM: 'Numbers', JHN: 'John' };
+      const crosses = id => {
+        const m = /^(\w+)\.(\d+)(?:\.\d+)?-\1\.(\d+)/.exec(id);
+        return !!(m && m[2] !== m[3]);
+      };
+      const written = id => {
+        const m = /^(\w+)\.(\d+)(?:\.(\d+))?(?:-\w+\.(\d+)(?:\.(\d+))?)?$/.exec(id);
+        const name = books[m[1]] + ' ' + m[2];
+        if (!m[3]) return name;
+        return name + ':' + m[3] + (m[5] && m[5] !== m[3] ? '-' + m[5] : '');
+      };
+      const table = () => {
+        const q = { filters: {} };
+        q.select = () => q;
+        q.eq = (k, v) => { q.filters[k] = v; return q; };
+        q.gte = () => q;
+        q.maybeSingle = async () => ({ data: cache.get(q.filters.passage_id) || null, error: null });
+        q.upsert = async row => {
+          cache.set(row.passage_id, { reference: row.reference, content: row.content });
+          return { error: null };
+        };
+        return q;
+      };
+      const sandbox = {
+        Deno: {
+          env: { get: k => ({ YVP_APP_KEY: 'key', SUPABASE_URL: 'https://db', SUPABASE_SERVICE_ROLE_KEY: 'sr' })[k] },
+          serve: fn => { handler = fn; }
+        },
+        createClient: () => ({ from: table, rpc: async () => ({ data: true, error: null }) }),
+        fetch: async url => {
+          const u = new URL(url);
+          const m = /\/passages\/([^?]+)$/.exec(u.pathname);
+          if (!m) {
+            return new Response(JSON.stringify({ abbreviation: 'NIV', title: 'New International Version', copyright: 'Biblica' }));
+          }
+          const id = decodeURIComponent(m[1]);
+          asked.push(id);
+          if (crosses(id)) return new Response('{}', { status: 404 });
+          return new Response(JSON.stringify({ reference: written(id), content: '[' + id + ']' }));
+        },
+        Response, URL, TextEncoder, crypto, console: { error: () => {}, log: () => {} }
+      };
+      vm.createContext(sandbox);
+      vm.runInContext(stripTypeScriptTypes(source.replace(/^import .*$/m, '')), sandbox);
+      const ask = async ref => {
+        const res = await handler(new Request('https://fn/bible-passage?ref=' + encodeURIComponent(ref)));
+        return { status: res.status, body: await res.json() };
+      };
+      return { ask, asked, cache };
+    }
+
+    const yv = runFunction();
+    const genesis = await yv.ask('GEN.39.20-GEN.40.23');
+    ok('Genesis 39:20-40:23 comes back, where it used to be a 404',
+       [genesis.status, genesis.body.reference, genesis.body.text],
+       [200, 'Genesis 39:20-40:23', '[GEN.39.20-GEN.39.23]\n\n[GEN.40]']);
+    ok('asked of YouVersion a chapter at a time',
+       yv.asked, ['GEN.39.20-GEN.39.23', 'GEN.40']);
+    ok('and each chapter is kept, and so is the whole',
+       ['GEN.39.20-GEN.39.23', 'GEN.40', 'GEN.39.20-GEN.40.23'].map(k => yv.cache.has(k)),
+       [true, true, true]);
+
+    const again = await yv.ask('GEN.39.20-GEN.40.23');
+    ok('the next phone gets it from the cache, without asking YouVersion again',
+       [again.status, yv.asked.length], [200, 2]);
+
+    const numbers = await yv.ask('NUM.13-NUM.14');
+    ok('Numbers 13-14 too',
+       [numbers.status, numbers.body.reference, numbers.body.text],
+       [200, 'Numbers 13-14', '[NUM.13]\n\n[NUM.14]']);
+
+    const chapter = await yv.ask('GEN.40');
+    ok('a chapter already fetched as part of a longer passage is not fetched again',
+       [chapter.status, yv.asked.filter(x => x === 'GEN.40').length], [200, 1]);
+
+    const plain = await yv.ask('JHN.3.16-JHN.3.18');
+    ok('a range inside one chapter is still one request, as before',
+       [plain.status, plain.body.reference, yv.asked[yv.asked.length - 1]],
+       [200, 'John 3:16-18', 'JHN.3.16-JHN.3.18']);
+
+    const before = yv.asked.length;
+    const long = await yv.ask('GEN.1-GEN.50');
+    ok('fifty chapters at once is refused before anything is asked',
+       [long.status, /too long/.test(long.body.error), yv.asked.length], [400, true, before]);
+
+    const wrong = await yv.ask('GEN.39.30-GEN.40.1');
+    ok('a verse that is not there is still not found',
+       [wrong.status, wrong.body.error], [404, 'We could not find that passage.']);
+  }
+
+  /* --------------------------------------- the check the guide commands run */
+
+  {
+    const { spawnSync } = require('child_process');
+    const run = refs => spawnSync(process.execPath,
+      [path.join(__dirname, '..', 'scripts', 'check_scripture.js'), '--refs', refs.join('\n')],
+      { encoding: 'utf8' });
+    const good = run(['Genesis 39:20-40:23', 'Numbers 13-14', 'Acts 2:17-18; Joel 2:28-29', 'Jude 6']);
+    ok('the scripture check passes references that open', [good.status, /Every reference opens/.test(good.stdout)], [0, true]);
+    const bad = run(['2 Samuel 11 & 12', 'Romans 12:1-2; Hezekiah 4', 'Genesis 1-50']);
+    ok('and stops on one that would not, or would lose a part, or is too long',
+       [bad.status, (bad.stdout.match(/^FIX/gm) || []).length], [1, 3]);
   }
 
   /* ------------------------------------------------------------ the sheet */

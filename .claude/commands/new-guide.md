@@ -113,6 +113,20 @@ cannot see yet, it stays fully readable to you.
 **Before you upsert, grep the JSON for an em-dash.** It is a hard brand rule
 and this is the last place it can be caught cheaply.
 
+**Then check every scripture reference opens.** Each one in `scriptures` and
+`closing_scripture` becomes a tap that opens the verse sheet, and one the app
+cannot read sends people out to a bible.com search instead:
+
+```bash
+node scripts/check_scripture.js /tmp/guide-your-slug.json
+```
+
+Every line should say `OK`. Write references the way the app reads them:
+`Book chapter:verse`, a hyphen for a range (`Genesis 39:20-40:23`,
+`Numbers 13-14` and `Romans 12:1-2, 9-10` are all fine), and a semicolon
+between separate passages (`Acts 2:17-18; Joel 2:28-29`). Never `&`, `and`,
+`ff` or `f.`, and no more than ten chapters in one passage.
+
 **Then the sermon row, last.** `NEW_GUIDE_PROCESS.md` Step 3 calls it the
 sermon object; in Supabase it is a row in `podcasts`, and it goes up after the
 guide because `podcasts.guide_id` is the foreign key that points back at it.
