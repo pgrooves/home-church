@@ -354,6 +354,33 @@ Deno.serve(async (req: Request) => {
     return json({ error: 'This is not set up correctly. Please tell the church.' }, 500);
   }
 
+  /* CLOSED UNTIL FURTHER NOTICE (Trey, 2026-11-03). The form is hidden in
+     the app, but every build already in the App Store draws it with no way
+     to hide it, so this is where it is actually turned off: nothing is
+     written and nothing is sent, and the app shows this sentence under the
+     form with an "Email the church instead" button beside it.
+
+     The same switch as the app's, contact_form_on in app_settings, and the
+     same fallback: no row, or a row that is not true, is closed. A read that
+     fails is closed too, because "the form is off" is what the church asked
+     for and the sentence below still gets a person to the church. Add the
+     row with value_bool true and the form works again, here and in every
+     build that draws it behind that switch. */
+  const gate = createClient(url, serviceKey, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+  const { data: setting, error: settingError } = await gate
+    .from('app_settings')
+    .select('value_bool')
+    .eq('key', 'contact_form_on')
+    .maybeSingle();
+  if (settingError) console.error('contact: could not read contact_form_on:', settingError.message);
+  if (settingError || setting?.value_bool !== true) {
+    return json({
+      error: 'The contact form is closed for now. Email hello@homechurchnola.com and somebody will answer.',
+    }, 503);
+  }
+
   /* No way to send means no promise to make. Refused up front rather than
      after writing a row nobody will read, and said in the app's own voice
      because a person is looking at this. */
