@@ -480,6 +480,23 @@
     );
   }
 
+  /* Whether the contact form is drawn at all. Hidden until further notice
+     (Trey, 2026-11-03): Connect opens on the Instagram rail instead, and
+     everything under it keeps its order.
+
+     A SWITCH IN app_settings, contact_form_on, READ LIVE, and THE FALLBACK IS
+     false, the same shape as the page switches in js/app.js. There is no row
+     today, so the form is off everywhere this build runs. Adding the row
+     with value_bool true brings it back on every build that has this line,
+     without waiting on an App Store release.
+
+     Everything that points at the form reads this too. The "I'm new here"
+     step jumps to it, and a button that scrolls to a form that is not there
+     is a button that does nothing, which this screen does not draw. */
+  function contactOn() {
+    return HC.data.setting('contact_form_on', false) === true;
+  }
+
   function contactForm() {
     var html = c.sectionHeader('Talk to us', 'Get in touch', {
       id: CONTACT_ANCHOR,
@@ -811,8 +828,14 @@
         value: step.blurb, label: step.title + ', the description', rows: 4 }
     );
 
-    if (step.url) {
-      var inApp = INTERNAL_STEPS[step.url];
+    var inApp = step.url ? INTERNAL_STEPS[step.url] : null;
+
+    /* An in-app step whose destination is switched off draws as a
+       description, the honest shape for a step with nowhere to send anybody.
+       Today that is 'app:contact' while the contact form is hidden. */
+    var goesNowhere = inApp && inApp.action === 'go-contact' && !contactOn();
+
+    if (step.url && !goesNowhere) {
 
       /* The button's words are the church's, in a column of its own, so they
          are edited as a row rather than as a slot. Where it goes is not
@@ -860,8 +883,12 @@
        Under the h1 rather than over it, for the same reason the Instagram
        rail is: a screen whose first element is a form has no title, and a
        screen reader arriving in a text box with no heading above it has
-       nothing to say about where it landed. */
-    html += contactForm();
+       nothing to say about where it landed.
+
+       Hidden until further notice, behind contact_form_on (see contactOn).
+       With it off the screen opens on the Instagram rail, which keeps the
+       same rule: under the h1, never above it. */
+    if (contactOn()) html += contactForm();
 
     // Under the h1, never above it. A screen whose first element is a strip of
     // unlabeled photographs reads as an ad banner to a person and as an

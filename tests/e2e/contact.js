@@ -189,6 +189,37 @@ async function type(page, name, value) {
   await page.waitForTimeout(500);
 
   await page.evaluate(() => window.HC.router.go({ name: 'connect' }));
+  await page.waitForSelector('.hc-connect', { timeout: 8000 });
+  await page.waitForTimeout(500);
+
+  console.log('\n--- hidden until further notice ---');
+
+  /* Trey, 2026-11-03: the form is hidden, and Connect starts with the
+     Instagram rail. No contact_form_on row means off. */
+  const hidden = await page.evaluate(() => {
+    const screen = document.querySelector('.hc-connect');
+    const step = document.querySelector('[data-section="step-step-new"]');
+    return {
+      form: !!screen.querySelector('[data-contact-form]'),
+      anchor: !!document.getElementById('hc-contact-top'),
+      stepButton: step ? !!step.querySelector('[data-action="go-contact"]') : null,
+      stepBlurb: step ? !!step.querySelector('.hc-step__blurb') : null
+    };
+  });
+  ok('without the switch there is no contact form', !hidden.form);
+  ok('and no “Get in touch” heading either', !hidden.anchor);
+  ok('and “I’m new here” no longer has a button that jumps to it',
+     hidden.stepButton === false && hidden.stepBlurb === true, JSON.stringify(hidden));
+
+  /* Then switched on, the way the row would arrive: one app_settings entry,
+     and the screen drawn again. Put straight into HC.data rather than served,
+     because a fake project with one real row in it stops looking unseeded and
+     every other table on Connect comes back empty. */
+  await page.evaluate(() => {
+    window.HC.data.appSettings.push({ key: 'contact_form_on', kind: 'boolean', value: true });
+    window.HC.router.go({ name: 'home' });
+    window.HC.router.go({ name: 'connect' });
+  });
   await page.waitForSelector('[data-contact-form]', { timeout: 8000 });
 
   console.log('\n--- where it is on the page ---');
