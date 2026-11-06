@@ -606,8 +606,12 @@ analytics, external links, and data collection that buy us nothing.
 ## 7. App Review notes
 
 Paste this into the Notes for Review field, which caps at 4000 characters.
-This is 3059, which leaves room for CRLF line endings if App Store Connect
+This is 3284, which leaves room for CRLF line endings if App Store Connect
 counts them; check the count again if you edit it.
+
+**1.2 (November 6) adds one paragraph** under the switched-off list: the
+contact form on Connect went behind its own switch, contact_form_on, and
+ships off.
 
 **Rewritten for 1.1 (October 19), when Group went behind its switch for the
 phased rollout.** The old walkthrough sent the reviewer to GROUP to open a
@@ -680,6 +684,10 @@ not code; everything that runs is in this build.
 
 A screen recording of each is attached. If you would rather see any of them
 live, tell us which and we will switch it on for the review.
+
+One smaller piece is switched off the same way: the "Get in touch" message
+form on CONNECT, which version 1.1 showed you. It is paused for now, and the
+same admin screen turns it back on. Nothing else about Connect changed.
 
 DELETING AN ACCOUNT, GUIDELINE 5.1.1(v)
 Two places, both in-app, neither needing an email to us or a website:

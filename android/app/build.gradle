@@ -13,7 +13,7 @@ android {
            it. A local build with no HC_VERSION_CODE is 1 and is never uploaded.
            versionName is what people see, and matches the iOS version. */
         versionCode((System.getenv('HC_VERSION_CODE') ?: '1') as Integer)
-        versionName "1.1"
+        versionName "1.2"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
