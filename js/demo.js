@@ -42,8 +42,17 @@
        "signedIn": { "id": "<uuid>", "email": "..." }, // start signed in
        "overlay":  { "app_settings": [ { "key": "cafe_on", "value_bool": true } ] },
        "routes":   [ { "match": "/rest/v1/profiles", "body": { ... } },
-                     { "match": "/rpc/hc_cafe_ahead", "method": "POST", "body": 3 } ]
+                     { "match": "/rpc/hc_cafe_ahead", "method": "POST", "body": 3 } ],
+       "effects":  [ { "rpc": "hc_admin_approve_event", "table": "events",
+                       "set": { "published": true, "review_state": "approved" } } ]
      }
+
+   EFFECTS make a screen move the way it would. When the app calls a named
+   rpc, the row its p_id names gets `set` laid over it for the rest of the
+   tab, in every route answering that table, and an eq filter on a column an
+   effect changed is honoured for that row: approve a date and it leaves the
+   `review_state=eq.pending` list. Nothing is sent; the rpc is still answered
+   here like any other.
 
    "{{today}}" anywhere in the file becomes today's date at church,
    2026-10-25, so a demo can say "open today" on whatever day it is opened.
@@ -112,6 +121,7 @@
     var sample = JSON.parse(String(text).split('{{today}}').join(today));
     sample.routes = Array.isArray(sample.routes) ? sample.routes : [];
     sample.overlay = sample.overlay && typeof sample.overlay === 'object' ? sample.overlay : {};
+    sample.effects = Array.isArray(sample.effects) ? sample.effects : [];
     return sample;
   }
 
@@ -158,6 +168,51 @@
       out.forEach(function (r, i) { if (r && r[by] === row[by]) at = i; });
       if (at === -1) { if (by === 'key') out.push(row); }
       else out[at] = Object.assign({}, out[at], row);
+    });
+    return out;
+  }
+
+  /* The effect a call has, if the sample gives it one. */
+  function effectFor(sample, method, path) {
+    if (method !== 'POST') return null;
+    var name = (/^\/rest\/v1\/rpc\/([a-z0-9_]+)/.exec(path) || [])[1];
+    if (!name) return null;
+    return (sample.effects || []).filter(function (e) {
+      return e && e.rpc === name && e.table && e.set;
+    })[0] || null;
+  }
+
+  /* Remembers what an effect did: changed[table][id] = columns. */
+  function recordEffect(changed, effect, body) {
+    var args = {};
+    try { args = JSON.parse(body || '{}') || {}; } catch (err) { return changed; }
+    var id = args.p_id;
+    if (id === undefined || id === null) return changed;
+    changed[effect.table] = changed[effect.table] || {};
+    changed[effect.table][id] = Object.assign({}, changed[effect.table][id], effect.set);
+    return changed;
+  }
+
+  /* A route's rows with what the effects did laid over them. Only rows an
+     effect touched are ever changed or filtered out; everything else is the
+     sample as written. */
+  function applyEffects(rows, changed, path) {
+    var table = (/^\/rest\/v1\/([a-z0-9_]+)/.exec(path) || [])[1];
+    var mine = table && changed && changed[table];
+    if (!mine || !Array.isArray(rows)) return rows;
+    var cols = {};
+    Object.keys(mine).forEach(function (id) {
+      Object.keys(mine[id]).forEach(function (k) { cols[k] = true; });
+    });
+    var out = rows.map(function (r) {
+      return r && Object.prototype.hasOwnProperty.call(mine, r.id) ? Object.assign({}, r, mine[r.id]) : r;
+    });
+    new URLSearchParams(path.split('?')[1] || '').forEach(function (v, k) {
+      var eq = /^eq\.(.*)$/.exec(v);
+      if (!eq || !cols[k]) return;
+      out = out.filter(function (r) {
+        return !r || !Object.prototype.hasOwnProperty.call(mine, r.id) || String(r[k]) === eq[1];
+      });
     });
     return out;
   }
@@ -242,6 +297,9 @@
       } catch (err) { /* private mode: sign in by hand, any address works */ }
     }
 
+    // What the sample's effects have done this tab. See "EFFECTS" above.
+    var changed = {};
+
     function base() {
       return (HC.config && HC.config.SUPABASE_URL) || '';
     }
@@ -276,9 +334,13 @@
       var method = String((init && init.method) || (input && input.method) || 'GET').toUpperCase();
       var path = url.slice(url.indexOf('/', 'https://'.length));
       var accept = headerOf(init, input, 'Accept');
+      var effect = effectFor(sample, method, path);
+      if (effect) recordEffect(changed, effect, init && init.body);
       var d = decide(sample, method, path);
       if (d.kind === 'auth') return Promise.resolve(auth(path, init));
-      if (d.kind === 'route') return Promise.resolve(json(d.body, d.status, accept));
+      if (d.kind === 'route') {
+        return Promise.resolve(json(applyEffects(d.body, changed, path), d.status, accept));
+      }
       if (d.kind === 'read') return anonRead(url, init, input);
       if (d.kind === 'overlay') {
         return anonRead(url, init, input)
@@ -348,6 +410,9 @@
     _decide: decide,
     _parseSample: parseSample,
     _overlayRows: overlayRows,
+    _effectFor: effectFor,
+    _recordEffect: recordEffect,
+    _applyEffects: applyEffects,
     _keysAskedFor: keysAskedFor
   };
 

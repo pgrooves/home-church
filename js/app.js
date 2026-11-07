@@ -2397,6 +2397,8 @@
 
       adminRun('event-approve:' + id, HC.admin.approveEvent(id).then(function () {
         HC.components.toast('“' + row.title + '” is on the calendar.');
+        // Then: tell everyone, add more, or not. Migration 0098.
+        HC.notifyBatch.ask('event', { id: id, title: row.title, published: true });
       }));
     },
 
@@ -2470,8 +2472,22 @@
         // Says where it went rather than that it worked. "Approved" is a state
         // and "It is on Home" is the thing somebody actually wanted to know.
         HC.components.toast('“' + row.title + '” is on Home.');
+        // Then: tell everyone, add more, or not. Migration 0098. Asked of
+        // the row as approved, so one dated for later is not asked about.
+        HC.notifyBatch.ask('announcement', {
+          id: id, title: row.title, published: true,
+          starts_on: row.starts_on, ends_on: row.ends_on, deleted_at: row.deleted_at
+        });
       }));
     },
+
+    /* The answer to that, and the strip that shows what is waiting. See
+       js/notify-batch.js. */
+    'notify-batch-yes': function () { HC.notifyBatch.answer('yes'); },
+    'notify-batch-more': function () { HC.notifyBatch.answer('more'); },
+    'notify-batch-no': function () { HC.notifyBatch.answer('no'); },
+    'notify-batch-send-now': function () { HC.notifyBatch.sendNow(); },
+    'notify-batch-cancel': function () { HC.notifyBatch.cancel(); },
 
     'admin-review-discard': function (el) {
       var id = el.getAttribute('data-id');
@@ -6156,6 +6172,14 @@
          it. */
       else if (route && route.name === 'home') {
         HC.router.go({ name: 'home', restore: true }, { force: true });
+      }
+      /* And Admin, which draws "this part of the app is for the church's
+         admins" until the role is known. Opened cold, from a link or a
+         restored tab, it draws before the session's profile lands, and
+         without this it stays on that sentence for somebody who is an admin. */
+      else if (route && route.name === 'admin') {
+        HC.router.go(Object.assign({}, route, { restore: true }),
+                     { force: true, animate: false, replace: true });
       }
     });
 

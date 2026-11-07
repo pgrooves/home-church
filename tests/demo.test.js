@@ -98,6 +98,36 @@ ok('an id overlay lays over the live row it names',
 ok('and adds nothing the live project did not send',
   demo._overlayRows([], guideRows, '/rest/v1/guides?select=*'), []);
 
+// Effects: an rpc the sample names changes the row it was called with, for
+// the rest of the tab, so an approved card leaves the queue on a preview.
+const fx = demo._parseSample(JSON.stringify({
+  effects: [{ rpc: 'hc_admin_approve_event', table: 'events',
+              set: { published: true, review_state: 'approved' } }]
+}));
+ok('a sample with no effects has none', demo._parseSample('{}').effects, []);
+ok('an rpc the sample names has its effect',
+  !!demo._effectFor(fx, 'POST', '/rest/v1/rpc/hc_admin_approve_event'), true);
+ok('another rpc has none', demo._effectFor(fx, 'POST', '/rest/v1/rpc/hc_admin_discard_event'), null);
+ok('a read has none', demo._effectFor(fx, 'GET', '/rest/v1/rpc/hc_admin_approve_event'), null);
+
+const changed = demo._recordEffect({}, fx.effects[0], JSON.stringify({ p_id: 'e1' }));
+ok('the row it names is remembered', changed, { events: { e1: { published: true, review_state: 'approved' } } });
+
+const pendingDates = [
+  { id: 'e1', review_state: 'pending', published: false },
+  { id: 'e2', review_state: 'pending', published: false }
+];
+ok('the changed row leaves a filter it no longer matches',
+  demo._applyEffects(pendingDates, changed, '/rest/v1/events?select=*&review_state=eq.pending').map((r) => r.id),
+  ['e2']);
+ok('and shows its new columns where no filter is asked',
+  demo._applyEffects(pendingDates, changed, '/rest/v1/events?select=*')[0],
+  { id: 'e1', review_state: 'approved', published: true });
+ok('another table is untouched',
+  demo._applyEffects(pendingDates, changed, '/rest/v1/announcements?review_state=eq.pending').length, 2);
+ok('rows no effect touched are never filtered',
+  demo._applyEffects([{ id: 'x' }], changed, '/rest/v1/events?review_state=eq.pending'), [{ id: 'x' }]);
+
 const index = read('index.html');
 const at = s => index.indexOf('src="' + s);
 ok('demo.js loads before everything else', at('js/demo.js') !== -1 && at('js/demo.js') < at('js/data.js') && at('js/demo.js') < at('js/store.js'), true);

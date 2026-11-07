@@ -86,7 +86,8 @@ type Topic =
   | 'banner'
   | 'cafe_ready'
   | 'instagram_sync'
-  | 'new_sermon';
+  | 'new_sermon'
+  | 'approved_batch';
 
 const TOPIC_COLUMN: Record<Topic, string | null> = {
   new_guide: 'wants_new_guide',
@@ -109,6 +110,12 @@ const TOPIC_COLUMN: Record<Topic, string | null> = {
   // The sermon audio is up. Off unless somebody turned it on, unlike every
   // switch above it. Migration 0096.
   new_sermon: 'wants_new_sermon',
+  // What an admin just approved out of the newsletter queue, announcements
+  // and dates together, one notification per sitting. The Announcements
+  // switch decides, for dates too: members have no separate calendar switch,
+  // and a date from the newsletter is an announcement with a day on it.
+  // Migration 0098.
+  approved_batch: 'wants_announcements',
 };
 
 /* The topic that goes to exactly one phone, named by the row it is about.
@@ -358,6 +365,9 @@ interface Note {
   // new_guide only: the guides this send covers, stamped push_announced_at
   // once it has gone out so the next send does not announce them again.
   guideIds?: string[];
+  // approved_batch only: which wording family this used, moved on by one
+  // after a real send so the next one takes the next wording. See 0098.
+  turnKey?: string;
 }
 
 /* @@ guide-note:start */
@@ -385,6 +395,203 @@ function guideBody(seriesTitle: string | null, part: number | null): string {
     : `This week’s guide is live in the app: ${series}.`;
 }
 /* @@ guide-note:end */
+
+/* @@ batch-note:start */
+/* The approval notification, migration 0098. An admin clearing the
+   newsletter queue answers Yes or More after each approval, and what they
+   said yes to goes out as one notification: worded for the one thing when
+   there is one, and for the batch when there are more.
+
+   Three wordings for each, taken in turn (push_wording_turns), so the
+   congregation does not read the same sentence every week. No emoji: the
+   church asked for plain words. */
+
+interface BatchItem { kind: string; row_id: string }
+interface BatchAnnouncement { id: string; title: string; event_id?: string | null }
+interface BatchEvent { id: string; title: string; starts_at: string; time_label?: string | null }
+type Picked =
+  | { kind: 'announcement'; row: BatchAnnouncement }
+  | { kind: 'event'; row: BatchEvent };
+
+const MONTH_TAIL = /,\s*((?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Sept|Oct|Nov|Dec)[a-z]*\.?\s+\d{1,2}(?:st|nd|rd|th)?)\s*$/i;
+
+/* "Homecoming Gala, October 29" is how /new-announcement and the newsletter
+   intake title things: the thing, then its date. Split, so a sentence can
+   put the date where it reads naturally, and so a list of names is not a
+   list of commas. A title with no date on the end comes back whole. */
+function splitDated(title: string): { name: string; date: string | null } {
+  const flat = String(title ?? '').replace(/\s+/g, ' ').trim();
+  const m = MONTH_TAIL.exec(flat);
+  if (!m || m.index === 0) return { name: flat, date: null };
+  return { name: flat.slice(0, m.index).trim(), date: m[1] };
+}
+
+function asSentence(text: string): string {
+  const t = text.trim();
+  return /[.!?…]$/.test(t) ? t : t + '.';
+}
+
+function clipTo(text: string, max: number): string {
+  return text.length > max ? text.slice(0, max - 1).trimEnd() + '…' : text;
+}
+
+/* "Thursday, October 29", in the church's own time. */
+function eventDay(iso: string): string {
+  return new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/Chicago', weekday: 'long', month: 'long', day: 'numeric',
+  }).format(new Date(iso));
+}
+
+/* "6 pm", "6:30 pm", or null when there is no time worth saying. A
+   time_label wins, the way the calendar draws it, but only when it is a time:
+   "Time to be announced" and "All three services" do not follow "at". A date
+   at midnight church time is a date with no hour, not an event at midnight. */
+function eventTime(row: BatchEvent): string | null {
+  const label = String(row.time_label ?? '').trim();
+  if (label) return /\d/.test(label) ? label : null;
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/Chicago', hour: 'numeric', minute: '2-digit', hour12: true,
+  }).formatToParts(new Date(row.starts_at));
+  const hour = parts.find((p) => p.type === 'hour')?.value ?? '';
+  const minute = parts.find((p) => p.type === 'minute')?.value ?? '00';
+  const half = (parts.find((p) => p.type === 'dayPeriod')?.value ?? '').toLowerCase();
+  if (!hour) return null;
+  if (hour === '12' && minute === '00' && half === 'am') return null;
+  return minute === '00' ? `${hour} ${half}` : `${hour}:${minute} ${half}`;
+}
+
+/* What the batch is about, in the order it was approved. An announcement and
+   its own date are one thing to the congregation, so the date drops out when
+   its announcement is there. Rows that are no longer up have already been
+   left out of `announcements` and `events` by the caller. */
+function pickBatch(
+  items: BatchItem[],
+  announcements: BatchAnnouncement[],
+  events: BatchEvent[],
+): Picked[] {
+  const annById = new Map(announcements.map((a) => [a.id, a]));
+  const evById = new Map(events.map((e) => [e.id, e]));
+  const seen = new Set<string>();
+  const coveredEvents = new Set<string>();
+
+  for (const it of items) {
+    const a = it.kind === 'announcement' ? annById.get(it.row_id) : undefined;
+    if (a?.event_id) coveredEvents.add(a.event_id);
+  }
+
+  const out: Picked[] = [];
+  for (const it of items) {
+    const key = `${it.kind}:${it.row_id}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    if (it.kind === 'announcement') {
+      const a = annById.get(it.row_id);
+      if (a && String(a.title ?? '').trim()) out.push({ kind: 'announcement', row: a });
+    } else if (it.kind === 'event') {
+      const e = evById.get(it.row_id);
+      if (e && !coveredEvents.has(e.id) && String(e.title ?? '').trim()) {
+        out.push({ kind: 'event', row: e });
+      }
+    }
+  }
+  return out;
+}
+
+/* Which wording family a batch belongs to, for push_wording_turns. */
+function turnKeyFor(picked: Picked[]): string {
+  if (picked.length > 1) return 'approved_batch';
+  return picked[0]?.kind === 'event' ? 'approved_one_date' : 'approved_one_announcement';
+}
+
+function oneAnnouncementNote(title: string, turn: number): { title: string; body: string } {
+  const flat = String(title).replace(/\s+/g, ' ').trim();
+  const { name, date } = splitDated(flat);
+  switch (((turn % 3) + 3) % 3) {
+    case 0:
+      return { title: 'Something new from Home Church',
+               body: `${asSentence(flat)} Tap to see the details.` };
+    case 1:
+      return { title: 'Heads up!',
+               body: date ? `${name} is coming ${date}. Take a look.`
+                          : `${asSentence(flat)} Take a look.` };
+    default:
+      return { title: clipTo(flat, 60), body: 'Just posted. Tap for the details.' };
+  }
+}
+
+function oneDateNote(row: BatchEvent, turn: number): { title: string; body: string } {
+  const name = splitDated(row.title).name;
+  const day = eventDay(row.starts_at);
+  switch (((turn % 3) + 3) % 3) {
+    case 0:
+      return { title: 'Save the date', body: `${name} · ${day}. It’s on the calendar now.` };
+    case 1:
+      return { title: 'Mark your calendar', body: `${name} is ${day}. We’d love to see you there.` };
+    default: {
+      const time = eventTime(row);
+      return { title: 'New on the calendar', body: `${name} · ${day}${time ? ` at ${time}` : ''}` };
+    }
+  }
+}
+
+function plural(n: number, one: string, many: string): string {
+  return `${n} ${n === 1 ? one : many}`;
+}
+
+/* "3 new announcements and 2 dates on the calendar". */
+function batchCounts(picked: Picked[]): string {
+  const a = picked.filter((p) => p.kind === 'announcement').length;
+  const e = picked.length - a;
+  if (a && e) {
+    return `${plural(a, 'new announcement', 'new announcements')} and ` +
+      `${plural(e, 'date', 'dates')} on the calendar`;
+  }
+  if (a) return plural(a, 'new announcement', 'new announcements');
+  return `${plural(e, 'new date', 'new dates')} on the calendar`;
+}
+
+/* "Holiday Market and Baby Blessing", or "Holiday Market, Baby Blessing and
+   more". Announcements first: they are what Home shows. */
+function batchNames(picked: Picked[]): string {
+  const ordered = [
+    ...picked.filter((p) => p.kind === 'announcement'),
+    ...picked.filter((p) => p.kind === 'event'),
+  ];
+  const names = ordered.map((p) => splitDated(p.row.title).name);
+  if (names.length === 2) return `${names[0]} and ${names[1]}`;
+  return `${names[0]}, ${names[1]} and more`;
+}
+
+function batchNote(picked: Picked[], turn: number, now: Date): { title: string; body: string } {
+  const weekday = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/Chicago', weekday: 'long',
+  }).format(now);
+  const counts = batchCounts(picked);
+  const names = batchNames(picked);
+  let note: { title: string; body: string };
+  switch (((turn % 3) + 3) % 3) {
+    case 0:
+      note = { title: `Happy ${weekday}!`, body: `${counts}: ${names}.` };
+      break;
+    case 1:
+      note = { title: 'Fresh from Home Church', body: `${names} just went up. ${counts}.` };
+      break;
+    default:
+      note = { title: 'A few things to know', body: `${counts}. Tap to see what’s new.` };
+  }
+  return { title: note.title, body: clipTo(note.body, 178) };
+}
+
+function approvalNote(picked: Picked[], turn: number, now: Date): { title: string; body: string } | null {
+  if (!picked.length) return null;
+  if (picked.length > 1) return batchNote(picked, turn, now);
+  const only = picked[0];
+  const note = only.kind === 'announcement'
+    ? oneAnnouncementNote(only.row.title, turn)
+    : oneDateNote(only.row as BatchEvent, turn);
+  return { title: note.title, body: clipTo(note.body, 178) };
+}
+/* @@ batch-note:end */
 
 async function compose(
   topic: Topic,
@@ -621,6 +828,69 @@ async function compose(
         ? `${title}${who ? `, with ${who}` : ''}. Listen in the app.`
         : 'Listen in the app.',
     };
+  }
+
+  /* What an admin approved in one sitting, migration 0098. The batch id is
+     the ref; the tick or Send now closed the batch before asking, so this
+     reads a batch nobody can add to any more.
+
+     READ AS IT IS NOW, not as it was approved. A card discarded, deleted or
+     taken down inside the five minutes is left out, and a batch that has
+     emptied is the null case: nothing goes out, push_log says so. */
+  if (topic === 'approved_batch') {
+    const batchId = Number(ref);
+    if (!ref || !Number.isFinite(batchId)) return null;
+
+    const { data: itemRows } = await admin
+      .from('notify_batch_items')
+      .select('kind, row_id, added_at')
+      .eq('batch_id', batchId)
+      .order('added_at', { ascending: true });
+    const items = (itemRows ?? []) as BatchItem[];
+    if (!items.length) return null;
+
+    const annIds = items.filter((i) => i.kind === 'announcement').map((i) => i.row_id);
+    const evIds = items.filter((i) => i.kind === 'event').map((i) => i.row_id);
+    const today = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'America/Chicago', year: 'numeric', month: '2-digit', day: '2-digit',
+    }).format(new Date());
+
+    let announcements: BatchAnnouncement[] = [];
+    if (annIds.length) {
+      const { data } = await admin
+        .from('announcements')
+        .select('id, title, event_id, published, deleted_at, starts_on, ends_on')
+        .in('id', annIds);
+      announcements = ((data ?? []) as Array<BatchAnnouncement & {
+        published?: boolean; deleted_at?: string | null;
+        starts_on?: string | null; ends_on?: string | null;
+      }>).filter((a) => a.published && !a.deleted_at &&
+        (!a.starts_on || a.starts_on <= today) && (!a.ends_on || a.ends_on > today));
+    }
+
+    let events: BatchEvent[] = [];
+    if (evIds.length) {
+      const { data } = await admin
+        .from('events')
+        .select('id, title, starts_at, time_label, published')
+        .in('id', evIds);
+      events = ((data ?? []) as Array<BatchEvent & { published?: boolean }>)
+        .filter((e) => e.published && e.starts_at);
+    }
+
+    const picked = pickBatch(items, announcements, events);
+    if (!picked.length) return null;
+
+    const turnKey = turnKeyFor(picked);
+    const { data: turnRow } = await admin
+      .from('push_wording_turns')
+      .select('turns')
+      .eq('key', turnKey)
+      .maybeSingle();
+    const turn = Number((turnRow as { turns?: number } | null)?.turns ?? 0) || 0;
+
+    const note = approvalNote(picked, turn, new Date());
+    return note ? { ...note, turnKey } : null;
   }
 
   /* The cafe. Read at send time from the order the counter just marked
@@ -1062,6 +1332,11 @@ Deno.serve(async (req: Request) => {
   // A guide is announced once, whether or not anybody had the switch on, so
   // a phone that turns it on next week is not told about this one then.
   const markAnnounced = async () => {
+    // The approval notification's wording takes its turn, so the next one
+    // reads differently. A failure here only means the same wording twice.
+    if (note.turnKey) {
+      await admin.rpc('hc_push_wording_turn', { p_key: note.turnKey }).then(null, () => null);
+    }
     if (!note.guideIds?.length) return;
     await admin.from('guides')
       .update({ push_announced_at: new Date().toISOString() })
@@ -1083,7 +1358,8 @@ Deno.serve(async (req: Request) => {
   const notConfigured: string[] = [];
 
   // See the note next to apns-collapse-id in sendOne().
-  const collapseId = (topic === 'announcement' || topic === 'cafe_ready' || topic === 'new_sermon') && ref
+  const collapseId = (topic === 'announcement' || topic === 'cafe_ready' || topic === 'new_sermon' ||
+                      topic === 'approved_batch') && ref
     ? `${topic}:${ref}` : topic;
 
   // Batched rather than all at once. This church is small enough that it will

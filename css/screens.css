@@ -2688,6 +2688,43 @@
 
 .hc-admin__item-actions .hc-btn { margin-top: 0; }
 
+/* The notification waiting after a sitting of approvals, js/notify-batch.js.
+   An item card with a rule down its edge in the accent, so it reads as the
+   one thing on this screen that is about to happen on its own. */
+.hc-admin__batch {
+  background: var(--hc-cream);
+  border-radius: var(--hc-radius-lg);
+  border-left: 3px solid var(--hc-accent-deep);
+  padding: var(--hc-space-base);
+  margin-top: var(--hc-space-lg);
+}
+
+.hc-admin__batch > * + * { margin-top: 4px; }
+
+/* The Yes / More / No sheet. The three answers stacked, full width, so each
+   is a thumb's width wide on the narrowest phone and none can be hit by
+   reaching for another. */
+.hc-batch-ask__q {
+  font-size: calc(17px * var(--hc-text-scale));
+  line-height: 1.4;
+  color: var(--hc-ink);
+}
+
+.hc-batch-ask__buttons {
+  display: flex;
+  flex-direction: column;
+  gap: var(--hc-space-sm);
+  margin-top: var(--hc-space-lg);
+}
+
+.hc-batch-ask__buttons .hc-btn { width: 100%; margin-top: 0; justify-content: center; }
+
+/* On a demo link the "nothing saves" pill floats at the foot of the screen,
+   right where More would be. Lift the answers clear of it. */
+.hc-batch-ask--demo .hc-sheet__panel {
+  padding-bottom: calc(var(--hc-space-lg) + 96px + env(safe-area-inset-bottom));
+}
+
 /* Users, split into Admins, Hosts and Members under the search box. The folds
    are the Journal's, and a row a search has left out is hidden outright. */
 .hc-admin__users [hidden] { display: none; }

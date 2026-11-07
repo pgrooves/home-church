@@ -1,0 +1,26 @@
+{
+  "title": "Approve and notify",
+  "signedIn": { "id": "00000000-0000-0000-0000-00000000de30", "email": "demo@example.org" },
+  "routes": [
+    { "match": "/rest/v1/profiles", "body": [{ "id": "00000000-0000-0000-0000-00000000de30", "first_name": "Sample", "last_name": "Admin", "role": "admin", "can_host": false, "can_run_cafe": false }] },
+    { "match": "/rest/v1/announcements?select=*&order=created_at.desc", "body": [
+      { "id": "demo-holiday-market", "title": "Holiday Market, December 6", "body": "Shop small and support business owners in our church community, in the courtyard after each service.", "event_id": "demo-holiday-market-date", "published": false, "review_state": "pending", "priority": 0, "starts_on": null, "ends_on": null, "deleted_at": null, "created_at": "{{today}}T14:00:00+00:00" },
+      { "id": "demo-baby-blessing", "title": "Baby Blessing, December 13", "body": "If you would like your child blessed during the service, sign up at the Welcome Desk.", "event_id": "demo-baby-blessing-date", "published": false, "review_state": "pending", "priority": 0, "starts_on": null, "ends_on": null, "deleted_at": null, "created_at": "{{today}}T14:00:01+00:00" },
+      { "id": "demo-serve-day", "title": "Volunteers needed", "body": "Our kids team needs three more people for the Christmas season. Talk to Erin after service.", "event_id": null, "published": false, "review_state": "pending", "priority": 0, "starts_on": null, "ends_on": null, "deleted_at": null, "created_at": "{{today}}T14:00:02+00:00" },
+      { "id": "demo-food-drive", "title": "Thanksgiving Food Drive", "body": "Bring canned goods to any service through November 22.", "event_id": null, "published": true, "review_state": "approved", "priority": 3, "starts_on": null, "ends_on": null, "deleted_at": null, "created_at": "2026-10-30T17:00:00+00:00" }
+    ] },
+    { "match": "/rest/v1/events?select=*&review_state=eq.pending", "body": [
+      { "id": "demo-holiday-market-date", "title": "Holiday Market, December 6", "description": "Shop small in the courtyard.", "starts_at": "2026-12-06T15:00:00+00:00", "ends_at": null, "time_label": "After each service", "location": "Home Church Courtyard", "published": false, "review_state": "pending", "duplicate_of": null },
+      { "id": "demo-baby-blessing-date", "title": "Baby Blessing, December 13", "description": "During each service.", "starts_at": "2026-12-13T15:00:00+00:00", "ends_at": null, "time_label": "All three services", "location": null, "published": false, "review_state": "pending", "duplicate_of": null },
+      { "id": "demo-christmas-party", "title": "Christmas Party", "description": "Food, music and a white elephant swap.", "starts_at": "2026-12-19T00:30:00+00:00", "ends_at": null, "time_label": null, "location": "The Loft", "published": false, "review_state": "pending", "duplicate_of": null }
+    ] },
+    { "match": "/rest/v1/events?select=*&duplicate_of", "body": [] },
+    { "match": "/rest/v1/review_approvals", "body": [] },
+    { "match": "/rest/v1/newsletter_runs", "body": [] },
+    { "match": "/rest/v1/group_status_runs", "body": [] }
+  ],
+  "effects": [
+    { "rpc": "hc_admin_approve_announcement", "table": "announcements", "set": { "published": true, "review_state": "approved" } },
+    { "rpc": "hc_admin_approve_event", "table": "events", "set": { "published": true, "review_state": "approved" } }
+  ]
+}

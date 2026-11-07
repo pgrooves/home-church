@@ -1545,6 +1545,10 @@
     // second one opens. See pushDefaultRow().
     html += pushDefaultRow();
 
+    // A notification waiting to go out about what was just approved, with
+    // Send now and Don't send. Nothing when there is none. Migration 0098.
+    html += HC.notifyBatch.strip();
+
     var rows = HC.admin.announcements();
     if (!rows.length) {
       return html + pending('announcements',
@@ -2960,6 +2964,10 @@
     // And when the home groups box on Connect was last updated, for the line
     // under its button at the foot of the same section.
     if (id === 'announcements') HC.admin.loadGroupStatus();
+    // And the notification waiting after a sitting of approvals, if there is
+    // one, for the strip above the queue. Asked again at most every 30
+    // seconds however often this draws. See js/notify-batch.js.
+    if (id === 'announcements') HC.notifyBatch.refresh();
     if (id === 'homekids') HC.admin.loadHomekids();
     if (id === 'homekids') HC.admin.loadHomekidsDrafts();
     if (id === 'users') HC.admin.loadUsers();
