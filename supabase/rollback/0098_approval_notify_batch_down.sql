@@ -24,12 +24,13 @@ $$;
 
 drop function if exists public.hc_notify_batch_tick(timestamptz);
 drop function if exists public.hc_admin_notify_batch_cancel();
+drop function if exists public.hc_admin_notify_batch_schedule(timestamptz);
 drop function if exists public.hc_admin_notify_batch_send_now();
 drop function if exists public.hc_notify_batch_close_and_send(bigint);
 drop function if exists public.hc_admin_notify_batch_add(text, text, boolean);
 drop function if exists public.hc_admin_notify_batch();
 drop function if exists public.hc_notify_batch_json(bigint);
-drop function if exists public.hc_notify_batch_due(timestamptz, timestamptz);
+drop function if exists public.hc_notify_batch_due(timestamptz, timestamptz, boolean);
 drop function if exists public.hc_push_wording_turn(text);
 
 drop table if exists public.notify_batch_items;

@@ -2488,6 +2488,10 @@
     'notify-batch-no': function () { HC.notifyBatch.answer('no'); },
     'notify-batch-send-now': function () { HC.notifyBatch.sendNow(); },
     'notify-batch-cancel': function () { HC.notifyBatch.cancel(); },
+    'notify-batch-schedule': function () { HC.notifyBatch.openSchedule(); },
+    'notify-batch-preset': function (el) { HC.notifyBatch.preset(el.getAttribute('data-id')); },
+    'notify-batch-schedule-close': function () { HC.notifyBatch.closeSchedule(); },
+    'notify-batch-schedule-save': function () { HC.notifyBatch.saveSchedule(); },
 
     'admin-review-discard': function (el) {
       var id = el.getAttribute('data-id');

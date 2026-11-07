@@ -27,7 +27,13 @@
 -- WHEN IT SENDS. A clock every minute (pg_cron) looks at the one open batch
 -- and sends it once it is due. Due is the time above, except that anything
 -- that would land between 9 pm and 8 am in Metairie waits until 8 am. "Send
--- now" on the admin screen is the one way past that, because a person asked.
+-- now" on the admin screen is one way past that, because a person asked.
+--
+-- OR WHEN SOMEBODY SAYS. "Schedule this instead" on the admin screen picks a
+-- day and time for the waiting batch. A scheduled batch goes at exactly that
+-- time, quiet hours or not, because a person chose it; approvals added to it
+-- afterwards join it and leave the time alone, rather than a Yes quietly
+-- turning Sunday morning back into five minutes from now.
 --
 -- WHAT IT SAYS is decided by send-push at the moment it sends, from the rows
 -- as they are then: a card discarded or deleted inside the five minutes drops
@@ -77,6 +83,9 @@ create table if not exists public.notify_batches (
   -- The last Yes or More, which is what the thirty minute fallback counts
   -- from when the clock is stopped.
   last_activity_at timestamptz not null default now(),
+  -- True once an admin picked the time with "Schedule this instead". Then
+  -- send_at is that time exactly, and Yes and More leave it alone.
+  scheduled        boolean not null default false,
   closed_at        timestamptz,
   outcome          text,
 
@@ -136,7 +145,8 @@ grant all on public.push_wording_turns to service_role;
 --
 -- Five minutes after the last Yes, or thirty minutes after the last activity
 -- while a More is holding it, and never between 9 pm and 8 am church time:
--- anything due then moves to the next 8 am.
+-- anything due then moves to the next 8 am. A scheduled batch is due at the
+-- time somebody picked, whatever time that is.
 --
 -- One function, read by the clock that sends and by the screen that says
 -- "sends at 3:42", so the two cannot disagree.
@@ -144,7 +154,8 @@ grant all on public.push_wording_turns to service_role;
 
 create or replace function public.hc_notify_batch_due(
   p_send_at       timestamptz,
-  p_last_activity timestamptz
+  p_last_activity timestamptz,
+  p_scheduled     boolean default false
 )
 returns timestamptz
 language plpgsql
@@ -156,6 +167,7 @@ declare
   v_local timestamp;
 begin
   if v_due is null then return null; end if;
+  if coalesce(p_scheduled, false) and p_send_at is not null then return p_send_at; end if;
 
   v_local := v_due at time zone 'America/Chicago';
 
@@ -169,16 +181,17 @@ begin
 end;
 $$;
 
-revoke all on function public.hc_notify_batch_due(timestamptz, timestamptz) from public, anon, authenticated;
-grant execute on function public.hc_notify_batch_due(timestamptz, timestamptz) to service_role;
+revoke all on function public.hc_notify_batch_due(timestamptz, timestamptz, boolean) from public, anon, authenticated;
+grant execute on function public.hc_notify_batch_due(timestamptz, timestamptz, boolean) to service_role;
 
 
 -- ---------------------------------------------------------------------------
 -- 3. The batch as the admin screen sees it
 --
--- { open, id, held, due_at, items: [{ kind, id }] }, or { open: false,
--- items: [] }. The screen works out the wording of its prompt from `items`,
--- and draws "sends at" from `due_at`.
+-- { open, id, held, scheduled, due_at, now, items: [{ kind, id }] }, or
+-- { open: false, items: [] }. The screen works out the wording of its prompt
+-- from `items`, and draws its countdown from `due_at` measured against `now`,
+-- so a phone whose clock is a minute out still counts down the right time.
 -- ---------------------------------------------------------------------------
 
 create or replace function public.hc_notify_batch_json(p_id bigint)
@@ -192,8 +205,10 @@ as $$
     (select jsonb_build_object(
         'open',    true,
         'id',      b.id,
-        'held',    b.send_at is null,
-        'due_at',  public.hc_notify_batch_due(b.send_at, b.last_activity_at),
+        'held',      b.send_at is null,
+        'scheduled', b.scheduled,
+        'due_at',    public.hc_notify_batch_due(b.send_at, b.last_activity_at, b.scheduled),
+        'now',       now(),
         'items',   coalesce((
           select jsonb_agg(jsonb_build_object('kind', i.kind, 'id', i.row_id)
                            order by i.added_at, i.kind, i.row_id)
@@ -201,7 +216,7 @@ as $$
            where i.batch_id = b.id), '[]'::jsonb))
        from public.notify_batches b
       where b.id = p_id and b.closed_at is null),
-    jsonb_build_object('open', false, 'items', '[]'::jsonb));
+    jsonb_build_object('open', false, 'items', '[]'::jsonb, 'now', now()));
 $$;
 
 revoke all on function public.hc_notify_batch_json(bigint) from public, anon, authenticated;
@@ -303,9 +318,12 @@ begin
   values (v_id, p_kind, p_id, v_uid)
   on conflict (batch_id, kind, row_id) do nothing;
 
+  -- A scheduled batch keeps the time somebody picked. Otherwise Yes is five
+  -- minutes from now and More stops the clock.
   update public.notify_batches
      set last_activity_at = now(),
-         send_at = case when coalesce(p_hold, false) then null
+         send_at = case when scheduled then send_at
+                        when coalesce(p_hold, false) then null
                         else now() + interval '5 minutes' end
    where id = v_id;
 
@@ -318,6 +336,58 @@ grant execute on function public.hc_admin_notify_batch_add(text, text, boolean) 
 
 comment on function public.hc_admin_notify_batch_add(text, text, boolean) is
   'Yes (p_hold false) or More (p_hold true) after approving an announcement or a date: puts it in the one waiting notification and sets its clock. Admins only, and only for a row that is on Home or on the calendar. See 0098.';
+
+
+-- ---------------------------------------------------------------------------
+-- 4b. Schedule this instead
+--
+-- Picks the time the waiting batch goes out. At least a minute from now, so
+-- the clock does not send it before the screen has said it was scheduled, and
+-- at most thirty days, so a mistyped year is refused rather than kept quiet
+-- for one. Can be moved again: scheduling a scheduled batch changes its time.
+-- ---------------------------------------------------------------------------
+
+create or replace function public.hc_admin_notify_batch_schedule(p_at timestamptz)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_id bigint;
+begin
+  if not public.hc_is_admin() then
+    raise exception 'Admins only.' using errcode = 'insufficient_privilege';
+  end if;
+
+  if p_at is null or p_at < now() + interval '1 minute' then
+    raise exception 'Pick a time later than now.';
+  end if;
+
+  if p_at > now() + interval '30 days' then
+    raise exception 'Pick a time in the next thirty days.';
+  end if;
+
+  perform pg_advisory_xact_lock(hashtext('hc_notify_batch'));
+
+  select id into v_id from public.notify_batches where closed_at is null;
+  if v_id is null then
+    raise exception 'Nothing is waiting to be scheduled. It may have just gone out.';
+  end if;
+
+  update public.notify_batches
+     set send_at = p_at, scheduled = true, last_activity_at = now()
+   where id = v_id;
+
+  return public.hc_notify_batch_json(v_id);
+end;
+$$;
+
+revoke all on function public.hc_admin_notify_batch_schedule(timestamptz) from public, anon, authenticated;
+grant execute on function public.hc_admin_notify_batch_schedule(timestamptz) to authenticated;
+
+comment on function public.hc_admin_notify_batch_schedule(timestamptz) is
+  'Schedule this instead: the waiting approval notification goes out at this time, exactly, quiet hours or not. Later approvals join it without moving it. Admins only. See 0098.';
 
 
 -- ---------------------------------------------------------------------------
@@ -429,7 +499,7 @@ begin
   select * into v_row from public.notify_batches where closed_at is null;
   if not found then return 'nothing waiting'; end if;
 
-  v_due := public.hc_notify_batch_due(v_row.send_at, v_row.last_activity_at);
+  v_due := public.hc_notify_batch_due(v_row.send_at, v_row.last_activity_at, v_row.scheduled);
   if v_due > p_now then
     return 'waiting until ' || v_due::text;
   end if;
@@ -443,7 +513,7 @@ revoke all on function public.hc_notify_batch_tick(timestamptz) from public, ano
 grant execute on function public.hc_notify_batch_tick(timestamptz) to service_role;
 
 comment on function public.hc_notify_batch_tick(timestamptz) is
-  'Every minute: sends the waiting approval notification once it is due (five minutes after the last Yes, thirty after a More, never 9 pm to 8 am). Returns what it decided, in words. See 0098.';
+  'Every minute: sends the waiting approval notification once it is due (five minutes after the last Yes, thirty after a More, never 9 pm to 8 am, or at the time it was scheduled for). Returns what it decided, in words. See 0098.';
 
 
 -- ---------------------------------------------------------------------------

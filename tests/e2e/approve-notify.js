@@ -10,8 +10,9 @@
       other announcements"; dates are asked about the same way.
    3. More holds the clock; Yes starts it; No leaves the row out and asks
       nothing of the server.
-   4. While one is waiting, the Announcements screen says what and when, and
-      Don't send takes it away.
+   4. While one is waiting, the Announcements screen counts down to it, can
+      schedule it for a day and time instead, and Cancel push takes it away.
+      Approving after it is scheduled joins it and leaves the time alone.
    5. Nothing but reads ever leaves the page.
 
      node tests/e2e/approve-notify.js [shots-dir]
@@ -70,7 +71,8 @@ function serve() {
 (async () => {
   const server = await serve();
   const browser = await chromium.launch({ executablePath: chrome() });
-  const page = await browser.newPage({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, hasTouch: true });
+  const page = await browser.newPage({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, hasTouch: true,
+    timezoneId: 'America/Chicago' });
   const errors = [];
   page.on('pageerror', e => errors.push(String(e)));
   page.on('dialog', d => d.accept());
@@ -127,6 +129,8 @@ function serve() {
     !(await page.$('[data-action="admin-review-approve"][data-id="demo-holiday-market"]')));
   ok('More holds it', await page.evaluate(() => window.HC.notifyBatch.state().held === true));
   ok('the strip says one is waiting, held', /Notification waiting/.test(await strip()) && /Held/.test(await strip()), await strip());
+  ok('a held clock says Paused', (await page.textContent('[data-batch-left]')) === 'Paused');
+  ok('one thing: "Schedule this instead"', /Schedule this instead/.test(await strip()), await strip());
 
   // 2. The second.
   await approve('admin-review-approve', 'demo-baby-blessing');
@@ -139,6 +143,10 @@ function serve() {
     const s = window.HC.notifyBatch.state();
     return s.held === false && s.items.length === 2 && !!s.due_at;
   }));
+  await page.waitForTimeout(1200);
+  ok('the clock counts down from five minutes',
+    /^[45]:\d\d$/.test(await page.textContent('[data-batch-left]')), await page.textContent('[data-batch-left]'));
+  ok('more than one: "Schedule this batch instead"', /Schedule this batch instead/.test(await strip()), await strip());
 
   // 3. A date, third.
   await page.waitForSelector('[data-action="admin-event-approve"][data-id="demo-christmas-party"]', { timeout: 10000 });
@@ -155,22 +163,49 @@ function serve() {
   await answer('no');
   ok('No leaves it out', await page.evaluate(() => window.HC.notifyBatch.state().items.length === 3));
 
-  await page.evaluate(() => window.scrollTo(0, 0));
   const waiting = await strip();
   ok('the strip counts 2 announcements and 1 date', /2 announcements and 1 date/.test(waiting), waiting);
-  ok('and says when it goes out, 5 minutes after the last Yes',
-    /Goes out at 2:0\d PM, 5 minutes after the last Yes/.test(waiting), waiting);
+  ok('and says when it goes out',
+    /Until it goes out at 2:0\d PM, 5 minutes after the last Yes/.test(waiting), waiting);
   await page.waitForTimeout(3500);   // let the toast go
   await page.evaluate(() => document.querySelector('.hc-admin__batch').scrollIntoView({ block: 'center' }));
   await page.waitForTimeout(300);
-  await shot('03-waiting-strip.png');
+  await shot('03-waiting-clock.png');
 
-  // 5. Don't send.
+  // 5. Schedule this batch instead.
+  await page.click('[data-action="notify-batch-schedule"]');
+  await page.waitForSelector('[data-sheet="notify-batch-schedule"]', { timeout: 5000 });
+  ok('the schedule sheet names the batch',
+    /Schedule this batch/.test(await page.textContent('[data-sheet="notify-batch-schedule"]')));
+  await page.click('[data-action="notify-batch-preset"][data-id="tomorrow"]');
+  ok('a preset fills the day and time', await page.evaluate(() =>
+    document.querySelector('[data-batch-sched="time"]').value === '09:00'));
+  await shot('04-schedule-sheet.png');
+  await page.click('[data-action="notify-batch-schedule-save"]');
+  await page.waitForSelector('[data-sheet="notify-batch-schedule"]', { state: 'detached', timeout: 5000 });
+  await page.waitForTimeout(400);
+  ok('it is scheduled for tomorrow at 9', /Scheduled for tomorrow at 9:00 AM/.test(await strip()), await strip());
+  ok('the button now changes the time', /Change the time/.test(await strip()), await strip());
+
+  // 6. An approval after scheduling joins it and leaves the time alone.
+  await approve('admin-event-approve', 'demo-holiday-market-date');
+  ok('it asks to add to the scheduled notification',
+    /Add this to the notification scheduled for tomorrow at 9:00 AM\?/.test(await sheetText()), await sheetText());
+  ok('and offers only Yes and No', await page.evaluate(() =>
+    !document.querySelector('[data-sheet="notify-batch"] .hc-btn[data-action="notify-batch-more"]')));
+  await answer('yes');
+  ok('still scheduled for tomorrow at 9', /Scheduled for tomorrow at 9:00 AM/.test(await strip()), await strip());
+  ok('its own date does not count twice', /2 announcements and 1 date/.test(await strip()), await strip());
+  await page.waitForTimeout(3500);
+  await page.evaluate(() => document.querySelector('.hc-admin__batch').scrollIntoView({ block: 'center' }));
+  await page.waitForTimeout(300);
+  await shot('05-scheduled.png');
+
+  // 7. Cancel push.
   await page.click('[data-action="notify-batch-cancel"]');
   await page.waitForTimeout(500);
-  ok('Don\'t send takes it away', !(await page.$('.hc-admin__batch')));
+  ok('Cancel push takes it away', !(await page.$('.hc-admin__batch')));
   ok('and nothing is waiting', await page.evaluate(() => window.HC.notifyBatch.state().open === false));
-
   const writes = sent.filter(s => s.method !== 'GET' && s.method !== 'HEAD');
   ok('no write or rpc reached the network', writes.length === 0, JSON.stringify(writes.slice(0, 3)));
   ok('no page errors', errors.length === 0, errors.join(' | '));
