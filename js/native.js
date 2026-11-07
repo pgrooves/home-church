@@ -583,6 +583,46 @@
     } catch (err) { /* an older plugin, or none */ }
   }
 
+  /* A push notification that was tapped, handed to `fn` as where it should
+     open: { v: 'announcement', id }, { v: 'event', id } or { v: 'home' }.
+     send-push puts that beside the message (see `open` there): on iOS as an
+     `hc` object next to aps, on Android as flat `v` and `id` strings, because
+     Firebase data is strings. A notification with neither, from a topic that
+     says nothing about where to go, is not handed on, and the tap simply
+     opens the app as it always did.
+
+     Registered once, at boot, and not inside listen(), which only runs once
+     a phone has been asked about notifications. The plugin holds a tap that
+     launched the app until somebody listens, on both platforms, so the cold
+     start lands here too. */
+  function pushTarget(data) {
+    if (!data || typeof data !== 'object') return null;
+    var hc = data.hc;
+    if (typeof hc === 'string') {
+      try { hc = JSON.parse(hc); } catch (err) { hc = null; }
+    }
+    var from = hc && typeof hc === 'object' && hc.v ? hc : data;
+    var v = String(from.v || '');
+    var id = from.id === undefined || from.id === null ? '' : String(from.id);
+    if (v === 'home') return { v: 'home', id: null };
+    if ((v === 'announcement' || v === 'event') && id) return { v: v, id: id };
+    return null;
+  }
+
+  function onPushTapped(fn) {
+    var p = plugins();
+    if (!isNative() || !pushAvailable() || !p || !p.PushNotifications ||
+        !p.PushNotifications.addListener) return;
+
+    try {
+      p.PushNotifications.addListener('pushNotificationActionPerformed', function (action) {
+        var note = action && action.notification;
+        var target = pushTarget(note && note.data);
+        if (target) fn(target);
+      });
+    } catch (err) { /* an older plugin, or none */ }
+  }
+
   /* ------------------------------------------------------- notifications
      Asked for on the first launch, the first thing a new phone sees, and a
      yes turns on every kind of notification there is. The church decided
@@ -1172,6 +1212,9 @@
     pendingReminderIds: pendingReminderIds,
     cancelAllReminders: cancelAllReminders,
     onReminderTapped: onReminderTapped,
+    onPushTapped: onPushTapped,
+    // For tests.
+    _pushTarget: pushTarget,
     enableNotifications: enableNotifications,
     syncPreferences: syncPreferences,
     syncAdminPreferences: syncAdminPreferences,

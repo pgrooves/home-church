@@ -308,12 +308,24 @@ function parseServiceAccount(raw: string | undefined): ServiceAccount | string {
  *   channel_id     the channel js/native.js makes. A phone on a build from
  *                  before the channel existed falls back to Firebase's own.
  */
-function fcmMessage(token: string, note: { title: string; body: string }, topic: string, collapseId: string) {
+function fcmMessage(
+  token: string,
+  note: { title: string; body: string; open?: { v: string; id?: string } },
+  topic: string,
+  collapseId: string,
+) {
+  // Where a tap should land, flat, because Firebase data values are strings.
+  // An Android build from before the tap listener ignores both keys.
+  const data: Record<string, string> = { topic };
+  if (note.open?.v) {
+    data.v = note.open.v;
+    if (note.open.id) data.id = note.open.id;
+  }
   return {
     message: {
       token,
       notification: { title: note.title, body: note.body },
-      data: { topic },
+      data,
       android: {
         priority: 'HIGH',
         ttl: '21600s',
@@ -368,6 +380,10 @@ interface Note {
   // approved_batch only: which wording family this used, moved on by one
   // after a real send so the next one takes the next wording. See 0098.
   turnKey?: string;
+  // Where a tap opens, in a build that listens for taps (js/native.js
+  // onPushTapped): an announcement's own page, a date on the calendar, or
+  // Home. Left out, a tap simply opens the app, as it always has.
+  open?: { v: string; id?: string };
 }
 
 /* @@ guide-note:start */
@@ -495,6 +511,19 @@ function pickBatch(
     }
   }
   return out;
+}
+
+/* Where a tap on the approval notification opens, the way a tap on the
+   card on Home would: one announcement opens its own page; one date opens
+   the announcement it belongs to when there is one (`dateAnnouncementId`,
+   looked up by the caller), and otherwise that day on the calendar; more than
+   one thing opens Home, where they are the cards at the top. */
+function approvalOpen(picked: Picked[], dateAnnouncementId: string | null): { v: string; id?: string } {
+  if (picked.length !== 1) return { v: 'home' };
+  const only = picked[0];
+  if (only.kind === 'announcement') return { v: 'announcement', id: only.row.id };
+  if (dateAnnouncementId) return { v: 'announcement', id: dateAnnouncementId };
+  return { v: 'event', id: only.row.id };
 }
 
 /* Which wording family a batch belongs to, for push_wording_turns. */
@@ -719,6 +748,7 @@ async function compose(
     return {
       title,
       body: body ? firstSentence(body) : 'Open the app to read it.',
+      open: { v: 'announcement', id: ref },
     };
   }
 
@@ -890,7 +920,25 @@ async function compose(
     const turn = Number((turnRow as { turns?: number } | null)?.turns ?? 0) || 0;
 
     const note = approvalNote(picked, turn, new Date());
-    return note ? { ...note, turnKey } : null;
+    if (!note) return null;
+
+    // A single date opens its announcement when it has one that is up, so
+    // the tap lands on the same page the card on Home would open.
+    let dateAnnouncementId: string | null = null;
+    if (picked.length === 1 && picked[0].kind === 'event') {
+      const { data: owners } = await admin
+        .from('announcements')
+        .select('id, published, deleted_at, starts_on, ends_on')
+        .eq('event_id', picked[0].row.id);
+      const live = ((owners ?? []) as Array<{
+        id: string; published?: boolean; deleted_at?: string | null;
+        starts_on?: string | null; ends_on?: string | null;
+      }>).find((a) => a.published && !a.deleted_at &&
+        (!a.starts_on || a.starts_on <= today) && (!a.ends_on || a.ends_on > today));
+      dateAnnouncementId = live?.id ?? null;
+    }
+
+    return { ...note, turnKey, open: approvalOpen(picked, dateAnnouncementId) };
   }
 
   /* The cafe. Read at send time from the order the counter just marked
@@ -1139,6 +1187,10 @@ async function sendOne(
         'content-type': 'application/json',
       },
       body: JSON.stringify({
+        // Where a tap should land: { v: 'announcement', id } and the like.
+        // Beside aps, where iOS passes custom keys through to the app's tap
+        // listener untouched. A build from before the listener ignores it.
+        ...(note.open?.v ? { hc: note.open } : {}),
         aps: {
           alert: { title: note.title, body: note.body },
           sound: 'default',

@@ -5116,6 +5116,52 @@
     HC.router.go({ name: 'cal', restore: true }, { force: true });
   }
 
+  /* Where a tapped push notification lands: an announcement's own page, the
+     same one its card on Home opens; a date's day on the Cal tab, the same
+     move a tapped event reminder makes in js/reminders.js; or Home, for a
+     notification about several things at once, whose cards are at the top.
+
+     A content check is asked for on the way, because the notification is
+     often about something posted minutes ago that this phone has not synced
+     yet. The announcement page already says "It may still be on its way"
+     for that moment, and redraws itself when the content lands.
+
+     Held until the splash is gone, so a tap that launched the app does not
+     race the greeting for the screen. */
+  function openFromPush(target) {
+    if (!target) return;
+    if (HC.splash && HC.splash.showing && HC.splash.showing()) {
+      HC.splash.whenGone(function () { openFromPush(target); });
+      return;
+    }
+
+    if (HC.content && HC.content.refresh) HC.content.refresh();
+
+    if (target.v === 'announcement') {
+      // Put away on this phone once? Reading it from the notification is as
+      // clear a sign as there is that they are not done with it.
+      if (HC.store.undismiss) HC.store.undismiss(target.id);
+      HC.router.go({ name: 'announcement', id: target.id });
+      return;
+    }
+
+    if (target.v === 'event') {
+      var evt = (HC.data.events || []).filter(function (e) {
+        return e && e.id === target.id;
+      })[0];
+      var cal = HC.screens && HC.screens.calHelpers;
+      HC.router.go({ name: 'cal' });
+      if (evt && cal) {
+        cal.showMonth(evt.date);
+        cal.selectDay(evt.date);
+        HC.router.go({ name: 'cal', restore: false }, { force: true });
+      }
+      return;
+    }
+
+    HC.router.go({ name: 'home' });
+  }
+
   function repaintAdmin() {
     var route = HC.router.current();
     if (!route || route.name !== 'admin') return;
@@ -6355,6 +6401,10 @@
        and iOS may have forgotten reminders this phone still remembers wanting.
        See the housekeeping section of js/reminders.js. */
     HC.reminders.boot();
+
+    /* A push notification tapped, opening where it was about, the way the
+       card on Home would. See openFromPush(). */
+    HC.native.onPushTapped(openFromPush);
 
     /* The Journal lock row appears only on a phone that can actually
        challenge somebody. The answer is asynchronous and Profile has already
