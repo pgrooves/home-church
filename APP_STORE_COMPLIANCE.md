@@ -770,7 +770,8 @@ Center** and **Group Vitals**.
   this section. It now carries four serve teams with real descriptions, the SMS
   signup, three events, and six next steps of which five go somewhere real.
 - `js/screens/profile.js:287` hardcodes "Version 1.0", disconnected from any
-  build number.
+  build number. **Fixed November 2026:** the line now asks the
+  phone for the Version and Build typed into Xcode (`HC.native.versionLabel()`).
 
 ### Demo account and review notes
 

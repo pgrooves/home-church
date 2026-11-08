@@ -376,7 +376,8 @@ a completeness problem before it is a compliance problem.
   church's actual groups and events, or replaced, before submission.
 - `assets/img/README.md` is a note that real photography goes there later.
 - `profile.js:287` hardcodes "Version 1.0" in the About block, disconnected from
-  any build number.
+  any build number. **Fixed November 2026:** the line now asks the
+  phone for the Version and Build typed into Xcode (`HC.native.versionLabel()`).
 
 ### 4.3 Empty and error states
 
