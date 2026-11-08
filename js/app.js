@@ -5038,6 +5038,16 @@
     slot.hidden = false;
   }
 
+  function paintVersion() {
+    var label = HC.native.versionLabel();
+    if (!label) return;
+    var lines = document.querySelectorAll('[data-appversion]');
+    for (var i = 0; i < lines.length; i++) {
+      lines[i].textContent = label;
+      lines[i].hidden = false;
+    }
+  }
+
   function setSwitch(el, on) {
     el.setAttribute('aria-checked', on ? 'true' : 'false');
     var knob = el.querySelector('.hc-switch');
@@ -6415,6 +6425,11 @@
       paintLockRow();
       HC.store.on('view', paintLockRow);
     });
+
+    /* The version line at the foot of Your account, the same way: the phone
+       answers after Profile may already have painted, so the line is filled
+       in when it does. Every later paint reads the saved answer. */
+    HC.native.appVersion().then(paintVersion);
 
     // Then go and get the current content, after the first paint so nothing
     // waits on the network. If it lands and something actually changed, the

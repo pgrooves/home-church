@@ -1189,6 +1189,37 @@
       .catch(function () { return false; });
   }
 
+  /* ------------------------------------------------------- the version
+     Which build this phone is running, as the phone itself reports it: the
+     Version and Build typed into Xcode (versionName and versionCode on
+     Android). Asked of the binary rather than written here, because a number
+     in this file is only right until somebody forgets to change it, which is
+     how every copy came to say 1.0. The App plugin has shipped since 1.0, so
+     this needs nothing new installed.
+
+     Resolves { version, build }, or null in a browser, which has no build. */
+  var appInfo = null;
+
+  function appVersion() {
+    if (appInfo) return Promise.resolve(appInfo);
+    var p = plugins();
+    if (!isNative() || !p || !p.App || !p.App.getInfo) return Promise.resolve(null);
+    return p.App.getInfo().then(function (info) {
+      if (!info || !info.version) return null;
+      appInfo = { version: String(info.version), build: info.build ? String(info.build) : '' };
+      return appInfo;
+    }).catch(function () { return null; });
+  }
+
+  /* The line under Your account. Synchronous, because Profile draws
+     synchronously: empty until appVersion() has answered once, and js/app.js
+     fills the line in when it does. */
+  function versionLabel() {
+    if (!isNative()) return 'Web version';
+    if (!appInfo) return '';
+    return 'Version ' + appInfo.version + (appInfo.build ? ' (' + appInfo.build + ')' : '');
+  }
+
   HC.native = {
     isNative: isNative,
     platform: platform,
@@ -1222,7 +1253,9 @@
     resumeNotifications: resumeNotifications,
     applyChoices: applyChoices,
     notificationAnswer: notificationAnswer,
-    openAppSettings: openAppSettings
+    openAppSettings: openAppSettings,
+    appVersion: appVersion,
+    versionLabel: versionLabel
   };
 
 })(window.HC = window.HC || {});
