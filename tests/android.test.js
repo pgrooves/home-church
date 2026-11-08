@@ -31,12 +31,18 @@ function fakeStorage() {
 }
 
 /* What a plugin was asked to do, so a test can say "never touched". */
-function fakePlugins(calls) {
+function fakePlugins(calls, opts) {
   const record = (name, value) => function (arg) {
     calls.push([name, arg === undefined ? null : arg]);
     return Promise.resolve(value);
   };
-  return {
+  const plugins = {
+    Filesystem: {
+      writeFile: record('fs.writeFile', { uri: 'file:///cache/the-guide.pdf' })
+    },
+    Share: {
+      share: record('share.share', {})
+    },
     LocalNotifications: {
       checkPermissions: record('ln.checkPermissions', { display: 'granted' }),
       schedule: record('ln.schedule', {})
@@ -49,10 +55,24 @@ function fakePlugins(calls) {
       createChannel: record('push.createChannel', undefined)
     }
   };
+  /* The app's own Android plugin. Absent unless asked for, the way it is in
+     every build from before it existed; `pdfViewer: 'fails'` is a phone
+     with no app that opens PDFs. */
+  if (opts && opts.pdfViewer) {
+    plugins.PdfViewer = {
+      open: function (arg) {
+        calls.push(['pdf.open', arg]);
+        return opts.pdfViewer === 'fails'
+          ? Promise.reject(new Error('No app on this phone opens PDFs.'))
+          : Promise.resolve();
+      }
+    };
+  }
+  return plugins;
 }
 
 /* `platform` is what Capacitor.getPlatform() says, or null for a browser. */
-function load(platform) {
+function load(platform, opts) {
   const calls = [];
   const sandbox = {
     window: { localStorage: fakeStorage(), console: console },
@@ -67,7 +87,7 @@ function load(platform) {
     sandbox.window.Capacitor = {
       isNativePlatform: () => true,
       getPlatform: () => platform,
-      Plugins: fakePlugins(calls)
+      Plugins: fakePlugins(calls, opts)
     };
   }
   sandbox.window.window = sandbox.window;
@@ -148,6 +168,65 @@ Promise.all([
   const src = fs.readFileSync(path.join(__dirname, '..', 'js', 'native.js'), 'utf8');
   ok('registration carries the platform rather than a hard coded ios',
     /p_platform: platform\(\)/.test(src) && !/p_platform: 'ios'/.test(src), true);
+
+  /* ------------------------------------------------------ a PDF handed over
+
+     Download guide, the night sheet, the journal and the HomeKids month all
+     come through handOverPdf(). An iPhone gets the share sheet, exactly as
+     before. Android opens the PDF in the phone's viewer, because its share
+     sheet is "send to" only and the file in it can't be opened. */
+
+  const names = (calls) => calls.map((c) => c[0]);
+  const iosPdf = load('ios', { pdfViewer: 'works' });
+  const andPdf = load('android', { pdfViewer: 'works' });
+  const andNoViewer = load('android', { pdfViewer: 'fails' });
+  const andOldBuild = load('android');
+
+  return Promise.all([
+    iosPdf.HC.native.handOverPdf('the-guide.pdf', 'JVBERi0=', 'The Guide'),
+    andPdf.HC.native.handOverPdf('the-guide.pdf', 'JVBERi0=', 'The Guide'),
+    andNoViewer.HC.native.handOverPdf('the-guide.pdf', 'JVBERi0=', 'The Guide'),
+    andOldBuild.HC.native.handOverPdf('the-guide.pdf', 'JVBERi0=', 'The Guide'),
+    web.handOverPdf('the-guide.pdf', 'JVBERi0=', 'The Guide')
+  ]).then(function (got) {
+    ok('an iPhone writes the PDF and opens the share sheet, as before',
+      [got[0], names(iosPdf.calls)], [true, ['fs.writeFile', 'share.share']]);
+    ok('and the iPhone share sheet is asked exactly what it was before',
+      iosPdf.calls[1][1], { title: 'The Guide', url: 'file:///cache/the-guide.pdf', dialogTitle: 'The Guide' });
+    ok('an iPhone never opens the PDF viewer, even if one were there',
+      iosPdf.calls.some((c) => c[0] === 'pdf.open'), false);
+    ok('the PDF is written as bytes, not as base64 text',
+      iosPdf.calls[0][1], { path: 'the-guide.pdf', directory: 'CACHE', data: 'JVBERi0=' });
+
+    ok('Android opens the PDF in the viewer, and no share sheet',
+      [got[1], names(andPdf.calls)], [true, ['fs.writeFile', 'pdf.open']]);
+    ok('the viewer is given the file just written',
+      andPdf.calls[1][1], { url: 'file:///cache/the-guide.pdf' });
+
+    ok('an Android phone with no PDF app gets the share sheet instead',
+      [got[2], names(andNoViewer.calls)], [true, ['fs.writeFile', 'pdf.open', 'share.share']]);
+    ok('an Android build from before the viewer gets the share sheet, as before',
+      [got[3], names(andOldBuild.calls)], [true, ['fs.writeFile', 'share.share']]);
+    ok('a browser has nothing to hand it to, so the caller falls back',
+      got[4], false);
+
+    const main = fs.readFileSync(path.join(__dirname, '..', 'android', 'app', 'src', 'main', 'java',
+      'com', 'homechurchnola', 'app', 'MainActivity.java'), 'utf8');
+    const plugin = fs.readFileSync(path.join(__dirname, '..', 'android', 'app', 'src', 'main', 'java',
+      'com', 'homechurchnola', 'app', 'PdfViewerPlugin.java'), 'utf8');
+    ok('MainActivity registers the viewer before Capacitor builds the bridge',
+      main.indexOf('registerPlugin(PdfViewerPlugin.class)') > -1 &&
+      main.indexOf('registerPlugin(PdfViewerPlugin.class)') < main.indexOf('super.onCreate(savedInstanceState)'), true);
+    ok('the plugin is called by the name js/native.js looks for',
+      /@CapacitorPlugin\(name = "PdfViewer"\)/.test(plugin), true);
+    ok('and it uses the FileProvider the manifest already declares',
+      /getPackageName\(\) \+ "\.fileprovider"/.test(plugin) &&
+      /\$\{applicationId\}\.fileprovider/.test(fs.readFileSync(path.join(__dirname, '..', 'android',
+        'app', 'src', 'main', 'AndroidManifest.xml'), 'utf8')), true);
+    ok('every document goes through handOverPdf, none straight to the share sheet',
+      /HC\.native\.shareBinaryFile\(/.test(fs.readFileSync(path.join(__dirname, '..', 'js', 'app.js'), 'utf8')), false);
+  });
+}).then(function () {
 
   console.log('\n' + pass + ' passed, ' + fail + ' failed');
   process.exit(fail ? 1 : 0);

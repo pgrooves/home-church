@@ -1737,7 +1737,9 @@
      group's night, and somebody's journal. Each of them is a PDF, written by
      js/pdf.js and laid out by js/print-pdf.js, saved into the app's cache
      directory and handed to the iOS share sheet, where a leader gets Print,
-     Save to Files, Mail and Messages.
+     Save to Files, Mail and Messages. On Android it opens in the phone's PDF
+     viewer instead, because Android's share sheet is only "send to";
+     HC.native.handOverPdf() in js/native.js has the reasons.
 
      WHY IT IS A PDF AND NOT HTML, which is what it was until this function.
      window.print() is a silent no-op inside WKWebView, so the packaged app
@@ -1786,7 +1788,7 @@
       }
 
       var road = pdf
-        ? HC.native.shareBinaryFile(opts.name + '.pdf', pdf, opts.title)
+        ? HC.native.handOverPdf(opts.name + '.pdf', pdf, opts.title)
         : asHtml();
 
       road.then(function (ok) {

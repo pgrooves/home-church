@@ -189,6 +189,37 @@
     return writeAndShare(name, { data: base64 }, dialogTitle);
   }
 
+  /* A PDF the app made (a guide, a night sheet, a journal, a HomeKids month),
+     handed to the person.
+
+     ON AN IPHONE, EXACTLY shareBinaryFile() AS BEFORE: the share sheet, which
+     there has Print and Save to Files.
+
+     ON ANDROID IT OPENS IN THE PHONE'S PDF VIEWER INSTEAD. Android's share
+     sheet is only "send to". The PDF sits at the top as a preview that does
+     nothing when tapped, so somebody who wanted to read the guide had to email
+     it to themselves first (reported from an Android phone, November 2026).
+     The viewer has its own share and print, so nothing is lost.
+
+     PdfViewer is the app's own Android plugin
+     (android/app/src/main/java/com/homechurchnola/app/PdfViewerPlugin.java).
+     An Android build from before it existed has no PdfViewer, and a phone with
+     no PDF app makes it fail. Both fall back to the share sheet, which is what
+     Android always did, so no build is worse off than before. */
+  function handOverPdf(name, base64, dialogTitle) {
+    var p = plugins();
+    if (!isAndroid() || !p || !p.PdfViewer) return shareBinaryFile(name, base64, dialogTitle);
+
+    return writeCacheFile(name, { data: base64 }).then(function (uri) {
+      if (!uri) return false;
+      return p.PdfViewer.open({ url: uri }).then(function () {
+        return true;
+      }, function () {
+        return shareCacheFile(uri, name, dialogTitle);
+      });
+    });
+  }
+
   /* Browsers get a Blob and a synthetic download instead. Same file, same
      name, different road. */
   function downloadInBrowser(name, contents, mimeType) {
@@ -1232,6 +1263,7 @@
     shareText: shareText,
     shareFile: shareFile,
     shareBinaryFile: shareBinaryFile,
+    handOverPdf: handOverPdf,
     addToCalendarSheet: addToCalendarSheet,
     downloadInBrowser: downloadInBrowser,
     buildIcs: buildIcs,
