@@ -172,11 +172,11 @@ not.
 ### Call a database function
 
 ```bash
-python3 scripts/hc_supabase.py rpc hc_announce_new_sermon '{"p_id": "sermon-your-slug"}'
+python3 scripts/hc_supabase.py rpc hc_schedule_new_sermon '{"p_id": "sermon-your-slug"}'
 ```
 
 ```sql
-select public.hc_announce_new_sermon('sermon-your-slug');
+select public.hc_schedule_new_sermon('sermon-your-slug');
 ```
 
 The function's refusal comes back in its own words either way. The script

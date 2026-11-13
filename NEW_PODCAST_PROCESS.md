@@ -334,24 +334,35 @@ editing a guide.
 
 -----
 
-## Step 5c: Tell the phones that asked
+## Step 5c: Book the noon notification for the phones that asked
 
 The last thing, and only when everything above worked: the row is
 published, `episode_url` landed, the title has no `(Working Title)` left on
 it, and the setlist step did what it said. If any of that failed or was
-skipped, stop and send nothing. A notification that sends somebody to
+skipped, stop and book nothing. A notification that sends somebody to
 "Audio coming soon!" is worse than none, and it cannot be taken back.
 
 ```bash
-python3 scripts/hc_supabase.py rpc hc_announce_new_sermon '{"p_id": "sermon-your-slug"}'
+python3 scripts/hc_supabase.py rpc hc_schedule_new_sermon '{"p_id": "sermon-your-slug"}'
 ```
 
+**It goes out at noon, church time, not when the run ends.** A run before
+12:00 books noon that day; a run at 12:00 or later books noon the next day,
+so the Tuesday evening routine's notification lands Wednesday at lunch
+rather than at dinner. Migration 0099 is the whole of it: a clock in the
+noon hour sends every booking that is due, checking first that the message
+is still published with its episode, and unbooks one that is not. The
+answer says when, in words, under `says`.
+
 It goes only to phones that turned on **New sermon audio** in Your account,
-which is off unless somebody chose it. The function checks the row again
-before anything is sent, and refuses one with no episode, one from more than
-two weeks ago, or one already announced, so running `/new-podcast` twice for
-the same Sunday tells nobody twice. A refusal is not a failure of the run:
-say what it said and finish.
+which is off unless somebody chose it. The function checks the row before
+it books, and refuses one with no episode, one from more than two weeks ago,
+or one already announced, so running `/new-podcast` twice for the same
+Sunday tells nobody twice; a second run before noon leaves the booking as it
+was. A refusal is not a failure of the run: say what it said and finish.
+
+`hc_announce_new_sermon` still sends straight away, for the rare time
+somebody asks for that. The noon clock then finds it already told.
 
 **Never in a backfill.** The back catalogue is not news, and the two week
 limit is there in case somebody forgets.
