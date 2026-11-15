@@ -61,7 +61,8 @@ function appChanges() {
 }
 
 function releases() {
-  const text = fs.readFileSync(path.join(ROOT, 'RELEASES.md'), 'utf8');
+  // main is where /new-build records each build; the checked-out copy can be behind.
+  const text = git('show origin/main:RELEASES.md') || fs.readFileSync(path.join(ROOT, 'RELEASES.md'), 'utf8');
   const rows = text.split('\n')
     .filter((l) => /^\|\s*\d{4}-\d\d-\d\d\s*\|/.test(l))
     .map((l) => l.split('|').map((c) => c.trim()))
