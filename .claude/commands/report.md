@@ -33,7 +33,8 @@ $ARGUMENTS
 
    It adds what comes from the repository by itself: changes on `main` in
    the period, from git (it deepens a shallow clone as needed), and the App
-   Store version from `RELEASES.md`. It writes
+   Store version from Apple's public listing (falling back to
+   `RELEASES.md` on `main`). It writes
    `reports/Home Church report <date>.pdf` and a `.png` of the same page.
 
 3. **Look at the PNG** before sending. One page, nothing cut off, nothing
@@ -62,8 +63,9 @@ report or `db.json`.
 | Cafe orders | Square production orders that were paid. Sandbox orders are tests |
 | Messages to the office | `contact_messages` |
 | Published | Rows created in the period and published |
-| Coming up | Approved events in the next 14 days, first four |
+| Coming up | Approved events in the next 60 days, first four |
 | Improvements made | Non-merge commits on `main` in the period |
+| In the App Store | Apple's public lookup for `com.homechurchnola.app`; next version from `RELEASES.md` on `main` when it is newer |
 | Automatic updates | Instagram, TikTok and newsletter syncs. "Not updating" if a feed has had no successful run for 6 hours |
 
 ## The schedule

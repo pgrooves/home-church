@@ -9,6 +9,7 @@
 -- The two App Review demo accounts are left out of every account count.
 -- Cafe counts Square production orders only; sandbox orders are tests.
 -- Notifications count what went to the church, not admin review alerts.
+-- Coming up looks 60 days ahead: the church posts events weeks out.
 
 with
 p as (
@@ -84,11 +85,11 @@ select json_build_object(
   'pub_events',    (select count(*) from ev, p where created_at >= p.s),
 
   'groups_listed', (select count(*) from groups where published),
-  'upcoming_count', (select count(*) from ev, p where starts_at >= p.e and starts_at < p.e + interval '14 days'),
+  'upcoming_count', (select count(*) from ev, p where starts_at >= p.e and starts_at < p.e + interval '60 days'),
   'upcoming', (
     select coalesce(json_agg(x order by x.starts_at), '[]'::json) from (
       select title, starts_at from ev, p
-      where starts_at >= p.e and starts_at < p.e + interval '14 days'
+      where starts_at >= p.e and starts_at < p.e + interval '60 days'
       order by starts_at limit 4
     ) x
   ),

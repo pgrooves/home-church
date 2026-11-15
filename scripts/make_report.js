@@ -60,6 +60,26 @@ function appChanges() {
   return out ? out.split('\n').length : 0;
 }
 
+// The App Store's own public listing says what is live. RELEASES.md only
+// marks a build Live when the next /new-build runs, so on its own it lags.
+function appStoreVersion() {
+  try {
+    const out = execSync(
+      'curl -s --max-time 15 "https://itunes.apple.com/lookup?bundleId=com.homechurchnola.app&country=us"',
+      { stdio: ['ignore', 'pipe', 'ignore'] }).toString();
+    const r = JSON.parse(out).results || [];
+    return r[0] && r[0].version ? r[0].version : null;
+  } catch (e) { return null; }
+}
+
+const newer = (a, b) => {
+  const x = a.split('.').map(Number), y = b.split('.').map(Number);
+  for (let i = 0; i < Math.max(x.length, y.length); i++) {
+    if ((x[i] || 0) !== (y[i] || 0)) return (x[i] || 0) > (y[i] || 0);
+  }
+  return false;
+};
+
 function releases() {
   // main is where /new-build records each build; the checked-out copy can be behind.
   const text = git('show origin/main:RELEASES.md') || fs.readFileSync(path.join(ROOT, 'RELEASES.md'), 'utf8');
@@ -67,14 +87,14 @@ function releases() {
     .filter((l) => /^\|\s*\d{4}-\d\d-\d\d\s*\|/.test(l))
     .map((l) => l.split('|').map((c) => c.trim()))
     .map((c) => ({ date: c[1], version: c[2], build: c[3], status: c[4] }));
-  const live = rows.find((r) => /live/i.test(r.status));
-  let liveVersion = live ? live.version : null;
+  let liveVersion = appStoreVersion();
   if (!liveVersion) {
+    const live = rows.find((r) => /live/i.test(r.status));
     const m = text.match(/\*\*(\d+(?:\.\d+)+) \(\d+\)\*\*, uploaded and live/);
-    liveVersion = m ? m[1] : '?';
+    liveVersion = live ? live.version : m ? m[1] : '?';
   }
   const latest = rows[0];
-  const next = latest && latest.version !== liveVersion ? latest : null;
+  const next = latest && liveVersion !== '?' && newer(latest.version, liveVersion) ? latest : null;
   return { liveVersion, next };
 }
 
@@ -109,7 +129,10 @@ const feedLine = down.length
   : 'All running';
 
 const upcoming = (db.upcoming || []).map((e) =>
-  '<li><span class="when">' + fmtDay(new Date(e.starts_at), { weekday: 'short' }) + '</span>' + esc(e.title) + '</li>'
+  '<li><span class="when">' + fmtDay(new Date(e.starts_at), { weekday: 'short' }) + '</span><span>' +
+  // Titles often end with their own date ("Holiday Market, December 6"); the column already says it.
+  esc(String(e.title).replace(/,\s*(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2}$/, '')) +
+  '</span></li>'
 ).join('') || '<li class="none">Nothing on the calendar</li>';
 const moreEvents = db.upcoming_count > (db.upcoming || []).length
   ? '<li class="none">and ' + (db.upcoming_count - db.upcoming.length) + ' more</li>' : '';
@@ -147,9 +170,9 @@ td.num.wide{width:auto;white-space:nowrap}
 .prev{color:#6D6864;font-size:11.5px}
 .unit{font-weight:600;font-size:13px;color:#6D6864}
 ul{list-style:none}
-li{padding:8px 0;border-bottom:1px solid #C8C0B0;font-size:15px}
+li{padding:8px 0;border-bottom:1px solid #C8C0B0;font-size:15px;display:flex}
 li.none{color:#6D6864}
-.when{display:inline-block;width:92px;font-weight:800;white-space:nowrap}
+.when{flex:none;width:92px;font-weight:800;white-space:nowrap}
 .warn{color:#8B4A3F;font-weight:700}
 footer{margin-top:auto;padding-top:14px;border-top:1px solid #C8C0B0;color:#6D6864;font-size:11.5px;display:flex;justify-content:space-between}
 </style></head><body>
