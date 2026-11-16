@@ -181,11 +181,20 @@
     });
   }
 
+  /* What sits above the series' title. A single message, one sermon nobody
+     has said starts a series, is called that rather than "Current series" or
+     "Past series", and goes without the count: "1 episode" under it would be
+     the same promise of more in other words. */
+  function seriesKicker(series) {
+    if (!HC.data.isFullSeries(series)) return 'Single message';
+    return series.current ? 'Current series' : 'Past series';
+  }
+
   function seriesMeta(series) {
     var count = HC.data.sermonsInSeries(series.id).length;
+    var full = HC.data.isFullSeries(series);
     return '' +
-      '<p class="hc-eyebrow hc-series-meta__kicker">' +
-        (series.current ? 'Current series' : 'Past series') + '</p>' +
+      '<p class="hc-eyebrow hc-series-meta__kicker">' + seriesKicker(series) + '</p>' +
       '<h3 class="hc-display-m hc-series-meta__title">' + c.esc(series.title) + '</h3>' +
       /* The series' own line. Its title above is what the series is called on
          the artwork and in the guide list, and the count below it is counted
@@ -199,9 +208,11 @@
           value: series.subtitle, label: series.title + ', the line under it',
           rows: 3 }
       ) +
-      '<p class="hc-caption hc-series-meta__count">' +
-        count + ' episode' + (count === 1 ? '' : 's') + (series.current ? ' so far' : '') +
-      '</p>';
+      (full
+        ? '<p class="hc-caption hc-series-meta__count">' +
+            count + ' episode' + (count === 1 ? '' : 's') + (series.current ? ' so far' : '') +
+          '</p>'
+        : '');
   }
 
   function seriesEpisodes(series) {
@@ -226,6 +237,82 @@
         '<span class="hc-visually-hidden">' + c.esc(series.title) + '</span>' +
         c.cover('', '4x3', { compact: true, art: series.artUrl || '' }) +
       '</li>';
+  }
+
+  /* ============================================================ browse series
+     A shortcut into the rail for the series proper, with the single messages
+     left out. Folded away under one centred button; open, it is a sideways
+     strip of small tiles, and picking one moves the big rail above the
+     episode list to that series and folds the strip away again. The strip
+     only ever moves the rail: the rail is still what decides what is drawn
+     underneath it, so there is one way the page changes, not two. */
+  function browseTile(series, index) {
+    var count = HC.data.sermonsInSeries(series.id).length;
+    return '' +
+      '<li class="hc-series-browse__item">' +
+        '<button type="button" class="hc-series-browse__tile" data-action="pick-series" ' +
+          'data-index="' + index + '">' +
+          '<span class="hc-series-browse__art">' +
+            c.cover('', '1x1', { compact: true, art: series.artUrl || '' }) +
+          '</span>' +
+          '<span class="hc-series-browse__title">' + c.esc(series.title) + '</span>' +
+          '<span class="hc-caption hc-series-browse__count">' +
+            count + ' episode' + (count === 1 ? '' : 's') + (series.current ? ' so far' : '') +
+          '</span>' +
+        '</button>' +
+      '</li>';
+  }
+
+  function seriesBrowse(list) {
+    var tiles = '';
+    list.forEach(function (series, i) {
+      if (HC.data.isFullSeries(series)) tiles += browseTile(series, i);
+    });
+    if (!tiles) return '';
+    return '' +
+      '<div class="hc-series-browse">' +
+        '<button type="button" class="hc-series-browse__toggle" data-action="toggle-series-browse" ' +
+          'aria-expanded="false" aria-controls="series-browse-panel">' +
+          '<span>Browse series</span>' +
+          c.icon('chevronDown', 'hc-series-browse__chevron') +
+        '</button>' +
+        '<div class="hc-series-browse__panel" id="series-browse-panel" data-open="false">' +
+          '<ul class="hc-series-browse__track" role="list">' + tiles + '</ul>' +
+        '</div>' +
+      '</div>';
+  }
+
+  function toggleBrowse(btn, force) {
+    var wrap = btn.closest('.hc-series-browse');
+    if (!wrap) return;
+    var open = typeof force === 'boolean' ? force : btn.getAttribute('aria-expanded') !== 'true';
+    btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    var panel = wrap.querySelector('.hc-series-browse__panel');
+    if (panel) panel.setAttribute('data-open', open ? 'true' : 'false');
+  }
+
+  /* A tile in the strip was tapped: slide the rail to that series, redraw
+     under it straight away rather than waiting for the scroll to settle, and
+     fold the strip. */
+  function pickSeries(tile) {
+    var index = parseInt(tile.getAttribute('data-index'), 10) || 0;
+    var screen = tile.closest('.hc-listen');
+    var rail = screen && screen.querySelector('[data-series-rail]');
+    if (!rail) return;
+    var slides = rail.firstElementChild ? rail.firstElementChild.children : [];
+    var slide = slides[index];
+    var wrap = rail.closest('.hc-series-picker');
+    selectSeries(rail, index);
+    if (slide && wrap) {
+      wrap.setAttribute('data-heading', String(index));
+      // If the glide is interrupted by a thumb, stop ignoring the rail.
+      setTimeout(function () { wrap.removeAttribute('data-heading'); }, 1200);
+      rail.scrollTo({ left: slide.offsetLeft - slides[0].offsetLeft, behavior: 'smooth' });
+    }
+    var toggle = screen.querySelector('[data-action="toggle-series-browse"]');
+    if (toggle) toggle.setAttribute('aria-expanded', 'false');
+    var panel = screen.querySelector('.hc-series-browse__panel');
+    if (panel) panel.setAttribute('data-open', 'false');
   }
 
   function seriesPicker(list) {
@@ -261,7 +348,17 @@
      produces. */
   function selectSeries(rail, index) {
     var wrap = rail.closest ? rail.closest('.hc-series-picker') : null;
-    if (!wrap || String(index) === wrap.getAttribute('data-index')) return;
+    if (!wrap) return;
+
+    /* While the rail glides to a series picked from the Browse series strip
+       it passes over every slide in between, and redrawing each one would
+       flicker their names under it. Those frames are ignored until it lands. */
+    var heading = wrap.getAttribute('data-heading');
+    if (heading !== null) {
+      if (String(index) !== heading) return;
+      wrap.removeAttribute('data-heading');
+    }
+    if (String(index) === wrap.getAttribute('data-index')) return;
 
     var ids = (wrap.getAttribute('data-series-ids') || '').split(',');
     var series = HC.data.getSeries(ids[index]);
@@ -335,7 +432,8 @@
 
     var list = seriesList();
     if (list.length) {
-      html += c.sectionHeader('', 'Select series');
+      html += c.sectionHeader('', 'Browse sermons');
+      html += seriesBrowse(list);
       html += seriesPicker(list);
     }
 
@@ -383,6 +481,10 @@
 
   HC.screens = HC.screens || {};
   HC.screens.listen = render;
-  HC.screens.listenHelpers = { selectSeries: selectSeries };
+  HC.screens.listenHelpers = {
+    selectSeries: selectSeries,
+    toggleBrowse: toggleBrowse,
+    pickSeries: pickSeries
+  };
 
 })(window.HC = window.HC || {});

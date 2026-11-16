@@ -32,7 +32,7 @@
 
   var cfg = HC.config || {};
   var CACHE_KEY = 'content';
-  var CACHE_VERSION = 17;     // bump when a mapping below changes shape
+  var CACHE_VERSION = 18;     // bump when a mapping below changes shape
   var TIMEOUT_MS = 12000;
 
   // The tables we pull, and the HC.data key each one fills. Adding another
@@ -173,6 +173,12 @@
       subtitle: str(r.subtitle),
       startedOn: r.started_on || null,
       current: !!r.is_current,
+      /* Said out loud by /new-sunday when a message starts a series. Until
+         it is, a series with one message in it reads as a single message,
+         so nobody is promised a part 2 that was never planned. Two or more
+         messages make it a series whatever this says. Missing until
+         migration 0100 is applied, and missing reads as false. */
+      isSeries: !!r.is_series,
       blurb: str(r.blurb),
       artUrl: r.art_url || null
     };

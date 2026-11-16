@@ -4028,6 +4028,16 @@
       if (panel) panel.setAttribute('data-open', open ? 'false' : 'true');
     },
 
+    /* Sermons: the "Browse series" strip under the rail's header. The
+       screen owns both; see js/screens/listen.js. */
+    'toggle-series-browse': function (el) {
+      HC.screens.listenHelpers.toggleBrowse(el);
+    },
+
+    'pick-series': function (el) {
+      HC.screens.listenHelpers.pickSeries(el);
+    },
+
     filter: function (el) {
       var name = el.getAttribute('data-filter');
       var value = el.getAttribute('data-value');

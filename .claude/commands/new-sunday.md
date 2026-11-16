@@ -76,7 +76,14 @@ ask for:
 
 Leave them out and they are derived rather than asked about. The series is
 the one with `is_current` set, which is right on every Sunday that continues
-a series. The duration comes off the transcript's own timestamps when it has
+a series. **Not when the current row is a single message** (one message in
+it and `is_series` not true): the week after a one-off can be another one-off,
+a new series, or part 2 of it, and only the pastor knows which, so `--go`
+stops and asks the four-way question in `/new-sermon` Step 4.
+
+The command line can say it instead: `single`, `new series <Title>`, or
+`part 2 <Title>` in place of a series id, for example
+`/new-sunday --go    part 2 Crazy Faith, 41 min`. The duration comes off the transcript's own timestamps when it has
 them, and is left off the row when it does not, which the app draws as a
 sensible blank.
 
@@ -113,7 +120,8 @@ interruption.
   title, a subtitle, a blurb and artwork, plus flipping the old one's
   `is_current`, and none of that is inferable from a transcript. If the
   sermon plainly continues the current series, carry on. If it reads like a
-  new one and the command line did not name a series, stop and ask.
+  new one and the command line did not name a series, stop and ask. The
+  same goes for the week after a single message, above.
 - **A setlist line naming two artists.** `Holy Spirit: Jesus Culture or
   Bryan & Katie Torwalt` is two different recordings and picking one silently
   is picking wrong half the time. `/new-worship` already refuses to decide

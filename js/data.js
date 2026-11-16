@@ -2760,6 +2760,15 @@
       return sermons.filter(function (s) { return s.preachedOn === iso; })[0] || null;
     },
 
+    /* A series, as opposed to a single message filed under its own name.
+       Two or more messages always make one. One message makes one only when
+       it was marked as the start of a series (`is_series`), which is what
+       keeps a one-off from saying "so far" as if more were coming. */
+    isFullSeries: function (s) {
+      if (!s) return false;
+      return !!s.isSeries || this.sermonsInSeries(s.id).length > 1;
+    },
+
     currentSeries: function () {
       return series.filter(function (s) { return s.current; })[0] || series[0];
     },

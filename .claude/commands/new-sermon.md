@@ -350,8 +350,10 @@ opening anything.
 This is also where the two questions you did not ask at the start get asked,
 in one breath, alongside the draft rather than before it:
 
-1. **Which series is this in?** A new one means a new `series` row and flipping
-   the old one's `is_current`, which the publishing half covers.
+1. **Which series is this in?** Ask it as the four choices: part of the
+   current series, a single message, the start of a new series, or part 2 of
+   last week's single message. "After the guide is written and approved" has
+   what each one writes. A new row means flipping the old one's `is_current`.
 2. **Roughly how long was the message?** For `podcasts.duration`, if the
    transcript does not make it obvious.
 
@@ -466,9 +468,31 @@ columns, and read the row back before you report it published.
 key. For a new series, create it and flip the old one in the same pass:
 
 ```bash
-python3 scripts/hc_supabase.py upsert series '{"id":"series-xxx","title":"...","subtitle":"...","blurb":"...","started_on":"2026-08-16","is_current":true}'
+python3 scripts/hc_supabase.py upsert series '{"id":"series-xxx","title":"...","subtitle":"...","blurb":"...","started_on":"2026-08-16","is_current":true,"is_series":true}'
 python3 scripts/hc_supabase.py update series series-david '{"is_current": false}'
 ```
+
+**Every message is one of four things, and `is_series` is how the app tells
+them apart.** Sermons draws a series holding one message as "Single message"
+unless `is_series` is true, so a one-off never says "1 episode so far". Two or
+more messages make it a series whatever the flag says.
+
+- **Part of the current series.** Same `series_id`, nothing to change.
+- **A single message.** Its own row, titled with the message's title, with
+  `"is_series": false` (or left off) and `is_current` true; flip the old one.
+- **The start of a new series.** A new row as above, with `"is_series": true`.
+- **Part 2 of last week's single message.** Do not make a new row. Reuse last
+  week's: give it the series' real title, subtitle, blurb and art, and set
+  `"is_series": true`. Last week's message and guide already point at that row,
+  so they become part 1 by themselves, and this week's message goes in the
+  same `series_id`. The row's id keeps last week's slug; nobody sees an id.
+
+  ```bash
+  python3 scripts/hc_supabase.py update series series-last-weeks-slug '{"title":"...","subtitle":"...","blurb":"...","is_series":true}'
+  ```
+
+`is_series` arrives with migration 0100. If that is not applied yet, leave the
+key out of every write: an unknown column fails the whole upsert.
 
 **Give it `art_url` while you are there.** It is optional and it is the one
 field that shows up on five screens: the rail on Listen, the latest message
