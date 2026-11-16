@@ -48,8 +48,7 @@
     { name: 'home',    label: 'Home',    icon: 'home' },
     { name: 'cal',     label: 'Cal',     icon: 'calendar', long: 'Calendar' },
     { name: 'connect', label: 'Connect', icon: 'connect' },
-    { name: 'listen',  label: 'Listen',  icon: 'listen' },
-    { name: 'guide',   label: 'Guide',   icon: 'guide' },
+    { name: 'listen',  label: 'Sermons', icon: 'listen' },
     { name: 'more',    label: 'More',    icon: 'more', tab: false }
   ];
 
@@ -273,7 +272,7 @@
 
   var TITLES = {
     home: 'Home',
-    listen: 'Listen',
+    listen: 'Sermons',
     guide: 'Guides',
     group: 'Group',
     connect: 'Connect',

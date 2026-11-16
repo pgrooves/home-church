@@ -73,7 +73,11 @@
 
   // Old route names kept alive so a link or a restored history entry from
   // before a rename still lands somewhere real.
-  var ALIASES = { watch: 'listen' };
+  //
+  // `guide` is the old Guide tile, the list of guides. That list now lives
+  // inside Sermons, one message at a time, so the bare route goes there. A
+  // guide itself is `guide-reader` and is untouched.
+  var ALIASES = { watch: 'listen', guide: 'listen' };
 
   var routes = {};        // name -> render(route) returning an element
   var current = null;

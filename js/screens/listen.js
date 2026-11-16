@@ -1,10 +1,10 @@
 /* ==========================================================================
-   Home Church, Listen
-   The Home Church NOLA podcast. The latest message, then a rail of every
+   Home Church, Sermons (the `listen` route)
+   Listen and Guide, merged into one tile. The Home Church NOLA podcast. The latest message, then a rail of every
    series the church has preached with that series' messages underneath it,
    then the whole archive folded away behind one chevron. Every message opens
-   to its own episode notes and a way into Spotify. Any sermon with a guide
-   carries a quiet link into it.
+   to its own episode notes, a way into Spotify, and, beside it, the way into
+   that message's guide when it has one.
    ========================================================================== */
 
 (function (HC) {
@@ -12,13 +12,18 @@
 
   var c = HC.components;
 
-  function guideLink(sermon) {
+  /* The guide's way in, the same size and weight as the Spotify button it
+     sits beside. Listen and Guide used to be two tiles; this button is what
+     replaced the second one, so it looks like a destination rather than an
+     aside. A message with no guide has nothing here. */
+  function guideButton(sermon) {
     if (!sermon.guideId) return '';
-    return '<button type="button" class="hc-inline-link" data-action="open-guide" ' +
-      'data-id="' + c.esc(sermon.guideId) + '">' +
-      c.icon('guide', 'hc-share__icon') +
-      '<span>Open the group guide</span>' +
-    '</button>';
+    return c.button('Open guide', {
+      action: 'open-guide',
+      id: sermon.guideId,
+      variant: 'secondary',
+      icon: 'guide'
+    });
   }
 
   // The one action every episode carries. Named for where it lands, because
@@ -33,6 +38,16 @@
       variant: variant || 'secondary',
       icon: 'listen'
     });
+  }
+
+  /* Spotify and the guide, side by side, each half the width. A message
+     without a guide keeps the Spotify button at full width on its own rather
+     than half a row and a gap. */
+  function actions(sermon, className, variant) {
+    var guide = guideButton(sermon);
+    return '<div class="' + className + (guide ? ' hc-sermon-actions' : '') + '">' +
+      listenButton(sermon, variant) + guide +
+    '</div>';
   }
 
   /* The message's own notes. Two columns can hold them: `summary`, which is a
@@ -91,8 +106,7 @@
           c.esc(c.metaLine([sermon.preacher, sermon.duration])) +
         '</p>' +
         '<div class="hc-latest__desc">' + summaryHtml(sermon, 'latest') + '</div>' +
-        '<div class="hc-latest__action">' + listenButton(sermon, 'primary') + '</div>' +
-        guideLink(sermon) +
+        actions(sermon, 'hc-latest__action', 'primary') +
       '</div>';
   }
 
@@ -127,8 +141,7 @@
         '<div class="hc-episode" id="' + c.esc(panelId) + '" data-open="false">' +
           '<div class="hc-episode__inner">' +
             summaryHtml(sermon, scope || 'archive') +
-            '<div class="hc-episode__action">' + listenButton(sermon) + '</div>' +
-            guideLink(sermon) +
+            actions(sermon, 'hc-episode__action') +
           '</div>' +
         '</div>' +
       '</div>';

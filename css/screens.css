@@ -4728,3 +4728,27 @@ html.hc-cafe-sheet-open, html.hc-cafe-sheet-open body { overflow: hidden; }
 .hc-cafe-pause__note { margin-top: var(--hc-space-sm); text-align: center; }
 .hc-cafe-oc__note { margin: var(--hc-space-sm) 0 0; text-align: center; }
 .hc-cafe-oc__back { font: inherit; font-weight: 600; color: var(--hc-accent-deep); text-decoration: underline; min-height: 32px; }
+
+/* Sermons: Spotify and the guide side by side, each half the row. Tighter
+   side padding than a full-width button so "Listen on Spotify" fits in half
+   a phone, and a longer label ("Audio coming soon!", or a bigger text size)
+   wraps to a second line inside the button rather than running out of it. */
+.hc-sermon-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--hc-space-sm);
+}
+
+.hc-sermon-actions .hc-btn {
+  min-width: 0;
+  padding: 0 var(--hc-space-sm);
+  gap: var(--hc-space-xs);
+  text-align: center;
+  line-height: 1.15;
+  padding-block: var(--hc-space-xs);
+  font-size: calc(var(--hc-button) * 0.92);
+  letter-spacing: 0;
+}
+
+.hc-sermon-actions .hc-btn__icon { flex: none; }
+.hc-sermon-actions .hc-btn > span { flex: 0 1 auto; }
