@@ -19,7 +19,8 @@ row is the code that build was made from**, and that is how the next
 
 | Date | Version | iPhone build | Status | What's New |
 |---|---|---|---|---|
-| 2026-11-07 | 1.2 | 25 | | Bug fixes and improvements. New: tap a picture on an announcement to see all of it. New: tapping a notification opens what it was about. |
+| 2026-11-17 | 1.3 | 26 | | Bug fixes and improvements. New: Listen and Guide are now one page, Sermons, with each message's guide a tap away. New: Browse series, to jump straight to any sermon series. |
+| 2026-11-07 | 1.2 | 25 | Live | Bug fixes and improvements. New: tap a picture on an announcement to see all of it. New: tapping a notification opens what it was about. |
 | 2026-10-29 | 1.1 | 24 | Live | Bug fixes and improvements. New: in a guide, drag through the audio, or tap a paragraph to jump there. New: turn on notifications for new sermon audio from Your account. |
 
 Before this list began: **1.0.1 (23)**, uploaded and live on the App Store

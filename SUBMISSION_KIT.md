@@ -606,8 +606,12 @@ analytics, external links, and data collection that buy us nothing.
 ## 7. App Review notes
 
 Paste this into the Notes for Review field, which caps at 4000 characters.
-This is 3284, which leaves room for CRLF line endings if App Store Connect
+This is 3309, which leaves room for CRLF line endings if App Store Connect
 counts them; check the count again if you edit it.
+
+**1.3 (November 17) changes one step** under LEADER MODE: Listen and Guide
+became one page, Sermons, so the reviewer goes to SERMONS, opens a message
+and taps "Open guide", instead of tapping GUIDE.
 
 **1.2 (November 6) adds one paragraph** under the switched-off list: the
 contact form on Connect went behind its own switch, contact_form_on, and
@@ -657,9 +661,10 @@ person rather than a phone, so the church grants it to whoever leads a
 group.
 
   1. Circle in the top right, sign in with the Host account.
-  2. Round button in the bottom right, then GUIDE.
-  3. Open any guide and tap "Start presentation mode": one question at a
-     time in large type, the view leaders use while running a meeting.
+  2. Round button in the bottom right, then SERMONS.
+  3. Tap any message, then "Open guide".
+  4. Tap "Start presentation mode": one question at a time in large type,
+     the view leaders use while running a meeting.
 
   (As the Member account, or signed out, the button is not there. That is
   the feature working, not an error.)
