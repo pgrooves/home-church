@@ -441,10 +441,18 @@
      caption size, because it is a footnote to the list above it and not a
      sixth thing on the front door.
 
-     DRAWN WHENEVER THIS PHONE HAS ARCHIVED ANYTHING, including on the week
-     every live announcement has been archived and there are no cards left over
-     it. That is exactly the week somebody needs the way back, and hanging the
+     DRAWN UNDER EVERY ANNOUNCEMENTS LIST, archived or not. It used to appear
+     only once this phone had archived something, which was tidy and meant
+     nobody could find it: a guest looking for "the archive" found nothing to
+     tap, and the box in the corner of each card had no word anywhere saying
+     where it led. The line now says it is there before it is needed, and an
+     empty archive opens on a sentence saying how to fill it.
+
+     AND ON THE WEEK EVERY LIVE CARD IS ARCHIVED, with no cards left over it.
+     That is exactly the week somebody needs the way back, and hanging the
      link off the presence of a card above it would be the week it disappears.
+     The one time it is not drawn is no live cards and nothing archived: a
+     heading over a link to an empty list is a heading over nothing.
 
      IT COUNTS WHAT IS IN HC.data, not what is in the store's map. An id in
      that map whose announcement the church has since deleted is not an
@@ -461,9 +469,9 @@
 
   var ARCHIVE_LINK = '(Announcement Archive)';
 
-  function archiveLink() {
+  function archiveLink(hasCards) {
     var n = archivedAnnouncements().length;
-    if (!n) return '';
+    if (!n && !hasCards) return '';
 
     return '' +
       '<p class="hc-home__archive-line">' +
@@ -473,8 +481,9 @@
           /* The count is said to a screen reader and not drawn, so the line
              on screen stays the three words the church asked for while the
              announcement a screen reader makes is worth listening to. */
-          '<span class="hc-visually-hidden">, ' + n +
-            (n === 1 ? ' archived announcement' : ' archived announcements') +
+          '<span class="hc-visually-hidden">, ' +
+            (n === 0 ? 'nothing archived yet'
+              : n + (n === 1 ? ' archived announcement' : ' archived announcements')) +
           '</span>' +
         '</button>' +
       '</p>';
@@ -796,7 +805,7 @@
        nothing to show and still has somewhere to go, and the heading over that
        one line is what says which archive it is the way back to. */
     var ann = announcements();
-    var archive = archiveLink();
+    var archive = archiveLink(!!ann);
     if (ann || archive) {
       html += c.sectionHeader('', 'Announcements');
       html += '<div class="hc-home__announcement">' + ann + archive + '</div>';

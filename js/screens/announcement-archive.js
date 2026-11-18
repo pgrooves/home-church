@@ -214,8 +214,11 @@
 
   /* --------------------------------------------------------- the screen */
 
-  var EMPTY = 'Nothing in here. Announcements you archive from Home wait in ' +
-    'this list until you put them back.';
+  /* Reached far more often now that Home draws the link under every list,
+     including for somebody who has never archived anything. So it says how,
+     and not only that the list is empty. */
+  var EMPTY = 'Nothing archived yet. Tap the box in the corner of an ' +
+    'announcement on Home and it waits here until you put it back.';
 
   /* Said under the heading, every time, because the one thing somebody opening
      this screen might reasonably fear is that they have done something to the

@@ -133,6 +133,11 @@ const count = (page, sel) => page.evaluate(
     }
   });
 
+  /* No database, enforced rather than assumed. Where this machine can reach
+     the church's project, the content sync lands mid-test and replaces the
+     bundled seed with the live announcements, and every id below is gone. */
+  await page.route(/supabase\.co/, route => route.abort());
+
   await page.goto('http://127.0.0.1:' + PORT + '/index.html');
   await page.waitForFunction(() => window.HC && window.HC.data && window.HC.router, null,
     { timeout: 15000 });
@@ -153,9 +158,22 @@ const count = (page, sel) => page.evaluate(
   ok('and nothing on Home is still wired to the old dismissal',
     await count(page, '[data-action="dismiss-banner"]') === 0);
 
-  // Nothing archived, so there is nothing to link to yet.
-  ok('no archive line before anything is archived',
-    await count(page, '[data-action="open-announcement-archive"]') === 0);
+  // Nothing archived yet, and the way to the archive is there anyway: a
+  // person looking for it should not have to archive something to find it.
+  ok('the archive line is there before anything is archived',
+    await count(page, '[data-action="open-announcement-archive"]') === 1);
+  ok('and tells a screen reader there is nothing in it yet',
+    await page.evaluate(() => /nothing archived yet$/.test(
+      document.querySelector('[data-action="open-announcement-archive"]')
+        .textContent.replace(/\s+/g, ' ').trim())));
+
+  await page.click('[data-action="open-announcement-archive"]');
+  await settle(page);
+  ok('and opens on a sentence saying how to fill it',
+    await page.evaluate(() => /Tap the box in the corner/.test(
+      (document.querySelector('.hc-archive') || {}).textContent || '')));
+  await home(page);
+  await settle(page);
 
   await page.click('.hc-banner[data-banner="ann-e2e-three"] .hc-banner__archive');
   await settle(page);

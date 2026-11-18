@@ -531,7 +531,7 @@
       field({ name: 'startsOn', label: 'Goes up', type: 'date', value: d.startsOn,
         help: 'The day the card appears. Empty puts it on Home now.' }) +
       field({ name: 'endsOn', label: 'Comes down', type: 'date', value: d.endsOn,
-        help: 'The day it disappears. Empty leaves it up.' }) +
+        help: comesDownHelp(d) }) +
     '</div>';
 
     html += switchRow({
@@ -733,6 +733,32 @@
     }
 
     return '<p class="hc-caption hc-admin__loading">Newsletter checked ' + c.esc(when) + '.</p>';
+  }
+
+  /* What leaving "Comes down" empty does, which since migration 0101 depends
+     on whether the announcement exists yet.
+
+     A NEW ONE gets a date from the database the moment it is saved: the day it
+     goes up plus the days in App settings, 21 to start. So "Empty leaves it
+     up", which this said for years, became untrue for every new card, and the
+     date that does appear after saving would have looked like a bug.
+
+     AN EXISTING ONE is an edit, which 0101 never touches. Clearing the date
+     there is how somebody keeps a card up for good, and it stays cleared. */
+  function shelfDays() {
+    var raw = String(HC.data.setting('announcement_shelf_days', '21') || '').trim();
+    var n = /^\d{1,3}$/.test(raw) ? parseInt(raw, 10) : 21;
+    return n > 365 ? 21 : n;
+  }
+
+  function comesDownHelp(d) {
+    if (d.id) return 'The day it disappears. Empty keeps it up until you take it down.';
+    var n = shelfDays();
+    if (!n) return 'The day it disappears. Empty leaves it up.';
+    var span = n % 7 === 0
+      ? (n / 7 === 1 ? '1 week' : (n / 7) + ' weeks')
+      : (n === 1 ? '1 day' : n + ' days');
+    return 'The day it disappears. Empty takes it down ' + span + ' after it goes up.';
   }
 
   /* What a parsed draft says about itself above the buttons. The dates matter

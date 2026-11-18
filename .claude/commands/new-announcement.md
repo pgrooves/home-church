@@ -73,6 +73,13 @@ hands off, and it is the one nobody thinks to give you. An announcement for a
 September 12 serve day should stop showing on September 13, and setting
 `ends_on` now means nobody has to remember to come back and remove it.
 
+If there is genuinely no end, leave `ends_on` null and say what will happen:
+since migration 0101 the database gives a new announcement with no end date
+one of its own, the day it goes up plus App settings → "Announcements come
+down after (days)" (21 to start). To keep a card up for good, clear the date
+afterwards with `update`, never `upsert`: an upsert runs the insert trigger
+and puts the default straight back.
+
 ## Step 2. Write it in the church's voice
 
 Home shows one announcement at a time, so this is the single most read piece
