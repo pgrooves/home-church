@@ -1053,7 +1053,7 @@
      uses standing in for the mark's band. */
 
   // Each house point carries a third number, when it sets off: 0 leaves at
-  // once, NAVFAB_LAG leaves last. That is what gives the fold its stages
+  // once, 1 leaves last, NAVFAB_LAG of the way through. That is what gives the fold its stages
   // rather than every point sliding straight across together: the roof
   // peaks first, the walls swing down after it, the crossbar draws in and
   // then the upright grows, and the floor's stem and speech tail come last.
@@ -1063,35 +1063,38 @@
   var NAVFAB_SHAPES = {
     top: {
       flat:  [[[4, 6], [7.81, 6], [12, 6], [16.19, 6], [20, 6]]],
-      house: [[[-1.75, 23.72, 0.32], [-1.75, 8.49, 0.12], [12, -1.01, 0],
-               [25.75, 8.49, 0.12], [25.75, 23.72, 0.32]]]
+      house: [[[-1.75, 23.72, 0.8], [-1.75, 8.49, 0.3], [12, -1.01, 0],
+               [25.75, 8.49, 0.3], [25.75, 23.72, 0.8]]]
     },
     mid: {
       flat:  [[[4, 12], [20, 12]], [[12, 12], [12, 12]]],
-      house: [[[8.65, 12.64, 0.1], [15.27, 12.64, 0.1]],
-              [[12, 12.64, 0.1], [12, 9.35, 0.3]]]
+      house: [[[8.65, 12.64, 0.25], [15.27, 12.64, 0.25]],
+              [[12, 12.64, 0.25], [12, 9.35, 0.75]]]
     },
     bot: {
       flat:  [[[4, 18], [9.54, 18], [12, 18]], [[12, 18], [13.96, 18], [20, 18]]],
-      house: [[[-1.75, 23.72, 0.32], [12, 23.72, 0.32], [12, 17.61, 0.38]],
-              [[14.22, 25.01, 0.4], [16.81, 23.72, 0.32], [25.75, 23.72, 0.32]]]
+      house: [[[-1.75, 23.72, 0.8], [12, 23.72, 0.8], [12, 17.61, 0.95]],
+              [[14.22, 25.01, 1], [16.81, 23.72, 0.8], [25.75, 23.72, 0.8]]]
     }
   };
 
   var NAVFAB_ORDER = ['top', 'mid', 'bot'];
-  var NAVFAB_DUR = 820;     // the whole fold, first point leaving to last landing
-  var NAVFAB_LAG = 0.4;     // the latest any point sets off, as a share of it
+  // As quick as the x it replaced: every point travels for 300ms, the x's
+  // --hc-dur-base, and the last sets off 100ms after the first, so the
+  // whole fold is 400ms. Short enough to feel like a reply to the tap.
+  var NAVFAB_DUR = 400;     // the whole fold, first point leaving to last landing
+  var NAVFAB_LAG = 0.25;    // the latest any point sets off, as a share of it
   var NAVFAB_STROKE = [1.8, 2.3];  // the rules' weight, then the house's
 
   var navfabMorph = { bars: null, u: 0, open: false, raf: 0, last: 0 };
 
-  // cubic-bezier(0.55, 0, 0.3, 1). Each point eases in and out over its own
-  // stretch of the fold, so a point setting off never jerks and one landing
-  // settles rather than stops.
+  // The app's --hc-ease, cubic-bezier(0.4, 0, 0.2, 1), the curve the x
+  // used. It is moving on the first frame after the tap and spends its time
+  // settling rather than getting going, which is what reads as snappy.
   function navfabEase(x) {
     if (x <= 0) return 0;
     if (x >= 1) return 1;
-    var x1 = 0.55, x2 = 0.3;
+    var x1 = 0.4, x2 = 0.2;
     var cx = 3 * x1, bx = 3 * (x2 - x1) - cx, ax = 1 - cx - bx;
     var t = x, i;
     for (i = 0; i < 8; i++) {
@@ -1109,7 +1112,7 @@
     s.flat.forEach(function (run, r) {
       run.forEach(function (a, i) {
         var b = s.house[r][i];
-        var k = navfabEase((u - b[2]) / (1 - NAVFAB_LAG));
+        var k = navfabEase((u - b[2] * NAVFAB_LAG) / (1 - NAVFAB_LAG));
         var x = a[0] + (b[0] - a[0]) * k;
         var y = a[1] + (b[1] - a[1]) * k;
         d += (i ? 'L' : 'M') + x.toFixed(2) + ' ' + y.toFixed(2);
