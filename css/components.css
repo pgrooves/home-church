@@ -944,28 +944,13 @@
           drop-shadow(0 1px 1px var(--hc-gold-halo));
 }
 
-/* The three rules become an x. Both glyphs are the same three lines in the
-   same 24 box, so the swap is a transform on each line rather than one icon
-   being taken away and another put in its place: the middle rule fades, and
-   the outer two travel to the centre and cross. A person watching sees the
-   menu fold, which is the honest picture of what the tap did. */
-.hc-navfab__bar {
-  transform-origin: 12px 12px;
-  transition: transform var(--hc-dur-base) var(--hc-ease),
-              opacity var(--hc-dur-fast) var(--hc-ease);
-}
-
-#app[data-navmenu="open"] .hc-navfab__bar--top {
-  transform: translateY(6px) rotate(45deg);
-}
-#app[data-navmenu="open"] .hc-navfab__bar--mid { opacity: 0; }
-#app[data-navmenu="open"] .hc-navfab__bar--bot {
-  transform: translateY(-6px) rotate(-45deg);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .hc-navfab__bar { transition: none; }
-}
+/* The three rules become the church's mark, the house with the cross in
+   it. The points are moved by morphNavfab in js/app.js, which says why it is
+   script rather than a transition here; all this does is round the corners
+   the rules acquire on the way, so the joins match the round ends they
+   already had and no frame of the fold throws a sharp miter. Reduced motion
+   is honoured there too: the shape changes in one step. */
+.hc-navfab__icon { stroke-linejoin: round; }
 
 /* --------------------------------------------------------------------------
    The overlay. Everything the app has, on one screen.

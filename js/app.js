@@ -497,8 +497,8 @@
       '</nav>' +
 
       /* The one piece of navigation chrome on the glass. It is the toggle as
-         well as the way in: the three rules fold into an x while the overlay
-         is up, and it does not move while they do, so the thumb that opened
+         well as the way in: the three rules fold into the church's mark
+         while the overlay is up (see morphNavfab), and it does not move while they do, so the thumb that opened
          it is already on the thing that closes it. */
       '<button type="button" class="hc-navfab" id="hc-navfab" data-action="nav-toggle" ' +
           'aria-expanded="false" aria-controls="hc-navmenu" aria-label="Open navigation">' +
@@ -1026,6 +1026,134 @@
     document.getElementById('app').setAttribute('data-navmenu', open ? 'open' : 'closed');
     navfab.setAttribute('aria-expanded', open ? 'true' : 'false');
     navfab.setAttribute('aria-label', open ? 'Close navigation' : 'Open navigation');
+    morphNavfab(open);
+  }
+
+  /* ----------------------------------------- the three rules become the house
+
+     Open, the button draws the church's mark in outline rather than an x:
+     the top rule lifts at its middle into the roof while its ends drop to
+     become the walls, the middle rule draws in to the crossbar and the
+     upright grows out of it, and the bottom rule settles into the floor,
+     its middle rising as the stem and its right end turning down as the
+     speech tail. Closed, it all lays itself back down flat.
+
+     WHY SCRIPT AND NOT CSS. Each rule is a path whose points all move, and
+     the CSS that animates a path's points (`d`) is not something every
+     WebView an installed copy runs in can be trusted with. Moving the points
+     by hand works in all of them, and it lets a second tap halfway through
+     turn the shape around from wherever it is instead of jumping.
+
+     Each piece is a list of runs, each run a list of points, and the two
+     states have the same number of points so every frame is just a blend of
+     the two. The flat rules space their points by how far apart they end up
+     in the house, so nothing bunches up or races while it travels. The
+     house comes from assets/icons/mark.png, traced to centre lines in the
+     same 24 box the rules were drawn in, with the stroke the button already
+     uses standing in for the mark's band. */
+
+  var NAVFAB_SHAPES = {
+    top: {
+      flat:  [[[4, 6], [7.81, 6], [12, 6], [16.19, 6], [20, 6]]],
+      house: [[[2.5, 20], [2.5, 9.5], [12, 3], [21.5, 9.5], [21.5, 20]]]
+    },
+    mid: {
+      flat:  [[[4, 12], [20, 12]], [[12, 12], [12, 12]]],
+      house: [[[9.7, 12.4], [14.3, 12.4]], [[12, 12.4], [12, 10.1]]]
+    },
+    bot: {
+      flat:  [[[4, 18], [9.54, 18], [12, 18]], [[12, 18], [13.96, 18], [20, 18]]],
+      house: [[[2.5, 20], [12, 20], [12, 15.8]], [[13.6, 20.9], [15.4, 20], [21.5, 20]]]
+    }
+  };
+
+  // Top first, then the cross, then the floor; the other way round on the
+  // way back, so the house is taken down in the order it went up.
+  var NAVFAB_ORDER = ['top', 'mid', 'bot'];
+  var NAVFAB_DUR = 560;
+  var NAVFAB_STAGGER = 60;
+
+  var navfabMorph = { bars: null, u: { top: 0, mid: 0, bot: 0 }, open: false, raf: 0, last: 0, start: 0 };
+
+  // cubic-bezier(0.45, 0, 0.25, 1): a softer start than the app's
+  // --hc-ease, because a shape changing reads smoother when the first frames
+  // ease in rather than leap. It settles the same way --hc-ease does.
+  function navfabEase(x) {
+    if (x <= 0) return 0;
+    if (x >= 1) return 1;
+    var t = x, i, cx = 1.35, bx = 3 * (0.25 - 0.45) - cx, ax = 1 - cx - bx;
+    for (i = 0; i < 8; i++) {
+      var fx = ((ax * t + bx) * t + cx) * t - x;
+      var dx = (3 * ax * t + 2 * bx) * t + cx;
+      if (Math.abs(fx) < 1e-5 || !dx) break;
+      t -= fx / dx;
+    }
+    var cy = 0, by = 3 - cy, ay = 1 - cy - by;
+    return ((ay * t + by) * t + cy) * t;
+  }
+
+  function navfabPath(key, k) {
+    var s = NAVFAB_SHAPES[key], d = '';
+    s.flat.forEach(function (run, r) {
+      run.forEach(function (a, i) {
+        var b = s.house[r][i];
+        var x = a[0] + (b[0] - a[0]) * k;
+        var y = a[1] + (b[1] - a[1]) * k;
+        d += (i ? 'L' : 'M') + x.toFixed(2) + ' ' + y.toFixed(2);
+      });
+    });
+    return d;
+  }
+
+  function navfabDraw() {
+    NAVFAB_ORDER.forEach(function (key) {
+      navfabMorph.bars[key].setAttribute('d', navfabPath(key, navfabEase(navfabMorph.u[key])));
+    });
+  }
+
+  function navfabStep(now) {
+    var m = navfabMorph;
+    // Never backwards (a frame can be stamped a hair before the tap) and
+    // never a leap: back from the background it simply finishes.
+    var dt = Math.max(0, Math.min(100, now - m.last));
+    m.last = now;
+    var running = false;
+    NAVFAB_ORDER.forEach(function (key, i) {
+      var delay = (m.open ? i : NAVFAB_ORDER.length - 1 - i) * NAVFAB_STAGGER;
+      if (now - m.start < delay) { running = true; return; }
+      var u = m.u[key] + (m.open ? 1 : -1) * dt / NAVFAB_DUR;
+      m.u[key] = Math.max(0, Math.min(1, u));
+      if (m.u[key] !== (m.open ? 1 : 0)) running = true;
+    });
+    navfabDraw();
+    m.raf = running ? requestAnimationFrame(navfabStep) : 0;
+  }
+
+  function morphNavfab(open) {
+    var m = navfabMorph;
+    if (!m.bars) {
+      m.bars = {};
+      NAVFAB_ORDER.forEach(function (key) {
+        m.bars[key] = navfab.querySelector('.hc-navfab__bar--' + key);
+      });
+      if (!m.bars.top || !m.bars.mid || !m.bars.bot) { m.bars = null; return; }
+    }
+    if (m.open === open && !m.raf) return;
+    m.open = open;
+    var still = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (still || typeof requestAnimationFrame !== 'function') {
+      if (m.raf) cancelAnimationFrame(m.raf);
+      m.raf = 0;
+      NAVFAB_ORDER.forEach(function (key) { m.u[key] = open ? 1 : 0; });
+      navfabDraw();
+      return;
+    }
+    // A tap mid way turns it round from where it is, with no wait for the
+    // stagger: whatever is already moving just changes direction.
+    var moving = !!m.raf;
+    m.start = performance.now() - (moving ? NAVFAB_STAGGER * NAVFAB_ORDER.length : 0);
+    m.last = performance.now();
+    if (!moving) m.raf = requestAnimationFrame(navfabStep);
   }
 
   /* A link nobody can see should not be a link anybody can reach, same rule as
