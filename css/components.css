@@ -924,8 +924,11 @@
 .hc-navfab:active { transform: scale(0.94); }
 
 .hc-navfab__icon {
-  width: 26px;
-  height: 26px;
+  /* 39 for a 36 box: the rules' 24 box at the 26px it has always been drawn
+     at, with 6 to spare all round for the house they fold into, which is
+     drawn bigger than they are so it fills the button. */
+  width: 39px;
+  height: 39px;
   fill: none;
   stroke: currentColor;
   /* 1.8, the discs' weight, not the 2 it was drawn at on a solid ground. The

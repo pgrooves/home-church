@@ -502,7 +502,7 @@
          it is already on the thing that closes it. */
       '<button type="button" class="hc-navfab" id="hc-navfab" data-action="nav-toggle" ' +
           'aria-expanded="false" aria-controls="hc-navmenu" aria-label="Open navigation">' +
-        '<svg class="hc-navfab__icon" viewBox="0 0 24 24" aria-hidden="true">' +
+        '<svg class="hc-navfab__icon" viewBox="-6 -6 36 36" aria-hidden="true">' +
           '<path class="hc-navfab__bar hc-navfab__bar--top" d="M4 6h16"/>' +
           '<path class="hc-navfab__bar hc-navfab__bar--mid" d="M4 12h16"/>' +
           '<path class="hc-navfab__bar hc-navfab__bar--bot" d="M4 18h16"/>' +
@@ -1052,36 +1052,48 @@
      same 24 box the rules were drawn in, with the stroke the button already
      uses standing in for the mark's band. */
 
+  // Each house point carries a third number, when it sets off: 0 leaves at
+  // once, NAVFAB_LAG leaves last. That is what gives the fold its stages
+  // rather than every point sliding straight across together: the roof
+  // peaks first, the walls swing down after it, the crossbar draws in and
+  // then the upright grows, and the floor's stem and speech tail come last.
+  // Closing runs the same schedule backwards, so the house comes down in the
+  // order it went up. The house is drawn larger than the 24 box the rules
+  // sit in (the svg leaves room round it), so it fills the button.
   var NAVFAB_SHAPES = {
     top: {
       flat:  [[[4, 6], [7.81, 6], [12, 6], [16.19, 6], [20, 6]]],
-      house: [[[2.5, 20], [2.5, 9.5], [12, 3], [21.5, 9.5], [21.5, 20]]]
+      house: [[[-1.75, 23.72, 0.32], [-1.75, 8.49, 0.12], [12, -1.01, 0],
+               [25.75, 8.49, 0.12], [25.75, 23.72, 0.32]]]
     },
     mid: {
       flat:  [[[4, 12], [20, 12]], [[12, 12], [12, 12]]],
-      house: [[[9.7, 12.4], [14.3, 12.4]], [[12, 12.4], [12, 10.1]]]
+      house: [[[8.65, 12.64, 0.1], [15.27, 12.64, 0.1]],
+              [[12, 12.64, 0.1], [12, 9.35, 0.3]]]
     },
     bot: {
       flat:  [[[4, 18], [9.54, 18], [12, 18]], [[12, 18], [13.96, 18], [20, 18]]],
-      house: [[[2.5, 20], [12, 20], [12, 15.8]], [[13.6, 20.9], [15.4, 20], [21.5, 20]]]
+      house: [[[-1.75, 23.72, 0.32], [12, 23.72, 0.32], [12, 17.61, 0.38]],
+              [[14.22, 25.01, 0.4], [16.81, 23.72, 0.32], [25.75, 23.72, 0.32]]]
     }
   };
 
-  // Top first, then the cross, then the floor; the other way round on the
-  // way back, so the house is taken down in the order it went up.
   var NAVFAB_ORDER = ['top', 'mid', 'bot'];
-  var NAVFAB_DUR = 560;
-  var NAVFAB_STAGGER = 60;
+  var NAVFAB_DUR = 820;     // the whole fold, first point leaving to last landing
+  var NAVFAB_LAG = 0.4;     // the latest any point sets off, as a share of it
+  var NAVFAB_STROKE = [1.8, 2.3];  // the rules' weight, then the house's
 
-  var navfabMorph = { bars: null, u: { top: 0, mid: 0, bot: 0 }, open: false, raf: 0, last: 0, start: 0 };
+  var navfabMorph = { bars: null, u: 0, open: false, raf: 0, last: 0 };
 
-  // cubic-bezier(0.45, 0, 0.25, 1): a softer start than the app's
-  // --hc-ease, because a shape changing reads smoother when the first frames
-  // ease in rather than leap. It settles the same way --hc-ease does.
+  // cubic-bezier(0.55, 0, 0.3, 1). Each point eases in and out over its own
+  // stretch of the fold, so a point setting off never jerks and one landing
+  // settles rather than stops.
   function navfabEase(x) {
     if (x <= 0) return 0;
     if (x >= 1) return 1;
-    var t = x, i, cx = 1.35, bx = 3 * (0.25 - 0.45) - cx, ax = 1 - cx - bx;
+    var x1 = 0.55, x2 = 0.3;
+    var cx = 3 * x1, bx = 3 * (x2 - x1) - cx, ax = 1 - cx - bx;
+    var t = x, i;
     for (i = 0; i < 8; i++) {
       var fx = ((ax * t + bx) * t + cx) * t - x;
       var dx = (3 * ax * t + 2 * bx) * t + cx;
@@ -1092,11 +1104,12 @@
     return ((ay * t + by) * t + cy) * t;
   }
 
-  function navfabPath(key, k) {
+  function navfabPath(key, u) {
     var s = NAVFAB_SHAPES[key], d = '';
     s.flat.forEach(function (run, r) {
       run.forEach(function (a, i) {
         var b = s.house[r][i];
+        var k = navfabEase((u - b[2]) / (1 - NAVFAB_LAG));
         var x = a[0] + (b[0] - a[0]) * k;
         var y = a[1] + (b[1] - a[1]) * k;
         d += (i ? 'L' : 'M') + x.toFixed(2) + ' ' + y.toFixed(2);
@@ -1106,8 +1119,12 @@
   }
 
   function navfabDraw() {
+    var u = navfabMorph.u;
+    var w = NAVFAB_STROKE[0] + (NAVFAB_STROKE[1] - NAVFAB_STROKE[0]) * navfabEase(u);
     NAVFAB_ORDER.forEach(function (key) {
-      navfabMorph.bars[key].setAttribute('d', navfabPath(key, navfabEase(navfabMorph.u[key])));
+      var bar = navfabMorph.bars[key];
+      bar.setAttribute('d', navfabPath(key, u));
+      bar.style.strokeWidth = w.toFixed(3);
     });
   }
 
@@ -1117,16 +1134,9 @@
     // never a leap: back from the background it simply finishes.
     var dt = Math.max(0, Math.min(100, now - m.last));
     m.last = now;
-    var running = false;
-    NAVFAB_ORDER.forEach(function (key, i) {
-      var delay = (m.open ? i : NAVFAB_ORDER.length - 1 - i) * NAVFAB_STAGGER;
-      if (now - m.start < delay) { running = true; return; }
-      var u = m.u[key] + (m.open ? 1 : -1) * dt / NAVFAB_DUR;
-      m.u[key] = Math.max(0, Math.min(1, u));
-      if (m.u[key] !== (m.open ? 1 : 0)) running = true;
-    });
+    m.u = Math.max(0, Math.min(1, m.u + (m.open ? 1 : -1) * dt / NAVFAB_DUR));
     navfabDraw();
-    m.raf = running ? requestAnimationFrame(navfabStep) : 0;
+    m.raf = m.u !== (m.open ? 1 : 0) ? requestAnimationFrame(navfabStep) : 0;
   }
 
   function morphNavfab(open) {
@@ -1144,16 +1154,13 @@
     if (still || typeof requestAnimationFrame !== 'function') {
       if (m.raf) cancelAnimationFrame(m.raf);
       m.raf = 0;
-      NAVFAB_ORDER.forEach(function (key) { m.u[key] = open ? 1 : 0; });
+      m.u = open ? 1 : 0;
       navfabDraw();
       return;
     }
-    // A tap mid way turns it round from where it is, with no wait for the
-    // stagger: whatever is already moving just changes direction.
-    var moving = !!m.raf;
-    m.start = performance.now() - (moving ? NAVFAB_STAGGER * NAVFAB_ORDER.length : 0);
+    // A tap mid way just turns it round from wherever it has got to.
     m.last = performance.now();
-    if (!moving) m.raf = requestAnimationFrame(navfabStep);
+    if (!m.raf) m.raf = requestAnimationFrame(navfabStep);
   }
 
   /* A link nobody can see should not be a link anybody can reach, same rule as
