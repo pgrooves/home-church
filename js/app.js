@@ -503,6 +503,9 @@
       '<button type="button" class="hc-navfab" id="hc-navfab" data-action="nav-toggle" ' +
           'aria-expanded="false" aria-controls="hc-navmenu" aria-label="Open navigation">' +
         '<svg class="hc-navfab__icon" viewBox="-6 -6 36 36" aria-hidden="true">' +
+          '<path class="hc-navfab__halo hc-navfab__halo--top" d="M4 6h16"/>' +
+          '<path class="hc-navfab__halo hc-navfab__halo--mid" d="M4 12h16"/>' +
+          '<path class="hc-navfab__halo hc-navfab__halo--bot" d="M4 18h16"/>' +
           '<path class="hc-navfab__bar hc-navfab__bar--top" d="M4 6h16"/>' +
           '<path class="hc-navfab__bar hc-navfab__bar--mid" d="M4 12h16"/>' +
           '<path class="hc-navfab__bar hc-navfab__bar--bot" d="M4 18h16"/>' +
@@ -1085,8 +1088,9 @@
   var NAVFAB_DUR = 400;     // the whole fold, first point leaving to last landing
   var NAVFAB_LAG = 0.25;    // the latest any point sets off, as a share of it
   var NAVFAB_STROKE = [1.8, 2.3];  // the rules' weight, then the house's
+  var NAVFAB_HALO = 2;             // how much wider the halo under each is
 
-  var navfabMorph = { bars: null, u: 0, open: false, raf: 0, last: 0 };
+  var navfabMorph = { bars: null, halos: null, u: 0, open: false, raf: 0, last: 0 };
 
   // The app's --hc-ease, cubic-bezier(0.4, 0, 0.2, 1), the curve the x
   // used. It is moving on the first frame after the tap and spends its time
@@ -1125,9 +1129,14 @@
     var u = navfabMorph.u;
     var w = NAVFAB_STROKE[0] + (NAVFAB_STROKE[1] - NAVFAB_STROKE[0]) * navfabEase(u);
     NAVFAB_ORDER.forEach(function (key) {
-      var bar = navfabMorph.bars[key];
-      bar.setAttribute('d', navfabPath(key, u));
+      var d = navfabPath(key, u);
+      var bar = navfabMorph.bars[key], halo = navfabMorph.halos[key];
+      bar.setAttribute('d', d);
       bar.style.strokeWidth = w.toFixed(3);
+      if (halo) {
+        halo.setAttribute('d', d);
+        halo.style.strokeWidth = (w + NAVFAB_HALO).toFixed(3);
+      }
     });
   }
 
@@ -1146,8 +1155,10 @@
     var m = navfabMorph;
     if (!m.bars) {
       m.bars = {};
+      m.halos = {};
       NAVFAB_ORDER.forEach(function (key) {
         m.bars[key] = navfab.querySelector('.hc-navfab__bar--' + key);
+        m.halos[key] = navfab.querySelector('.hc-navfab__halo--' + key);
       });
       if (!m.bars.top || !m.bars.mid || !m.bars.bot) { m.bars = null; return; }
     }

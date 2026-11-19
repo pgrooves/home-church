@@ -937,14 +937,30 @@
   stroke-width: 1.8;
   stroke-linecap: round;
 
-  /* AND THE HALO THE DISCS ALREADY WEAR, for the reason given beside them:
-     glass this thin sits over whatever is scrolling underneath it, and on the
-     frame where that is a dark button or a photograph, neither a taupe rule
-     nor a paper one is safe on its own. The halo is what carries it. It is
-     invisible against the ordinary case, which is the disc over paper, and it
-     is the whole of the legibility in the case that is not. */
-  filter: drop-shadow(0 0 2px var(--hc-gold-halo))
-          drop-shadow(0 1px 1px var(--hc-gold-halo));
+  /* Its own layer, so redrawing the icon on every frame of the fold never
+     asks the glass underneath to be redrawn with it. */
+  will-change: transform;
+}
+
+/* AND THE HALO THE DISCS ALREADY WEAR, for the reason given beside them:
+   glass this thin sits over whatever is scrolling underneath it, and on the
+   frame where that is a dark button or a photograph, neither a taupe rule
+   nor a paper one is safe on its own. The halo is what carries it. It is
+   invisible against the ordinary case, which is the disc over paper, and it
+   is the whole of the legibility in the case that is not.
+
+   IT IS A WIDER COPY OF EACH RULE DRAWN UNDER IT, NOT A drop-shadow filter.
+   It was a filter on the whole svg until the rules started folding into the
+   house: Safari does not repaint a filtered svg properly while the shapes
+   inside it move, and every frame of the fold was left smeared on the
+   button, on the way up and on the way back down. morphNavfab keeps each
+   halo on its rule's points and a little wider than it. */
+.hc-navfab__halo {
+  stroke: var(--hc-gold-halo);
+  stroke-width: 3.8;
+  /* Half of a colour that is already half clear: a ring this hard has to be
+     fainter than the blur it stands in for, or it reads as an outline. */
+  stroke-opacity: 0.5;
 }
 
 /* The three rules become the church's mark, the house with the cross in
