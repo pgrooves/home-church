@@ -615,7 +615,10 @@
   }
 
   /* A push notification that was tapped, handed to `fn` as where it should
-     open: { v: 'announcement', id }, { v: 'event', id } or { v: 'home' }.
+     open: { v: 'announcement', id }, { v: 'event', id } or { v: 'home' },
+     and, since every topic got a page of its own (topicOpen in send-push):
+     { v: 'guide', id? }, { v: 'listen', id? }, { v: 'when-where' },
+     { v: 'connect' }, { v: 'admin', id? } and { v: 'cafe', id }.
      send-push puts that beside the message (see `open` there): on iOS as an
      `hc` object next to aps, on Android as flat `v` and `id` strings, because
      Firebase data is strings. A notification with neither, from a topic that
@@ -635,10 +638,25 @@
     var from = hc && typeof hc === 'object' && hc.v ? hc : data;
     var v = String(from.v || '');
     var id = from.id === undefined || from.id === null ? '' : String(from.id);
-    if (v === 'home') return { v: 'home', id: null };
-    if ((v === 'announcement' || v === 'event') && id) return { v: v, id: id };
+    if (PUSH_PLACES[v] === 'id') return id ? { v: v, id: id } : null;
+    if (PUSH_PLACES[v] === 'maybe') return { v: v, id: id || null };
     return null;
   }
+
+  /* The places a tap can open, and whether each needs an id to get there.
+     Anything not on this list, from a newer server talking to this build, is
+     nowhere, and the tap opens the app as it always did. */
+  var PUSH_PLACES = {
+    home: 'maybe',
+    announcement: 'id',
+    event: 'id',
+    cafe: 'id',
+    guide: 'maybe',
+    listen: 'maybe',
+    admin: 'maybe',
+    'when-where': 'maybe',
+    connect: 'maybe'
+  };
 
   function onPushTapped(fn) {
     var p = plugins();

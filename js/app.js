@@ -5329,7 +5329,63 @@
       return;
     }
 
+    if (target.v === 'guide') {
+      openGuideFromPush(target.id);
+      return;
+    }
+
+    // The Admin section the queue is on, or the Admin menu for one this
+    // build does not have.
+    if (target.v === 'admin') {
+      HC.router.go(target.id ? { name: 'admin', id: target.id } : { name: 'admin' });
+      return;
+    }
+
+    // The order's own ticket, which loads the order itself.
+    if (target.v === 'cafe') {
+      HC.router.go({ name: 'cafe', id: 't-' + target.id });
+      return;
+    }
+
+    // Pages with nothing to pick inside them: the newest message is the top
+    // of Sermons, and the Instagram rail is on Connect.
+    if (target.v === 'listen' || target.v === 'when-where' || target.v === 'connect') {
+      HC.router.go({ name: target.v });
+      return;
+    }
+
     HC.router.go({ name: 'home' });
+  }
+
+  /* A guide, from its notification. The one named when there is one, and
+     this week's (the newest on the phone) for the group-day reminder, which
+     names none.
+
+     The new-guide notice often lands minutes after the guide went up, before
+     this phone has synced it, and the reader would say "We lost that one".
+     So Sermons goes up first, where the guides live, and the guide opens on
+     top of it once the content check brings it in, as long as nobody has
+     moved off Sermons in the meantime. */
+  function openGuideFromPush(id) {
+    var guide = id ? HC.data.getGuide(id) : HC.data.latestGuide();
+    if (guide) {
+      HC.router.go({ name: 'guide-reader', id: guide.id });
+      return;
+    }
+
+    HC.router.go({ name: 'listen' });
+    if (!id) return;
+
+    // A minute, then it stops waiting: a phone that was offline should not
+    // be pulled into a guide long after the tap, by a sync it did later.
+    var until = Date.now() + 60000;
+    var off = HC.store.on('content', function () {
+      var route = HC.router.current();
+      if (Date.now() > until || !route || route.name !== 'listen') { off(); return; }
+      if (!HC.data.getGuide(id)) return;
+      off();
+      HC.router.go({ name: 'guide-reader', id: id });
+    });
   }
 
   function repaintAdmin() {

@@ -382,9 +382,51 @@ interface Note {
   turnKey?: string;
   // Where a tap opens, in a build that listens for taps (js/native.js
   // onPushTapped): an announcement's own page, a date on the calendar, or
-  // Home. Left out, a tap simply opens the app, as it always has.
+  // Home, and since topicOpen() below, a page for every topic. Left out, a
+  // tap simply opens the app, as it always has.
   open?: { v: string; id?: string };
 }
+
+/* @@ topic-open:start */
+/* Where a tap lands for the topics whose page does not depend on which rows
+   compose() read. The two that do, announcement and approved_batch, and
+   new_guide, whose ref is a cutoff time rather than the guide, set `open`
+   themselves and this is not asked.
+
+   A build that does not know a place reads the tap as nowhere and opens the
+   app as it always did (pushTarget in js/native.js answers null), so naming
+   a new place here is safe for every version people have installed. */
+function topicOpen(topic: string, ref: string | null): { v: string; id?: string } | undefined {
+  switch (topic) {
+    case 'test':
+    case 'banner':
+      // The pinned banner is drawn at the top of Home.
+      return { v: 'home' };
+    case 'sunday_reminder':
+      // "See you tomorrow", with the times and the address: When & Where.
+      return { v: 'when-where' };
+    case 'group_day':
+      // "The guide is ready when you are": this week's guide, which the
+      // phone knows better than this does.
+      return { v: 'guide' };
+    case 'new_sermon':
+      // The message is the latest one, the first thing on Sermons.
+      return ref ? { v: 'listen', id: ref } : { v: 'listen' };
+    case 'announcement_review':
+    case 'event_review':
+      // Both queues are on Admin's Announcements section.
+      return { v: 'admin', id: 'announcements' };
+    case 'cafe_ready':
+      // The order's own ticket, the page that says "ready".
+      return ref ? { v: 'cafe', id: ref } : undefined;
+    case 'instagram_sync':
+      // The rail it is about, on Connect.
+      return { v: 'connect' };
+    default:
+      return undefined;
+  }
+}
+/* @@ topic-open:end */
 
 /* @@ guide-note:start */
 /* The new guide notice, worded for a glance at the lock screen. A greeting
@@ -706,6 +748,8 @@ async function compose(
       title: guideGreeting(new Date()),
       body: guideBody(seriesTitle, part),
       guideIds: guides!.map((g) => g.id as string),
+      // The guide the words are about, the newest of the ones going out.
+      open: { v: 'guide', id: String(guide.id) },
     };
   }
 
@@ -1297,6 +1341,10 @@ Deno.serve(async (req: Request) => {
       topic, skipped: true, note: 'Nothing new to announce.',
     });
     return json({ ok: true, skipped: true, reason: 'nothing new' });
+  }
+  if (!note.open) {
+    const open = topicOpen(topic, ref);
+    if (open) note.open = open;
   }
 
   let query = admin.from('device_tokens').select('token, platform').eq('active', true);

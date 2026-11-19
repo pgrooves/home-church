@@ -9,7 +9,7 @@
    What is pinned here:
    1. The approval notification's target: one announcement opens its page;
       one date opens its announcement, or the day when it has none; a batch
-      opens Home.
+      opens Home. And every other topic has a page of its own (topicOpen).
    2. The Firebase message carries the target as strings, and leaves the data
       as it was for a notification with none.
    3. The app reads both shapes, ignores anything else, and registers the
@@ -70,6 +70,33 @@ if (typeof stripTypeScriptTypes === 'function') {
   const home = F.fcmMessage('tok', { title: 'T', body: 'B', open: { v: 'home' } }, 'approved_batch', 'x').message;
   ok('and Home without an id', home.data, { topic: 'approved_batch', v: 'home' });
 
+  const O = vm.runInNewContext(fence('topic-open') + '\n({ topicOpen })', {});
+  const places = {
+    test: { v: 'home' },
+    banner: { v: 'home' },
+    sunday_reminder: { v: 'when-where' },
+    group_day: { v: 'guide' },
+    new_sermon: { v: 'listen', id: 'pod-1' },
+    announcement_review: { v: 'admin', id: 'announcements' },
+    event_review: { v: 'admin', id: 'announcements' },
+    cafe_ready: { v: 'cafe', id: 'pod-1' },
+    instagram_sync: { v: 'connect' },
+  };
+  for (const [topic, want] of Object.entries(places)) {
+    ok(topic + ' opens ' + want.v, O.topicOpen(topic, 'pod-1'), want);
+  }
+  ok('a cafe notice with no order opens nothing in particular', O.topicOpen('cafe_ready', null), undefined);
+  ok('the new guide notice opens that guide',
+    /open: \{ v: 'guide', id: String\(guide\.id\) \}/.test(source), true);
+  ok('every topic the server knows has somewhere to go',
+    (source.match(/^  ([a-z_]+): (?:null|'[a-z_]+'),$/gm) || [])
+      .map((l) => l.trim().split(':')[0])
+      .filter((topic) => !['announcement', 'approved_batch', 'new_guide'].includes(topic) &&
+        !O.topicOpen(topic, 'x')),
+    []);
+  ok('the composed note is given its page before it is sent',
+    /if \(!note\.open\) \{\s*const open = topicOpen\(topic, ref\);/.test(source), true);
+
   ok('iPhone carries it beside aps', /\.\.\.\(note\.open\?\.v \? \{ hc: note\.open \} : \{\}\)/.test(source), true);
   ok('the one-row announcement topic opens its page too',
     /open: \{ v: 'announcement', id: ref \}/.test(source), true);
@@ -121,8 +148,16 @@ ok('Android: flat strings',
 ok('Home needs no id', t({ hc: { v: 'home' } }), { v: 'home', id: null });
 ok('hc that arrived as text is read too', t({ hc: '{"v":"announcement","id":"a2"}' }), { v: 'announcement', id: 'a2' });
 ok('an announcement with no id goes nowhere', t({ hc: { v: 'announcement' } }), null);
-ok('an unknown place goes nowhere', t({ hc: { v: 'admin', id: 'x' } }), null);
-ok('the Sunday reminder, with nothing to say, goes nowhere', t({ topic: 'sunday_reminder' }), null);
+ok('an unknown place goes nowhere', t({ hc: { v: 'somewhere-new', id: 'x' } }), null);
+ok('a guide, named', t({ hc: { v: 'guide', id: 'g1' } }), { v: 'guide', id: 'g1' });
+ok('this week\'s guide, unnamed', t({ hc: { v: 'guide' } }), { v: 'guide', id: null });
+ok('Sermons', t({ topic: 'new_sermon', v: 'listen', id: 'p1' }), { v: 'listen', id: 'p1' });
+ok('When & Where', t({ topic: 'sunday_reminder', v: 'when-where' }), { v: 'when-where', id: null });
+ok('Connect', t({ hc: { v: 'connect' } }), { v: 'connect', id: null });
+ok('an Admin section', t({ hc: { v: 'admin', id: 'announcements' } }), { v: 'admin', id: 'announcements' });
+ok('a cafe ticket', t({ topic: 'cafe_ready', v: 'cafe', id: 'o1' }), { v: 'cafe', id: 'o1' });
+ok('a cafe notice with no order goes nowhere', t({ hc: { v: 'cafe' } }), null);
+ok('a Sunday reminder from before it had a page goes nowhere', t({ topic: 'sunday_reminder' }), null);
 ok('no data goes nowhere', t(undefined), null);
 
 const opened = [];
