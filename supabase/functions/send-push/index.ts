@@ -445,10 +445,13 @@ function guideGreeting(now: Date): string {
   return 'Hi there!';
 }
 
+/* No "Part 1". A series' first week does not yet know it is a series: the
+   church may preach it once and stop, and "Part 1" promises a Part 2. The
+   number appears from the second guide on, once there is more than one. */
 function guideBody(seriesTitle: string | null, part: number | null): string {
   const series = String(seriesTitle ?? '').trim();
   if (!series) return 'This week’s guide is live in the app.';
-  return part && part > 0
+  return part && part > 1
     ? `This week’s guide is live in the app: ${series}, Part ${part}.`
     : `This week’s guide is live in the app: ${series}.`;
 }
