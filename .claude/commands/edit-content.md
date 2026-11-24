@@ -152,6 +152,21 @@ Two rules, and they are not style preferences:
    send the entire array back. Do not hand build a fresh array from memory,
    that is how the other seventeen questions get lost.
 
+**Announcements keep their words twice.** `body` is the plain text the Home
+card and the review queue show; `body_html` is what the announcement's own
+page draws when someone taps Read it. A fix to one is not a fix: change the
+same words in both, then read the row back and check that neither still has
+the old text. On the 24th of November 2026 the Christmas Eve Eve times were
+corrected in `body` only, and Read it went on showing the wrong times until
+someone looked.
+
+**A time on an announcement usually lives in three places.** If the card
+belongs to an event (`event_id`), the calendar has its own `starts_at` and
+maybe a `time_label`. Show all three in the current versus proposed, and
+change them together, or the card and the Cal tab will disagree. More than one
+service in an evening goes in `time_label` ("5:00pm and 6:30pm"), with
+`starts_at` at the first.
+
 For a time change, convert with the helper rather than by hand:
 
 ```bash

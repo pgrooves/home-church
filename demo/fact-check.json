@@ -1,0 +1,26 @@
+{
+  "title": "Fact check on the review queue",
+  "signedIn": { "id": "00000000-0000-0000-0000-00000000de31", "email": "demo@example.org" },
+  "routes": [
+    { "match": "/rest/v1/profiles", "body": [{ "id": "00000000-0000-0000-0000-00000000de31", "first_name": "Sample", "last_name": "Admin", "role": "admin", "can_host": false, "can_run_cafe": false }] },
+    { "match": "/rest/v1/announcements?select=*&order=created_at.desc", "body": [
+      { "id": "demo-christmas-eve-eve", "title": "Christmas Eve Eve, December 23", "body": "Slow down and prepare your heart for Christmas with a special worship service.\nWednesday, December 23, 2026\nServices at 5:30pm and 7:00pm\nInvite family and friends", "event_id": "demo-christmas-eve-eve-date", "published": false, "review_state": "pending", "priority": 0, "starts_on": null, "ends_on": "2026-12-24", "deleted_at": null, "created_at": "{{today}}T14:00:00+00:00", "review_note": "5:30pm and 7:00pm are not in the email or on its flyers. Check the times before approving. The calendar already has “Christmas Eve Eve, December 23” that day at 5:00pm, and this says 5:30pm and 7:00pm. One of them is wrong. The reader was unsure: the text says 5:30pm and 7pm, the flyer says 5pm and 6:30pm." },
+      { "id": "demo-communion-december", "title": "Communion Sunday, December 20", "body": "Join us this Sunday as we take communion together across all three of our morning services.\nSunday, December 20, 2026\nService times: 8:00am, 9:30am, and 11:00am", "event_id": "demo-communion-december-date", "published": false, "review_state": "pending", "priority": 0, "starts_on": null, "ends_on": "2026-12-21", "deleted_at": null, "created_at": "{{today}}T14:00:01+00:00", "review_note": null },
+      { "id": "demo-food-drive", "title": "November Food Drive", "body": "We are teaming up with Love Your Neighbor NOLA to collect Thanksgiving meal items for local families.", "event_id": null, "published": true, "review_state": "approved", "priority": 3, "starts_on": null, "ends_on": null, "deleted_at": null, "created_at": "2026-10-30T17:00:00+00:00" }
+    ] },
+    { "match": "/rest/v1/events?select=*&review_state=eq.pending", "body": [
+      { "id": "demo-christmas-eve-eve-date", "title": "Christmas Eve Eve, December 23", "description": "Slow down and prepare your heart for Christmas with a special worship service.", "starts_at": "2026-12-23T23:30:00+00:00", "ends_at": null, "time_label": null, "location": null, "published": false, "review_state": "pending", "duplicate_of": null, "review_note": "5:30pm and 7:00pm are not in the email or on its flyers. Check the times before approving. The calendar already has “Christmas Eve Eve, December 23” that day at 5:00pm, and this says 5:30pm and 7:00pm. One of them is wrong." },
+      { "id": "demo-communion-december-date", "title": "Communion Sunday, December 20", "description": "Communion across all three services.", "starts_at": "2026-12-20T14:00:00+00:00", "ends_at": null, "time_label": "8:00am, 9:30am and 11:00am", "location": null, "published": false, "review_state": "pending", "duplicate_of": null, "review_note": null }
+    ] },
+    { "match": "/rest/v1/events?select=*&duplicate_of", "body": [] },
+    { "match": "/rest/v1/review_approvals", "body": [] },
+    { "match": "/rest/v1/newsletter_runs", "body": [
+      { "id": 1, "ran_at": "{{today}}T14:00:05+00:00", "ok": true, "found": 1, "parsed": 1, "drafts": 2, "note": "Check “Christmas Eve Eve, December 23”: 5:30pm and 7:00pm are not in the email or on its flyers. Check the times before approving." }
+    ] },
+    { "match": "/rest/v1/group_status_runs", "body": [] }
+  ],
+  "effects": [
+    { "rpc": "hc_admin_approve_announcement", "table": "announcements", "set": { "published": true, "review_state": "approved" } },
+    { "rpc": "hc_admin_approve_event", "table": "events", "set": { "published": true, "review_state": "approved" } }
+  ]
+}

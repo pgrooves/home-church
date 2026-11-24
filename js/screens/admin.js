@@ -916,6 +916,20 @@
       ' because Gemini was busy. Read it closely before approving.</p>';
   }
 
+  /* What the newsletter reader's fact check wants looked at, said over
+     Approve. Christmas Eve Eve is why: the card said 5:30pm and 7:00pm, the
+     flyers and the calendar said 5:00pm and 6:30pm, and this screen showed
+     the card's words with nothing beside them, so it was approved as it
+     was. The intake now reads every draft back against the email, its flyers
+     and the calendar (factCheck, migration 0102), and anything that did not
+     match is here, in the same orange as the Groq note above it. Nothing on a
+     draft that passed, and nothing on a row a person wrote. */
+  function reviewNote(row) {
+    if (!row || !row.review_note) return '';
+    return '<p class="hc-caption hc-admin__warn">Fact check: ' +
+      c.esc(row.review_note) + '</p>';
+  }
+
   function reviewSection(rows) {
     var html = c.sectionHeader('', 'Needs review');
     html += '<p class="hc-caption hc-admin__intro-note">Parsed out of the newsletter ' +
@@ -943,6 +957,7 @@
           '<p class="hc-row__title">' + c.esc(row.title) + '</p>' +
           writtenByNote(row) +
           (row.body ? '<p class="hc-caption">' + c.esc(row.body) + '</p>' : '') +
+          reviewNote(row) +
           (updates
             ? '<p class="hc-caption hc-admin__warn">Looks like an update to “' +
               c.esc(updates.title) + '”' +
@@ -1046,6 +1061,7 @@
           (row.location
             ? '<p class="hc-caption">' + c.esc(row.location) + '</p>'
             : '<p class="hc-caption hc-admin__review-dates">No location given.</p>') +
+          reviewNote(row) +
           sameNightNote(same) +
         '</div>' +
         '<div class="hc-admin__item-actions">' +

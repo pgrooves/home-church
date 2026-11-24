@@ -244,7 +244,7 @@ not look the same as "no newsletter arrived."
 | Gmail account | $0 | Free |
 | App Password | $0 | A setting |
 | IMAP access | $0 | No paid tier, no API quota |
-| Gemini API | $0 | One call per newsletter, roughly four a month, against a free tier measured in requests per day. Free as long as billing stays off on the Google Cloud project |
+| Gemini API | $0 | Two calls per newsletter (one reads the flyers, one drafts the cards), roughly eight a month, against a free tier measured in requests per day. Free as long as billing stays off on the Google Cloud project |
 | Supabase Edge Function | $0 | ~2,200 runs/month against a free-tier allowance of 500,000 |
 | `pg_cron` / `pg_net` | $0 | Already enabled on this project and already running two other jobs |
 | Database | $0 | Two small log tables against a 500 MB free tier |
@@ -806,6 +806,87 @@ side can call into the other. `tests/newsletter-links.test.js` pins down both
 and asserts they agree. It errs towards *not* a wrapper: a link it misses is
 left exactly as it was before any of this, and a link it wrongly suspects costs
 one HTTP request.
+
+---
+
+## When the card and the flyer disagree
+
+**Christmas Eve Eve** is the card this section is named after. The newsletter
+of the 20th of November 2026 carried it on two flyers saying **5pm and 6:30pm**.
+The draft the reader made said *"Services at 5:30pm and 7:00pm"*, it was
+approved, and on the 24th a member texted the church to ask which was right.
+The church had to answer that the app was wrong.
+
+**What let it through, in order:**
+
+1. **The reader never saw the flyers.** It handed the model the email's words
+   and a list of picture *addresses*, so the model could choose a picture for
+   the card but never read one. This church's newsletter is mostly flyers, and
+   the flyer is where the day and the times are printed.
+2. **Nothing compared the draft with the email.** The model is told never to
+   invent a fact, and that is a request, not a check. Whatever it wrote, from
+   a typo in the email's text or from nowhere, went to the review card as is.
+3. **Nothing compared the draft with the calendar.** Christmas Eve Eve had been
+   on the calendar at 5:00pm since the 15th, approved. The new card said
+   5:30pm and nothing pointed out that the two disagreed. When the draft's own
+   date was later merged into that entry, the calendar kept 5:00pm and the
+   card kept 5:30pm.
+4. **The review card had nothing to go on.** It showed the draft's words, and
+   the person approving had no flyer beside them to check against.
+
+The ledger keeps no copy of the email, on purpose, so whether the email's text
+itself said 5:30pm or the model made it up cannot be read back from the
+database. `{"dry_run": true, "email_id": 19}` (below) reads it again from the
+mailbox and answers that, for as long as it is inside the fortnight.
+
+**What changed:**
+
+- **The flyers are read.** Before the parse, up to six of the email's pictures
+  are fetched and Gemini is asked to write out every word on them. Those words
+  go into what the parse reads, under *WORDS ON THE FLYERS*, and the prompt
+  says a flyer is part of the email. It is a separate, plainer call so the
+  parse's own request stays the size the busy free tier is known to accept,
+  and it is best effort: if the pictures cannot be read, the newsletter is read
+  from its words as before and the run note says so.
+- **Every draft is read back against its source, with no model in it.**
+  `factCheck` in the function, pinned by `tests/newsletter-facts.test.js`:
+  - every time the draft states must be printed in the email or on a flyer;
+  - the day its calendar entry lands on must be one the email names;
+  - the calendar must not already have that night, under the same name, at a
+    different hour. That one alone would have caught Christmas Eve Eve.
+- **What it finds is said over Approve.** Migration `0102` adds `review_note`
+  to announcements and events; the Needs review and Dates to review cards draw
+  it in orange as *Fact check: …*, and the run note at the top of the screen
+  carries it too, so a build without the new card still shows it. It never
+  blocks a draft and never rewrites one.
+- **The model says what it was unsure of.** A new `doubts` field, for things
+  like "the text says 5:30pm and 7pm, the flyer says 5pm and 6:30pm". It goes
+  on the review card, never on Home.
+- **Two services, one calendar entry.** `more_times` lets the parse give every
+  start time in an evening, and the calendar entry gets a `time_label` like
+  *5:00pm and 6:30pm*, which the Cal tab draws in place of the single hour.
+  Only when those times passed the check.
+- **The backfill gets the same check**, against the announcement's own words.
+
+**It errs towards not flagging.** Times are compared on a twelve hour clock, so
+"5:30" in the email vouches for 5:30pm on the card, and a bare number only
+counts as a time when its list says am or pm. A check that cries wolf on every
+newsletter is a check people learn to tap past.
+
+### Reading one newsletter again
+
+```bash
+curl -X POST https://ibqkumxfltfiuqevviji.supabase.co/functions/v1/newsletter-intake \
+  -H "x-hc-cron-secret: <the secret>" -H "Content-Type: application/json" \
+  -d '{"dry_run": true, "email_id": 19}'
+```
+
+`email_id` is the `id` in `newsletter_emails`. It re-reads that newsletter even
+though it was settled long ago and returns the drafts it would make today, the
+fact check's findings, the words read off its flyers and the whole text the
+model was given. Like every dry run it writes nothing, claims nothing and
+leaves the email as it was. It only reaches emails inside the fortnight the
+mailbox search covers.
 
 ---
 

@@ -965,6 +965,11 @@ interface ParsedEvent {
   minute?: number;      // 0-59
   end_hour?: number;
   end_minute?: number;
+  /* The other start times the same day, when there is more than one service.
+     Christmas Eve Eve is 5:00pm AND 6:30pm, and a calendar entry with one
+     starts_at can only say the first; servicesLabel turns these into the
+     time_label the Cal tab draws instead. */
+  more_times?: Array<{ hour?: number; minute?: number }>;
   location?: string;
 }
 
@@ -977,6 +982,9 @@ interface Parsed {
   ends_on?: string;
   image_url?: string;
   event?: ParsedEvent;
+  /* Anything the model could not settle, above all where the email's words
+     and a flyer disagree. Goes on the review card; never on Home. */
+  doubts?: string[];
 }
 
 const SCHEMA = {
@@ -1012,10 +1020,22 @@ const SCHEMA = {
               minute: { type: 'integer' },
               end_hour: { type: 'integer' },
               end_minute: { type: 'integer' },
+              more_times: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: {
+                    hour: { type: 'integer' },
+                    minute: { type: 'integer' },
+                  },
+                  required: ['hour'],
+                },
+              },
               location: { type: 'string' },
             },
             required: ['date'],
           },
+          doubts: { type: 'array', items: { type: 'string' } },
         },
         required: ['title', 'summary'],
       },
@@ -1108,11 +1128,27 @@ function prompt(
     '               a real event; do not invent an hour for it.',
     '     minute    0-59, only alongside hour. Omit when the time is on the hour.',
     '     end_hour / end_minute   same, only if the email gives an end time.',
+    '     more_times  when the same thing starts more than once that day (two services,',
+    '               "5pm & 6:30pm"), every start time AFTER the first, each as hour and',
+    '               minute. Leave it out when there is one start time.',
     '     location  the address or room, whenever the email gives one. Fill this in',
     '               even when the same address also appears in details: details are',
     '               read on the card, and this is what goes into the calendar entry on',
     '               somebody\'s phone, where it becomes the directions they tap.',
-    '11. If the email contains no real announcements, return an empty array.',
+    '11. TIMES ARE COPIED, NEVER WORKED OUT. Every time in details and in event must be',
+    '   one printed in the newsletter text or on a flyer below, exactly. Never round a',
+    '   time, never shift one, never fill in a time for a service the email does not',
+    '   time. If you cannot find a time, leave it out.',
+    '12. THE FLYERS ARE PART OF THE EMAIL. Most of this newsletter is pictures, and',
+    '   their words are written out under WORDS ON THE FLYERS. Carry their details',
+    '   across like any other. When the newsletter text and a flyer disagree about a',
+    '   date, a time or a place, use the flyer\'s version in details and event, and say',
+    '   exactly what disagrees in doubts, quoting both ("the text says 5:30pm and',
+    '   7pm, the flyer says 5pm and 6:30pm"). A person reads doubts before approving.',
+    '13. doubts: anything else you were unsure of about THIS announcement: a date you',
+    '   had to work out rather than read, two dates that might be meant. Empty array',
+    '   when there is nothing. Never put doubts in details.',
+    '14. If the email contains no real announcements, return an empty array.',
     '',
     'CANDIDATE LINKS (copy urls exactly; the link text is what the reader saw)',
     links.length
@@ -1148,23 +1184,33 @@ function fallbackModels(primary: string): string[] {
 }
 
 /* An insert of newly parsed drafts, which carries written_by when the backup
-   wrote them. If migration 0089 has not been run the column does not exist,
-   and the insert is tried once more without it: losing the label is a
-   nuisance, losing the newsletter is the thing this whole file exists to
-   prevent. Returns the error, or null. */
+   wrote them and review_note when the fact check found something. If the
+   migration that adds either column has not been run (0089, 0102), the
+   insert is tried again without it: losing a label is a nuisance, losing the
+   newsletter is the thing this whole file exists to prevent. The run note
+   still carries every review note, so nothing the check found is lost.
+   Returns the error, or null. */
+const OPTIONAL_COLUMNS = ['written_by', 'review_note'];
+
 async function insertDrafts(
   admin: ReturnType<typeof createClient>,
   table: 'announcements' | 'events',
   rows: Array<Record<string, unknown>>,
 ): Promise<{ message: string } | null> {
-  const { error } = await admin.from(table).insert(rows);
-  if (!error || !/written_by/.test(error.message) || !rows.some((r) => 'written_by' in r)) {
-    return error;
+  let batch = rows;
+  for (let i = 0; i <= OPTIONAL_COLUMNS.length; i++) {
+    const { error } = await admin.from(table).insert(batch);
+    if (!error) return null;
+    const missing = OPTIONAL_COLUMNS.find((c) =>
+      new RegExp(c).test(error.message) && batch.some((r) => c in r));
+    if (!missing) return error;
+    console.error(`newsletter-intake: ${table}.${missing} is missing, run its migration. Writing without it.`);
+    batch = batch.map((r) => {
+      const { [missing]: _drop, ...rest } = r;
+      return rest;
+    });
   }
-  console.error(`newsletter-intake: ${table}.written_by is missing, run migration 0089. Writing without the label.`);
-  const bare = rows.map(({ written_by: _drop, ...rest }) => rest);
-  const retry = await admin.from(table).insert(bare);
-  return retry.error;
+  return { message: `Could not write ${table}.` };
 }
 
 async function askGemini(
@@ -1401,6 +1447,179 @@ async function askGemini(
    Everything between the two markers is evalled by tests/homekids.test.js, so
    it stays self-contained: no imports, nothing from further up this file.
    ===================================================================== */
+
+/* ========================================================================
+   The flyers
+   ===================================================================== */
+
+/* READING THE PICTURES, which until Christmas Eve Eve nobody did.
+
+   The church's newsletter is mostly flyers: a designed picture per event, with
+   the day, the times and the place printed on it, and a sentence or two of
+   text around it. This function used to hand the model the text and a list of
+   picture ADDRESSES, so the model could choose a picture for the card but
+   never read one. On the 20th of November the flyers said 5pm and 6:30pm and
+   the card came out saying 5:30pm and 7:00pm, and nothing on the card's way
+   to Home could have known the difference.
+
+   So before the parse, the pictures are fetched and Gemini is asked to write
+   out every word on them, and those words go into the text the parse reads,
+   under WORDS ON THE FLYERS, and into the text the fact check reads too.
+
+   A SEPARATE CALL, not pictures stapled onto the parse, for two reasons. The
+   transcription is a smaller, plainer job with much less room to invent; and
+   it leaves the parse's request the size it has always been, which is the
+   size the busy free tier is known to accept (see "When the model breaks" in
+   NEWSLETTER_INTAKE_SETUP.md).
+
+   BEST EFFORT, always. A picture that will not download, a model that is busy,
+   an answer that will not parse: any of them returns no flyer words and a
+   sentence for the run note, and the newsletter is read from its text exactly
+   as it was before this existed. Losing the flyers is a worse parse; losing
+   the newsletter is the thing this whole file exists to prevent. */
+const FLYER_MAX = 6;
+const FLYER_MIN_BYTES = 12_000;      // smaller than this is a logo or an icon
+const FLYER_MAX_BYTES = 4_000_000;
+const FLYER_FETCH_MS = 6000;
+const FLYER_BUDGET_MS = 45_000;
+const FLYER_TYPES = /^image\/(png|jpe?g|webp|heic|heif)$/i;
+
+const FLYER_SCHEMA = {
+  type: 'object',
+  properties: {
+    flyers: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          n: { type: 'integer' },
+          text: { type: 'string' },
+        },
+        required: ['n', 'text'],
+      },
+    },
+  },
+  required: ['flyers'],
+};
+
+function toBase64(bytes: Uint8Array): string {
+  let binary = '';
+  for (let i = 0; i < bytes.length; i += 0x8000) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  }
+  return btoa(binary);
+}
+
+async function fetchFlyer(url: string): Promise<{ mime: string; data: string } | null> {
+  const control = new AbortController();
+  const timer = setTimeout(() => control.abort(), FLYER_FETCH_MS);
+  try {
+    const res = await fetch(url, { signal: control.signal, redirect: 'follow' });
+    if (!res.ok) return null;
+    const mime = String(res.headers.get('content-type') ?? '').split(';')[0].trim();
+    if (!FLYER_TYPES.test(mime)) return null;
+    const bytes = new Uint8Array(await res.arrayBuffer());
+    if (bytes.length < FLYER_MIN_BYTES || bytes.length > FLYER_MAX_BYTES) return null;
+    return { mime: mime.toLowerCase() === 'image/jpg' ? 'image/jpeg' : mime, data: toBase64(bytes) };
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function readFlyers(
+  apiKey: string,
+  model: string,
+  images: string[],
+): Promise<{ text: string; read: number; note: string | null }> {
+  if (!images.length) return { text: '', read: 0, note: null };
+  const began = Date.now();
+
+  const fetched = (await Promise.all(images.slice(0, FLYER_MAX * 2).map(fetchFlyer)))
+    .filter((f): f is { mime: string; data: string } => !!f)
+    .slice(0, FLYER_MAX);
+  if (!fetched.length) return { text: '', read: 0, note: null };
+
+  const ask = [
+    `These are the ${fetched.length} pictures from a church newsletter email, numbered`,
+    'in order from 1. For each one, write out every word printed on it, exactly as',
+    'printed, keeping its line breaks: titles, days, dates, times, places, prices, ages.',
+    'Copy numbers and times character for character ("5PM & 6:30PM" stays exactly that).',
+    'Do not summarise, correct or add anything. A picture with no words on it, or only',
+    'a logo, gets an empty string.',
+  ].join('\n');
+
+  const request = JSON.stringify({
+    contents: [{
+      role: 'user',
+      parts: [
+        { text: ask },
+        ...fetched.map((f) => ({ inline_data: { mime_type: f.mime, data: f.data } })),
+      ],
+    }],
+    generationConfig: {
+      temperature: 1.0,
+      maxOutputTokens: 8192,
+      responseMimeType: 'application/json',
+      responseSchema: FLYER_SCHEMA,
+    },
+  });
+
+  let reason = '';
+  for (const m of [model, ...fallbackModels(model)]) {
+    const left = FLYER_BUDGET_MS - (Date.now() - began);
+    if (left < 5000) break;
+    const control = new AbortController();
+    const timer = setTimeout(() => control.abort(), left);
+    try {
+      const res = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(m)}:generateContent?key=${encodeURIComponent(apiKey)}`,
+        { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: request, signal: control.signal },
+      );
+      if (!res.ok) { reason = `Gemini answered ${res.status}`; continue; }
+      const payload = await res.json();
+      const raw = (payload?.candidates?.[0]?.content?.parts ?? [])
+        .map((p: { text?: string }) => p?.text ?? '').join('').trim();
+      const list = JSON.parse(raw)?.flyers;
+      if (!Array.isArray(list)) { reason = 'the answer had no flyers in it'; continue; }
+      const blocks = (list as Array<{ n?: number; text?: string }>)
+        .map((f, i) => ({ n: Number(f?.n) || i + 1, text: String(f?.text ?? '').trim().slice(0, 3000) }))
+        .filter((f) => f.text)
+        .map((f) => `FLYER ${f.n}\n${f.text}`);
+      return { text: blocks.join('\n\n'), read: blocks.length, note: null };
+    } catch (err) {
+      reason = String((err as Error)?.message ?? err).slice(0, 120);
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+  return {
+    text: '',
+    read: 0,
+    note: `Could not read the flyers this time (${reason || 'out of time'}), so the drafts come from the email's words only. Check dates and times against the flyers.`,
+  };
+}
+
+/* Today's calendar and everything after it, for the third half of the fact
+   check: what the church has already said about a night, in the one place
+   people put it in their phones. Read once per run and only when a draft
+   needs it. A failure here is a missing comparison, never a missing draft. */
+async function calendarFrom(
+  admin: ReturnType<typeof createClient>,
+  fromDay: string,
+): Promise<CalendarRow[]> {
+  const { data, error } = await admin
+    .from('events')
+    .select('id, title, starts_at, time_label, also_on, published')
+    .gte('starts_at', `${fromDay}T00:00:00Z`)
+    .limit(500);
+  if (error) {
+    console.error(`newsletter-intake: could not read the calendar for the fact check: ${error.message}`);
+    return [];
+  }
+  return (data ?? []) as CalendarRow[];
+}
 
 /* @@ homekids:start */
 
@@ -1744,6 +1963,331 @@ function eventDateFor(
 }
 
 /* @@ dates:end */
+
+/* @@ facts:start
+   THE CHECK WITH NO MODEL IN IT, named after Christmas Eve Eve.
+
+   WHAT HAPPENED. The newsletter of the 20th of November carried Christmas Eve
+   Eve on two flyers saying 5pm and 6:30pm. The draft that came out of it said
+   "Services at 5:30pm and 7:00pm". It went up on Home, a member texted the
+   church to ask which was right, and the church had to say the app was wrong.
+   Nothing anywhere had compared the card with the email, so nothing said so.
+
+   Two things let it through. The model was only ever shown the email's words,
+   never its pictures, so the flyers the church treats as the truth were
+   invisible to it. And the calendar already had Christmas Eve Eve at 5:00pm,
+   entered and approved five days before, and nothing compared the new card
+   with that either.
+
+   SO EVERY DRAFT IS NOW READ BACK AGAINST ITS SOURCE, here, in plain code:
+
+     a time the draft states must be a time the email (or a flyer) states;
+     a day the calendar entry lands on must be a day the email names;
+     an entry the calendar already has on that day, under the same name, must
+     not disagree about the hour.
+
+   Anything that fails becomes `review_note` on the draft, drawn in orange on
+   the Needs review card over Approve, and goes into the run note. It never
+   blocks a draft and never rewrites one: what it says is "look here before
+   you approve", which is exactly the sentence nobody had on the 20th.
+
+   It errs towards not flagging. A time is compared on a twelve hour clock, so
+   "5:30" in the email vouches for "5:30pm" in the draft; a bare number only
+   counts as a time when the list it sits in carries an am or pm. A check that
+   cries wolf on every newsletter is a check people learn to tap past.
+
+   Evalled by tests/newsletter-facts.test.js, so it has to stay self-contained:
+   no imports, no Deno, nothing from further up this file. */
+
+const FACT_TZ = 'America/Chicago';
+
+const FACT_MONTHS = [
+  'january', 'february', 'march', 'april', 'may', 'june',
+  'july', 'august', 'september', 'october', 'november', 'december',
+];
+const FACT_WEEKDAYS = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+
+/* Lower case, one spelling of am and pm, one kind of dash, and the words that
+   are times written out. Everything below reads text through this. */
+function factText(value: unknown): string {
+  return String(value ?? '')
+    .toLowerCase()
+    .replace(/[   ]/g, ' ')
+    .replace(/[–—‒]/g, '-')
+    .replace(/\b([ap])\.\s?m\.?/g, '$1m')
+    .replace(/\bnoon\b/g, '12:00pm')
+    .replace(/\bmidnight\b/g, '12:00am');
+}
+
+/* A clock time as minutes past twelve on a twelve hour clock, 0 to 719. The
+   twelve hour clock is the leniency on purpose: an email that says "5:30" and
+   a draft that says 5:30pm agree, and so do "6pm" and 18:00. */
+function clockKey(hour: number, minute: number): number | null {
+  if (!Number.isInteger(hour) || !Number.isInteger(minute)) return null;
+  if (hour < 0 || hour > 23 || minute < 0 || minute > 59) return null;
+  return (hour % 12) * 60 + minute;
+}
+
+/* How a time is written back to a person, the way the church writes it. */
+function clockLabel(hour: number, minute: number): string {
+  const h12 = hour % 12 === 0 ? 12 : hour % 12;
+  return `${h12}:${String(minute).padStart(2, '0')}${hour < 12 ? 'am' : 'pm'}`;
+}
+
+/* One number in a list of times: "5", "6:30", or "630" when an am or pm is
+   stuck to it. Never a piece of a date or a price: "12/23", "$15" and "2026"
+   are refused by the lookarounds, not by luck. */
+const FACT_NUM = String.raw`(?<![\d/$.:])(?:\d{1,2}(?::\d{2})?|\d{3,4}(?=\s*(?:am|pm)))(?![\d/])`;
+const FACT_SEP = String.raw`\s*(?:,\s*(?:and\s+|&\s*|or\s+)?|&|\band\b|\bor\b|-|\bto\b|\buntil\b|\btil\b|\bthrough\b)\s*`;
+const FACT_CHAIN = new RegExp(
+  `${FACT_NUM}(?:${FACT_SEP}${FACT_NUM})*(?:\\s*(am|pm|o'?clock)\\b)?`, 'g');
+const FACT_ONE = new RegExp(FACT_NUM, 'g');
+
+interface ClockTime { key: number; label: string }
+
+/* Every clock time written in a piece of text. A number with a colon is
+   always a time; a bare number is a time only when its list ends in am, pm or
+   o'clock ("8, 9:30 and 11am" is three times; "ages 6 to 12" is none).
+
+   `lenient` is for reading the EMAIL, where a missed time means a false alarm:
+   there a bare number also counts when it shares a list with a colon time, so
+   "5-6:30" vouches for 5:00. The draft is read strictly, where a time read
+   that was never meant as one is the false alarm. */
+function clockTimes(value: unknown, lenient = false): ClockTime[] {
+  const text = factText(value);
+  const out: ClockTime[] = [];
+  const seen = new Set<number>();
+  for (const chain of text.matchAll(FACT_CHAIN)) {
+    const marker = chain[1] ?? '';
+    const pm = marker === 'pm';
+    const listed = lenient && chain[0].includes(':');
+    for (const one of chain[0].matchAll(FACT_ONE)) {
+      const raw = one[0];
+      let hour: number;
+      let minute: number;
+      if (raw.includes(':')) {
+        [hour, minute] = raw.split(':').map(Number);
+      } else if (!marker && listed) {
+        hour = Number(raw);
+        minute = 0;
+      } else if (!marker) {
+        continue;
+      } else if (raw.length >= 3) {
+        hour = Number(raw.slice(0, -2));
+        minute = Number(raw.slice(-2));
+      } else {
+        hour = Number(raw);
+        minute = 0;
+      }
+      if (marker && marker !== "o'clock" && marker !== 'oclock' && (hour < 1 || hour > 12)) continue;
+      const key = clockKey(hour, minute);
+      if (key === null || seen.has(key)) continue;
+      seen.add(key);
+      const h24 = marker && marker !== "o'clock" && marker !== 'oclock'
+        ? (hour % 12) + (pm ? 12 : 0)
+        : hour;
+      out.push({ key, label: marker ? clockLabel(h24, minute) : `${hour}:${String(minute).padStart(2, '0')}` });
+    }
+  }
+  return out;
+}
+
+/* The day and the clock in church local time, for a stored instant. */
+function churchClock(iso: string): { date: string; hour: number; minute: number } | null {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return null;
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: FACT_TZ, year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
+  }).formatToParts(d);
+  const get = (type: string) => parts.find((p) => p.type === type)?.value ?? '';
+  return {
+    date: `${get('year')}-${get('month')}-${get('day')}`,
+    hour: Number(get('hour')),
+    minute: Number(get('minute')),
+  };
+}
+
+/* Whether the email names this day, in any of the ways a newsletter does:
+   "December 23", "Dec. 23rd", "23 December", "12/23", or, for something in the
+   next week, its weekday or "tonight". Lenient again: a newsletter that says
+   "Wednesday the 23rd" and nothing else is still naming the 23rd. */
+function dayMentioned(isoDate: string, source: unknown, emailDay: string): boolean {
+  const text = factText(source);
+  const [y, m, d] = isoDate.split('-').map(Number);
+  if (!y || !m || !d) return true;
+  const month = FACT_MONTHS[m - 1];
+  const names = `(?:${month}|${month.slice(0, 3)}${month === 'september' ? '|sept' : ''})`;
+  const day = `0?${d}(?:st|nd|rd|th)?`;
+  const patterns = [
+    new RegExp(`\\b${names}\\.?\\s+${day}\\b`),
+    new RegExp(`\\b${day}\\s+(?:of\\s+)?${names}\\b`),
+    new RegExp(`(?<![\\d/])0?${m}/0?${d}(?![\\d])`),
+    new RegExp(`\\bthe\\s+${d}(?:st|nd|rd|th)\\b`),
+  ];
+  if (patterns.some((p) => p.test(text))) return true;
+
+  const sent = new Date(`${emailDay}T00:00:00Z`).getTime();
+  const when = new Date(`${isoDate}T00:00:00Z`).getTime();
+  const ahead = Math.round((when - sent) / 86400000);
+  if (ahead >= 0 && ahead <= 7) {
+    if (ahead === 0 && /\b(today|tonight|this evening|this morning)\b/.test(text)) return true;
+    if (ahead === 1 && /\btomorrow\b/.test(text)) return true;
+    const weekday = FACT_WEEKDAYS[new Date(when).getUTCDay()];
+    if (new RegExp(`\\b${weekday}\\b`).test(text)) return true;
+  }
+  return false;
+}
+
+/* The words two titles must share to be talking about the same night. The
+   same idea as the calendar's same-day guard in 0053: dates, numbers and
+   filler come out, and what is left has to overlap. */
+const FACT_NOISE = new Set([
+  'the', 'a', 'an', 'and', 'of', 'at', 'for', 'in', 'on', 'with', 'our', 'your',
+  'to', 'is', 'join', 'us', 'service', 'services', 'night', 'day', 'sunday',
+  ...FACT_MONTHS, ...FACT_MONTHS.map((m) => m.slice(0, 3)), 'sept', ...FACT_WEEKDAYS,
+]);
+
+function titleWords(title: unknown): Set<string> {
+  return new Set(
+    factText(title).replace(/[^a-z\s]/g, ' ').split(/\s+/)
+      .filter((w) => w.length > 2 && !FACT_NOISE.has(w)),
+  );
+}
+
+interface FactEvent {
+  date: string;
+  hour?: number;
+  minute?: number;
+  end_hour?: number;
+  end_minute?: number;
+  more_times?: Array<{ hour?: number; minute?: number }>;
+}
+
+interface CalendarRow {
+  id?: string;
+  title?: string | null;
+  starts_at?: string | null;
+  time_label?: string | null;
+  also_on?: string[] | null;
+  published?: boolean | null;
+}
+
+/* Every start time the draft's calendar entry carries, as integers. */
+function eventTimes(event: FactEvent | null | undefined): Array<{ hour: number; minute: number }> {
+  if (!event) return [];
+  const out: Array<{ hour: number; minute: number }> = [];
+  const add = (h: unknown, m: unknown) => {
+    const hour = Number(h);
+    const minute = m === undefined || m === null ? 0 : Number(m);
+    if (clockKey(hour, minute) === null) return;
+    if (out.some((t) => t.hour === hour && t.minute === minute)) return;
+    out.push({ hour, minute });
+  };
+  if (event.hour !== undefined && event.hour !== null) add(event.hour, event.minute);
+  for (const t of Array.isArray(event.more_times) ? event.more_times : []) {
+    if (t && t.hour !== undefined && t.hour !== null) add(t.hour, t.minute);
+  }
+  return out.sort((a, b) => a.hour * 60 + a.minute - (b.hour * 60 + b.minute));
+}
+
+/* "5:00pm and 6:30pm", for an evening with more than one service. The Cal tab
+   draws time_label in place of the clock time, which is the only way a single
+   calendar entry can say there are two. One time, or none, is no label. */
+function servicesLabel(event: FactEvent | null | undefined): string | null {
+  const times = eventTimes(event);
+  if (times.length < 2) return null;
+  const labels = times.map((t) => clockLabel(t.hour, t.minute));
+  return labels.length === 2
+    ? `${labels[0]} and ${labels[1]}`
+    : `${labels.slice(0, -1).join(', ')} and ${labels[labels.length - 1]}`;
+}
+
+function listOf(items: string[]): string {
+  if (items.length <= 1) return items.join('');
+  return `${items.slice(0, -1).join(', ')} and ${items[items.length - 1]}`;
+}
+
+/* The whole check, for one draft. Returns the sentences to put in front of
+   whoever approves it, most important first, or an empty list. */
+function factCheck(
+  draft: { title?: unknown; text?: unknown; event?: FactEvent | null; date?: string | null },
+  source: unknown,
+  emailDay: string,
+  calendar: CalendarRow[] = [],
+): string[] {
+  const notes: string[] = [];
+  const sourceKeys = new Set(clockTimes(source, true).map((t) => t.key));
+
+  /* 1. Every time the draft states is a time the email states. */
+  const stated = clockTimes(`${draft.title ?? ''}\n${draft.text ?? ''}`);
+  for (const t of eventTimes(draft.event)) {
+    const key = clockKey(t.hour, t.minute) as number;
+    if (!stated.some((s) => s.key === key)) stated.push({ key, label: clockLabel(t.hour, t.minute) });
+  }
+  if (draft.event && draft.event.end_hour !== undefined && draft.event.end_hour !== null) {
+    const h = Number(draft.event.end_hour);
+    const m = Number(draft.event.end_minute ?? 0);
+    const key = clockKey(h, m);
+    if (key !== null && !stated.some((s) => s.key === key)) stated.push({ key, label: clockLabel(h, m) });
+  }
+  const missing = stated.filter((t) => !sourceKeys.has(t.key)).map((t) => t.label);
+  if (missing.length) {
+    notes.push(
+      `${listOf(missing)} ${missing.length === 1 ? 'is' : 'are'} not in the email or on its flyers. ` +
+      'Check the times before approving.',
+    );
+  }
+
+  /* 2. The day the calendar entry lands on is a day the email names. */
+  const date = draft.date ?? draft.event?.date ?? null;
+  if (date && !dayMentioned(date, `${source ?? ''}`, emailDay)) {
+    const [, m, d] = date.split('-').map(Number);
+    const month = FACT_MONTHS[m - 1];
+    notes.push(
+      `${month[0].toUpperCase()}${month.slice(1)} ${d} was worked out, not read: ` +
+      'the email does not print that date. Check the day.',
+    );
+  }
+
+  /* 3. Nothing already on the calendar that day, under the same name, says
+     a different hour. This is the one that would have caught Christmas Eve
+     Eve on its own: the calendar said 5:00pm and the draft said 5:30pm. */
+  if (date && stated.length) {
+    const words = titleWords(draft.title);
+    const draftKeys = new Set(stated.map((t) => t.key));
+    for (const row of calendar) {
+      if (!row || !row.starts_at || row.published === false) continue;
+      const at = churchClock(row.starts_at);
+      if (!at) continue;
+      const days = new Set([at.date, ...(Array.isArray(row.also_on) ? row.also_on : [])]);
+      if (!days.has(date)) continue;
+      const theirs = titleWords(row.title);
+      if (![...words].some((w) => theirs.has(w))) continue;
+
+      const label = String(row.time_label ?? '');
+      if (/announced/i.test(label)) continue;
+      const fromLabel = clockTimes(label);
+      const theirTimes = fromLabel.length
+        ? fromLabel
+        : [{ key: clockKey(at.hour, at.minute) as number, label: clockLabel(at.hour, at.minute) }];
+      /* Theirs must all be in the draft. Not the other way round: a draft
+         that also says "doors at 4:30" is not disagreeing with the calendar. */
+      if (theirTimes.every((t) => draftKeys.has(t.key))) continue;
+
+      notes.push(
+        `The calendar already has “${String(row.title ?? '').trim()}” that day at ` +
+        `${listOf(theirTimes.map((t) => t.label))}, and this says ${listOf(stated.map((t) => t.label))}. ` +
+        'One of them is wrong.',
+      );
+      break;
+    }
+  }
+
+  return notes;
+}
+
+/* @@ facts:end */
 
 /* @@ retry:start
    Fenced like the dates above, and evalled by tests/newsletter-retry.test.js,
@@ -2271,8 +2815,13 @@ async function runBackfill(
   const { data: existingEvents } = await admin.from('events').select('id');
   const takenEvents = new Set((existingEvents ?? []).map((r) => r.id as string));
 
+  // For the fact check below, the same as the ordinary parse uses.
+  const oldest = rows.map((r) => r.written).filter(Boolean).sort()[0] ?? todayInChicago();
+  const calendar = await calendarFrom(admin, oldest);
+
   let made = 0;
   const madeFor: string[] = [];
+  const checks: string[] = [];
 
   for (const row of rows) {
     const answer: Record<string, unknown> = said.get(row.id) ?? {};
@@ -2289,7 +2838,23 @@ async function runBackfill(
     const eventId = uniqueId(row.title, takenEvents, 'event');
     const at = churchInstant(date, item.hour, item.minute);
 
-    const { error: eventError } = await admin.from('events').insert({
+    /* The same fact check as the ordinary parse, with the announcement's
+       own words as the source: an hour the card never printed, or one the
+       calendar already disagrees with, is said on the date's review card. */
+    const reviewNotes = factCheck(
+      {
+        title: row.title,
+        event: {
+          date, hour: item.hour as number | undefined, minute: item.minute as number | undefined,
+          end_hour: item.end_hour as number | undefined, end_minute: item.end_minute as number | undefined,
+        },
+        date,
+      },
+      `${row.title}\n${row.body ?? ''}`, row.written, calendar,
+    );
+    if (reviewNotes.length) checks.push(`${row.title}: ${reviewNotes[0]}`);
+
+    const eventRow: Record<string, unknown> = {
       id: eventId,
       title: row.title,
       description: row.body ? String(row.body).split('\n')[0].slice(0, 500) : null,
@@ -2305,7 +2870,9 @@ async function runBackfill(
          has ever seen them. They appear in the events queue for approval. */
       published: false,
       review_state: 'pending',
-    });
+      ...(reviewNotes.length ? { review_note: reviewNotes.join(' ').slice(0, 1000) } : {}),
+    };
+    const eventError = await insertDrafts(admin, 'events', [eventRow]);
     if (eventError) continue;
 
     const { error: linkError } = await admin.from('announcements')
@@ -2328,7 +2895,7 @@ async function runBackfill(
      announce a queue of thirty dates that nobody asked for today. The two
      review topics are for the twenty minute tick, where there is genuinely
      nobody watching. */
-  return { ok: true, backfill: true, looked_at: rows.length, events: made, titles: madeFor };
+  return { ok: true, backfill: true, looked_at: rows.length, events: made, titles: madeFor, checks };
 }
 
 /* ========================================================================
@@ -2350,6 +2917,7 @@ Deno.serve(async (req: Request) => {
   let body: {
     probe?: boolean; dry_run?: boolean; backfill?: boolean; limit?: number;
     generation_config?: Record<string, unknown>; model?: string;
+    email_id?: number;
   } = {};
   try { body = await req.json(); } catch { /* an empty body is a normal tick */ }
   const probe = body.probe === true;
@@ -2526,6 +3094,12 @@ Deno.serve(async (req: Request) => {
      and a person is about to tap Approve on a card built out of these. See
      checkedLinks. */
   const linkNotes: string[] = [];
+  /* What the fact check found, across every email this run read: one line
+     per draft that needs a closer look, and one if the flyers could not be
+     read. First in the run note, ahead of the link notes, because a wrong
+     time on Home is worse than a footer link left off. */
+  const factNotes: string[] = [];
+  let calendar: CalendarRow[] | null = null;
 
   try {
     await imap.connect(host, port);
@@ -2587,7 +3161,7 @@ Deno.serve(async (req: Request) => {
     }
 
     const now = Date.now();
-    const fresh = candidates
+    let fresh = candidates
       .map((c) => ({ ...c, how: claimDecision(ledgerState.get(c.messageId), now) }))
       .filter((c) => c.how !== 'skip')
       .slice(0, MAX_EMAILS_PER_RUN) as Array<{
@@ -2595,6 +3169,32 @@ Deno.serve(async (req: Request) => {
         messageId: string;
         how: 'new' | 'retry' | 'reclaim';
       }>;
+
+    /* READING ONE EMAIL AGAIN, ON A DRY RUN ONLY. `{"dry_run": true,
+       "email_id": 19}` re-reads the newsletter that ledger row 19 is about,
+       even though it was settled long ago, and returns what the parse would
+       draft from it today, with the fact check's notes, the words read off
+       its flyers, and the text the model was given. It writes nothing,
+       claims nothing and leaves the email exactly as it was, so it is the
+       way to ask "what did that newsletter actually say?" after a card has
+       gone wrong, and to check a change to the prompt against the email that
+       caused it. Only inside the fortnight the mailbox search covers. */
+    const rereadId = dryRun && Number.isInteger(Number(body.email_id)) ? Number(body.email_id) : null;
+    if (rereadId !== null) {
+      const { data: row } = await admin.from('newsletter_emails')
+        .select('message_id').eq('id', rereadId).maybeSingle();
+      const target = candidates.find((c) => c.messageId === row?.message_id);
+      if (!target) {
+        await imap.close();
+        return json({
+          ok: false, dry_run: true,
+          error: row
+            ? `Email ${rereadId} is not in the mailbox search any more (it covers the last ${SEARCH_DAYS} days).`
+            : `There is no email ${rereadId} in the ledger.`,
+        });
+      }
+      fresh = [{ ...target, how: 'new' }];
+    }
 
     if (!fresh.length) {
       await imap.close();
@@ -2753,9 +3353,23 @@ Deno.serve(async (req: Request) => {
             continue;
           }
 
+          /* The flyers, read into words before the parse. See readFlyers:
+             best effort, and when it cannot it says so in the run note
+             rather than holding the newsletter up. */
+          const flyers = await readFlyers(geminiKey!, model, images);
+          const fullText = flyers.text
+            ? `${text}\n\nWORDS ON THE FLYERS (read from the pictures in this email)\n\n${flyers.text}`
+            : text;
+
           const { items, by: writtenBy } = await askGemini(
-            geminiKey!, model, text, links, images, emailDay, tuning,
+            geminiKey!, model, fullText, links, images, emailDay, tuning,
           );
+
+          /* What the calendar already says, for the fact check. Read from a
+             fortnight before the email, so a weekend that started last
+             Saturday still counts as "already on the calendar". */
+          if (!calendar) calendar = await calendarFrom(admin, shiftDate(emailDay, -14));
+          const emailFactNotes: string[] = [];
           /* Who drafted these, on every row they become, and only when it
              was the backup: the review queue prints it so whoever approves
              knows to read closely. Absent, not null, when Gemini wrote them,
@@ -2825,16 +3439,47 @@ Deno.serve(async (req: Request) => {
               cleanDate(item.ends_on),
               emailDay,
             );
+            /* THE FACT CHECK. Every time on the card and in the calendar
+               entry read back against the email and its flyers, the day
+               against the email, and the hour against what the calendar
+               already says about that night. Plus anything the model itself
+               said it was unsure of. None of it changes the draft: it goes on
+               the review card, over Approve, where a person decides. See
+               factCheck, and Christmas Eve Eve, which is why it exists. */
+            const checkEvent = eventDate ? { ...(item.event ?? {}), date: eventDate } : null;
+            const doubts = (Array.isArray(item.doubts) ? item.doubts : [])
+              .map((d) => String(d ?? '').trim()).filter(Boolean).slice(0, 3)
+              .map((d) => `The reader was unsure: ${d.slice(0, 240)}`);
+            const reviewNotes = [
+              ...factCheck({ title, text: bodyText, event: checkEvent, date: eventDate },
+                fullText, emailDay, calendar ?? []),
+              ...doubts,
+            ];
+            const reviewNote = reviewNotes.length ? reviewNotes.join(' ').slice(0, 1000) : null;
+            if (reviewNote) emailFactNotes.push(`Check “${title}”: ${reviewNotes[0]}`);
+            const noted = reviewNote ? { review_note: reviewNote } : {};
+
+            /* Several services, one entry: the start is the first of them,
+               and time_label lists them all, which is what the Cal tab draws.
+               A label made of times the email does not print would be the
+               same mistake in a second place, so it is only used when those
+               times passed the check above. */
+            const several = checkEvent ? servicesLabel(checkEvent) : null;
+            const severalOk = several &&
+              !reviewNotes.some((n) => /not in the email or on its flyers/.test(n));
+            const startAt = eventDate
+              ? churchInstant(eventDate, item.event?.hour, item.event?.minute)
+              : null;
+
             const eventRow = eventDate
               ? {
                 id: uniqueId(title, takenEvents, 'event'),
                 title,
                 description: summary || null,
-                starts_at: churchInstant(eventDate, item.event?.hour, item.event?.minute)
-                  ?? `${eventDate}T09:00:00${churchOffset(eventDate)}`,
+                starts_at: startAt ?? `${eventDate}T09:00:00${churchOffset(eventDate)}`,
                 ends_at: churchInstant(eventDate, item.event?.end_hour, item.event?.end_minute),
-                time_label: churchInstant(eventDate, item.event?.hour, item.event?.minute)
-                  ? null
+                time_label: startAt
+                  ? (severalOk ? several : null)
                   : 'Time to be announced',
                 location: String(item.event?.location ?? '').trim().slice(0, 200) || null,
                 signup_url: keptLinks[0]?.url ?? null,
@@ -2846,6 +3491,7 @@ Deno.serve(async (req: Request) => {
                 published: false,
                 review_state: 'pending',
                 ...stamp,
+                ...noted,
               }
               : null;
 
@@ -2902,6 +3548,7 @@ Deno.serve(async (req: Request) => {
               source: 'newsletter',
               pinned: false,
               ...stamp,
+              ...noted,
             };
           }).filter(Boolean) as Array<Record<string, unknown>>;
 
@@ -2911,7 +3558,14 @@ Deno.serve(async (req: Request) => {
               'Read it, but nothing in it looked like an announcement.', linkNote,
             ].filter(Boolean).join(' ').slice(0, 500);
           } else if (dryRun) {
-            preview.push({ subject, drafts: rows, links: linkNote, written_by: writtenBy });
+            preview.push({
+              subject, drafts: rows, links: linkNote, written_by: writtenBy,
+              checks: emailFactNotes,
+              ...(flyers.note ? { flyers_note: flyers.note } : {}),
+              // The whole of what the model was given, when one email was
+              // asked for by id: that is the question being asked.
+              ...(rereadId !== null ? { flyers: flyers.text, text: fullText.slice(0, 30000) } : {}),
+            });
             draftCount += rows.length;
           } else {
             /* The ledger row is already there — the claim above wrote it
@@ -2952,9 +3606,14 @@ Deno.serve(async (req: Request) => {
             await settleEmail(admin, emailId, {
               status: 'parsed',
               drafts: rows.length,
-              note: [writtenBy ? `Gemini was busy; drafted by ${writtenBy}.` : null, linkNote]
-                .filter(Boolean).join(' ').slice(0, 500) || null,
+              note: [
+                writtenBy ? `Gemini was busy; drafted by ${writtenBy}.` : null,
+                ...emailFactNotes,
+                flyers.note,
+                linkNote,
+              ].filter(Boolean).join(' ').slice(0, 500) || null,
             });
+            factNotes.push(...emailFactNotes, ...(flyers.note ? [flyers.note] : []));
 
             draftCount += rows.length;
             newDrafts += rows.length;
@@ -3069,6 +3728,7 @@ Deno.serve(async (req: Request) => {
     /* Last, because it is the only one of the three that is not about the run
        having gone badly, and first-come-first-served on the 500 characters is
        the right order for that. */
+    if (factNotes.length) lines.push(factNotes.join(' '));
     if (linkNotes.length) lines.push(linkNotes.join(' '));
     const note = lines.length ? lines.join(' ').slice(0, 500) : null;
 
