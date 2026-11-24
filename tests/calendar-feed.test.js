@@ -142,6 +142,31 @@ function loadApp(config) {
     days[1].DTSTART, '20261108T150000Z');
   ok('and keeps its length', days[1].DTEND, '20261108T163000Z');
 
+  /* ------------------------------------------------- several services */
+
+  // Christmas Eve Eve 2026, as it is in the table: starts_at at the first
+  // service and both services in the label. Every subscriber's phone said
+  // 5 PM to 6 PM and nothing about 6:30 until this.
+  const eve = {
+    id: 'event-christmas-eve-eve-service-december-23', title: 'Christmas Eve Eve, December 23',
+    description: 'Slow down and prepare your heart for Christmas with a special worship service.',
+    starts_at: '2026-12-23T23:00:00Z', ends_at: null, time_label: '5:00pm and 6:30pm',
+    also_on: null, updated_at: '2026-11-24T16:46:54Z'
+  };
+  const services = parse(F.buildFeed([eve], NOW));
+  ok('two services in the label are two events', services.length, 2);
+  ok('at 5:00 and 6:30, an hour each',
+    services.map((d) => d.DTSTART + '-' + d.DTEND),
+    ['20261223T230000Z-20261224T000000Z', '20261224T003000Z-20261224T013000Z']);
+  ok('the first keeps the UID already on people\'s phones',
+    services.map((d) => d.UID),
+    ['event-christmas-eve-eve-service-december-23@homechurchnola.com',
+     'event-christmas-eve-eve-service-december-23-1830@homechurchnola.com']);
+  ok('both say both times in the notes', services.every((d) => /^5:00pm and 6:30pm\\n\\n/.test(d.DESCRIPTION)), true);
+  ok('labelTimes reads the church\'s ways of writing it',
+    [F.labelTimes('5:00pm and 6:30pm'), F.labelTimes('8, 9:30 and 11am'), F.labelTimes('7pm'), F.labelTimes('All three services')],
+    [[[17, 0], [18, 30]], [[11, 0]], [[19, 0]], []]);
+
   /* ----------------------------------------------------------- the shape */
 
   const text = F.buildFeed([supper, baptism], NOW);

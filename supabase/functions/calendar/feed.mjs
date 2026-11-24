@@ -31,6 +31,15 @@
      Length. An hour when there is no ends_at, the same guess js/native.js
      makes for the Add to calendar button.
 
+     Several services. A time_label that names more than one clock time
+     ("5:00pm and 6:30pm") is one VEVENT per time, each an hour long unless
+     ends_at says otherwise, and the label goes in the notes. Christmas Eve
+     Eve 2026 is why: the Cal tab said 5:00pm and 6:30pm, and every
+     subscriber's phone said 5 PM to 6 PM and nothing else, because this
+     file only ever read starts_at. The first time keeps the plain UID, so
+     the entry already on people's phones is the one that stays; each later
+     time gets its own.
+
    UIDs are the event id, plus the date for every day after the first. Stable
    UIDs are what let a calendar app move an event instead of drawing it twice
    when the church changes its time.
@@ -148,6 +157,24 @@ function daysOf(row, first) {
   return [first].concat(also).filter((d, i, all) => all.indexOf(d) === i).sort();
 }
 
+/* Every clock time in a label, in order, as [hour, minute] on a 24 hour
+   clock. "5:00pm and 6:30pm" is two; "7pm" is one; "All three services" is
+   none. Only used when there are at least two, so a label that merely
+   repeats starts_at changes nothing. */
+const LABEL_TIME = /(\d{1,2})(?::(\d{2}))?\s*(am|pm)\b/gi;
+
+export function labelTimes(label) {
+  const out = [];
+  String(label || '').replace(LABEL_TIME, (all, h, m, ap) => {
+    const hour = (+h % 12) + (/pm/i.test(ap) ? 12 : 0);
+    const minute = m ? +m : 0;
+    if (+h >= 1 && +h <= 12 && minute < 60 &&
+        !out.some((t) => t[0] === hour && t[1] === minute)) out.push([hour, minute]);
+    return all;
+  });
+  return out.sort((a, b) => a[0] * 60 + a[1] - (b[0] * 60 + b[1]));
+}
+
 function notes(row, label) {
   const parts = [];
   if (label) parts.push(label);
@@ -172,19 +199,30 @@ export function eventsFor(row, now) {
   const clock = churchParts(startMs);
 
   const modified = Date.parse(row.updated_at);
-  const description = notes(row, allDay ? label : '');
+  const several = allDay ? [] : labelTimes(label);
+  const services = several.length >= 2 ? several : null;
+  const description = notes(row, allDay || services ? label : '');
 
-  return daysOf(row, first).map((day) => {
-    const uid = (day === first ? row.id : row.id + '-' + dateValue(day)) + '@' + UID_HOST;
-    const lines = ['BEGIN:VEVENT', 'UID:' + uid, 'DTSTAMP:' + stamp(now)];
+  /* One slot per service when the label names several, else the one
+     starts_at has always given. The first slot of the first day is the
+     plain UID, as it always was. */
+  const slots = services || [[clock.hour % 24, clock.minute]];
+
+  const out = [];
+  daysOf(row, first).forEach((day) => (allDay ? [null] : slots).forEach((slot, i) => {
+    let uid = day === first ? row.id : row.id + '-' + dateValue(day);
+    if (services && i > 0) uid += '-' + two(slot[0]) + two(slot[1]);
+    const lines = ['BEGIN:VEVENT', 'UID:' + uid + '@' + UID_HOST, 'DTSTAMP:' + stamp(now)];
 
     if (allDay) {
       lines.push('DTSTART;VALUE=DATE:' + dateValue(day));
       lines.push('DTEND;VALUE=DATE:' + dateValue(nextDay(day)));
     } else {
-      const start = day === first ? startMs : churchInstant(day, clock.hour % 24, clock.minute);
+      const start = day === first && (!services || (slot[0] === clock.hour % 24 && slot[1] === clock.minute))
+        ? startMs
+        : churchInstant(day, slot[0], slot[1]);
       lines.push('DTSTART:' + stamp(start));
-      lines.push('DTEND:' + stamp(start + length));
+      lines.push('DTEND:' + stamp(start + (services && i > 0 ? HOUR : length)));
     }
 
     lines.push('SUMMARY:' + escapeText(row.title));
@@ -193,8 +231,9 @@ export function eventsFor(row, now) {
     if (row.signup_url) lines.push('URL:' + String(row.signup_url).replace(/[\r\n]/g, ''));
     if (!Number.isNaN(modified)) lines.push('LAST-MODIFIED:' + stamp(modified));
     lines.push('END:VEVENT');
-    return lines;
-  });
+    out.push(lines);
+  }));
+  return out;
 }
 
 /* The calendar. REFRESH-INTERVAL and X-PUBLISHED-TTL ask for six hours;
