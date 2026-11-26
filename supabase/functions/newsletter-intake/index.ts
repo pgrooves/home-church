@@ -534,7 +534,7 @@ function htmlToText(html: string): string {
       .replace(/<br\s*\/?>/gi, '\n')
       .replace(/<[^>]+>/g, ' '),
   )
-    .replace(/[ \t\u00a0]+/g, ' ')
+    .replace(/[ \t\xa0]+/g, ' ')
     .replace(/ ?\n ?/g, '\n')
     .replace(/\n{3,}/g, '\n\n')
     .trim();
@@ -1170,6 +1170,34 @@ const BUSY_TRIES_PER_MODEL = 2;
 const BUSY_WAIT_MS = 5000;
 const BUSY_BUDGET_MS = 90_000;
 
+/* THE WHOLE RUN HAS 150 SECONDS, and that is the platform's limit, not ours:
+   Supabase stops an Edge Function at 150 seconds of wall clock ("WallClockTime"
+   in the function logs) and nothing after that line runs, not even the code
+   that records what happened.
+
+   Found the night the flyer reading went live. A dry run of the 20th of
+   November's newsletter, flyers and all, was stopped at 150 seconds before it
+   could answer. Reading the flyers is up to fifty seconds more than the parse
+   alone ever took, and the parse's own request had no clock on it at all: the
+   busy budget above only stops a NEW request being started.
+
+   So every run now carries a deadline, a little inside the limit, and every
+   slow step is measured against it:
+     - the flyers are read only when there is plenty of time left, and never
+       on an email's third or fourth attempt, which is the old, text-only
+       reader that has always finished;
+     - the parse's request is aborted at the deadline and the email is
+       deferred to the next tick, exactly as a busy model is;
+     - a second email in the same run is left for the next tick unless there
+       is room for it.
+   And each stage logs how long it took, so the next time this is tight the
+   function logs say where the time went. */
+const RUN_BUDGET_MS = 138_000;
+const WRITE_RESERVE_MS = 12_000;      // writing the drafts, settling, marking read
+const FLYERS_NEED_MS = 105_000;       // left on the clock to be worth reading them
+const NEXT_EMAIL_NEEDS_MS = 75_000;   // left on the clock to start another email
+const FLYERS_UP_TO_ATTEMPT = 2;
+
 /* Other Flash models to ask when the configured one is busy. Overridable by
    secret, like GEMINI_MODEL, because which of these exist for a given key
    changes faster than this file does. */
@@ -1227,8 +1255,18 @@ async function askGemini(
      the fallback models and the truncation handling, is the same for both,
      which is the reason this is a parameter and not a second function. */
   spec?: { prompt: string; schema: unknown; key: string },
+  /* When the run must be finished by, as Date.now() milliseconds. Every
+     request below is aborted then, writes included in the margin. See
+     RUN_BUDGET_MS. */
+  deadline?: number,
 ): Promise<{ items: Parsed[]; by: string | null }> {
   const asked = spec ? spec.prompt : prompt(text, links, images, emailDate);
+  const clock = new AbortController();
+  const stopAt = deadline ? deadline - WRITE_RESERVE_MS : Infinity;
+  const clockTimer = Number.isFinite(stopAt)
+    ? setTimeout(() => clock.abort(), Math.max(1000, stopAt - Date.now()))
+    : null;
+  try {
   const request = JSON.stringify({
     contents: [{ role: 'user', parts: [{ text: asked }] }],
     generationConfig: {
@@ -1289,17 +1327,24 @@ async function askGemini(
   for (const m of models) {
     for (let i = 0; i < BUSY_TRIES_PER_MODEL; i++) {
       if (Date.now() - began > BUSY_BUDGET_MS) break tries;
+      if (clock.signal.aborted || stopAt - Date.now() < 10_000) {
+        busy = busy || 'Out of time in this run before Gemini answered.';
+        break tries;
+      }
       if (i > 0) await new Promise((r) => setTimeout(r, BUSY_WAIT_MS * i));
 
       let r: Response;
       try {
         r = await fetch(
           `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(m)}:generateContent?key=${encodeURIComponent(apiKey)}`,
-          { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: request },
+          { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: request, signal: clock.signal },
         );
       } catch (err) {
-        // DNS, TLS, a reset socket. None of it is the email's fault.
-        busy = `Could not reach Gemini: ${String((err as Error).message ?? err)}`;
+        // DNS, TLS, a reset socket, or the run's own clock running out. None
+        // of it is the email's fault.
+        busy = clock.signal.aborted
+          ? `Gemini was still working when this run ran out of time (${m}).`
+          : `Could not reach Gemini: ${String((err as Error).message ?? err)}`;
         continue;
       }
 
@@ -1332,7 +1377,8 @@ async function askGemini(
        everything else here. A Groq failure of any kind is the same
        TransientError this always was. */
     const groqKey = spec ? undefined : Deno.env.get('GROQ_API_KEY');
-    if (groqKey) {
+    // The backup needs time too, and a run stopped mid-answer records nothing.
+    if (groqKey && stopAt - Date.now() > 30_000) {
       const backup = await askGroq({
         apiKey: groqKey, model: Deno.env.get('GROQ_MODEL'), prompt: asked,
         schema: SCHEMA, temperature: 1.0, maxTokens: 8192,
@@ -1353,7 +1399,14 @@ async function askGemini(
   }
   if (usedModel !== model) console.warn(`newsletter-intake: answered by fallback model ${usedModel}`);
 
-  const payload = await res.json();
+  let payload: Record<string, any>;
+  try {
+    payload = await res.json();
+  } catch (err) {
+    throw new TransientError(clock.signal.aborted
+      ? `Gemini was still answering when this run ran out of time (${usedModel}). The next run will try again.`
+      : `Gemini's answer could not be read: ${String((err as Error).message ?? err)}`);
+  }
 
   /* Gemini 3 returns thought parts alongside the answer, and only some parts
      carry `text`. Concatenating every text part is what survives that, and it
@@ -1413,6 +1466,9 @@ async function askGemini(
     throw new TransientError(`Gemini returned no ${key} array (${finish}; ${spent}). Trying again next run.`);
   }
   return { items: list as Parsed[], by: null };
+  } finally {
+    if (clockTimer !== null) clearTimeout(clockTimer);
+  }
 }
 
 /* ========================================================================
@@ -1481,7 +1537,7 @@ const FLYER_MAX = 6;
 const FLYER_MIN_BYTES = 12_000;      // smaller than this is a logo or an icon
 const FLYER_MAX_BYTES = 4_000_000;
 const FLYER_FETCH_MS = 6000;
-const FLYER_BUDGET_MS = 45_000;
+const FLYER_BUDGET_MS = 30_000;   // and never past the run's deadline, see RUN_BUDGET_MS
 const FLYER_TYPES = /^image\/(png|jpe?g|webp|heic|heif)$/i;
 
 const FLYER_SCHEMA = {
@@ -1532,9 +1588,12 @@ async function readFlyers(
   apiKey: string,
   model: string,
   images: string[],
+  deadline: number = Infinity,
 ): Promise<{ text: string; read: number; note: string | null }> {
   if (!images.length) return { text: '', read: 0, note: null };
   const began = Date.now();
+  // The parse after this needs the rest of the run, so the flyers stop early.
+  const budget = Math.min(FLYER_BUDGET_MS, deadline - began - (FLYERS_NEED_MS - FLYER_BUDGET_MS));
 
   const fetched = (await Promise.all(images.slice(0, FLYER_MAX * 2).map(fetchFlyer)))
     .filter((f): f is { mime: string; data: string } => !!f)
@@ -1568,7 +1627,7 @@ async function readFlyers(
 
   let reason = '';
   for (const m of [model, ...fallbackModels(model)]) {
-    const left = FLYER_BUDGET_MS - (Date.now() - began);
+    const left = budget - (Date.now() - began);
     if (left < 5000) break;
     const control = new AbortController();
     const timer = setTimeout(() => control.abort(), left);
@@ -2904,6 +2963,8 @@ async function runBackfill(
 
 Deno.serve(async (req: Request) => {
   if (req.method !== 'POST') return json({ error: 'Use POST.' }, 405);
+  const runStarted = Date.now();
+  const deadline = runStarted + RUN_BUDGET_MS;
 
   const cronSecret = Deno.env.get('HC_NEWSLETTER_CRON_SECRET');
   if (!cronSecret) {
@@ -3214,7 +3275,16 @@ Deno.serve(async (req: Request) => {
 
     const preview: unknown[] = [];
 
+    let startedEmails = 0;
     for (const { uid, messageId, how } of fresh) {
+      /* Not enough clock left for another email: it stays unclaimed and
+         unread, and the next tick twenty minutes from now takes it. */
+      if (startedEmails > 0 && deadline - Date.now() < NEXT_EMAIL_NEEDS_MS) {
+        console.log(`newsletter-intake: leaving ${messageId} for the next run, ${Math.round((deadline - Date.now()) / 1000)}s left`);
+        break;
+      }
+      startedEmails += 1;
+      const emailBegan = Date.now();
       const raw = await imap.fetchRaw(uid);
       const envelope = splitHeaders(raw);
       const subject = decodeHeaderWords(envelope.headers['subject'] ?? '').slice(0, 300);
@@ -3315,6 +3385,7 @@ Deno.serve(async (req: Request) => {
               geminiKey!, model, text, links, images, emailDay, tuning,
               { prompt: homekidsPrompt(kidsAudience, text, links, emailDay),
                 schema: HOMEKIDS_SCHEMA, key: 'items' },
+              deadline,
             );
 
             if (!kidsTaken) {
@@ -3356,13 +3427,33 @@ Deno.serve(async (req: Request) => {
           /* The flyers, read into words before the parse. See readFlyers:
              best effort, and when it cannot it says so in the run note
              rather than holding the newsletter up. */
-          const flyers = await readFlyers(geminiKey!, model, images);
+          /* Only with time to spare, and only on the first two attempts.
+             An email whose earlier tries ran out of time is read the way it
+             was before flyers, from its words, which has always finished. */
+          const flyersBegan = Date.now();
+          const skipFlyers = attempt > FLYERS_UP_TO_ATTEMPT || deadline - Date.now() < FLYERS_NEED_MS;
+          const flyers = skipFlyers
+            ? {
+              text: '', read: 0,
+              note: images.length
+                ? 'Read from its words only, without the flyers, to finish inside the time limit. Check dates and times against the flyers.'
+                : null,
+            }
+            : await readFlyers(geminiKey!, model, images, deadline);
+          const flyersMs = Date.now() - flyersBegan;
           const fullText = flyers.text
             ? `${text}\n\nWORDS ON THE FLYERS (read from the pictures in this email)\n\n${flyers.text}`
             : text;
 
+          const parseBegan = Date.now();
           const { items, by: writtenBy } = await askGemini(
-            geminiKey!, model, fullText, links, images, emailDay, tuning,
+            geminiKey!, model, fullText, links, images, emailDay, tuning, undefined, deadline,
+          );
+          console.log(
+            `newsletter-intake: "${subject}" attempt ${attempt}: ` +
+            `before flyers ${flyersBegan - emailBegan}ms, ` +
+            `flyers ${skipFlyers ? 'skipped' : `${flyers.read} read in ${flyersMs}ms`}, ` +
+            `parse ${Date.now() - parseBegan}ms, run ${Date.now() - runStarted}ms`,
           );
 
           /* What the calendar already says, for the fact check. Read from a
