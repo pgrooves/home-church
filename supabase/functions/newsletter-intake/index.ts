@@ -2110,8 +2110,10 @@ interface ClockTime { key: number; label: string }
 
    `lenient` is for reading the EMAIL, where a missed time means a false alarm:
    there a bare number also counts when it shares a list with a colon time, so
-   "5-6:30" vouches for 5:00. The draft is read strictly, where a time read
-   that was never meant as one is the false alarm. */
+   "5-6:30" vouches for 5:00, and when it is one end of a range, so a flyer's
+   "8-1" vouches for 8:00 and 1:00 (the Holiday Market flyer, which the first
+   version flagged). The draft is read strictly, where a time read that was
+   never meant as one is the false alarm. */
 function clockTimes(value: unknown, lenient = false): ClockTime[] {
   const text = factText(value);
   const out: ClockTime[] = [];
@@ -2119,7 +2121,7 @@ function clockTimes(value: unknown, lenient = false): ClockTime[] {
   for (const chain of text.matchAll(FACT_CHAIN)) {
     const marker = chain[1] ?? '';
     const pm = marker === 'pm';
-    const listed = lenient && chain[0].includes(':');
+    const listed = lenient && (chain[0].includes(':') || /\d\s*(?:-|\bto\b|\buntil\b)\s*\d/.test(chain[0]));
     for (const one of chain[0].matchAll(FACT_ONE)) {
       const raw = one[0];
       let hour: number;

@@ -71,6 +71,12 @@ ok('a year is not a time', keys('December 23, 2026'), []);
 ok('a price is not a time', keys('$15 a person'), []);
 ok('an age range is not a time', keys('For babies ages 0 to 2'), []);
 ok('a count is not a time', keys('Only 7 vendor spots left'), []);
+ok('a flyer range "8-1" counts only when reading the email',
+  [keys('SUNDAY DECEMBER 6\n8-1'), keys('SUNDAY DECEMBER 6\n8-1', true)], [[], ['8:00', '1:00']]);
+ok('THE HOLIDAY MARKET: 8:00am to 1:00pm is vouched for by a flyer saying 8-1', factCheck({
+  title: 'Holiday Market, December 6', text: 'Time: 8:00am - 1:00pm',
+  event: { date: '2026-12-06', hour: 8, end_hour: 13 },
+}, 'Holiday Market\nSUNDAY DECEMBER 6\n8-1', '2026-11-20'), []);
 ok('a bare number beside a colon time counts only when reading the email',
   [keys('5-6:30'), keys('5-6:30', true)], [['6:30'], ['5:00', '6:30']]);
 

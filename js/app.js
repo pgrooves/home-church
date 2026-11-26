@@ -3723,9 +3723,18 @@
       var evt = (HC.data.events || []).filter(function (e) { return e.id === id; })[0];
       if (!evt) return;
 
+      /* More than one service in an evening ("5:00pm and 6:30pm", Christmas
+         Eve Eve 2026): the event the phone saves can only start at one of
+         them, the first, so the notes say every time. Otherwise somebody
+         who added it believes there is one service at five. */
+      var times = String(evt.time || '').match(/\d{1,2}(?::\d{2})?\s*(?:am|pm)/gi) || [];
+      var notes = times.length >= 2
+        ? 'Services at ' + evt.time + (evt.blurb ? '\n\n' + evt.blurb : '')
+        : evt.blurb;
+
       HC.native.addToCalendar({
         title: evt.title,
-        description: evt.blurb,
+        description: notes,
         location: evt.location,
         start: HC.screens.calHelpers.eventStart(evt, day)
       }).then(function (ok) {
